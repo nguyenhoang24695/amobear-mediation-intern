@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Tailwind utilities can be added here */
+/* Note: This file will be processed by Tailwind CLI to generate the final CSS */

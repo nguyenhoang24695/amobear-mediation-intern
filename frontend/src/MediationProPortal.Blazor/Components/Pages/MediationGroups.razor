@@ -1,0 +1,48 @@
+@page "/mediation-groups"
+@page "/mediation-groups/{AppId:int}"
+@using MediationProPortal.Blazor.Components
+@inherits MediationProPortalComponentBase
+@inject NavigationManager NavigationManager
+
+<PageTitle>Mediation Groups</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Mediation Groups</h2>
+            <p class="text-muted">View and manage mediation groups for your apps</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Mediation Groups</h5>
+                </div>
+                <div class="card-body">
+                    @if (AppId > 0)
+                    {
+                        <p>Mediation Groups for App ID: @AppId</p>
+                        <button class="btn btn-secondary" @onclick="NavigateToList">Back to Mediation Groups List</button>
+                    }
+                    else
+                    {
+                        <p>Loading mediation groups from backend API...</p>
+                        <!-- TODO: Implement mediation groups list and detail view -->
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int AppId { get; set; }
+
+    private void NavigateToList()
+    {
+        NavigationManager.NavigateTo("/mediation-groups");
+    }
+}

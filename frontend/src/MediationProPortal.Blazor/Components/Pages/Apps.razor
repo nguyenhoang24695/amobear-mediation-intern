@@ -1,0 +1,48 @@
+@page "/apps"
+@page "/apps/{AppId:int}"
+@using MediationProPortal.Blazor.Components
+@inherits MediationProPortalComponentBase
+@inject NavigationManager NavigationManager
+
+<PageTitle>Apps</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Apps</h2>
+            <p class="text-muted">View and manage your AdMob apps</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">AdMob Apps</h5>
+                </div>
+                <div class="card-body">
+                    @if (AppId > 0)
+                    {
+                        <p>App Detail View - App ID: @AppId</p>
+                        <button class="btn btn-secondary" @onclick="NavigateToList">Back to Apps List</button>
+                    }
+                    else
+                    {
+                        <p>Loading apps list from backend API...</p>
+                        <!-- TODO: Implement apps list and detail view -->
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int AppId { get; set; }
+
+    private void NavigateToList()
+    {
+        NavigationManager.NavigateTo("/apps");
+    }
+}
