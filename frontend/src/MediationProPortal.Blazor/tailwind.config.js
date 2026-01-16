@@ -9,17 +9,39 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // Extend Tailwind theme to match ABP/Lepton theme colors if needed
       colors: {
-        // Add custom colors here if needed
+        "primary": "#3c4cb4",
+        "primary-dark": "#2c388c",
+        "background-light": "#f6f6f8",
+        "background-dark": "#14151e",
+        "success": "#22c55e",
+        "warning": "#eab308",
+        "danger": "#ef4444",
       },
+      fontFamily: {
+        "display": ["Inter", "sans-serif"],
+        "body": ["Inter", "sans-serif"]
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "sm": "0.125rem",
+        "md": "0.375rem",
+        "lg": "0.5rem",
+        "full": "9999px"
+      },
+      fontSize: {
+        "xxs": "0.65rem",
+      },
+      boxShadow: {
+        "card": "0 2px 8px rgba(0,0,0,0.02)"
+      }
     },
   },
   plugins: [],
-  // Important: Use 'important' selector to override Bootstrap/Blazorise styles when needed
-  // important: true, // Uncomment if you need to override Bootstrap styles
+  // Enable important to override Bootstrap styles
+  important: true, // Force Tailwind to override Bootstrap
   corePlugins: {
-    // Disable preflight to avoid conflicts with Bootstrap
-    preflight: false, // Set to true if you want Tailwind's base styles
+    // Enable preflight to reset Bootstrap styles
+    preflight: true, // Tailwind's base styles will reset Bootstrap
   },
 }

@@ -21,8 +21,10 @@
       "launchBrowser": true,
       "applicationUrl": "https://localhost:44351/",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOTRELOAD": "true"
+      },
+      "hotReloadEnabled": true
     }
   }
 }

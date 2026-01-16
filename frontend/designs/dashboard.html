@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Mediation Pro Operations Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c4cb4",
+                        "primary-dark": "#2c388c",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#14151e",
+                        "success": "#22c55e",
+                        "warning": "#eab308",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "sm": "0.125rem",
+                        "md": "0.375rem",
+                        "lg": "0.5rem",
+                        "full": "9999px"
+                    },
+                    fontSize: {
+                        "xxs": "0.65rem",
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for high density data tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f4;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        .zebra-stripes:nth-child(even) {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light text-slate-900 font-display antialiased overflow-hidden h-screen flex">
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        <!-- Header -->
+        <header
+            class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
+            <div class="flex items-center gap-6 flex-1">
+                <!-- Breadcrumbs -->
+                <nav class="flex items-center text-sm font-medium text-gray-500">
+                    <span class="hover:text-primary cursor-pointer transition-colors">Dashboard</span>
+                    <span class="mx-2 text-gray-300">/</span>
+                    <span class="text-slate-900">Overview</span>
+                </nav>
+                <!-- Search -->
+                <div class="relative max-w-md w-full ml-4 hidden lg:block">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
+                    <input
+                        class="w-full pl-10 pr-4 py-2 bg-background-light border-none rounded text-sm text-slate-800 focus:ring-1 focus:ring-primary placeholder-gray-400"
+                        placeholder="Search apps, ad units, or networks..." type="text" />
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- System Ticker -->
+                <div class="hidden xl:flex items-center gap-2 mr-4">
+                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 border border-green-100">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span class="text-xs font-medium text-green-800">Redis: OK</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 border border-green-100">
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span class="text-xs font-medium text-green-800">RabbitMQ: 56 msg/s</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-50 border border-yellow-100">
+                        <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                        <span class="text-xs font-medium text-yellow-800">AdMob API: 85%</span>
+                    </div>
+                    <div class="relative cursor-pointer p-1">
+                        <span class="material-symbols-outlined text-gray-500 text-[22px]">notifications</span>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 border border-white rounded-full"></span>
+                    </div>
+                </div>
+                <!-- Actions -->
+                <div class="flex items-center gap-2 border-l border-gray-200 pl-4">
+                    <button
+                        class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 text-slate-700 text-sm font-medium transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Report
+                    </button>
+                    <button
+                        class="flex items-center gap-2 px-3 py-1.5 rounded border border-primary text-primary bg-white hover:bg-primary/5 text-sm font-medium transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">sync</span>
+                        Sync Now
+                    </button>
+                </div>
+            </div>
+        </header>
+        <!-- Dashboard Content Scrollable Area -->
+        <div class="flex-1 overflow-y-auto p-6 scroll-smooth">
+            <div class="max-w-[1600px] mx-auto space-y-6">
+                <!-- KPI Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <!-- KPI Card 1 -->
+                    <div
+                        class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Est. Earnings</h3>
+                            <span
+                                class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">+12%</span>
+                        </div>
+                        <div class="flex items-end gap-2 mt-1">
+                            <span class="text-2xl font-bold text-slate-900">$12,450</span>
+                        </div>
+                        <!-- Sparkline -->
+                        <div class="h-8 mt-auto w-full relative">
+                            <svg class="w-full h-full text-primary opacity-20 group-hover:opacity-40 transition-opacity"
+                                preserveaspectratio="none" viewbox="0 0 100 20">
+                                <path d="M0 15 Q 10 18, 20 12 T 40 10 T 60 14 T 80 5 T 100 8 L 100 20 L 0 20 Z"
+                                    fill="currentColor"></path>
+                                <path class="text-primary opacity-100"
+                                    d="M0 15 Q 10 18, 20 12 T 40 10 T 60 14 T 80 5 T 100 8" fill="none"
+                                    stroke="currentColor" stroke-width="2"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <!-- KPI Card 2 -->
+                    <div
+                        class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">eCPM</h3>
+                            <span
+                                class="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">-2.1%</span>
+                        </div>
+                        <div class="flex items-end gap-2 mt-1">
+                            <span class="text-2xl font-bold text-slate-900">$4.20</span>
+                        </div>
+                        <!-- Sparkline -->
+                        <div class="h-8 mt-auto w-full relative">
+                            <svg class="w-full h-full text-red-500 opacity-20 group-hover:opacity-40 transition-opacity"
+                                preserveaspectratio="none" viewbox="0 0 100 20">
+                                <path d="M0 5 Q 10 8, 20 10 T 40 12 T 60 11 T 80 16 T 100 18 L 100 20 L 0 20 Z"
+                                    fill="currentColor"></path>
+                                <path class="text-red-500 opacity-100"
+                                    d="M0 5 Q 10 8, 20 10 T 40 12 T 60 11 T 80 16 T 100 18" fill="none"
+                                    stroke="currentColor" stroke-width="2"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <!-- KPI Card 3 -->
+                    <div
+                        class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Impressions</h3>
+                            <span
+                                class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">+5.4%</span>
+                        </div>
+                        <div class="flex items-end gap-2 mt-1">
+                            <span class="text-2xl font-bold text-slate-900">2.4M</span>
+                        </div>
+                        <!-- Sparkline -->
+                        <div class="h-8 mt-auto w-full relative">
+                            <svg class="w-full h-full text-green-500 opacity-20 group-hover:opacity-40 transition-opacity"
+                                preserveaspectratio="none" viewbox="0 0 100 20">
+                                <path d="M0 18 Q 10 15, 20 14 T 40 10 T 60 8 T 80 5 T 100 2 L 100 20 L 0 20 Z"
+                                    fill="currentColor"></path>
+                                <path class="text-green-500 opacity-100"
+                                    d="M0 18 Q 10 15, 20 14 T 40 10 T 60 8 T 80 5 T 100 2" fill="none"
+                                    stroke="currentColor" stroke-width="2"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <!-- KPI Card 4 -->
+                    <div
+                        class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Match Rate</h3>
+                            <span
+                                class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">+0.5%</span>
+                        </div>
+                        <div class="flex items-end gap-2 mt-1">
+                            <span class="text-2xl font-bold text-slate-900">96.5%</span>
+                        </div>
+                        <!-- Sparkline -->
+                        <div class="h-8 mt-auto w-full relative">
+                            <svg class="w-full h-full text-indigo-400 opacity-20 group-hover:opacity-40 transition-opacity"
+                                preserveaspectratio="none" viewbox="0 0 100 20">
+                                <path d="M0 10 Q 10 10, 20 11 T 40 9 T 60 10 T 80 10 T 100 8 L 100 20 L 0 20 Z"
+                                    fill="currentColor"></path>
+                                <path class="text-indigo-400 opacity-100"
+                                    d="M0 10 Q 10 10, 20 11 T 40 9 T 60 10 T 80 10 T 100 8" fill="none"
+                                    stroke="currentColor" stroke-width="2"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <!-- KPI Card 5 -->
+                    <div
+                        class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Ad Units</h3>
+                        </div>
+                        <div class="flex items-end gap-2 mt-1">
+                            <span class="text-2xl font-bold text-slate-900">842</span>
+                        </div>
+                        <div class="mt-auto flex items-center gap-1 text-xs text-gray-500">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span> 98% Healthy
+                        </div>
+                    </div>
+                </div>
+                <!-- Charts Row -->
+                <div class="grid grid-cols-12 gap-6 h-[400px]">
+                    <!-- Main Chart: Revenue & eCPM -->
+                    <div
+                        class="col-span-12 lg:col-span-8 bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-5 flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-sm font-bold text-slate-800">Revenue &amp; eCPM Trends</h2>
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-3 h-0.5 bg-blue-600"></span>
+                                    <span class="text-gray-600">Revenue</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-3 h-0.5 border-t border-dashed border-purple-600"></span>
+                                    <span class="text-gray-600">eCPM</span>
+                                </div>
+                                <select
+                                    class="text-xs bg-gray-50 border-gray-200 rounded py-1 pl-2 pr-6 focus:ring-primary focus:border-primary">
+                                    <option>Last 30 Days</option>
+                                    <option>Last 7 Days</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Chart Area Placeholder (Simulated) -->
+                        <div class="flex-1 w-full relative">
+                            <!-- Y-Axis Labels Left (Revenue) -->
+                            <div
+                                class="absolute left-0 top-0 bottom-8 w-8 flex flex-col justify-between text-[10px] text-gray-400 text-right pr-2">
+                                <span>$15k</span>
+                                <span>$10k</span>
+                                <span>$5k</span>
+                                <span>$0</span>
+                            </div>
+                            <!-- Y-Axis Labels Right (eCPM) -->
+                            <div
+                                class="absolute right-0 top-0 bottom-8 w-8 flex flex-col justify-between text-[10px] text-gray-400 text-left pl-2">
+                                <span>$6.0</span>
+                                <span>$4.0</span>
+                                <span>$2.0</span>
+                                <span>$0</span>
+                            </div>
+                            <!-- Chart Canvas Area -->
+                            <div
+                                class="absolute left-10 right-10 top-2 bottom-8 border-l border-b border-gray-100 bg-[linear-gradient(to_right,#f9fafb_1px,transparent_1px),linear-gradient(to_bottom,#f9fafb_1px,transparent_1px)] bg-[size:40px_40px]">
+                                <!-- Simulated Line Chart -->
+                                <svg class="w-full h-full overflow-visible" preserveaspectratio="none">
+                                    <!-- Revenue Line (Blue) -->
+                                    <path
+                                        d="M0 80 Q 50 70, 100 65 T 200 60 T 300 40 T 400 30 T 500 45 T 600 20 T 700 15 T 800 10"
+                                        fill="none" stroke="#2563EB" stroke-width="2"
+                                        vector-effect="non-scaling-stroke"></path>
+                                    <!-- eCPM Line (Purple Dashed) -->
+                                    <path
+                                        d="M0 60 Q 50 55, 100 58 T 200 50 T 300 45 T 400 48 T 500 55 T 600 50 T 700 45 T 800 40"
+                                        fill="none" stroke="#9333EA" stroke-dasharray="4,4" stroke-width="2"
+                                        vector-effect="non-scaling-stroke"></path>
+                                    <!-- Hover Dot (Simulated) -->
+                                    <circle cx="600" cy="20" fill="white" r="4" stroke="#2563EB" stroke-width="2">
+                                    </circle>
+                                    <!-- Tooltip -->
+                                    <g transform="translate(560, -20)">
+                                        <rect fill="#1e293b" height="35" rx="4" width="90"></rect>
+                                        <text fill="white" font-size="10" font-weight="bold" text-anchor="middle" x="45"
+                                            y="15">$12,840</text>
+                                        <text fill="#94a3b8" font-size="9" text-anchor="middle" x="45" y="28">May
+                                            12</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <!-- X-Axis Labels -->
+                            <div
+                                class="absolute left-10 right-10 bottom-0 h-6 flex justify-between text-[10px] text-gray-400">
+                                <span>May 01</span>
+                                <span>May 05</span>
+                                <span>May 10</span>
+                                <span>May 15</span>
+                                <span>May 20</span>
+                                <span>May 25</span>
+                                <span>May 30</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right Column Split -->
+                    <div class="col-span-12 lg:col-span-4 flex flex-col gap-6 h-full">
+                        <!-- Top Half: Share of Wallet -->
+                        <div
+                            class="flex-1 bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-4 flex flex-col">
+                            <h2 class="text-sm font-bold text-slate-800 mb-2">Share of Wallet</h2>
+                            <div class="flex items-center h-full gap-4">
+                                <!-- Donut Chart CSS -->
+                                <div class="w-28 h-28 shrink-0 rounded-full relative"
+                                    style="background: conic-gradient(#4285F4 0% 40%, #EA4335 40% 70%, #FBBC04 70% 90%, #E2E8F0 90% 100%);">
+                                    <div
+                                        class="absolute inset-4 bg-white rounded-full flex items-center justify-center flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">Total</span>
+                                        <span class="text-sm font-bold text-slate-900">$12k</span>
+                                    </div>
+                                </div>
+                                <!-- Legend Table -->
+                                <table class="w-full text-xs">
+                                    <tbody>
+                                        <tr class="border-b border-gray-50 last:border-0">
+                                            <td class="py-1.5 flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full bg-[#4285F4]"></div> AdMob
+                                            </td>
+                                            <td class="text-right font-medium">40%</td>
+                                            <td class="text-right text-gray-500">$4.9k</td>
+                                        </tr>
+                                        <tr class="border-b border-gray-50 last:border-0">
+                                            <td class="py-1.5 flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full bg-[#EA4335]"></div> AppLovin
+                                            </td>
+                                            <td class="text-right font-medium">30%</td>
+                                            <td class="text-right text-gray-500">$3.7k</td>
+                                        </tr>
+                                        <tr class="border-b border-gray-50 last:border-0">
+                                            <td class="py-1.5 flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full bg-[#FBBC04]"></div> Unity
+                                            </td>
+                                            <td class="text-right font-medium">20%</td>
+                                            <td class="text-right text-gray-500">$2.5k</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-1.5 flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full bg-[#E2E8F0]"></div> Others
+                                            </td>
+                                            <td class="text-right font-medium">10%</td>
+                                            <td class="text-right text-gray-500">$1.2k</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Bottom Half: Live Operations Log -->
+                        <div
+                            class="flex-1 bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-4 flex flex-col overflow-hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <h2 class="text-sm font-bold text-slate-800">Live Operations Log</h2>
+                                <span class="flex h-2 w-2 relative">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto pr-1 space-y-2 text-xs">
+                                <div class="flex gap-2">
+                                    <span class="text-gray-400 font-mono text-[10px] pt-0.5">10:42:15</span>
+                                    <p class="text-slate-700 leading-snug"><span
+                                            class="font-semibold text-primary">Waterfall updated</span> for App ID 892
+                                        (Game_Zone_iOS)</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="text-gray-400 font-mono text-[10px] pt-0.5">10:40:02</span>
+                                    <p class="text-slate-700 leading-snug"><span
+                                            class="font-semibold text-orange-600">Sync Warning:</span> IronSource API
+                                        latency &gt; 200ms</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="text-gray-400 font-mono text-[10px] pt-0.5">10:38:55</span>
+                                    <p class="text-slate-700 leading-snug">New ad unit detected for <span
+                                            class="font-medium">Travel_Buddy_Android</span></p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="text-gray-400 font-mono text-[10px] pt-0.5">10:35:12</span>
+                                    <p class="text-slate-700 leading-snug">Scheduled Report #1024 completed successfully
+                                    </p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="text-gray-400 font-mono text-[10px] pt-0.5">10:31:00</span>
+                                    <p class="text-slate-700 leading-snug">User <span class="font-medium">Mike S.</span>
+                                        changed mediation groups for <span class="underline decoration-dotted">Group
+                                            A</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tables Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
+                    <!-- Left Table: Top Apps -->
+                    <div
+                        class="bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h2 class="text-sm font-bold text-slate-800">Top Apps by Revenue Change</h2>
+                            <button class="text-xs text-primary font-medium hover:underline">View All</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-2 w-1/2">App Name</th>
+                                        <th class="px-4 py-2">Platform</th>
+                                        <th class="px-4 py-2 text-right">Revenue</th>
+                                        <th class="px-4 py-2 text-right">% Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 shadow-sm shrink-0"
+                                                    data-alt="Blue gradient app icon"></div>
+                                                <div>
+                                                    <p class="font-medium text-slate-900">Word Master Pro</p>
+                                                    <p class="text-[10px] text-gray-400">ID: 48291</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span
+                                                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200">
+                                                <span class="material-symbols-outlined text-[12px]">android</span>
+                                                Android
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-slate-700">$1,240</td>
+                                        <td class="px-4 py-3 text-right">
+                                            <span
+                                                class="text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded border border-green-100">+15.2%</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 shadow-sm shrink-0"
+                                                    data-alt="Purple pink gradient app icon"></div>
+                                                <div>
+                                                    <p class="font-medium text-slate-900">Pixel Dungeon</p>
+                                                    <p class="text-[10px] text-gray-400">ID: 99210</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span
+                                                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200">
+                                                <span class="material-symbols-outlined text-[12px]">phone_iphone</span>
+                                                iOS
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-slate-700">$980</td>
+                                        <td class="px-4 py-3 text-right">
+                                            <span
+                                                class="text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded border border-green-100">+8.4%</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-red-500 shadow-sm shrink-0"
+                                                    data-alt="Orange red gradient app icon"></div>
+                                                <div>
+                                                    <p class="font-medium text-slate-900">Candy Smash 3D</p>
+                                                    <p class="text-[10px] text-gray-400">ID: 11029</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span
+                                                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200">
+                                                <span class="material-symbols-outlined text-[12px]">android</span>
+                                                Android
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-slate-700">$2,105</td>
+                                        <td class="px-4 py-3 text-right">
+                                            <span
+                                                class="text-red-600 font-medium bg-red-50 px-1.5 py-0.5 rounded border border-red-100">-3.1%</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-cyan-500 shadow-sm shrink-0"
+                                                    data-alt="Teal cyan gradient app icon"></div>
+                                                <div>
+                                                    <p class="font-medium text-slate-900">Solitaire Zen</p>
+                                                    <p class="text-[10px] text-gray-400">ID: 33491</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span
+                                                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200">
+                                                <span class="material-symbols-outlined text-[12px]">phone_iphone</span>
+                                                iOS
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-slate-700">$450</td>
+                                        <td class="px-4 py-3 text-right">
+                                            <span
+                                                class="text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded border border-green-100">+22.1%</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Right Table: Ad Network Health -->
+                    <div
+                        class="bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h2 class="text-sm font-bold text-slate-800">Ad Network Health</h2>
+                            <div class="flex gap-2 text-[10px] text-gray-500">
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2 h-2 rounded-full bg-green-500"></span> Online</span>
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2 h-2 rounded-full bg-yellow-500"></span> Degraded</span>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-2 w-1/3">Network</th>
+                                        <th class="px-4 py-2 text-right">Latency</th>
+                                        <th class="px-4 py-2 text-right">Fill Rate</th>
+                                        <th class="px-4 py-2 w-1/3">Match Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div
+                                                    class="w-6 h-6 rounded bg-[#4285F4] flex items-center justify-center text-white text-[10px] font-bold">
+                                                    A</div>
+                                                <span class="font-medium text-slate-900">AdMob</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-green-600">45ms</td>
+                                        <td class="px-4 py-3 text-right text-slate-700">98%</td>
+                                        <td class="px-4 py-3 align-middle">
+                                            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full bg-green-500 rounded-full" style="width: 99%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div
+                                                    class="w-6 h-6 rounded bg-[#1877F2] flex items-center justify-center text-white text-[10px] font-bold">
+                                                    M</div>
+                                                <span class="font-medium text-slate-900">Meta Audience</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-green-600">62ms</td>
+                                        <td class="px-4 py-3 text-right text-slate-700">94%</td>
+                                        <td class="px-4 py-3 align-middle">
+                                            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full bg-blue-500 rounded-full" style="width: 94%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div
+                                                    class="w-6 h-6 rounded bg-black flex items-center justify-center text-white text-[10px] font-bold">
+                                                    U</div>
+                                                <span class="font-medium text-slate-900">Unity Ads</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-yellow-600">120ms</td>
+                                        <td class="px-4 py-3 text-right text-slate-700">88%</td>
+                                        <td class="px-4 py-3 align-middle">
+                                            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full bg-yellow-500 rounded-full" style="width: 88%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div
+                                                    class="w-6 h-6 rounded bg-[#EA4335] flex items-center justify-center text-white text-[10px] font-bold">
+                                                    A</div>
+                                                <span class="font-medium text-slate-900">AppLovin</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-mono text-green-600">55ms</td>
+                                        <td class="px-4 py-3 text-right text-slate-700">92%</td>
+                                        <td class="px-4 py-3 align-middle">
+                                            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full bg-blue-500 rounded-full" style="width: 92%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

@@ -3,16 +3,16 @@
   "name": "my-app",
   "private": true,
   "dependencies": {
-    "@abp/aspnetcore.mvc.ui.theme.leptonxlite": "~5.0.2",
-    "@abp/aspnetcore.components.server.leptonxlitetheme": "~5.0.2"
+    "@abp/aspnetcore.components.server.leptonxlitetheme": "~5.0.2",
+    "@abp/aspnetcore.mvc.ui.theme.leptonxlite": "~5.0.2"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.1",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.33"
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19"
   },
   "scripts": {
-    "build:css": "tailwindcss -i ./wwwroot/tailwind.css -o ./wwwroot/tailwind-output.css --minify",
-    "watch:css": "tailwindcss -i ./wwwroot/tailwind.css -o ./wwwroot/tailwind-output.css --watch"
+    "build:css": "npx tailwindcss -i ./wwwroot/tailwind.css -o ./wwwroot/tailwind-output.css --minify",
+    "watch:css": "npx tailwindcss -i ./wwwroot/tailwind.css -o ./wwwroot/tailwind-output.css --watch"
   }
 }

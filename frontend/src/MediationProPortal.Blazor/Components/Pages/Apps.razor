@@ -1,36 +1,256 @@
 @page "/apps"
-@page "/apps/{AppId:int}"
-@using MediationProPortal.Blazor.Components
-@inherits MediationProPortalComponentBase
 @inject NavigationManager NavigationManager
 
-<PageTitle>Apps</PageTitle>
+<PageTitle>Waterfall Management</PageTitle>
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2>Apps</h2>
-            <p class="text-muted">View and manage your AdMob apps</p>
-        </div>
-    </div>
+<div class="apps-content">
+    <!-- Header -->
+    <header class="bg-white border-bottom sticky-top" style="height: 60px; z-index: 99;">
+        <div class="container-fluid h-100 d-flex align-items-center justify-content-between px-4">
+            <div class="d-flex align-items-center gap-3">
+                <a href="#" class="btn btn-sm btn-light border" @onclick="GoBack" @onclick:preventDefault>
+                    <span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                </a>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0 align-items-center">
+                        <li class="breadcrumb-item">
+                            <a href="#" class="text-decoration-none text-secondary"
+                                @onclick="() => NavigateToApp(AppName)" @onclick:preventDefault>@AppName</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="#" class="text-decoration-none text-secondary"
+                                @onclick="() => NavigateToAdUnit(AdUnitName)" @onclick:preventDefault>@AdUnitName</a>
+                        </li>
+                        <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">@MediationGroupName
+                        </li>
+                    </ol>
+                </nav>
+                <span class="badge bg-success-subtle text-success border border-success-subtle">@Status</span>
+            </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">AdMob Apps</h5>
+            <div class="d-flex align-items-center gap-4">
+                <div class="d-flex gap-4 border-end pe-4">
+                    <div class="text-end">
+                        <div class="text-xs text-secondary">Est. Earnings (7d)</div>
+                        <div class="fw-bold text-dark">$@EstimatedEarnings7d.ToString("F2")</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-xs text-secondary">Observed eCPM</div>
+                        <div class="fw-bold text-primary">$@ObservedECPM.ToString("F2")</div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    @if (AppId > 0)
-                    {
-                        <p>App Detail View - App ID: @AppId</p>
-                        <button class="btn btn-secondary" @onclick="NavigateToList">Back to Apps List</button>
-                    }
-                    else
-                    {
-                        <p>Loading apps list from backend API...</p>
-                        <!-- TODO: Implement apps list and detail view -->
-                    }
+                <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
+                    disabled="@(!HasUnsavedChanges)" @onclick="ApplyChanges">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">save</span> Apply Changes
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Unsaved Changes Warning -->
+    @if (HasUnsavedChanges)
+    {
+        <div
+            class="bg-warning-subtle text-warning-emphasis border-bottom px-4 py-2 d-flex align-items-center justify-content-between text-xs fw-medium">
+            <div class="d-flex align-items-center gap-2">
+                <span class="material-symbols-outlined icon-sm">info</span>
+                You have unsaved changes in the Waterfall configuration.
+            </div>
+            <div class="d-flex gap-2">
+                <a href="#" class="text-decoration-underline text-warning-emphasis" @onclick="DiscardChanges"
+                    @onclick:preventDefault>Discard</a>
+                <a href="#" class="text-decoration-underline text-warning-emphasis" @onclick="SimulateImpact"
+                    @onclick:preventDefault>Simulate Impact</a>
+            </div>
+        </div>
+    }
+
+    <div class="container-fluid px-4 py-4">
+        <div class="row g-4">
+            <!-- Left Column: Waterfall Configuration -->
+            <div class="col-xl-8 col-lg-7">
+                <!-- Real-time Bidding Section -->
+                <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                        <h6 class="text-uppercase text-xs fw-bold text-secondary mb-0">Real-time Bidding (Auto)</h6>
+                        <span class="badge bg-light text-secondary border">@BiddingSources.Count Sources</span>
+                    </div>
+
+                    <div class="card border border-light-subtle shadow-sm overflow-hidden">
+                        <div class="bg-light border-bottom px-3 py-2 d-flex text-xs fw-bold text-secondary">
+                            <div style="width: 40px;"></div>
+                            <div class="col">Ad Source</div>
+                            <div class="col-2 text-end">Observed eCPM</div>
+                            <div class="col-2 text-end">Status</div>
+                        </div>
+
+                        @foreach (var source in BiddingSources)
+                        {
+                            var borderClass = source != BiddingSources.Last() ? "border-bottom" : "";
+                            <div class="px-3 py-2 @borderClass bg-white d-flex align-items-center">
+                                <div style="width: 40px;" class="text-center text-secondary">
+                                    <span class="material-symbols-outlined text-xs">lock</span>
+                                </div>
+                                <div class="col d-flex align-items-center gap-2">
+                                    <div class="network-logo @GetNetworkBgClass(source.Network)">
+                                        @GetNetworkInitial(source.Network)
+                                    </div>
+                                    <span class="fw-medium text-dark">@source.Name</span>
+                                </div>
+                                <div class="col-2 text-end">
+                                    <span class="font-mono fw-bold text-dark">$@source.ObservedECPM.ToString("F2")</span>
+                                </div>
+                                <div class="col-2 text-end">
+                                    <span class="badge bg-success-subtle text-success">Bidding</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Manual Waterfall Section -->
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                        <h6 class="text-uppercase text-xs fw-bold text-secondary mb-0">Manual Waterfall</h6>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-white border text-secondary hover-primary text-xs"
+                                @onclick="OptimizeOrder">
+                                Optimize Order
+                            </button>
+                            <button class="btn btn-sm btn-white border text-secondary hover-primary text-xs"
+                                @onclick="ImportCsv">
+                                CSV Import
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2">
+                        <div class="px-3 py-1 d-flex text-xs fw-bold text-secondary">
+                            <div style="width: 40px;"></div>
+                            <div class="col-4">Ad Source</div>
+                            <div class="col-3">eCPM Floor</div>
+                            <div class="col-2 text-end">Hist. eCPM</div>
+                            <div class="col-2 text-end">Actions</div>
+                        </div>
+
+                        @foreach (var item in WaterfallItems)
+                        {
+                            <div
+                                class="waterfall-item rounded p-2 d-flex align-items-center @(item.IsEnabled ? "" : "bg-light opacity-75")">
+                                <div style="width: 40px;" class="text-center drag-handle">
+                                    <span class="material-symbols-outlined icon-sm">drag_indicator</span>
+                                </div>
+                                <div class="col-4 d-flex align-items-center gap-2">
+                                    <div class="network-logo @GetNetworkBgClass(item.Network)">
+                                        @GetNetworkInitial(item.Network)</div>
+                                    <div>
+                                        <div class="fw-medium text-dark text-sm">@item.Name</div>
+                                        <div class="text-2xs text-secondary">Instance: @item.InstanceName</div>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light text-secondary border-end-0">$</span>
+                                        <input type="text"
+                                            class="form-control input-ecpm border-start-0 @(item.IsEnabled ? "" : "text-secondary")"
+                                            value="@item.ECPMFloor.ToString("F2")"
+                                            @onchange="(e) => UpdateECPMFloor(item, e.Value?.ToString())"
+                                            @oninput="(e) => OnECPMChanged(item)" />
+                                    </div>
+                                </div>
+                                <div class="col-2 text-end">
+                                    <span
+                                        class="font-mono text-xs text-secondary">$@item.HistoricalECPM.ToString("F2")</span>
+                                </div>
+                                <div class="col-2 d-flex justify-content-end align-items-center gap-2">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" checked="@item.IsEnabled"
+                                            @onchange="(e) => ToggleItem(item, e.Value is bool value && value)" />
+                                    </div>
+                                    <button class="btn btn-sm btn-light text-danger p-1 lh-1"
+                                        @onclick="() => DeleteItem(item)">
+                                        <span class="material-symbols-outlined icon-sm">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <button
+                            class="btn btn-dashed w-100 py-2 mt-2 d-flex align-items-center justify-content-center gap-2"
+                            @onclick="AddAdSource">
+                            <span class="material-symbols-outlined icon-sm">add</span> Add Ad Source
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Performance Charts -->
+            <div class="col-xl-4 col-lg-5">
+                <!-- Performance Chart -->
+                <div class="card border border-light-subtle shadow-sm mb-4">
+                    <div
+                        class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="card-title m-0 text-sm fw-bold">Performance (Last 7 Days)</h6>
+                        <select class="form-select form-select-sm w-auto py-0 text-xs" style="height: 24px;"
+                            @bind="PerformanceMetric" @bind:after="OnPerformanceMetricChanged">
+                            <option value="ecpm">eCPM</option>
+                            <option value="revenue">Revenue</option>
+                        </select>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="position-relative">
+                            <svg class="chart-svg" viewBox="0 0 300 150">
+                                <line x1="0" y1="150" x2="300" y2="150" stroke="#f1f5f9" stroke-width="1" />
+                                <line x1="0" y1="100" x2="300" y2="100" stroke="#f1f5f9" stroke-width="1" />
+                                <line x1="0" y1="50" x2="300" y2="50" stroke="#f1f5f9" stroke-width="1" />
+                                <polyline points="@PerformanceChartPoints" fill="none" stroke="#4f46e5"
+                                    stroke-width="2" />
+                                <polygon points="@PerformanceChartPolygon" fill="rgba(79, 70, 229, 0.05)" />
+                            </svg>
+                            <div
+                                class="position-absolute top-0 end-0 bg-white border rounded px-2 py-1 text-2xs shadow-sm">
+                                <span class="badge-dot bg-primary"></span> Current: $@ObservedECPM.ToString("F2")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Waterfall Predictor -->
+                <div class="card border border-light-subtle shadow-sm">
+                    <div
+                        class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined text-primary icon-sm">insights</span>
+                            <h6 class="card-title m-0 text-sm fw-bold">Waterfall Predictor</h6>
+                        </div>
+                        <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle">Simulated</span>
+                    </div>
+                    <div class="card-body p-3">
+                        @if (HasPrediction)
+                        {
+                            <p class="text-xs text-secondary mb-3">
+                                Increasing the floor price of <span class="fw-bold text-dark">@PredictionSourceName</span>
+                                to <span class="fw-bold text-primary">$@PredictionNewFloor.ToString("F2")</span> may reduce
+                                fill rate by <span class="text-danger fw-bold">@PredictionFillRateReduction%</span>.
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-xs text-secondary mb-3">
+                                Make changes to see simulation predictions.
+                            </p>
+                        }
+                        <svg class="chart-svg" viewBox="0 0 300 120">
+                            <path d="M10,110 C80,110 120,80 280,20" fill="none" stroke="#cbd5e1" stroke-width="2"
+                                stroke-dasharray="4" />
+                            <path d="M10,110 C80,110 100,60 280,40" fill="none" stroke="#f59e0b" stroke-width="2" />
+                            <circle cx="160" cy="55" r="4" fill="#f59e0b" />
+                        </svg>
+                        <div class="d-flex justify-content-between text-2xs text-secondary mt-2">
+                            <span>Low Floor</span>
+                            <span>High Floor</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -38,11 +258,247 @@
 </div>
 
 @code {
-    [Parameter]
-    public int AppId { get; set; }
+    // Data Models
+    private class BiddingSource
+    {
+        public string Network { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public decimal ObservedECPM { get; set; }
+    }
 
-    private void NavigateToList()
+    private class WaterfallItem
+    {
+        public int Id { get; set; }
+        public string Network { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string InstanceName { get; set; } = string.Empty;
+        public decimal ECPMFloor { get; set; }
+        public decimal HistoricalECPM { get; set; }
+        public bool IsEnabled { get; set; }
+        public decimal? OriginalECPMFloor { get; set; } // Track original value for change detection
+    }
+
+    // State
+    private string AppName = "Galaxy Shooter";
+    private string AdUnitName = "Interstitial";
+    private string MediationGroupName = "US - High Floor";
+    private string Status = "Active";
+    private decimal EstimatedEarnings7d = 1240.50m;
+    private decimal ObservedECPM = 12.50m;
+    private bool HasUnsavedChanges = false;
+    private string PerformanceMetric = "ecpm";
+    private bool HasPrediction = false;
+    private string PredictionSourceName = "Unity Ads";
+    private decimal PredictionNewFloor = 15.00m;
+    private int PredictionFillRateReduction = 5;
+
+    private List<BiddingSource> BiddingSources = new();
+    private List<WaterfallItem> WaterfallItems = new();
+
+    // Chart Data
+    private string PerformanceChartPoints = "0,120 50,110 100,80 150,90 200,40 250,50 300,30";
+    private string PerformanceChartPolygon = "0,150 0,120 50,110 100,80 150,90 200,40 250,50 300,30 300,150";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        // TODO: Replace with actual API calls
+        await Task.Delay(500);
+
+        // Load Bidding Sources
+        BiddingSources = new List<BiddingSource>
+{
+new BiddingSource { Network = "meta", Name = "Meta Audience Network", ObservedECPM = 11.20m },
+new BiddingSource { Network = "applovin", Name = "AppLovin (Bidding)", ObservedECPM = 10.85m }
+};
+
+        // Load Waterfall Items
+        WaterfallItems = new List<WaterfallItem>
+{
+new WaterfallItem
+{
+Id = 1,
+Network = "unity",
+Name = "Unity Ads",
+InstanceName = "High_Floor_01",
+ECPMFloor = 15.00m,
+HistoricalECPM = 14.80m,
+IsEnabled = true,
+OriginalECPMFloor = 15.00m
+},
+new WaterfallItem
+{
+Id = 2,
+Network = "ironsource",
+Name = "IronSource",
+InstanceName = "US_IS_02",
+ECPMFloor = 12.50m,
+HistoricalECPM = 11.90m,
+IsEnabled = true,
+OriginalECPMFloor = 12.50m
+},
+new WaterfallItem
+{
+Id = 3,
+Network = "vungle",
+Name = "Vungle",
+InstanceName = "Vungle_Backfill",
+ECPMFloor = 8.00m,
+HistoricalECPM = 7.50m,
+IsEnabled = false,
+OriginalECPMFloor = 8.00m
+}
+};
+    }
+
+    private void OnECPMChanged(WaterfallItem item)
+    {
+        CheckForUnsavedChanges();
+    }
+
+    private void UpdateECPMFloor(WaterfallItem item, string? value)
+    {
+        if (decimal.TryParse(value, out decimal newFloor))
+        {
+            item.ECPMFloor = newFloor;
+            CheckForUnsavedChanges();
+            UpdatePrediction(item);
+        }
+    }
+
+    private void ToggleItem(WaterfallItem item, bool isEnabled)
+    {
+        item.IsEnabled = isEnabled;
+        CheckForUnsavedChanges();
+    }
+
+    private void DeleteItem(WaterfallItem item)
+    {
+        WaterfallItems.Remove(item);
+        CheckForUnsavedChanges();
+    }
+
+    private void CheckForUnsavedChanges()
+    {
+        HasUnsavedChanges = WaterfallItems.Any(item =>
+        item.ECPMFloor != item.OriginalECPMFloor ||
+        item.IsEnabled != (item.OriginalECPMFloor.HasValue));
+    }
+
+    private void UpdatePrediction(WaterfallItem item)
+    {
+        if (item.IsEnabled && item.ECPMFloor > item.OriginalECPMFloor)
+        {
+            HasPrediction = true;
+            PredictionSourceName = item.Name;
+            PredictionNewFloor = item.ECPMFloor;
+            PredictionFillRateReduction = (int)((item.ECPMFloor - item.OriginalECPMFloor.Value) / item.OriginalECPMFloor.Value *
+            100);
+        }
+        else
+        {
+            HasPrediction = false;
+        }
+    }
+
+    private async Task ApplyChanges()
+    {
+        // TODO: Implement API call to save changes
+        await Task.Delay(500);
+
+        // Update original values
+        foreach (var item in WaterfallItems)
+        {
+            item.OriginalECPMFloor = item.ECPMFloor;
+        }
+
+        HasUnsavedChanges = false;
+        HasPrediction = false;
+    }
+
+    private void DiscardChanges()
+    {
+        // Restore original values
+        foreach (var item in WaterfallItems)
+        {
+            if (item.OriginalECPMFloor.HasValue)
+            {
+                item.ECPMFloor = item.OriginalECPMFloor.Value;
+            }
+        }
+
+        HasUnsavedChanges = false;
+        HasPrediction = false;
+    }
+
+    private void SimulateImpact()
+    {
+        // TODO: Implement simulation
+    }
+
+    private void OptimizeOrder()
+    {
+        // TODO: Implement optimize order
+    }
+
+    private void ImportCsv()
+    {
+        // TODO: Implement CSV import
+    }
+
+    private void AddAdSource()
+    {
+        // TODO: Implement add ad source modal
+    }
+
+    private void OnPerformanceMetricChanged()
+    {
+        // TODO: Update chart based on selected metric
+    }
+
+    private void GoBack()
     {
         NavigationManager.NavigateTo("/apps");
+    }
+
+    private void NavigateToApp(string appName)
+    {
+        NavigationManager.NavigateTo("/apps");
+    }
+
+    private void NavigateToAdUnit(string adUnitName)
+    {
+        // TODO: Navigate to ad unit page
+    }
+
+    // Helper Methods
+    private string GetNetworkBgClass(string network)
+    {
+        return network.ToLower() switch
+        {
+            "meta" => "bg-meta",
+            "unity" => "bg-unity",
+            "applovin" => "bg-applovin",
+            "ironsource" => "bg-ironsource",
+            "vungle" => "bg-vungle",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetNetworkInitial(string network)
+    {
+        return network.ToLower() switch
+        {
+            "meta" => "M",
+            "unity" => "U",
+            "applovin" => "A",
+            "ironsource" => "is",
+            "vungle" => "V",
+            _ => network.Substring(0, 1).ToUpper()
+        };
     }
 }

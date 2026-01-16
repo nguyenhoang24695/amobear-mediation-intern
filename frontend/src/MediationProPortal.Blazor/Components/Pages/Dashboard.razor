@@ -4,25 +4,519 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2>Dashboard</h2>
-            <p class="text-muted">Overview of all AdMob apps in your account</p>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">AdMob Apps Overview</h5>
+<!-- Dashboard Content Wrapper - All original HTML structure and classes preserved -->
+<div class="dashboard-content flex-1 flex flex-col min-w-0 h-full">
+    <!-- Scrollable Content Area -->
+    <main class="flex-1 overflow-y-auto p-6 scroll-smooth">
+        <div class="max-w-[1600px] mx-auto space-y-6">
+            <!-- KPI Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- KPI Card 1: Est. Earnings -->
+                <div class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Est. Earnings</h3>
+                        <span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">+12%</span>
+                    </div>
+                    <div class="flex items-end gap-2 mt-1">
+                        <span class="text-2xl font-bold text-slate-900">$12,450</span>
+                    </div>
+                    <!-- Sparkline -->
+                    <div class="h-8 mt-auto w-full relative">
+                        <svg class="w-full h-full text-primary opacity-20 group-hover:opacity-40 transition-opacity" preserveAspectRatio="none" viewBox="0 0 100 20">
+                            <path d="M0 15 Q 10 18, 20 12 T 40 10 T 60 14 T 80 5 T 100 8 L 100 20 L 0 20 Z" fill="currentColor"></path>
+                            <path class="text-primary opacity-100" d="M0 15 Q 10 18, 20 12 T 40 10 T 60 14 T 80 5 T 100 8" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p>Loading apps data from backend API...</p>
-                    <!-- TODO: Implement dashboard with app statistics -->
+
+                <!-- KPI Card 2: eCPM -->
+                <div class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">eCPM</h3>
+                        <span class="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">@ECPMChange%</span>
+                    </div>
+                    <div class="flex items-end gap-2 mt-1">
+                        <span class="text-2xl font-bold text-slate-900">$@FormatCurrency(AvgECPM)</span>
+                    </div>
+                    <!-- Sparkline -->
+                    <div class="h-8 mt-auto w-full relative">
+                        <svg class="w-full h-full text-red-500 opacity-20 group-hover:opacity-40 transition-opacity" preserveAspectRatio="none" viewBox="0 0 100 20">
+                            <path d="M0 5 Q 10 8, 20 10 T 40 12 T 60 11 T 80 16 T 100 18 L 100 20 L 0 20 Z" fill="currentColor"></path>
+                            <path class="text-red-500 opacity-100" d="M0 5 Q 10 8, 20 10 T 40 12 T 60 11 T 80 16 T 100 18" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- KPI Card 3: Impressions -->
+                <div class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Impressions</h3>
+                        <span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">+@ImpressionsChange%</span>
+                    </div>
+                    <div class="flex items-end gap-2 mt-1">
+                        <span class="text-2xl font-bold text-slate-900">@FormatNumber(TotalImpressions)</span>
+                    </div>
+                    <!-- Sparkline -->
+                    <div class="h-8 mt-auto w-full relative">
+                        <svg class="w-full h-full text-green-500 opacity-20 group-hover:opacity-40 transition-opacity" preserveAspectRatio="none" viewBox="0 0 100 20">
+                            <path d="M0 18 Q 10 15, 20 14 T 40 10 T 60 8 T 80 5 T 100 2 L 100 20 L 0 20 Z" fill="currentColor"></path>
+                            <path class="text-green-500 opacity-100" d="M0 18 Q 10 15, 20 14 T 40 10 T 60 8 T 80 5 T 100 2" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- KPI Card 4: Match Rate -->
+                <div class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Match Rate</h3>
+                        <span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium flex items-center">+@MatchRateChange%</span>
+                    </div>
+                    <div class="flex items-end gap-2 mt-1">
+                        <span class="text-2xl font-bold text-slate-900">@MatchRate%</span>
+                    </div>
+                    <!-- Sparkline -->
+                    <div class="h-8 mt-auto w-full relative">
+                        <svg class="w-full h-full text-indigo-400 opacity-20 group-hover:opacity-40 transition-opacity" preserveAspectRatio="none" viewBox="0 0 100 20">
+                            <path d="M0 10 Q 10 10, 20 11 T 40 9 T 60 10 T 80 10 T 100 8 L 100 20 L 0 20 Z" fill="currentColor"></path>
+                            <path class="text-indigo-400 opacity-100" d="M0 10 Q 10 10, 20 11 T 40 9 T 60 10 T 80 10 T 100 8" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- KPI Card 5: Active Ad Units -->
+                <div class="bg-white p-4 rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-32 relative overflow-hidden group">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Ad Units</h3>
+                    </div>
+                    <div class="flex items-end gap-2 mt-1">
+                        <span class="text-2xl font-bold text-slate-900">@ActiveAdUnits</span>
+                    </div>
+                    <div class="mt-auto flex items-center gap-1 text-xs text-gray-500">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> @HealthyAdUnits% Healthy
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-12 gap-6 h-[400px]">
+                <!-- Main Chart: Revenue & eCPM -->
+                <div class="col-span-12 lg:col-span-8 bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-5 flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-sm font-bold text-slate-800">Revenue &amp; eCPM Trends</h2>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-3 h-0.5 bg-blue-600"></span>
+                                <span class="text-gray-600">Revenue</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-3 h-0.5 border-t border-dashed border-purple-600"></span>
+                                <span class="text-gray-600">eCPM</span>
+                            </div>
+                            <select @bind="selectedTimeRange" class="text-xs bg-gray-50 border-gray-200 rounded py-1 pl-2 pr-6 focus:ring-primary focus:border-primary">
+                                <option value="30">Last 30 Days</option>
+                                <option value="7">Last 7 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Chart Area Placeholder (Simulated) -->
+                    <div class="flex-1 w-full relative">
+                        <!-- Y-Axis Labels Left (Revenue) -->
+                        <div class="absolute left-0 top-0 bottom-8 w-8 flex flex-col justify-between text-[10px] text-gray-400 text-right pr-2">
+                            <span>$15k</span>
+                            <span>$10k</span>
+                            <span>$5k</span>
+                            <span>$0</span>
+                        </div>
+                        <!-- Y-Axis Labels Right (eCPM) -->
+                        <div class="absolute right-0 top-0 bottom-8 w-8 flex flex-col justify-between text-[10px] text-gray-400 text-left pl-2">
+                            <span>$6.0</span>
+                            <span>$4.0</span>
+                            <span>$2.0</span>
+                            <span>$0</span>
+                        </div>
+                        <!-- Chart Canvas Area -->
+                        <div class="absolute left-10 right-10 top-2 bottom-8 border-l border-b border-gray-100 bg-[linear-gradient(to_right,#f9fafb_1px,transparent_1px),linear-gradient(to_bottom,#f9fafb_1px,transparent_1px)] bg-[size:40px_40px]">
+                            <!-- Simulated Line Chart -->
+                            <svg class="w-full h-full overflow-visible" preserveAspectRatio="none">
+                                <!-- Revenue Line (Blue) -->
+                                <path d="M0 80 Q 50 70, 100 65 T 200 60 T 300 40 T 400 30 T 500 45 T 600 20 T 700 15 T 800 10" fill="none" stroke="#2563EB" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+                                <!-- eCPM Line (Purple Dashed) -->
+                                <path d="M0 60 Q 50 55, 100 58 T 200 50 T 300 45 T 400 48 T 500 55 T 600 50 T 700 45 T 800 40" fill="none" stroke="#9333EA" stroke-dasharray="4,4" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+                                <!-- Hover Dot (Simulated) -->
+                                <circle cx="600" cy="20" fill="white" r="4" stroke="#2563EB" stroke-width="2"></circle>
+                                <!-- Tooltip -->
+                                <g transform="translate(560, -20)">
+                                    <rect fill="#1e293b" height="35" rx="4" width="90"></rect>
+                                    <text fill="white" font-size="10" font-weight="bold" text-anchor="middle" x="45" y="15">$@FormatCurrency(TotalRevenue)</text>
+                                    <text fill="#94a3b8" font-size="9" text-anchor="middle" x="45" y="28">@DateTime.Now.ToString("MMM dd")</text>
+                                </g>
+                            </svg>
+                        </div>
+                        <!-- X-Axis Labels -->
+                        <div class="absolute left-10 right-10 bottom-0 h-6 flex justify-between text-[10px] text-gray-400">
+                            @foreach (var date in ChartDates)
+                            {
+                                <span>@date</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column Split -->
+                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6 h-full">
+                    <!-- Top Half: Share of Wallet -->
+                    <div class="flex-1 bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-4 flex flex-col">
+                        <h2 class="text-sm font-bold text-slate-800 mb-2">Share of Wallet</h2>
+                        <div class="flex items-center h-full gap-4">
+                            <!-- Donut Chart CSS -->
+                            <div class="w-28 h-28 shrink-0 rounded-full relative" style="background: @GetSoWGradient();">
+                                <div class="absolute inset-4 bg-white rounded-full flex items-center justify-center flex-col">
+                                    <span class="text-xs text-gray-500 font-medium">Total</span>
+                                    <span class="text-sm font-bold text-slate-900">$@FormatCurrencyShort(TotalRevenue)</span>
+                                </div>
+                            </div>
+                            <!-- Legend Table -->
+                            <table class="w-full text-xs">
+                                <tbody>
+                                    @foreach (var item in ShareOfWallet)
+                                    {
+                                        <tr class="border-b border-gray-50 last:border-0">
+                                            <td class="py-1.5 flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full" style="background-color: @item.Color;"></div>
+                                                @item.Name
+                                            </td>
+                                            <td class="text-right font-medium">@item.Percentage%</td>
+                                            <td class="text-right text-gray-500">$@FormatCurrencyShort(item.Amount)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Half: Live Operations Log -->
+                    <div class="flex-1 bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-4 flex flex-col overflow-hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-sm font-bold text-slate-800">Live Operations Log</h2>
+                            <span class="flex h-2 w-2 relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto pr-1 space-y-2 text-xs">
+                            @if (OperationsLog.Count == 0)
+                            {
+                                <p class="text-gray-400 text-center py-4">No recent operations</p>
+                            }
+                            else
+                            {
+                                @foreach (var log in OperationsLog)
+                                {
+                                    <div class="flex gap-2">
+                                        <span class="text-gray-400 font-mono text-[10px] pt-0.5">@log.Time</span>
+                                        <p class="text-slate-700 leading-snug">
+                                            @if (!string.IsNullOrEmpty(log.Highlight))
+                                            {
+                                                <span class="font-semibold @log.HighlightClass">@log.Highlight:</span>
+                                            }
+                                            @log.Message
+                                        </p>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
+                <!-- Left Table: Top Apps -->
+                <div class="bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h2 class="text-sm font-bold text-slate-800">Top Apps by Revenue Change</h2>
+                        <button @onclick="ViewAllApps" class="text-xs text-primary font-medium hover:underline">View All</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                                <tr>
+                                    <th class="px-4 py-2 w-1/2">App Name</th>
+                                    <th class="px-4 py-2">Platform</th>
+                                    <th class="px-4 py-2 text-right">Revenue</th>
+                                    <th class="px-4 py-2 text-right">% Change</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @if (TopApps.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">No apps data</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var app in TopApps)
+                                    {
+                                        <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br @GetAppGradient(app.Id) shadow-sm shrink-0 flex items-center justify-center text-white font-bold text-xs">
+                                                        @GetAppInitial(app.Name)
+                                                    </div>
+                                                    <div>
+                                                        <p class="font-medium text-slate-900">@app.Name</p>
+                                                        <p class="text-[10px] text-gray-400">ID: @app.PackageName</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200">
+                                                    <span class="material-symbols-outlined text-[12px]">@GetPlatformIcon(app.Platform)</span>
+                                                    @app.Platform
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-mono text-slate-700">$@FormatCurrency(app.Revenue7d)</td>
+                                            <td class="px-4 py-3 text-right">
+                                                @if (app.RevenueChange >= 0)
+                                                {
+                                                    <span class="text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
+                                                        +@app.RevenueChange%
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-red-600 font-medium bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
+                                                        @app.RevenueChange%
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right Table: Ad Network Health -->
+                <div class="bg-white rounded border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h2 class="text-sm font-bold text-slate-800">Ad Network Health</h2>
+                        <div class="flex gap-2 text-[10px] text-gray-500">
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Online</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Degraded</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                                <tr>
+                                    <th class="px-4 py-2 w-1/3">Network</th>
+                                    <th class="px-4 py-2 text-right">Latency</th>
+                                    <th class="px-4 py-2 text-right">Fill Rate</th>
+                                    <th class="px-4 py-2 w-1/3">Match Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @if (NetworkHealth.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">No network data</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var network in NetworkHealth)
+                                    {
+                                        <tr class="zebra-stripes hover:bg-gray-50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-6 h-6 rounded @network.BgColor flex items-center justify-center text-white text-[10px] font-bold">
+                                                        @network.Initial
+                                                    </div>
+                                                    <span class="font-medium text-slate-900">@network.Name</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-mono @network.LatencyColor">@network.Latency</td>
+                                            <td class="px-4 py-3 text-right text-slate-700">@network.FillRate%</td>
+                                            <td class="px-4 py-3 align-middle">
+                                                <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div class="h-full @network.MatchRateColor rounded-full" style="width: @network.MatchRate%"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
+
+@code {
+    private string selectedTimeRange = "30";
+    private bool isLoading = true;
+
+    // KPI Data
+    private decimal TotalRevenue = 12450.00m;
+    private decimal RevenueChange = 12m;
+    private decimal AvgECPM = 4.20m;
+    private decimal ECPMChange = -2.1m;
+    private long TotalImpressions = 2400000;
+    private decimal ImpressionsChange = 5.4m;
+    private decimal MatchRate = 96.5m;
+    private decimal MatchRateChange = 0.5m;
+    private int ActiveAdUnits = 842;
+    private int HealthyAdUnits = 98;
+
+    // Chart Data
+    private List<string> ChartDates = new();
+    
+    // Share of Wallet
+    private List<SoWItem> ShareOfWallet = new();
+    
+    // Operations Log
+    private List<OperationLog> OperationsLog = new();
+    
+    // Top Apps
+    private List<TopApp> TopApps = new();
+    
+    // Network Health
+    private List<NetworkHealthItem> NetworkHealth = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        
+        // TODO: Replace with actual API calls
+        await Task.Delay(500); // Simulate API call
+        
+        // Generate chart dates
+        ChartDates = new List<string>();
+        var startDate = DateTime.Now.AddDays(-30);
+        for (int i = 0; i < 7; i++)
+        {
+            ChartDates.Add(startDate.AddDays(i * 5).ToString("MMM dd"));
+        }
+
+        // Share of Wallet
+        ShareOfWallet = new List<SoWItem>
+        {
+            new SoWItem { Name = "AdMob", Percentage = 40, Amount = 4900m, Color = "#4285F4" },
+            new SoWItem { Name = "AppLovin", Percentage = 30, Amount = 3700m, Color = "#EA4335" },
+            new SoWItem { Name = "Unity", Percentage = 20, Amount = 2500m, Color = "#FBBC04" },
+            new SoWItem { Name = "Others", Percentage = 10, Amount = 1200m, Color = "#E2E8F0" }
+        };
+
+        // Operations Log
+        OperationsLog = new List<OperationLog>
+        {
+            new OperationLog { Time = "10:42:15", Message = "Waterfall updated for App ID 892 (Game_Zone_iOS)", Highlight = "Waterfall updated", HighlightClass = "text-primary" },
+            new OperationLog { Time = "10:40:02", Message = "IronSource API latency > 200ms", Highlight = "Sync Warning:", HighlightClass = "text-orange-600" },
+            new OperationLog { Time = "10:38:55", Message = "New ad unit detected for Travel_Buddy_Android", Highlight = "", HighlightClass = "" },
+            new OperationLog { Time = "10:35:12", Message = "Scheduled Report #1024 completed successfully", Highlight = "", HighlightClass = "" },
+            new OperationLog { Time = "10:31:00", Message = "User Mike S. changed mediation groups for Group A", Highlight = "", HighlightClass = "" }
+        };
+
+        // Top Apps
+        TopApps = new List<TopApp>
+        {
+            new TopApp { Id = "1", Name = "Word Master Pro", PackageName = "48291", Platform = "Android", Revenue7d = 1240m, RevenueChange = 15.2m },
+            new TopApp { Id = "2", Name = "Pixel Dungeon", PackageName = "99210", Platform = "iOS", Revenue7d = 980m, RevenueChange = 8.4m },
+            new TopApp { Id = "3", Name = "Candy Smash 3D", PackageName = "11029", Platform = "Android", Revenue7d = 2105m, RevenueChange = -3.1m },
+            new TopApp { Id = "4", Name = "Solitaire Zen", PackageName = "33491", Platform = "iOS", Revenue7d = 450m, RevenueChange = 22.1m }
+        };
+
+        // Network Health
+        NetworkHealth = new List<NetworkHealthItem>
+        {
+            new NetworkHealthItem { Name = "AdMob", Initial = "A", BgColor = "bg-[#4285F4]", Latency = "45ms", LatencyColor = "text-green-600", FillRate = 98, MatchRate = 99, MatchRateColor = "bg-green-500" },
+            new NetworkHealthItem { Name = "Meta Audience", Initial = "M", BgColor = "bg-[#1877F2]", Latency = "62ms", LatencyColor = "text-green-600", FillRate = 94, MatchRate = 94, MatchRateColor = "bg-blue-500" },
+            new NetworkHealthItem { Name = "Unity Ads", Initial = "U", BgColor = "bg-black", Latency = "120ms", LatencyColor = "text-yellow-600", FillRate = 88, MatchRate = 88, MatchRateColor = "bg-yellow-500" },
+            new NetworkHealthItem { Name = "AppLovin", Initial = "A", BgColor = "bg-[#EA4335]", Latency = "55ms", LatencyColor = "text-green-600", FillRate = 92, MatchRate = 92, MatchRateColor = "bg-blue-500" }
+        };
+
+        isLoading = false;
+    }
+
+    private string FormatCurrency(decimal value) => value.ToString("N2");
+    private string FormatCurrencyShort(decimal value) => value >= 1000 ? $"{value / 1000:N1}k" : value.ToString("N0");
+    private string FormatNumber(long value) => value >= 1000000 ? $"{value / 1000000.0:N1}M" : value >= 1000 ? $"{value / 1000.0:N1}k" : value.ToString();
+
+    private string GetAppInitial(string name) => name.Length > 0 ? name[0].ToString() : "?";
+    
+    private string GetAppGradient(string appId)
+    {
+        var gradients = new Dictionary<string, string>
+        {
+            { "1", "from-blue-400 to-indigo-500" },
+            { "2", "from-purple-400 to-pink-500" },
+            { "3", "from-orange-400 to-red-500" },
+            { "4", "from-teal-400 to-cyan-500" }
+        };
+        return gradients.GetValueOrDefault(appId, "from-gray-400 to-gray-600");
+    }
+
+    private string GetPlatformIcon(string platform) => platform == "iOS" ? "phone_iphone" : "android";
+
+    private string GetSoWGradient()
+    {
+        var gradients = ShareOfWallet.Select((item, index) => 
+        {
+            var startPercent = index == 0 ? 0 : ShareOfWallet.Take(index).Sum(x => x.Percentage);
+            var endPercent = startPercent + item.Percentage;
+            return $"{item.Color} {startPercent}% {endPercent}%";
+        });
+        return $"conic-gradient({string.Join(", ", gradients)})";
+    }
+
+    private void ViewAllApps() { /* TODO: Navigate to apps page */ }
+
+    // Data models
+    private class SoWItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Percentage { get; set; }
+        public decimal Amount { get; set; }
+        public string Color { get; set; } = string.Empty;
+    }
+
+    private class OperationLog
+    {
+        public string Time { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Highlight { get; set; } = string.Empty;
+        public string HighlightClass { get; set; } = string.Empty;
+    }
+
+    private class TopApp
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string PackageName { get; set; } = string.Empty;
+        public string Platform { get; set; } = string.Empty;
+        public decimal Revenue7d { get; set; }
+        public decimal RevenueChange { get; set; }
+    }
+
+    private class NetworkHealthItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Initial { get; set; } = string.Empty;
+        public string BgColor { get; set; } = string.Empty;
+        public string Latency { get; set; } = string.Empty;
+        public string LatencyColor { get; set; } = string.Empty;
+        public int FillRate { get; set; }
+        public int MatchRate { get; set; }
+        public string MatchRateColor { get; set; } = string.Empty;
+    }
+}

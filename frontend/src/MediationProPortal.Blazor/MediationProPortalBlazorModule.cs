@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Blazorise;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Microsoft.AspNetCore.Builder;
@@ -168,8 +169,10 @@ public class MediationProPortalBlazorModule : AbpModule
                 bundle =>
                 {
                     bundle.AddFiles("/blazor-global-styles.css");
-                    // Tailwind CSS - Add after blazor-global-styles to allow overrides
-                    bundle.AddFiles("/tailwind-output.css");
+                    // Dashboard custom styles
+                    bundle.AddFiles("/dashboard-styles.css");
+                    // Apps custom styles
+                    bundle.AddFiles("/apps-styles.css");
                     //You can remove the following line if you don't use Blazor CSS isolation for components
                     bundle.AddFiles(new BundleFile("/MediationProPortal.Blazor.styles.css", true));
                 }
@@ -206,7 +209,19 @@ public class MediationProPortalBlazorModule : AbpModule
 
     private void ConfigureBlazorise(ServiceConfigurationContext context)
     {
+        var configuration = context.Services.GetConfiguration();
+        var productToken = configuration["Blazorise:ProductToken"];
+        
+        if (string.IsNullOrWhiteSpace(productToken))
+        {
+            throw new InvalidOperationException("Blazorise ProductToken is required. Please configure it in appsettings.json under 'Blazorise:ProductToken'");
+        }
+        
         context.Services
+            .AddBlazorise(options =>
+            {
+                options.ProductToken = productToken;
+            })
             .AddBootstrap5Providers()
             .AddFontAwesomeIcons();
     }
