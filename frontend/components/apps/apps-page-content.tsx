@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RefreshCw, Download, Search, X, Cloud, Smartphone, Layers, DollarSign } from "lucide-react"
+import { RefreshCw, Download, Search, X, Cloud, Smartphone, Layers, DollarSign, Loader2 } from "lucide-react"
 import { AppsTable } from "./apps-table"
 import { Card } from "@/components/ui/card"
+import { useApi } from "@/hooks/use-api"
+import { structureApi } from "@/lib/api/services"
 
 const platformOptions = ["All Platforms", "Android", "iOS"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
@@ -25,6 +27,24 @@ export function AppsPageContent() {
   const [network, setNetwork] = useState("All Networks")
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [selectedApps, setSelectedApps] = useState<string[]>([])
+
+  // Fetch apps from API with cache key to prevent duplicate calls
+  const { data: apps, loading: appsLoading, refetch: refetchApps } = useApi(
+    () => structureApi.getApps(),
+    { enabled: true, cacheKey: 'apps_list' }
+  )
+
+  // Calculate summary stats (basic stats only, detailed metrics are fetched in AppsTable)
+  const summaryStats = useMemo(() => {
+    if (!apps) return { total: 0, active: 0, totalUnits: 0, avgEcpm: 0 }
+    
+    return {
+      total: apps.length,
+      active: apps.filter(app => app.approvalState === "APPROVED" || !app.approvalState).length,
+      totalUnits: 0, // Will be calculated in AppsTable
+      avgEcpm: 0, // Will be calculated in AppsTable
+    }
+  }, [apps])
 
   const handleFilterChange = (type: string, value: string) => {
     if (value.startsWith("All")) {
@@ -81,9 +101,13 @@ export function AppsPageContent() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-slate-900">Apps</h1>
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
-              247
-            </Badge>
+            {appsLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+            ) : (
+              <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
+                {summaryStats.total}
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-slate-500 mt-1">Manage your mobile applications and ad units</p>
         </div>
@@ -151,9 +175,13 @@ export function AppsPageContent() {
             <Download className="w-4 h-4" />
             Export
           </Button>
-          <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
-            <RefreshCw className="w-4 h-4" />
-            Sync from AdMob
+          <Button 
+            className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+            onClick={() => refetchApps()}
+            disabled={appsLoading}
+          >
+            <RefreshCw className={`w-4 h-4 ${appsLoading ? 'animate-spin' : ''}`} />
+            {appsLoading ? 'Syncing...' : 'Sync from AdMob'}
           </Button>
         </div>
       </div>
@@ -186,16 +214,20 @@ export function AppsPageContent() {
           <div className="flex items-center gap-2 text-slate-600">
             <Cloud className="w-4 h-4 text-blue-500" />
             <span>
-              Last synced: <span className="font-medium text-slate-900">5 minutes ago</span>
+              Last synced: <span className="font-medium text-slate-900">
+                {apps && apps.length > 0 && apps[0].lastSyncedAt 
+                  ? new Date(apps[0].lastSyncedAt).toLocaleString()
+                  : 'Never'}
+              </span>
             </span>
           </div>
           <div className="hidden sm:block w-px h-4 bg-blue-200" />
           <span className="text-slate-600">
-            <span className="font-medium text-slate-900">247</span> apps
+            <span className="font-medium text-slate-900">{summaryStats.total}</span> apps
           </span>
           <span className="text-slate-300">•</span>
           <span className="text-slate-600">
-            <span className="font-medium text-slate-900">1,847</span> ad units
+            <span className="font-medium text-slate-900">{summaryStats.totalUnits.toLocaleString()}</span> ad units
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -213,7 +245,11 @@ export function AppsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Total Apps</p>
-              <p className="text-xl font-semibold text-slate-900">247</p>
+              {appsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.total}</p>
+              )}
             </div>
           </div>
         </Card>
@@ -224,7 +260,11 @@ export function AppsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Active</p>
-              <p className="text-xl font-semibold text-slate-900">235</p>
+              {appsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.active}</p>
+              )}
             </div>
           </div>
         </Card>
@@ -235,7 +275,11 @@ export function AppsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Total Units</p>
-              <p className="text-xl font-semibold text-slate-900">1,847</p>
+              {appsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.totalUnits.toLocaleString()}</p>
+              )}
             </div>
           </div>
         </Card>
@@ -246,7 +290,13 @@ export function AppsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Avg eCPM</p>
-              <p className="text-xl font-semibold text-slate-900">$4.12</p>
+              {appsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">
+                  {summaryStats.avgEcpm > 0 ? `$${summaryStats.avgEcpm.toFixed(2)}` : '—'}
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -275,6 +325,8 @@ export function AppsPageContent() {
 
       {/* Apps Table */}
       <AppsTable
+        apps={apps || []}
+        loading={appsLoading}
         searchQuery={searchQuery}
         platformFilter={platform}
         statusFilter={status}

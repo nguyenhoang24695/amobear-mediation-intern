@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,9 +21,12 @@ import {
   ChevronDown,
   Check,
   FlaskConical,
+  Loader2,
 } from "lucide-react"
 import { MediationGroupsTable } from "./mediation-groups-table"
 import { cn } from "@/lib/utils"
+import { useApi } from "@/hooks/use-api"
+import { structureApi, mediationGroupMetricsApi, alertsApi } from "@/lib/api/services"
 
 const appOptions = [
   { value: "all", label: "All Apps" },
@@ -60,6 +63,109 @@ export function MediationGroupsPageContent() {
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
+
+  // Fetch mediation groups from API
+  const { data: mediationGroups, loading: groupsLoading, refetch: refetchGroups } = useApi(
+    () => structureApi.getMediationGroups(),
+    { enabled: true }
+  )
+
+  // Fetch apps for filter dropdown
+  const { data: apps } = useApi(
+    () => structureApi.getApps(),
+    { enabled: true }
+  )
+
+  // Update app options from API
+  const appOptions = useMemo(() => {
+    const allOption = { value: "all", label: "All Apps" }
+    if (!apps || apps.length === 0) return [allOption]
+    
+    return [
+      allOption,
+      ...apps.map(app => ({
+        value: app.id.toString(),
+        label: app.displayName || app.name,
+      }))
+    ]
+  }, [apps])
+
+  // Fetch active alerts summary
+  const { data: alertsSummary } = useApi(
+    () => alertsApi.getActiveAlertsSummary(),
+    { enabled: true }
+  )
+
+  // Fetch metrics for all mediation groups
+  const { data: groupsWithMetrics } = useApi(
+    async () => {
+      if (!mediationGroups || mediationGroups.length === 0) return []
+
+      const last7Days = new Date()
+      last7Days.setDate(last7Days.getDate() - 7)
+      const today = new Date()
+
+      const groupsWithData = await Promise.all(
+        mediationGroups.map(async (group) => {
+          try {
+            const [adSources, metrics] = await Promise.all([
+              structureApi.getMediationGroupAdSources(group.id).catch(() => ({ adSources: [] })),
+              mediationGroupMetricsApi.getMediationGroupMetrics(group.mediationGroupId, {
+                startDate: last7Days.toISOString().split('T')[0],
+                endDate: today.toISOString().split('T')[0],
+              }).catch(() => null),
+            ])
+
+            return {
+              ...group,
+              adSources: adSources.adSources || [],
+              ecpm: metrics?.avgEcpm || 0,
+              revenue: metrics?.totalRevenue || 0,
+              impressions: metrics?.totalImpressions || 0,
+              fillRate: metrics?.avgFillRate || 0,
+            }
+          } catch (err) {
+            return {
+              ...group,
+              adSources: [],
+              ecpm: 0,
+              revenue: 0,
+              impressions: 0,
+              fillRate: 0,
+            }
+          }
+        })
+      )
+
+      return groupsWithData
+    },
+    { enabled: !!mediationGroups && mediationGroups.length > 0 }
+  )
+
+  // Calculate summary stats
+  const summaryStats = useMemo(() => {
+    if (!groupsWithMetrics || groupsWithMetrics.length === 0) {
+      if (!mediationGroups) return { total: 0, active: 0, abTests: 0, issues: 0, avgEcpm: 0 }
+      return {
+        total: mediationGroups.length,
+        active: mediationGroups.filter(mg => mg.state === "ENABLED" || !mg.state).length,
+        abTests: 0,
+        issues: alertsSummary?.total || 0,
+        avgEcpm: 0,
+      }
+    }
+
+    const total = groupsWithMetrics.length
+    const active = groupsWithMetrics.filter((mg: any) => mg.state === "ENABLED" || !mg.state).length
+    const abTests = 0 // TODO: Fetch from A/B tests API
+    const issues = alertsSummary?.total || 0
+    const groupsWithEcpm = groupsWithMetrics.filter((mg: any) => mg.ecpm > 0)
+    const avgEcpm = groupsWithEcpm.length > 0
+      ? groupsWithEcpm.reduce((sum: number, mg: any) => sum + mg.ecpm, 0) / groupsWithEcpm.length
+      : 0
+
+    return { total, active, abTests, issues, avgEcpm }
+  }, [groupsWithMetrics, mediationGroups, alertsSummary])
 
   const handleFilterChange = (type: string, value: string) => {
     const isDefaultValue = value === "all" || value.startsWith("All")
@@ -148,9 +254,13 @@ export function MediationGroupsPageContent() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-slate-900">Mediation Groups</h1>
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
-              384
-            </Badge>
+            {groupsLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+            ) : (
+              <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
+                {summaryStats.total}
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-slate-500 mt-1">Configure and optimize your ad waterfall settings</p>
         </div>
@@ -179,9 +289,10 @@ export function MediationGroupsPageContent() {
                   role="combobox"
                   aria-expanded={appPopoverOpen}
                   className="w-44 h-10 justify-between bg-white"
+                  disabled={!apps}
                 >
                   <span className="truncate">
-                    {selectedApp === "all" ? "All Apps" : appOptions.find((a) => a.value === selectedApp)?.label}
+                    {selectedApp === "all" ? "All Apps" : appOptions.find((a) => a.value === selectedApp)?.label || "All Apps"}
                   </span>
                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -324,7 +435,11 @@ export function MediationGroupsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Total Groups</p>
-              <p className="text-xl font-semibold text-slate-900">384</p>
+              {groupsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.total}</p>
+              )}
             </div>
           </div>
         </Card>
@@ -335,7 +450,11 @@ export function MediationGroupsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Active</p>
-              <p className="text-xl font-semibold text-slate-900">356</p>
+              {groupsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.active}</p>
+              )}
             </div>
           </div>
         </Card>
@@ -346,7 +465,11 @@ export function MediationGroupsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">A/B Tests Running</p>
-              <p className="text-xl font-semibold text-slate-900">3</p>
+              {groupsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.abTests}</p>
+              )}
             </div>
           </div>
         </Card>
@@ -358,8 +481,14 @@ export function MediationGroupsPageContent() {
             <div>
               <p className="text-xs text-slate-500">Need Attention</p>
               <div className="flex items-center gap-1.5">
-                <p className="text-xl font-semibold text-slate-900">12</p>
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                {groupsLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                ) : (
+                  <>
+                    <p className="text-xl font-semibold text-slate-900">{summaryStats.issues}</p>
+                    {summaryStats.issues > 0 && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -371,7 +500,13 @@ export function MediationGroupsPageContent() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Avg eCPM</p>
-              <p className="text-xl font-semibold text-slate-900">$5.82</p>
+              {groupsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">
+                  {summaryStats.avgEcpm > 0 ? `$${summaryStats.avgEcpm.toFixed(2)}` : '—'}
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -403,6 +538,8 @@ export function MediationGroupsPageContent() {
 
       {/* Mediation Groups Table - Added abTestFilter prop */}
       <MediationGroupsTable
+        mediationGroups={mediationGroups || []}
+        loading={groupsLoading}
         searchQuery={searchQuery}
         appFilter={selectedApp}
         formatFilter={format}

@@ -45,8 +45,23 @@ import {
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import { useToast } from "@/hooks/use-toast"
+import { useApi } from "@/hooks/use-api"
+import type { App } from "@/types/api"
+import { performanceApi, structureApi, appMetricsApi } from "@/lib/api/services"
+import { useMemo } from "react"
 
-// Mock data for apps
+interface AppsTableProps {
+  apps: App[]
+  loading?: boolean
+  searchQuery: string
+  platformFilter: string
+  statusFilter: string
+  networkFilter: string
+  selectedApps: string[]
+  onSelectionChange: (apps: string[]) => void
+}
+
+// Mock data for apps (fallback)
 const mockApps = [
   {
     id: "1",
@@ -200,19 +215,12 @@ const mockApps = [
   },
 ]
 
-interface AppsTableProps {
-  searchQuery: string
-  platformFilter: string
-  statusFilter: string
-  networkFilter: string
-  selectedApps: string[]
-  onSelectionChange: (apps: string[]) => void
-}
-
 type SortField = "name" | "adUnits" | "revenue" | "ecpm" | "impressions" | "fillRate" | "lastSync"
 type SortDirection = "asc" | "desc"
 
 export function AppsTable({
+  apps,
+  loading = false,
   searchQuery,
   platformFilter,
   statusFilter,
@@ -228,11 +236,143 @@ export function AppsTable({
 
   const [showPauseModal, setShowPauseModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedAppForAction, setSelectedAppForAction] = useState<(typeof mockApps)[0] | null>(null)
+  const [selectedAppForAction, setSelectedAppForAction] = useState<App | null>(null)
   const [isActionLoading, setIsActionLoading] = useState(false)
 
+  // Generate cache key based on apps list to prevent refetch when apps haven't changed
+  const appsCacheKey = useMemo(() => {
+    if (!apps || apps.length === 0) return 'apps_metrics_empty'
+    // Create a hash from app IDs
+    const appIds = apps.map(a => a.id).sort().join(',')
+    let hash = 0
+    for (let i = 0; i < appIds.length; i++) {
+      const char = appIds.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    return `apps_metrics_${Math.abs(hash)}`
+  }, [apps])
+
+  // Fetch metrics for all apps with cache key to prevent duplicate calls
+  // Only fetch once per app list change
+  const { data: appsWithMetrics } = useApi(
+    async () => {
+      if (!apps || apps.length === 0) return []
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split('T')[0]
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const last7Days = new Date(today)
+      last7Days.setDate(last7Days.getDate() - 7)
+      const last7DaysStr = last7Days.toISOString().split('T')[0]
+
+      // Batch fetch to reduce API calls - fetch all apps in parallel but with deduplication
+      const appsWithData = await Promise.all(
+        apps.map(async (app) => {
+          try {
+            // Use cache keys to prevent duplicate calls for same app/date combination
+            const adUnitsCount = await structureApi.getAppAdUnitsCount(app.id).catch(() => ({ adUnitsCount: 0 }))
+            
+            // Fetch metrics with specific cache keys
+            const [todayMetrics, yesterdayMetrics, last7DaysMetrics] = await Promise.all([
+              appMetricsApi.getAppMetrics(app.appId, {
+                startDate: todayStr,
+                endDate: todayStr,
+              }).catch(() => null),
+              appMetricsApi.getAppMetrics(app.appId, {
+                startDate: yesterdayStr,
+                endDate: yesterdayStr,
+              }).catch(() => null),
+              appMetricsApi.getAppMetrics(app.appId, {
+                startDate: last7DaysStr,
+                endDate: todayStr,
+              }).catch(() => null),
+            ])
+
+            const todayRevenue = todayMetrics?.totalRevenue || 0
+            const yesterdayRevenue = yesterdayMetrics?.totalRevenue || 0
+            const revenueTrend = yesterdayRevenue > 0
+              ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
+              : 0
+
+            return {
+              ...app,
+              adUnitsCount: adUnitsCount.adUnitsCount || 0,
+              revenue: todayRevenue,
+              revenueTrend,
+              ecpm: last7DaysMetrics?.avgEcpm || 0,
+              impressions: last7DaysMetrics?.totalImpressions || 0,
+              fillRate: (last7DaysMetrics?.avgFillRate || 0) * 100,
+            }
+          } catch (err) {
+            return {
+              ...app,
+              adUnitsCount: 0,
+              revenue: 0,
+              revenueTrend: 0,
+              ecpm: 0,
+              impressions: 0,
+              fillRate: 0,
+            }
+          }
+        })
+      )
+
+      return appsWithData
+    },
+    { enabled: !!apps && apps.length > 0 }
+  )
+
+  // Transform apps data to match table format
+  const transformedApps = useMemo(() => {
+    if (!appsWithMetrics || appsWithMetrics.length === 0) {
+      if (!apps || apps.length === 0) return []
+      // Fallback to basic data if metrics not loaded yet
+      return apps.map((app) => ({
+        id: app.id.toString(),
+        name: app.displayName || app.name,
+        packageName: app.appId,
+        icon: app.iconUri, // Use iconUri from API
+        platform: app.platform || "Unknown",
+        adUnits: 0,
+        revenue: 0,
+        revenueTrend: 0,
+        ecpm: 0,
+        impressions: 0,
+        fillRate: 0,
+        status: app.approvalState === "APPROVED" ? "Active" : app.approvalState || "Active",
+        lastSync: app.lastSyncedAt 
+          ? new Date(app.lastSyncedAt).toLocaleString()
+          : "Never",
+        _original: app,
+      }))
+    }
+
+    return appsWithMetrics.map((app: any) => ({
+      id: app.id.toString(),
+      name: app.displayName || app.name,
+      packageName: app.appId,
+      icon: app.iconUri || app.icon, // Use iconUri from API
+      platform: app.platform || "Unknown",
+      adUnits: app.adUnitsCount || 0,
+      revenue: app.revenue || 0,
+      revenueTrend: app.revenueTrend || 0,
+      ecpm: app.ecpm || 0,
+      impressions: app.impressions || 0,
+      fillRate: app.fillRate || 0,
+      status: app.approvalState === "APPROVED" ? "Active" : app.approvalState || "Active",
+      lastSync: app.lastSyncedAt 
+        ? new Date(app.lastSyncedAt).toLocaleString()
+        : "Never",
+      _original: app,
+    }))
+  }, [appsWithMetrics, apps])
+
   // Filter apps
-  const filteredApps = mockApps.filter((app) => {
+  const filteredApps = transformedApps.filter((app) => {
     if (searchQuery && !app.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
@@ -325,7 +465,7 @@ export function AppsTable({
     }
   }
 
-  const handleSync = async (app: (typeof mockApps)[0], e: React.MouseEvent) => {
+  const handleSync = async (app: typeof transformedApps[0], e: React.MouseEvent) => {
     e.stopPropagation()
     toast({
       title: "Syncing...",
@@ -365,6 +505,12 @@ export function AppsTable({
     setSelectedAppForAction(null)
   }
 
+  // Get app for action from transformed apps
+  const getAppForAction = () => {
+    if (!selectedAppForAction) return null
+    return transformedApps.find(a => a.id === selectedAppForAction.id.toString())
+  }
+
   const handleRowClick = (appId: string) => {
     router.push(`/apps/${appId}`)
   }
@@ -386,6 +532,18 @@ export function AppsTable({
       )}
     </button>
   )
+
+  // Loading state
+  if (loading) {
+    return (
+      <Card className="border-slate-200">
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400 mb-4" />
+          <p className="text-sm text-slate-500">Loading apps...</p>
+        </div>
+      </Card>
+    )
+  }
 
   // Empty state
   if (filteredApps.length === 0) {
@@ -574,7 +732,7 @@ export function AppsTable({
                           <DropdownMenuItem
                             className="gap-2 cursor-pointer"
                             onClick={() => {
-                              setSelectedAppForAction(app)
+                              setSelectedAppForAction(app._original)
                               setShowPauseModal(true)
                             }}
                           >
@@ -585,7 +743,7 @@ export function AppsTable({
                           <DropdownMenuItem
                             className="gap-2 cursor-pointer"
                             onClick={() => {
-                              setSelectedAppForAction(app)
+                              setSelectedAppForAction(app._original)
                               setShowPauseModal(true)
                             }}
                           >
@@ -596,7 +754,7 @@ export function AppsTable({
                         <DropdownMenuItem
                           className="gap-2 text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50"
                           onClick={() => {
-                            setSelectedAppForAction(app)
+                            setSelectedAppForAction(app._original)
                             setShowDeleteModal(true)
                           }}
                         >
@@ -629,11 +787,11 @@ export function AppsTable({
       <Dialog open={showPauseModal} onOpenChange={setShowPauseModal}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{selectedAppForAction?.status === "Active" ? "Pause" : "Resume"} App?</DialogTitle>
+            <DialogTitle>{getAppForAction()?.status === "Active" ? "Pause" : "Resume"} App?</DialogTitle>
             <DialogDescription>
-              {selectedAppForAction?.status === "Active"
-                ? `Are you sure you want to pause "${selectedAppForAction?.name}"? This will stop all ad serving for this app.`
-                : `Are you sure you want to resume "${selectedAppForAction?.name}"? This will enable ad serving for this app.`}
+              {getAppForAction()?.status === "Active"
+                ? `Are you sure you want to pause "${getAppForAction()?.name}"? This will stop all ad serving for this app.`
+                : `Are you sure you want to resume "${getAppForAction()?.name}"? This will enable ad serving for this app.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:gap-2">
@@ -648,7 +806,7 @@ export function AppsTable({
             <Button
               className={cn(
                 "flex-1",
-                selectedAppForAction?.status === "Active"
+                getAppForAction()?.status === "Active"
                   ? "bg-amber-600 hover:bg-amber-700"
                   : "bg-green-600 hover:bg-green-700",
               )}
@@ -660,7 +818,7 @@ export function AppsTable({
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Processing...
                 </>
-              ) : selectedAppForAction?.status === "Active" ? (
+              ) : getAppForAction()?.status === "Active" ? (
                 "Pause App"
               ) : (
                 "Resume App"
@@ -675,7 +833,7 @@ export function AppsTable({
           <DialogHeader>
             <DialogTitle>Delete App?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedAppForAction?.name}"? This action cannot be undone and all
+              Are you sure you want to delete "{getAppForAction()?.name}"? This action cannot be undone and all
               associated data will be permanently removed.
             </DialogDescription>
           </DialogHeader>

@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Lock, Eye, EyeOff, CheckCircle2, Circle, Loader2, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams, useRouter } from "next/navigation"
+import { authApi } from "@/lib/api/services"
+import { useToast } from "@/hooks/use-toast"
 
 const passwordRequirements = [
   { id: "length", label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -20,6 +23,11 @@ const passwordRequirements = [
 ]
 
 export default function ResetPasswordPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  const token = searchParams.get("token")
+  
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -41,12 +49,57 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit || !token) {
+      if (!token) {
+        setError("invalid")
+      }
+      return
+    }
 
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsSuccess(true)
-    setIsLoading(false)
+    setError(null)
+
+    try {
+      const response = await authApi.resetPassword({
+        token,
+        newPassword: password,
+        confirmPassword,
+      })
+
+      if (response.success) {
+        setIsSuccess(true)
+        toast({
+          title: "Password reset successful",
+          description: "Your password has been successfully reset.",
+        })
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          router.push("/login")
+        }, 2000)
+      } else {
+        setError("invalid")
+        toast({
+          title: "Reset failed",
+          description: response.error?.message || "Invalid or expired reset token",
+          variant: "destructive",
+        })
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      setError("invalid")
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Check token on mount
+  if (!token && !isSuccess) {
+    setError("invalid")
   }
 
   if (error === "expired") {

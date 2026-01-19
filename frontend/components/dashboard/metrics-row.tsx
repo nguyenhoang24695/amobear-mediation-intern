@@ -1,82 +1,139 @@
 "use client"
 
+import { useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, DollarSign, Activity, Eye, Percent } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Activity, Eye, Percent, Loader2 } from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
+import { useApi } from "@/hooks/use-api"
+import { dashboardApi } from "@/lib/api/services"
+import { useDashboardDate } from "@/contexts/dashboard-date-context"
+import type { DateRangeType } from "@/types/api"
 
-const metrics = [
-  {
-    title: "Revenue Today",
-    value: "$12,847.56",
-    change: "+8.2%",
-    trend: "up",
-    icon: DollarSign,
-    sparklineData: [
-      { value: 400 },
-      { value: 300 },
-      { value: 500 },
-      { value: 450 },
-      { value: 470 },
-      { value: 520 },
-      { value: 580 },
-    ],
-    color: "#2563eb",
-  },
-  {
-    title: "Average eCPM",
-    value: "$4.52",
-    change: "+3.1%",
-    trend: "up",
-    icon: Activity,
-    sparklineData: [
-      { value: 3.8 },
-      { value: 4.0 },
-      { value: 3.9 },
-      { value: 4.2 },
-      { value: 4.3 },
-      { value: 4.4 },
-      { value: 4.52 },
-    ],
-    color: "#2563eb",
-  },
-  {
-    title: "Impressions",
-    value: "2.84M",
-    change: "+5.7%",
-    trend: "up",
-    icon: Eye,
-    sparklineData: [
-      { value: 2.5 },
-      { value: 2.6 },
-      { value: 2.55 },
-      { value: 2.7 },
-      { value: 2.75 },
-      { value: 2.8 },
-      { value: 2.84 },
-    ],
-    color: "#2563eb",
-  },
-  {
-    title: "Fill Rate",
-    value: "94.2%",
-    change: "-0.3%",
-    trend: "down",
-    icon: Percent,
-    sparklineData: [
-      { value: 95 },
-      { value: 94.8 },
-      { value: 94.5 },
-      { value: 94.6 },
-      { value: 94.4 },
-      { value: 94.3 },
-      { value: 94.2 },
-    ],
-    color: "#ef4444",
-  },
-]
+// Format number with commas
+function formatNumber(num: number): string {
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(2)}M`
+  }
+  if (num >= 1_000) {
+    return `${(num / 1_000).toFixed(1)}k`
+  }
+  return num.toFixed(0)
+}
+
+// Format currency
+function formatCurrency(num: number): string {
+  return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 export function MetricsRow() {
+  const { refreshKey } = useDashboardDate()
+  
+  // Always use "today" for metrics cards
+  const apiParams = useMemo(() => {
+    return {
+      range: 'today' as DateRangeType,
+    }
+  }, [])
+
+  // Fetch key metrics from new API (always "today")
+  const { data: keyMetricsData, loading: metricsLoading, refetch: refetchMetrics } = useApi(
+    () => dashboardApi.getKeyMetrics(apiParams),
+    { enabled: true, cacheKey: `key_metrics_today` }
+  )
+
+  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  useEffect(() => {
+    if (refreshKey > 0) {
+      refetchMetrics()
+    }
+  }, [refreshKey, refetchMetrics])
+
+  // Process key metrics from API
+  const metrics = useMemo(() => {
+    if (!keyMetricsData) {
+      return null
+    }
+
+    const m = keyMetricsData
+
+    // Convert sparkline array to chart format
+    const sparklineToChartData = (sparkline: number[]) => {
+      return sparkline.map((value, index) => ({ value }))
+    }
+
+    return [
+      {
+        title: "Revenue Today",
+        value: m.revenue.formattedValue,
+        change: `${m.revenue.change >= 0 ? '+' : ''}${m.revenue.change.toFixed(1)}%`,
+        trend: m.revenue.changeDirection as "up" | "down",
+        icon: DollarSign,
+        sparklineData: sparklineToChartData(m.revenue.sparkline),
+        color: "#2563eb",
+      },
+      {
+        title: "Average eCPM",
+        value: m.averageEcpm.formattedValue,
+        change: `${m.averageEcpm.change >= 0 ? '+' : ''}${m.averageEcpm.change.toFixed(1)}%`,
+        trend: m.averageEcpm.changeDirection as "up" | "down",
+        icon: Activity,
+        sparklineData: sparklineToChartData(m.averageEcpm.sparkline),
+        color: "#2563eb",
+      },
+      {
+        title: "Impressions",
+        value: m.impressions.formattedValue,
+        change: `${m.impressions.change >= 0 ? '+' : ''}${m.impressions.change.toFixed(1)}%`,
+        trend: m.impressions.changeDirection as "up" | "down",
+        icon: Eye,
+        sparklineData: sparklineToChartData(m.impressions.sparkline),
+        color: "#2563eb",
+      },
+      {
+        title: "Fill Rate",
+        value: m.fillRate.formattedValue,
+        change: `${m.fillRate.change >= 0 ? '+' : ''}${m.fillRate.change.toFixed(1)}%`,
+        trend: m.fillRate.changeDirection as "up" | "down",
+        icon: Percent,
+        sparklineData: sparklineToChartData(m.fillRate.sparkline),
+        color: m.fillRate.changeDirection === 'up' ? "#2563eb" : "#ef4444",
+      },
+    ]
+  }, [keyMetricsData])
+
+  const isLoading = metricsLoading
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center h-24">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (!metrics) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-center text-sm text-slate-500">No data available</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {metrics.map((metric) => (
@@ -107,7 +164,7 @@ export function MetricsRow() {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={metric.sparklineData}>
                     <defs>
-                      <linearGradient id={`gradient-${metric.title}`} x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id={`gradient-${metric.title.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={metric.color} stopOpacity={0.3} />
                         <stop offset="100%" stopColor={metric.color} stopOpacity={0} />
                       </linearGradient>
@@ -117,7 +174,7 @@ export function MetricsRow() {
                       dataKey="value"
                       stroke={metric.color}
                       strokeWidth={2}
-                      fill={`url(#gradient-${metric.title})`}
+                      fill={`url(#gradient-${metric.title.replace(/\s+/g, '-')})`}
                     />
                   </AreaChart>
                 </ResponsiveContainer>

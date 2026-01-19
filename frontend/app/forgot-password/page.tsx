@@ -10,29 +10,54 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, KeyRound, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import { authApi } from "@/lib/api/services"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ForgotPasswordPage() {
+  const { toast } = useToast()
   const [email, setEmail] = useState("")
+  const [organization, setOrganization] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!email.trim()) {
+      setError("Email is required")
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const response = await authApi.forgotPassword({
+        email: email.trim(),
+        organizationSlug: organization.trim() || undefined,
+      })
 
-    if (email === "notfound@example.com") {
-      setError("No account found with this email address.")
-    } else if (email === "rate@example.com") {
-      setError("Too many requests. Please wait 5 minutes before trying again.")
-    } else {
-      setIsSuccess(true)
+      if (response.success) {
+        setIsSuccess(true)
+        toast({
+          title: "Reset link sent",
+          description: "If the email exists, a password reset link has been sent.",
+        })
+      } else {
+        setError("Failed to send reset link. Please try again.")
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      setError(errorMessage)
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   const handleResend = async () => {
@@ -99,6 +124,18 @@ export default function ForgotPasswordPage() {
                 </Alert>
               )}
 
+              {/* Organization Field (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organization (Optional)</Label>
+                <Input
+                  id="organization"
+                  type="text"
+                  placeholder="your-company"
+                  value={organization}
+                  onChange={(e) => setOrganization(e.target.value)}
+                />
+              </div>
+
               {/* Email Field */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
@@ -113,7 +150,7 @@ export default function ForgotPasswordPage() {
                   }}
                   required
                 />
-                {error && !error.includes("Too many") && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-500">{error}</p>}
               </div>
 
               {/* Submit Button */}

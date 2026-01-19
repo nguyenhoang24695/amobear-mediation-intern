@@ -45,6 +45,11 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
+import type { MediationGroup } from "@/types/api"
+import { useMemo } from "react"
+import { Loader2 } from "lucide-react"
+import { structureApi, mediationGroupMetricsApi } from "@/lib/api/services"
+import { useApi } from "@/hooks/use-api"
 
 // ... existing code (networkColors, countryFlags, mockGroups) ...
 
@@ -256,6 +261,8 @@ const mockGroups = [
 ]
 
 interface MediationGroupsTableProps {
+  mediationGroups: MediationGroup[]
+  loading?: boolean
   searchQuery: string
   appFilter: string
   formatFilter: string
@@ -270,6 +277,8 @@ type SortField = "name" | "ecpm" | "lastModified" | "abTest"
 type SortDirection = "asc" | "desc"
 
 export function MediationGroupsTable({
+  mediationGroups,
+  loading = false,
   searchQuery,
   appFilter,
   formatFilter,
@@ -285,8 +294,117 @@ export function MediationGroupsTable({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
+  // Fetch ad sources and metrics for all groups
+  const { data: groupsWithData } = useApi(
+    async () => {
+      if (!mediationGroups || mediationGroups.length === 0) return []
+
+      const last7Days = new Date()
+      last7Days.setDate(last7Days.getDate() - 7)
+      const today = new Date()
+
+      const groupsWithFullData = await Promise.all(
+        mediationGroups.map(async (group) => {
+          try {
+            const [adSources, metrics, yesterdayMetrics] = await Promise.all([
+              structureApi.getMediationGroupAdSources(group.id).catch(() => ({ adSources: [] })),
+              mediationGroupMetricsApi.getMediationGroupMetrics(group.mediationGroupId, {
+                startDate: last7Days.toISOString().split('T')[0],
+                endDate: today.toISOString().split('T')[0],
+              }).catch(() => null),
+              mediationGroupMetricsApi.getMediationGroupMetrics(group.mediationGroupId, {
+                startDate: new Date(last7Days.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                endDate: new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              }).catch(() => null),
+            ])
+
+            const currentEcpm = metrics?.avgEcpm || 0
+            const previousEcpm = yesterdayMetrics?.avgEcpm || 0
+            const ecpmTrend = previousEcpm > 0
+              ? ((currentEcpm - previousEcpm) / previousEcpm) * 100
+              : 0
+
+            return {
+              ...group,
+              adSources: adSources.adSources || [],
+              ecpm: currentEcpm,
+              ecpmTrend,
+              revenue: metrics?.totalRevenue || 0,
+              impressions: metrics?.totalImpressions || 0,
+              fillRate: metrics?.avgFillRate || 0,
+            }
+          } catch (err) {
+            return {
+              ...group,
+              adSources: [],
+              ecpm: 0,
+              ecpmTrend: 0,
+              revenue: 0,
+              impressions: 0,
+              fillRate: 0,
+            }
+          }
+        })
+      )
+
+      return groupsWithFullData
+    },
+    { enabled: !!mediationGroups && mediationGroups.length > 0 }
+  )
+
+  // Transform mediation groups data to match table format
+  const transformedGroups = useMemo(() => {
+    if (!groupsWithData || groupsWithData.length === 0) {
+      if (!mediationGroups || mediationGroups.length === 0) return []
+      // Fallback to basic data
+      return mediationGroups.map((group) => ({
+        id: group.id.toString(),
+        name: group.displayName || group.name,
+        appName: "Unknown App", // TODO: Fetch app name from appId
+        appId: "0",
+        appIcon: undefined,
+        format: group.adFormat || "Unknown",
+        adSources: [],
+        targeting: "Global",
+        status: group.state === "ENABLED" ? "Active" : group.state || "Active",
+        abTest: null,
+        ecpm: 0,
+        ecpmTrend: 0,
+        lastModified: group.updatedAt 
+          ? new Date(group.updatedAt).toLocaleString()
+          : "Never",
+        lastModifiedBy: "System",
+        hasWarning: false,
+        hasError: false,
+        _original: group,
+      }))
+    }
+
+    return groupsWithData.map((group: any) => ({
+      id: group.id.toString(),
+      name: group.displayName || group.name,
+      appName: "Unknown App", // TODO: Fetch app name from appId
+      appId: "0",
+      appIcon: undefined,
+      format: group.adFormat || "Unknown",
+      adSources: group.adSources || [], // Now populated from API
+      targeting: "Global", // TODO: Parse targeting from group data
+      status: group.state === "ENABLED" ? "Active" : group.state || "Active",
+      abTest: null, // TODO: Fetch from A/B tests API
+      ecpm: group.ecpm || 0, // Now populated from API
+      ecpmTrend: group.ecpmTrend || 0, // Now calculated
+      lastModified: group.updatedAt 
+        ? new Date(group.updatedAt).toLocaleString()
+        : "Never",
+      lastModifiedBy: "System",
+      hasWarning: false, // TODO: Check alerts
+      hasError: false, // TODO: Check errors
+      _original: group,
+    }))
+  }, [groupsWithData, mediationGroups])
+
   // Filter groups
-  const filteredGroups = mockGroups.filter((group) => {
+  const filteredGroups = transformedGroups.filter((group) => {
     if (searchQuery && !group.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
@@ -411,6 +529,18 @@ export function MediationGroupsTable({
       )}
     </button>
   )
+
+  // Loading state
+  if (loading) {
+    return (
+      <Card className="border-slate-200">
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400 mb-4" />
+          <p className="text-sm text-slate-500">Loading mediation groups...</p>
+        </div>
+      </Card>
+    )
+  }
 
   // Empty state
   if (filteredGroups.length === 0) {
@@ -592,13 +722,16 @@ export function MediationGroupsTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium text-slate-900">${group.ecpm.toFixed(2)}</span>
-                        {group.ecpmTrend !== 0 && (
+                        <span className="text-sm font-medium text-slate-900">
+                          {group.ecpm > 0 ? `$${group.ecpm.toFixed(2)}` : "—"}
+                        </span>
+                        {group.ecpmTrend !== 0 && group.ecpm > 0 && (
                           <span
                             className={cn(
                               "flex items-center text-xs",
                               group.ecpmTrend > 0 ? "text-green-600" : "text-red-600",
                             )}
+                            title={`${group.ecpmTrend > 0 ? "+" : ""}${group.ecpmTrend.toFixed(1)}%`}
                           >
                             {group.ecpmTrend > 0 ? (
                               <TrendingUp className="w-3 h-3" />

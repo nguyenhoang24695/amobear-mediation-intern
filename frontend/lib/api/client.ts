@@ -14,10 +14,14 @@ export class ApiClient {
     ): Promise<T> {
         const url = `${this.baseUrl}${endpoint}`
 
+        // Get access token from localStorage
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+
         const config: RequestInit = {
             ...options,
             headers: {
                 'Content-Type': 'application/json',
+                ...(token && { Authorization: `Bearer ${token}` }),
                 ...options.headers,
             },
         }
@@ -26,10 +30,14 @@ export class ApiClient {
             const response = await fetch(url, config)
 
             if (!response.ok) {
-                const error = await response.json().catch(() => ({
+                const errorData = await response.json().catch(() => ({
                     error: `HTTP ${response.status}: ${response.statusText}`,
                 }))
-                throw new Error(error.error || error.message || 'Request failed')
+
+                // Create error object with response data for better error handling
+                const error = new Error(errorData.error?.message || errorData.message || errorData.error || 'Request failed')
+                    ; (error as any).response = { data: errorData, status: response.status }
+                throw error
             }
 
             // Handle empty responses

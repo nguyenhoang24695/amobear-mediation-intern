@@ -7,6 +7,7 @@ export interface App {
   platform?: string
   displayName?: string
   appStoreId?: string
+  iconUri?: string
   approvalState?: string
   publisherId: string
   createdAt: string
@@ -82,7 +83,98 @@ export interface ApiError {
   message?: string
 }
 
-// Dashboard Metrics
+// Dashboard Types
+export type DateRangeType = "today" | "yesterday" | "last3days" | "last7days" | "last14days" | "last30days" | "thismonth" | "lastmonth" | "custom"
+
+export interface KeyMetricItem {
+  value: number
+  formattedValue: string
+  change: number
+  changeDirection: "up" | "down" | "neutral"
+  sparkline: number[]
+}
+
+export interface DashboardKeyMetrics {
+  revenue: KeyMetricItem
+  averageEcpm: KeyMetricItem
+  impressions: KeyMetricItem
+  fillRate: KeyMetricItem
+  lastUpdated: string
+}
+
+export interface ChartDataPoint {
+  date: string
+  value: number
+  comparisonValue?: number
+}
+
+export interface ChartSummary {
+  total: number
+  average: number
+  min: number
+  max: number
+  change: number
+}
+
+export interface RevenueOverview {
+  metric: "revenue" | "ecpm" | "impressions"
+  data: ChartDataPoint[]
+  summary: ChartSummary
+}
+
+export interface TopAppItem {
+  appId: number
+  appName: string
+  packageName: string
+  platform: string
+  iconUrl?: string
+  revenue: number
+  ecpm: number
+  impressions: number
+  change: number
+  rank: number
+}
+
+export interface TopApps {
+  apps: TopAppItem[]
+  totalApps: number
+}
+
+export interface NetworkRevenueItem {
+  networkId: string
+  networkName: string
+  iconUrl?: string
+  revenue: number
+  percentage: number
+  ecpm: number
+  impressions: number
+}
+
+export interface RevenueByNetwork {
+  networks: NetworkRevenueItem[]
+  totalRevenue: number
+}
+
+export interface ActivityItem {
+  id: string
+  type: string
+  severity: string
+  title: string
+  description: string
+  timestamp: string
+  relativeTime: string
+  isRead: boolean
+  resourceType?: string
+  resourceId?: string
+  resourceUrl?: string
+}
+
+export interface RecentActivities {
+  activities: ActivityItem[]
+  unreadCount: number
+}
+
+// Legacy Dashboard Metrics (for backward compatibility)
 export interface DashboardMetrics {
   revenueToday: {
     value: number
@@ -112,8 +204,9 @@ export interface TopApp {
   appId: string
   name: string
   displayName?: string
+  icon?: string
+  iconUri?: string
   revenue: number
   ecpm: number
   trend: "up" | "down"
-  icon?: string
 }

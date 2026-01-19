@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, CheckCircle2, Circle, Loader2, AlertCircle } from "lucide-react"
+import { authApi } from "@/lib/api/services"
+import { useToast } from "@/hooks/use-toast"
 
 interface ChangePasswordModalProps {
   open: boolean
@@ -22,6 +24,7 @@ const passwordRequirements = [
 ]
 
 export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalProps) {
+  const { toast } = useToast()
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -49,17 +52,38 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
     setIsLoading(true)
     setError(null)
 
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const response = await authApi.changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      })
 
-    // Simulate error for wrong current password
-    if (currentPassword === "wrong") {
-      setError("Current password is incorrect")
+      if (response.success) {
+        setIsSuccess(true)
+        toast({
+          title: "Password changed",
+          description: "Your password has been successfully updated.",
+        })
+      } else {
+        setError(response.error?.message || "Failed to change password")
+        toast({
+          title: "Error",
+          description: response.error?.message || "Failed to change password",
+          variant: "destructive",
+        })
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      setError(errorMessage)
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    setIsSuccess(true)
-    setIsLoading(false)
   }
 
   const handleClose = () => {

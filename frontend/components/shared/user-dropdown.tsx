@@ -3,6 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import { authApi } from "@/lib/api/services"
+import { clearAuthData, getRefreshToken } from "@/lib/auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,14 +54,51 @@ export function UserDropdown() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [theme, setTheme] = useState("system")
 
+  const { toast } = useToast()
+
   const handleLogout = async () => {
     setIsLoggingOut(true)
-    // Simulate logout API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    // Clear session
-    localStorage.removeItem("user_session")
-    // Redirect to login
-    router.push("/login")
+    try {
+      // Call logout API
+      if (logoutAllDevices) {
+        // Logout from all devices
+        await authApi.logoutAll()
+      } else {
+        // Logout from current device only
+        const refreshToken = getRefreshToken()
+        if (refreshToken) {
+          await authApi.logout(refreshToken)
+        }
+      }
+
+      // Clear all authentication data from localStorage
+      clearAuthData()
+
+      // Show success message
+      toast({
+        title: logoutAllDevices ? "Logged out from all devices" : "Logged out",
+        description: logoutAllDevices 
+          ? "You have been logged out from all devices." 
+          : "You have been logged out successfully.",
+      })
+
+      // Redirect to login
+      router.push("/login")
+    } catch (err) {
+      // Even if API call fails, clear local data and redirect
+      clearAuthData()
+      
+      toast({
+        title: "Logged out",
+        description: "Your local session has been cleared.",
+        variant: "default",
+      })
+
+      router.push("/login")
+    } finally {
+      setIsLoggingOut(false)
+      setShowLogoutModal(false)
+    }
   }
 
   return (
@@ -204,7 +244,7 @@ export function UserDropdown() {
             <Checkbox
               id="logout-all"
               checked={logoutAllDevices}
-              onCheckedChange={(checked) => setLogoutAllDevices(checked as boolean)}
+              onCheckedChange={(checked: boolean) => setLogoutAllDevices(checked)}
             />
             <div className="grid gap-1.5 leading-none">
               <label htmlFor="logout-all" className="text-sm font-medium cursor-pointer">

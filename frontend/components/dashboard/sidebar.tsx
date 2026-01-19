@@ -20,7 +20,10 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import { authApi } from "@/lib/api/services"
+import { clearAuthData, getRefreshToken } from "@/lib/auth"
 
 interface SidebarProps {
   collapsed: boolean
@@ -39,6 +42,8 @@ const navItems = [
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { toast } = useToast()
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -134,23 +139,70 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* User Profile */}
         <div className="p-4 border-t border-slate-200">
-          <Link href="/profile" className={cn("flex items-center gap-3 group", collapsed && "justify-center")}>
-            <Avatar className="h-9 w-9">
-              <AvatarImage src="/professional-man-avatar.png" />
-              <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">JD</AvatarFallback>
-            </Avatar>
-            {!collapsed && (
-              <>
+          <div className={cn("flex items-center gap-3 group", collapsed && "justify-center")}>
+            <Link href="/profile" className={cn("flex items-center gap-3 flex-1 min-w-0", collapsed && "justify-center")}>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src="/professional-man-avatar.png" />
+                <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">JD</AvatarFallback>
+              </Avatar>
+              {!collapsed && (
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-600">John Doe</p>
                   <p className="text-xs text-slate-500 truncate">Admin</p>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </>
+              )}
+            </Link>
+            {!collapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-slate-400 hover:text-slate-600"
+                    onClick={async () => {
+                      try {
+                        // Call logout API
+                        const refreshToken = getRefreshToken()
+                        if (refreshToken) {
+                          await authApi.logout(refreshToken)
+                        }
+
+                        // Clear all authentication data
+                        clearAuthData()
+
+                        // Show success message
+                        toast({
+                          title: "Logged out",
+                          description: "You have been logged out successfully.",
+                        })
+
+                        // Redirect to login
+                        router.push("/login")
+                      } catch (err) {
+                        // Even if API call fails, clear local data and redirect
+                        clearAuthData()
+                        
+                        toast({
+                          title: "Logged out",
+                          description: "Your local session has been cleared.",
+                          variant: "default",
+                        })
+
+                        router.push("/login")
+                      }
+                    }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">
+                    <p>Log out</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
             )}
-          </Link>
+          </div>
         </div>
       </aside>
     </TooltipProvider>

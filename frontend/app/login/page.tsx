@@ -2,18 +2,20 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, Info } from "lucide-react"
-import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { authApi } from "@/lib/api/services"
+import { setAuthData } from "@/lib/auth"
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail, Zap } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,15 +25,16 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [rememberMe, setRememberMe] = useState(true)
   const [formData, setFormData] = useState({
-    organization: "demo",
-    email: "admin@demo.com",
-    password: "admin",
+    organization: "",
+    email: "",
+    password: "",
   })
   const [validationErrors, setValidationErrors] = useState<{
     organization?: string
     email?: string
     password?: string
   }>({})
+
 
   // Clear validation errors when fields change
   useEffect(() => {
@@ -70,36 +73,76 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await authApi.login({
+        email: formData.email,
+        password: formData.password,
+        organizationSlug: formData.organization || undefined,
+        deviceInfo: typeof window !== 'undefined' ? navigator.userAgent : undefined,
+      })
 
-    // Check credentials
-    if (formData.email === "locked@example.com") {
-      setError(
-        "Your account has been locked due to multiple failed attempts. Please try again in 30 minutes or reset your password.",
-      )
+      if (response.success && response.data) {
+        // Store authentication data
+        setAuthData(
+          response.data.accessToken,
+          response.data.refreshToken,
+          response.data.user
+        )
+
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true')
+        } else {
+          localStorage.removeItem('rememberMe')
+        }
+
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${response.data.user.firstName || response.data.user.email}!`,
+        })
+
+        // Navigate to dashboard
+        router.push("/")
+      } else {
+        // Extract error message from response
+        const errorMessage = response.error?.message || "Invalid email or password. Please try again."
+        setError(errorMessage)
+        toast({
+          title: "Login failed",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    } catch (err: any) {
+      // Handle different error types
+      let errorMessage = "An error occurred during login"
+
+      if (err?.response?.data) {
+        // API returned error response
+        const errorData = err.response.data
+        if (errorData.error?.message) {
+          errorMessage = errorData.error.message
+        } else if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (typeof errorData.error === 'string') {
+          errorMessage = errorData.error
+        }
+      } else if (err?.message) {
+        // Error object with message
+        errorMessage = err.message
+      } else if (typeof err === 'string') {
+        // String error
+        errorMessage = err
+      }
+
+      setError(errorMessage)
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    if (formData.organization === "demo" && formData.email === "admin@demo.com" && formData.password === "admin") {
-      // Store mock user session
-      localStorage.setItem(
-        "user_session",
-        JSON.stringify({
-          id: "1",
-          name: "John Doe",
-          email: "admin@demo.com",
-          role: "Admin",
-          organization: "demo",
-        }),
-      )
-      // Navigate to dashboard
-      router.push("/")
-    } else {
-      setError("Invalid email or password. Please try again.")
-    }
-
-    setIsLoading(false)
   }
 
   const handleSocialLogin = (provider: string) => {
@@ -154,14 +197,6 @@ export default function LoginPage() {
                 <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
-
-            <Alert className="border-blue-200 bg-blue-50">
-              <Info className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-sm text-blue-700">
-                Demo credentials: <span className="font-mono">admin@demo.com</span> /{" "}
-                <span className="font-mono">admin</span>
-              </AlertDescription>
-            </Alert>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Organization Field */}
@@ -234,7 +269,7 @@ export default function LoginPage() {
                   <Checkbox
                     id="remember"
                     checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    onCheckedChange={(checked: boolean) => setRememberMe(checked)}
                   />
                   <label htmlFor="remember" className="text-sm text-slate-600 cursor-pointer">
                     Remember me

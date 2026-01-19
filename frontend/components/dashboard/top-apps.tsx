@@ -1,60 +1,120 @@
 "use client"
 
+import { useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react"
+import { TrendingUp, TrendingDown, ArrowRight, Loader2 } from "lucide-react"
+import { useApi } from "@/hooks/use-api"
+import { dashboardApi } from "@/lib/api/services"
+import { useDashboardDate } from "@/contexts/dashboard-date-context"
+import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
+import type { DateRangeType } from "@/types/api"
 
-const topApps = [
-  {
-    id: "1",
-    rank: 1,
-    name: "Puzzle Master Pro",
-    icon: "/puzzle-game-app-icon.jpg",
-    revenue: "$3,245.80",
-    ecpm: "$5.82",
-    trend: "up",
-  },
-  {
-    id: "2",
-    rank: 2,
-    name: "Racing Legends",
-    icon: "/racing-game-app-icon.jpg",
-    revenue: "$2,847.50",
-    ecpm: "$4.95",
-    trend: "up",
-  },
-  {
-    id: "3",
-    rank: 3,
-    name: "Word Quest",
-    icon: "/word-game-app-icon.jpg",
-    revenue: "$2,156.20",
-    ecpm: "$4.28",
-    trend: "down",
-  },
-  {
-    id: "4",
-    rank: 4,
-    name: "Bubble Pop",
-    icon: "/bubble-pop-game-app-icon.jpg",
-    revenue: "$1,892.40",
-    ecpm: "$3.95",
-    trend: "up",
-  },
-  {
-    id: "5",
-    rank: 5,
-    name: "Card Battle Arena",
-    icon: "/card-game-app-icon.jpg",
-    revenue: "$1,654.30",
-    ecpm: "$4.12",
-    trend: "down",
-  },
-]
+// Format currency
+function formatCurrency(num: number): string {
+  return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 export function TopApps() {
+  const { dateRange, preset, refreshKey } = useDashboardDate()
+
+  // Use dateRange from context (default: last7days, can be changed when Apply is clicked)
+  const apiParams = useMemo(() => {
+    // Default to 7days if no preset is set
+    const effectivePreset = preset || '7days'
+    
+    if (effectivePreset === 'custom' && dateRange?.from && dateRange?.to) {
+      return {
+        range: 'custom' as DateRangeType,
+        startDate: formatDateForAPI(dateRange.from),
+        endDate: formatDateForAPI(dateRange.to),
+        limit: 5,
+      }
+    }
+    
+    // Map preset to DateRangeType
+    return {
+      range: mapPresetToDateRangeType(effectivePreset),
+      limit: 5,
+    }
+  }, [preset, dateRange])
+
+  // Build cache key based on params
+  const cacheKey = useMemo(() => {
+    const effectivePreset = preset || '7days'
+    
+    if (effectivePreset === 'custom' && dateRange?.from && dateRange?.to) {
+      return `topapps_custom_${formatDateForAPI(dateRange.from)}_${formatDateForAPI(dateRange.to)}`
+    }
+    
+    return `topapps_${effectivePreset}`
+  }, [preset, dateRange])
+
+  // Fetch top apps from API
+  const { data: topAppsResponse, loading, refetch: refetchTopApps } = useApi(
+    () => dashboardApi.getTopApps(apiParams),
+    { enabled: true, cacheKey }
+  )
+
+  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  useEffect(() => {
+    if (refreshKey > 0) {
+      refetchTopApps()
+    }
+  }, [refreshKey, refetchTopApps])
+
+  const topApps = useMemo(() => {
+    if (!topAppsResponse?.apps) return []
+    
+    return topAppsResponse.apps.map((app) => ({
+      id: app.appId.toString(),
+      rank: app.rank,
+      name: app.appName,
+      icon: app.iconUrl || `/placeholder.svg`,
+      revenue: formatCurrency(app.revenue),
+      ecpm: formatCurrency(app.ecpm),
+      trend: app.change >= 0 ? 'up' as const : 'down' as const,
+    }))
+  }, [topAppsResponse])
+
+  const totalApps = topAppsResponse?.totalApps || 0
+
+  if (loading) {
+    return (
+      <Card className="bg-white border-slate-200 shadow-sm h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-slate-900">Top Apps by Revenue</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (topApps.length === 0) {
+    return (
+      <Card className="bg-white border-slate-200 shadow-sm h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-slate-900">Top Apps by Revenue</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="text-center text-sm text-slate-500 py-8">No apps data available</div>
+          <Link href="/apps">
+            <Button variant="link" className="w-full mt-4 text-sm text-blue-600 hover:text-blue-700">
+              View All Apps
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="bg-white border-slate-200 shadow-sm h-full">
       <CardHeader className="pb-3">
@@ -72,7 +132,7 @@ export function TopApps() {
               <Avatar className="h-10 w-10 rounded-lg">
                 <AvatarImage src={app.icon || "/placeholder.svg"} className="rounded-lg" />
                 <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-xs">
-                  {app.name.slice(0, 2)}
+                  {app.name.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -96,7 +156,7 @@ export function TopApps() {
         </div>
         <Link href="/apps">
           <Button variant="link" className="w-full mt-4 text-sm text-blue-600 hover:text-blue-700">
-            View All 247 Apps
+            View All {totalApps} Apps
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
         </Link>

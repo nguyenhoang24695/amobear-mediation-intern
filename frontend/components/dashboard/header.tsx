@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Search, Calendar, RefreshCw } from "lucide-react"
+import { Search } from "lucide-react"
 import { NotificationPopup } from "@/components/shared/notification-popup"
 import { UserDropdown } from "@/components/shared/user-dropdown"
+import { DashboardDatePicker } from "./dashboard-date-picker"
 
 export function Header() {
   return (
@@ -29,23 +30,8 @@ export function Header() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          {/* Date Range Picker */}
-          <Button variant="outline" className="h-9 gap-2 text-sm text-slate-600 bg-transparent">
-            <Calendar className="w-4 h-4" />
-            <span className="hidden sm:inline">Last 7 days</span>
-          </Button>
-
-          {/* Refresh Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9 bg-transparent">
-                <RefreshCw className="w-4 h-4 text-slate-600" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Last updated: 2 min ago</p>
-            </TooltipContent>
-          </Tooltip>
+          {/* Date Range Picker with Apply and Refresh */}
+          <DashboardDatePicker />
 
           {/* Notifications */}
           <NotificationPopup />
