@@ -10,7 +10,7 @@ import { useApi } from "@/hooks/use-api"
 import { dashboardApi } from "@/lib/api/services"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
 import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
-import type { DateRangeType } from "@/types/api"
+import type { DateRangeType, TopApps } from "@/types/api"
 
 // Format currency
 function formatCurrency(num: number): string {
@@ -21,7 +21,12 @@ export function TopApps() {
   const { dateRange, preset, refreshKey } = useDashboardDate()
 
   // Use dateRange from context (default: last7days, can be changed when Apply is clicked)
-  const apiParams = useMemo(() => {
+  const apiParams = useMemo((): {
+    range: DateRangeType
+    startDate?: string
+    endDate?: string
+    limit: number
+  } => {
     // Default to 7days if no preset is set
     const effectivePreset = preset || '7days'
     
@@ -30,14 +35,14 @@ export function TopApps() {
         range: 'custom' as DateRangeType,
         startDate: formatDateForAPI(dateRange.from),
         endDate: formatDateForAPI(dateRange.to),
-        limit: 5,
+        limit: 4,
       }
     }
     
     // Map preset to DateRangeType
     return {
       range: mapPresetToDateRangeType(effectivePreset),
-      limit: 5,
+      limit: 4,
     }
   }, [preset, dateRange])
 
@@ -53,7 +58,7 @@ export function TopApps() {
   }, [preset, dateRange])
 
   // Fetch top apps from API
-  const { data: topAppsResponse, loading, refetch: refetchTopApps } = useApi(
+  const { data: topAppsResponse, loading, refetch: refetchTopApps } = useApi<TopApps>(
     () => dashboardApi.getTopApps(apiParams),
     { enabled: true, cacheKey }
   )

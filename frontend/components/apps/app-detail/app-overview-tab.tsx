@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { useParams } from "next/navigation"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,12 +21,7 @@ import {
   Calendar,
   Clock,
   Hash,
-  RectangleHorizontal,
-  Square,
-  Gift,
-  LayoutGrid,
 } from "lucide-react"
-import { useState } from "react"
 import {
   Area,
   AreaChart,
@@ -39,64 +36,9 @@ import {
   BarChart,
   Bar,
 } from "recharts"
-
-// Mock data
-const statsCards = [
-  { label: "Revenue Today", value: "$1,234.56", change: 12.3, icon: DollarSign, color: "blue" },
-  { label: "Revenue MTD", value: "$28,456.78", change: 8.7, icon: DollarSign, color: "green" },
-  { label: "eCPM", value: "$4.82", change: 5.2, icon: BarChart3, color: "purple" },
-  { label: "Impressions Today", value: "256K", change: 10.1, icon: Eye, color: "amber" },
-  { label: "Fill Rate", value: "95.8%", change: 0.3, icon: Percent, color: "cyan" },
-]
-
-const performanceData = [
-  { date: "Jan 1", revenue: 1050, previousRevenue: 980, ecpm: 4.2, impressions: 250 },
-  { date: "Jan 2", revenue: 1120, previousRevenue: 1020, ecpm: 4.35, impressions: 258 },
-  { date: "Jan 3", revenue: 980, previousRevenue: 1100, ecpm: 4.1, impressions: 239 },
-  { date: "Jan 4", revenue: 1280, previousRevenue: 1050, ecpm: 4.52, impressions: 283 },
-  { date: "Jan 5", revenue: 1350, previousRevenue: 1120, ecpm: 4.68, impressions: 288 },
-  { date: "Jan 6", revenue: 1180, previousRevenue: 1080, ecpm: 4.45, impressions: 265 },
-  { date: "Jan 7", revenue: 1234, previousRevenue: 1150, ecpm: 4.82, impressions: 256 },
-]
-
-const adFormatData = [
-  { name: "Rewarded", value: 45, color: "#f59e0b" },
-  { name: "Interstitial", value: 30, color: "#8b5cf6" },
-  { name: "Banner", value: 20, color: "#3b82f6" },
-  { name: "Native", value: 5, color: "#22c55e" },
-]
-
-const adUnitsSummary = [
-  { format: "Banner", count: 4, active: 4, icon: RectangleHorizontal },
-  { format: "Interstitial", count: 3, active: 3, icon: Square },
-  { format: "Rewarded", count: 3, active: 2, icon: Gift },
-  { format: "Native", count: 2, active: 2, icon: LayoutGrid },
-]
-
-const mediationGroups = [
-  { id: "1", name: "US Banner - High Value", format: "Banner", status: "Active" },
-  { id: "2", name: "EU Interstitial - Gaming", format: "Interstitial", status: "Active" },
-  { id: "3", name: "Global Rewarded - Default", format: "Rewarded", status: "Active" },
-]
-
-const networkPerformance = [
-  { name: "AdMob", value: 42, color: "#facc15" },
-  { name: "Unity Ads", value: 25, color: "#1e293b" },
-  { name: "ironSource", value: 18, color: "#9333ea" },
-  { name: "AppLovin", value: 15, color: "#ef4444" },
-]
-
-const activeAlerts = [
-  { id: "1", type: "warning", message: "Fill rate dropped below 90% for Banner ads", time: "2 hours ago" },
-  { id: "2", type: "error", message: "ironSource integration error detected", time: "4 hours ago" },
-]
-
-const quickInfo = {
-  createdDate: "Jan 15, 2024",
-  lastModified: "Jan 7, 2025",
-  admobAppId: "ca-app-pub-1234567890123456~1234567890",
-  lifetimeRevenue: "$142,567.89",
-}
+import { useApi } from "@/hooks/use-api"
+import { structureApi, appMetricsApi, performanceApi, alertsApi } from "@/lib/api/services"
+import type { App, PerformanceData } from "@/types/api"
 
 const colorMap: Record<string, string> = {
   blue: "bg-blue-50 text-blue-600",
@@ -114,10 +56,217 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
   const [chartMetric, setChartMetric] = useState<"revenue" | "ecpm" | "impressions">("revenue")
   const [dateRange, setDateRange] = useState("7d")
 
+  const params = useParams()
+  const appNumericId = Number((params as any)?.id)
+  const hasValidAppId = !Number.isNaN(appNumericId)
+
+  // Load app detail
+  const { data: app } = useApi<App>(
+    () => structureApi.getApp(appNumericId),
+    {
+      enabled: hasValidAppId,
+      cacheKey: hasValidAppId ? `app_detail_${appNumericId}` : undefined,
+    },
+  )
+
+  // Date range for chart
+  const { chartStartDate, chartEndDate } = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const end = new Date(today)
+    const start = new Date(today)
+
+    switch (dateRange) {
+      case "14d":
+        start.setDate(start.getDate() - 13)
+        break
+      case "30d":
+        start.setDate(start.getDate() - 29)
+        break
+      case "90d":
+        start.setDate(start.getDate() - 89)
+        break
+      case "7d":
+      default:
+        start.setDate(start.getDate() - 6)
+        break
+    }
+
+    const toIsoDate = (d: Date) => d.toISOString().split("T")[0]
+
+    return {
+      chartStartDate: toIsoDate(start),
+      chartEndDate: toIsoDate(end),
+    }
+  }, [dateRange])
+
+  // Metrics for cards (today + last 7 days)
+  const { data: metrics } = useApi(
+    async () => {
+      if (!app) return null
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split("T")[0]
+
+      const last7 = new Date(today)
+      last7.setDate(last7.getDate() - 6)
+      const last7Str = last7.toISOString().split("T")[0]
+
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+      const monthStartStr = monthStart.toISOString().split("T")[0]
+
+      const [todayMetrics, last7Metrics, mtdMetrics] = await Promise.all([
+        appMetricsApi.getAppMetrics(app.appId, { startDate: todayStr, endDate: todayStr }).catch(() => null),
+        appMetricsApi.getAppMetrics(app.appId, { startDate: last7Str, endDate: todayStr }).catch(() => null),
+        appMetricsApi.getAppMetrics(app.appId, { startDate: monthStartStr, endDate: todayStr }).catch(() => null),
+      ])
+
+      return { todayMetrics, last7Metrics, mtdMetrics }
+    },
+    {
+      enabled: !!app,
+      cacheKey: app ? `app_metrics_overview_${app.id}` : undefined,
+    },
+  )
+
+  const statsCards = useMemo(() => {
+    if (!metrics) return []
+
+    const { todayMetrics, last7Metrics, mtdMetrics } = metrics
+
+    const todayRevenue = todayMetrics?.totalRevenue ?? 0
+    const mtdRevenue = mtdMetrics?.totalRevenue ?? 0
+    const avgEcpm = last7Metrics?.avgEcpm ?? 0
+    const impressions7d = last7Metrics?.totalImpressions ?? 0
+    const fillRate7d = (last7Metrics?.avgFillRate ?? 0) * 100
+
+    return [
+      {
+        label: "Revenue Today",
+        value: `$${todayRevenue.toFixed(2)}`,
+        change: 0,
+        icon: DollarSign,
+        color: "blue",
+      },
+      {
+        label: "Revenue MTD",
+        value: `$${mtdRevenue.toFixed(2)}`,
+        change: 0,
+        icon: DollarSign,
+        color: "green",
+      },
+      {
+        label: "eCPM (7d avg)",
+        value: `$${avgEcpm.toFixed(2)}`,
+        change: 0,
+        icon: BarChart3,
+        color: "purple",
+      },
+      {
+        label: "Impressions (7d)",
+        value: impressions7d.toLocaleString(),
+        change: 0,
+        icon: Eye,
+        color: "amber",
+      },
+      {
+        label: "Fill Rate (7d)",
+        value: `${fillRate7d.toFixed(2)}%`,
+        change: 0,
+        icon: Percent,
+        color: "cyan",
+      },
+    ]
+  }, [metrics])
+
+  // Performance data for chart (per-day)
+  const { data: performance } = useApi(
+    async () => {
+      if (!app) return null
+
+      const response = await performanceApi.getPerformanceData({
+        appId: app.appId,
+        startDate: chartStartDate,
+        endDate: chartEndDate,
+        page: 1,
+        pageSize: 500,
+      })
+
+      return response
+    },
+    {
+      enabled: !!app && !!chartStartDate && !!chartEndDate,
+      cacheKey: app ? `app_perf_${app.id}_${chartStartDate}_${chartEndDate}` : undefined,
+    },
+  )
+
+  const performanceData = useMemo(() => {
+    if (!performance || !performance.data) return []
+
+    const byDate = new Map<
+      string,
+      {
+        revenue: number
+        ecpm: number
+        impressions: number
+      }
+    >()
+
+    performance.data.forEach((row: PerformanceData) => {
+      const dateKey = row.date.split("T")[0]
+      const existing = byDate.get(dateKey) ?? { revenue: 0, ecpm: 0, impressions: 0 }
+
+      const revenue = (row.revenueMicros ?? 0) / 1_000_000
+      const impressions = row.impressions ?? 0
+      const ecpm = row.ecpmMicros ? row.ecpmMicros / 1_000_000 : 0
+
+      existing.revenue += revenue
+      existing.impressions += impressions
+
+      if (ecpm > 0) {
+        existing.ecpm = ecpm
+      }
+
+      byDate.set(dateKey, existing)
+    })
+
+    const entries = Array.from(byDate.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1))
+
+    return entries.map(([date, values]) => {
+      const d = new Date(date)
+      const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+      return {
+        date: label,
+        revenue: values.revenue,
+        ecpm: values.ecpm,
+        impressions: Math.round(values.impressions / 1000),
+      }
+    })
+  }, [performance])
+
+  // Active alerts for this app
+  const { data: alerts } = useApi(
+    async () => {
+      if (!app) return null
+      return alertsApi.getActiveAlerts({ appId: app.appId })
+    },
+    {
+      enabled: !!app,
+      cacheKey: app ? `app_alerts_${app.id}` : undefined,
+    },
+  )
+
   const metricConfig = {
-    revenue: { key: "revenue", label: "Revenue", format: (v: number) => `$${v.toLocaleString()}`, color: "#2563eb" },
+    revenue: { key: "revenue", label: "Revenue", format: (v: number) => `$${v.toFixed(2)}`, color: "#2563eb" },
     ecpm: { key: "ecpm", label: "eCPM", format: (v: number) => `$${v.toFixed(2)}`, color: "#16a34a" },
-    impressions: { key: "impressions", label: "Impressions", format: (v: number) => `${v}K`, color: "#7c3aed" },
+    impressions: {
+      key: "impressions",
+      label: "Impressions",
+      format: (v: number) => v.toLocaleString(),
+      color: "#7c3aed",
+    },
   }
 
   const config = metricConfig[chartMetric]
@@ -126,33 +275,41 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     <div className="flex flex-col gap-6">
       {/* Stats Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {statsCards.map((stat, idx) => (
-          <Card key={idx} className="border-slate-200">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
-                  <p className="text-xl font-semibold text-slate-900">{stat.value}</p>
-                </div>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorMap[stat.color]}`}>
-                  <stat.icon className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="flex items-center gap-1 mt-2">
-                {stat.change > 0 ? (
-                  <TrendingUp className="w-3 h-3 text-green-600" />
-                ) : (
-                  <TrendingDown className="w-3 h-3 text-red-600" />
-                )}
-                <span className={`text-xs font-medium ${stat.change > 0 ? "text-green-600" : "text-red-600"}`}>
-                  {stat.change > 0 ? "+" : ""}
-                  {stat.change}%
-                </span>
-                <span className="text-xs text-slate-400">vs yesterday</span>
-              </div>
+        {statsCards.length === 0 ? (
+          <Card className="border-slate-200 col-span-2 lg:col-span-5">
+            <CardContent className="p-6 flex items-center justify-center text-sm text-slate-500">
+              Loading metrics...
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          statsCards.map((stat, idx) => (
+            <Card key={idx} className="border-slate-200">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
+                    <p className="text-xl font-semibold text-slate-900">{stat.value}</p>
+                  </div>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorMap[stat.color]}`}>
+                    <stat.icon className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mt-2">
+                  {stat.change >= 0 ? (
+                    <TrendingUp className="w-3 h-3 text-green-600" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-red-600" />
+                  )}
+                  <span className={`text-xs font-medium ${stat.change >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {stat.change > 0 ? "+" : ""}
+                    {stat.change.toFixed(2)}%
+                  </span>
+                  <span className="text-xs text-slate-400">vs previous</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Two Column Layout */}
@@ -255,62 +412,14 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
           <Card className="border-slate-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold text-slate-900">Ad Format Performance</CardTitle>
-              <CardDescription className="text-sm text-slate-500">Revenue distribution by format</CardDescription>
+              <CardDescription className="text-sm text-slate-500">
+                Revenue distribution by format (coming soon)
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-8">
-                <div className="h-48 w-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={adFormatData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {adFormatData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-white border border-slate-200 rounded-lg shadow-md p-2">
-                                <p className="text-sm font-medium">{payload[0].name}</p>
-                                <p className="text-sm text-slate-600">{payload[0].value}%</p>
-                              </div>
-                            )
-                          }
-                          return null
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex-1 space-y-3">
-                  {adFormatData.map((format, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: format.color }} />
-                        <span className="text-sm text-slate-700">{format.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: `${format.value}%`, backgroundColor: format.color }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-slate-900 w-10 text-right">{format.value}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <p className="text-sm text-slate-500">
+                Detailed breakdown by ad format will be available in a future update.
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -323,25 +432,16 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
               <CardTitle className="text-base font-semibold text-slate-900">Ad Units Summary</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-3">
-                {adUnitsSummary.map((unit, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => onNavigateToTab?.("ad-units")}
-                    className="w-full flex items-center justify-between py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50 rounded transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <unit.icon className="w-4 h-4 text-slate-500" />
-                      <span className="text-sm text-slate-700">{unit.format}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-900">{unit.count}</span>
-                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                        {unit.active} active
-                      </Badge>
-                    </div>
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-700">Total ad units</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {app?.adUnitsCount ?? 0}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  View the Ad Units tab for detailed configuration and performance per unit.
+                </p>
               </div>
               <Button
                 variant="link"
@@ -360,20 +460,9 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
               <CardTitle className="text-base font-semibold text-slate-900">Mediation Groups</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {mediationGroups.map((group) => (
-                  <Link
-                    key={group.id}
-                    href={`/mediation/${group.id}`}
-                    className="flex items-center justify-between py-2 px-2 -mx-2 rounded hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="text-sm text-blue-600 hover:underline">{group.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {group.format}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
+              <p className="text-sm text-slate-500">
+                View and manage mediation groups associated with this app in the Mediation Groups tab.
+              </p>
               <Button
                 variant="link"
                 className="p-0 h-auto mt-4 text-blue-600 gap-1"
@@ -389,42 +478,14 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
           <Card className="border-slate-200">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-slate-900">Top Networks</CardTitle>
-              <CardDescription className="text-sm text-slate-500">Revenue contribution %</CardDescription>
+              <CardDescription className="text-sm text-slate-500">
+                Revenue contribution by network (coming soon)
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={networkPerformance} layout="vertical" margin={{ left: 0, right: 10 }}>
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#64748b" }}
-                      width={70}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-white border border-slate-200 rounded-lg shadow-md p-2">
-                              <p className="text-sm font-medium">{payload[0].payload.name}</p>
-                              <p className="text-sm text-slate-600">{payload[0].value}% of revenue</p>
-                            </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                      {networkPerformance.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <p className="text-sm text-slate-500">
+                Network-level breakdown for this app will be available in a future update.
+              </p>
             </CardContent>
           </Card>
 
@@ -434,33 +495,41 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold text-slate-900">Active Alerts</CardTitle>
                 <Badge variant="secondary" className="bg-red-100 text-red-700">
-                  {activeAlerts.length}
+                  {alerts?.data?.length ?? 0}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
-                {activeAlerts.map((alert) => (
-                  <Link
-                    key={alert.id}
-                    href={`/alerts/${alert.id}`}
-                    className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                      alert.type === "error" ? "bg-red-50 hover:bg-red-100" : "bg-amber-50 hover:bg-amber-100"
-                    }`}
-                  >
-                    {alert.type === "error" ? (
-                      <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div>
-                      <p className="text-sm text-slate-700">{alert.message}</p>
-                      <p className="text-xs text-slate-500 mt-1">{alert.time}</p>
-                    </div>
-                  </Link>
-                ))}
+                {!alerts || alerts.data.length === 0 ? (
+                  <p className="text-sm text-slate-500">No active alerts for this app today.</p>
+                ) : (
+                  alerts.data.slice(0, 5).map((alert) => {
+                    const isError = alert.severity === "CRITICAL" || alert.severity === "HIGH"
+                    const triggeredTime = new Date(alert.triggeredAt).toLocaleString()
+                    return (
+                      <Link
+                        key={alert.id}
+                        href={`/alerts/${alert.id}`}
+                        className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                          isError ? "bg-red-50 hover:bg-red-100" : "bg-amber-50 hover:bg-amber-100"
+                        }`}
+                      >
+                        {isError ? (
+                          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className="text-sm text-slate-700">{alert.message}</p>
+                          <p className="text-xs text-slate-500 mt-1">{triggeredTime}</p>
+                        </div>
+                      </Link>
+                    )
+                  })
+                )}
               </div>
-              <Link href="/alerts?app=1">
+              <Link href={app ? `/alerts?appId=${encodeURIComponent(app.appId)}` : "/alerts"}>
                 <Button variant="link" className="p-0 h-auto mt-4 text-blue-600 gap-1">
                   View All Alerts
                   <ArrowRight className="w-3 h-3" />
@@ -481,14 +550,18 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
                     <Calendar className="w-4 h-4" />
                     <span className="text-sm">Created</span>
                   </div>
-                  <span className="text-sm font-medium text-slate-900">{quickInfo.createdDate}</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {app ? new Date(app.createdAt).toLocaleDateString() : "--"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-slate-500">
                     <Clock className="w-4 h-4" />
                     <span className="text-sm">Last Modified</span>
                   </div>
-                  <span className="text-sm font-medium text-slate-900">{quickInfo.lastModified}</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {app ? new Date(app.updatedAt).toLocaleDateString() : "--"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-slate-500">
@@ -496,15 +569,17 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
                     <span className="text-sm">AdMob App ID</span>
                   </div>
                   <code className="text-xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[140px]">
-                    {quickInfo.admobAppId.slice(-12)}
+                    {app?.appId ? app.appId.slice(-12) : "--"}
                   </code>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                   <div className="flex items-center gap-2 text-slate-500">
                     <DollarSign className="w-4 h-4" />
-                    <span className="text-sm">Lifetime Revenue</span>
+                    <span className="text-sm">Revenue (MTD)</span>
                   </div>
-                  <span className="text-sm font-semibold text-green-600">{quickInfo.lifetimeRevenue}</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    {metrics?.mtdMetrics ? `$${metrics.mtdMetrics.totalRevenue.toFixed(2)}` : "$0.00"}
+                  </span>
                 </div>
               </div>
             </CardContent>

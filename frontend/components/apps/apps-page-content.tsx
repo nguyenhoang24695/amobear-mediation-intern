@@ -29,22 +29,25 @@ export function AppsPageContent() {
   const [selectedApps, setSelectedApps] = useState<string[]>([])
 
   // Fetch apps from API with cache key to prevent duplicate calls
-  const { data: apps, loading: appsLoading, refetch: refetchApps } = useApi(
+  const { data: appsResponse, loading: appsLoading, refetch: refetchApps } = useApi(
     () => structureApi.getApps(),
     { enabled: true, cacheKey: 'apps_list' }
   )
 
-  // Calculate summary stats (basic stats only, detailed metrics are fetched in AppsTable)
+  const apps = appsResponse?.apps || []
+  const summary = appsResponse?.summary
+
+  // Calculate summary stats from API response
   const summaryStats = useMemo(() => {
-    if (!apps) return { total: 0, active: 0, totalUnits: 0, avgEcpm: 0 }
+    if (!appsResponse) return { total: 0, active: 0, totalUnits: 0, avgEcpm: 0 }
     
     return {
-      total: apps.length,
+      total: summary?.totalApps || apps.length,
       active: apps.filter(app => app.approvalState === "APPROVED" || !app.approvalState).length,
-      totalUnits: 0, // Will be calculated in AppsTable
-      avgEcpm: 0, // Will be calculated in AppsTable
+      totalUnits: summary?.totalAdUnits || 0,
+      avgEcpm: summary?.averageEcpm || 0,
     }
-  }, [apps])
+  }, [appsResponse, apps, summary])
 
   const handleFilterChange = (type: string, value: string) => {
     if (value.startsWith("All")) {

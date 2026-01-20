@@ -5,7 +5,8 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronUp, ArrowRight, Loader2 } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronUp, ArrowRight, Loader2, AlertOctagon } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { alertsApi } from "@/lib/api/services"
 import { formatDistanceToNow } from "date-fns"
@@ -19,13 +20,13 @@ export function AlertSummary() {
   // Fetch active alerts summary
   const { data: alertsSummary, loading: summaryLoading, refetch: refetchSummary } = useApi(
     () => alertsApi.getActiveAlertsSummary(),
-    { enabled: true }
+    { enabled: true, cacheKey: "active_alerts_summary_today" }
   )
 
   // Fetch recent active alerts
   const { data: alertsData, loading: alertsLoading, refetch: refetchAlerts } = useApi(
     () => alertsApi.getActiveAlerts({ page: 1, pageSize: 5 }),
-    { enabled: expanded } // Only fetch when expanded
+    { enabled: true, cacheKey: "active_alerts_today_page1_size5" } // Fetch always; only render when expanded
   )
 
   // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
@@ -40,22 +41,27 @@ export function AlertSummary() {
 
   const severityCounts = alertsSummary
     ? {
-        critical: alertsSummary.bySeverity?.["CRITICAL"] || 0,
-        warning: alertsSummary.bySeverity?.["WARNING"] || 0,
-        info: alertsSummary.bySeverity?.["INFO"] || 0,
+        critical: alertsSummary.BySeverity?.["CRITICAL"] || 0,
+        high: alertsSummary.BySeverity?.["HIGH"] || 0,
+        medium: alertsSummary.BySeverity?.["MEDIUM"] || 0,
+        low: alertsSummary.BySeverity?.["LOW"] || 0,
       }
-    : { critical: 0, warning: 0, info: 0 }
+    : { critical: 0, high: 0, medium: 0, low: 0 }
 
   const alerts = alertsData?.data || []
 
   const getSeverityIcon = (severity: string) => {
     switch (severity?.toUpperCase()) {
       case "CRITICAL":
-        return <AlertTriangle className="w-4 h-4 text-red-500" />
-      case "WARNING":
+        return <AlertTriangle className="w-4 h-4 text-red-600" />
+      case "HIGH":
+        return <AlertOctagon className="w-4 h-4 text-orange-500" />
+      case "MEDIUM":
         return <AlertCircle className="w-4 h-4 text-amber-500" />
-      default:
+      case "LOW":
         return <Info className="w-4 h-4 text-blue-500" />
+      default:
+        return <Info className="w-4 h-4 text-slate-400" />
     }
   }
 
@@ -63,7 +69,11 @@ export function AlertSummary() {
     switch (severity?.toUpperCase()) {
       case "CRITICAL":
         return "destructive"
-      case "WARNING":
+      case "HIGH":
+        return "secondary"
+      case "MEDIUM":
+        return "secondary"
+      case "LOW":
         return "secondary"
       default:
         return "secondary"
@@ -80,27 +90,41 @@ export function AlertSummary() {
                 <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
               ) : (
                 <>
-                  <Link href="/alerts?severity=CRITICAL">
-                    <Badge
-                      variant="destructive"
-                      className="gap-1 px-2.5 py-1 cursor-pointer hover:bg-red-600 transition-colors"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      {severityCounts.critical} Critical
-                    </Badge>
-                  </Link>
-                  <Link href="/alerts?severity=WARNING">
-                    <Badge className="gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer transition-colors">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      {severityCounts.warning} Warning
-                    </Badge>
-                  </Link>
-                  <Link href="/alerts?severity=INFO">
-                    <Badge className="gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors">
-                      <Info className="w-3.5 h-3.5" />
-                      {severityCounts.info} Info
-                    </Badge>
-                  </Link>
+                  {severityCounts.critical > 0 && (
+                    <Link href="/alerts?severity=CRITICAL">
+                      <Badge
+                        variant="destructive"
+                        className="gap-1 px-2.5 py-1 cursor-pointer hover:bg-red-600 transition-colors"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        {severityCounts.critical} Critical
+                      </Badge>
+                    </Link>
+                  )}
+                  {severityCounts.high > 0 && (
+                    <Link href="/alerts?severity=HIGH">
+                      <Badge className="gap-1 px-2.5 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer transition-colors">
+                        <AlertOctagon className="w-3.5 h-3.5" />
+                        {severityCounts.high} High
+                      </Badge>
+                    </Link>
+                  )}
+                  {severityCounts.medium > 0 && (
+                    <Link href="/alerts?severity=MEDIUM">
+                      <Badge className="gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer transition-colors">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {severityCounts.medium} Medium
+                      </Badge>
+                    </Link>
+                  )}
+                  {severityCounts.low > 0 && (
+                    <Link href="/alerts?severity=LOW">
+                      <Badge className="gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors">
+                        <Info className="w-3.5 h-3.5" />
+                        {severityCounts.low} Low
+                      </Badge>
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -128,24 +152,32 @@ export function AlertSummary() {
               <div className="text-center py-4 text-sm text-slate-500">No active alerts</div>
             ) : (
               alerts.map((alert) => (
-                <Link
-                  key={alert.id}
-                  href={`/alerts/${alert.id}`}
-                  className="flex items-start gap-3 p-3 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block"
-                >
-                  {getSeverityIcon(alert.severity)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-700">{alert.message}</p>
-                    {alert.alertRuleName && (
-                      <p className="text-xs text-slate-500 mt-0.5">{alert.alertRuleName}</p>
-                    )}
-                  </div>
-                  <span className="text-xs text-slate-400 whitespace-nowrap">
-                    {alert.triggeredAt
-                      ? formatDistanceToNow(new Date(alert.triggeredAt), { addSuffix: true })
-                      : "—"}
-                  </span>
-                </Link>
+                <Tooltip key={alert.id}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={`/alerts/${alert.id}`}
+                      className="flex items-start gap-3 p-3 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block"
+                    >
+                      {getSeverityIcon(alert.severity)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-700">{alert.message}</p>
+                        {alert.alertRuleName && (
+                          <p className="text-xs text-slate-500 mt-0.5">{alert.alertRuleName}</p>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 whitespace-nowrap">
+                        {alert.triggeredAt
+                          ? formatDistanceToNow(new Date(alert.triggeredAt), { addSuffix: true })
+                          : "—"}
+                      </span>
+                    </Link>
+                  </TooltipTrigger>
+                  {alert.alertRuleDescription && (
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-sm">{alert.alertRuleDescription}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
               ))
             )}
           </div>

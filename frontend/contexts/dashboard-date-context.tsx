@@ -12,6 +12,7 @@ export interface DateRange {
 interface DashboardDateContextType {
   dateRange: DateRange
   preset: DateRangePreset
+  refreshKey: number
   setDateRange: (range: DateRange) => void
   setPreset: (preset: DateRangePreset) => void
   applyDateRange: () => void

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter, useParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,28 +27,30 @@ import {
   Check,
   Loader2,
 } from "lucide-react"
+import { useApi } from "@/hooks/use-api"
+import { structureApi } from "@/lib/api/services"
+import type { App } from "@/types/api"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
 import { useToast } from "@/hooks/use-toast"
 
-// Mock app data
-const appData = {
-  id: "1",
-  name: "Weather Plus Pro",
-  packageName: "com.weatherplus.pro",
-  platform: "iOS",
-  status: "Active",
-  admobAppId: "ca-app-pub-1234567890123456~1234567890",
-  icon: "/weather-app-icon-blue-gradient.jpg",
-  adUnitsCount: 12,
-  mediationGroupsCount: 8,
-}
-
 export function AppDetailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const params = useParams()
   const { toast } = useToast()
+
+  const appNumericId = Number((params as any)?.id)
+  const hasValidAppId = !Number.isNaN(appNumericId)
+
+  const { data: app, loading: appLoading } = useApi<App>(
+    () => structureApi.getApp(appNumericId),
+    {
+      enabled: hasValidAppId,
+      cacheKey: hasValidAppId ? `app_detail_${appNumericId}` : undefined,
+    },
+  )
 
   const initialTab = searchParams.get("tab") || "overview"
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -59,7 +61,8 @@ export function AppDetailContent() {
     setActiveTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", tab)
-    router.push(`/apps/${appData.id}?${params.toString()}`, { scroll: false })
+    const targetId = hasValidAppId ? appNumericId : ""
+    router.push(`/apps/${targetId}?${params.toString()}`, { scroll: false })
   }
 
   useEffect(() => {
@@ -106,21 +109,23 @@ export function AppDetailContent() {
           {/* Left: App Info */}
           <div className="flex items-start gap-4">
             <img
-              src={appData.icon || "/placeholder.svg"}
-              alt={appData.name}
+              src={app?.iconUri || "/placeholder.svg"}
+              alt={app?.displayName || app?.name || "App"}
               className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm object-cover"
             />
             <div className="flex flex-col gap-2">
               <div>
-                <h1 className="text-2xl font-semibold text-slate-900">{appData.name}</h1>
+                <h1 className="text-2xl font-semibold text-slate-900">
+                  {appLoading ? "Loading..." : app?.displayName || app?.name || "Unnamed App"}
+                </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <code className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-mono">
-                    {appData.packageName}
+                    {app?.appId || "--"}
                   </code>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => copyToClipboard(appData.packageName)}
+                        onClick={() => app?.appId && copyToClipboard(app.appId)}
                         className="p-1 hover:bg-slate-100 rounded transition-colors"
                       >
                         {copied ? (
@@ -138,11 +143,13 @@ export function AppDetailContent() {
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200">
                   <Apple className="w-3 h-3" />
-                  {appData.platform}
+                  {app?.platform || "Unknown"}
                 </Badge>
-                <Badge className="bg-green-100 text-green-700 border-0">{appData.status}</Badge>
+                <Badge className="bg-green-100 text-green-700 border-0">
+                  {app?.approvalState || "Unknown"}
+                </Badge>
                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-mono text-xs">
-                  {appData.admobAppId}
+                  {app?.appId || "--"}
                 </Badge>
               </div>
             </div>
@@ -186,7 +193,11 @@ export function AppDetailContent() {
                   <Settings className="w-4 h-4" />
                   App Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2" onClick={() => copyToClipboard(appData.admobAppId)}>
+                <DropdownMenuItem
+                  className="gap-2"
+                  onClick={() => app?.appId && copyToClipboard(app.appId)}
+                  disabled={!app?.appId}
+                >
                   <Copy className="w-4 h-4" />
                   Copy App ID
                 </DropdownMenuItem>
@@ -212,13 +223,13 @@ export function AppDetailContent() {
             <TabsTrigger value="ad-units" className="px-4 data-[state=active]:bg-white">
               Ad Units
               <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {appData.adUnitsCount}
+                  {app?.adUnitsCount ?? 0}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
               Mediation Groups
               <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {appData.mediationGroupsCount}
+                {app?.mediationGroupsCount ?? 0}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">

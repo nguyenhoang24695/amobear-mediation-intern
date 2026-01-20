@@ -13,6 +13,9 @@ export interface App {
   createdAt: string
   updatedAt: string
   lastSyncedAt?: string
+  adUnitsCount?: number
+  mediationGroupsCount?: number
+  averageEcpm?: number
 }
 
 export interface MediationGroup {

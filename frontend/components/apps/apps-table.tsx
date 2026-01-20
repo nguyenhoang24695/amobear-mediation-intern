@@ -61,160 +61,6 @@ interface AppsTableProps {
   onSelectionChange: (apps: string[]) => void
 }
 
-// Mock data for apps (fallback)
-const mockApps = [
-  {
-    id: "1",
-    name: "Puzzle Master Pro",
-    packageName: "com.studio.puzzlemaster",
-    icon: "/puzzle-game-icon.png",
-    platform: "Android",
-    adUnits: 8,
-    revenue: 1247.5,
-    revenueTrend: 12.5,
-    ecpm: 5.24,
-    impressions: 284000,
-    fillRate: 94.2,
-    status: "Active",
-    lastSync: "2 min ago",
-  },
-  {
-    id: "2",
-    name: "Word Connect",
-    packageName: "com.games.wordconnect",
-    icon: "/word-game-icon.jpg",
-    platform: "iOS",
-    adUnits: 6,
-    revenue: 982.3,
-    revenueTrend: -3.2,
-    ecpm: 4.87,
-    impressions: 198000,
-    fillRate: 91.8,
-    status: "Active",
-    lastSync: "5 min ago",
-  },
-  {
-    id: "3",
-    name: "Racing Thunder",
-    packageName: "com.speedgames.racing",
-    icon: "/racing-game-icon.png",
-    platform: "Android",
-    adUnits: 12,
-    revenue: 2156.8,
-    revenueTrend: 8.7,
-    ecpm: 6.12,
-    impressions: 412000,
-    fillRate: 96.5,
-    status: "Active",
-    lastSync: "3 min ago",
-  },
-  {
-    id: "4",
-    name: "Fitness Tracker Plus",
-    packageName: "com.health.fitnesstracker",
-    icon: "/fitness-app-icon.jpg",
-    platform: "iOS",
-    adUnits: 4,
-    revenue: 534.2,
-    revenueTrend: 5.1,
-    ecpm: 3.92,
-    impressions: 156000,
-    fillRate: 88.3,
-    status: "Active",
-    lastSync: "8 min ago",
-  },
-  {
-    id: "5",
-    name: "Photo Editor Pro",
-    packageName: "com.creative.photoeditor",
-    icon: "/photo-editor-icon.png",
-    platform: "Android",
-    adUnits: 5,
-    revenue: 421.6,
-    revenueTrend: -1.8,
-    ecpm: 3.45,
-    impressions: 142000,
-    fillRate: 85.2,
-    status: "Paused",
-    lastSync: "15 min ago",
-  },
-  {
-    id: "6",
-    name: "Bubble Pop Mania",
-    packageName: "com.casual.bubblepop",
-    icon: "/bubble-game-icon.jpg",
-    platform: "Android",
-    adUnits: 7,
-    revenue: 867.4,
-    revenueTrend: 15.3,
-    ecpm: 4.56,
-    impressions: 224000,
-    fillRate: 92.7,
-    status: "Active",
-    lastSync: "1 min ago",
-  },
-  {
-    id: "7",
-    name: "Music Player X",
-    packageName: "com.audio.musicplayer",
-    icon: "/music-player-icon.jpg",
-    platform: "iOS",
-    adUnits: 3,
-    revenue: 312.8,
-    revenueTrend: -5.4,
-    ecpm: 2.89,
-    impressions: 98000,
-    fillRate: 78.6,
-    status: "Error",
-    lastSync: "32 min ago",
-  },
-  {
-    id: "8",
-    name: "Tower Defense Elite",
-    packageName: "com.strategy.towerdefense",
-    icon: "/tower-defense-game-icon.jpg",
-    platform: "Android",
-    adUnits: 9,
-    revenue: 1523.9,
-    revenueTrend: 22.1,
-    ecpm: 5.78,
-    impressions: 328000,
-    fillRate: 95.1,
-    status: "Active",
-    lastSync: "4 min ago",
-  },
-  {
-    id: "9",
-    name: "Weather Now",
-    packageName: "com.utility.weathernow",
-    icon: "/weather-app-icon.png",
-    platform: "iOS",
-    adUnits: 2,
-    revenue: 189.5,
-    revenueTrend: 1.2,
-    ecpm: 2.34,
-    impressions: 72000,
-    fillRate: 82.4,
-    status: "Active",
-    lastSync: "12 min ago",
-  },
-  {
-    id: "10",
-    name: "Solitaire Classic",
-    packageName: "com.cards.solitaire",
-    icon: "/solitaire-card-game-icon.jpg",
-    platform: "Android",
-    adUnits: 6,
-    revenue: 756.2,
-    revenueTrend: 4.8,
-    ecpm: 4.12,
-    impressions: 186000,
-    fillRate: 90.3,
-    status: "Active",
-    lastSync: "6 min ago",
-  },
-]
-
 type SortField = "name" | "adUnits" | "revenue" | "ecpm" | "impressions" | "fillRate" | "lastSync"
 type SortDirection = "asc" | "desc"
 
@@ -270,13 +116,18 @@ export function AppsTable({
       const last7DaysStr = last7Days.toISOString().split('T')[0]
 
       // Batch fetch to reduce API calls - fetch all apps in parallel but with deduplication
+      // Use adUnitsCount and averageEcpm from API if available, otherwise fetch
       const appsWithData = await Promise.all(
         apps.map(async (app) => {
           try {
-            // Use cache keys to prevent duplicate calls for same app/date combination
-            const adUnitsCount = await structureApi.getAppAdUnitsCount(app.id).catch(() => ({ adUnitsCount: 0 }))
+            // Use adUnitsCount from API if available, otherwise fetch
+            let adUnitsCount = app.adUnitsCount || 0
+            if (!adUnitsCount) {
+              const adUnitsCountResult = await structureApi.getAppAdUnitsCount(app.id).catch(() => ({ adUnitsCount: 0 }))
+              adUnitsCount = adUnitsCountResult.adUnitsCount || 0
+            }
             
-            // Fetch metrics with specific cache keys
+            // Fetch metrics with specific cache keys (still need for revenue, trend, etc.)
             const [todayMetrics, yesterdayMetrics, last7DaysMetrics] = await Promise.all([
               appMetricsApi.getAppMetrics(app.appId, {
                 startDate: todayStr,
@@ -298,22 +149,25 @@ export function AppsTable({
               ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
               : 0
 
+            // Use averageEcpm from API if available, otherwise use from metrics
+            const ecpm = app.averageEcpm || last7DaysMetrics?.avgEcpm || 0
+
             return {
               ...app,
-              adUnitsCount: adUnitsCount.adUnitsCount || 0,
+              adUnitsCount,
               revenue: todayRevenue,
               revenueTrend,
-              ecpm: last7DaysMetrics?.avgEcpm || 0,
+              ecpm,
               impressions: last7DaysMetrics?.totalImpressions || 0,
               fillRate: (last7DaysMetrics?.avgFillRate || 0) * 100,
             }
           } catch (err) {
             return {
               ...app,
-              adUnitsCount: 0,
+              adUnitsCount: app.adUnitsCount || 0,
               revenue: 0,
               revenueTrend: 0,
-              ecpm: 0,
+              ecpm: app.averageEcpm || 0,
               impressions: 0,
               fillRate: 0,
             }
@@ -483,8 +337,8 @@ export function AppsTable({
     setIsActionLoading(true)
     await new Promise((resolve) => setTimeout(resolve, 1000))
     toast({
-      title: selectedAppForAction.status === "Active" ? "App Paused" : "App Resumed",
-      description: `${selectedAppForAction.name} has been ${selectedAppForAction.status === "Active" ? "paused" : "resumed"}`,
+      title: selectedAppForAction.approvalState === "Active" ? "App Paused" : "App Resumed",
+      description: `${selectedAppForAction.name} has been ${selectedAppForAction.approvalState === "Active" ? "paused" : "resumed"}`,
     })
     setIsActionLoading(false)
     setShowPauseModal(false)
@@ -685,7 +539,7 @@ export function AppsTable({
                         ) : (
                           <TrendingDown className="w-3 h-3 mr-0.5" />
                         )}
-                        {Math.abs(app.revenueTrend)}%
+                        {Math.abs(app.revenueTrend).toFixed(2)}%
                       </span>
                     </div>
                   </td>
@@ -696,7 +550,9 @@ export function AppsTable({
                     <span className="text-sm text-slate-900">{formatNumber(app.impressions)}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn("text-sm font-medium", getFillRateColor(app.fillRate))}>{app.fillRate}%</span>
+                    <span className={cn("text-sm font-medium", getFillRateColor(app.fillRate))}>
+                      {app.fillRate.toFixed(2)}%
+                    </span>
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(app.status)}</td>
                   <td className="px-4 py-3">

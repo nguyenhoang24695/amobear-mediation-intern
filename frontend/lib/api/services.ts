@@ -1,11 +1,17 @@
 import type {
     App,
     DashboardMetrics,
+    DashboardKeyMetrics,
+    DateRangeType,
     MediationGroup,
     PagedResponse,
     PerformanceData,
     PerformanceSummary,
+    RecentActivities,
+    RevenueByNetwork,
+    RevenueOverview,
     TopApp,
+    TopApps,
 } from '@/types/api'
 import { apiClient } from './client'
 
@@ -87,9 +93,16 @@ export interface CurrentUser {
 
 // Structure API Service
 export const structureApi = {
-    // Apps
-    getApps: async (publisherId?: string): Promise<App[]> => {
-        return apiClient.get<App[]>('/api/Structure/apps', { publisherId })
+    // Apps - Returns apps with metrics from cache and summary
+    getApps: async (publisherId?: string): Promise<{
+        apps: App[]
+        summary: {
+            totalApps: number
+            totalAdUnits: number
+            averageEcpm: number
+        }
+    }> => {
+        return apiClient.get('/api/Structure/apps', { publisherId })
     },
 
     getApp: async (id: number): Promise<App> => {
@@ -388,89 +401,6 @@ export const dashboardApi = {
             },
         }
     },
-
-    getTopApps: async (limit: number = 5, period: 'today' | '7days' | '30days' = 'today'): Promise<TopApp[]> => {
-        // Try to get from cache first
-        try {
-            const cached = await apiClient.get<{ apps?: any[]; totalApps?: number }>(`/api/DashboardCache/topapps/${period}?limit=${limit}`)
-            
-            // Handle new response format: { apps: [...], totalApps: number }
-            if (cached && cached.apps && Array.isArray(cached.apps)) {
-                return cached.apps.map((app: any) => ({
-                    id: app.id || app.appId,
-                    appId: app.appId || app.appId,
-                    name: app.name || app.displayName || '',
-                    displayName: app.displayName || app.name || '',
-                    icon: app.iconUri || app.icon || undefined,
-                    iconUri: app.iconUri || app.icon || undefined,
-                    revenue: app.revenue || 0,
-                    ecpm: app.ecpm || 0,
-                    trend: app.trend || (app.change >= 0 ? 'up' : 'down'),
-                })) as TopApp[]
-            }
-            
-            // Handle legacy format: Array directly
-            if (cached && Array.isArray(cached)) {
-                return (cached as TopApp[]).slice(0, limit)
-            }
-        } catch (err) {
-            // If cache miss, fall back to calculation
-            console.log('Cache miss, calculating top apps...', err)
-        }
-
-        // Fallback to calculation if cache miss
-        const apps = await structureApi.getApps()
-        const summary = await performanceApi.getPerformanceSummary({
-            startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .split('T')[0],
-            endDate: new Date().toISOString().split('T')[0],
-        })
-
-        // Get performance data for each app
-        const topApps: TopApp[] = []
-
-        for (const app of apps.slice(0, limit * 2)) {
-            const appPerformance = await performanceApi.getPerformanceData({
-                appId: app.appId,
-                startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split('T')[0],
-                endDate: new Date().toISOString().split('T')[0],
-                pageSize: 100,
-            })
-
-            const revenue = appPerformance.data.reduce(
-                (sum, d) => sum + (d.revenueMicros || 0),
-                0
-            ) / 1_000_000
-
-            if (revenue > 0) {
-                const avgEcpm =
-                    appPerformance.data.reduce(
-                        (sum, d) => sum + (d.ecpmMicros || 0),
-                        0
-                    ) /
-                    appPerformance.data.length /
-                    1_000_000
-
-                topApps.push({
-                    id: app.id,
-                    appId: app.appId,
-                    name: app.name,
-                    displayName: app.displayName,
-                    icon: app.iconUri, // Include iconUri from app data
-                    revenue,
-                    ecpm: avgEcpm,
-                    trend: 'up', // TODO: Calculate trend
-                })
-            }
-        }
-
-        return topApps
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, limit)
-    },
 }
 
 // App Metrics API Service
@@ -539,6 +469,7 @@ export const alertsApi = {
             acknowledgedAt?: string
             acknowledgedBy?: string
             alertRuleName?: string
+            alertRuleDescription?: string
         }>
         page: number
         pageSize: number
@@ -549,13 +480,13 @@ export const alertsApi = {
     },
 
     getActiveAlertsSummary: async (publisherId?: string): Promise<{
-        total: number
-        bySeverity: Record<string, number>
-        byType: Record<string, number>
-        details: Array<{
-            severity: string
-            alertType: string
-            count: number
+        Total: number
+        BySeverity: Record<string, number>
+        ByType: Record<string, number>
+        Details: Array<{
+            Severity: string
+            AlertType: string
+            Count: number
         }>
     }> => {
         return apiClient.get('/api/Alerts/active/summary', { publisherId })

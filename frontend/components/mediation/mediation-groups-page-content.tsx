@@ -71,10 +71,12 @@ export function MediationGroupsPageContent() {
   )
 
   // Fetch apps for filter dropdown
-  const { data: apps } = useApi(
+  const { data: appsResponse } = useApi(
     () => structureApi.getApps(),
     { enabled: true }
   )
+  
+  const apps = appsResponse?.apps || []
 
   // Update app options from API
   const appOptions = useMemo(() => {
