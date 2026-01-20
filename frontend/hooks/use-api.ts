@@ -49,12 +49,13 @@ export function useApi<T>(
     return `api_${Math.abs(hash)}`
   }, [apiCall, cacheKey])
 
-  // Create a stable wrapper function
+  // Create a stable wrapper function - don't depend on apiCall to avoid re-renders
+  // apiCallRef is updated on every render, so we can safely use it without dependencies
   const stableApiCall = useMemo(() => {
     return async () => {
       return await apiCallRef.current()
     }
-  }, [apiCall])
+  }, []) // Empty deps - apiCallRef.current is always the latest apiCall
 
   useEffect(() => {
     if (!enabled) {
@@ -107,6 +108,15 @@ export function useApi<T>(
         
         if (!cancelled) {
           const error = err instanceof Error ? err : new Error('Unknown error')
+          
+          // Don't set error or call onError for 401 - it's handled by API client redirect
+          // This prevents infinite loops and error state updates
+          if (error && (error as any).response?.status === 401) {
+            // 401 is handled by API client, just stop loading
+            setLoading(false)
+            return
+          }
+          
           setError(error)
           onErrorRef.current?.(error)
         }
@@ -122,7 +132,7 @@ export function useApi<T>(
     return () => {
       cancelled = true
     }
-  }, [enabled, requestKey, stableApiCall])
+  }, [enabled, requestKey]) // Remove stableApiCall from deps - it's stable
 
   const refetch = async () => {
     // Clear cache and pending request

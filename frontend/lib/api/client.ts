@@ -1,6 +1,9 @@
 // Base API Client
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
+// Global flag to prevent multiple simultaneous redirects
+let isRedirecting = false
+
 export class ApiClient {
     private baseUrl: string
 
@@ -33,6 +36,25 @@ export class ApiClient {
                 const errorData = await response.json().catch(() => ({
                     error: `HTTP ${response.status}: ${response.statusText}`,
                 }))
+
+                // Handle 401 Unauthorized - clear auth and redirect to login
+                if (response.status === 401) {
+                    // Clear auth data
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem('accessToken')
+                        localStorage.removeItem('refreshToken')
+                        localStorage.removeItem('user')
+                        
+                        // Only redirect once to prevent infinite loops
+                        if (!isRedirecting && !window.location.pathname.startsWith('/login')) {
+                            isRedirecting = true
+                            // Use setTimeout to allow current error handling to complete
+                            setTimeout(() => {
+                                window.location.href = '/login'
+                            }, 100)
+                        }
+                    }
+                }
 
                 // Create error object with response data for better error handling
                 const error = new Error(errorData.error?.message || errorData.message || errorData.error || 'Request failed')

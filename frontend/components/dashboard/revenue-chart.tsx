@@ -12,14 +12,18 @@ import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboar
 import type { DateRangeType } from "@/types/api"
 
 const tabConfig = {
-  revenue: { key: "revenue", label: "Revenue", format: (v: number) => `$${(v / 1000).toFixed(1)}k`, color: "#2563eb" },
+  revenue: { key: "revenue", label: "Revenue", format: (v: number) => `${formatCurrency(v)}`, color: "#2563eb" },
   ecpm: { key: "ecpm", label: "eCPM", format: (v: number) => `$${v.toFixed(2)}`, color: "#16a34a" },
   impressions: {
     key: "impressions",
     label: "Impressions",
-    format: (v: number) => `${v.toFixed(2)}M`,
+    format: (v: number) => `${v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
     color: "#7c3aed",
   },
+}
+
+function formatCurrency(num: number): string {
+  return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // Get day name from date
