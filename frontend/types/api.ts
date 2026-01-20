@@ -18,6 +18,23 @@ export interface App {
   averageEcpm?: number
 }
 
+export interface AdUnit {
+  id: number
+  name: string
+  adUnitId: string
+  adFormat?: string
+  displayName?: string
+  publisherId: string
+  createdAt: string
+  updatedAt: string
+  lastSyncedAt?: string
+  revenue?: number
+  impressions?: number
+  ecpm?: number
+  fillRate?: number
+  status?: string
+}
+
 export interface MediationGroup {
   id: number
   name: string

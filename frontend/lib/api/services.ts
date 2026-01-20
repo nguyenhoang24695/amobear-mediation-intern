@@ -1,4 +1,5 @@
 import type {
+    AdUnit,
     App,
     DashboardMetrics,
     DashboardKeyMetrics,
@@ -107,6 +108,10 @@ export const structureApi = {
 
     getApp: async (id: number): Promise<App> => {
         return apiClient.get<App>(`/api/Structure/apps/${id}`)
+    },
+
+    getAppAdUnits: async (id: number): Promise<AdUnit[]> => {
+        return apiClient.get<AdUnit[]>(`/api/Structure/apps/${id}/adunits`)
     },
 
     getAppAdUnitsCount: async (id: number): Promise<{ appId: number; adUnitsCount: number }> => {

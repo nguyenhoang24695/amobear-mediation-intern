@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -37,101 +38,18 @@ import {
   Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-// Mock data
-const mockAdUnits = [
-  {
-    id: "1",
-    name: "Home Screen Banner",
-    format: "Banner",
-    adUnitId: "ca-app-pub-1234567890/1111111111",
-    status: "Active",
-    ecpm: 2.45,
-    impressions: 45200,
-    revenue: 110.74,
-    fillRate: 96.2,
-  },
-  {
-    id: "2",
-    name: "Level Complete Interstitial",
-    format: "Interstitial",
-    adUnitId: "ca-app-pub-1234567890/2222222222",
-    status: "Active",
-    ecpm: 8.92,
-    impressions: 12800,
-    revenue: 114.18,
-    fillRate: 94.5,
-  },
-  {
-    id: "3",
-    name: "Daily Reward Video",
-    format: "Rewarded",
-    adUnitId: "ca-app-pub-1234567890/3333333333",
-    status: "Active",
-    ecpm: 18.45,
-    impressions: 8500,
-    revenue: 156.83,
-    fillRate: 98.1,
-  },
-  {
-    id: "4",
-    name: "News Feed Native",
-    format: "Native",
-    adUnitId: "ca-app-pub-1234567890/4444444444",
-    status: "Active",
-    ecpm: 4.67,
-    impressions: 22100,
-    revenue: 103.21,
-    fillRate: 92.8,
-  },
-  {
-    id: "5",
-    name: "App Launch Ad",
-    format: "App Open",
-    adUnitId: "ca-app-pub-1234567890/5555555555",
-    status: "Paused",
-    ecpm: 6.23,
-    impressions: 0,
-    revenue: 0,
-    fillRate: 0,
-  },
-  {
-    id: "6",
-    name: "Settings Banner",
-    format: "Banner",
-    adUnitId: "ca-app-pub-1234567890/6666666666",
-    status: "Active",
-    ecpm: 1.89,
-    impressions: 18700,
-    revenue: 35.34,
-    fillRate: 95.4,
-  },
-  {
-    id: "7",
-    name: "Exit Interstitial",
-    format: "Interstitial",
-    adUnitId: "ca-app-pub-1234567890/7777777777",
-    status: "Active",
-    ecpm: 7.56,
-    impressions: 9400,
-    revenue: 71.06,
-    fillRate: 93.2,
-  },
-  {
-    id: "8",
-    name: "Extra Lives Reward",
-    format: "Rewarded",
-    adUnitId: "ca-app-pub-1234567890/8888888888",
-    status: "Active",
-    ecpm: 16.78,
-    impressions: 6200,
-    revenue: 104.04,
-    fillRate: 97.5,
-  },
-]
+import { useApi } from "@/hooks/use-api"
+import { structureApi } from "@/lib/api/services"
+import type { AdUnit } from "@/types/api"
 
 const formatIcons: Record<string, React.ElementType> = {
-  Banner: RectangleHorizontal,
+  BANNER: RectangleHorizontal,
+  INTERSTITIAL: Square,
+  REWARDED: Gift,
+  REWARDED_INTERSTITIAL: Gift,
+  NATIVE: LayoutGrid,
+  APP_OPEN: Smartphone,
+  Banner: RectangleHorizontal, // Fallback for lowercase
   Interstitial: Square,
   Rewarded: Gift,
   Native: LayoutGrid,
@@ -139,47 +57,88 @@ const formatIcons: Record<string, React.ElementType> = {
 }
 
 const formatColors: Record<string, string> = {
-  Banner: "bg-blue-50 text-blue-700 border-blue-200",
+  BANNER: "bg-blue-50 text-blue-700 border-blue-200",
+  INTERSTITIAL: "bg-purple-50 text-purple-700 border-purple-200",
+  REWARDED: "bg-amber-50 text-amber-700 border-amber-200",
+  REWARDED_INTERSTITIAL: "bg-amber-50 text-amber-700 border-amber-200",
+  NATIVE: "bg-green-50 text-green-700 border-green-200",
+  APP_OPEN: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  Banner: "bg-blue-50 text-blue-700 border-blue-200", // Fallback
   Interstitial: "bg-purple-50 text-purple-700 border-purple-200",
   Rewarded: "bg-amber-50 text-amber-700 border-amber-200",
   Native: "bg-green-50 text-green-700 border-green-200",
   "App Open": "bg-cyan-50 text-cyan-700 border-cyan-200",
 }
 
+// Helper to format ad format for display
+const formatAdFormat = (format?: string): string => {
+  if (!format) return "Unknown"
+  // Convert BANNER -> Banner, INTERSTITIAL -> Interstitial, etc.
+  return format
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ")
+}
+
 type SortField = "name" | "ecpm" | "impressions" | "revenue" | "fillRate"
 type SortDirection = "asc" | "desc"
 
 export function AppAdUnitsTab() {
+  const params = useParams()
+  const appNumericId = Number((params as any)?.id)
+  const hasValidAppId = !Number.isNaN(appNumericId)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUnits, setSelectedUnits] = useState<string[]>([])
   const [sortField, setSortField] = useState<SortField>("revenue")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  const filteredUnits = mockAdUnits.filter((unit) => {
-    if (searchQuery && !unit.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false
-    }
-    return true
-  })
+  // Load ad units from API
+  const { data: adUnits, loading } = useApi<AdUnit[]>(
+    () => structureApi.getAppAdUnits(appNumericId),
+    {
+      enabled: hasValidAppId,
+      cacheKey: hasValidAppId ? `app_ad_units_${appNumericId}` : undefined,
+    },
+  )
 
-  const sortedUnits = [...filteredUnits].sort((a, b) => {
+  const filteredUnits = useMemo(() => {
+    if (!adUnits) return []
+    return adUnits.filter((unit) => {
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase()
+        const name = (unit.displayName || unit.name || "").toLowerCase()
+        const adUnitId = (unit.adUnitId || "").toLowerCase()
+        if (!name.includes(searchLower) && !adUnitId.includes(searchLower)) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [adUnits, searchQuery])
+
+  const sortedUnits = useMemo(() => {
     const multiplier = sortDirection === "asc" ? 1 : -1
-    switch (sortField) {
-      case "name":
-        return multiplier * a.name.localeCompare(b.name)
-      case "ecpm":
-        return multiplier * (a.ecpm - b.ecpm)
-      case "impressions":
-        return multiplier * (a.impressions - b.impressions)
-      case "revenue":
-        return multiplier * (a.revenue - b.revenue)
-      case "fillRate":
-        return multiplier * (a.fillRate - b.fillRate)
-      default:
-        return 0
-    }
-  })
+    return [...filteredUnits].sort((a, b) => {
+      switch (sortField) {
+        case "name":
+          const nameA = (a.displayName || a.name || "").toLowerCase()
+          const nameB = (b.displayName || b.name || "").toLowerCase()
+          return multiplier * nameA.localeCompare(nameB)
+        case "ecpm":
+          return multiplier * ((a.ecpm || 0) - (b.ecpm || 0))
+        case "impressions":
+          return multiplier * ((a.impressions || 0) - (b.impressions || 0))
+        case "revenue":
+          return multiplier * ((a.revenue || 0) - (b.revenue || 0))
+        case "fillRate":
+          return multiplier * ((a.fillRate || 0) - (b.fillRate || 0))
+        default:
+          return 0
+      }
+    })
+  }, [filteredUnits, sortField, sortDirection])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -194,21 +153,22 @@ export function AppAdUnitsTab() {
     if (selectedUnits.length === sortedUnits.length) {
       setSelectedUnits([])
     } else {
-      setSelectedUnits(sortedUnits.map((u) => u.id))
+      setSelectedUnits(sortedUnits.map((u) => u.id.toString()))
     }
   }
 
-  const toggleSelectUnit = (unitId: string) => {
-    if (selectedUnits.includes(unitId)) {
-      setSelectedUnits(selectedUnits.filter((id) => id !== unitId))
+  const toggleSelectUnit = (unitId: number) => {
+    const idStr = unitId.toString()
+    if (selectedUnits.includes(idStr)) {
+      setSelectedUnits(selectedUnits.filter((id) => id !== idStr))
     } else {
-      setSelectedUnits([...selectedUnits, unitId])
+      setSelectedUnits([...selectedUnits, idStr])
     }
   }
 
-  const copyAdUnitId = (id: string, adUnitId: string) => {
+  const copyAdUnitId = (id: number, adUnitId: string) => {
     navigator.clipboard.writeText(adUnitId)
-    setCopiedId(id)
+    setCopiedId(id.toString())
     setTimeout(() => setCopiedId(null), 2000)
   }
 
@@ -284,128 +244,152 @@ export function AppAdUnitsTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sortedUnits.map((unit) => {
-                  const FormatIcon = formatIcons[unit.format]
-                  return (
-                    <tr
-                      key={unit.id}
-                      className={cn(
-                        "hover:bg-slate-50 transition-colors",
-                        selectedUnits.includes(unit.id) && "bg-blue-50 hover:bg-blue-50",
-                        unit.status === "Paused" && "opacity-60",
-                      )}
-                    >
-                      <td className="px-4 py-3">
-                        <Checkbox
-                          checked={selectedUnits.includes(unit.id)}
-                          onCheckedChange={() => toggleSelectUnit(unit.id)}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-slate-900">{unit.name}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className={cn("gap-1", formatColors[unit.format])}>
-                          <FormatIcon className="w-3 h-3" />
-                          {unit.format}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                            {unit.adUnitId}
-                          </code>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => copyAdUnitId(unit.id, unit.adUnitId)}
-                                className="p-1 hover:bg-slate-100 rounded transition-colors"
-                              >
-                                {copiedId === unit.id ? (
-                                  <Check className="w-3.5 h-3.5 text-green-600" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5 text-slate-400" />
-                                )}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>{copiedId === unit.id ? "Copied!" : "Copy ID"}</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {unit.status === "Active" ? (
-                          <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
-                        ) : (
-                          <Badge className="bg-slate-100 text-slate-600 border-0">Paused</Badge>
+                {loading ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-500">
+                      Loading ad units...
+                    </td>
+                  </tr>
+                ) : sortedUnits.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-500">
+                      {searchQuery ? "No ad units found matching your search." : "No ad units found for this app."}
+                    </td>
+                  </tr>
+                ) : (
+                  sortedUnits.map((unit) => {
+                    const format = unit.adFormat || "Unknown"
+                    const FormatIcon = formatIcons[format] || RectangleHorizontal
+                    const formatDisplay = formatAdFormat(format)
+                    const unitIdStr = unit.id.toString()
+                    const fillRate = unit.fillRate || 0
+                    return (
+                      <tr
+                        key={unit.id}
+                        className={cn(
+                          "hover:bg-slate-50 transition-colors",
+                          selectedUnits.includes(unitIdStr) && "bg-blue-50 hover:bg-blue-50",
+                          unit.status === "Paused" && "opacity-60",
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-sm font-medium text-slate-900">${unit.ecpm.toFixed(2)}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-sm text-slate-700">{unit.impressions.toLocaleString()}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-sm font-medium text-slate-900">${unit.revenue.toFixed(2)}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span
-                          className={cn(
-                            "text-sm font-medium",
-                            unit.fillRate >= 95
-                              ? "text-green-600"
-                              : unit.fillRate >= 90
-                                ? "text-amber-600"
-                                : "text-red-600",
+                      >
+                        <td className="px-4 py-3">
+                          <Checkbox
+                            checked={selectedUnits.includes(unitIdStr)}
+                            onCheckedChange={() => toggleSelectUnit(unit.id)}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-slate-900">
+                            {unit.displayName || unit.name || "Unnamed Ad Unit"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className={cn("gap-1", formatColors[format] || formatColors.BANNER)}>
+                            <FormatIcon className="w-3 h-3" />
+                            {formatDisplay}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                              {unit.adUnitId}
+                            </code>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => copyAdUnitId(unit.id, unit.adUnitId)}
+                                  className="p-1 hover:bg-slate-100 rounded transition-colors"
+                                >
+                                  {copiedId === unitIdStr ? (
+                                    <Check className="w-3.5 h-3.5 text-green-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>{copiedId === unitIdStr ? "Copied!" : "Copy ID"}</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {unit.status === "Active" || !unit.status ? (
+                            <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
+                          ) : (
+                            <Badge className="bg-slate-100 text-slate-600 border-0">Paused</Badge>
                           )}
-                        >
-                          {unit.fillRate > 0 ? `${unit.fillRate}%` : "-"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                              <Pencil className="w-4 h-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                              <Copy className="w-4 h-4" />
-                              Copy ID
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2 text-amber-600">
-                              {unit.status === "Active" ? (
-                                <>
-                                  <Pause className="w-4 h-4" />
-                                  Pause
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-4 h-4" />
-                                  Resume
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2 text-red-600">
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  )
-                })}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-medium text-slate-900">
+                            ${(unit.ecpm || 0).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm text-slate-700">{(unit.impressions || 0).toLocaleString()}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-medium text-slate-900">
+                            ${(unit.revenue || 0).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span
+                            className={cn(
+                              "text-sm font-medium",
+                              fillRate >= 95
+                                ? "text-green-600"
+                                : fillRate >= 90
+                                  ? "text-amber-600"
+                                  : "text-red-600",
+                            )}
+                          >
+                            {fillRate > 0 ? `${fillRate.toFixed(2)}%` : "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem className="gap-2">
+                                <Eye className="w-4 h-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2">
+                                <Pencil className="w-4 h-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2" onClick={() => copyAdUnitId(unit.id, unit.adUnitId)}>
+                                <Copy className="w-4 h-4" />
+                                Copy ID
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="gap-2 text-amber-600">
+                                {unit.status === "Active" || !unit.status ? (
+                                  <>
+                                    <Pause className="w-4 h-4" />
+                                    Pause
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-4 h-4" />
+                                    Resume
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2 text-red-600">
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
