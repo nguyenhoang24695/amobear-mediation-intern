@@ -45,9 +45,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import { useToast } from "@/hooks/use-toast"
-import { useApi } from "@/hooks/use-api"
 import type { App } from "@/types/api"
-import { performanceApi, structureApi, appMetricsApi } from "@/lib/api/services"
 import { useMemo } from "react"
 
 interface AppsTableProps {
@@ -85,145 +83,28 @@ export function AppsTable({
   const [selectedAppForAction, setSelectedAppForAction] = useState<App | null>(null)
   const [isActionLoading, setIsActionLoading] = useState(false)
 
-  // Generate cache key based on apps list to prevent refetch when apps haven't changed
-  const appsCacheKey = useMemo(() => {
-    if (!apps || apps.length === 0) return 'apps_metrics_empty'
-    // Create a hash from app IDs
-    const appIds = apps.map(a => a.id).sort().join(',')
-    let hash = 0
-    for (let i = 0; i < appIds.length; i++) {
-      const char = appIds.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return `apps_metrics_${Math.abs(hash)}`
-  }, [apps])
-
-  // Fetch metrics for all apps with cache key to prevent duplicate calls
-  // Only fetch once per app list change
-  const { data: appsWithMetrics } = useApi(
-    async () => {
-      if (!apps || apps.length === 0) return []
-
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const todayStr = today.toISOString().split('T')[0]
-      const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
-      const last7Days = new Date(today)
-      last7Days.setDate(last7Days.getDate() - 7)
-      const last7DaysStr = last7Days.toISOString().split('T')[0]
-
-      // Batch fetch to reduce API calls - fetch all apps in parallel but with deduplication
-      // Use adUnitsCount and averageEcpm from API if available, otherwise fetch
-      const appsWithData = await Promise.all(
-        apps.map(async (app) => {
-          try {
-            // Use adUnitsCount from API if available, otherwise fetch
-            let adUnitsCount = app.adUnitsCount || 0
-            if (!adUnitsCount) {
-              const adUnitsCountResult = await structureApi.getAppAdUnitsCount(app.id).catch(() => ({ adUnitsCount: 0 }))
-              adUnitsCount = adUnitsCountResult.adUnitsCount || 0
-            }
-            
-            // Fetch metrics with specific cache keys (still need for revenue, trend, etc.)
-            const [todayMetrics, yesterdayMetrics, last7DaysMetrics] = await Promise.all([
-              appMetricsApi.getAppMetrics(app.appId, {
-                startDate: todayStr,
-                endDate: todayStr,
-              }).catch(() => null),
-              appMetricsApi.getAppMetrics(app.appId, {
-                startDate: yesterdayStr,
-                endDate: yesterdayStr,
-              }).catch(() => null),
-              appMetricsApi.getAppMetrics(app.appId, {
-                startDate: last7DaysStr,
-                endDate: todayStr,
-              }).catch(() => null),
-            ])
-
-            const todayRevenue = todayMetrics?.totalRevenue || 0
-            const yesterdayRevenue = yesterdayMetrics?.totalRevenue || 0
-            const revenueTrend = yesterdayRevenue > 0
-              ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
-              : 0
-
-            // Use averageEcpm from API if available, otherwise use from metrics
-            const ecpm = app.averageEcpm || last7DaysMetrics?.avgEcpm || 0
-
-            return {
-              ...app,
-              adUnitsCount,
-              revenue: todayRevenue,
-              revenueTrend,
-              ecpm,
-              impressions: last7DaysMetrics?.totalImpressions || 0,
-              fillRate: (last7DaysMetrics?.avgFillRate || 0) * 100,
-            }
-          } catch (err) {
-            return {
-              ...app,
-              adUnitsCount: app.adUnitsCount || 0,
-              revenue: 0,
-              revenueTrend: 0,
-              ecpm: app.averageEcpm || 0,
-              impressions: 0,
-              fillRate: 0,
-            }
-          }
-        })
-      )
-
-      return appsWithData
-    },
-    { enabled: !!apps && apps.length > 0 }
-  )
-
   // Transform apps data to match table format
   const transformedApps = useMemo(() => {
-    if (!appsWithMetrics || appsWithMetrics.length === 0) {
-      if (!apps || apps.length === 0) return []
-      // Fallback to basic data if metrics not loaded yet
-      return apps.map((app) => ({
-        id: app.id.toString(),
-        name: app.displayName || app.name,
-        packageName: app.appId,
-        icon: app.iconUri, // Use iconUri from API
-        platform: app.platform || "Unknown",
-        adUnits: 0,
-        revenue: 0,
-        revenueTrend: 0,
-        ecpm: 0,
-        impressions: 0,
-        fillRate: 0,
-        status: app.approvalState === "APPROVED" ? "Active" : app.approvalState || "Active",
-        lastSync: app.lastSyncedAt 
-          ? new Date(app.lastSyncedAt).toLocaleString()
-          : "Never",
-        _original: app,
-      }))
-    }
+    if (!apps || apps.length === 0) return []
 
-    return appsWithMetrics.map((app: any) => ({
+    // Dữ liệu metrics/delta đã được backend trả sẵn từ cache dashboard:app:{id}:metrics:today
+    return apps.map((app) => ({
       id: app.id.toString(),
       name: app.displayName || app.name,
       packageName: app.appId,
-      icon: app.iconUri || app.icon, // Use iconUri from API
+      icon: app.iconUri,
       platform: app.platform || "Unknown",
       adUnits: app.adUnitsCount || 0,
-      revenue: app.revenue || 0,
-      revenueTrend: app.revenueTrend || 0,
-      ecpm: app.ecpm || 0,
-      impressions: app.impressions || 0,
-      fillRate: app.fillRate || 0,
+      revenue: app.todayRevenue || 0,
+      revenueTrend: app.todayRevenueChangePct || 0,
+      ecpm: app.todayEcpm ?? app.averageEcpm ?? 0,
+      impressions: app.todayImpressions || 0,
+      fillRate: app.todayFillRate || 0, // percent (0..100)
       status: app.approvalState === "APPROVED" ? "Active" : app.approvalState || "Active",
-      lastSync: app.lastSyncedAt 
-        ? new Date(app.lastSyncedAt).toLocaleString()
-        : "Never",
+      lastSync: app.lastSyncedAt ? new Date(app.lastSyncedAt).toLocaleString() : "Never",
       _original: app,
     }))
-  }, [appsWithMetrics, apps])
+  }, [apps])
 
   // Filter apps
   const filteredApps = transformedApps.filter((app) => {

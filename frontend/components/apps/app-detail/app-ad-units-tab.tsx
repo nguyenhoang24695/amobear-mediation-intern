@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
+import { Pagination } from "@/components/shared/pagination"
 import type { AdUnit } from "@/types/api"
 
 const formatIcons: Record<string, React.ElementType> = {
@@ -93,6 +94,8 @@ export function AppAdUnitsTab() {
   const [sortField, setSortField] = useState<SortField>("revenue")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   // Load ad units from API
   const { data: adUnits, loading } = useApi<AdUnit[]>(
@@ -140,6 +143,19 @@ export function AppAdUnitsTab() {
     })
   }, [filteredUnits, sortField, sortDirection])
 
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(sortedUnits.length / pageSize))
+  const paginatedUnits = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    return sortedUnits.slice(startIndex, endIndex)
+  }, [sortedUnits, currentPage, pageSize])
+
+  // Reset to page 1 when search or sort changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, sortField, sortDirection])
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -150,10 +166,21 @@ export function AppAdUnitsTab() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedUnits.length === sortedUnits.length) {
-      setSelectedUnits([])
+    const paginatedUnitIds = paginatedUnits.map((u) => u.id.toString())
+    const allPaginatedSelected = paginatedUnitIds.every((id) => selectedUnits.includes(id))
+    
+    if (allPaginatedSelected) {
+      // Deselect all items on current page
+      setSelectedUnits(selectedUnits.filter((id) => !paginatedUnitIds.includes(id)))
     } else {
-      setSelectedUnits(sortedUnits.map((u) => u.id.toString()))
+      // Select all items on current page (keep items from other pages)
+      const newSelection = [...selectedUnits]
+      paginatedUnitIds.forEach((id) => {
+        if (!newSelection.includes(id)) {
+          newSelection.push(id)
+        }
+      })
+      setSelectedUnits(newSelection)
     }
   }
 
@@ -218,7 +245,10 @@ export function AppAdUnitsTab() {
                 <tr className="text-xs text-slate-500 font-medium">
                   <th className="px-4 py-3 text-left w-10">
                     <Checkbox
-                      checked={selectedUnits.length === sortedUnits.length && sortedUnits.length > 0}
+                      checked={
+                        paginatedUnits.length > 0 &&
+                        paginatedUnits.every((u) => selectedUnits.includes(u.id.toString()))
+                      }
                       onCheckedChange={toggleSelectAll}
                     />
                   </th>
@@ -257,7 +287,7 @@ export function AppAdUnitsTab() {
                     </td>
                   </tr>
                 ) : (
-                  sortedUnits.map((unit) => {
+                  paginatedUnits.map((unit) => {
                     const format = unit.adFormat || "Unknown"
                     const FormatIcon = formatIcons[format] || RectangleHorizontal
                     const formatDisplay = formatAdFormat(format)
@@ -393,6 +423,21 @@ export function AppAdUnitsTab() {
               </tbody>
             </table>
           </div>
+
+          {sortedUnits.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sortedUnits.length}
+              pageSize={pageSize}
+              onPageChange={(page) => setCurrentPage(page)}
+              onPageSizeChange={(size) => {
+                setPageSize(size)
+                setCurrentPage(1)
+              }}
+              itemName="ad units"
+            />
+          )}
         </Card>
       </div>
     </TooltipProvider>

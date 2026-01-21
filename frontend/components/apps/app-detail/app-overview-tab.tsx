@@ -37,8 +37,9 @@ import {
   Bar,
 } from "recharts"
 import { useApi } from "@/hooks/use-api"
-import { structureApi, appMetricsApi, performanceApi, alertsApi } from "@/lib/api/services"
-import type { App, PerformanceData } from "@/types/api"
+import { structureApi, appMetricsApi, dashboardApi, alertsApi } from "@/lib/api/services"
+import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
+import type { App, DateRangeType } from "@/types/api"
 
 const colorMap: Record<string, string> = {
   blue: "bg-blue-50 text-blue-600",
@@ -69,39 +70,50 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     },
   )
 
-  // Date range for chart
-  const { chartStartDate, chartEndDate } = useMemo(() => {
+  // Build API params for chart - tương tự revenue-chart.tsx
+  const chartApiParams = useMemo(() => {
+    if (!app) return null
+
+    // Map dateRange string to DateRangeType
+    let range: DateRangeType = 'last7days'
+    let startDate: string | undefined
+    let endDate: string | undefined
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-
     const end = new Date(today)
     const start = new Date(today)
 
     switch (dateRange) {
       case "14d":
         start.setDate(start.getDate() - 13)
+        range = 'last14days'
         break
       case "30d":
         start.setDate(start.getDate() - 29)
+        range = 'last30days'
         break
       case "90d":
         start.setDate(start.getDate() - 89)
+        range = 'custom' // Use custom for 90 days
         break
       case "7d":
       default:
         start.setDate(start.getDate() - 6)
+        range = 'last7days'
         break
     }
 
-    const toIsoDate = (d: Date) => d.toISOString().split("T")[0]
-
     return {
-      chartStartDate: toIsoDate(start),
-      chartEndDate: toIsoDate(end),
+      range,
+      startDate: formatDateForAPI(start),
+      endDate: formatDateForAPI(end),
+      metric: chartMetric,
     }
-  }, [dateRange])
+  }, [app, dateRange, chartMetric])
 
-  // Metrics for cards (today + last 7 days)
+  // Metrics for cards - sử dụng cache cho today, 7days, 14days, 30days
+  // MTD sẽ gọi database vì không có trong cache
   const { data: metrics } = useApi(
     async () => {
       if (!app) return null
@@ -117,6 +129,8 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
       const monthStartStr = monthStart.toISOString().split("T")[0]
 
+      // Today và 7days sẽ dùng cache (API tự động check cache)
+      // MTD sẽ gọi database vì không có trong cache
       const [todayMetrics, last7Metrics, mtdMetrics] = await Promise.all([
         appMetricsApi.getAppMetrics(app.appId, { startDate: todayStr, endDate: todayStr }).catch(() => null),
         appMetricsApi.getAppMetrics(app.appId, { startDate: last7Str, endDate: todayStr }).catch(() => null),
@@ -181,70 +195,52 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     ]
   }, [metrics])
 
-  // Performance data for chart (per-day)
-  const { data: performance } = useApi(
-    async () => {
-      if (!app) return null
-
-      const response = await performanceApi.getPerformanceData({
-        appId: app.appId,
-        startDate: chartStartDate,
-        endDate: chartEndDate,
-        page: 1,
-        pageSize: 500,
-      })
-
-      return response
+  // Performance data for chart - sử dụng API giống revenue-chart.tsx
+  // API sẽ tự động dùng cache cho 7days, 14days, 30days, gọi database cho custom range
+  const fetchChartData = useMemo(
+    () => {
+      if (!app || !chartApiParams) return () => Promise.resolve(null)
+      // API endpoint expects AdMob AppId (string), not database ID
+      return () => dashboardApi.getRevenueOverviewForApp(app.appId, chartApiParams)
     },
+    [app, chartApiParams]
+  )
+
+  const cacheKey = useMemo(() => {
+    if (!app || !chartApiParams) return undefined
+    return `app_revenue_overview_${app.id}_${dateRange}_${chartMetric}`
+  }, [app, dateRange, chartMetric])
+
+  const { data: revenueOverviewData, loading: performanceLoading } = useApi(
+    fetchChartData,
     {
-      enabled: !!app && !!chartStartDate && !!chartEndDate,
-      cacheKey: app ? `app_perf_${app.id}_${chartStartDate}_${chartEndDate}` : undefined,
+      enabled: !!app && !!chartApiParams,
+      cacheKey,
     },
   )
 
+  // Process chart data from API format - tương tự revenue-chart.tsx
   const performanceData = useMemo(() => {
-    if (!performance || !performance.data) return []
+    if (!revenueOverviewData?.data || revenueOverviewData.data.length === 0) return []
 
-    const byDate = new Map<
-      string,
-      {
-        revenue: number
-        ecpm: number
-        impressions: number
-      }
-    >()
+    // Get day name helper
+    const getDayName = (date: Date): string => {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      return days[date.getDay()]
+    }
 
-    performance.data.forEach((row: PerformanceData) => {
-      const dateKey = row.date.split("T")[0]
-      const existing = byDate.get(dateKey) ?? { revenue: 0, ecpm: 0, impressions: 0 }
-
-      const revenue = (row.revenueMicros ?? 0) / 1_000_000
-      const impressions = row.impressions ?? 0
-      const ecpm = row.ecpmMicros ? row.ecpmMicros / 1_000_000 : 0
-
-      existing.revenue += revenue
-      existing.impressions += impressions
-
-      if (ecpm > 0) {
-        existing.ecpm = ecpm
-      }
-
-      byDate.set(dateKey, existing)
-    })
-
-    const entries = Array.from(byDate.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1))
-
-    return entries.map(([date, values]) => {
-      const d = new Date(date)
-      const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    // Map API data to chart format
+    return revenueOverviewData.data.map(item => {
+      const dateObj = new Date(item.date)
       return {
-        date: label,
-        revenue: values.revenue,
-        ecpm: values.ecpm,
-        impressions: Math.round(values.impressions / 1000),
+        day: getDayName(dateObj),
+        date: item.date,
+        revenue: chartMetric === 'revenue' ? item.value : 0,
+        ecpm: chartMetric === 'ecpm' ? item.value : 0,
+        impressions: chartMetric === 'impressions' ? item.value : 0,
       }
     })
-  }, [performance])
+  }, [revenueOverviewData, chartMetric])
 
   // Active alerts for this app
   const { data: alerts } = useApi(
@@ -354,8 +350,17 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                {performanceLoading ? (
+                  <div className="flex items-center justify-center h-full text-sm text-slate-500">
+                    Loading chart data...
+                  </div>
+                ) : performanceData.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-sm text-slate-500">
+                    No data available for the selected period
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={config.color} stopOpacity={0.2} />
@@ -364,7 +369,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                     <XAxis
-                      dataKey="date"
+                      dataKey="day"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "#64748b" }}
@@ -403,7 +408,8 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
                       fill="url(#colorMetric)"
                     />
                   </AreaChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>

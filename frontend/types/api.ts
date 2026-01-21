@@ -16,6 +16,18 @@ export interface App {
   adUnitsCount?: number
   mediationGroupsCount?: number
   averageEcpm?: number
+
+  // Metrics from dashboard cache (today) - returned by /api/Structure/apps
+  todayRevenue?: number
+  todayImpressions?: number
+  todayEcpm?: number
+  todayFillRate?: number // percent (0..100)
+
+  // Precomputed % change vs yesterday (so UI doesn't have to calculate)
+  todayRevenueChangePct?: number
+  todayImpressionsChangePct?: number
+  todayEcpmChangePct?: number
+  todayFillRateChangePct?: number
 }
 
 export interface AdUnit {
@@ -35,6 +47,11 @@ export interface AdUnit {
   status?: string
 }
 
+export interface AdSourceInfo {
+  adSourceId: string
+  title: string
+}
+
 export interface MediationGroup {
   id: number
   name: string
@@ -48,6 +65,11 @@ export interface MediationGroup {
   createdAt: string
   updatedAt: string
   lastSyncedAt?: string
+  ecpm?: number
+  adSources?: string[] // Legacy field for backward compatibility
+  adSourcesInfo?: AdSourceInfo[] // New field with detailed info from database
+  countries?: string[]
+  status?: string
 }
 
 export interface PerformanceData {

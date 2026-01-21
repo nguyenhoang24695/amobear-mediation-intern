@@ -118,6 +118,10 @@ export const structureApi = {
         return apiClient.get(`/api/Structure/apps/${id}/adunits/count`)
     },
 
+    getAppMediationGroups: async (id: number): Promise<MediationGroup[]> => {
+        return apiClient.get<MediationGroup[]>(`/api/Structure/apps/${id}/mediationgroups`)
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,
@@ -241,6 +245,15 @@ export const dashboardApi = {
         metric?: 'revenue' | 'ecpm' | 'impressions'
     }): Promise<RevenueOverview> => {
         return apiClient.get('/api/v1/dashboard/revenue-overview', params)
+    },
+
+    getRevenueOverviewForApp: async (appId: string | number, params: {
+        range?: DateRangeType
+        startDate?: string
+        endDate?: string
+        metric?: 'revenue' | 'ecpm' | 'impressions'
+    }): Promise<RevenueOverview> => {
+        return apiClient.get(`/api/v1/dashboard/revenue-overview/app/${appId}`, params)
     },
 
     getTopApps: async (params: {
