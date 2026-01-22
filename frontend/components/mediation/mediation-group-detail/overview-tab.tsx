@@ -202,29 +202,34 @@ export function MediationGroupOverviewTab() {
     
     const detail = groupDetail as any
     
+    // Calculate Fill Rate from AdRequests and MatchedRequests
+    const fillRate7Days = detail.TotalAdRequests7Days > 0
+      ? (detail.TotalMatchedRequests7Days / detail.TotalAdRequests7Days) * 100
+      : 0
+    
     return [
       {
         label: "eCPM",
-        value: detail.ecpm7Days ? `$${detail.ecpm7Days.toFixed(2)}` : "—",
-        change: detail.ecpmChangePct ?? 0,
+        value: detail.AverageEcpm7Days ? `$${detail.AverageEcpm7Days.toFixed(2)}` : "—",
+        change: detail.EcpmChangePct ?? 0,
         icon: DollarSign,
       },
       {
         label: "Fill Rate",
-        value: detail.fillRate7Days ? `${(detail.fillRate7Days * 100).toFixed(1)}%` : "—",
-        change: detail.fillRateChangePct ?? 0,
+        value: fillRate7Days > 0 ? `${fillRate7Days.toFixed(1)}%` : "—",
+        change: detail.FillRateChangePct ?? 0,
         icon: Percent,
       },
       {
         label: "Impressions",
-        value: detail.impressions7Days ? formatNumber(detail.impressions7Days) : "—",
-        change: detail.impressionsChangePct ?? 0,
+        value: detail.TotalImpressions7Days ? formatNumber(detail.TotalImpressions7Days) : "—",
+        change: detail.ImpressionsChangePct ?? 0,
         icon: Eye,
       },
       {
         label: "Revenue (7D)",
-        value: detail.revenue7Days ? `$${detail.revenue7Days.toFixed(2)}` : "—",
-        change: detail.revenueChangePct ?? 0,
+        value: detail.TotalRevenue7Days ? `$${detail.TotalRevenue7Days.toFixed(2)}` : "—",
+        change: detail.RevenueChangePct ?? 0,
         icon: DollarSign,
       },
     ]
@@ -232,38 +237,39 @@ export function MediationGroupOverviewTab() {
 
   // Ad sources breakdown
   const adSourcesBreakdown = useMemo(() => {
-    if (!groupDetail?.adSources) return { bidding: [], waterfall: [] }
+    const detail = groupDetail as any
+    if (!detail?.AdSources) return { bidding: [], waterfall: [] }
 
-    const bidding = groupDetail.adSources
-      .filter((ads: any) => ads.cpmMode === "BIDDING")
+    const bidding = detail.AdSources
+      .filter((ads: any) => ads.CpmMode === "BIDDING")
       .map((ads: any) => {
-        const networkInfo = getNetworkInfo(ads.adSourceId)
-        const displayName = getNetworkName(ads.adSourceId, ads.title)
+        const networkInfo = getNetworkInfo(ads.AdSourceId)
+        const displayName = getNetworkName(ads.AdSourceId, ads.Title)
         return {
-          adSourceId: ads.adSourceId,
+          adSourceId: ads.AdSourceId,
           name: displayName,
           color: networkInfo.color,
           emoji: networkInfo.emoji,
         }
       })
 
-    const waterfall = groupDetail.adSources
-      .filter((ads: any) => ads.cpmMode === "WATERFALL")
-      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+    const waterfall = detail.AdSources
+      .filter((ads: any) => ads.CpmMode === "WATERFALL")
+      .sort((a: any, b: any) => (a.Order ?? 0) - (b.Order ?? 0))
       .map((ads: any) => {
-        const networkInfo = getNetworkInfo(ads.adSourceId)
-        const displayName = getNetworkName(ads.adSourceId, ads.title)
+        const networkInfo = getNetworkInfo(ads.AdSourceId)
+        const displayName = getNetworkName(ads.AdSourceId, ads.Title)
         return {
-          adSourceId: ads.adSourceId,
+          adSourceId: ads.AdSourceId,
           name: displayName,
           color: networkInfo.color,
           emoji: networkInfo.emoji,
-          order: ads.order,
+          order: ads.Order,
         }
       })
 
     return { bidding, waterfall }
-  }, [groupDetail?.adSources])
+  }, [groupDetail])
 
   // Format ad format
   const formatAdFormat = (format?: string): string => {
@@ -290,7 +296,7 @@ export function MediationGroupOverviewTab() {
     )
   }
 
-  const countries = (groupDetail as any).countries || []
+  const countries = (groupDetail as any).Countries || []
   const isGlobal = countries.length === 0 || countries.length > 10
 
   return (
@@ -344,12 +350,19 @@ export function MediationGroupOverviewTab() {
                   <Hash className="w-3 h-3" />
                   App
                 </p>
-                {(groupDetail as any).appId ? (
+                {(groupDetail as any).AppId ? (
                   <Link
-                    href={`/apps/${(groupDetail as any).appId}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
+                    href={`/apps/${(groupDetail as any).AppId}`}
+                    className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-2"
                   >
-                    {(groupDetail as any).appName || "Unknown App"}
+                    {(groupDetail as any).AppIconUri && (
+                      <img
+                        src={(groupDetail as any).AppIconUri}
+                        alt=""
+                        className="w-4 h-4 rounded"
+                      />
+                    )}
+                    {(groupDetail as any).AppName || "Unknown App"}
                   </Link>
                 ) : (
                   <p className="text-sm text-slate-500">—</p>
@@ -468,7 +481,7 @@ export function MediationGroupOverviewTab() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {adSourcesBreakdown.bidding.map((source, idx) => (
+                    {adSourcesBreakdown.bidding.map((source: { adSourceId: string; name: string; color: string; emoji?: string }, idx: number) => (
                       <div
                         key={idx}
                         className={cn(
@@ -495,7 +508,7 @@ export function MediationGroupOverviewTab() {
                     </Badge>
                   </div>
                   <div className="flex flex-col gap-1">
-                    {adSourcesBreakdown.waterfall.slice(0, 5).map((source, idx) => (
+                    {adSourcesBreakdown.waterfall.slice(0, 5).map((source: { adSourceId: string; name: string; color: string; emoji?: string; order?: number }, idx: number) => (
                       <div key={idx} className="flex items-center gap-2">
                         <span className="text-xs text-slate-400 w-4">{(source.order ?? idx) + 1}</span>
                         <div

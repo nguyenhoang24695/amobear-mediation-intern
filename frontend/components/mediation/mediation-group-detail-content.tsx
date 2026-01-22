@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -34,25 +34,35 @@ import { ABTestsTab } from "./mediation-group-detail/ab-tests-tab"
 import { CreateABTestModal } from "./modals/create-ab-test-modal"
 import { ApplyVariantModal } from "./modals/apply-variant-modal"
 import { useToast } from "@/hooks/use-toast"
+import { useApi } from "@/hooks/use-api"
+import { structureApi } from "@/lib/api/services"
 
-// Mock group data
-const groupData = {
-  id: "1",
-  name: "Weather Plus - Rewarded Video - US Tier 1",
-  appName: "Weather Plus Pro",
-  appId: "app_123",
-  format: "Rewarded",
-  status: "Active",
-  admobGroupId: "ca-app-pub-1234567890123456/9876543210",
-  hasRunningTest: true,
-  testDay: 5,
-  testDuration: 14,
+// Helper to format ad format
+const formatAdFormat = (format?: string): string => {
+  if (!format) return "Unknown"
+  return format
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ")
 }
 
 export function MediationGroupDetailContent() {
+  const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+
+  const groupId = Number((params as any)?.id)
+  const hasValidId = !Number.isNaN(groupId)
+
+  // Fetch mediation group detail from API (with cache)
+  const { data: groupDetail, loading } = useApi(
+    () => structureApi.getMediationGroup(groupId),
+    {
+      enabled: hasValidId,
+      cacheKey: hasValidId ? `mediation_group_detail_${groupId}` : undefined,
+    },
+  )
 
   const initialTab = searchParams.get("tab") || "waterfall-optimization"
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -61,11 +71,30 @@ export function MediationGroupDetailContent() {
   const [applyMode, setApplyMode] = useState<"direct" | "test-winner">("direct")
   const [isSyncing, setIsSyncing] = useState(false)
 
+  // Extract data from API response
+  const groupData = useMemo(() => {
+    if (!groupDetail) return null
+    const detail = groupDetail as any
+    return {
+      id: detail.id || groupId,
+      name: detail.DisplayName || detail.name || "Unknown Mediation Group",
+      appName: detail.AppName || "Unknown App",
+      appId: detail.AppId,
+      appIconUri: detail.AppIconUri,
+      format: formatAdFormat(detail.AdFormat || detail.adFormat),
+      status: detail.State || detail.state || "Unknown",
+      admobGroupId: detail.MediationGroupId || detail.mediationGroupId,
+      hasRunningTest: false, // TODO: Fetch from A/B tests API
+      testDay: 0,
+      testDuration: 0,
+    }
+  }, [groupDetail, groupId])
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", tab)
-    router.push(`/mediation/${groupData.id}?${params.toString()}`, { scroll: false })
+    router.push(`/mediation/${groupId}?${params.toString()}`, { scroll: false })
   }
 
   useEffect(() => {
@@ -103,6 +132,33 @@ export function MediationGroupDetailContent() {
     setIsSyncing(false)
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    )
+  }
+
+  if (!groupData || !groupDetail) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-sm text-slate-500">Mediation group not found</p>
+        <Link
+          href="/mediation"
+          className="mt-4 text-sm text-blue-600 hover:underline"
+        >
+          Back to Mediation Groups
+        </Link>
+      </div>
+    )
+  }
+
+  // Build AdMob URL
+  const admobUrl = groupData.admobGroupId
+    ? `https://admob.google.com/mediation/groups/${groupData.admobGroupId}`
+    : "https://admob.google.com"
+
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6">
@@ -122,14 +178,23 @@ export function MediationGroupDetailContent() {
             <h1 className="text-xl font-bold text-slate-900">{groupData.name}</h1>
             {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap">
-              <Link href={`/apps/${groupData.appId}`}>
-                <Badge
-                  variant="outline"
-                  className="gap-1 bg-slate-50 border-slate-200 hover:bg-slate-100 cursor-pointer"
-                >
-                  {groupData.appName}
-                </Badge>
-              </Link>
+              {groupData.appId && (
+                <Link href={`/apps/${groupData.appId}`}>
+                  <Badge
+                    variant="outline"
+                    className="gap-1 bg-slate-50 border-slate-200 hover:bg-slate-100 cursor-pointer flex items-center"
+                  >
+                    {groupData.appIconUri && (
+                      <img
+                        src={groupData.appIconUri}
+                        alt=""
+                        className="w-3 h-3 rounded"
+                      />
+                    )}
+                    {groupData.appName}
+                  </Badge>
+                </Link>
+              )}
               <Badge className="gap-1 bg-green-100 text-green-700 border-0">
                 <Gift className="w-3 h-3" />
                 {groupData.format}
@@ -153,7 +218,7 @@ export function MediationGroupDetailContent() {
             <Button
               variant="outline"
               className="h-9 gap-2 bg-transparent text-sm"
-              onClick={() => window.open("https://admob.google.com", "_blank")}
+              onClick={() => window.open(admobUrl, "_blank")}
             >
               <ExternalLink className="w-4 h-4" />
               View in AdMob
