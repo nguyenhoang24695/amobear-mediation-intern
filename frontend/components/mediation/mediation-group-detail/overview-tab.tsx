@@ -1,5 +1,6 @@
 "use client"
 
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,58 +19,280 @@ import {
   Smartphone,
   ArrowRight,
   Pencil,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useApi } from "@/hooks/use-api"
+import { structureApi } from "@/lib/api/services"
+import { useMemo } from "react"
 
-// Mock data
-const basicInfo = {
-  groupId: "grp_abc123xyz",
-  admobGroupId: "ca-app-pub-1234567890123456/9876543210",
-  created: "Dec 15, 2024",
-  lastModified: "Jan 15, 2025",
-  format: "Rewarded",
-  appName: "Weather Plus Pro",
-  appId: "app_123",
+// Country flags
+const countryFlags: Record<string, string> = {
+  US: "🇺🇸",
+  UK: "🇬🇧",
+  GB: "🇬🇧",
+  DE: "🇩🇪",
+  FR: "🇫🇷",
+  JP: "🇯🇵",
+  CA: "🇨🇦",
+  AU: "🇦🇺",
+  IN: "🇮🇳",
+  CN: "🇨🇳",
+  KR: "🇰🇷",
+  BR: "🇧🇷",
+  MX: "🇲🇽",
+  ES: "🇪🇸",
+  IT: "🇮🇹",
+  NL: "🇳🇱",
+  SE: "🇸🇪",
+  NO: "🇳🇴",
+  DK: "🇩🇰",
+  FI: "🇫🇮",
+  PL: "🇵🇱",
+  RU: "🇷🇺",
+  TR: "🇹🇷",
+  SA: "🇸🇦",
+  AE: "🇦🇪",
+  SG: "🇸🇬",
+  MY: "🇲🇾",
+  TH: "🇹🇭",
+  ID: "🇮🇩",
+  PH: "🇵🇭",
+  VN: "🇻🇳",
 }
 
-const targetingInfo = {
-  countries: [
-    { code: "US", name: "United States", flag: "🇺🇸" },
-    { code: "CA", name: "Canada", flag: "🇨🇦" },
-    { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
-  ],
-  devices: "All devices",
-  osVersion: "iOS 14.0+, Android 10+",
-  customRules: "Premium users only",
+// Network logos/images - map ad source IDs to image URLs or emoji
+const networkLogos: Record<string, { image?: string; emoji?: string; color: string }> = {
+  admob: {
+    emoji: "📱",
+    color: "bg-yellow-400",
+  },
+  "ca-app-pub": {
+    emoji: "📱",
+    color: "bg-yellow-400",
+  },
+  unity: {
+    emoji: "🎮",
+    color: "bg-slate-800",
+  },
+  ironsource: {
+    emoji: "⚡",
+    color: "bg-purple-600",
+  },
+  applovin: {
+    emoji: "🔴",
+    color: "bg-red-500",
+  },
+  vungle: {
+    emoji: "💎",
+    color: "bg-blue-500",
+  },
+  meta: {
+    emoji: "📘",
+    color: "bg-blue-600",
+  },
+  facebook: {
+    emoji: "📘",
+    color: "bg-blue-600",
+  },
+  chartboost: {
+    emoji: "📊",
+    color: "bg-green-500",
+  },
+  mintegral: {
+    emoji: "🌐",
+    color: "bg-orange-500",
+  },
+  pangle: {
+    emoji: "🇨🇳",
+    color: "bg-red-600",
+  },
+  adcolony: {
+    emoji: "🏢",
+    color: "bg-indigo-500",
+  },
+  tapjoy: {
+    emoji: "🎯",
+    color: "bg-pink-500",
+  },
 }
 
-const performanceStats = [
-  { label: "eCPM", value: "$18.45", change: 8.2, icon: DollarSign },
-  { label: "Fill Rate", value: "94.5%", change: 2.1, icon: Percent },
-  { label: "Impressions", value: "1.2M", change: 12.5, icon: Eye },
-  { label: "Revenue (7D)", value: "$22,140", change: 15.3, icon: DollarSign },
-]
+// Helper to get network info from ad source ID
+const getNetworkInfo = (adSourceId?: string): { emoji?: string; color: string; name: string } => {
+  if (!adSourceId) {
+    return { color: "bg-slate-400", name: "Unknown" }
+  }
+  const idLower = adSourceId.toLowerCase()
+  for (const [key, info] of Object.entries(networkLogos)) {
+    if (idLower.includes(key.toLowerCase())) {
+      return {
+        emoji: info.emoji,
+        color: info.color,
+        name: getNetworkName(adSourceId),
+      }
+    }
+  }
+  return { color: "bg-slate-400", name: "Unknown" }
+}
 
-const adSourcesPreview = {
-  bidding: [
-    { name: "AdMob Bidding", color: "bg-yellow-400" },
-    { name: "Meta AN", color: "bg-blue-600" },
-    { name: "Unity Ads", color: "bg-slate-800" },
-    { name: "AppLovin", color: "bg-red-500" },
-  ],
-  waterfall: [
-    { name: "ironSource", color: "bg-purple-600" },
-    { name: "Vungle", color: "bg-blue-500" },
-    { name: "Chartboost", color: "bg-green-500" },
-    { name: "Pangle", color: "bg-cyan-500" },
-    { name: "InMobi", color: "bg-indigo-500" },
-    { name: "Mintegral", color: "bg-pink-500" },
-    { name: "Fyber", color: "bg-orange-500" },
-    { name: "AdColony", color: "bg-teal-500" },
-  ],
+// Helper to get network name from ad source ID
+const getNetworkName = (adSourceId?: string, title?: string): string => {
+  // Use title from database if available
+  if (title) return title
+  
+  if (!adSourceId) return "Unknown"
+  const idLower = adSourceId.toLowerCase()
+  if (idLower.includes("admob") || idLower.includes("ca-app-pub")) return "AdMob"
+  if (idLower.includes("unity")) return "Unity Ads"
+  if (idLower.includes("ironsource")) return "ironSource"
+  if (idLower.includes("applovin")) return "AppLovin"
+  if (idLower.includes("vungle")) return "Vungle"
+  if (idLower.includes("meta") || idLower.includes("facebook")) return "Meta AN"
+  if (idLower.includes("chartboost")) return "Chartboost"
+  if (idLower.includes("pangle")) return "Pangle"
+  if (idLower.includes("mintegral")) return "Mintegral"
+  if (idLower.includes("adcolony")) return "AdColony"
+  if (idLower.includes("tapjoy")) return "Tapjoy"
+  return adSourceId
+}
+
+// Helper to format number
+const formatNumber = (num: number): string => {
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`
+  return num.toFixed(0)
 }
 
 export function MediationGroupOverviewTab() {
+  const params = useParams()
+  const groupId = Number((params as any)?.id)
+  const hasValidId = !Number.isNaN(groupId)
+
+  // Fetch mediation group detail from API (with cache)
+  const { data: groupDetail, loading } = useApi(
+    () => structureApi.getMediationGroup(groupId),
+    {
+      enabled: hasValidId,
+      cacheKey: hasValidId ? `mediation_group_detail_${groupId}` : undefined,
+    },
+  )
+
+  // Format dates
+  const createdDate = useMemo(() => {
+    if (!groupDetail?.createdAt) return "—"
+    return new Date(groupDetail.createdAt).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }, [groupDetail?.createdAt])
+
+  const lastModifiedDate = useMemo(() => {
+    if (!groupDetail?.updatedAt) return "—"
+    return new Date(groupDetail.updatedAt).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }, [groupDetail?.updatedAt])
+
+  // Performance stats (7 days) with change percentages
+  const performanceStats = useMemo(() => {
+    if (!groupDetail) return []
+    
+    const detail = groupDetail as any
+    
+    return [
+      {
+        label: "eCPM",
+        value: detail.ecpm7Days ? `$${detail.ecpm7Days.toFixed(2)}` : "—",
+        change: detail.ecpmChangePct ?? 0,
+        icon: DollarSign,
+      },
+      {
+        label: "Fill Rate",
+        value: detail.fillRate7Days ? `${(detail.fillRate7Days * 100).toFixed(1)}%` : "—",
+        change: detail.fillRateChangePct ?? 0,
+        icon: Percent,
+      },
+      {
+        label: "Impressions",
+        value: detail.impressions7Days ? formatNumber(detail.impressions7Days) : "—",
+        change: detail.impressionsChangePct ?? 0,
+        icon: Eye,
+      },
+      {
+        label: "Revenue (7D)",
+        value: detail.revenue7Days ? `$${detail.revenue7Days.toFixed(2)}` : "—",
+        change: detail.revenueChangePct ?? 0,
+        icon: DollarSign,
+      },
+    ]
+  }, [groupDetail])
+
+  // Ad sources breakdown
+  const adSourcesBreakdown = useMemo(() => {
+    if (!groupDetail?.adSources) return { bidding: [], waterfall: [] }
+
+    const bidding = groupDetail.adSources
+      .filter((ads: any) => ads.cpmMode === "BIDDING")
+      .map((ads: any) => {
+        const networkInfo = getNetworkInfo(ads.adSourceId)
+        const displayName = getNetworkName(ads.adSourceId, ads.title)
+        return {
+          adSourceId: ads.adSourceId,
+          name: displayName,
+          color: networkInfo.color,
+          emoji: networkInfo.emoji,
+        }
+      })
+
+    const waterfall = groupDetail.adSources
+      .filter((ads: any) => ads.cpmMode === "WATERFALL")
+      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+      .map((ads: any) => {
+        const networkInfo = getNetworkInfo(ads.adSourceId)
+        const displayName = getNetworkName(ads.adSourceId, ads.title)
+        return {
+          adSourceId: ads.adSourceId,
+          name: displayName,
+          color: networkInfo.color,
+          emoji: networkInfo.emoji,
+          order: ads.order,
+        }
+      })
+
+    return { bidding, waterfall }
+  }, [groupDetail?.adSources])
+
+  // Format ad format
+  const formatAdFormat = (format?: string): string => {
+    if (!format) return "Unknown"
+    return format
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ")
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    )
+  }
+
+  if (!groupDetail) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-sm text-slate-500">Mediation group not found</p>
+      </div>
+    )
+  }
+
+  const countries = (groupDetail as any).countries || []
+  const isGlobal = countries.length === 0 || countries.length > 10
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-6">
       {/* Left Column */}
@@ -84,13 +307,13 @@ export function MediationGroupOverviewTab() {
               <div className="space-y-1">
                 <p className="text-xs text-slate-500">Group ID</p>
                 <code className="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                  {basicInfo.groupId}
+                  {groupDetail.id}
                 </code>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-slate-500">AdMob Group ID</p>
                 <code className="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded truncate block">
-                  {basicInfo.admobGroupId}
+                  {groupDetail.mediationGroupId}
                 </code>
               </div>
               <div className="space-y-1">
@@ -98,30 +321,39 @@ export function MediationGroupOverviewTab() {
                   <Calendar className="w-3 h-3" />
                   Created
                 </p>
-                <p className="text-sm font-medium text-slate-900">{basicInfo.created}</p>
+                <p className="text-sm font-medium text-slate-900">{createdDate}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   Last Modified
                 </p>
-                <p className="text-sm font-medium text-slate-900">{basicInfo.lastModified}</p>
+                <p className="text-sm font-medium text-slate-900">{lastModifiedDate}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 flex items-center gap-1">
                   <Gift className="w-3 h-3" />
                   Format
                 </p>
-                <Badge className="bg-amber-100 text-amber-700 border-0">{basicInfo.format}</Badge>
+                <Badge className="bg-amber-100 text-amber-700 border-0">
+                  {formatAdFormat(groupDetail.adFormat)}
+                </Badge>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 flex items-center gap-1">
                   <Hash className="w-3 h-3" />
                   App
                 </p>
-                <Link href={`/apps/${basicInfo.appId}`} className="text-sm font-medium text-blue-600 hover:underline">
-                  {basicInfo.appName}
-                </Link>
+                {(groupDetail as any).appId ? (
+                  <Link
+                    href={`/apps/${(groupDetail as any).appId}`}
+                    className="text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    {(groupDetail as any).appName || "Unknown App"}
+                  </Link>
+                ) : (
+                  <p className="text-sm text-slate-500">—</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -146,14 +378,23 @@ export function MediationGroupOverviewTab() {
                   <Globe className="w-3 h-3" />
                   Countries
                 </p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {targetingInfo.countries.map((country) => (
-                    <Badge key={country.code} variant="outline" className="gap-1.5 bg-slate-50 border-slate-200">
-                      <span>{country.flag}</span>
-                      {country.name}
-                    </Badge>
-                  ))}
-                </div>
+                {isGlobal ? (
+                  <div className="flex items-center gap-1 text-sm text-slate-600">
+                    <Globe className="w-4 h-4" />
+                    Global
+                  </div>
+                ) : countries.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {countries.map((country: string) => (
+                      <Badge key={country} variant="outline" className="gap-1.5 bg-slate-50 border-slate-200">
+                        <span>{countryFlags[country] || country}</span>
+                        {country}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">—</p>
+                )}
               </div>
 
               {/* Devices */}
@@ -162,21 +403,13 @@ export function MediationGroupOverviewTab() {
                   <Smartphone className="w-3 h-3" />
                   Devices
                 </p>
-                <p className="text-sm text-slate-900">{targetingInfo.devices}</p>
+                <p className="text-sm text-slate-900">All devices</p>
               </div>
 
-              {/* OS Version */}
+              {/* Platform */}
               <div className="space-y-2">
-                <p className="text-xs text-slate-500">OS Version</p>
-                <p className="text-sm text-slate-900">{targetingInfo.osVersion}</p>
-              </div>
-
-              {/* Custom Rules */}
-              <div className="space-y-2">
-                <p className="text-xs text-slate-500">Custom Rules</p>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                  {targetingInfo.customRules}
-                </Badge>
+                <p className="text-xs text-slate-500">Platform</p>
+                <p className="text-sm text-slate-900">{groupDetail.platform || "—"}</p>
               </div>
             </div>
           </CardContent>
@@ -199,17 +432,19 @@ export function MediationGroupOverviewTab() {
                     {stat.label}
                   </div>
                   <p className="text-lg font-semibold text-slate-900">{stat.value}</p>
-                  <div className="flex items-center gap-1">
-                    {stat.change > 0 ? (
-                      <TrendingUp className="w-3 h-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-red-600" />
-                    )}
-                    <span className={cn("text-xs font-medium", stat.change > 0 ? "text-green-600" : "text-red-600")}>
-                      {stat.change > 0 ? "+" : ""}
-                      {stat.change}%
-                    </span>
-                  </div>
+                  {stat.change !== 0 && (
+                    <div className="flex items-center gap-1">
+                      {stat.change > 0 ? (
+                        <TrendingUp className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3 text-red-600" />
+                      )}
+                      <span className={cn("text-xs font-medium", stat.change > 0 ? "text-green-600" : "text-red-600")}>
+                        {stat.change > 0 ? "+" : ""}
+                        {stat.change.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -224,50 +459,70 @@ export function MediationGroupOverviewTab() {
           <CardContent className="pt-0">
             <div className="space-y-4">
               {/* Bidding Section */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-medium text-slate-700">Bidding</p>
-                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                    {adSourcesPreview.bidding.length} sources
-                  </Badge>
+              {adSourcesBreakdown.bidding.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-slate-700">Bidding</p>
+                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                      {adSourcesBreakdown.bidding.length} sources
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {adSourcesBreakdown.bidding.map((source, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold",
+                          source.color,
+                          source.emoji ? "text-base" : "text-white",
+                        )}
+                        title={source.name}
+                      >
+                        {source.emoji || source.name.charAt(0)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {adSourcesPreview.bidding.map((source, idx) => (
-                    <div
-                      key={idx}
-                      className={cn(
-                        "w-8 h-8 rounded-md flex items-center justify-center text-white text-xs font-bold",
-                        source.color,
-                      )}
-                      title={source.name}
-                    >
-                      {source.name.charAt(0)}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
 
               {/* Waterfall Section */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-medium text-slate-700">Waterfall</p>
-                  <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-700">
-                    {adSourcesPreview.waterfall.length} sources
-                  </Badge>
+              {adSourcesBreakdown.waterfall.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-slate-700">Waterfall</p>
+                    <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-700">
+                      {adSourcesBreakdown.waterfall.length} sources
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {adSourcesBreakdown.waterfall.slice(0, 5).map((source, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-4">{(source.order ?? idx) + 1}</span>
+                        <div
+                          className={cn(
+                            "w-6 h-6 rounded-sm flex items-center justify-center text-xs",
+                            source.color,
+                            source.emoji ? "text-base" : "text-white font-bold",
+                          )}
+                          title={source.name}
+                        >
+                          {source.emoji || source.name.charAt(0)}
+                        </div>
+                        <span className="text-sm text-slate-700">{source.name}</span>
+                      </div>
+                    ))}
+                    {adSourcesBreakdown.waterfall.length > 5 && (
+                      <p className="text-xs text-slate-500 ml-8">
+                        +{adSourcesBreakdown.waterfall.length - 5} more sources
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  {adSourcesPreview.waterfall.slice(0, 5).map((source, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400 w-4">{idx + 1}</span>
-                      <div className={cn("w-3 h-3 rounded-sm", source.color)} />
-                      <span className="text-sm text-slate-700">{source.name}</span>
-                    </div>
-                  ))}
-                  {adSourcesPreview.waterfall.length > 5 && (
-                    <p className="text-xs text-slate-500 ml-6">+{adSourcesPreview.waterfall.length - 5} more sources</p>
-                  )}
-                </div>
-              </div>
+              )}
+
+              {adSourcesBreakdown.bidding.length === 0 && adSourcesBreakdown.waterfall.length === 0 && (
+                <p className="text-sm text-slate-400">No ad sources configured</p>
+              )}
 
               <Button variant="link" className="p-0 h-auto text-blue-600 gap-1">
                 Edit Waterfall

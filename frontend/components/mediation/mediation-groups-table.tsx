@@ -50,214 +50,156 @@ import { useMemo } from "react"
 import { Loader2 } from "lucide-react"
 // Removed unused imports - data now comes from cache via API
 
-// ... existing code (networkColors, countryFlags, mockGroups) ...
-
-const networkColors: Record<string, string> = {
-  AdMob: "bg-yellow-400",
-  "Unity Ads": "bg-slate-800",
-  ironSource: "bg-purple-600",
-  AppLovin: "bg-red-500",
-  Vungle: "bg-blue-500",
-  "Meta AN": "bg-blue-600",
-  Chartboost: "bg-green-500",
-  Pangle: "bg-cyan-500",
+// Network logos/images - map ad source IDs to image URLs or emoji
+const networkLogos: Record<string, { image?: string; emoji?: string; color: string }> = {
+  admob: {
+    emoji: "📱",
+    color: "bg-yellow-400",
+  },
+  "ca-app-pub": {
+    emoji: "📱",
+    color: "bg-yellow-400",
+  },
+  unity: {
+    emoji: "🎮",
+    color: "bg-slate-800",
+  },
+  ironsource: {
+    emoji: "⚡",
+    color: "bg-purple-600",
+  },
+  applovin: {
+    emoji: "🔴",
+    color: "bg-red-500",
+  },
+  vungle: {
+    emoji: "💎",
+    color: "bg-blue-500",
+  },
+  meta: {
+    emoji: "📘",
+    color: "bg-blue-600",
+  },
+  facebook: {
+    emoji: "📘",
+    color: "bg-blue-600",
+  },
+  chartboost: {
+    emoji: "📊",
+    color: "bg-green-500",
+  },
+  mintegral: {
+    emoji: "🌐",
+    color: "bg-orange-500",
+  },
+  pangle: {
+    emoji: "🇨🇳",
+    color: "bg-red-600",
+  },
+  adcolony: {
+    emoji: "🏢",
+    color: "bg-indigo-500",
+  },
+  tapjoy: {
+    emoji: "🎯",
+    color: "bg-pink-500",
+  },
 }
 
+// Network colors - map ad source IDs to colors (fallback)
+const networkColors: Record<string, string> = {
+  admob: "bg-yellow-400",
+  "ca-app-pub": "bg-yellow-400",
+  unity: "bg-slate-800",
+  ironsource: "bg-purple-600",
+  applovin: "bg-red-500",
+  vungle: "bg-blue-500",
+  meta: "bg-blue-600",
+  facebook: "bg-blue-600",
+}
+
+// Country flags
 const countryFlags: Record<string, string> = {
   US: "🇺🇸",
   UK: "🇬🇧",
+  GB: "🇬🇧",
   DE: "🇩🇪",
   FR: "🇫🇷",
   JP: "🇯🇵",
-  KR: "🇰🇷",
-  BR: "🇧🇷",
-  IN: "🇮🇳",
   CA: "🇨🇦",
   AU: "🇦🇺",
+  IN: "🇮🇳",
+  CN: "🇨🇳",
+  KR: "🇰🇷",
+  BR: "🇧🇷",
+  MX: "🇲🇽",
+  ES: "🇪🇸",
+  IT: "🇮🇹",
+  NL: "🇳🇱",
+  SE: "🇸🇪",
+  NO: "🇳🇴",
+  DK: "🇩🇰",
+  FI: "🇫🇮",
+  PL: "🇵🇱",
+  RU: "🇷🇺",
+  TR: "🇹🇷",
+  SA: "🇸🇦",
+  AE: "🇦🇪",
+  SG: "🇸🇬",
+  MY: "🇲🇾",
+  TH: "🇹🇭",
+  ID: "🇮🇩",
+  PH: "🇵🇭",
+  VN: "🇻🇳",
 }
 
-const mockGroups = [
-  {
-    id: "1",
-    name: "US Banner - High Value",
-    appName: "Puzzle Master Pro",
-    appId: "1",
-    appIcon: "/puzzle-game-icon.png",
-    format: "Banner",
-    adSources: ["AdMob", "Unity Ads", "ironSource", "AppLovin", "Vungle", "Meta AN", "Chartboost", "Pangle"],
-    targeting: ["US", "CA"],
-    status: "Active",
-    abTest: { id: "test-1", status: "running", day: 5, duration: 14 },
-    ecpm: 8.45,
-    ecpmTrend: 5.2,
-    lastModified: "2 hours ago",
-    lastModifiedBy: "John Doe",
-    hasWarning: false,
-    hasError: false,
-  },
-  {
-    id: "2",
-    name: "EU Interstitial - Gaming",
-    appName: "Racing Thunder",
-    appId: "3",
-    appIcon: "/racing-game-icon.png",
-    format: "Interstitial",
-    adSources: ["AdMob", "Unity Ads", "ironSource", "AppLovin", "Vungle"],
-    targeting: ["DE", "FR", "UK"],
-    status: "Active",
-    abTest: { id: "test-2", status: "completed" },
-    ecpm: 12.34,
-    ecpmTrend: 8.7,
-    lastModified: "5 hours ago",
-    lastModifiedBy: "Jane Smith",
-    hasWarning: true,
-    hasError: false,
-  },
-  {
-    id: "3",
-    name: "Global Rewarded - Default",
-    appName: "Word Connect",
-    appId: "2",
-    appIcon: "/word-game-icon.jpg",
-    format: "Rewarded",
-    adSources: ["AdMob", "Unity Ads", "ironSource"],
-    targeting: "Global",
-    status: "Active",
-    abTest: null,
-    ecpm: 18.92,
-    ecpmTrend: -2.1,
-    lastModified: "1 day ago",
-    lastModifiedBy: "Mike Johnson",
-    hasWarning: false,
-    hasError: false,
-  },
-  {
-    id: "4",
-    name: "APAC Native - News Feed",
-    appName: "Fitness Tracker Plus",
-    appId: "4",
-    appIcon: "/fitness-app-icon.jpg",
-    format: "Native",
-    adSources: ["AdMob", "Meta AN", "Pangle", "AppLovin"],
-    targeting: ["JP", "KR", "AU", "IN"],
-    status: "Active",
-    abTest: null,
-    ecpm: 4.56,
-    ecpmTrend: 12.3,
-    lastModified: "3 hours ago",
-    lastModifiedBy: "Sarah Lee",
-    hasWarning: false,
-    hasError: false,
-  },
-  {
-    id: "5",
-    name: "US App Open - Premium",
-    appName: "Photo Editor Pro",
-    appId: "5",
-    appIcon: "/photo-editor-icon.png",
-    format: "App Open",
-    adSources: ["AdMob", "AppLovin"],
-    targeting: ["US"],
-    status: "Paused",
-    abTest: null,
-    ecpm: 6.78,
-    ecpmTrend: 0,
-    lastModified: "1 week ago",
-    lastModifiedBy: "Tom Wilson",
-    hasWarning: false,
-    hasError: false,
-  },
-  {
-    id: "6",
-    name: "LATAM Banner - Casual",
-    appName: "Bubble Pop Mania",
-    appId: "6",
-    appIcon: "/bubble-game-icon.jpg",
-    format: "Banner",
-    adSources: ["AdMob", "Unity Ads", "Chartboost"],
-    targeting: ["BR"],
-    status: "Error",
-    abTest: null,
-    ecpm: 2.34,
-    ecpmTrend: -8.5,
-    lastModified: "4 hours ago",
-    lastModifiedBy: "Ana Garcia",
-    hasWarning: false,
-    hasError: true,
-  },
-  {
-    id: "7",
-    name: "EU Rewarded - Tier 1",
-    appName: "Tower Defense Elite",
-    appId: "8",
-    appIcon: "/tower-defense-game-icon.jpg",
-    format: "Rewarded",
-    adSources: ["AdMob", "Unity Ads", "ironSource", "AppLovin", "Vungle", "Meta AN"],
-    targeting: ["UK", "DE", "FR"],
-    status: "Active",
-    abTest: { id: "test-3", status: "running", day: 12, duration: 14 },
-    ecpm: 22.15,
-    ecpmTrend: 15.8,
-    lastModified: "6 hours ago",
-    lastModifiedBy: "David Brown",
-    hasWarning: true,
-    hasError: false,
-  },
-  {
-    id: "8",
-    name: "Global Interstitial - Fallback",
-    appName: "Weather Now",
-    appId: "9",
-    appIcon: "/weather-app-icon.png",
-    format: "Interstitial",
-    adSources: ["AdMob", "Unity Ads"],
-    targeting: "Global",
-    status: "Active",
-    abTest: null,
-    ecpm: 5.67,
-    ecpmTrend: 1.2,
-    lastModified: "2 days ago",
-    lastModifiedBy: "Emily Chen",
-    hasWarning: false,
-    hasError: false,
-  },
-  {
-    id: "9",
-    name: "US Native - In-Feed",
-    appName: "Solitaire Classic",
-    appId: "10",
-    appIcon: "/solitaire-card-game-icon.jpg",
-    format: "Native",
-    adSources: ["AdMob", "Meta AN", "AppLovin", "Pangle"],
-    targeting: ["US", "CA"],
-    status: "Active",
-    abTest: null,
-    ecpm: 7.89,
-    ecpmTrend: 6.4,
-    lastModified: "8 hours ago",
-    lastModifiedBy: "Chris Taylor",
-    hasWarning: false,
-    hasError: false,
-  },
-  {
-    id: "10",
-    name: "JP Banner - High Floor",
-    appName: "Puzzle Master Pro",
-    appId: "1",
-    appIcon: "/puzzle-game-icon.png",
-    format: "Banner",
-    adSources: ["AdMob", "Pangle", "Unity Ads", "AppLovin"],
-    targeting: ["JP"],
-    status: "Active",
-    abTest: null,
-    ecpm: 9.12,
-    ecpmTrend: 3.5,
-    lastModified: "12 hours ago",
-    lastModifiedBy: "Yuki Tanaka",
-    hasWarning: false,
-    hasError: false,
-  },
-]
+// Helper to get network info from ad source ID
+const getNetworkInfo = (adSourceId?: string): { emoji?: string; color: string; name: string } => {
+  if (!adSourceId) {
+    return { color: "bg-slate-400", name: "Unknown" }
+  }
+  const idLower = adSourceId.toLowerCase()
+  for (const [key, info] of Object.entries(networkLogos)) {
+    if (idLower.includes(key.toLowerCase())) {
+      return {
+        emoji: info.emoji,
+        color: info.color,
+        name: getNetworkName(adSourceId),
+      }
+    }
+  }
+  // Fallback to color-based lookup
+  for (const [key, color] of Object.entries(networkColors)) {
+    if (idLower.includes(key.toLowerCase())) {
+      return {
+        color,
+        name: getNetworkName(adSourceId),
+      }
+    }
+  }
+  return { color: "bg-slate-400", name: "Unknown" }
+}
+
+// Helper to get network name from ad source ID or title
+const getNetworkName = (adSourceId?: string, title?: string): string => {
+  // Use title from database if available
+  if (title) return title
+  
+  if (!adSourceId) return "Unknown"
+  const idLower = adSourceId.toLowerCase()
+  if (idLower.includes("admob") || idLower.includes("ca-app-pub")) return "AdMob"
+  if (idLower.includes("unity")) return "Unity Ads"
+  if (idLower.includes("ironsource")) return "ironSource"
+  if (idLower.includes("applovin")) return "AppLovin"
+  if (idLower.includes("vungle")) return "Vungle"
+  if (idLower.includes("meta") || idLower.includes("facebook")) return "Meta AN"
+  if (idLower.includes("chartboost")) return "Chartboost"
+  if (idLower.includes("pangle")) return "Pangle"
+  if (idLower.includes("mintegral")) return "Mintegral"
+  if (idLower.includes("adcolony")) return "AdColony"
+  if (idLower.includes("tapjoy")) return "Tapjoy"
+  return adSourceId
+}
 
 interface MediationGroupsTableProps {
   mediationGroups: MediationGroup[]
@@ -274,6 +216,11 @@ interface MediationGroupsTableProps {
 
 type SortField = "name" | "ecpm" | "lastModified" | "abTest"
 type SortDirection = "asc" | "desc"
+
+interface AdSourceInfo {
+  adSourceId: string
+  title: string
+}
 
 export function MediationGroupsTable({
   mediationGroups,
@@ -349,6 +296,7 @@ export function MediationGroupsTable({
       appIcon: group.appIconUri || undefined, // From cache
       format: group.adFormat || "Unknown",
       adSources: group.adSources || [], // From cache
+      countries: group.countries || [], // Keep countries array for easy access
       targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
       status: group.state === "ENABLED" ? "Active" : group.state || "Active",
       abTest: null, // TODO: Fetch from A/B tests API
@@ -385,9 +333,10 @@ export function MediationGroupsTable({
       return false
     }
     if (abTestFilter !== "all") {
-      if (abTestFilter === "running" && group.abTest?.status !== "running") return false
-      if (abTestFilter === "completed" && group.abTest?.status !== "completed") return false
-      if (abTestFilter === "none" && group.abTest !== null) return false
+      const abTest = (group as any).abTest
+      if (abTestFilter === "running" && abTest?.status !== "running") return false
+      if (abTestFilter === "completed" && abTest?.status !== "completed") return false
+      if (abTestFilter === "none" && abTest !== null) return false
     }
     return true
   })
@@ -553,6 +502,15 @@ export function MediationGroupsTable({
             <tbody className="divide-y divide-slate-100">
               {paginatedGroups.map((group) => {
                 const FormatIcon = getFormatIcon(group.format)
+                // Get countries from group data (prefer countries array, fallback to _original)
+                const countries = (group as any).countries || (group._original as any)?.countries || []
+                const isGlobal = countries.length === 0 || countries.length > 10
+                
+                // Map ad sources to adSourcesInfo format (like app-mediation-groups-tab.tsx)
+                const adSourcesInfo = (group.adSources || []).map((adSourceId: string) => ({
+                  adSourceId,
+                  title: adSourceId, // Use adSourceId as title if no title from database
+                }))
 
                 return (
                   <tr
@@ -619,76 +577,115 @@ export function MediationGroupsTable({
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-1">
-                            <div className="flex -space-x-1">
-                              {group.adSources.slice(0, 4).map((source: string, idx: number) => (
-                                <div
-                                  key={idx}
-                                  className={cn("w-4 h-4 rounded-full border border-white", networkColors[source] || "bg-slate-300")}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-xs text-slate-500 ml-1">{group.adSources.length}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-slate-600">{adSourcesInfo.length}</span>
+                        {adSourcesInfo.length > 0 && (
+                          <div className="flex items-center -space-x-1 ml-1">
+                            {adSourcesInfo.slice(0, 4).map((adSource: { adSourceId: string; title: string }, idx: number) => {
+                              const networkInfo = getNetworkInfo(adSource.adSourceId)
+                              const displayName = getNetworkName(adSource.adSourceId, adSource.title)
+                              return (
+                                <Tooltip key={idx}>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      className={cn(
+                                        "w-6 h-6 rounded-sm border-2 border-white flex items-center justify-center text-xs",
+                                        networkInfo.color,
+                                        !networkInfo.emoji && "bg-slate-400",
+                                      )}
+                                      title={displayName}
+                                    >
+                                      {networkInfo.emoji ? (
+                                        <span>{networkInfo.emoji}</span>
+                                      ) : (
+                                        <span className="text-white font-semibold text-[10px]">
+                                          {displayName.charAt(0).toUpperCase()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p className="font-medium">{displayName}</p>
+                                    <p className="text-xs text-slate-400">{adSource.adSourceId}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )
+                            })}
+                            {adSourcesInfo.length > 4 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="w-6 h-6 rounded-sm bg-slate-200 border-2 border-white flex items-center justify-center">
+                                    <span className="text-[10px] font-semibold text-slate-600">
+                                      +{adSourcesInfo.length - 4}
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <div className="space-y-1">
+                                    {adSourcesInfo.slice(4).map((adSource: AdSourceInfo, idx: number) => {
+                                      const displayName = getNetworkName(adSource.adSourceId, adSource.title)
+                                      return (
+                                        <p key={idx} className="text-sm">
+                                          {displayName}
+                                        </p>
+                                      )
+                                    })}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">{group.adSources.join(", ")}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
-                      {group.targeting === "Global" ? (
-                        <div className="flex items-center gap-1 text-slate-500">
+                      {isGlobal ? (
+                        <div className="flex items-center gap-1 text-sm text-slate-600">
                           <Globe className="w-4 h-4" />
-                          <span className="text-sm">Global</span>
+                          Global
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          {Array.isArray(group.targeting) 
-                            ? group.targeting.slice(0, 3).map((country: string, idx: number) => (
-                                <span key={idx} className="text-base">
-                                  {countryFlags[country] || country}
-                                </span>
-                              ))
-                            : typeof group.targeting === 'string' && group.targeting !== 'Global'
-                            ? [group.targeting].slice(0, 3).map((country: string, idx: number) => (
-                                <span key={idx} className="text-base">
-                                  {countryFlags[country] || country}
-                                </span>
-                              ))
-                            : null
-                          }
-                          {Array.isArray(group.targeting) && group.targeting.length > 3 && (
-                            <span className="text-xs text-slate-500">+{group.targeting.length - 3}</span>
+                      ) : countries.length > 0 ? (
+                        <div className="flex items-center gap-0.5">
+                          {countries.slice(0, 3).map((country: string, idx: number) => (
+                            <span key={idx} className="text-base" title={country}>
+                              {countryFlags[country] || country}
+                            </span>
+                          ))}
+                          {countries.length > 3 && (
+                            <span className="text-xs text-slate-500 ml-1">+{countries.length - 3}</span>
                           )}
                         </div>
+                      ) : (
+                        <span className="text-sm text-slate-400">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">{getStatusBadge(group.status)}</td>
                     <td className="px-4 py-3">
-                      {group.abTest ? (
-                        <Link
-                          href={`/mediation/tests/${group.abTest.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="block"
-                        >
-                          {group.abTest.status === "running" ? (
-                            <Badge className="gap-1 bg-purple-100 text-purple-700 border-0 hover:bg-purple-200 transition-colors cursor-pointer">
-                              <FlaskConical className="w-3 h-3" />
-                              Running
-                            </Badge>
-                          ) : (
-                            <Badge className="gap-1 bg-green-100 text-green-700 border-0 hover:bg-green-200 transition-colors cursor-pointer">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Completed
-                            </Badge>
-                          )}
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
+                      {(() => {
+                        const abTest = (group as any).abTest
+                        if (!abTest) {
+                          return <span className="text-xs text-slate-400">—</span>
+                        }
+                        return (
+                          <Link
+                            href={`/mediation/tests/${abTest.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block"
+                          >
+                            {abTest.status === "running" ? (
+                              <Badge className="gap-1 bg-purple-100 text-purple-700 border-0 hover:bg-purple-200 transition-colors cursor-pointer">
+                                <FlaskConical className="w-3 h-3" />
+                                Running
+                              </Badge>
+                            ) : (
+                              <Badge className="gap-1 bg-green-100 text-green-700 border-0 hover:bg-green-200 transition-colors cursor-pointer">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Completed
+                              </Badge>
+                            )}
+                          </Link>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">

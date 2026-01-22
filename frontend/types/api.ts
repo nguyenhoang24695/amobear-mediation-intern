@@ -70,6 +70,33 @@ export interface MediationGroup {
   adSourcesInfo?: AdSourceInfo[] // New field with detailed info from database
   countries?: string[]
   status?: string
+  
+  // Detailed metrics (from cache)
+  revenue?: number
+  impressions?: number
+  adRequests?: number
+  matchedRequests?: number
+  fillRate?: number
+  revenue7Days?: number
+  impressions7Days?: number
+  adRequests7Days?: number
+  matchedRequests7Days?: number
+  ecpm7Days?: number
+  fillRate7Days?: number
+  revenueChangePct?: number
+  impressionsChangePct?: number
+  ecpmChangePct?: number
+  fillRateChangePct?: number
+  
+  // App info
+  appId?: number
+  appAdMobId?: string
+  appName?: string
+  appIconUri?: string
+  
+  // Ad sources breakdown
+  biddingSources?: string[]
+  waterfallSources?: string[]
 }
 
 export interface PerformanceData {
