@@ -120,14 +120,15 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
 
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const todayStr = today.toISOString().split("T")[0]
+      // Format date in local timezone to avoid UTC conversion issues
+      const todayStr = formatDateForAPI(today)
 
       const last7 = new Date(today)
       last7.setDate(last7.getDate() - 6)
-      const last7Str = last7.toISOString().split("T")[0]
+      const last7Str = formatDateForAPI(last7)
 
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      const monthStartStr = monthStart.toISOString().split("T")[0]
+      const monthStartStr = formatDateForAPI(monthStart)
 
       // Today và 7days sẽ dùng cache (API tự động check cache)
       // MTD sẽ gọi database vì không có trong cache
@@ -160,35 +161,35 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
       {
         label: "Revenue Today",
         value: `$${todayRevenue.toFixed(2)}`,
-        change: 0,
+        change: todayMetrics?.revenueChange ?? 0,
         icon: DollarSign,
         color: "blue",
       },
       {
         label: "Revenue MTD",
         value: `$${mtdRevenue.toFixed(2)}`,
-        change: 0,
+        change: mtdMetrics?.revenueChange ?? 0,
         icon: DollarSign,
         color: "green",
       },
       {
         label: "eCPM (7d avg)",
         value: `$${avgEcpm.toFixed(2)}`,
-        change: 0,
+        change: last7Metrics?.ecpmChange ?? 0,
         icon: BarChart3,
         color: "purple",
       },
       {
         label: "Impressions (7d)",
         value: impressions7d.toLocaleString(),
-        change: 0,
+        change: last7Metrics?.impressionsChange ?? 0,
         icon: Eye,
         color: "amber",
       },
       {
         label: "Fill Rate (7d)",
         value: `${fillRate7d.toFixed(2)}%`,
-        change: 0,
+        change: last7Metrics?.fillRateChange ?? 0,
         icon: Percent,
         color: "cyan",
       },
@@ -581,7 +582,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                   <div className="flex items-center gap-2 text-slate-500">
                     <DollarSign className="w-4 h-4" />
-                    <span className="text-sm">Revenue (MTD)</span>
+                    <span className="text-sm">Revenue (30 days)</span>
                   </div>
                   <span className="text-sm font-semibold text-green-600">
                     {metrics?.mtdMetrics ? `$${metrics.mtdMetrics.totalRevenue.toFixed(2)}` : "$0.00"}

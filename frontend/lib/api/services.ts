@@ -15,6 +15,7 @@ import type {
     TopApps,
 } from '@/types/api'
 import { apiClient } from './client'
+import { formatDateForAPI } from '@/lib/utils/dashboard'
 
 // Auth Types
 export interface LoginRequest {
@@ -422,6 +423,7 @@ export const dashboardApi = {
 }
 
 // App Metrics API Service
+// Sử dụng API dashboard key-metrics với các range tương ứng
 export const appMetricsApi = {
     getAppMetrics: async (appId: string, params?: {
         startDate?: string
@@ -435,8 +437,79 @@ export const appMetricsApi = {
         avgEcpm: number
         avgFillRate: number
         avgMatchRate: number
+        revenueChange?: number
+        revenueChangeDirection?: "up" | "down" | "neutral"
+        impressionsChange?: number
+        impressionsChangeDirection?: "up" | "down" | "neutral"
+        ecpmChange?: number
+        ecpmChangeDirection?: "up" | "down" | "neutral"
+        fillRateChange?: number
+        fillRateChangeDirection?: "up" | "down" | "neutral"
     }> => {
-        return apiClient.get(`/api/PerformanceData/apps/${appId}/metrics`, params)
+        // Map startDate/endDate to range parameter
+        let range: DateRangeType = "today"
+        
+        if (params?.startDate && params?.endDate) {
+            const startDate = new Date(params.startDate)
+            const endDate = new Date(params.endDate)
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            
+            const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+            
+            // Check if it's today
+            if (startDate.toDateString() === today.toDateString() && 
+                endDate.toDateString() === today.toDateString()) {
+                range = "today"
+            }
+            // Check if it's last 7 days (including today)
+            else if (daysDiff === 6 && endDate.toDateString() === today.toDateString()) {
+                range = "last7days"
+            }
+            // Check if it's last 30 days (including today) - used for MTD
+            else if (daysDiff === 29 && endDate.toDateString() === today.toDateString()) {
+                range = "last30days"
+            }
+            // For MTD (month to date), use last30days
+            else {
+                // If startDate is month start and endDate is today, treat as MTD -> use last30days
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+                if (startDate.toDateString() === monthStart.toDateString() && 
+                    endDate.toDateString() === today.toDateString()) {
+                    range = "last30days"
+                } else {
+                    range = "custom"
+                }
+            }
+        }
+        
+        // Call dashboard key-metrics API for specific app
+        const response = await apiClient.get<DashboardKeyMetrics>(`/api/v1/dashboard/key-metrics/app/${appId}`, {
+            range,
+            startDate: params?.startDate,
+            endDate: params?.endDate,
+        })
+        
+        // Map response to expected format
+        return {
+            appId,
+            startDate: params?.startDate || formatDateForAPI(new Date()),
+            endDate: params?.endDate || formatDateForAPI(new Date()),
+            totalRevenue: response.revenue.value,
+            totalImpressions: response.impressions.value,
+            avgEcpm: response.averageEcpm.value,
+            avgFillRate: response.fillRate.value / 100, // Convert from percentage to decimal (0-1)
+            avgMatchRate: 0, // Not available in key-metrics API
+            // Include change percentages and directions from API
+            revenueChange: response.revenue.change,
+            revenueChangeDirection: response.revenue.changeDirection,
+            impressionsChange: response.impressions.change,
+            impressionsChangeDirection: response.impressions.changeDirection,
+            ecpmChange: response.averageEcpm.change,
+            ecpmChangeDirection: response.averageEcpm.changeDirection,
+            fillRateChange: response.fillRate.change,
+            fillRateChangeDirection: response.fillRate.changeDirection,
+        }
     },
 }
 
