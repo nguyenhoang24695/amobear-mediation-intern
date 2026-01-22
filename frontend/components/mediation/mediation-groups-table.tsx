@@ -48,8 +48,7 @@ import { Pagination } from "@/components/shared/pagination"
 import type { MediationGroup } from "@/types/api"
 import { useMemo } from "react"
 import { Loader2 } from "lucide-react"
-import { structureApi, mediationGroupMetricsApi } from "@/lib/api/services"
-import { useApi } from "@/hooks/use-api"
+// Removed unused imports - data now comes from cache via API
 
 // ... existing code (networkColors, countryFlags, mockGroups) ...
 
@@ -295,81 +294,43 @@ export function MediationGroupsTable({
   const [pageSize, setPageSize] = useState(20)
 
   // Fetch ad sources and metrics for all groups
-  const { data: groupsWithData } = useApi(
-    async () => {
-      if (!mediationGroups || mediationGroups.length === 0) return []
+  // Use mediation groups data directly from cache (already includes metrics and ad sources)
+  // No need to fetch additional data - all data comes from cache via API
+  const groupsWithData = useMemo(() => {
+    if (!mediationGroups || mediationGroups.length === 0) return []
 
-      const last7Days = new Date()
-      last7Days.setDate(last7Days.getDate() - 7)
-      const today = new Date()
-
-      const groupsWithFullData = await Promise.all(
-        mediationGroups.map(async (group) => {
-          try {
-            const [adSources, metrics, yesterdayMetrics] = await Promise.all([
-              structureApi.getMediationGroupAdSources(group.id).catch(() => ({ adSources: [] })),
-              mediationGroupMetricsApi.getMediationGroupMetrics(group.mediationGroupId, {
-                startDate: last7Days.toISOString().split('T')[0],
-                endDate: today.toISOString().split('T')[0],
-              }).catch(() => null),
-              mediationGroupMetricsApi.getMediationGroupMetrics(group.mediationGroupId, {
-                startDate: new Date(last7Days.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                endDate: new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              }).catch(() => null),
-            ])
-
-            const currentEcpm = metrics?.avgEcpm || 0
-            const previousEcpm = yesterdayMetrics?.avgEcpm || 0
-            const ecpmTrend = previousEcpm > 0
-              ? ((currentEcpm - previousEcpm) / previousEcpm) * 100
-              : 0
-
-            return {
-              ...group,
-              adSources: adSources.adSources || [],
-              ecpm: currentEcpm,
-              ecpmTrend,
-              revenue: metrics?.totalRevenue || 0,
-              impressions: metrics?.totalImpressions || 0,
-              fillRate: metrics?.avgFillRate || 0,
-            }
-          } catch (err) {
-            return {
-              ...group,
-              adSources: [],
-              ecpm: 0,
-              ecpmTrend: 0,
-              revenue: 0,
-              impressions: 0,
-              fillRate: 0,
-            }
-          }
-        })
-      )
-
-      return groupsWithFullData
-    },
-    { enabled: !!mediationGroups && mediationGroups.length > 0 }
-  )
+    // Data already includes metrics and ad sources from cache
+    // Use EcpmChangePct from cache (app's EcpmChangePct) as ecpmTrend
+    return mediationGroups.map((group: any) => ({
+      ...group,
+      adSources: group.adSources || [],
+      ecpm: group.ecpm || 0,
+      ecpmTrend: group.ecpmChangePct || 0, // Use EcpmChangePct from cache
+      revenue: group.revenue || 0,
+      impressions: group.impressions || 0,
+      fillRate: group.fillRate || 0,
+      countries: group.countries || [],
+    }))
+  }, [mediationGroups])
 
   // Transform mediation groups data to match table format
   const transformedGroups = useMemo(() => {
     if (!groupsWithData || groupsWithData.length === 0) {
       if (!mediationGroups || mediationGroups.length === 0) return []
       // Fallback to basic data
-      return mediationGroups.map((group) => ({
+      return mediationGroups.map((group: any) => ({
         id: group.id.toString(),
         name: group.displayName || group.name,
-        appName: "Unknown App", // TODO: Fetch app name from appId
-        appId: "0",
-        appIcon: undefined,
+        appName: group.appName || "Unknown App", // From cache if available
+        appId: group.appId?.toString() || "0",
+        appIcon: group.appIconUri || undefined, // From cache if available
         format: group.adFormat || "Unknown",
-        adSources: [],
-        targeting: "Global",
+        adSources: group.adSources || [],
+        targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
         status: group.state === "ENABLED" ? "Active" : group.state || "Active",
         abTest: null,
-        ecpm: 0,
-        ecpmTrend: 0,
+        ecpm: group.ecpm || 0,
+        ecpmTrend: group.ecpmChangePct || 0, // From cache if available
         lastModified: group.updatedAt 
           ? new Date(group.updatedAt).toLocaleString()
           : "Never",
@@ -383,16 +344,16 @@ export function MediationGroupsTable({
     return groupsWithData.map((group: any) => ({
       id: group.id.toString(),
       name: group.displayName || group.name,
-      appName: "Unknown App", // TODO: Fetch app name from appId
-      appId: "0",
-      appIcon: undefined,
+      appName: group.appName || "Unknown App", // From cache
+      appId: group.appId?.toString() || "0",
+      appIcon: group.appIconUri || undefined, // From cache
       format: group.adFormat || "Unknown",
-      adSources: group.adSources || [], // Now populated from API
-      targeting: "Global", // TODO: Parse targeting from group data
+      adSources: group.adSources || [], // From cache
+      targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
       status: group.state === "ENABLED" ? "Active" : group.state || "Active",
       abTest: null, // TODO: Fetch from A/B tests API
-      ecpm: group.ecpm || 0, // Now populated from API
-      ecpmTrend: group.ecpmTrend || 0, // Now calculated
+      ecpm: group.ecpm || 0, // From cache
+      ecpmTrend: group.ecpmTrend || 0, // From cache (EcpmChangePct)
       lastModified: group.updatedAt 
         ? new Date(group.updatedAt).toLocaleString()
         : "Never",
@@ -662,10 +623,10 @@ export function MediationGroupsTable({
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <div className="flex -space-x-1">
-                              {group.adSources.slice(0, 4).map((source, idx) => (
+                              {group.adSources.slice(0, 4).map((source: string, idx: number) => (
                                 <div
                                   key={idx}
-                                  className={cn("w-4 h-4 rounded-full border border-white", networkColors[source])}
+                                  className={cn("w-4 h-4 rounded-full border border-white", networkColors[source] || "bg-slate-300")}
                                 />
                               ))}
                             </div>
@@ -685,13 +646,22 @@ export function MediationGroupsTable({
                         </div>
                       ) : (
                         <div className="flex items-center gap-1">
-                          {(group.targeting as string[]).slice(0, 3).map((country, idx) => (
-                            <span key={idx} className="text-base">
-                              {countryFlags[country]}
-                            </span>
-                          ))}
-                          {(group.targeting as string[]).length > 3 && (
-                            <span className="text-xs text-slate-500">+{(group.targeting as string[]).length - 3}</span>
+                          {Array.isArray(group.targeting) 
+                            ? group.targeting.slice(0, 3).map((country: string, idx: number) => (
+                                <span key={idx} className="text-base">
+                                  {countryFlags[country] || country}
+                                </span>
+                              ))
+                            : typeof group.targeting === 'string' && group.targeting !== 'Global'
+                            ? [group.targeting].slice(0, 3).map((country: string, idx: number) => (
+                                <span key={idx} className="text-base">
+                                  {countryFlags[country] || country}
+                                </span>
+                              ))
+                            : null
+                          }
+                          {Array.isArray(group.targeting) && group.targeting.length > 3 && (
+                            <span className="text-xs text-slate-500">+{group.targeting.length - 3}</span>
                           )}
                         </div>
                       )}

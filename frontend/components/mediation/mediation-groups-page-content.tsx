@@ -64,11 +64,62 @@ export function MediationGroupsPageContent() {
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
 
-  // Fetch mediation groups from API
-  const { data: mediationGroups, loading: groupsLoading, refetch: refetchGroups } = useApi(
+  // Fetch mediation groups from API (now includes metrics and ad sources from cache)
+  const { data: mediationGroupsWithData, loading: groupsLoading, refetch: refetchGroups } = useApi(
     () => structureApi.getMediationGroups(),
-    { enabled: true }
+    { 
+      enabled: true,
+      cacheKey: 'mediation_groups_all' // Cache key for frontend cache
+    }
   )
+
+  // Transform cached data to match expected format
+  const mediationGroups = useMemo(() => {
+    if (!mediationGroupsWithData) return []
+    return mediationGroupsWithData.map((group: any) => ({
+      id: group.id,
+      mediationGroupId: group.mediationGroupId,
+      name: group.name,
+      displayName: group.displayName,
+      adFormat: group.adFormat,
+      platform: group.platform,
+      state: group.state,
+      publisherId: group.publisherId,
+      createdAt: group.createdAt,
+      updatedAt: group.updatedAt,
+      lastSyncedAt: group.lastSyncedAt,
+    }))
+  }, [mediationGroupsWithData])
+
+  // Groups with metrics (from cache)
+  const groupsWithMetrics = useMemo(() => {
+    if (!mediationGroupsWithData) return []
+    return mediationGroupsWithData.map((group: any) => ({
+      id: group.id,
+      mediationGroupId: group.mediationGroupId,
+      name: group.name,
+      displayName: group.displayName,
+      adFormat: group.adFormat,
+      platform: group.platform,
+      state: group.state,
+      publisherId: group.publisherId,
+      createdAt: group.createdAt,
+      updatedAt: group.updatedAt,
+      lastSyncedAt: group.lastSyncedAt,
+      adSources: group.adSources || [],
+      ecpm: group.ecpm || 0,
+      ecpmChangePct: group.ecpmChangePct || 0, // Use EcpmChangePct from cache
+      revenue: group.revenue || 0,
+      impressions: group.impressions || 0,
+      fillRate: group.fillRate || 0,
+      countries: group.countries || [],
+      // App info from cache
+      appId: group.appId,
+      appAdMobId: group.appAdMobId,
+      appName: group.appName,
+      appIconUri: group.appIconUri,
+    }))
+  }, [mediationGroupsWithData])
 
   // Fetch apps for filter dropdown
   const { data: appsResponse } = useApi(
@@ -98,52 +149,6 @@ export function MediationGroupsPageContent() {
     { enabled: true }
   )
 
-  // Fetch metrics for all mediation groups
-  const { data: groupsWithMetrics } = useApi(
-    async () => {
-      if (!mediationGroups || mediationGroups.length === 0) return []
-
-      const last7Days = new Date()
-      last7Days.setDate(last7Days.getDate() - 7)
-      const today = new Date()
-
-      const groupsWithData = await Promise.all(
-        mediationGroups.map(async (group) => {
-          try {
-            const [adSources, metrics] = await Promise.all([
-              structureApi.getMediationGroupAdSources(group.id).catch(() => ({ adSources: [] })),
-              mediationGroupMetricsApi.getMediationGroupMetrics(group.mediationGroupId, {
-                startDate: last7Days.toISOString().split('T')[0],
-                endDate: today.toISOString().split('T')[0],
-              }).catch(() => null),
-            ])
-
-            return {
-              ...group,
-              adSources: adSources.adSources || [],
-              ecpm: metrics?.avgEcpm || 0,
-              revenue: metrics?.totalRevenue || 0,
-              impressions: metrics?.totalImpressions || 0,
-              fillRate: metrics?.avgFillRate || 0,
-            }
-          } catch (err) {
-            return {
-              ...group,
-              adSources: [],
-              ecpm: 0,
-              revenue: 0,
-              impressions: 0,
-              fillRate: 0,
-            }
-          }
-        })
-      )
-
-      return groupsWithData
-    },
-    { enabled: !!mediationGroups && mediationGroups.length > 0 }
-  )
-
   // Calculate summary stats
   const summaryStats = useMemo(() => {
     if (!groupsWithMetrics || groupsWithMetrics.length === 0) {
@@ -152,7 +157,7 @@ export function MediationGroupsPageContent() {
         total: mediationGroups.length,
         active: mediationGroups.filter(mg => mg.state === "ENABLED" || !mg.state).length,
         abTests: 0,
-        issues: alertsSummary?.total || 0,
+        issues: alertsSummary?.Total || 0,
         avgEcpm: 0,
       }
     }
@@ -540,7 +545,7 @@ export function MediationGroupsPageContent() {
 
       {/* Mediation Groups Table - Added abTestFilter prop */}
       <MediationGroupsTable
-        mediationGroups={mediationGroups || []}
+        mediationGroups={groupsWithMetrics || []}
         loading={groupsLoading}
         searchQuery={searchQuery}
         appFilter={selectedApp}
