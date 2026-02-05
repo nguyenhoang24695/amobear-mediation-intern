@@ -95,6 +95,11 @@ export function AppsTable({
       icon: app.iconUri,
       platform: app.platform || "Unknown",
       adUnits: app.adUnitsCount || 0,
+      waterfallAdUnits: app.waterfallAdUnitsCount ?? 0,
+      adUnitsRevenue: app.todayRevenue || 0,
+      adUnitsRevenueTrend: app.todayRevenueChangePct ?? 0,
+      waterfallAdUnitsRevenue: app.todayWaterfallAdUnitsRevenue ?? 0,
+      waterfallAdUnitsRevenueTrend: app.todayWaterfallAdUnitsRevenueChangePct ?? 0,
       revenue: app.todayRevenue || 0,
       revenueTrend: app.todayRevenueChangePct || 0,
       ecpm: app.todayEcpm ?? app.averageEcpm ?? 0,
@@ -127,7 +132,7 @@ export function AppsTable({
       case "name":
         return multiplier * a.name.localeCompare(b.name)
       case "adUnits":
-        return multiplier * (a.adUnits - b.adUnits)
+        return multiplier * (a.adUnits + a.waterfallAdUnits - (b.adUnits + b.waterfallAdUnits))
       case "revenue":
         return multiplier * (a.revenue - b.revenue)
       case "ecpm":
@@ -398,30 +403,52 @@ export function AppsTable({
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/apps/${app.id}?tab=ad-units`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {app.adUnits} units
-                    </Link>
+                    <div className="flex flex-col gap-0.5 text-sm">
+                      <Link
+                        href={`/apps/${app.id}?tab=ad-units`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {app.adUnits} ad units
+                      </Link>
+                      <span className="text-slate-700">{app.waterfallAdUnits} waterfall units</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-900">${app.revenue.toFixed(2)}</span>
-                      <span
-                        className={cn(
-                          "flex items-center text-xs",
-                          app.revenueTrend >= 0 ? "text-green-600" : "text-red-600",
-                        )}
-                      >
-                        {app.revenueTrend >= 0 ? (
-                          <TrendingUp className="w-3 h-3 mr-0.5" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 mr-0.5" />
-                        )}
-                        {Math.abs(app.revenueTrend).toFixed(2)}%
-                      </span>
+                    <div className="flex flex-col gap-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900">${app.adUnitsRevenue.toFixed(2)}</span>
+                        <span
+                          className={cn(
+                            "flex items-center text-xs",
+                            app.adUnitsRevenueTrend >= 0 ? "text-green-600" : "text-red-600",
+                          )}
+                        >
+                          {app.adUnitsRevenueTrend >= 0 ? (
+                            <TrendingUp className="w-3 h-3 mr-0.5" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 mr-0.5" />
+                          )}
+                          {Math.abs(app.adUnitsRevenueTrend).toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <span className="text-xs text-slate-500">waterfall</span>
+                        <span>${app.waterfallAdUnitsRevenue.toFixed(2)}</span>
+                        <span
+                          className={cn(
+                            "flex items-center text-xs",
+                            app.waterfallAdUnitsRevenueTrend >= 0 ? "text-green-600" : "text-red-600",
+                          )}
+                        >
+                          {app.waterfallAdUnitsRevenueTrend >= 0 ? (
+                            <TrendingUp className="w-3 h-3 mr-0.5" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 mr-0.5" />
+                          )}
+                          {Math.abs(app.waterfallAdUnitsRevenueTrend).toFixed(2)}%
+                        </span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">

@@ -14,11 +14,17 @@ export interface App {
   updatedAt: string
   lastSyncedAt?: string
   adUnitsCount?: number
+  /** Waterfall Ad Units (from SyncAdMobNetworkWaterfallAdUnitsAsync), distinct from adUnitsCount (from SyncAdUnitsAsync). */
+  waterfallAdUnitsCount?: number
   mediationGroupsCount?: number
   averageEcpm?: number
 
   // Metrics from dashboard cache (today) - returned by /api/Structure/apps
   todayRevenue?: number
+  /** Revenue from ad units linked to waterfall (today). */
+  todayWaterfallAdUnitsRevenue?: number
+  /** % thay đổi revenue waterfall so với kỳ trước. */
+  todayWaterfallAdUnitsRevenueChangePct?: number | null
   todayImpressions?: number
   todayEcpm?: number
   todayFillRate?: number // percent (0..100)
