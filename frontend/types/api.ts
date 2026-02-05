@@ -19,9 +19,12 @@ export interface App {
   mediationGroupsCount?: number
   averageEcpm?: number
 
-  // Metrics from dashboard cache (today) - returned by /api/Structure/apps
+  // Metrics from dashboard cache (today) - returned by /api/Structure/apps. Tách: ad unit (placement không waterfall) + waterfall (placement có trong ít nhất 1 waterfall).
   todayRevenue?: number
-  /** Revenue from ad units linked to waterfall (today). */
+  /** Doanh thu từ placements KHÔNG thuộc waterfall (today). */
+  todayAdUnitsRevenue?: number
+  todayAdUnitsRevenueChangePct?: number | null
+  /** Doanh thu từ placements CÓ trong ít nhất 1 waterfall (today). */
   todayWaterfallAdUnitsRevenue?: number
   /** % thay đổi revenue waterfall so với kỳ trước. */
   todayWaterfallAdUnitsRevenueChangePct?: number | null

@@ -96,8 +96,8 @@ export function AppsTable({
       platform: app.platform || "Unknown",
       adUnits: app.adUnitsCount || 0,
       waterfallAdUnits: app.waterfallAdUnitsCount ?? 0,
-      adUnitsRevenue: app.todayRevenue || 0,
-      adUnitsRevenueTrend: app.todayRevenueChangePct ?? 0,
+      adUnitsRevenue: app.todayAdUnitsRevenue ?? 0,
+      adUnitsRevenueTrend: app.todayAdUnitsRevenueChangePct ?? 0,
       waterfallAdUnitsRevenue: app.todayWaterfallAdUnitsRevenue ?? 0,
       waterfallAdUnitsRevenueTrend: app.todayWaterfallAdUnitsRevenueChangePct ?? 0,
       revenue: app.todayRevenue || 0,
@@ -416,7 +416,8 @@ export function AppsTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1 text-sm">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <span className="text-xs text-slate-500">ad unit</span>
                         <span className="font-medium text-slate-900">${app.adUnitsRevenue.toFixed(2)}</span>
                         <span
                           className={cn(
