@@ -103,9 +103,16 @@ export interface MediationGroup {
   appName?: string
   appIconUri?: string
   
-  // Ad sources breakdown
+  // Ad sources breakdown (from detail/cache)
   biddingSources?: string[]
   waterfallSources?: string[]
+  /** Full ad source list with mode and order (from GET mediationgroups/:id) */
+  adSourceDetails?: Array<{
+    adSourceId: string
+    title?: string | null
+    cpmMode?: string
+    order?: number | null
+  }>
 }
 
 export interface PerformanceData {

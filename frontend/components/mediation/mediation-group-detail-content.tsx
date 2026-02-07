@@ -71,19 +71,19 @@ export function MediationGroupDetailContent() {
   const [applyMode, setApplyMode] = useState<"direct" | "test-winner">("direct")
   const [isSyncing, setIsSyncing] = useState(false)
 
-  // Extract data from API response
+  // Extract data from API response (cache key: dashboard:mediationgroup:{mediationGroupId}:detail:today)
   const groupData = useMemo(() => {
     if (!groupDetail) return null
-    const detail = groupDetail as any
+    const d = groupDetail as unknown as Record<string, unknown>
     return {
-      id: detail.id || groupId,
-      name: detail.DisplayName || detail.name || "Unknown Mediation Group",
-      appName: detail.AppName || "Unknown App",
-      appId: detail.AppId,
-      appIconUri: detail.AppIconUri,
-      format: formatAdFormat(detail.AdFormat || detail.adFormat),
-      status: detail.State || detail.state || "Unknown",
-      admobGroupId: detail.MediationGroupId || detail.mediationGroupId,
+      id: (d.id as number) ?? groupId,
+      name: (d.displayName ?? d.DisplayName ?? d.name ?? d.Name) as string || "Unknown Mediation Group",
+      appName: (d.appName ?? d.AppName) as string || "Unknown App",
+      appId: (d.appId ?? d.AppId) as number | undefined,
+      appIconUri: (d.appIconUri ?? d.AppIconUri) as string | undefined,
+      format: formatAdFormat((d.adFormat ?? d.AdFormat) as string | undefined),
+      status: (d.state ?? d.State) as string || "Unknown",
+      admobGroupId: (d.mediationGroupId ?? d.MediationGroupId) as string | undefined,
       hasRunningTest: false, // TODO: Fetch from A/B tests API
       testDay: 0,
       testDuration: 0,

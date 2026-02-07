@@ -158,6 +158,38 @@ export const structureApi = {
     },
 }
 
+// SoW (Share of Wallet) Data - per ad source eCPM/SoW for waterfall optimization
+export interface SoWDataItem {
+    id: number
+    date: string
+    publisherId: string
+    mediationGroupId: string
+    adSourceId: string
+    adSourceInstanceId?: string
+    countryCode?: string
+    sow: number
+    totalRevenueMicros: number
+    mediationGroupTotalRevenueMicros: number
+    totalImpressions: number
+    avgEcpmMicros: number
+    avgMatchRate?: number
+    avgFillRate?: number
+}
+
+export const sowApi = {
+    getSoWData: async (params: {
+        mediationGroupId?: string
+        publisherId?: string
+        adSourceId?: string
+        startDate?: string
+        endDate?: string
+        page?: number
+        pageSize?: number
+    }): Promise<PagedResponse<SoWDataItem>> => {
+        return apiClient.get<PagedResponse<SoWDataItem>>('/api/SoWData', params)
+    },
+}
+
 // Performance Data API Service
 export const performanceApi = {
     getPerformanceData: async (params: {

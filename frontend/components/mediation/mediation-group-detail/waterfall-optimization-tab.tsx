@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,6 +32,8 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useApi } from "@/hooks/use-api"
+import { structureApi, sowApi } from "@/lib/api/services"
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 
 interface WaterfallOptimizationTabProps {
@@ -62,84 +65,6 @@ interface BiddingSource {
   changeType?: "new" | "removed"
 }
 
-// Initial mock data for current waterfall
-const initialCurrentWaterfall = {
-  bidding: [
-    { id: "b1", name: "AdMob Network", floor: null, status: "active" as const, ecpm7d: 8.5 },
-    { id: "b2", name: "Pangle", floor: null, status: "active" as const, ecpm7d: 7.2 },
-  ],
-  waterfall: [
-    { id: "w1", name: "Inter81.15", floor: 81.15, ecpm: 85.2, status: "active" as const, network: "AdMob" },
-    { id: "w2", name: "Inter65.93", floor: 65.93, ecpm: 68.4, status: "active" as const, network: "ironSource" },
-    { id: "w3", name: "Inter50.72", floor: 50.72, ecpm: 54.3, status: "active" as const, network: "Unity Ads" },
-    { id: "w4", name: "Inter40.57", floor: 40.57, ecpm: 43.8, status: "active" as const, network: "Vungle" },
-    { id: "w5", name: "Inter30.43", floor: 30.43, ecpm: 33.2, status: "active" as const, network: "AppLovin" },
-  ],
-  estimatedMonthly: 859,
-}
-
-// Initial AI-suggested optimized waterfall
-const initialOptimizedWaterfall = {
-  bidding: [
-    { id: "b1", name: "AdMob Network", floor: null, status: "active" as const, ecpm7d: 8.5 },
-    { id: "b2", name: "Pangle", floor: null, status: "active" as const, ecpm7d: 7.2 },
-  ],
-  waterfall: [
-    {
-      id: "w1",
-      name: "Inter191.42",
-      floor: 191.42,
-      ecpm: 195.8,
-      status: "active" as const,
-      network: "AdMob",
-      originalFloor: 81.15,
-      changeType: "modified" as const,
-    },
-    {
-      id: "w2",
-      name: "Inter153.14",
-      floor: 153.14,
-      ecpm: 158.2,
-      status: "active" as const,
-      network: "ironSource",
-      originalFloor: 65.93,
-      changeType: "modified" as const,
-    },
-    {
-      id: "w3",
-      name: "Inter122.50",
-      floor: 122.5,
-      ecpm: 128.4,
-      status: "active" as const,
-      network: "Unity Ads",
-      originalFloor: 50.72,
-      changeType: "modified" as const,
-    },
-    {
-      id: "w4",
-      name: "Inter85.75",
-      floor: 85.75,
-      ecpm: 89.3,
-      status: "active" as const,
-      network: "Vungle",
-      originalFloor: 40.57,
-      changeType: "modified" as const,
-    },
-    {
-      id: "w5",
-      name: "Inter47.16",
-      floor: 47.16,
-      ecpm: 51.2,
-      status: "active" as const,
-      network: "AppLovin",
-      originalFloor: 30.43,
-      changeType: "modified" as const,
-    },
-  ],
-  estimatedMonthly: 954,
-  improvement: 11.1,
-}
-
 export function WaterfallOptimizationTab({
   onRunABTest,
   onApplyDirect,
@@ -147,6 +72,109 @@ export function WaterfallOptimizationTab({
   testDay,
   testDuration,
 }: WaterfallOptimizationTabProps) {
+  const params = useParams()
+  const groupId = Number((params as { id?: string })?.id)
+  const hasValidId = !Number.isNaN(groupId)
+
+  const { data: groupDetail, loading: loadingDetail } = useApi(
+    () => structureApi.getMediationGroup(groupId),
+    { enabled: hasValidId, cacheKey: hasValidId ? `mediation_group_detail_${groupId}` : undefined }
+  )
+
+  const mediationGroupId = (groupDetail as { mediationGroupId?: string } | undefined)?.mediationGroupId ?? ""
+  const endDate = useMemo(() => new Date(), [])
+  const startDate = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 7)
+    return d
+  }, [])
+
+  const { data: sowResponse } = useApi(
+    () =>
+      sowApi.getSoWData({
+        mediationGroupId: mediationGroupId || undefined,
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate.toISOString().slice(0, 10),
+        pageSize: 500,
+      }),
+    {
+      enabled: !!mediationGroupId,
+      cacheKey: mediationGroupId ? `sow_${mediationGroupId}_7d` : undefined,
+    }
+  )
+
+  const sowDataList = sowResponse?.data ?? []
+
+  const ecpmByAdSourceId = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const row of sowDataList) {
+      const ecpm = row.avgEcpmMicros / 1_000_000
+      if (!map[row.adSourceId] || ecpm > (map[row.adSourceId] ?? 0)) {
+        map[row.adSourceId] = ecpm
+      }
+    }
+    return map
+  }, [sowDataList])
+
+  const currentSetup = useMemo(() => {
+    const detail = groupDetail as {
+      adSourceDetails?: Array<{ adSourceId: string; title?: string | null; cpmMode?: string; order?: number | null }>
+      biddingSources?: string[]
+      waterfallSources?: string[]
+      totalRevenue7Days?: number
+      revenue?: number
+    } | undefined
+    if (!detail) {
+      return {
+        bidding: [] as BiddingSource[],
+        waterfall: [] as WaterfallSource[],
+        estimatedMonthly: 0,
+      }
+    }
+    const rawAdSources =
+      (detail as { adSourceDetails?: unknown[] }).adSourceDetails ??
+      (detail as { adSources?: unknown[] }).adSources ??
+      (detail as { AdSources?: unknown[] }).AdSources ??
+      []
+    type AdSourceRow = { adSourceId: string; title?: string | null; cpmMode?: string; CpmMode?: string; order?: number | null; Order?: number | null }
+    const adSourceDetails = rawAdSources as AdSourceRow[]
+    const getCpmMode = (a: AdSourceRow) => (a.cpmMode ?? a.CpmMode ?? "").toUpperCase()
+    const getOrder = (a: AdSourceRow) => a.order ?? a.Order ?? 999
+    const biddingList: BiddingSource[] = adSourceDetails
+      .filter((a) => getCpmMode(a) === "BIDDING")
+      .map((a) => ({
+        id: `b_${a.adSourceId}`,
+        name: a.title || a.adSourceId,
+        floor: null,
+        status: "active" as const,
+        ecpm7d: ecpmByAdSourceId[a.adSourceId] ?? 0,
+      }))
+    const waterfallList: WaterfallSource[] = adSourceDetails
+      .filter((a) => getCpmMode(a) !== "BIDDING")
+      .sort((a, b) => getOrder(a) - getOrder(b))
+      .map((a, idx) => ({
+        id: `w_${a.adSourceId}_${idx}`,
+        name: a.title || a.adSourceId,
+        floor: 0,
+        ecpm: ecpmByAdSourceId[a.adSourceId] ?? 0,
+        status: "active" as const,
+        network: a.adSourceId,
+      }))
+    const rev7 = detail.totalRevenue7Days ?? detail.revenue ?? 0
+    const estimatedMonthly = rev7 > 0 ? Math.round((rev7 * 30) / 7) : 0
+    return { bidding: biddingList, waterfall: waterfallList, estimatedMonthly }
+  }, [groupDetail, ecpmByAdSourceId])
+
+  const recommendedWaterfall = useMemo(() => {
+    const w = [...currentSetup.waterfall].sort((a, b) => b.ecpm - a.ecpm)
+    return w.map((s, i) => ({
+      ...s,
+      id: `rec_${s.id}_${i}`,
+      originalFloor: s.floor,
+      changeType: "modified" as const,
+    }))
+  }, [currentSetup.waterfall])
+
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [viewMode, setViewMode] = useState("side-by-side")
   const [showMode, setShowMode] = useState("all")
@@ -155,10 +183,26 @@ export function WaterfallOptimizationTab({
   const [optimizedBiddingOpen, setOptimizedBiddingOpen] = useState(true)
   const [optimizedWaterfallOpen, setOptimizedWaterfallOpen] = useState(true)
 
-  // Editable state for optimized waterfall
-  const [optimizedBidding, setOptimizedBidding] = useState<BiddingSource[]>(initialOptimizedWaterfall.bidding)
-  const [optimizedWaterfall, setOptimizedWaterfall] = useState<WaterfallSource[]>(initialOptimizedWaterfall.waterfall)
-  const [aiSuggestedWaterfall] = useState<WaterfallSource[]>(initialOptimizedWaterfall.waterfall)
+  const [optimizedBidding, setOptimizedBidding] = useState<BiddingSource[]>([])
+  const [optimizedWaterfall, setOptimizedWaterfall] = useState<WaterfallSource[]>([])
+  const [aiSuggestedWaterfall, setAiSuggestedWaterfall] = useState<WaterfallSource[]>([])
+  const lastInitKey = useRef<string>("")
+
+  useEffect(() => {
+    if (!hasValidId || !groupDetail) return
+    const key = `${groupId}_${sowDataList.length}`
+    if (lastInitKey.current === key) return
+    lastInitKey.current = key
+    setOptimizedBidding([...currentSetup.bidding])
+    if (recommendedWaterfall.length > 0) {
+      setOptimizedWaterfall([...recommendedWaterfall])
+      setAiSuggestedWaterfall([...recommendedWaterfall])
+    } else if (currentSetup.waterfall.length > 0) {
+      const fallback = currentSetup.waterfall.map((s) => ({ ...s }))
+      setOptimizedWaterfall(fallback)
+      setAiSuggestedWaterfall(fallback)
+    }
+  }, [groupId, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, sowDataList.length])
 
   // Editing state
   const [editingFloorId, setEditingFloorId] = useState<string | null>(null)
@@ -198,7 +242,7 @@ export function WaterfallOptimizationTab({
         : 0
 
     // Recalculate estimated monthly based on changes
-    const baseMonthly = initialCurrentWaterfall.estimatedMonthly
+    const baseMonthly = currentSetup.estimatedMonthly
     const improvementFactor =
       1 + (avgFloorIncrease / 100) * 0.5 + addedSources.length * 0.02 - removedSources.length * 0.015
     const estimatedMonthly = Math.round(baseMonthly * improvementFactor)
@@ -357,8 +401,8 @@ export function WaterfallOptimizationTab({
 
   // Reset to AI suggestion
   const resetToAISuggestion = () => {
-    setOptimizedWaterfall([...initialOptimizedWaterfall.waterfall])
-    setOptimizedBidding([...initialOptimizedWaterfall.bidding])
+    setOptimizedWaterfall([...aiSuggestedWaterfall])
+    setOptimizedBidding([...currentSetup.bidding])
   }
 
   // Discard all changes
@@ -378,12 +422,34 @@ export function WaterfallOptimizationTab({
     )
   }
 
-  // Calculate average eCPM floor
+  const activeWaterfall = optimizedWaterfall.filter((s) => s.changeType !== "removed")
   const currentAvgFloor =
-    initialCurrentWaterfall.waterfall.reduce((sum, s) => sum + s.floor, 0) / initialCurrentWaterfall.waterfall.length
+    currentSetup.waterfall.length > 0
+      ? currentSetup.waterfall.reduce((sum, s) => sum + s.floor, 0) / currentSetup.waterfall.length
+      : 0
   const optimizedAvgFloor =
-    optimizedWaterfall.filter((s) => s.changeType !== "removed").reduce((sum, s) => sum + s.floor, 0) /
-    optimizedWaterfall.filter((s) => s.changeType !== "removed").length
+    activeWaterfall.length > 0 ? activeWaterfall.reduce((sum, s) => sum + s.floor, 0) / activeWaterfall.length : 0
+
+  if (loadingDetail && hasValidId) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="animate-pulse text-slate-500">Loading waterfall configuration...</div>
+      </div>
+    )
+  }
+
+  const hasNoSources =
+    !loadingDetail && currentSetup.bidding.length === 0 && currentSetup.waterfall.length === 0 && hasValidId
+  if (hasNoSources) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
+        <p className="text-slate-600">No bidding or waterfall sources for this mediation group.</p>
+        <p className="text-sm text-slate-500 mt-1">
+          Sync structure from AdMob or add ad sources in the mediation group configuration.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <TooltipProvider>
@@ -399,7 +465,7 @@ export function WaterfallOptimizationTab({
                   <h3 className="font-semibold text-slate-900">Optimization Available</h3>
                   <p className="text-sm text-slate-700 mt-0.5">
                     Our analysis suggests changes that could increase eCPM by ~{changes.improvement}% ($
-                    {(changes.estimatedMonthly - initialCurrentWaterfall.estimatedMonthly).toFixed(0)})
+                    {(changes.estimatedMonthly - currentSetup.estimatedMonthly).toFixed(0)})
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
                     Based on last 14 days performance data • Confidence: 87%
@@ -566,7 +632,7 @@ export function WaterfallOptimizationTab({
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-teal-100">Estimated Monthly</p>
-                    <p className="text-2xl font-bold">${initialCurrentWaterfall.estimatedMonthly}</p>
+                    <p className="text-2xl font-bold">${currentSetup.estimatedMonthly}</p>
                   </div>
                 </div>
               </div>
@@ -575,7 +641,7 @@ export function WaterfallOptimizationTab({
                 <Collapsible open={currentBiddingOpen} onOpenChange={setCurrentBiddingOpen}>
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-slate-50 rounded-md">
                     <span className="text-sm font-medium text-slate-700">
-                      Bidding ({initialCurrentWaterfall.bidding.length} sources)
+                      Bidding ({currentSetup.bidding.length} sources)
                     </span>
                     {currentBiddingOpen ? (
                       <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -584,7 +650,7 @@ export function WaterfallOptimizationTab({
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
-                    {initialCurrentWaterfall.bidding.map((source) => (
+                    {currentSetup.bidding.map((source) => (
                       <div key={source.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                         <Check className="w-4 h-4 text-green-500" />
                         <div className="flex-1">
@@ -601,7 +667,7 @@ export function WaterfallOptimizationTab({
                 <Collapsible open={currentWaterfallOpen} onOpenChange={setCurrentWaterfallOpen}>
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-slate-50 rounded-md">
                     <span className="text-sm font-medium text-slate-700">
-                      Waterfall ({initialCurrentWaterfall.waterfall.length} sources)
+                      Waterfall ({currentSetup.waterfall.length} sources)
                     </span>
                     {currentWaterfallOpen ? (
                       <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -610,7 +676,7 @@ export function WaterfallOptimizationTab({
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
-                    {initialCurrentWaterfall.waterfall.map((source, index) => (
+                    {currentSetup.waterfall.map((source, index) => (
                       <div key={source.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                         <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-medium flex items-center justify-center">
                           {index + 1}
@@ -935,7 +1001,7 @@ export function WaterfallOptimizationTab({
                         )}
                       />
                       Estimated impact: {Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}$
-                      {changes.estimatedMonthly - initialCurrentWaterfall.estimatedMonthly}/month (
+                      {changes.estimatedMonthly - currentSetup.estimatedMonthly}/month (
                       {Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}
                       {changes.improvement}%)
                     </li>
@@ -981,7 +1047,7 @@ export function WaterfallOptimizationTab({
                       <tbody>
                         <tr className="border-t border-slate-100">
                           <td className="p-2 text-slate-700">Est. Monthly Revenue</td>
-                          <td className="p-2 text-right text-slate-600">${initialCurrentWaterfall.estimatedMonthly}</td>
+                          <td className="p-2 text-right text-slate-600">${currentSetup.estimatedMonthly}</td>
                           <td className="p-2 text-right text-slate-900 font-medium">${changes.estimatedMonthly}</td>
                           <td
                             className={cn(
@@ -990,14 +1056,14 @@ export function WaterfallOptimizationTab({
                             )}
                           >
                             {Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}$
-                            {changes.estimatedMonthly - initialCurrentWaterfall.estimatedMonthly} (
+                            {changes.estimatedMonthly - currentSetup.estimatedMonthly} (
                             {Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}
                             {changes.improvement}%)
                           </td>
                         </tr>
                         <tr className="border-t border-slate-100">
                           <td className="p-2 text-slate-700">Waterfall Sources</td>
-                          <td className="p-2 text-right text-slate-600">{initialCurrentWaterfall.waterfall.length}</td>
+                          <td className="p-2 text-right text-slate-600">{currentSetup.waterfall.length}</td>
                           <td className="p-2 text-right text-slate-900 font-medium">
                             {optimizedWaterfall.filter((s) => s.changeType !== "removed").length}
                           </td>
