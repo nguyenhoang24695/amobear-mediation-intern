@@ -100,7 +100,9 @@ export const structureApi = {
         apps: App[]
         summary: {
             totalApps: number
+            totalApprovedApps: number
             totalAdUnits: number
+            totalWaterfallAdUnits: number
             averageEcpm: number
         }
     }> => {

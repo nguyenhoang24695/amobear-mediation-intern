@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 
-const platformOptions = ["All Platforms", "Android", "iOS"]
+const platformOptions = ["All Platforms", "ANDROID", "IOS"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
 const networkOptions = ["All Networks", "AdMob", "Unity Ads", "ironSource", "AppLovin"]
 
@@ -37,15 +37,15 @@ export function AppsPageContent() {
   const apps = appsResponse?.apps || []
   const summary = appsResponse?.summary
 
-  // Calculate summary stats from API response
+  // Summary từ API: Total Apps = tất cả (kể cả chưa APPROVED), Active = đã APPROVED, Total Ad Units / Total Waterfall Ad Units
   const summaryStats = useMemo(() => {
-    if (!appsResponse) return { total: 0, active: 0, totalUnits: 0, avgEcpm: 0 }
-    
+    if (!appsResponse) return { total: 0, active: 0, totalAdUnits: 0, totalWaterfallAdUnits: 0, avgEcpm: 0 }
     return {
-      total: summary?.totalApps || apps.length,
-      active: apps.filter(app => app.approvalState === "APPROVED" || !app.approvalState).length,
-      totalUnits: summary?.totalAdUnits || 0,
-      avgEcpm: summary?.averageEcpm || 0,
+      total: summary?.totalApps ?? apps.length,
+      active: summary?.totalApprovedApps ?? apps.filter(app => app.approvalState === "APPROVED" || !app.approvalState).length,
+      totalAdUnits: summary?.totalAdUnits ?? 0,
+      totalWaterfallAdUnits: summary?.totalWaterfallAdUnits ?? 0,
+      avgEcpm: summary?.averageEcpm ?? 0,
     }
   }, [appsResponse, apps, summary])
 
@@ -230,7 +230,7 @@ export function AppsPageContent() {
           </span>
           <span className="text-slate-300">•</span>
           <span className="text-slate-600">
-            <span className="font-medium text-slate-900">{summaryStats.totalUnits.toLocaleString()}</span> ad units
+            <span className="font-medium text-slate-900">{summaryStats.totalAdUnits.toLocaleString()}</span> ad units
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -240,7 +240,7 @@ export function AppsPageContent() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="p-4 border-slate-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
@@ -277,11 +277,26 @@ export function AppsPageContent() {
               <Layers className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total Units</p>
+              <p className="text-xs text-slate-500">Total Ad Units</p>
               {appsLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.totalUnits.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.totalAdUnits.toLocaleString()}</p>
+              )}
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4 border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center">
+              <Layers className="w-5 h-5 text-violet-600" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Total Waterfall Ad Units</p>
+              {appsLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+              ) : (
+                <p className="text-xl font-semibold text-slate-900">{summaryStats.totalWaterfallAdUnits.toLocaleString()}</p>
               )}
             </div>
           </div>
