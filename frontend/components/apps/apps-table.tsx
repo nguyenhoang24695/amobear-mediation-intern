@@ -126,9 +126,11 @@ export function AppsTable({
     return true
   })
 
-  // Helper: % WaterFall (waterfallAdUnitsRevenue / adUnitsRevenue * 100), null nếu adUnitsRevenue = 0
-  const getWaterfallPct = (app: { adUnitsRevenue: number; waterfallAdUnitsRevenue: number }) =>
-    app.adUnitsRevenue > 0 ? (app.waterfallAdUnitsRevenue / app.adUnitsRevenue) * 100 : null
+  // Helper: % WaterFall = tỷ trọng waterfall trong tổng revenue (waterfall / (adUnit + waterfall) * 100), null nếu tổng = 0
+  const getWaterfallPct = (app: { adUnitsRevenue: number; waterfallAdUnitsRevenue: number }) => {
+    const total = app.adUnitsRevenue + app.waterfallAdUnitsRevenue
+    return total > 0 ? (app.waterfallAdUnitsRevenue / total) * 100 : null
+  }
 
   // Sort apps (khi sort theo waterfallPct: giá trị 0/null đẩy xuống cuối)
   const sortedApps = [...filteredApps].sort((a, b) => {

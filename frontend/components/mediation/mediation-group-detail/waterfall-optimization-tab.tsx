@@ -75,15 +75,15 @@ export function WaterfallOptimizationTab({
   testDuration,
 }: WaterfallOptimizationTabProps) {
   const params = useParams()
-  const groupId = Number((params as { id?: string })?.id)
-  const hasValidId = !Number.isNaN(groupId)
+  const mediationGroupIdFromParams = (params as { id?: string })?.id as string | undefined
+  const hasValidId = !!mediationGroupIdFromParams
 
   const { data: groupDetail, loading: loadingDetail } = useApi(
-    () => structureApi.getMediationGroup(groupId),
-    { enabled: hasValidId, cacheKey: hasValidId ? `mediation_group_detail_${groupId}` : undefined }
+    () => structureApi.getMediationGroupByAdMobId(mediationGroupIdFromParams!),
+    { enabled: hasValidId, cacheKey: hasValidId ? `mediation_group_detail_${mediationGroupIdFromParams}` : undefined }
   )
 
-  const mediationGroupId = (groupDetail as { mediationGroupId?: string } | undefined)?.mediationGroupId ?? ""
+  const mediationGroupId = (groupDetail as { mediationGroupId?: string } | undefined)?.mediationGroupId ?? mediationGroupIdFromParams ?? ""
   const endDate = useMemo(() => new Date(), [])
   const startDate = useMemo(() => {
     const d = new Date()
@@ -107,17 +107,12 @@ export function WaterfallOptimizationTab({
 
   const sowDataList = sowResponse?.data ?? []
 
+  // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại)
   const { data: recommendationsResponse } = useApi(
-    () =>
-      structureApi.getMediationGroupRecommendations(groupId, {
-        startDate: startDate.toISOString().slice(0, 10),
-        endDate: endDate.toISOString().slice(0, 10),
-        minMatchRatePercent: 3,
-        minSowPercent: 0.9,
-      }),
+    () => structureApi.getMediationGroupRecommendationsByAdMobId(mediationGroupIdFromParams!),
     {
-      enabled: hasValidId && !!mediationGroupId,
-      cacheKey: hasValidId ? `mg_recommendations_${groupId}_7d` : undefined,
+      enabled: hasValidId && !!mediationGroupIdFromParams,
+      cacheKey: hasValidId ? `mg_recommendations_${mediationGroupIdFromParams}` : undefined,
     }
   )
   const recommendations = recommendationsResponse?.recommendations ?? []
@@ -236,7 +231,7 @@ export function WaterfallOptimizationTab({
 
   useEffect(() => {
     if (!hasValidId || !groupDetail) return
-    const key = `${groupId}_${recommendations.length}_${currentSetup.waterfall.length}`
+    const key = `${mediationGroupIdFromParams}_${recommendations.length}_${currentSetup.waterfall.length}`
     if (lastInitKey.current === key) return
     lastInitKey.current = key
     setOptimizedBidding([...currentSetup.bidding])
@@ -248,7 +243,7 @@ export function WaterfallOptimizationTab({
       setOptimizedWaterfall(fallback)
       setAiSuggestedWaterfall(fallback)
     }
-  }, [groupId, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, recommendations.length, recommendedWaterfall])
+  }, [mediationGroupIdFromParams, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, recommendations.length, recommendedWaterfall])
 
   // Editing state
   const [editingFloorId, setEditingFloorId] = useState<string | null>(null)

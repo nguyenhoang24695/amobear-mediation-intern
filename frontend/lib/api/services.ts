@@ -162,7 +162,7 @@ export const structureApi = {
         return apiClient.get(`/api/Structure/mediationgroups/${id}/adsources`)
     },
 
-    /** 8-Rule Waterfall Recommendation (Min Match Rate default 3%, Min SOW default 0.9%). */
+    /** 8-Rule Waterfall Recommendation (Min Match Rate default 3%, Min SOW default 0.9%). Dùng id số (nội bộ). */
     getMediationGroupRecommendations: async (
         id: number,
         params?: {
@@ -174,6 +174,22 @@ export const structureApi = {
     ): Promise<WaterfallRecommendationsResponse> => {
         return apiClient.get<WaterfallRecommendationsResponse>(
             `/api/Structure/mediationgroups/${id}/recommendations`,
+            params as Record<string, string | number | undefined>
+        )
+    },
+
+    /** 8-Rule Recommendation theo AdMob mediation_group_id. Không truyền params = dùng mặc định 7d + 3% + 0.9% (server trả cache). */
+    getMediationGroupRecommendationsByAdMobId: async (
+        mediationGroupId: string,
+        params?: {
+            startDate?: string
+            endDate?: string
+            minMatchRatePercent?: number
+            minSowPercent?: number
+        }
+    ): Promise<WaterfallRecommendationsResponse> => {
+        return apiClient.get<WaterfallRecommendationsResponse>(
+            `/api/Structure/mediationgroups/admob/${encodeURIComponent(mediationGroupId)}/recommendations`,
             params as Record<string, string | number | undefined>
         )
     },
