@@ -74,7 +74,7 @@ export function TopApps() {
     if (!topAppsResponse?.apps) return []
     
     return topAppsResponse.apps.map((app) => ({
-      id: app.appId.toString(),
+      id: (app.appAdMobId ?? app.appId.toString()),
       rank: app.rank,
       name: app.appName,
       icon: app.iconUrl || `/placeholder.svg`,

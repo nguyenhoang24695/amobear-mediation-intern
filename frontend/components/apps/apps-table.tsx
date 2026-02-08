@@ -59,7 +59,7 @@ interface AppsTableProps {
   onSelectionChange: (apps: string[]) => void
 }
 
-type SortField = "name" | "adUnits" | "revenue" | "ecpm" | "impressions" | "fillRate" | "lastSync"
+type SortField = "name" | "adUnits" | "revenue" | "waterfallPct" | "ecpm" | "impressions" | "fillRate" | "lastSync"
 type SortDirection = "asc" | "desc"
 
 export function AppsTable({
@@ -73,7 +73,7 @@ export function AppsTable({
 }: AppsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
-  const [sortField, setSortField] = useState<SortField>("revenue")
+  const [sortField, setSortField] = useState<SortField>("waterfallPct")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -90,6 +90,7 @@ export function AppsTable({
     // Dữ liệu metrics/delta đã được backend trả sẵn từ cache dashboard:app:{id}:metrics:today
     return apps.map((app) => ({
       id: app.id.toString(),
+      appId: app.appId,
       name: app.displayName || app.name,
       packageName: app.appId,
       icon: app.iconUri,
@@ -125,7 +126,11 @@ export function AppsTable({
     return true
   })
 
-  // Sort apps
+  // Helper: % WaterFall (waterfallAdUnitsRevenue / adUnitsRevenue * 100), null nếu adUnitsRevenue = 0
+  const getWaterfallPct = (app: { adUnitsRevenue: number; waterfallAdUnitsRevenue: number }) =>
+    app.adUnitsRevenue > 0 ? (app.waterfallAdUnitsRevenue / app.adUnitsRevenue) * 100 : null
+
+  // Sort apps (khi sort theo waterfallPct: giá trị 0/null đẩy xuống cuối)
   const sortedApps = [...filteredApps].sort((a, b) => {
     const multiplier = sortDirection === "asc" ? 1 : -1
     switch (sortField) {
@@ -135,6 +140,15 @@ export function AppsTable({
         return multiplier * (a.adUnits + a.waterfallAdUnits - (b.adUnits + b.waterfallAdUnits))
       case "revenue":
         return multiplier * (a.revenue - b.revenue)
+      case "waterfallPct": {
+        const pa = getWaterfallPct(a)
+        const pb = getWaterfallPct(b)
+        const isEmpty = (p: number | null) => p == null || p === 0
+        if (isEmpty(pa) && isEmpty(pb)) return 0
+        if (isEmpty(pa)) return 1
+        if (isEmpty(pb)) return -1
+        return multiplier * (pa! - pb!)
+      }
       case "ecpm":
         return multiplier * (a.ecpm - b.ecpm)
       case "impressions":
@@ -251,8 +265,8 @@ export function AppsTable({
     return transformedApps.find(a => a.id === selectedAppForAction.id.toString())
   }
 
-  const handleRowClick = (appId: string) => {
-    router.push(`/apps/${appId}`)
+  const handleRowClick = (appAdMobId: string) => {
+    router.push(`/apps/${appAdMobId}`)
   }
 
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -324,10 +338,13 @@ export function AppsTable({
                 </th>
                 <th className="px-4 py-3 text-left">Platform</th>
                 <th className="px-4 py-3 text-left">
-                  <SortHeader field="adUnits">Ad Units</SortHeader>
+                  <SortHeader field="adUnits">AdUnits</SortHeader>
                 </th>
                 <th className="px-4 py-3 text-left">
-                  <SortHeader field="revenue">Revenue (Today)</SortHeader>
+                  <SortHeader field="revenue">Revenue</SortHeader>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <SortHeader field="waterfallPct">% WF</SortHeader>
                 </th>
                 <th className="px-4 py-3 text-left">
                   <SortHeader field="ecpm">eCPM</SortHeader>
@@ -347,7 +364,7 @@ export function AppsTable({
               {paginatedApps.map((app) => (
                 <tr
                   key={app.id}
-                  onClick={() => handleRowClick(app.id)}
+                  onClick={() => handleRowClick(app.appId)}
                   className={cn(
                     "hover:bg-slate-50 transition-colors cursor-pointer",
                     selectedApps.includes(app.id) && "bg-blue-50 hover:bg-blue-50",
@@ -370,7 +387,7 @@ export function AppsTable({
                       </Avatar>
                       <div>
                         <Link
-                          href={`/apps/${app.id}`}
+                          href={`/apps/${app.appId}`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
                         >
@@ -405,21 +422,23 @@ export function AppsTable({
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5 text-sm">
                       <Link
-                        href={`/apps/${app.id}?tab=ad-units`}
+                        href={`/apps/${app.appId}?tab=ad-units`}
                         onClick={(e) => e.stopPropagation()}
                         className="text-blue-600 hover:underline"
                       >
-                        {app.adUnits} ad units
+                        {app.adUnits} ad
                       </Link>
-                      <span className="text-slate-700">{app.waterfallAdUnits} waterfall units</span>
+                      <span className="text-slate-700">{app.waterfallAdUnits} waterfall</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1 text-sm">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <span className="text-xs text-slate-500">ad unit</span>
-                        <span className="font-medium text-slate-900">${app.adUnitsRevenue.toFixed(2)}</span>
-                        <span
+                      <div className="flex flex-col gap-0.5 text-slate-700">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500">ad unit</span>
+                          <span className="font-medium text-slate-900">${app.adUnitsRevenue.toFixed(2)}</span>
+                        </div>
+                        <div
                           className={cn(
                             "flex items-center text-xs",
                             app.adUnitsRevenueTrend >= 0 ? "text-green-600" : "text-red-600",
@@ -431,12 +450,14 @@ export function AppsTable({
                             <TrendingDown className="w-3 h-3 mr-0.5" />
                           )}
                           {Math.abs(app.adUnitsRevenueTrend).toFixed(2)}%
-                        </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <span className="text-xs text-slate-500">waterfall</span>
-                        <span>${app.waterfallAdUnitsRevenue.toFixed(2)}</span>
-                        <span
+                      <div className="flex flex-col gap-0.5 text-slate-700">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500">waterfall</span>
+                          <span>${app.waterfallAdUnitsRevenue.toFixed(2)}</span>
+                        </div>
+                        <div
                           className={cn(
                             "flex items-center text-xs",
                             app.waterfallAdUnitsRevenueTrend >= 0 ? "text-green-600" : "text-red-600",
@@ -448,9 +469,25 @@ export function AppsTable({
                             <TrendingDown className="w-3 h-3 mr-0.5" />
                           )}
                           {Math.abs(app.waterfallAdUnitsRevenueTrend).toFixed(2)}%
-                        </span>
+                        </div>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const ratio = getWaterfallPct(app)
+                      const isLow = ratio != null && ratio < 50
+                      return (
+                        <span
+                          className={cn(
+                            "text-sm font-medium",
+                            isLow && "text-red-600",
+                          )}
+                        >
+                          {ratio != null ? `${ratio.toFixed(1)}%` : "—"}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm text-slate-900">${app.ecpm.toFixed(2)}</span>
@@ -476,7 +513,7 @@ export function AppsTable({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                          <Link href={`/apps/${app.id}`} className="flex items-center gap-2 cursor-pointer">
+                          <Link href={`/apps/${app.appId}`} className="flex items-center gap-2 cursor-pointer">
                             <Eye className="w-4 h-4" />
                             View Details
                           </Link>

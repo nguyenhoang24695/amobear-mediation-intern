@@ -209,6 +209,8 @@ export interface RevenueOverview {
 
 export interface TopAppItem {
   appId: number
+  /** AdMob app_id (string) cho link /apps/{appAdMobId}. */
+  appAdMobId?: string
   appName: string
   packageName: string
   platform: string

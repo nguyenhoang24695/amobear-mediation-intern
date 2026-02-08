@@ -266,10 +266,12 @@ export function MediationGroupsTable({
       if (!mediationGroups || mediationGroups.length === 0) return []
       // Fallback to basic data
       return mediationGroups.map((group: any) => ({
-        id: group.id.toString(),
+        id: (group.mediationGroupId ?? group.id?.toString()) ?? "",
+        mediationGroupId: group.mediationGroupId ?? group.id?.toString(),
         name: group.displayName || group.name,
         appName: group.appName || "Unknown App", // From cache if available
         appId: group.appId?.toString() || "0",
+        appAdMobId: group.appAdMobId ?? undefined,
         appIcon: group.appIconUri || undefined, // From cache if available
         format: group.adFormat || "Unknown",
         adSources: group.adSources || [],
@@ -289,10 +291,12 @@ export function MediationGroupsTable({
     }
 
     return groupsWithData.map((group: any) => ({
-      id: group.id.toString(),
+      id: (group.mediationGroupId ?? group.id?.toString()) ?? "",
+      mediationGroupId: group.mediationGroupId ?? group.id?.toString(),
       name: group.displayName || group.name,
       appName: group.appName || "Unknown App", // From cache
       appId: group.appId?.toString() || "0",
+      appAdMobId: group.appAdMobId ?? undefined,
       appIcon: group.appIconUri || undefined, // From cache
       format: group.adFormat || "Unknown",
       adSources: group.adSources || [], // From cache
@@ -540,14 +544,14 @@ export function MediationGroupsTable({
                         )}
                         <div>
                           <Link
-                            href={`/mediation/${group.id}`}
+                            href={`/mediation/${group.mediationGroupId ?? group.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
                           >
                             {group.name}
                           </Link>
                           <Link
-                            href={`/apps/${group.appId}`}
+                            href={group.appAdMobId ? `/apps/${group.appAdMobId}` : "#"}
                             onClick={(e) => e.stopPropagation()}
                             className="text-xs text-slate-500 hover:text-slate-700 block"
                           >
@@ -558,7 +562,7 @@ export function MediationGroupsTable({
                     </td>
                     <td className="px-4 py-3">
                       <Link
-                        href={`/apps/${group.appId}`}
+                        href={group.appAdMobId ? `/apps/${group.appAdMobId}` : "#"}
                         onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                       >
@@ -728,14 +732,14 @@ export function MediationGroupsTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem asChild>
-                            <Link href={`/mediation/${group.id}`} className="flex items-center gap-2 cursor-pointer">
+                            <Link href={`/mediation/${group.mediationGroupId ?? group.id}`} className="flex items-center gap-2 cursor-pointer">
                               <Eye className="w-4 h-4" />
                               View Details
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link
-                              href={`/mediation/${group.id}?tab=waterfall-optimization`}
+                              href={`/mediation/${group.mediationGroupId ?? group.id}?tab=waterfall-optimization`}
                               className="flex items-center gap-2 cursor-pointer"
                             >
                               <Pencil className="w-4 h-4" />
@@ -744,7 +748,7 @@ export function MediationGroupsTable({
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link
-                              href={`/mediation/${group.id}?tab=ab-tests`}
+                              href={`/mediation/${group.mediationGroupId ?? group.id}?tab=ab-tests`}
                               className="flex items-center gap-2 cursor-pointer"
                             >
                               <FlaskConical className="w-4 h-4" />

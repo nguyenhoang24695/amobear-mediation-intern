@@ -52,15 +52,15 @@ export function MediationGroupDetailContent() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
 
-  const groupId = Number((params as any)?.id)
-  const hasValidId = !Number.isNaN(groupId)
+  const mediationGroupIdFromParams = (params as any)?.id as string | undefined
+  const hasValidId = !!mediationGroupIdFromParams
 
-  // Fetch mediation group detail from API (with cache)
+  // Fetch mediation group by AdMob mediation_group_id (cache key đồng nhất: mediation_group_detail_{mediationGroupId})
   const { data: groupDetail, loading } = useApi(
-    () => structureApi.getMediationGroup(groupId),
+    () => structureApi.getMediationGroupByAdMobId(mediationGroupIdFromParams!),
     {
       enabled: hasValidId,
-      cacheKey: hasValidId ? `mediation_group_detail_${groupId}` : undefined,
+      cacheKey: hasValidId ? `mediation_group_detail_${mediationGroupIdFromParams}` : undefined,
     },
   )
 
@@ -75,26 +75,30 @@ export function MediationGroupDetailContent() {
   const groupData = useMemo(() => {
     if (!groupDetail) return null
     const d = groupDetail as unknown as Record<string, unknown>
+    const mediationGroupId = (d.mediationGroupId ?? d.MediationGroupId ?? mediationGroupIdFromParams) as string
     return {
-      id: (d.id as number) ?? groupId,
+      id: d.id as number,
+      mediationGroupId,
       name: (d.displayName ?? d.DisplayName ?? d.name ?? d.Name) as string || "Unknown Mediation Group",
       appName: (d.appName ?? d.AppName) as string || "Unknown App",
       appId: (d.appId ?? d.AppId) as number | undefined,
+      appAdMobId: (d.appAdMobId ?? d.AppAdMobId) as string | undefined,
       appIconUri: (d.appIconUri ?? d.AppIconUri) as string | undefined,
       format: formatAdFormat((d.adFormat ?? d.AdFormat) as string | undefined),
       status: (d.state ?? d.State) as string || "Unknown",
-      admobGroupId: (d.mediationGroupId ?? d.MediationGroupId) as string | undefined,
+      admobGroupId: mediationGroupId,
       hasRunningTest: false, // TODO: Fetch from A/B tests API
       testDay: 0,
       testDuration: 0,
     }
-  }, [groupDetail, groupId])
+  }, [groupDetail, mediationGroupIdFromParams])
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("tab", tab)
-    router.push(`/mediation/${groupId}?${params.toString()}`, { scroll: false })
+    const qs = new URLSearchParams(searchParams.toString())
+    qs.set("tab", tab)
+    const idForUrl = groupData?.mediationGroupId ?? mediationGroupIdFromParams ?? ""
+    router.push(`/mediation/${idForUrl}?${qs.toString()}`, { scroll: false })
   }
 
   useEffect(() => {
@@ -179,7 +183,7 @@ export function MediationGroupDetailContent() {
             {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap">
               {groupData.appId && (
-                <Link href={`/apps/${groupData.appId}`}>
+                <Link href={groupData.appAdMobId ? `/apps/${groupData.appAdMobId}` : "#"}>
                   <Badge
                     variant="outline"
                     className="gap-1 bg-slate-50 border-slate-200 hover:bg-slate-100 cursor-pointer flex items-center"

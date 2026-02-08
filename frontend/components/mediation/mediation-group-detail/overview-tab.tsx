@@ -350,9 +350,9 @@ export function MediationGroupOverviewTab() {
                   <Hash className="w-3 h-3" />
                   App
                 </p>
-                {(groupDetail as any).AppId ? (
+                {(groupDetail as any).AppAdMobId ? (
                   <Link
-                    href={`/apps/${(groupDetail as any).AppId}`}
+                    href={`/apps/${(groupDetail as any).AppAdMobId}`}
                     className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-2"
                   >
                     {(groupDetail as any).AppIconUri && (

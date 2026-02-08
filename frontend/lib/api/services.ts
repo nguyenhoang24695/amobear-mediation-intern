@@ -113,6 +113,11 @@ export const structureApi = {
         return apiClient.get<App>(`/api/Structure/apps/${id}`)
     },
 
+    /** App by AdMob app_id (cho URL /apps/{appId}). Cache key đồng nhất: app_detail_{appId}. */
+    getAppByAppId: async (appId: string): Promise<App> => {
+        return apiClient.get<App>(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}`)
+    },
+
     getAppAdUnits: async (id: number): Promise<AdUnit[]> => {
         return apiClient.get<AdUnit[]>(`/api/Structure/apps/${id}/adunits`)
     },

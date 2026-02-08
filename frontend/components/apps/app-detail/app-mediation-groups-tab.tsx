@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useMemo, useEffect } from "react"
 import { useParams } from "next/navigation"
+import Link from "next/link"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -440,9 +441,12 @@ export function AppMediationGroupsTab() {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm font-medium text-slate-900">
+                          <Link
+                            href={`/mediation/${group.mediationGroupId}`}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                          >
                             {group.displayName || group.name || "Unnamed Mediation Group"}
-                          </span>
+                          </Link>
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className={cn("gap-1", formatColors[format] || formatColors.BANNER)}>
@@ -558,9 +562,11 @@ export function AppMediationGroupsTab() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem className="gap-2">
-                                  <Eye className="w-4 h-4" />
-                                  View Details
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/mediation/${group.mediationGroupId}`} className="flex items-center gap-2 cursor-pointer">
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="gap-2">
                                   <Pencil className="w-4 h-4" />

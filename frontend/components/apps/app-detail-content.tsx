@@ -41,14 +41,14 @@ export function AppDetailContent() {
   const params = useParams()
   const { toast } = useToast()
 
-  const appNumericId = Number((params as any)?.id)
-  const hasValidAppId = !Number.isNaN(appNumericId)
+  const appIdFromParams = (params as any)?.id as string | undefined
+  const hasValidAppId = !!appIdFromParams
 
   const { data: app, loading: appLoading } = useApi<App>(
-    () => structureApi.getApp(appNumericId),
+    () => structureApi.getAppByAppId(appIdFromParams!),
     {
       enabled: hasValidAppId,
-      cacheKey: hasValidAppId ? `app_detail_${appNumericId}` : undefined,
+      cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined,
     },
   )
 
@@ -61,7 +61,7 @@ export function AppDetailContent() {
     setActiveTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", tab)
-    const targetId = hasValidAppId ? appNumericId : ""
+    const targetId = (app?.appId ?? appIdFromParams) ?? ""
     router.push(`/apps/${targetId}?${params.toString()}`, { scroll: false })
   }
 
