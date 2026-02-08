@@ -209,7 +209,7 @@ export function WaterfallOptimizationTab({
           network: r.adSourceId,
           recommendationAction: r.action,
         } satisfies WaterfallSource
-      }
+      })
       return mapped.sort((a, b) => b.floor - a.floor)
     }
     const w = [...currentSetup.waterfall]
