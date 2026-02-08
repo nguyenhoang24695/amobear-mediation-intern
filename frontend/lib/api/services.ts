@@ -156,6 +156,45 @@ export const structureApi = {
     }> => {
         return apiClient.get(`/api/Structure/mediationgroups/${id}/adsources`)
     },
+
+    /** 8-Rule Waterfall Recommendation (Min Match Rate default 3%, Min SOW default 0.9%). */
+    getMediationGroupRecommendations: async (
+        id: number,
+        params?: {
+            startDate?: string
+            endDate?: string
+            minMatchRatePercent?: number
+            minSowPercent?: number
+        }
+    ): Promise<WaterfallRecommendationsResponse> => {
+        return apiClient.get<WaterfallRecommendationsResponse>(
+            `/api/Structure/mediationgroups/${id}/recommendations`,
+            params as Record<string, string | number | undefined>
+        )
+    },
+}
+
+export interface SowRecommendationItem {
+    lineId: string
+    adSourceId: string
+    displayName?: string
+    action: string
+    newFloorMicros?: number | null
+    reason: string
+    priority: string
+    sowPercent: number
+    matchRatePercent?: number | null
+    currentFloorMicros: number
+    observedEcpm?: number | null
+}
+
+export interface WaterfallRecommendationsResponse {
+    mediationGroupId: string
+    periodStart: string
+    periodEnd: string
+    minMatchRatePercent: number
+    minSowPercent: number
+    recommendations: SowRecommendationItem[]
 }
 
 // SoW (Share of Wallet) Data - per ad source eCPM/SoW for waterfall optimization

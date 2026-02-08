@@ -54,6 +54,8 @@ interface WaterfallSource {
   originalFloor?: number
   changeType?: "modified" | "new" | "removed"
   network?: string
+  /** 8-Rule recommendation: REMOVE | TEST | REDUCE | KEEP | INCREASE | ADD LAYER | ADD HIGHER */
+  recommendationAction?: string
 }
 
 interface BiddingSource {
@@ -105,6 +107,21 @@ export function WaterfallOptimizationTab({
 
   const sowDataList = sowResponse?.data ?? []
 
+  const { data: recommendationsResponse } = useApi(
+    () =>
+      structureApi.getMediationGroupRecommendations(groupId, {
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate.toISOString().slice(0, 10),
+        minMatchRatePercent: 3,
+        minSowPercent: 0.9,
+      }),
+    {
+      enabled: hasValidId && !!mediationGroupId,
+      cacheKey: hasValidId ? `mg_recommendations_${groupId}_7d` : undefined,
+    }
+  )
+  const recommendations = recommendationsResponse?.recommendations ?? []
+
   const ecpmByAdSourceId = useMemo(() => {
     const map: Record<string, number> = {}
     for (const row of sowDataList) {
@@ -116,11 +133,13 @@ export function WaterfallOptimizationTab({
     return map
   }, [sowDataList])
 
+  // Build từ mediation_group_lines_json (PostgreSQL) theo format Dolphin 2.0
   const currentSetup = useMemo(() => {
     const detail = groupDetail as {
-      adSourceDetails?: Array<{ adSourceId: string; title?: string | null; cpmMode?: string; order?: number | null }>
-      biddingSources?: string[]
-      waterfallSources?: string[]
+      mediationGroupLines?: Record<
+        string,
+        { id?: string; displayName?: string; adSourceId?: string; cpmMode?: string; cpmMicros?: string; state?: string }
+      >
       totalRevenue7Days?: number
       revenue?: number
     } | undefined
@@ -131,49 +150,76 @@ export function WaterfallOptimizationTab({
         estimatedMonthly: 0,
       }
     }
-    const rawAdSources =
-      (detail as { adSourceDetails?: unknown[] }).adSourceDetails ??
-      (detail as { adSources?: unknown[] }).adSources ??
-      (detail as { AdSources?: unknown[] }).AdSources ??
-      []
-    type AdSourceRow = { adSourceId: string; title?: string | null; cpmMode?: string; CpmMode?: string; order?: number | null; Order?: number | null }
-    const adSourceDetails = rawAdSources as AdSourceRow[]
-    const getCpmMode = (a: AdSourceRow) => (a.cpmMode ?? a.CpmMode ?? "").toUpperCase()
-    const getOrder = (a: AdSourceRow) => a.order ?? a.Order ?? 999
-    const biddingList: BiddingSource[] = adSourceDetails
-      .filter((a) => getCpmMode(a) === "BIDDING")
-      .map((a) => ({
-        id: `b_${a.adSourceId}`,
-        name: a.title || a.adSourceId,
+    const rawLines = (detail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown }).mediationGroupLines
+      ?? (detail as { MediationGroupLines?: unknown }).MediationGroupLines
+      ?? {}
+    const linesObj = typeof rawLines === "object" && rawLines !== null
+      ? (rawLines as Record<string, { id?: string; displayName?: string; adSourceId?: string; cpmMicros?: string; state?: string }>)
+      : {}
+    const values = Object.values(linesObj)
+
+    // Bidding: lines không có cpmMicros (giống Dolphin BiddingTable)
+    const biddingList: BiddingSource[] = values
+      .filter((line) => !line.cpmMicros || line.cpmMicros === "")
+      .map((line) => ({
+        id: line.id ?? `b_${line.adSourceId ?? ""}`,
+        name: line.displayName ?? line.adSourceId ?? "Unknown",
         floor: null,
-        status: "active" as const,
-        ecpm7d: ecpmByAdSourceId[a.adSourceId] ?? 0,
+        status: line.state === "DISABLED" || line.state === "REMOVED" ? ("inactive" as const) : ("active" as const),
+        ecpm7d: ecpmByAdSourceId[line.adSourceId ?? ""] ?? 0,
       }))
-    const waterfallList: WaterfallSource[] = adSourceDetails
-      .filter((a) => getCpmMode(a) !== "BIDDING")
-      .sort((a, b) => getOrder(a) - getOrder(b))
-      .map((a, idx) => ({
-        id: `w_${a.adSourceId}_${idx}`,
-        name: a.title || a.adSourceId,
-        floor: 0,
-        ecpm: ecpmByAdSourceId[a.adSourceId] ?? 0,
-        status: "active" as const,
-        network: a.adSourceId,
-      }))
+
+    // Waterfall gốc: chỉ từ mediation_group_lines_json — floor = cpmMicros/1e6, không áp eCPM từ SoW.
+    const waterfallList: WaterfallSource[] = values
+      .filter((line) => line.cpmMicros != null && line.cpmMicros !== "")
+      .sort((a, b) => parseInt(b.cpmMicros ?? "0", 10) - parseInt(a.cpmMicros ?? "0", 10))
+      .map((line) => {
+        const cpmMicros = parseFloat(line.cpmMicros ?? "0") || 0
+        const floor = cpmMicros / 1_000_000
+        return {
+          id: line.id ?? `w_${line.adSourceId ?? ""}`,
+          name: line.displayName ?? line.adSourceId ?? "Unknown",
+          floor,
+          ecpm: floor, // Current = đúng từ JSON; eCPM SoW chỉ dùng cho recommendation (cột Optimized).
+          status: line.state === "DISABLED" || line.state === "REMOVED" ? ("inactive" as const) : ("active" as const),
+          network: line.adSourceId ?? "",
+        }
+      })
+
     const rev7 = detail.totalRevenue7Days ?? detail.revenue ?? 0
     const estimatedMonthly = rev7 > 0 ? Math.round((rev7 * 30) / 7) : 0
     return { bidding: biddingList, waterfall: waterfallList, estimatedMonthly }
   }, [groupDetail, ecpmByAdSourceId])
 
+  // Optimized (Suggested): từ 8-Rule Recommendation API; có thể có line mới (ADD LAYER / ADD HIGHER). Sort theo floor DESC.
   const recommendedWaterfall = useMemo(() => {
-    const w = [...currentSetup.waterfall].sort((a, b) => b.ecpm - a.ecpm)
+    if (recommendations.length > 0) {
+      const mapped = recommendations.map((r, i) => {
+        const floor = (r.newFloorMicros ?? r.currentFloorMicros) / 1_000_000
+        const originalFloor = r.currentFloorMicros / 1_000_000
+        const isNewSuggestedLine = r.lineId.startsWith("suggested_")
+        return {
+          id: `rec_${r.lineId}_${i}`,
+          name: r.displayName ?? r.adSourceId ?? "Unknown",
+          floor,
+          ecpm: r.observedEcpm ?? floor,
+          status: r.action === "REMOVE" ? ("inactive" as const) : ("active" as const),
+          originalFloor,
+          changeType: isNewSuggestedLine ? ("new" as const) : r.action !== "KEEP" && r.action !== "REMOVE" ? ("modified" as const) : undefined,
+          network: r.adSourceId,
+          recommendationAction: r.action,
+        } satisfies WaterfallSource
+      }
+      return mapped.sort((a, b) => b.floor - a.floor)
+    }
+    const w = [...currentSetup.waterfall]
     return w.map((s, i) => ({
       ...s,
       id: `rec_${s.id}_${i}`,
       originalFloor: s.floor,
       changeType: "modified" as const,
     }))
-  }, [currentSetup.waterfall])
+  }, [currentSetup.waterfall, recommendations])
 
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [viewMode, setViewMode] = useState("side-by-side")
@@ -190,7 +236,7 @@ export function WaterfallOptimizationTab({
 
   useEffect(() => {
     if (!hasValidId || !groupDetail) return
-    const key = `${groupId}_${sowDataList.length}`
+    const key = `${groupId}_${recommendations.length}_${currentSetup.waterfall.length}`
     if (lastInitKey.current === key) return
     lastInitKey.current = key
     setOptimizedBidding([...currentSetup.bidding])
@@ -202,7 +248,7 @@ export function WaterfallOptimizationTab({
       setOptimizedWaterfall(fallback)
       setAiSuggestedWaterfall(fallback)
     }
-  }, [groupId, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, sowDataList.length])
+  }, [groupId, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, recommendations.length, recommendedWaterfall])
 
   // Editing state
   const [editingFloorId, setEditingFloorId] = useState<string | null>(null)
@@ -854,6 +900,11 @@ export function WaterfallOptimizationTab({
                                 <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
                               )}
                               {isRemoved && <Badge className="bg-red-100 text-red-700 border-0 text-xs">REMOVED</Badge>}
+                              {source.recommendationAction && source.recommendationAction !== "KEEP" && (
+                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                                  {source.recommendationAction}
+                                </Badge>
+                              )}
                             </div>
 
                             {/* eCPM Floor - Editable */}
