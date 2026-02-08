@@ -86,8 +86,8 @@ type SortDirection = "asc" | "desc"
 
 export function AppAdUnitsTab() {
   const params = useParams()
-  const appNumericId = Number((params as any)?.id)
-  const hasValidAppId = !Number.isNaN(appNumericId)
+  const appIdFromParams = (params as any)?.id as string | undefined
+  const hasValidAppId = !!appIdFromParams
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUnits, setSelectedUnits] = useState<string[]>([])
@@ -97,12 +97,16 @@ export function AppAdUnitsTab() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  // Load ad units from API
+  // Load app by AdMob app_id, rồi load ad units bằng app.id (backend cần id số)
+  const { data: app } = useApi(
+    () => structureApi.getAppByAppId(appIdFromParams!),
+    { enabled: hasValidAppId, cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
+  )
   const { data: adUnits, loading } = useApi<AdUnit[]>(
-    () => structureApi.getAppAdUnits(appNumericId),
+    () => structureApi.getAppAdUnits(app!.id),
     {
-      enabled: hasValidAppId,
-      cacheKey: hasValidAppId ? `app_ad_units_${appNumericId}` : undefined,
+      enabled: !!app,
+      cacheKey: app ? `app_ad_units_${app.appId}` : undefined,
     },
   )
 

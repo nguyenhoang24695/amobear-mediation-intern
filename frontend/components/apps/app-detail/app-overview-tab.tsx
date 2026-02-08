@@ -58,15 +58,15 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
   const [dateRange, setDateRange] = useState("7d")
 
   const params = useParams()
-  const appNumericId = Number((params as any)?.id)
-  const hasValidAppId = !Number.isNaN(appNumericId)
+  const appIdFromParams = (params as any)?.id as string | undefined
+  const hasValidAppId = !!appIdFromParams
 
-  // Load app detail
+  // Load app by AdMob app_id (URL dùng /apps/{appId})
   const { data: app } = useApi<App>(
-    () => structureApi.getApp(appNumericId),
+    () => structureApi.getAppByAppId(appIdFromParams!),
     {
       enabled: hasValidAppId,
-      cacheKey: hasValidAppId ? `app_detail_${appNumericId}` : undefined,
+      cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined,
     },
   )
 
@@ -142,7 +142,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     },
     {
       enabled: !!app,
-      cacheKey: app ? `app_metrics_overview_${app.id}` : undefined,
+      cacheKey: app ? `app_metrics_overview_${app.appId}` : undefined,
     },
   )
 
@@ -209,7 +209,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
 
   const cacheKey = useMemo(() => {
     if (!app || !chartApiParams) return undefined
-    return `app_revenue_overview_${app.id}_${dateRange}_${chartMetric}`
+    return `app_revenue_overview_${app.appId}_${dateRange}_${chartMetric}`
   }, [app, dateRange, chartMetric])
 
   const { data: revenueOverviewData, loading: performanceLoading } = useApi(
@@ -251,7 +251,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     },
     {
       enabled: !!app,
-      cacheKey: app ? `app_alerts_${app.id}` : undefined,
+      cacheKey: app ? `app_alerts_${app.appId}` : undefined,
     },
   )
 

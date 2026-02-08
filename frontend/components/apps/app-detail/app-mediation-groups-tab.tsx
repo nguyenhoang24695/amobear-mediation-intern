@@ -232,8 +232,8 @@ type SortDirection = "asc" | "desc"
 
 export function AppMediationGroupsTab() {
   const params = useParams()
-  const appNumericId = Number((params as any)?.id)
-  const hasValidAppId = !Number.isNaN(appNumericId)
+  const appIdFromParams = (params as any)?.id as string | undefined
+  const hasValidAppId = !!appIdFromParams
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
@@ -242,12 +242,16 @@ export function AppMediationGroupsTab() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  // Load mediation groups from API
+  // Load app by AdMob app_id, rồi load mediation groups bằng app.id (backend cần id số)
+  const { data: app } = useApi(
+    () => structureApi.getAppByAppId(appIdFromParams!),
+    { enabled: hasValidAppId, cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
+  )
   const { data: mediationGroups, loading } = useApi<MediationGroup[]>(
-    () => structureApi.getAppMediationGroups(appNumericId),
+    () => structureApi.getAppMediationGroups(app!.id),
     {
-      enabled: hasValidAppId,
-      cacheKey: hasValidAppId ? `app_mediation_groups_${appNumericId}` : undefined,
+      enabled: !!app,
+      cacheKey: app ? `app_mediation_groups_${app.appId}` : undefined,
     },
   )
 
