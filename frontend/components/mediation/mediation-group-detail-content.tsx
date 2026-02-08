@@ -32,7 +32,7 @@ import { MediationGroupOverviewTab } from "./mediation-group-detail/overview-tab
 import { WaterfallOptimizationTab } from "./mediation-group-detail/waterfall-optimization-tab"
 import { ABTestsTab } from "./mediation-group-detail/ab-tests-tab"
 import { CreateABTestModal } from "./modals/create-ab-test-modal"
-import { ApplyVariantModal } from "./modals/apply-variant-modal"
+import { ApplyVariantModal, type ApplyDirectChanges } from "./modals/apply-variant-modal"
 import { useToast } from "@/hooks/use-toast"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
@@ -69,6 +69,8 @@ export function MediationGroupDetailContent() {
   const [createTestModalOpen, setCreateTestModalOpen] = useState(false)
   const [applyVariantModalOpen, setApplyVariantModalOpen] = useState(false)
   const [applyMode, setApplyMode] = useState<"direct" | "test-winner">("direct")
+  const [applyDirectChanges, setApplyDirectChanges] = useState<ApplyDirectChanges | undefined>(undefined)
+  const [applyMediationGroupId, setApplyMediationGroupId] = useState<string | undefined>(undefined)
   const [isSyncing, setIsSyncing] = useState(false)
 
   // Extract data from API response (cache key: dashboard:mediationgroup:{mediationGroupId}:detail:today)
@@ -112,8 +114,10 @@ export function MediationGroupDetailContent() {
     setCreateTestModalOpen(true)
   }
 
-  const handleApplyDirect = () => {
+  const handleApplyDirect = (changes: ApplyDirectChanges, mediationGroupId: string) => {
     setApplyMode("direct")
+    setApplyDirectChanges(changes)
+    setApplyMediationGroupId(mediationGroupId)
     setApplyVariantModalOpen(true)
   }
 
@@ -324,7 +328,13 @@ export function MediationGroupDetailContent() {
 
         {/* Modals */}
         <CreateABTestModal open={createTestModalOpen} onOpenChange={setCreateTestModalOpen} />
-        <ApplyVariantModal open={applyVariantModalOpen} onOpenChange={setApplyVariantModalOpen} mode={applyMode} />
+        <ApplyVariantModal
+          open={applyVariantModalOpen}
+          onOpenChange={setApplyVariantModalOpen}
+          mode={applyMode}
+          mediationGroupId={applyMode === "direct" ? applyMediationGroupId : undefined}
+          changes={applyMode === "direct" ? applyDirectChanges : undefined}
+        />
       </div>
     </TooltipProvider>
   )

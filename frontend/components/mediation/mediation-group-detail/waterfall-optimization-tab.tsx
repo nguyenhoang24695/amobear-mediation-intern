@@ -35,10 +35,12 @@ import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
 import { structureApi, sowApi } from "@/lib/api/services"
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
+import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
 
 interface WaterfallOptimizationTabProps {
   onRunABTest: () => void
-  onApplyDirect: () => void
+  /** Gọi với dữ liệu thay đổi thật + mediationGroupId để mở modal Apply Direct */
+  onApplyDirect: (changes: ApplyDirectChanges, mediationGroupId: string) => void
   hasRunningTest: boolean
   testDay: number
   testDuration: number
@@ -56,6 +58,8 @@ interface WaterfallSource {
   network?: string
   /** 8-Rule recommendation: REMOVE | TEST | REDUCE | KEEP | INCREASE | ADD LAYER | ADD HIGHER */
   recommendationAction?: string
+  /** Lý do gợi ý từ API (hiển thị tooltip cho Suggested) */
+  reason?: string
 }
 
 interface BiddingSource {
@@ -151,28 +155,28 @@ export function WaterfallOptimizationTab({
     const linesObj = typeof rawLines === "object" && rawLines !== null
       ? (rawLines as Record<string, { id?: string; displayName?: string; adSourceId?: string; cpmMicros?: string; state?: string }>)
       : {}
-    const values = Object.values(linesObj)
+    const entries = Object.entries(linesObj)
 
     // Bidding: lines không có cpmMicros (giống Dolphin BiddingTable)
-    const biddingList: BiddingSource[] = values
-      .filter((line) => !line.cpmMicros || line.cpmMicros === "")
-      .map((line) => ({
-        id: line.id ?? `b_${line.adSourceId ?? ""}`,
+    const biddingList: BiddingSource[] = entries
+      .filter(([, line]) => !line.cpmMicros || line.cpmMicros === "")
+      .map(([key, line]) => ({
+        id: line.id ?? key ?? `b_${line.adSourceId ?? ""}`,
         name: line.displayName ?? line.adSourceId ?? "Unknown",
         floor: null,
         status: line.state === "DISABLED" || line.state === "REMOVED" ? ("inactive" as const) : ("active" as const),
         ecpm7d: ecpmByAdSourceId[line.adSourceId ?? ""] ?? 0,
       }))
 
-    // Waterfall gốc: chỉ từ mediation_group_lines_json — floor = cpmMicros/1e6, không áp eCPM từ SoW.
-    const waterfallList: WaterfallSource[] = values
-      .filter((line) => line.cpmMicros != null && line.cpmMicros !== "")
-      .sort((a, b) => parseInt(b.cpmMicros ?? "0", 10) - parseInt(a.cpmMicros ?? "0", 10))
-      .map((line) => {
+    // Waterfall gốc: chỉ từ mediation_group_lines_json — floor = cpmMicros/1e6; id = key AdMob (để Apply REMOVED đúng).
+    const waterfallList: WaterfallSource[] = entries
+      .filter(([, line]) => line.cpmMicros != null && line.cpmMicros !== "")
+      .sort(([, a], [, b]) => parseInt(b.cpmMicros ?? "0", 10) - parseInt(a.cpmMicros ?? "0", 10))
+      .map(([key, line]) => {
         const cpmMicros = parseFloat(line.cpmMicros ?? "0") || 0
         const floor = cpmMicros / 1_000_000
         return {
-          id: line.id ?? `w_${line.adSourceId ?? ""}`,
+          id: line.id ?? key ?? `w_${line.adSourceId ?? ""}`,
           name: line.displayName ?? line.adSourceId ?? "Unknown",
           floor,
           ecpm: floor, // Current = đúng từ JSON; eCPM SoW chỉ dùng cho recommendation (cột Optimized).
@@ -200,9 +204,10 @@ export function WaterfallOptimizationTab({
           ecpm: r.observedEcpm ?? floor,
           status: r.action === "REMOVE" ? ("inactive" as const) : ("active" as const),
           originalFloor,
-          changeType: isNewSuggestedLine ? ("new" as const) : r.action !== "KEEP" && r.action !== "REMOVE" ? ("modified" as const) : undefined,
+          changeType: isNewSuggestedLine ? ("new" as const) : r.action === "REMOVE" ? ("removed" as const) : r.action !== "KEEP" ? ("modified" as const) : undefined,
           network: r.adSourceId,
           recommendationAction: r.action,
+          reason: r.reason,
         } satisfies WaterfallSource
       })
       return mapped.sort((a, b) => b.floor - a.floor)
@@ -271,11 +276,19 @@ export function WaterfallOptimizationTab({
     return optimizedWaterfall.some((s) => s.changeType === "new" || s.changeType === "removed")
   }, [optimizedWaterfall, aiSuggestedWaterfall])
 
-  // Calculate changes summary
+  // Calculate changes summary: added/removed dựa trên recommendation vs current; modified từ optimized state
   const calculateChanges = useCallback(() => {
     const modifiedFloors = optimizedWaterfall.filter((s) => s.changeType === "modified" && s.status !== "inactive")
-    const addedSources = optimizedWaterfall.filter((s) => s.changeType === "new")
-    const removedSources = optimizedWaterfall.filter((s) => s.changeType === "removed")
+
+    // Added = số nguồn "new" từ recommendation (suggested lines từ API)
+    const addedFromRecommendation = aiSuggestedWaterfall.filter((s) => s.changeType === "new").length
+    // Kept = số dòng current được giữ trong suggestion (không phải new)
+    const keptInRecommendation = aiSuggestedWaterfall.length - addedFromRecommendation
+    // Removed = số dòng current bị recommendation bỏ (REMOVE)
+    const removedByRecommendation = Math.max(
+      0,
+      currentSetup.waterfall.length - keptInRecommendation,
+    )
 
     const avgFloorIncrease =
       modifiedFloors.length > 0
@@ -285,22 +298,63 @@ export function WaterfallOptimizationTab({
     // Recalculate estimated monthly based on changes
     const baseMonthly = currentSetup.estimatedMonthly
     const improvementFactor =
-      1 + (avgFloorIncrease / 100) * 0.5 + addedSources.length * 0.02 - removedSources.length * 0.015
+      1 + (avgFloorIncrease / 100) * 0.5 + addedFromRecommendation * 0.02 - removedByRecommendation * 0.015
     const estimatedMonthly = Math.round(baseMonthly * improvementFactor)
     const improvement = ((estimatedMonthly - baseMonthly) / baseMonthly) * 100
 
     return {
       modifiedCount: modifiedFloors.length,
-      addedCount: addedSources.length,
-      removedCount: removedSources.length,
+      addedCount: addedFromRecommendation,
+      removedCount: removedByRecommendation,
       avgFloorIncrease,
       estimatedMonthly,
       improvement: improvement.toFixed(1),
-      hasChanges: modifiedFloors.length > 0 || addedSources.length > 0 || removedSources.length > 0,
+      hasChanges:
+        modifiedFloors.length > 0 || addedFromRecommendation > 0 || removedByRecommendation > 0,
     }
-  }, [optimizedWaterfall])
+  }, [optimizedWaterfall, aiSuggestedWaterfall, currentSetup.waterfall.length, currentSetup.estimatedMonthly])
 
   const changes = calculateChanges()
+
+  /** Tính bộ thay đổi thật để truyền vào popup Apply Direct (floors modified, added, removed) */
+  const getApplyDirectChanges = useCallback((): ApplyDirectChanges => {
+    const active = optimizedWaterfall.filter((s) => s.changeType !== "removed")
+
+    const floorsModified = optimizedWaterfall
+      .filter(
+        (s) =>
+          s.changeType !== "removed" &&
+          s.changeType !== "new" &&
+          s.originalFloor != null &&
+          Math.abs(s.floor - s.originalFloor) > 1e-9,
+      )
+      .map((s) => {
+        const match = s.id.match(/^rec_(.+)_\d+$/)
+        const lineId = match ? match[1] : ""
+        return { name: s.name, lineId, oldValue: s.originalFloor!, newValue: s.floor }
+      })
+
+    const sourcesAdded = optimizedWaterfall
+      .filter((s) => s.changeType === "new")
+      .map((s) => ({ name: s.name, floor: s.floor }))
+
+    const sourcesRemoved = currentSetup.waterfall
+      .filter(
+        (c) =>
+          !active.some(
+            (o) =>
+              o.id.startsWith(`rec_${c.id}_`) ||
+              (o.network != null && o.network === (c.network ?? "")),
+          ),
+      )
+      .map((c) => ({ name: c.name, lineId: c.id }))
+
+    return { floorsModified, sourcesAdded, sourcesRemoved }
+  }, [optimizedWaterfall, currentSetup.waterfall])
+
+  const handleApplyDirectClick = () => {
+    onApplyDirect(getApplyDirectChanges(), mediationGroupId)
+  }
 
   // Determine banner state
   const getBannerState = (): "optimization" | "running" | "optimized" | "unsaved" => {
@@ -515,7 +569,7 @@ export function WaterfallOptimizationTab({
                     <Button variant="link" className="h-auto p-0 text-blue-600">
                       View Changes
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={onApplyDirect}>
+                    <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                       Apply Direct
                     </Button>
                     <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
@@ -584,7 +638,7 @@ export function WaterfallOptimizationTab({
                     <Button variant="link" className="h-auto p-0 text-red-600" onClick={discardAllChanges}>
                       Discard Changes
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={onApplyDirect}>
+                    <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                       Apply Direct
                     </Button>
                     <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
@@ -880,19 +934,44 @@ export function WaterfallOptimizationTab({
                           {/* Source Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p
-                                className={cn(
-                                  "text-sm font-medium text-slate-900",
-                                  isRemoved && "line-through text-slate-400",
-                                )}
-                              >
-                                {source.name}
-                              </p>
+                              {source.reason != null && source.reason !== "" && !isRemoved ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center gap-2 cursor-help">
+                                      <p
+                                        className={cn(
+                                          "text-sm font-medium text-slate-900",
+                                          isRemoved && "line-through text-slate-400",
+                                        )}
+                                      >
+                                        {source.name}
+                                      </p>
+                                      {isNew && (
+                                        <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
+                                      )}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <p className="text-sm">{source.reason}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <>
+                                  <p
+                                    className={cn(
+                                      "text-sm font-medium text-slate-900",
+                                      isRemoved && "line-through text-slate-400",
+                                    )}
+                                  >
+                                    {source.name}
+                                  </p>
+                                  {isNew && !isRemoved && (
+                                    <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
+                                  )}
+                                </>
+                              )}
                               {isModified && !isRemoved && (
                                 <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">MODIFIED</Badge>
-                              )}
-                              {isNew && !isRemoved && (
-                                <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
                               )}
                               {isRemoved && <Badge className="bg-red-100 text-red-700 border-0 text-xs">REMOVED</Badge>}
                               {source.recommendationAction && source.recommendationAction !== "KEEP" && (
@@ -1166,7 +1245,7 @@ export function WaterfallOptimizationTab({
               <Button
                 variant="outline"
                 className="bg-transparent"
-                onClick={onApplyDirect}
+                onClick={handleApplyDirectClick}
                 disabled={!changes.hasChanges}
               >
                 Apply Direct

@@ -236,6 +236,27 @@ export interface SoWDataItem {
     avgFillRate?: number
 }
 
+// Waterfall Management API - Apply Direct lên AdMob
+export interface ApplyWaterfallRequest {
+    mediationGroupId: string
+    floorsModified: Array<{ name: string; lineId: string; oldValue: number; newValue: number }>
+    sourcesAdded: Array<{ name: string; floor: number }>
+    sourcesRemoved: Array<{ name: string; lineId: string }>
+}
+
+export interface ApplyWaterfallResponse {
+    success: boolean
+    message?: string
+    errorMessage?: string
+    updatedAt: string
+}
+
+export const waterfallManagementApi = {
+    apply: async (body: ApplyWaterfallRequest): Promise<ApplyWaterfallResponse> => {
+        return apiClient.post<ApplyWaterfallResponse>('/api/WaterfallManagement/apply', body)
+    },
+}
+
 export const sowApi = {
     getSoWData: async (params: {
         mediationGroupId?: string

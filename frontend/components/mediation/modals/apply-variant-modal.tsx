@@ -4,57 +4,77 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, Check, Loader2, CheckCircle2, XCircle, Circle, ArrowRight } from "lucide-react"
+import { waterfallManagementApi } from "@/lib/api/services"
+
+/** Dữ liệu thay đổi khi Apply Direct / Apply Winner — dùng dữ liệu thật từ waterfall optimization */
+export interface ApplyDirectChanges {
+  floorsModified: Array<{ name: string; lineId: string; oldValue: number; newValue: number }>
+  sourcesAdded: Array<{ name: string; floor: number }>
+  sourcesRemoved: Array<{ name: string; lineId: string }>
+}
 
 interface ApplyVariantModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: "direct" | "test-winner"
-  changes?: {
-    floorsModified: Array<{ name: string; oldValue: number; newValue: number }>
-    sourcesAdded: Array<{ name: string; floor: number }>
-    sourcesRemoved: Array<{ name: string }>
-  }
+  /** AdMob mediation group id (bắt buộc khi mode = direct để gọi API apply). */
+  mediationGroupId?: string
+  changes?: ApplyDirectChanges
 }
 
 type ModalState = "confirm" | "loading" | "success" | "error"
 
-// Default mock changes
-const defaultChanges = {
-  floorsModified: [
-    { name: "Inter81.15", oldValue: 81.15, newValue: 191.42 },
-    { name: "Inter65.93", oldValue: 65.93, newValue: 153.14 },
-    { name: "Inter50.72", oldValue: 50.72, newValue: 122.5 },
-    { name: "Inter40.57", oldValue: 40.57, newValue: 85.75 },
-    { name: "Inter30.43", oldValue: 30.43, newValue: 47.16 },
-  ],
-  sourcesAdded: [] as Array<{ name: string; floor: number }>,
-  sourcesRemoved: [] as Array<{ name: string }>,
+const emptyChanges: ApplyDirectChanges = {
+  floorsModified: [],
+  sourcesAdded: [],
+  sourcesRemoved: [],
 }
 
-export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultChanges }: ApplyVariantModalProps) {
+export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, changes }: ApplyVariantModalProps) {
+  const effectiveChanges = changes ?? emptyChanges
   const [modalState, setModalState] = useState<ModalState>("confirm")
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  const [errorMessage, setErrorMessage] = useState<string>("")
 
-  const totalSteps = changes.floorsModified.length + changes.sourcesAdded.length + changes.sourcesRemoved.length
+  const totalSteps =
+    effectiveChanges.floorsModified.length +
+    effectiveChanges.sourcesAdded.length +
+    effectiveChanges.sourcesRemoved.length
 
-  const handleApply = () => {
+  const canApplyDirect = mode === "direct" ? !!mediationGroupId && totalSteps > 0 : totalSteps > 0
+
+  const handleApply = async () => {
+    if (mode === "direct" && !mediationGroupId) return
     setModalState("loading")
     setCurrentStep(0)
     setCompletedSteps([])
+    setErrorMessage("")
 
-    // Simulate step-by-step progress
-    let step = 0
-    const interval = setInterval(() => {
-      setCompletedSteps((prev) => [...prev, step])
-      step++
-      setCurrentStep(step)
-
-      if (step >= totalSteps) {
-        clearInterval(interval)
-        setTimeout(() => setModalState("success"), 500)
+    try {
+      if (mode === "direct") {
+        const res = await waterfallManagementApi.apply({
+          mediationGroupId: mediationGroupId!,
+          floorsModified: effectiveChanges.floorsModified,
+          sourcesAdded: effectiveChanges.sourcesAdded,
+          sourcesRemoved: effectiveChanges.sourcesRemoved,
+        })
+        if (!res.success) {
+          setErrorMessage(res.errorMessage ?? res.message ?? "Apply failed")
+          setModalState("error")
+          return
+        }
+        setCompletedSteps(Array.from({ length: totalSteps }, (_, i) => i))
+        setModalState("success")
+      } else {
+        setCompletedSteps(Array.from({ length: totalSteps }, (_, i) => i))
+        setModalState("success")
       }
-    }, 600)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setErrorMessage(msg)
+      setModalState("error")
+    }
   }
 
   const handleClose = () => {
@@ -84,13 +104,13 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
                 <h4 className="font-medium text-slate-900">Changes Summary</h4>
 
                 {/* eCPM Floors Modified */}
-                {changes.floorsModified.length > 0 && (
+                {effectiveChanges.floorsModified.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-slate-700">
-                      {changes.floorsModified.length} eCPM floors will be updated:
+                      {effectiveChanges.floorsModified.length} eCPM floors will be updated:
                     </p>
                     <ul className="text-sm text-slate-600 space-y-1 ml-4">
-                      {changes.floorsModified.slice(0, 5).map((change) => (
+                      {effectiveChanges.floorsModified.slice(0, 5).map((change) => (
                         <li key={change.name} className="flex items-center gap-1">
                           <span className="text-slate-500">{change.name}:</span>
                           <span className="text-slate-400">${change.oldValue.toFixed(2)}</span>
@@ -98,21 +118,23 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
                           <span className="font-medium text-slate-900">${change.newValue.toFixed(2)}</span>
                         </li>
                       ))}
-                      {changes.floorsModified.length > 5 && (
-                        <li className="text-slate-500 italic">...and {changes.floorsModified.length - 5} more</li>
+                      {effectiveChanges.floorsModified.length > 5 && (
+                        <li className="text-slate-500 italic">
+                          ...and {effectiveChanges.floorsModified.length - 5} more
+                        </li>
                       )}
                     </ul>
                   </div>
                 )}
 
                 {/* Sources Added */}
-                {changes.sourcesAdded.length > 0 && (
+                {effectiveChanges.sourcesAdded.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-green-700">
-                      {changes.sourcesAdded.length} sources will be added:
+                      {effectiveChanges.sourcesAdded.length} sources will be added:
                     </p>
                     <ul className="text-sm text-slate-600 space-y-1 ml-4">
-                      {changes.sourcesAdded.map((source) => (
+                      {effectiveChanges.sourcesAdded.map((source) => (
                         <li key={source.name} className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                           <span>{source.name}</span>
@@ -124,13 +146,13 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
                 )}
 
                 {/* Sources Removed */}
-                {changes.sourcesRemoved.length > 0 && (
+                {effectiveChanges.sourcesRemoved.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-red-700">
-                      {changes.sourcesRemoved.length} sources will be removed:
+                      {effectiveChanges.sourcesRemoved.length} sources will be removed:
                     </p>
                     <ul className="text-sm text-slate-600 space-y-1 ml-4">
-                      {changes.sourcesRemoved.map((source) => (
+                      {effectiveChanges.sourcesRemoved.map((source) => (
                         <li key={source.name} className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                           <span className="line-through">{source.name}</span>
@@ -140,9 +162,9 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
                   </div>
                 )}
 
-                {changes.floorsModified.length === 0 &&
-                  changes.sourcesAdded.length === 0 &&
-                  changes.sourcesRemoved.length === 0 && (
+                {effectiveChanges.floorsModified.length === 0 &&
+                  effectiveChanges.sourcesAdded.length === 0 &&
+                  effectiveChanges.sourcesRemoved.length === 0 && (
                     <p className="text-sm text-slate-500 italic">No changes to apply</p>
                   )}
               </div>
@@ -173,7 +195,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleApply} disabled={totalSteps === 0}>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => void handleApply()} disabled={!canApplyDirect}>
                 Apply Changes
               </Button>
             </DialogFooter>
@@ -189,7 +211,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
 
             <div className="space-y-2 max-w-sm mx-auto max-h-64 overflow-y-auto">
               {/* Floors */}
-              {changes.floorsModified.map((change, index) => (
+              {effectiveChanges.floorsModified.map((change, index) => (
                 <div key={change.name} className="flex items-center gap-3 text-sm py-1">
                   {completedSteps.includes(index) ? (
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -214,8 +236,8 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
               ))}
 
               {/* Added Sources */}
-              {changes.sourcesAdded.map((source, i) => {
-                const index = changes.floorsModified.length + i
+              {effectiveChanges.sourcesAdded.map((source, i) => {
+                const index = effectiveChanges.floorsModified.length + i
                 return (
                   <div key={source.name} className="flex items-center gap-3 text-sm py-1">
                     {completedSteps.includes(index) ? (
@@ -242,8 +264,11 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
               })}
 
               {/* Removed Sources */}
-              {changes.sourcesRemoved.map((source, i) => {
-                const index = changes.floorsModified.length + changes.sourcesAdded.length + i
+              {effectiveChanges.sourcesRemoved.map((source, i) => {
+                const index =
+                  effectiveChanges.floorsModified.length +
+                  effectiveChanges.sourcesAdded.length +
+                  i
                 return (
                   <div key={source.name} className="flex items-center gap-3 text-sm py-1">
                     {completedSteps.includes(index) ? (
@@ -300,10 +325,10 @@ export function ApplyVariantModal({ open, onOpenChange, mode, changes = defaultC
             <DialogTitle className="mb-2">Failed to Apply Changes</DialogTitle>
             <p className="text-sm text-slate-600 mb-4">There was an error updating AdMob:</p>
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 max-w-sm mx-auto mb-2">
-              API rate limit exceeded. Please try again in 5 minutes.
+              {errorMessage || "Unknown error. Please try again."}
             </div>
             <p className="text-xs text-slate-500 mb-6">
-              {completedSteps.length} of {totalSteps} changes were applied successfully.
+              Check AdMob token and network, then retry.
             </p>
 
             <div className="flex items-center justify-center gap-3">
