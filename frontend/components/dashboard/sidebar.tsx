@@ -37,7 +37,7 @@ const navItems = [
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
   { icon: BarChart3, label: "Reports", href: "/reports", hasSubmenu: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
-  { icon: Users, label: "Team Members", href: "/users" },
+  { icon: Users, label: "Team Members", href: "/team-members" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]
 

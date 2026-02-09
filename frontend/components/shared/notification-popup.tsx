@@ -54,7 +54,7 @@ const mockNotifications: Notification[] = [
     description: "jane.doe@company.com accepted invitation",
     time: "2 days ago",
     read: true,
-    link: "/users/2",
+    link: "/team-members/2",
   },
   {
     id: "5",

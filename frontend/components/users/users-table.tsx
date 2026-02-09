@@ -277,7 +277,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                     />
                   </TableCell>
                   <TableCell>
-                    <Link href={`/users/${user.id}`} className="flex items-center gap-3 group">
+                    <Link href={`/team-members/${user.id}`} className="flex items-center gap-3 group">
                       <div className="relative">
                         <Avatar className="h-9 w-9">
                           {user.avatar && <AvatarImage src={user.avatar || "/placeholder.svg"} />}
@@ -354,7 +354,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                          <Link href={`/users/${user.id}`}>
+                          <Link href={`/team-members/${user.id}`}>
                             <User className="w-4 h-4 mr-2" />
                             View Profile
                           </Link>
