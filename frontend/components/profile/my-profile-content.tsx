@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2 } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
 import { authApi } from "@/lib/api/services"
+import { getUserInitials } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -40,6 +41,10 @@ export function MyProfileContent() {
     : null
 
   const displayUser = user || userFromStorage
+
+  // Get apps and teams from user data
+  const myApps = displayUser?.permissions ? Object.keys(displayUser.permissions) : []
+  const myTeams = displayUser?.teams || []
 
   const handleLogoutAll = async () => {
     try {
@@ -78,8 +83,10 @@ export function MyProfileContent() {
               <div className="flex items-center gap-6">
                 <div className="relative group">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src="/professional-man-avatar.png" />
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-bold">JD</AvatarFallback>
+                    {displayUser?.avatarUrl && <AvatarImage src={displayUser.avatarUrl} />}
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-bold">
+                      {getUserInitials(displayUser)}
+                    </AvatarFallback>
                   </Avatar>
                   <button className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="w-6 h-6 text-white" />
@@ -292,17 +299,17 @@ export function MyProfileContent() {
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {displayUser?.teams && displayUser.teams.length > 0 ? (
-                  displayUser.teams.map((team: any) => (
-                    <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm text-slate-900">{team.name}</span>
+                {myApps.length > 0 ? (
+                  Object.entries(displayUser?.permissions || {}).map(([appId, permission]) => (
+                    <div key={appId} className="flex items-center justify-between p-3 border rounded-lg">
+                      <span className="text-sm text-slate-900">{appId}</span>
                       <Badge variant="outline" className="text-xs">
-                        {team.role}
+                        {permission as string}
                       </Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500 col-span-2">No teams found</p>
+                  <p className="text-sm text-slate-500 col-span-2">No app permissions found</p>
                 )}
               </div>
             </CollapsibleContent>
@@ -320,17 +327,17 @@ export function MyProfileContent() {
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {displayUser?.permissions && Object.keys(displayUser.permissions).length > 0 ? (
-                  Object.entries(displayUser.permissions).map(([appId, permission]) => (
-                    <div key={appId} className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm text-slate-900">{appId}</span>
+                {myTeams.length > 0 ? (
+                  myTeams.map((team: any) => (
+                    <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <span className="text-sm text-slate-900">{team.name}</span>
                       <Badge variant="outline" className="text-xs">
-                        {permission as string}
+                        {team.role}
                       </Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500 col-span-2">No app permissions found</p>
+                  <p className="text-sm text-slate-500 col-span-2">No teams found</p>
                 )}
               </div>
             </CollapsibleContent>

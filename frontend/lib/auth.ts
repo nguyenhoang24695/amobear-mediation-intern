@@ -87,3 +87,44 @@ export function isRememberMeEnabled(): boolean {
   if (typeof window === 'undefined') return false
   return localStorage.getItem('rememberMe') === 'true'
 }
+
+/**
+ * Get user initials from user data
+ */
+export function getUserInitials(user: AuthUser | null): string {
+  if (!user) return "U"
+  
+  if (user.fullName) {
+    const parts = user.fullName.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return parts[0][0].toUpperCase()
+  }
+  
+  if (user.firstName && user.lastName) {
+    return (user.firstName[0] + user.lastName[0]).toUpperCase()
+  }
+  
+  if (user.firstName) {
+    return user.firstName[0].toUpperCase()
+  }
+  
+  if (user.email) {
+    return user.email[0].toUpperCase()
+  }
+  
+  return "U"
+}
+
+/**
+ * Get user display name from user data
+ */
+export function getUserDisplayName(user: AuthUser | null): string {
+  if (!user) return "User"
+  
+  if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`
+  if (user.firstName) return user.firstName
+  if (user.lastName) return user.lastName
+  return "User"
+}

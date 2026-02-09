@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { clearAuthData, getRefreshToken } from "@/lib/auth"
+import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, type AuthUser } from "@/lib/auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -53,8 +53,15 @@ export function UserDropdown() {
   const [logoutAllDevices, setLogoutAllDevices] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [theme, setTheme] = useState("system")
+  const [user, setUser] = useState<AuthUser | null>(null)
 
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Get user from localStorage
+    const currentUser = getCurrentUser()
+    setUser(currentUser)
+  }, [])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -107,8 +114,10 @@ export function UserDropdown() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-9 gap-2 px-2">
             <Avatar className="h-7 w-7">
-              <AvatarImage src="/professional-man-avatar.png" />
-              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">JD</AvatarFallback>
+              {user?.avatarUrl && <AvatarImage src={user.avatarUrl} />}
+              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                {getUserInitials(user)}
+              </AvatarFallback>
             </Avatar>
             <ChevronDown className="w-4 h-4 text-slate-400" />
           </Button>
@@ -118,14 +127,16 @@ export function UserDropdown() {
           <DropdownMenuLabel className="p-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src="/professional-man-avatar.png" />
-                <AvatarFallback className="bg-blue-100 text-blue-600">JD</AvatarFallback>
+                {user?.avatarUrl && <AvatarImage src={user.avatarUrl} />}
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  {getUserInitials(user)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-medium text-slate-900">John Doe</span>
-                <span className="text-xs font-normal text-slate-500 truncate">john.doe@company.com</span>
+                <span className="font-medium text-slate-900">{getUserDisplayName(user)}</span>
+                <span className="text-xs font-normal text-slate-500 truncate">{user?.email || "No email"}</span>
                 <Badge variant="secondary" className="w-fit mt-1 text-xs bg-blue-100 text-blue-700">
-                  Admin
+                  {user?.role || "User"}
                 </Badge>
               </div>
             </div>

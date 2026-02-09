@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +24,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { clearAuthData, getRefreshToken } from "@/lib/auth"
+import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, type AuthUser } from "@/lib/auth"
 
 interface SidebarProps {
   collapsed: boolean
@@ -44,6 +45,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { toast } = useToast()
+  const [user, setUser] = useState<AuthUser | null>(null)
+
+  useEffect(() => {
+    // Get user from localStorage
+    const currentUser = getCurrentUser()
+    setUser(currentUser)
+  }, [])
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -142,13 +150,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <div className={cn("flex items-center gap-3 group", collapsed && "justify-center")}>
             <Link href="/profile" className={cn("flex items-center gap-3 flex-1 min-w-0", collapsed && "justify-center")}>
               <Avatar className="h-9 w-9">
-                <AvatarImage src="/professional-man-avatar.png" />
-                <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">JD</AvatarFallback>
+                {user?.avatarUrl && <AvatarImage src={user.avatarUrl} />}
+                <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">
+                  {getUserInitials(user)}
+                </AvatarFallback>
               </Avatar>
               {!collapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-600">John Doe</p>
-                  <p className="text-xs text-slate-500 truncate">Admin</p>
+                  <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-600">
+                    {getUserDisplayName(user)}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate">{user?.role || "User"}</p>
                 </div>
               )}
             </Link>
