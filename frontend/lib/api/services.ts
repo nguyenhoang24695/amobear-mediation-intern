@@ -368,6 +368,10 @@ export const teamMembersApi = {
         return apiClient.post('/api/v1/team-members/invite-user', request)
     },
 
+    updateUser: async (userId: string, data: { firstName?: string; lastName?: string; role?: string; status?: string }): Promise<{ success: boolean; data?: any }> => {
+        return apiClient.put(`/api/v1/team-members/update-user/${userId}`, data)
+    },
+
     removeUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
         return apiClient.delete(`/api/v1/team-members/remove-user/${userId}`)
     },

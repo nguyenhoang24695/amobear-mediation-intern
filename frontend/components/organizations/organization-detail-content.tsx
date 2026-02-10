@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ArrowLeft, Edit, MoreHorizontal, Copy, ToggleLeft, Trash2, CheckCircle2, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { OrgOverviewTab } from "./tabs/org-overview-tab"
 import { OrgUsersTab } from "./tabs/org-users-tab"
 import { OrgTeamsTab } from "./tabs/org-teams-tab"
@@ -45,6 +46,11 @@ interface OrganizationDetailContentProps {
 }
 
 export function OrganizationDetailContent({ orgId }: OrganizationDetailContentProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const activeTab = searchParams.get("tab") || "overview"
+
   const [org, setOrg] = useState<OrganizationDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -71,6 +77,12 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
     navigator.clipboard.writeText(`${org.slug}.mediationpro.io`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", value)
+    router.push(`${pathname}?${params.toString()}`)
   }
 
   if (loading) {
@@ -183,7 +195,7 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="bg-slate-100">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>

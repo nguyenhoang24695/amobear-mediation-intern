@@ -44,8 +44,10 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react"
+import Link from "next/link"
 import { Pagination } from "@/components/shared/pagination"
 import { AddUserToOrgModal } from "../add-user-to-org-modal"
+import { AddEditUserModal } from "../modals/add-edit-user-modal"
 import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
 
 interface OrgUsersTabProps {
@@ -98,8 +100,11 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
   const [removeUser, setRemoveUser] = useState<{ id: string; name: string } | null>(null)
   const [addUserOpen, setAddUserOpen] = useState(false)
+  const [editUser, setEditUser] = useState<OrgUserItem | null>(null)
+  const [editUserOpen, setEditUserOpen] = useState(false)
 
   // API state
   const [users, setUsers] = useState<OrgUserItem[]>([])
@@ -349,8 +354,19 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
                               <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
-                              <DropdownMenuItem><Eye className="w-4 h-4 mr-2" />View Profile</DropdownMenuItem>
-                              <DropdownMenuItem><Edit className="w-4 h-4 mr-2" />Edit User</DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/organizations/${orgId}/users/${user.id}`}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Profile
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setEditUser(user)
+                                setEditUserOpen(true)
+                              }}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit User
+                              </DropdownMenuItem>
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
@@ -424,6 +440,24 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
 
       {/* Add User Modal */}
       <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgName={org.name} />
+
+      {/* Edit User Modal */}
+      <AddEditUserModal
+        open={editUserOpen}
+        onOpenChange={setEditUserOpen}
+        mode="edit"
+        user={editUser ? {
+          id: editUser.id,
+          name: editUser.fullName,
+          email: editUser.email,
+          role: editUser.role,
+          status: editUser.status
+        } : undefined}
+        onSuccess={() => {
+          fetchUsers()
+          setEditUser(null)
+        }}
+      />
     </div>
   )
 }
