@@ -563,17 +563,17 @@ export const appMetricsApi = {
     }> => {
         // Map startDate/endDate to range parameter
         let range: DateRangeType = "today"
-        
+
         if (params?.startDate && params?.endDate) {
             const startDate = new Date(params.startDate)
             const endDate = new Date(params.endDate)
             const today = new Date()
             today.setHours(0, 0, 0, 0)
-            
+
             const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-            
+
             // Check if it's today
-            if (startDate.toDateString() === today.toDateString() && 
+            if (startDate.toDateString() === today.toDateString() &&
                 endDate.toDateString() === today.toDateString()) {
                 range = "today"
             }
@@ -589,7 +589,7 @@ export const appMetricsApi = {
             else {
                 // If startDate is month start and endDate is today, treat as MTD -> use last30days
                 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-                if (startDate.toDateString() === monthStart.toDateString() && 
+                if (startDate.toDateString() === monthStart.toDateString() &&
                     endDate.toDateString() === today.toDateString()) {
                     range = "last30days"
                 } else {
@@ -597,14 +597,14 @@ export const appMetricsApi = {
                 }
             }
         }
-        
+
         // Call dashboard key-metrics API for specific app
         const response = await apiClient.get<DashboardKeyMetrics>(`/api/v1/dashboard/key-metrics/app/${appId}`, {
             range,
             startDate: params?.startDate,
             endDate: params?.endDate,
         })
-        
+
         // Map response to expected format
         return {
             appId,
@@ -697,4 +697,161 @@ export const alertsApi = {
     }> => {
         return apiClient.get('/api/Alerts/active/summary', { publisherId })
     },
+}
+
+// Organization Types
+export interface OrganizationListItem {
+    id: string
+    name: string
+    slug: string
+    logoUrl?: string
+    isActive: boolean
+    userCount: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface OrganizationDetail {
+    id: string
+    name: string
+    slug: string
+    logoUrl?: string
+    settings: string
+    isActive: boolean
+    userCount: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateOrganizationRequest {
+    name: string
+    slug: string
+    logoUrl?: string
+}
+
+export interface UpdateOrganizationRequest {
+    name?: string
+    slug?: string
+    logoUrl?: string
+    settings?: string
+}
+
+// Organizations API Service
+export const organizationsApi = {
+    // List all organizations
+    getAll: async (): Promise<OrganizationListItem[]> => {
+        return apiClient.get<OrganizationListItem[]>('/api/v1/organizations')
+    },
+
+    // Get single organization by ID
+    getById: async (id: string): Promise<OrganizationDetail> => {
+        return apiClient.get<OrganizationDetail>(`/api/v1/organizations/${id}`)
+    },
+
+    // Create new organization
+    create: async (request: CreateOrganizationRequest): Promise<OrganizationDetail> => {
+        return apiClient.post<OrganizationDetail>('/api/v1/organizations', request)
+    },
+
+    // Update organization
+    update: async (id: string, request: UpdateOrganizationRequest): Promise<OrganizationDetail> => {
+        return apiClient.put<OrganizationDetail>(`/api/v1/organizations/${id}`, request)
+    },
+
+    // Delete organization
+    delete: async (id: string): Promise<void> => {
+        return apiClient.delete(`/api/v1/organizations/${id}`)
+    },
+
+    // Activate organization
+    activate: async (id: string): Promise<{ message: string }> => {
+        return apiClient.post(`/api/v1/organizations/${id}/activate`, {})
+    },
+
+    // Deactivate organization
+    deactivate: async (id: string): Promise<{ message: string }> => {
+        return apiClient.post<{ message: string }>(`/api/v1/organizations/${id}/deactivate`, {})
+    },
+
+    // Get users for an organization
+    getUsers: async (orgId: string, params?: OrgUsersFilter): Promise<PagedResult<OrgUserItem>> => {
+        const queryParams: Record<string, string | number | undefined> = {}
+        if (params?.page) queryParams.page = params.page
+        if (params?.pageSize) queryParams.pageSize = params.pageSize
+        if (params?.search) queryParams.search = params.search
+        if (params?.role) queryParams.role = params.role
+        if (params?.status) queryParams.status = params.status
+        return apiClient.get<PagedResult<OrgUserItem>>(`/api/v1/organizations/${orgId}/users`, queryParams)
+    },
+
+    // Get teams for an organization
+    getTeams: async (orgId: string): Promise<OrgTeam[]> => {
+        return apiClient.get<OrgTeam[]>(`/api/v1/organizations/${orgId}/teams`)
+    },
+
+    // Create a new team
+    createTeam: async (orgId: string, data: CreateTeamRequest): Promise<OrgTeam> => {
+        return apiClient.post<OrgTeam>(`/api/v1/organizations/${orgId}/teams`, data)
+    },
+
+    // Update a team
+    updateTeam: async (orgId: string, teamId: string, data: UpdateTeamRequest): Promise<OrgTeam> => {
+        return apiClient.put<OrgTeam>(`/api/v1/organizations/${orgId}/teams/${teamId}`, data)
+    },
+
+    // Delete a team
+    deleteTeam: async (orgId: string, teamId: string): Promise<void> => {
+        await apiClient.delete(`/api/v1/organizations/${orgId}/teams/${teamId}`)
+    },
+}
+
+// Organization user types
+export interface OrgUserItem {
+    id: string
+    email: string
+    firstName?: string
+    lastName?: string
+    fullName: string
+    avatarUrl?: string
+    role: string
+    status: string
+    createdAt: string
+    lastLoginAt?: string
+}
+
+export interface OrgUsersFilter {
+    page?: number
+    pageSize?: number
+    search?: string
+    role?: string
+    status?: string
+}
+
+export interface PagedResult<T> {
+    items: T[]
+    total: number
+    page: number
+    pageSize: number
+    totalPages: number
+}
+
+export interface OrgTeam {
+    id: string
+    name: string
+    description?: string
+    isActive: boolean
+    memberCount: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateTeamRequest {
+    name: string
+    description?: string
+}
+
+export interface UpdateTeamRequest {
+    name: string
+    description?: string
+    isActive: boolean
 }
