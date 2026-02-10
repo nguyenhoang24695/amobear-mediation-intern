@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { teamMembersApi } from "@/lib/api/services"
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const [message, setMessage] = useState("")
   const [showPreview, setShowPreview] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [inviteResults, setInviteResults] = useState<Array<{ email: string; success: boolean; error?: string }>>([])
 
   const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -123,8 +125,60 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     if (emails.length === 0) return
 
     setState("loading")
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setState("success")
+
+    // Prepare request data
+    const teamIds = selectedTeams.length > 0 ? selectedTeams : undefined
+    const appPermissions = giveAllApps 
+      ? undefined // If giveAllApps is true, don't send appPermissions (backend will handle it)
+      : selectedApps.length > 0 
+        ? selectedApps.map(app => ({ AppId: app.id, Level: app.permission }))
+        : undefined
+
+    // Send invitation for each email
+    const results: Array<{ email: string; success: boolean; error?: string }> = []
+    
+    for (const email of emails) {
+      try {
+        const response = await teamMembersApi.inviteUser({
+          email,
+          role,
+          teamIds,
+          appPermissions,
+          message: message || undefined,
+        })
+
+        if (response.success) {
+          results.push({ email, success: true })
+        } else {
+          results.push({ 
+            email, 
+            success: false, 
+            error: (response as any).error?.message || "Failed to send invitation" 
+          })
+        }
+      } catch (error: any) {
+        const errorMessage = error?.response?.data?.error?.message || error?.message || "Failed to send invitation"
+        results.push({ email, success: false, error: errorMessage })
+      }
+    }
+
+    // Store results for display
+    setInviteResults(results)
+
+    // Determine final state
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+
+    if (failCount === 0) {
+      // All succeeded
+      setState("success")
+    } else if (successCount > 0) {
+      // Partial success
+      setState("partial-error")
+    } else {
+      // All failed - show error
+      setState("partial-error")
+    }
   }
 
   const handleInviteMore = () => {
@@ -136,6 +190,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setGiveAllApps(false)
     setSelectedApps([])
     setMessage("")
+    setInviteResults([])
   }
 
   const handleClose = () => {
@@ -150,6 +205,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       setSelectedApps([])
       setMessage("")
       setEmailError(null)
+      setInviteResults([])
     }, 200)
   }
 
@@ -495,20 +551,31 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 <AlertCircle className="w-8 h-8 text-amber-600" />
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">Partial success</h2>
-              <p className="text-sm text-slate-500 mb-4">2 of 3 invitations sent. 1 failed:</p>
+              <p className="text-sm text-slate-500 mb-4">
+                {inviteResults.filter(r => r.success).length} of {inviteResults.length} invitation{inviteResults.length > 1 ? "s" : ""} sent.
+                {inviteResults.filter(r => !r.success).length > 0 && ` ${inviteResults.filter(r => !r.success).length} failed:`}
+              </p>
               <div className="space-y-2 w-full max-w-sm">
-                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  john@example.com
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  sarah@example.com
-                </div>
-                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">
-                  <X className="w-4 h-4 text-red-500" />
-                  existing@company.com - Already a member
-                </div>
+                {inviteResults.map((result) => (
+                  <div
+                    key={result.email}
+                    className={`flex items-center gap-2 text-sm rounded-md px-3 py-2 ${
+                      result.success
+                        ? "text-slate-600 bg-slate-50"
+                        : "text-red-600 bg-red-50"
+                    }`}
+                  >
+                    {result.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <X className="w-4 h-4 text-red-500" />
+                    )}
+                    <span className="flex-1 text-left">{result.email}</span>
+                    {result.error && (
+                      <span className="text-xs text-red-500">- {result.error}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
             <DialogFooter>
