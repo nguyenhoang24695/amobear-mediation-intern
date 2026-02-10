@@ -13,6 +13,9 @@ import type {
     RevenueOverview,
     TopApp,
     TopApps,
+    TeamMember,
+    TeamMemberFilterRequest,
+    PagedTeamMembersResponse,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -340,6 +343,33 @@ export const authApi = {
 
     changePassword: async (request: ChangePasswordRequest): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post('/api/v1/auth/change-password', request)
+    },
+}
+
+// Team Members API Service
+export interface InviteUserRequest {
+    email: string
+    role?: string
+    teamIds?: string[]
+    appPermissions?: Array<{ AppId: string; Level: string }>
+    message?: string
+}
+
+export const teamMembersApi = {
+    filterTeamMembers: async (request: TeamMemberFilterRequest): Promise<{ success: boolean; data: PagedTeamMembersResponse }> => {
+        return apiClient.post('/api/v1/team-members/filter', request)
+    },
+
+    viewProfile: async (userId: string): Promise<{ success: boolean; data?: TeamMember }> => {
+        return apiClient.get(`/api/v1/team-members/view-profile/${userId}`)
+    },
+
+    inviteUser: async (request: InviteUserRequest): Promise<{ success: boolean; data?: { invitationId: string; email: string; expiresAt: string; message: string } }> => {
+        return apiClient.post('/api/v1/team-members/invite-user', request)
+    },
+
+    removeUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.delete(`/api/v1/team-members/remove-user/${userId}`)
     },
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Download, Plus, Users, UserCheck, Clock, Shield } from "lucide-react"
 import { UsersTable } from "./users-table"
 import { InviteUserModal } from "./invite-user-modal"
+import { getCurrentUser } from "@/lib/auth"
 
 const statsData = [
   { label: "Total Users", value: 45, icon: Users, color: "text-slate-600" },
@@ -23,6 +24,16 @@ export function UserManagementContent() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
+
+  // Get teams from current user
+  const currentUser = getCurrentUser()
+  const availableTeams = useMemo(() => {
+    if (!currentUser?.teams) return []
+    return currentUser.teams.map(team => ({
+      id: team.id,
+      name: team.name,
+    }))
+  }, [currentUser])
 
   return (
     <div className="space-y-6">
@@ -84,9 +95,11 @@ export function UserManagementContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Teams</SelectItem>
-              <SelectItem value="mobile">Mobile Team</SelectItem>
-              <SelectItem value="analytics">Analytics Team</SelectItem>
-              <SelectItem value="product">Product Team</SelectItem>
+              {availableTeams.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

@@ -297,3 +297,44 @@ export interface TopApp {
   ecpm: number
   trend: "up" | "down"
 }
+
+// Team Members / Users
+export interface TeamMember {
+  id: string
+  email: string
+  firstName?: string
+  lastName?: string
+  fullName: string
+  avatarUrl?: string
+  role: string
+  organization?: {
+    id: string
+    name: string
+    slug: string
+    logoUrl?: string
+  }
+  teams: Array<{
+    id: string
+    name: string
+    role: string
+    status: string
+  }>
+  permissions?: Record<string, string> // AppId -> PermissionLevel
+}
+
+export interface TeamMemberFilterRequest {
+  page?: number
+  pageSize?: number
+  search?: string
+  role?: string
+  status?: string
+  teamId?: string
+}
+
+export interface PagedTeamMembersResponse {
+  items: TeamMember[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,8 +30,12 @@ import {
   Users,
   Search,
   X,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
+import { useApi } from "@/hooks/use-api"
+import { teamMembersApi } from "@/lib/api/services"
+import type { TeamMember } from "@/types/api"
 
 interface UsersTableProps {
   searchQuery: string
@@ -39,105 +43,6 @@ interface UsersTableProps {
   statusFilter: string
   teamFilter: string
 }
-
-const usersData = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@company.com",
-    avatar: "/professional-man-avatar.png",
-    isOnline: true,
-    role: "admin" as const,
-    teams: ["Mobile Team", "Analytics Team", "Product Team"],
-    appAccess: "all",
-    status: "active" as const,
-    lastActive: "2 hours ago",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.j@company.com",
-    avatar: "",
-    isOnline: true,
-    role: "editor" as const,
-    teams: ["Mobile Team"],
-    appAccess: 12,
-    status: "active" as const,
-    lastActive: "5 minutes ago",
-  },
-  {
-    id: "3",
-    name: "Michael Chen",
-    email: "m.chen@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "editor" as const,
-    teams: ["Analytics Team", "Product Team"],
-    appAccess: 8,
-    status: "active" as const,
-    lastActive: "Yesterday",
-  },
-  {
-    id: "4",
-    name: "Emily Parker",
-    email: "emily.p@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "viewer" as const,
-    teams: [],
-    appAccess: 5,
-    status: "invited" as const,
-    lastActive: "Never",
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "d.wilson@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "viewer" as const,
-    teams: ["Mobile Team"],
-    appAccess: 3,
-    status: "inactive" as const,
-    lastActive: "2 weeks ago",
-  },
-  {
-    id: "6",
-    name: "Lisa Anderson",
-    email: "l.anderson@company.com",
-    avatar: "",
-    isOnline: true,
-    role: "admin" as const,
-    teams: ["Product Team"],
-    appAccess: "all",
-    status: "active" as const,
-    lastActive: "1 hour ago",
-  },
-  {
-    id: "7",
-    name: "Robert Kim",
-    email: "r.kim@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "editor" as const,
-    teams: ["Mobile Team", "Analytics Team"],
-    appAccess: 15,
-    status: "active" as const,
-    lastActive: "3 hours ago",
-  },
-  {
-    id: "8",
-    name: "Jennifer Lee",
-    email: "j.lee@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "viewer" as const,
-    teams: [],
-    appAccess: 2,
-    status: "invited" as const,
-    lastActive: "Never",
-  },
-]
 
 const roleColors = {
   admin: "bg-purple-100 text-purple-700",
@@ -149,24 +54,67 @@ const statusConfig = {
   active: { color: "bg-green-500", label: "Active" },
   invited: { color: "bg-amber-500", label: "Invited" },
   inactive: { color: "bg-slate-400", label: "Inactive" },
+  pending: { color: "bg-blue-500", label: "Pending" },
 }
 
 export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }: UsersTableProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [pageSize, setPageSize] = useState("20")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
-  const filteredUsers = usersData.filter((user) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      if (!user.name.toLowerCase().includes(query) && !user.email.toLowerCase().includes(query)) {
-        return false
-      }
+  // Build filter request
+  const filterRequest = useMemo(() => ({
+    page,
+    pageSize,
+    search: searchQuery || undefined,
+    role: roleFilter !== "all" ? roleFilter : undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    teamId: teamFilter !== "all" ? teamFilter : undefined,
+  }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamFilter])
+
+  // Fetch team members from API
+  const { data: filterResponse, loading, refetch } = useApi(
+    () => teamMembersApi.filterTeamMembers(filterRequest),
+    { 
+      enabled: true,
+      cacheKey: `team_members_filter_${JSON.stringify(filterRequest)}`
     }
-    if (roleFilter !== "all" && user.role !== roleFilter) return false
-    if (statusFilter !== "all" && user.status !== statusFilter) return false
-    if (teamFilter !== "all" && !user.teams.some((t) => t.toLowerCase().includes(teamFilter))) return false
-    return true
-  })
+  )
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, roleFilter, statusFilter, teamFilter])
+
+  // Transform API response to display format
+  const filteredUsers = useMemo(() => {
+    if (!filterResponse?.data?.items) return []
+    
+    return filterResponse.data.items.map((user: TeamMember) => {
+      const appAccessCount = user.permissions ? Object.keys(user.permissions).length : 0
+      const hasAllApps = appAccessCount === 0 || user.role === "super_admin" || user.role === "admin"
+      
+      // Get status from first team member status, or fallback to user status logic
+      const teamMemberStatus = user.teams.length > 0 ? user.teams[0].status : null
+      const displayStatus = teamMemberStatus || (user.organization?.id ? "active" : "invited")
+      
+      return {
+        id: user.id,
+        name: user.fullName || user.email,
+        email: user.email,
+        avatar: user.avatarUrl || "",
+        isOnline: false, // TODO: Add online status if available
+        role: user.role as "admin" | "editor" | "viewer",
+        teams: user.teams.map(t => t.name),
+        appAccess: hasAllApps ? "all" : appAccessCount,
+        status: displayStatus as "active" | "invited" | "inactive" | "pending",
+        lastActive: "N/A", // TODO: Get lastActive from API if available
+      }
+    })
+  }, [filterResponse])
+
+  const totalUsers = filterResponse?.data?.total || 0
+  const totalPages = filterResponse?.data?.totalPages || 0
 
   const toggleSelectAll = () => {
     if (selectedUsers.length === filteredUsers.length) {
@@ -180,12 +128,23 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
     setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
   }
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(Number(newSize))
+    setPage(1)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+  }
+
+  if (loading) {
+    return (
+      <Card className="border-slate-200">
+        <CardContent className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        </CardContent>
+      </Card>
+    )
   }
 
   if (filteredUsers.length === 0) {
@@ -280,9 +239,13 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                     <Link href={`/team-members/${user.id}`} className="flex items-center gap-3 group">
                       <div className="relative">
                         <Avatar className="h-9 w-9">
-                          {user.avatar && <AvatarImage src={user.avatar || "/placeholder.svg"} />}
+                          {user.avatar && <AvatarImage src={user.avatar} />}
                           <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                            {getInitials(user.name)}
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         {user.isOnline && (
@@ -395,12 +358,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <p className="text-sm text-slate-500">
-            Showing 1-{filteredUsers.length} of {filteredUsers.length} users
+            Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalUsers)} of {totalUsers} users
           </p>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Rows per page:</span>
-              <Select value={pageSize} onValueChange={setPageSize}>
+              <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
                 <SelectTrigger className="w-16 h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -412,13 +375,45 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
               </Select>
             </div>
             <div className="flex gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 bg-transparent" 
+                disabled={page === 1}
+                onClick={() => handlePageChange(page - 1)}
+              >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" className="h-8 min-w-8 bg-blue-50 text-blue-600 border-blue-200">
-                1
-              </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 5) {
+                  pageNum = i + 1
+                } else if (page <= 3) {
+                  pageNum = i + 1
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i
+                } else {
+                  pageNum = page - 2 + i
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant="outline"
+                    size="sm"
+                    className={`h-8 min-w-8 ${page === pageNum ? "bg-blue-50 text-blue-600 border-blue-200" : ""}`}
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 bg-transparent" 
+                disabled={page >= totalPages}
+                onClick={() => handlePageChange(page + 1)}
+              >
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
