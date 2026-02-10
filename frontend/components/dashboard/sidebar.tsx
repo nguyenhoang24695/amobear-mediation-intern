@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   Zap,
   Users,
+  Building2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -38,6 +39,7 @@ const navItems = [
   { icon: BarChart3, label: "Reports", href: "/reports", hasSubmenu: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
   { icon: Users, label: "Team Members", href: "/team-members" },
+  { icon: Building2, label: "Organizations", href: "/organizations" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
@@ -167,9 +169,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             {!collapsed && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 text-slate-400 hover:text-slate-600"
                     onClick={async () => {
                       try {
@@ -193,7 +195,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       } catch (err) {
                         // Even if API call fails, clear local data and redirect
                         clearAuthData()
-                        
+
                         toast({
                           title: "Logged out",
                           description: "Your local session has been cleared.",
