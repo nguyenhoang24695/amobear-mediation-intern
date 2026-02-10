@@ -214,7 +214,7 @@ interface MediationGroupsTableProps {
   onSelectionChange: (groups: string[]) => void
 }
 
-type SortField = "name" | "ecpm" | "lastModified" | "abTest"
+type SortField = "name" | "ecpm" | "lastModified" | "revenue"
 type SortDirection = "asc" | "desc"
 
 interface AdSourceInfo {
@@ -277,9 +277,9 @@ export function MediationGroupsTable({
         adSources: group.adSources || [],
         targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
         status: group.state === "ENABLED" ? "Active" : group.state || "Active",
-        abTest: null,
         ecpm: group.ecpm || 0,
         ecpmTrend: group.ecpmChangePct || 0, // From cache if available
+        revenue: group.revenue || 0,
         lastModified: group.updatedAt 
           ? new Date(group.updatedAt).toLocaleString()
           : "Never",
@@ -303,9 +303,9 @@ export function MediationGroupsTable({
       countries: group.countries || [], // Keep countries array for easy access
       targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
       status: group.state === "ENABLED" ? "Active" : group.state || "Active",
-      abTest: null, // TODO: Fetch from A/B tests API
       ecpm: group.ecpm || 0, // From cache
       ecpmTrend: group.ecpmTrend || 0, // From cache (EcpmChangePct)
+      revenue: group.revenue || 0,
       lastModified: group.updatedAt 
         ? new Date(group.updatedAt).toLocaleString()
         : "Never",
@@ -353,10 +353,8 @@ export function MediationGroupsTable({
         return multiplier * a.name.localeCompare(b.name)
       case "ecpm":
         return multiplier * (a.ecpm - b.ecpm)
-      case "abTest":
-        const aHasTest = a.abTest ? 1 : 0
-        const bHasTest = b.abTest ? 1 : 0
-        return multiplier * (aHasTest - bHasTest)
+      case "revenue":
+        return multiplier * ((a as any).revenue - (b as any).revenue)
       default:
         return 0
     }
@@ -492,13 +490,13 @@ export function MediationGroupsTable({
                 <th className="px-4 py-3 text-left">Format</th>
                 <th className="px-4 py-3 text-left">Ad Sources</th>
                 <th className="px-4 py-3 text-left">Targeting</th>
-                <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">
-                  <SortHeader field="abTest">A/B Test</SortHeader>
+                  <SortHeader field="revenue">Revenue</SortHeader>
                 </th>
                 <th className="px-4 py-3 text-left">
                   <SortHeader field="ecpm">eCPM</SortHeader>
                 </th>
+                <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Last Modified</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -663,33 +661,10 @@ export function MediationGroupsTable({
                         <span className="text-sm text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(group.status)}</td>
                     <td className="px-4 py-3">
-                      {(() => {
-                        const abTest = (group as any).abTest
-                        if (!abTest) {
-                          return <span className="text-xs text-slate-400">—</span>
-                        }
-                        return (
-                          <Link
-                            href={`/mediation/tests/${abTest.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="block"
-                          >
-                            {abTest.status === "running" ? (
-                              <Badge className="gap-1 bg-purple-100 text-purple-700 border-0 hover:bg-purple-200 transition-colors cursor-pointer">
-                                <FlaskConical className="w-3 h-3" />
-                                Running
-                              </Badge>
-                            ) : (
-                              <Badge className="gap-1 bg-green-100 text-green-700 border-0 hover:bg-green-200 transition-colors cursor-pointer">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Completed
-                              </Badge>
-                            )}
-                          </Link>
-                        )
-                      })()}
+                      <span className="text-sm font-medium text-slate-900">
+                        {(group as any).revenue > 0 ? `$${(group as any).revenue.toFixed(2)}` : "—"}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
@@ -713,6 +688,7 @@ export function MediationGroupsTable({
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3">{getStatusBadge(group.status)}</td>
                     <td className="px-4 py-3">
                       <Tooltip>
                         <TooltipTrigger asChild>
