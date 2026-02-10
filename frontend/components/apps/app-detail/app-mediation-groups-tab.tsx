@@ -227,7 +227,7 @@ const getNetworkName = (adSourceId?: string, title?: string): string => {
   return adSourceId
 }
 
-type SortField = "name" | "ecpm"
+type SortField = "name" | "ecpm" | "revenue"
 type SortDirection = "asc" | "desc"
 
 export function AppMediationGroupsTab() {
@@ -237,7 +237,7 @@ export function AppMediationGroupsTab() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
-  const [sortField, setSortField] = useState<SortField>("ecpm")
+  const [sortField, setSortField] = useState<SortField>("revenue")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -274,12 +274,15 @@ export function AppMediationGroupsTab() {
     const multiplier = sortDirection === "asc" ? 1 : -1
     return [...filteredGroups].sort((a, b) => {
       switch (sortField) {
-        case "name":
+        case "name": {
           const nameA = (a.displayName || a.name || "").toLowerCase()
           const nameB = (b.displayName || b.name || "").toLowerCase()
           return multiplier * nameA.localeCompare(nameB)
+        }
         case "ecpm":
           return multiplier * ((a.ecpm || 0) - (b.ecpm || 0))
+        case "revenue":
+          return multiplier * (((a as any).revenue || 0) - ((b as any).revenue || 0))
         default:
           return 0
       }
@@ -396,10 +399,13 @@ export function AppMediationGroupsTab() {
                   <th className="px-4 py-3 text-left">Format</th>
                   <th className="px-4 py-3 text-left min-w-[140px]">Ad Sources</th>
                   <th className="px-4 py-3 text-left min-w-[120px]">Targeting</th>
-                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-right">
+                    <SortHeader field="revenue">Revenue</SortHeader>
+                  </th>
                   <th className="px-4 py-3 text-right">
                     <SortHeader field="ecpm">eCPM</SortHeader>
                   </th>
+                  <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-right w-24">Actions</th>
                 </tr>
               </thead>
@@ -541,17 +547,22 @@ export function AppMediationGroupsTab() {
                             <span className="text-sm text-slate-400">-</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-medium text-slate-900">
+                            {(group.revenue || 0) > 0 ? `$${(group.revenue || 0).toFixed(2)}` : "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-medium text-slate-900">
+                            ${(group.ecpm || 0).toFixed(2)}
+                          </span>
+                        </td>
                         <td className="px-4 py-3">
                           {group.status === "ENABLED" || !group.status ? (
                             <Badge className="bg-green-100 text-green-700 border-0">Enabled</Badge>
                           ) : (
                             <Badge className="bg-slate-100 text-slate-600 border-0">Paused</Badge>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-medium text-slate-900">
-                            ${(group.ecpm || 0).toFixed(2)}
-                          </span>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
