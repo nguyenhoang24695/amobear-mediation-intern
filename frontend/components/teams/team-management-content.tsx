@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -17,80 +17,64 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Search, Plus, MoreHorizontal, Edit, Users, Trash2, ExternalLink } from "lucide-react"
+import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, ExternalLink } from "lucide-react"
 import Link from "next/link"
+import { userApi, type OrgTeam } from "@/lib/api/services"
 
-const teamsData = [
-  {
-    id: "1",
-    name: "Mobile Team",
-    description: "Team responsible for mobile app development and AdMob integrations",
-    memberCount: 8,
-    members: [
-      { name: "John Doe", avatar: "/professional-man-avatar.png" },
-      { name: "Sarah Johnson", avatar: "" },
-      { name: "Michael Chen", avatar: "" },
-      { name: "Emily Parker", avatar: "" },
-      { name: "David Wilson", avatar: "" },
-    ],
-    appAccess: 12,
-    createdAt: "Jan 1, 2025",
-  },
-  {
-    id: "2",
-    name: "Analytics Team",
-    description: "Data analysis and reporting specialists",
-    memberCount: 5,
-    members: [
-      { name: "Lisa Anderson", avatar: "" },
-      { name: "Robert Kim", avatar: "" },
-      { name: "Jennifer Lee", avatar: "" },
-    ],
-    appAccess: "all",
-    createdAt: "Jan 5, 2025",
-  },
-  {
-    id: "3",
-    name: "Product Team",
-    description: "Product management and strategy",
-    memberCount: 6,
-    members: [
-      { name: "John Doe", avatar: "/professional-man-avatar.png" },
-      { name: "Lisa Anderson", avatar: "" },
-    ],
-    appAccess: 8,
-    createdAt: "Jan 10, 2025",
-  },
-  {
-    id: "4",
-    name: "Marketing Team",
-    description: "Marketing campaigns and user acquisition",
-    memberCount: 4,
-    members: [{ name: "Emily Parker", avatar: "" }],
-    appAccess: 5,
-    createdAt: "Jan 15, 2025",
-  },
-]
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
 
 export function TeamManagementContent() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [teams, setTeams] = useState<OrgTeam[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
-  const filteredTeams = teamsData.filter((team) => team.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Fetch teams details from API (chỉ lấy các team mà user hiện tại đang nằm trong đó)
+  const fetchTeams = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-  }
+      // Gọi API mới: /api/v1/user/teams
+      const data = await userApi.getMyTeams()
+
+      // Map về cấu trúc OrgTeam để tái sử dụng UI hiện tại
+      const mapped: OrgTeam[] = data.map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        isActive: t.isActive,
+        memberCount: t.memberCount,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      }))
+
+      setTeams(mapped)
+    } catch (err) {
+      console.error("Failed to fetch teams:", err)
+      setError("Failed to load teams")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchTeams()
+  }, [fetchTeams])
+
+  // Client-side search filter
+  const filteredTeams = teams.filter((team) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return team.name.toLowerCase().includes(query) || team.description?.toLowerCase().includes(query)
+  })
 
   return (
     <div className="space-y-6">
@@ -99,7 +83,7 @@ export function TeamManagementContent() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-slate-900">Teams</h1>
           <Badge variant="secondary" className="rounded-full">
-            {teamsData.length} teams
+            {teams.length} teams
           </Badge>
         </div>
         <p className="text-sm text-slate-500 mt-1">Organize your team members into groups</p>
@@ -122,95 +106,86 @@ export function TeamManagementContent() {
         </Button>
       </div>
 
-      {/* Teams Grid */}
-      {filteredTeams.length === 0 ? (
-        <Card className="border-slate-200">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-slate-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">No teams yet</h3>
-            <p className="text-sm text-slate-500 mb-4 text-center">
-              Create teams to organize your users and manage app permissions efficiently
-            </p>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setCreateModalOpen(true)}>
-              Create First Team
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTeams.map((team) => (
-            <Card key={team.id} className="border-slate-200 hover:border-slate-300 transition-colors">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{team.name}</h3>
-                    <p className="text-sm text-slate-500">{team.memberCount} members</p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Users className="w-4 h-4 mr-2" />
-                        Manage Members
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-600">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-slate-500 line-clamp-2">{team.description}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    {team.members.slice(0, 5).map((member, i) => (
-                      <Avatar key={i} className="w-7 h-7 border-2 border-white">
-                        {member.avatar && <AvatarImage src={member.avatar || "/placeholder.svg"} />}
-                        <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                          {getInitials(member.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {team.memberCount > 5 && (
-                      <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                        <span className="text-xs text-slate-600">+{team.memberCount - 5}</span>
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs text-slate-500">
-                    {team.appAccess === "all" ? "All apps" : `${team.appAccess} apps`}
-                  </span>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-0 flex items-center justify-between">
-                <span className="text-xs text-slate-400">Created {team.createdAt}</span>
-                <Link
-                  href={`/teams/${team.id}`}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  View Team
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
       )}
 
-      {/* Create Team Modal */}
+      {/* Error State */}
+      {error && !loading && (
+        <Card className="border-slate-200">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => fetchTeams()}>Try Again</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Content (Empty + List) */}
+      {!loading && !error && (
+        filteredTeams.length === 0 ? (
+          <Card className="border-slate-200">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <FolderOpen className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">No teams yet</h3>
+              <p className="text-sm text-slate-500 mb-4 text-center">
+                {searchQuery ? "Try adjusting your search" : "You are not a member of any teams yet"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTeams.map((team) => (
+              <Card key={team.id} className="border-slate-200 hover:border-slate-300 transition-colors">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{team.name}</h3>
+                      <p className="text-sm text-slate-500">{team.memberCount} members</p>
+                    </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem disabled>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            View Team
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-slate-500 line-clamp-2">
+                    {team.description || "No description provided"}
+                  </p>
+                </CardContent>
+                <CardFooter className="pt-0 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Created {formatDate(team.createdAt)}</span>
+                  <button
+                    type="button"
+                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-default opacity-60"
+                    disabled
+                  >
+                    View Team
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Create Team Modal (UI cũ) */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>

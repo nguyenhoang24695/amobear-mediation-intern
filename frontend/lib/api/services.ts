@@ -875,6 +875,28 @@ export interface OrgTeam {
     updatedAt: string
 }
 
+// User Teams API types
+export interface UserTeamMember {
+    id: string
+    email: string
+    firstName?: string
+    lastName?: string
+    role: string
+    status: string
+    avatarUrl?: string
+}
+
+export interface UserTeamWithMembers {
+    id: string
+    name: string
+    description?: string
+    isActive: boolean
+    memberCount: number
+    createdAt: string
+    updatedAt: string
+    members: UserTeamMember[]
+}
+
 export interface CreateTeamRequest {
     name: string
     description?: string
@@ -884,4 +906,13 @@ export interface UpdateTeamRequest {
     name: string
     description?: string
     isActive: boolean
+}
+
+// Current User API Service
+export const userApi = {
+    // Get teams of current user, including members of each team
+    getMyTeams: async (): Promise<UserTeamWithMembers[]> => {
+        const response = await apiClient.get<{ success: boolean; data: UserTeamWithMembers[] }>('/api/v1/user/teams')
+        return response.data
+    },
 }
