@@ -42,6 +42,7 @@ interface UsersTableProps {
   roleFilter: string
   statusFilter: string
   teamFilter: string
+  onInviteClick?: () => void
 }
 
 const roleColors = {
@@ -57,7 +58,7 @@ const statusConfig = {
   pending: { color: "bg-blue-500", label: "Pending" },
 }
 
-export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }: UsersTableProps) {
+export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, onInviteClick }: UsersTableProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -169,7 +170,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-1">No team members yet</h3>
               <p className="text-sm text-slate-500 mb-4">Start by inviting your first team member</p>
-              <Button className="bg-blue-600 hover:bg-blue-700">Invite User</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => onInviteClick?.()}>Invite User</Button>
             </>
           )}
         </CardContent>

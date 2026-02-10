@@ -141,6 +141,7 @@ export function UserManagementContent() {
         roleFilter={roleFilter}
         statusFilter={statusFilter}
         teamFilter={teamFilter}
+        onInviteClick={() => setInviteModalOpen(true)}
       />
 
       {/* Invite User Modal */}
