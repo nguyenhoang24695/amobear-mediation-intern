@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Download, Plus, Users, UserCheck, Clock, Shield } from "lucide-react"
 import { UsersTable } from "./users-table"
 import { InviteUserModal } from "./invite-user-modal"
-import { getCurrentUser } from "@/lib/auth"
 
 const statsData = [
   { label: "Total Users", value: 45, icon: Users, color: "text-slate-600" },
@@ -18,22 +17,16 @@ const statsData = [
   { label: "Admins", value: 5, icon: Shield, color: "text-purple-600" },
 ]
 
-export function UserManagementContent() {
+interface UserManagementContentProps {
+  teamId?: string
+}
+
+export function UserManagementContent({ teamId }: UserManagementContentProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [teamFilter, setTeamFilter] = useState("all")
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
-
-  // Get teams from current user
-  const currentUser = getCurrentUser()
-  const availableTeams = useMemo(() => {
-    if (!currentUser?.teams) return []
-    return currentUser.teams.map(team => ({
-      id: team.id,
-      name: team.name,
-    }))
-  }, [currentUser])
+  const [teamName, setTeamName] = useState<string | undefined>(undefined)
 
   return (
     <div className="space-y-6">
@@ -45,7 +38,16 @@ export function UserManagementContent() {
             45 users
           </Badge>
         </div>
-        <p className="text-sm text-slate-500 mt-1">Manage your organization's team members and their access</p>
+        <p className="text-sm text-slate-500 mt-1">
+          {teamName ? (
+            <>
+              Manage <span className="font-semibold text-slate-900">{teamName}</span>
+              {"'s team members and their access"}
+            </>
+          ) : (
+            "Manage your organization's team members and their access"
+          )}
+        </p>
       </div>
 
       {/* Action Bar */}
@@ -87,21 +89,6 @@ export function UserManagementContent() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Team Filter */}
-          <Select value={teamFilter} onValueChange={setTeamFilter}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="Team" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {availableTeams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="flex gap-2">
@@ -140,7 +127,8 @@ export function UserManagementContent() {
         searchQuery={searchQuery}
         roleFilter={roleFilter}
         statusFilter={statusFilter}
-        teamFilter={teamFilter}
+        teamId={teamId}
+        onTeamNameChange={setTeamName}
         onInviteClick={() => setInviteModalOpen(true)}
       />
 

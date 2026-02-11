@@ -375,6 +375,14 @@ export const teamMembersApi = {
     removeUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
         return apiClient.delete(`/api/v1/team-members/remove-user/${userId}`)
     },
+
+    // Update team role + app permissions for a user in a team
+    managePermissions: async (
+        userId: string,
+        body: { teamId: string; role: string; appPermissions?: Array<{ AppId: string; Level: string }> }
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/manage-permissions/${userId}`, body)
+    },
 }
 
 // Dashboard API Service
