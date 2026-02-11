@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -23,15 +24,28 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, ExternalLink } from "lucide-react"
 import Link from "next/link"
-import { userApi, type OrgTeam } from "@/lib/api/services"
+import { userApi, type UserTeamWithMembers } from "@/lib/api/services"
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
+function getMemberInitials(firstName?: string, lastName?: string, email?: string): string {
+  const name = `${firstName ?? ""} ${lastName ?? ""}`.trim()
+  if (name) {
+    const parts = name.split(" ").filter(Boolean)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return parts[0][0].toUpperCase()
+  }
+  if (email) return email[0].toUpperCase()
+  return "U"
+}
+
 export function TeamManagementContent() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [teams, setTeams] = useState<OrgTeam[]>([])
+  const [teams, setTeams] = useState<UserTeamWithMembers[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -44,19 +58,7 @@ export function TeamManagementContent() {
 
       // Gọi API mới: /api/v1/user/teams
       const data = await userApi.getMyTeams()
-
-      // Map về cấu trúc OrgTeam để tái sử dụng UI hiện tại
-      const mapped: OrgTeam[] = data.map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        isActive: t.isActive,
-        memberCount: t.memberCount,
-        createdAt: t.createdAt,
-        updatedAt: t.updatedAt,
-      }))
-
-      setTeams(mapped)
+      setTeams(data)
     } catch (err) {
       console.error("Failed to fetch teams:", err)
       setError("Failed to load teams")
@@ -167,6 +169,26 @@ export function TeamManagementContent() {
                   <p className="text-sm text-slate-500 line-clamp-2">
                     {team.description || "No description provided"}
                   </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex -space-x-2">
+                      {team.members.slice(0, 5).map((member, i) => (
+                        <Avatar key={member.id ?? i} className="w-7 h-7 border-2 border-white">
+                          {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
+                          <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                            {getMemberInitials(member.firstName, member.lastName, member.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                      {team.memberCount > 5 && (
+                        <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
+                          <span className="text-xs text-slate-600">+{team.memberCount - 5}</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {team.memberCount === 1 ? "1 member" : `${team.memberCount} members`}
+                    </span>
+                  </div>
                 </CardContent>
                 <CardFooter className="pt-0 flex items-center justify-between">
                   <span className="text-xs text-slate-400">Created {formatDate(team.createdAt)}</span>

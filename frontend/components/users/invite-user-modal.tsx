@@ -17,13 +17,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { X, Loader2, CheckCircle2, ChevronDown, Check, ChevronsUpDown, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { RoleSelector } from "./role-selector"
+import { AppPermissionsSelector } from "./app-permissions-selector"
 
 interface InviteUserModalProps {
   open: boolean
@@ -51,12 +52,11 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const [state, setState] = useState<ModalState>("form")
   const [emailInput, setEmailInput] = useState("")
   const [emails, setEmails] = useState<string[]>([])
-  const [role, setRole] = useState("viewer")
+  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
   const [selectedTeams, setSelectedTeams] = useState<string[]>([])
   const [teamsOpen, setTeamsOpen] = useState(false)
   const [giveAllApps, setGiveAllApps] = useState(false)
   const [selectedApps, setSelectedApps] = useState<{ id: string; permission: string }[]>([])
-  const [appsOpen, setAppsOpen] = useState(false)
   const [message, setMessage] = useState("")
   const [showPreview, setShowPreview] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
@@ -253,38 +253,12 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               </div>
 
               {/* Role Selection */}
-              <div className="space-y-3">
-                <Label>Role</Label>
-                <RadioGroup value={role} onValueChange={setRole} className="space-y-3">
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value="admin" id="admin" className="mt-0.5" />
-                    <div>
-                      <Label htmlFor="admin" className="font-medium cursor-pointer">
-                        Admin
-                      </Label>
-                      <p className="text-xs text-slate-500">Full access to all features including user management</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value="editor" id="editor" className="mt-0.5" />
-                    <div>
-                      <Label htmlFor="editor" className="font-medium cursor-pointer">
-                        Editor
-                      </Label>
-                      <p className="text-xs text-slate-500">Can view and edit apps, mediation groups, and reports</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value="viewer" id="viewer" className="mt-0.5" />
-                    <div>
-                      <Label htmlFor="viewer" className="font-medium cursor-pointer">
-                        Viewer
-                      </Label>
-                      <p className="text-xs text-slate-500">Read-only access to assigned apps and reports</p>
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
+              <RoleSelector
+                value={role}
+                onValueChange={setRole}
+                label="Role"
+                idPrefix="invite"
+              />
 
               {/* Team Assignment */}
               <div className="space-y-3 pt-2 border-t">
@@ -344,108 +318,18 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               </div>
 
               {/* App Permissions */}
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-slate-500 text-xs uppercase tracking-wide">App Permissions (Optional)</Label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Grant access to specific apps</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="all-apps"
-                        checked={giveAllApps}
-                        onChange={(e) => setGiveAllApps(e.target.checked)}
-                        className="rounded border-slate-300"
-                      />
-                      <label htmlFor="all-apps" className="text-sm text-slate-600 cursor-pointer">
-                        Give access to all apps
-                      </label>
-                    </div>
-                  </div>
-
-                  {!giveAllApps && (
-                    <>
-                      <Popover open={appsOpen} onOpenChange={setAppsOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between font-normal bg-transparent"
-                          >
-                            Select apps...
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search apps..." />
-                            <CommandList>
-                              <CommandEmpty>No app found.</CommandEmpty>
-                              <CommandGroup>
-                                {apps.map((app) => (
-                                  <CommandItem key={app.id} onSelect={() => toggleApp(app.id)}>
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedApps.find((a) => a.id === app.id) ? "opacity-100" : "opacity-0",
-                                      )}
-                                    />
-                                    <span className="mr-2">{app.icon}</span>
-                                    {app.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-
-                      {/* Selected Apps List */}
-                      {selectedApps.length > 0 && (
-                        <div className="space-y-2">
-                          {selectedApps.map((selected) => {
-                            const app = apps.find((a) => a.id === selected.id)
-                            return (
-                              <div
-                                key={selected.id}
-                                className="flex items-center justify-between p-2 bg-slate-50 rounded-md"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span>{app?.icon}</span>
-                                  <span className="text-sm">{app?.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Select
-                                    value={selected.permission}
-                                    onValueChange={(v) => updateAppPermission(selected.id, v)}
-                                  >
-                                    <SelectTrigger className="w-24 h-8">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="view">View</SelectItem>
-                                      <SelectItem value="edit">Edit</SelectItem>
-                                      <SelectItem value="manage">Manage</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => removeApp(selected.id)}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+              <AppPermissionsSelector
+                apps={apps}
+                giveAllApps={giveAllApps}
+                onGiveAllAppsChange={setGiveAllApps}
+                selectedApps={selectedApps}
+                onToggleApp={toggleApp}
+                onUpdateAppPermission={updateAppPermission}
+                onRemoveApp={removeApp}
+                label="App Permissions (Optional)"
+                showOwnerPermission={false}
+                mode="popover"
+              />
 
               {/* Personal Message */}
               <div className="space-y-2 pt-2 border-t">

@@ -162,12 +162,6 @@ export function UserDropdown() {
 
           {/* Organization Section */}
           <DropdownMenuItem asChild>
-            <Link href="/team-members" className="flex items-center gap-2 cursor-pointer">
-              <Users className="w-4 h-4" />
-              Team Members
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
             <Link href="/teams" className="flex items-center gap-2 cursor-pointer">
               <UsersRound className="w-4 h-4" />
               Teams

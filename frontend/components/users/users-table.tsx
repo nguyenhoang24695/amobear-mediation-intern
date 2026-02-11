@@ -35,14 +35,16 @@ import {
 import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
 import { teamMembersApi } from "@/lib/api/services"
+import { ManagePermissionsModal } from "./manage-permissions-modal"
 import type { TeamMember } from "@/types/api"
 
 interface UsersTableProps {
   searchQuery: string
   roleFilter: string
   statusFilter: string
-  teamFilter: string
+  teamId?: string
   onInviteClick?: () => void
+  onTeamNameChange?: (name?: string) => void
 }
 
 const roleColors = {
@@ -58,10 +60,14 @@ const statusConfig = {
   pending: { color: "bg-blue-500", label: "Pending" },
 }
 
-export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, onInviteClick }: UsersTableProps) {
+export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
+  const [permissionsUserId, setPermissionsUserId] = useState<string | null>(null)
+  const [permissionsUserName, setPermissionsUserName] = useState<string>("")
+  const [permissionsUserRole, setPermissionsUserRole] = useState<"admin" | "editor" | "viewer">("viewer")
 
   // Build filter request
   const filterRequest = useMemo(() => ({
@@ -70,8 +76,8 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
     search: searchQuery || undefined,
     role: roleFilter !== "all" ? roleFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
-    teamId: teamFilter !== "all" ? teamFilter : undefined,
-  }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamFilter])
+    teamId: teamId || undefined,
+  }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamId])
 
   // Fetch team members from API
   const { data: filterResponse, loading, refetch } = useApi(
@@ -85,7 +91,20 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1)
-  }, [searchQuery, roleFilter, statusFilter, teamFilter])
+  }, [searchQuery, roleFilter, statusFilter, teamId])
+
+  // Nếu filter theo teamId, lấy tên team từ phần tử đầu tiên (teams[0].name)
+  const teamNameFromItems = useMemo(() => {
+    if (!teamId || !filterResponse?.data?.items || filterResponse.data.items.length === 0) return undefined
+    const first = filterResponse.data.items[0] as TeamMember
+    return first.teams && first.teams.length > 0 ? first.teams[0].name : undefined
+  }, [teamId, filterResponse])
+
+  // Đẩy teamName lên cho header sử dụng
+  useEffect(() => {
+    if (!onTeamNameChange) return
+    onTeamNameChange(teamNameFromItems)
+  }, [teamNameFromItems, onTeamNameChange])
 
   // Transform API response to display format
   const filteredUsers = useMemo(() => {
@@ -94,6 +113,14 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
     return filterResponse.data.items.map((user: TeamMember) => {
       const appAccessCount = user.permissions ? Object.keys(user.permissions).length : 0
       const hasAllApps = appAccessCount === 0 || user.role === "super_admin" || user.role === "admin"
+      
+      // Nếu đang filter theo teamId, ưu tiên role của user trong team đó; fallback về user.role tổng thể
+      const teamRole = teamId ? user.teams.find((t) => t.id === teamId)?.role : undefined
+      const effectiveRole = (teamRole || user.role || "viewer").toLowerCase()
+      const roleKey: "admin" | "editor" | "viewer" =
+        effectiveRole === "admin" || effectiveRole === "editor" || effectiveRole === "viewer"
+          ? (effectiveRole as "admin" | "editor" | "viewer")
+          : "viewer"
       
       // Get status from first team member status, or fallback to user status logic
       const teamMemberStatus = user.teams.length > 0 ? user.teams[0].status : null
@@ -105,7 +132,8 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
         email: user.email,
         avatar: user.avatarUrl || "",
         isOnline: false, // TODO: Add online status if available
-        role: user.role as "admin" | "editor" | "viewer",
+        role: roleKey,
+        // hiển thị tên role theo effectiveRole (giữ nguyên chữ thường/hoa nếu sau này cần)
         teams: user.teams.map(t => t.name),
         appAccess: hasAllApps ? "all" : appAccessCount,
         status: displayStatus as "active" | "invited" | "inactive" | "pending",
@@ -152,7 +180,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
     return (
       <Card className="border-slate-200">
         <CardContent className="flex flex-col items-center justify-center py-16">
-          {searchQuery || roleFilter !== "all" || statusFilter !== "all" || teamFilter !== "all" ? (
+          {searchQuery || roleFilter !== "all" || statusFilter !== "all" ? (
             <>
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="w-8 h-8 text-slate-400" />
@@ -327,7 +355,16 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
                           <Edit className="w-4 h-4 mr-2" />
                           Edit User
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!teamId}
+                          onClick={() => {
+                            if (!teamId) return
+                            setPermissionsUserId(user.id)
+                            setPermissionsUserName(user.name)
+                            setPermissionsUserRole(user.role)
+                            setPermissionsModalOpen(true)
+                          }}
+                        >
                           <Shield className="w-4 h-4 mr-2" />
                           Manage Permissions
                         </DropdownMenuItem>
@@ -421,6 +458,17 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter, 
           </div>
         </div>
       </Card>
+      {/* Manage Permissions Modal */}
+      {permissionsUserId && teamId && (
+        <ManagePermissionsModal
+          open={permissionsModalOpen}
+          onOpenChange={setPermissionsModalOpen}
+          userId={permissionsUserId}
+          userName={permissionsUserName}
+          initialRole={permissionsUserRole}
+          teamId={teamId}
+        />
+      )}
     </TooltipProvider>
   )
 }
