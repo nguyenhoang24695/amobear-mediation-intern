@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { structureApi } from "@/lib/api/services"
 const platformOptions = ["All Platforms", "ANDROID", "IOS"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
 const networkOptions = ["All Networks", "AdMob", "Unity Ads", "ironSource", "AppLovin"]
+const ALL_ACCOUNTS_VALUE = "All Accounts"
 
 interface ActiveFilter {
   type: string
@@ -25,17 +26,34 @@ export function AppsPageContent() {
   const [platform, setPlatform] = useState("All Platforms")
   const [status, setStatus] = useState("All Status")
   const [network, setNetwork] = useState("All Networks")
+  const [admobAccount, setAdmobAccount] = useState(ALL_ACCOUNTS_VALUE)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [selectedApps, setSelectedApps] = useState<string[]>([])
 
-  // Fetch apps from API with cache key to prevent duplicate calls
+  // Fetch apps từ API (khi chọn "All Accounts" = getApps(), khi chọn 1 tài khoản = getApps(publisherId))
   const { data: appsResponse, loading: appsLoading, refetch: refetchApps } = useApi(
-    () => structureApi.getApps(),
-    { enabled: true, cacheKey: 'apps_list' }
+    () => structureApi.getApps(admobAccount === ALL_ACCOUNTS_VALUE ? undefined : admobAccount),
+    { enabled: true, cacheKey: `apps_list_${admobAccount}` }
   )
 
   const apps = appsResponse?.apps || []
   const summary = appsResponse?.summary
+
+  // Danh sách AdMob accounts cho dropdown: lấy unique publisherId từ apps khi đang "All Accounts"
+  const [admobAccountOptions, setAdmobAccountOptions] = useState<string[]>([])
+  useEffect(() => {
+    if (admobAccount === ALL_ACCOUNTS_VALUE && apps.length > 0) {
+      const ids = Array.from(new Set(apps.map((a) => a.publisherId).filter(Boolean))) as string[]
+      setAdmobAccountOptions(ids.sort())
+    }
+  }, [admobAccount, apps])
+  const admobAccountSelectOptions = useMemo(() => {
+    const opts = [ALL_ACCOUNTS_VALUE, ...admobAccountOptions]
+    if (admobAccount !== ALL_ACCOUNTS_VALUE && admobAccount && !admobAccountOptions.includes(admobAccount)) {
+      opts.push(admobAccount)
+    }
+    return opts
+  }, [admobAccountOptions, admobAccount])
 
   // Summary từ API: Total Apps = tất cả (kể cả chưa APPROVED), Active = đã APPROVED, Total Ad Units / Total Waterfall Ad Units
   const summaryStats = useMemo(() => {
@@ -71,6 +89,9 @@ export function AppsPageContent() {
       case "Network":
         setNetwork(value)
         break
+      case "AdMob Account":
+        setAdmobAccount(value)
+        break
     }
   }
 
@@ -86,6 +107,9 @@ export function AppsPageContent() {
       case "Network":
         setNetwork("All Networks")
         break
+      case "AdMob Account":
+        setAdmobAccount(ALL_ACCOUNTS_VALUE)
+        break
     }
   }
 
@@ -94,6 +118,7 @@ export function AppsPageContent() {
     setPlatform("All Platforms")
     setStatus("All Status")
     setNetwork("All Networks")
+    setAdmobAccount(ALL_ACCOUNTS_VALUE)
     setSearchQuery("")
   }
 
@@ -165,6 +190,19 @@ export function AppsPageContent() {
                 {networkOptions.map((opt) => (
                   <SelectItem key={opt} value={opt}>
                     {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={admobAccount} onValueChange={(v) => handleFilterChange("AdMob Account", v)}>
+              <SelectTrigger className="w-44 h-10 bg-white min-w-[11rem]">
+                <SelectValue placeholder="AdMob Account" />
+              </SelectTrigger>
+              <SelectContent>
+                {admobAccountSelectOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt === ALL_ACCOUNTS_VALUE ? "All Accounts" : opt}
                   </SelectItem>
                 ))}
               </SelectContent>
