@@ -112,33 +112,27 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     }
   }, [app, dateRange, chartMetric])
 
-  // Metrics for cards - sử dụng cache cho today, 7days, 14days, 30days
-  // MTD sẽ gọi database vì không có trong cache
+  // Metrics for cards - mặc định dùng cache 7 ngày cho tất cả (API tự động check cache)
+  // MTD gọi database khi cần
   const { data: metrics } = useApi(
     async () => {
       if (!app) return null
 
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      // Format date in local timezone to avoid UTC conversion issues
-      const todayStr = formatDateForAPI(today)
-
       const last7 = new Date(today)
       last7.setDate(last7.getDate() - 6)
       const last7Str = formatDateForAPI(last7)
-
+      const todayStr = formatDateForAPI(today)
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
       const monthStartStr = formatDateForAPI(monthStart)
 
-      // Today và 7days sẽ dùng cache (API tự động check cache)
-      // MTD sẽ gọi database vì không có trong cache
-      const [todayMetrics, last7Metrics, mtdMetrics] = await Promise.all([
-        appMetricsApi.getAppMetrics(app.appId, { startDate: todayStr, endDate: todayStr }).catch(() => null),
+      const [last7Metrics, mtdMetrics] = await Promise.all([
         appMetricsApi.getAppMetrics(app.appId, { startDate: last7Str, endDate: todayStr }).catch(() => null),
         appMetricsApi.getAppMetrics(app.appId, { startDate: monthStartStr, endDate: todayStr }).catch(() => null),
       ])
 
-      return { todayMetrics, last7Metrics, mtdMetrics }
+      return { last7Metrics, mtdMetrics }
     },
     {
       enabled: !!app,
@@ -149,9 +143,9 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
   const statsCards = useMemo(() => {
     if (!metrics) return []
 
-    const { todayMetrics, last7Metrics, mtdMetrics } = metrics
+    const { last7Metrics, mtdMetrics } = metrics
 
-    const todayRevenue = todayMetrics?.totalRevenue ?? 0
+    const revenue7d = last7Metrics?.totalRevenue ?? 0
     const mtdRevenue = mtdMetrics?.totalRevenue ?? 0
     const avgEcpm = last7Metrics?.avgEcpm ?? 0
     const impressions7d = last7Metrics?.totalImpressions ?? 0
@@ -159,9 +153,9 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
 
     return [
       {
-        label: "Revenue Today",
-        value: `$${todayRevenue.toFixed(2)}`,
-        change: todayMetrics?.revenueChange ?? 0,
+        label: "Revenue (7d)",
+        value: `$${revenue7d.toFixed(2)}`,
+        change: last7Metrics?.revenueChange ?? 0,
         icon: DollarSign,
         color: "blue",
       },

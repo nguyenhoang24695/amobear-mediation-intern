@@ -97,7 +97,7 @@ export function AppAdUnitsTab() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  // Load app by AdMob app_id, rồi load ad units bằng app.id (backend cần id số)
+  // Load app by AdMob app_id, rồi load ad units (backend trả metrics mặc định từ cache 7 ngày)
   const { data: app } = useApi(
     () => structureApi.getAppByAppId(appIdFromParams!),
     { enabled: hasValidAppId, cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },

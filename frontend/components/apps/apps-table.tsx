@@ -73,7 +73,7 @@ export function AppsTable({
 }: AppsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
-  const [sortField, setSortField] = useState<SortField>("waterfallPct")
+  const [sortField, setSortField] = useState<SortField>("revenue")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -87,7 +87,7 @@ export function AppsTable({
   const transformedApps = useMemo(() => {
     if (!apps || apps.length === 0) return []
 
-    // Dữ liệu metrics/delta đã được backend trả sẵn từ cache dashboard:app:{id}:metrics:today
+    // Dữ liệu metrics đã được backend trả sẵn (mặc định cache 7 ngày; fallback today)
     return apps.map((app) => ({
       id: app.id.toString(),
       appId: app.appId,
