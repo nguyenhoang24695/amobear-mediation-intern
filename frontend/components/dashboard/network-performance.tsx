@@ -61,13 +61,17 @@ export function NetworkPerformance() {
 
   const networks = useMemo(() => {
     if (!networkData?.networks) return []
-    
-    return networkData.networks.map((network) => ({
-      name: network.networkName,
-      percentage: network.percentage,
-      revenue: formatCurrency(network.revenue),
-      color: networkColors[network.networkId.toLowerCase()] || "#64748b",
-    }))
+
+    // Chỉ lấy Top 5 theo Revenue (giảm dần)
+    return [...networkData.networks]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+      .map((network) => ({
+        name: network.networkName,
+        percentage: network.percentage,
+        revenue: formatCurrency(network.revenue),
+        color: networkColors[network.networkId.toLowerCase()] || "#64748b",
+      }))
   }, [networkData])
 
   const totalRevenue = networkData?.totalRevenue ? formatCurrency(networkData.totalRevenue) : "$0.00"
