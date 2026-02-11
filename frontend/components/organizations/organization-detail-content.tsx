@@ -20,26 +20,9 @@ import { OrgUsersTab } from "./tabs/org-users-tab"
 import { OrgTeamsTab } from "./tabs/org-teams-tab"
 import { OrgSettingsTab } from "./tabs/org-settings-tab"
 import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
-
-function getOrgInitials(name: string): string {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
-}
-
-function getOrgColor(name: string): string {
-  const colors = [
-    "bg-blue-100 text-blue-700",
-    "bg-green-100 text-green-700",
-    "bg-amber-100 text-amber-700",
-    "bg-cyan-100 text-cyan-700",
-    "bg-indigo-100 text-indigo-700",
-  ]
-  const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return colors[hash % colors.length]
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-}
+import { getCurrentUser } from "@/lib/auth"
+import { UserRole } from "@/lib/enums/user-role"
+import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
 
 interface OrganizationDetailContentProps {
   orgId: string
@@ -55,6 +38,8 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const currentUser = getCurrentUser()
+  const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -112,9 +97,9 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
     createdAt: org.createdAt,
     updatedAt: org.updatedAt,
     users: org.userCount,
-    activeUsers: org.userCount, // TODO: get from API when available
-    teams: 0, // TODO: get from API when available
-    appsAccess: 0, // TODO: get from API when available
+    activeUsers: org.userCount,
+    teams: 0,
+    appsAccess: 0,
   }
 
   return (
@@ -180,15 +165,21 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem>
-                <ToggleLeft className="w-4 h-4 mr-2" />
-                {status === "active" ? "Deactivate" : "Activate"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600 focus:text-red-600">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Organization
-              </DropdownMenuItem>
+              {isSuperAdmin && (
+                <DropdownMenuItem>
+                  <ToggleLeft className="w-4 h-4 mr-2" />
+                  {status === "active" ? "Deactivate" : "Activate"}
+                </DropdownMenuItem>
+              )}
+              {isSuperAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Organization
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -204,7 +195,7 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
         </TabsList>
 
         <TabsContent value="overview">
-          <OrgOverviewTab org={orgTabData} />
+          <OrgOverviewTab org={orgTabData} orgId={orgId} />
         </TabsContent>
 
         <TabsContent value="users">
@@ -216,7 +207,17 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
         </TabsContent>
 
         <TabsContent value="settings">
-          <OrgSettingsTab org={orgTabData} />
+          <OrgSettingsTab org={orgTabData} orgId={orgId} isSuperAdmin={isSuperAdmin} onStatusChange={() => {
+            const refetch = async () => {
+              try {
+                const data = await organizationsApi.getById(orgId)
+                setOrg(data)
+              } catch (err) {
+                console.error("Failed to refresh organization:", err)
+              }
+            }
+            refetch()
+          }} />
         </TabsContent>
       </Tabs>
     </div>

@@ -14,16 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
   MoreHorizontal,
   Eye,
   Edit,
@@ -41,6 +31,7 @@ import {
 import { Pagination } from "@/components/shared/pagination"
 import Link from "next/link"
 import type { OrganizationListItem } from "@/lib/api/services"
+import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
 
 interface OrganizationsTableProps {
   organizations: OrganizationListItem[]
@@ -49,8 +40,9 @@ interface OrganizationsTableProps {
   onClearFilters: () => void
   hasFilters: boolean
   onCreateOrg: () => void
-  onDeleteOrg: (id: string) => void
-  onToggleStatus: (id: string, isActive: boolean) => void
+  onDeleteOrg: (org: OrganizationListItem) => void
+  onToggleStatus: (org: OrganizationListItem) => void
+  isSuperAdmin?: boolean
 }
 
 type SortField = "name" | "users" | "status" | "created"
@@ -59,35 +51,6 @@ type SortDir = "asc" | "desc"
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
   active: { label: "Active", dotColor: "bg-green-500" },
   inactive: { label: "Inactive", dotColor: "bg-red-500" },
-}
-
-// Generate initials and color from name
-function getOrgInitials(name: string): string {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
-}
-
-function getOrgColor(name: string): string {
-  const colors = [
-    "bg-blue-100 text-blue-700",
-    "bg-green-100 text-green-700",
-    "bg-amber-100 text-amber-700",
-    "bg-red-100 text-red-700",
-    "bg-cyan-100 text-cyan-700",
-    "bg-indigo-100 text-indigo-700",
-    "bg-sky-100 text-sky-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-orange-100 text-orange-700",
-    "bg-teal-100 text-teal-700",
-    "bg-violet-100 text-violet-700",
-    "bg-rose-100 text-rose-700",
-  ]
-  const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return colors[hash % colors.length]
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
 export function OrganizationsTable({
@@ -99,12 +62,12 @@ export function OrganizationsTable({
   onCreateOrg,
   onDeleteOrg,
   onToggleStatus,
+  isSuperAdmin = false,
 }: OrganizationsTableProps) {
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [deleteOrg, setDeleteOrg] = useState<{ id: string; name: string } | null>(null)
 
   // Filter
   const filteredOrgs = useMemo(() => {
@@ -168,12 +131,6 @@ export function OrganizationsTable({
     )
   }
 
-  const handleDelete = () => {
-    if (deleteOrg) {
-      onDeleteOrg(deleteOrg.id)
-      setDeleteOrg(null)
-    }
-  }
 
   // Empty State
   if (filteredOrgs.length === 0) {
@@ -198,10 +155,12 @@ export function OrganizationsTable({
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-1">No organizations yet</h3>
               <p className="text-sm text-slate-500 mb-4">Create your first organization to get started</p>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={onCreateOrg}>
-                <Plus className="w-4 h-4" />
-                Create Organization
-              </Button>
+              {isSuperAdmin && (
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={onCreateOrg}>
+                  <Plus className="w-4 h-4" />
+                  Create Organization
+                </Button>
+              )}
             </>
           )}
         </CardContent>
@@ -311,28 +270,36 @@ export function OrganizationsTable({
                                 Edit Organization
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => onToggleStatus(org.id, org.isActive)}>
-                              {org.isActive ? (
-                                <>
-                                  <ToggleLeft className="w-4 h-4 mr-2" />
-                                  Deactivate Organization
-                                </>
-                              ) : (
-                                <>
-                                  <ToggleRight className="w-4 h-4 mr-2" />
-                                  Activate Organization
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => setDeleteOrg({ id: org.id, name: org.name })}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Organization
-                            </DropdownMenuItem>
+                            {isSuperAdmin && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => onToggleStatus(org)}>
+                                  {org.isActive ? (
+                                    <>
+                                      <ToggleLeft className="w-4 h-4 mr-2" />
+                                      Deactivate Organization
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ToggleRight className="w-4 h-4 mr-2" />
+                                      Activate Organization
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {isSuperAdmin && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => onDeleteOrg(org)}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete Organization
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -396,28 +363,36 @@ export function OrganizationsTable({
                           Edit
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onToggleStatus(org.id, org.isActive)}>
-                        {org.isActive ? (
-                          <>
-                            <ToggleLeft className="w-4 h-4 mr-2" />
-                            Deactivate
-                          </>
-                        ) : (
-                          <>
-                            <ToggleRight className="w-4 h-4 mr-2" />
-                            Activate
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onClick={() => setDeleteOrg({ id: org.id, name: org.name })}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
+                      {isSuperAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => onToggleStatus(org)}>
+                            {org.isActive ? (
+                              <>
+                                <ToggleLeft className="w-4 h-4 mr-2" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <ToggleRight className="w-4 h-4 mr-2" />
+                                Activate
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {isSuperAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => onDeleteOrg(org)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -465,28 +440,7 @@ export function OrganizationsTable({
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteOrg} onOpenChange={(open) => { if (!open) setDeleteOrg(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Organization</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-slate-900">{deleteOrg?.name}</span>? This action cannot be undone
-              and will permanently remove the organization and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={handleDelete}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </>
   )
 }

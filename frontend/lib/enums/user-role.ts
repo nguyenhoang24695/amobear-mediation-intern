@@ -32,6 +32,13 @@ export function isAdmin(role?: string | null): boolean {
 }
 
 /**
+ * Check if user has super admin privileges
+ */
+export function isSuperAdmin(role?: string | null): boolean {
+    return role === UserRole.SuperAdmin
+}
+
+/**
  * Check if user has editor privileges or higher
  */
 export function canEdit(role?: string | null): boolean {

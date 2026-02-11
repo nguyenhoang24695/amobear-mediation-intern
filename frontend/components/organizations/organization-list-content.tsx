@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Building2, Search, Plus, Download, Users, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { OrganizationsTable } from "./organizations-table"
 import { CreateOrganizationModal } from "./create-organization-modal"
+import { OrganizationActionModal, type OrganizationActionType } from "./modals/organization-action-modal"
 import { organizationsApi, type OrganizationListItem } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
+import { getCurrentUser } from "@/lib/auth"
+import { UserRole } from "@/lib/enums/user-role"
 
 export function OrganizationListContent() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -18,7 +21,15 @@ export function OrganizationListContent() {
   const [organizations, setOrganizations] = useState<OrganizationListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Action Modal State
+  const [selectedOrg, setSelectedOrg] = useState<OrganizationListItem | null>(null)
+  const [activeAction, setActiveAction] = useState<OrganizationActionType | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+
   const { toast } = useToast()
+  const user = getCurrentUser()
+  const isSuperAdmin = user?.role === UserRole.SuperAdmin
 
   // Fetch organizations from API
   const fetchOrganizations = async () => {
@@ -59,44 +70,58 @@ export function OrganizationListContent() {
     fetchOrganizations() // Refresh list
   }
 
-  // Handle organization deleted
-  const handleOrganizationDeleted = async (id: string) => {
+  // Handle action confirmation
+  const handleActionConfirm = async () => {
+    if (!selectedOrg || !activeAction) return
+
     try {
-      await organizationsApi.delete(id)
-      toast({
-        title: "Success",
-        description: "Organization deleted successfully",
-      })
+      setActionLoading(true)
+
+      if (activeAction === "deactivate") {
+        await organizationsApi.deactivate(selectedOrg.id)
+        toast({
+          title: "Organization deactivated",
+          description: `${selectedOrg.name} has been deactivated successfully.`
+        })
+      } else if (activeAction === "activate") {
+        await organizationsApi.activate(selectedOrg.id)
+        toast({
+          title: "Organization activated",
+          description: `${selectedOrg.name} has been activated successfully.`
+        })
+      } else if (activeAction === "delete") {
+        await organizationsApi.delete(selectedOrg.id)
+        toast({
+          title: "Organization deleted",
+          description: `${selectedOrg.name} has been permanently deleted.`
+        })
+      }
+
       fetchOrganizations() // Refresh list
+      setActiveAction(null)
+      setSelectedOrg(null)
     } catch (err: any) {
-      console.error("Failed to delete organization:", err)
+      console.error(`Failed to ${activeAction} organization:`, err)
       toast({
         title: "Error",
-        description: err.message || "Failed to delete organization",
+        description: err.message || `Failed to ${activeAction} organization. Please try again.`,
         variant: "destructive",
       })
+    } finally {
+      setActionLoading(false)
     }
   }
 
-  // Handle activate/deactivate
-  const handleToggleStatus = async (id: string, isActive: boolean) => {
-    try {
-      if (isActive) {
-        await organizationsApi.deactivate(id)
-        toast({ title: "Success", description: "Organization deactivated" })
-      } else {
-        await organizationsApi.activate(id)
-        toast({ title: "Success", description: "Organization activated" })
-      }
-      fetchOrganizations() // Refresh list
-    } catch (err: any) {
-      console.error("Failed to toggle organization status:", err)
-      toast({
-        title: "Error",
-        description: err.message || "Failed to update organization status",
-        variant: "destructive",
-      })
-    }
+  // Handle delete request
+  const handleDeleteRequest = (org: OrganizationListItem) => {
+    setSelectedOrg(org)
+    setActiveAction("delete")
+  }
+
+  // Handle activate/deactivate request
+  const handleToggleStatusRequest = (org: OrganizationListItem) => {
+    setSelectedOrg(org)
+    setActiveAction(org.isActive ? "deactivate" : "activate")
   }
 
   return (
@@ -117,10 +142,12 @@ export function OrganizationListContent() {
             <Download className="w-4 h-4" />
             Export
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Create Organization
-          </Button>
+          {isSuperAdmin && (
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Create Organization
+            </Button>
+          )}
         </div>
       </div>
 
@@ -222,8 +249,9 @@ export function OrganizationListContent() {
           }}
           hasFilters={searchQuery !== "" || statusFilter !== "all"}
           onCreateOrg={() => setCreateModalOpen(true)}
-          onDeleteOrg={handleOrganizationDeleted}
-          onToggleStatus={handleToggleStatus}
+          onDeleteOrg={handleDeleteRequest}
+          onToggleStatus={handleToggleStatusRequest}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 
@@ -233,6 +261,25 @@ export function OrganizationListContent() {
         onOpenChange={setCreateModalOpen}
         onSuccess={handleOrganizationCreated}
       />
+
+      {/* Shared Action Modal */}
+      {selectedOrg && activeAction && (
+        <OrganizationActionModal
+          open={!!activeAction}
+          onOpenChange={(open) => {
+            if (!open) {
+              setActiveAction(null)
+              setSelectedOrg(null)
+            }
+          }}
+          actionType={activeAction}
+          organizationName={selectedOrg.name}
+          organizationSlug={selectedOrg.slug}
+          userCount={selectedOrg.userCount}
+          onConfirm={handleActionConfirm}
+          loading={actionLoading}
+        />
+      )}
     </div>
   )
 }

@@ -778,6 +778,20 @@ export interface UpdateOrganizationRequest {
     settings?: string
 }
 
+// Organization statistics types
+export interface RoleDistribution {
+    role: string
+    count: number
+}
+
+export interface OrganizationStatistics {
+    totalUsers: number
+    activeUsers: number
+    totalTeams: number
+    appsWithAccess: number
+    roleDistribution: RoleDistribution[]
+}
+
 // Organizations API Service
 export const organizationsApi = {
     // List all organizations
@@ -788,6 +802,11 @@ export const organizationsApi = {
     // Get single organization by ID
     getById: async (id: string): Promise<OrganizationDetail> => {
         return apiClient.get<OrganizationDetail>(`/api/v1/organizations/${id}`)
+    },
+
+    // Get organization statistics
+    getStatistics: async (orgId: string): Promise<OrganizationStatistics> => {
+        return apiClient.get<OrganizationStatistics>(`/api/v1/organizations/${orgId}/statistics`)
     },
 
     // Create new organization
