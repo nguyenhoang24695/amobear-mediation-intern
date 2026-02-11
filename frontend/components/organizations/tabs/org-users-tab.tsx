@@ -439,7 +439,7 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
       </AlertDialog>
 
       {/* Add User Modal */}
-      <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgName={org.name} />
+      <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgName={org.name} onUserCreated={fetchUsers} />
 
       {/* Edit User Modal */}
       <AddEditUserModal

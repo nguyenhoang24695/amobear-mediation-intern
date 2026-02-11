@@ -837,6 +837,22 @@ export const organizationsApi = {
     deleteTeam: async (orgId: string, teamId: string): Promise<void> => {
         await apiClient.delete(`/api/v1/organizations/${orgId}/teams/${teamId}`)
     },
+
+    // Create a user directly in the organization
+    createUser: async (data: CreateOrganizationUserRequest): Promise<{ success: boolean; data?: OrgUserItem }> => {
+        return apiClient.post('/api/v1/auth/organization/users', data)
+    },
+}
+
+// Create organization user request
+export interface CreateOrganizationUserRequest {
+    email: string
+    password: string
+    firstName?: string
+    lastName?: string
+    role?: string
+    mustChangePassword?: boolean
+    sendWelcomeEmail?: boolean
 }
 
 // Organization user types

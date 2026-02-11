@@ -26,6 +26,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
 import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, type AuthUser } from "@/lib/auth"
+import { UserRole } from "@/lib/enums/user-role"
 
 interface SidebarProps {
   collapsed: boolean
@@ -85,6 +86,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+
+            // Only show Organizations menu for admin and super_admin roles
+            if (item.label === "Organizations") {
+              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
+                return null
+              }
+            }
 
             return (
               <Tooltip key={item.label}>
