@@ -151,6 +151,9 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       const teamMemberStatus = user.teams.length > 0 ? user.teams[0].status : null
       const displayStatus = teamMemberStatus || (user.organization?.id ? "active" : "invited")
       
+      // Get joinedAt from team if filtering by teamId
+      const teamJoinedAt = teamId ? user.teams.find((t) => t.id === teamId)?.joinedAt : undefined
+      
       return {
         id: user.id,
         name: user.fullName || user.email,
@@ -163,6 +166,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         appAccess: appAccessCount,
         status: displayStatus as "active" | "invited" | "inactive" | "pending",
         lastActive: "N/A", // TODO: Get lastActive from API if available
+        joinedAt: teamJoinedAt, // JoinedAt from team membership
         permissions: user.permissions, // Store permissions for modal
       }
     })
@@ -363,7 +367,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 <TableHead>Teams</TableHead>
                 <TableHead>App Access</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last Active</TableHead>
+                <TableHead>{teamId ? "Joined At" : "Last Active"}</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -453,7 +457,15 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                       <span className="text-sm">{statusConfig[user.status].label}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-slate-500">{user.lastActive}</TableCell>
+                  <TableCell className="text-sm text-slate-500">
+                    {teamId && user.joinedAt
+                      ? new Date(user.joinedAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : user.lastActive}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
