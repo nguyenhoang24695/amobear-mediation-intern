@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -10,19 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { teamMembersApi } from "@/lib/api/services"
+import { teamMembersApi, structureApi } from "@/lib/api/services"
 import { Loader2 } from "lucide-react"
 import { RoleSelector } from "./role-selector"
 import { AppPermissionsSelector } from "./app-permissions-selector"
-import { useMemo } from "react"
-
-const apps = [
-  { id: "1", name: "Weather Plus Pro", icon: "🌤️" },
-  { id: "2", name: "Game Master", icon: "🎮" },
-  { id: "3", name: "Photo Editor Pro", icon: "📷" },
-  { id: "4", name: "Fitness Tracker", icon: "💪" },
-  { id: "5", name: "Music Player", icon: "🎵" },
-]
+import { useApi } from "@/hooks/use-api"
 
 interface ManagePermissionsModalProps {
   open: boolean
@@ -46,6 +38,24 @@ export function ManagePermissionsModal({
   const [appPermissions, setAppPermissions] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Fetch apps from API
+  const { data: appsResponse, loading: appsLoading } = useApi(
+    () => structureApi.getApps(),
+    { enabled: open, cacheKey: 'apps_list_for_manage_permissions' }
+  )
+
+  // Map API apps to AppPermissionsSelector format
+  const apps = useMemo(
+    () =>
+      appsResponse?.apps?.map((app) => ({
+        id: app.appId, // Use appId (string) as id
+        name: app.displayName || app.name,
+        icon: app.iconUri,
+        platform: app.platform,
+      })) || [],
+    [appsResponse]
+  )
 
   // Convert Record to Array for AppPermissionsSelector
   const selectedApps = useMemo(
@@ -144,6 +154,7 @@ export function ManagePermissionsModal({
             showOwnerPermission={true}
             mode="popover"
             error={error}
+            hideGiveAllApps={true}
           />
         </div>
 

@@ -36,6 +36,15 @@ import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
 import { teamMembersApi } from "@/lib/api/services"
 import { ManagePermissionsModal } from "./manage-permissions-modal"
+import { getCurrentUser } from "@/lib/auth"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import type { TeamMember } from "@/types/api"
 
 interface UsersTableProps {
@@ -68,6 +77,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   const [permissionsUserId, setPermissionsUserId] = useState<string | null>(null)
   const [permissionsUserName, setPermissionsUserName] = useState<string>("")
   const [permissionsUserRole, setPermissionsUserRole] = useState<"admin" | "editor" | "viewer">("viewer")
+  const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] = useState(false)
 
   // Build filter request
   const filterRequest = useMemo(() => ({
@@ -359,6 +369,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           disabled={!teamId}
                           onClick={() => {
                             if (!teamId) return
+                            const currentUser = getCurrentUser()
+                            if (currentUser && user.id === currentUser.id) {
+                              // User is trying to manage their own permissions
+                              setSelfPermissionWarningOpen(true)
+                              return
+                            }
                             setPermissionsUserId(user.id)
                             setPermissionsUserName(user.name)
                             setPermissionsUserRole(user.role)
@@ -469,6 +485,23 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           teamId={teamId}
         />
       )}
+
+      {/* Self Permission Warning Modal */}
+      <Dialog open={selfPermissionWarningOpen} onOpenChange={setSelfPermissionWarningOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cannot Change Own Permissions</DialogTitle>
+            <DialogDescription>
+              You cannot change your own permissions. Please contact an administrator if you need to update your access level.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelfPermissionWarningOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

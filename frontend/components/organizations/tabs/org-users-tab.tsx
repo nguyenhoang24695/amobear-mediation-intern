@@ -43,11 +43,13 @@ import {
   Users,
   Loader2,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react"
 import Link from "next/link"
 import { Pagination } from "@/components/shared/pagination"
 import { AddUserToOrgModal } from "../add-user-to-org-modal"
 import { AddEditUserModal } from "../modals/add-edit-user-modal"
+import { AddUserToTeamModal } from "../add-user-to-team-modal"
 import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
 
 interface OrgUsersTabProps {
@@ -105,6 +107,9 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [editUser, setEditUser] = useState<OrgUserItem | null>(null)
   const [editUserOpen, setEditUserOpen] = useState(false)
+  const [addToTeamUserIds, setAddToTeamUserIds] = useState<string[]>([])
+  const [addToTeamUserNames, setAddToTeamUserNames] = useState<string[]>([])
+  const [addToTeamOpen, setAddToTeamOpen] = useState(false)
 
   // API state
   const [users, setUsers] = useState<OrgUserItem[]>([])
@@ -232,6 +237,29 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
         <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <span className="text-sm font-medium text-blue-700">{selectedUsers.length} users selected</span>
           <div className="flex items-center gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs bg-transparent"
+              onClick={() => {
+                // Get all selected users
+                const selectedUserData = users
+                  .filter((u) => selectedUsers.includes(u.id))
+                  .map((u) => ({
+                    id: u.id,
+                    name: u.fullName || u.email,
+                  }))
+                
+                if (selectedUserData.length > 0) {
+                  setAddToTeamUserIds(selectedUserData.map((u) => u.id))
+                  setAddToTeamUserNames(selectedUserData.map((u) => u.name))
+                  setAddToTeamOpen(true)
+                }
+              }}
+            >
+              <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+              Add To Team
+            </Button>
             <Select>
               <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Change Role" /></SelectTrigger>
               <SelectContent>
@@ -367,6 +395,16 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit User
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setAddToTeamUserIds([user.id])
+                                  setAddToTeamUserNames([user.fullName || user.email])
+                                  setAddToTeamOpen(true)
+                                }}
+                              >
+                                <UserPlus className="w-4 h-4 mr-2" />
+                                Add To Team
+                              </DropdownMenuItem>
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
@@ -458,6 +496,23 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
           setEditUser(null)
         }}
       />
+
+      {/* Add User to Team Modal */}
+      {addToTeamUserIds.length > 0 && (
+        <AddUserToTeamModal
+          open={addToTeamOpen}
+          onOpenChange={setAddToTeamOpen}
+          orgId={orgId}
+          userIds={addToTeamUserIds}
+          userNames={addToTeamUserNames}
+          onSuccess={() => {
+            fetchUsers()
+            setAddToTeamUserIds([])
+            setAddToTeamUserNames([])
+            setSelectedUsers([])
+          }}
+        />
+      )}
     </div>
   )
 }

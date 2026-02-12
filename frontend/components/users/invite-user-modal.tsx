@@ -3,7 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
-import { teamMembersApi } from "@/lib/api/services"
+import { teamMembersApi, structureApi } from "@/lib/api/services"
+import { useApi } from "@/hooks/use-api"
 import {
   Dialog,
   DialogContent,
@@ -31,21 +32,6 @@ interface InviteUserModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-const teams = [
-  { value: "mobile", label: "Mobile Team" },
-  { value: "analytics", label: "Analytics Team" },
-  { value: "product", label: "Product Team" },
-  { value: "marketing", label: "Marketing Team" },
-]
-
-const apps = [
-  { id: "1", name: "Weather Plus Pro", icon: "🌤️" },
-  { id: "2", name: "Game Master", icon: "🎮" },
-  { id: "3", name: "Photo Editor Pro", icon: "📷" },
-  { id: "4", name: "Fitness Tracker", icon: "💪" },
-  { id: "5", name: "Music Player", icon: "🎵" },
-]
-
 type ModalState = "form" | "loading" | "success" | "partial-error"
 
 export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
@@ -53,14 +39,26 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const [emailInput, setEmailInput] = useState("")
   const [emails, setEmails] = useState<string[]>([])
   const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([])
-  const [teamsOpen, setTeamsOpen] = useState(false)
   const [giveAllApps, setGiveAllApps] = useState(false)
   const [selectedApps, setSelectedApps] = useState<{ id: string; permission: string }[]>([])
   const [message, setMessage] = useState("")
   const [showPreview, setShowPreview] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [inviteResults, setInviteResults] = useState<Array<{ email: string; success: boolean; error?: string }>>([])
+
+  // Fetch apps from API
+  const { data: appsResponse, loading: appsLoading } = useApi(
+    () => structureApi.getApps(),
+    { enabled: open, cacheKey: 'apps_list_for_invite' }
+  )
+
+  // Map API apps to AppPermissionsSelector format
+  const apps = appsResponse?.apps?.map((app) => ({
+    id: app.appId, // Use appId (string) as id
+    name: app.displayName || app.name,
+    icon: app.iconUri,
+    platform: app.platform,
+  })) || []
 
   const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -99,10 +97,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setEmails(emails.filter((e) => e !== email))
   }
 
-  const toggleTeam = (team: string) => {
-    setSelectedTeams((prev) => (prev.includes(team) ? prev.filter((t) => t !== team) : [...prev, team]))
-  }
-
   const toggleApp = (appId: string) => {
     setSelectedApps((prev) => {
       const exists = prev.find((a) => a.id === appId)
@@ -127,7 +121,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setState("loading")
 
     // Prepare request data
-    const teamIds = selectedTeams.length > 0 ? selectedTeams : undefined
     const appPermissions = giveAllApps 
       ? undefined // If giveAllApps is true, don't send appPermissions (backend will handle it)
       : selectedApps.length > 0 
@@ -142,7 +135,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
         const response = await teamMembersApi.inviteUser({
           email,
           role,
-          teamIds,
           appPermissions,
           message: message || undefined,
         })
@@ -186,7 +178,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setEmails([])
     setEmailInput("")
     setRole("viewer")
-    setSelectedTeams([])
     setGiveAllApps(false)
     setSelectedApps([])
     setMessage("")
@@ -200,7 +191,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       setEmails([])
       setEmailInput("")
       setRole("viewer")
-      setSelectedTeams([])
       setGiveAllApps(false)
       setSelectedApps([])
       setMessage("")
@@ -260,63 +250,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 idPrefix="invite"
               />
 
-              {/* Team Assignment */}
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-slate-500 text-xs uppercase tracking-wide">Team Assignment (Optional)</Label>
-                <div className="space-y-2">
-                  <Label>Add to teams</Label>
-                  <Popover open={teamsOpen} onOpenChange={setTeamsOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={teamsOpen}
-                        className="w-full justify-between font-normal bg-transparent"
-                      >
-                        {selectedTeams.length > 0 ? `${selectedTeams.length} team(s) selected` : "Select teams..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search teams..." />
-                        <CommandList>
-                          <CommandEmpty>No team found.</CommandEmpty>
-                          <CommandGroup>
-                            {teams.map((team) => (
-                              <CommandItem key={team.value} onSelect={() => toggleTeam(team.value)}>
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedTeams.includes(team.value) ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                                {team.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {selectedTeams.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTeams.map((teamId) => {
-                        const team = teams.find((t) => t.value === teamId)
-                        return (
-                          <Badge key={teamId} variant="secondary" className="gap-1">
-                            {team?.label}
-                            <button onClick={() => toggleTeam(teamId)} className="ml-1 hover:text-red-500">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* App Permissions */}
               <AppPermissionsSelector
                 apps={apps}
@@ -329,6 +262,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 label="App Permissions (Optional)"
                 showOwnerPermission={false}
                 mode="popover"
+                hideGiveAllApps={true}
               />
 
               {/* Personal Message */}

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, ExternalLink } from "lucide-react"
+import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, ExternalLink, SquarePen, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { userApi, type UserTeamWithMembers } from "@/lib/api/services"
 
@@ -49,6 +49,9 @@ export function TeamManagementContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [editingTeam, setEditingTeam] = useState<UserTeamWithMembers | null>(null)
+  const [teamName, setTeamName] = useState("")
+  const [teamDescription, setTeamDescription] = useState("")
 
   // Fetch teams details from API (chỉ lấy các team mà user hiện tại đang nằm trong đó)
   const fetchTeams = useCallback(async () => {
@@ -78,6 +81,31 @@ export function TeamManagementContent() {
     return team.name.toLowerCase().includes(query) || team.description?.toLowerCase().includes(query)
   })
 
+  // Handle Edit Team
+  const handleEditTeam = (team: UserTeamWithMembers) => {
+    setEditingTeam(team)
+    setTeamName(team.name)
+    setTeamDescription(team.description || "")
+    setCreateModalOpen(true)
+  }
+
+  // Handle Close Modal
+  const handleCloseModal = () => {
+    setCreateModalOpen(false)
+    setEditingTeam(null)
+    setTeamName("")
+    setTeamDescription("")
+  }
+
+  // Handle Create/Update Team
+  const handleSaveTeam = async () => {
+    // TODO: Implement API call to create/update team
+    console.log("Save team:", { editingTeam, teamName, teamDescription })
+    handleCloseModal()
+    // Refresh teams list after save
+    await fetchTeams()
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -102,7 +130,15 @@ export function TeamManagementContent() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setCreateModalOpen(true)}>
+        <Button
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => {
+            setEditingTeam(null)
+            setTeamName("")
+            setTeamDescription("")
+            setCreateModalOpen(true)
+          }}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Create Team
         </Button>
@@ -156,9 +192,13 @@ export function TeamManagementContent() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled>
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            View Team
+                          <DropdownMenuItem onClick={() => handleEditTeam(team)}>
+                            <SquarePen className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -192,14 +232,13 @@ export function TeamManagementContent() {
                 </CardContent>
                 <CardFooter className="pt-0 flex items-center justify-between">
                   <span className="text-xs text-slate-400">Created {formatDate(team.createdAt)}</span>
-                  <button
-                    type="button"
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-default opacity-60"
-                    disabled
+                  <Link
+                    href={`/team-members?teamId=${team.id}`}
+                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                   >
                     View Team
                     <ExternalLink className="w-3 h-3" />
-                  </button>
+                  </Link>
                 </CardFooter>
               </Card>
             ))}
@@ -207,28 +246,45 @@ export function TeamManagementContent() {
         )
       )}
 
-      {/* Create Team Modal (UI cũ) */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+      {/* Create/Edit Team Modal */}
+      <Dialog open={createModalOpen} onOpenChange={handleCloseModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New Team</DialogTitle>
-            <DialogDescription>Create a new team to organize users and manage permissions</DialogDescription>
+            <DialogTitle>{editingTeam ? "Edit Team" : "Create New Team"}</DialogTitle>
+            <DialogDescription>
+              {editingTeam
+                ? "Update team information and manage permissions"
+                : "Create a new team to organize users and manage permissions"}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="team-name">Team Name</Label>
-              <Input id="team-name" placeholder="e.g., Mobile Team" />
+              <Input
+                id="team-name"
+                placeholder="e.g., Mobile Team"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="team-description">Description (Optional)</Label>
-              <Textarea id="team-description" placeholder="Describe the team's purpose..." rows={3} />
+              <Textarea
+                id="team-description"
+                placeholder="Describe the team's purpose..."
+                rows={3}
+                value={teamDescription}
+                onChange={(e) => setTeamDescription(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>
+            <Button variant="outline" onClick={handleCloseModal}>
               Cancel
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700">Create Team</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveTeam}>
+              {editingTeam ? "Save Changes" : "Create Team"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +15,7 @@ export interface App {
   id: string
   name: string
   icon?: string
+  platform?: string
 }
 
 interface AppPermissionsSelectorProps {
@@ -28,6 +30,7 @@ interface AppPermissionsSelectorProps {
   showOwnerPermission?: boolean
   mode?: "popover" | "list"
   error?: string | null
+  hideGiveAllApps?: boolean
 }
 
 export function AppPermissionsSelector({
@@ -42,6 +45,7 @@ export function AppPermissionsSelector({
   showOwnerPermission = false,
   mode = "list",
   error,
+  hideGiveAllApps = false,
 }: AppPermissionsSelectorProps) {
   const [appsOpen, setAppsOpen] = useState(false)
 
@@ -64,21 +68,23 @@ export function AppPermissionsSelector({
 
       {mode === "popover" ? (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Grant access to specific apps</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="all-apps-popover"
-                checked={giveAllApps}
-                onChange={(e) => onGiveAllAppsChange(e.target.checked)}
-                className="rounded border-slate-300"
-              />
-              <label htmlFor="all-apps-popover" className="text-sm text-slate-600 cursor-pointer">
-                Give access to all apps
-              </label>
+          {!hideGiveAllApps && (
+            <div className="flex items-center justify-between">
+              <Label>Grant access to specific apps</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="all-apps-popover"
+                  checked={giveAllApps}
+                  onChange={(e) => onGiveAllAppsChange(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                <label htmlFor="all-apps-popover" className="text-sm text-slate-600 cursor-pointer">
+                  Give access to all apps
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {!giveAllApps && (
             <>
@@ -89,7 +95,7 @@ export function AppPermissionsSelector({
                     role="combobox"
                     className="w-full justify-between font-normal bg-transparent"
                   >
-                    Select apps...
+                    Select apps... ({apps.length} {apps.length === 1 ? "app" : "apps"})
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -106,8 +112,26 @@ export function AppPermissionsSelector({
                               <Check
                                 className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
                               />
-                              {app.icon && <span className="mr-2">{app.icon}</span>}
-                              {app.name}
+                              {app.icon ? (
+                                <Avatar className="mr-2 h-5 w-5">
+                                  <AvatarImage src={app.icon} alt={app.name} />
+                                  <AvatarFallback className="text-xs">
+                                    {app.name.charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <div className="mr-2 h-5 w-5 rounded bg-slate-200 flex items-center justify-center">
+                                  <span className="text-xs text-slate-500">
+                                    {app.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span>{app.name}</span>
+                                {app.platform && (
+                                  <span className="text-xs text-slate-500">({app.platform})</span>
+                                )}
+                              </div>
                             </CommandItem>
                           )
                         })}
@@ -128,8 +152,26 @@ export function AppPermissionsSelector({
                         className="flex items-center justify-between p-2 bg-slate-50 rounded-md"
                       >
                         <div className="flex items-center gap-2">
-                          {app?.icon && <span>{app.icon}</span>}
-                          <span className="text-sm">{app?.name}</span>
+                          {app?.icon ? (
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={app.icon} alt={app.name} />
+                              <AvatarFallback className="text-xs">
+                                {app.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <div className="h-6 w-6 rounded bg-slate-200 flex items-center justify-center">
+                              <span className="text-xs text-slate-500">
+                                {app?.name?.charAt(0).toUpperCase() || "?"}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{app?.name}</span>
+                            {app?.platform && (
+                              <span className="text-xs text-slate-500">({app.platform})</span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Select
@@ -169,16 +211,18 @@ export function AppPermissionsSelector({
       ) : (
         // List mode
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="all-apps-list"
-              checked={giveAllApps}
-              onCheckedChange={(checked: boolean) => onGiveAllAppsChange(checked)}
-            />
-            <Label htmlFor="all-apps-list" className="text-sm text-slate-600 cursor-pointer">
-              Give access to all apps (no direct app overrides)
-            </Label>
-          </div>
+          {!hideGiveAllApps && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="all-apps-list"
+                checked={giveAllApps}
+                onCheckedChange={(checked: boolean) => onGiveAllAppsChange(checked)}
+              />
+              <Label htmlFor="all-apps-list" className="text-sm text-slate-600 cursor-pointer">
+                Give access to all apps (no direct app overrides)
+              </Label>
+            </div>
+          )}
 
           {!giveAllApps && (
             <div className="space-y-2">
@@ -190,8 +234,26 @@ export function AppPermissionsSelector({
                     className="flex items-center justify-between p-2 rounded-md border bg-slate-50"
                   >
                     <div className="flex items-center gap-2">
-                      {app.icon && <span>{app.icon}</span>}
-                      <span className="text-sm font-medium text-slate-900">{app.name}</span>
+                      {app.icon ? (
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={app.icon} alt={app.name} />
+                          <AvatarFallback className="text-xs">
+                            {app.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div className="h-6 w-6 rounded bg-slate-200 flex items-center justify-center">
+                          <span className="text-xs text-slate-500">
+                            {app.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-900">{app.name}</span>
+                        {app.platform && (
+                          <span className="text-xs text-slate-500">({app.platform})</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Checkbox checked={selected} onCheckedChange={() => onToggleApp(app.id)} />

@@ -383,6 +383,14 @@ export const teamMembersApi = {
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/manage-permissions/${userId}`, body)
     },
+
+    // Add existing user to a team
+    addUserToTeam: async (
+        userId: string,
+        body: { teamId: string; role: string }
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/add-to-team/${userId}`, body)
+    },
 }
 
 // Dashboard API Service
