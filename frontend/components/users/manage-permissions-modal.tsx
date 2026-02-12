@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,11 @@ import { Loader2 } from "lucide-react"
 import { RoleSelector } from "./role-selector"
 import { AppPermissionsSelector } from "./app-permissions-selector"
 import { useApi } from "@/hooks/use-api"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AppPermissionLevel,
+  normalizePermissionLevel as normalizePermissionLevelUtil,
+} from "@/lib/enums/app-permission-level"
 
 interface ManagePermissionsModalProps {
   open: boolean
@@ -23,6 +28,8 @@ interface ManagePermissionsModalProps {
   userName: string
   initialRole: "admin" | "editor" | "viewer"
   teamId?: string
+  initialPermissions?: Record<string, string> // AppId -> PermissionLevel
+  onSuccess?: () => void // Callback after successful save
 }
 
 export function ManagePermissionsModal({
@@ -32,12 +39,22 @@ export function ManagePermissionsModal({
   userName,
   initialRole,
   teamId,
+  initialPermissions,
+  onSuccess,
 }: ManagePermissionsModalProps) {
+  const { toast } = useToast()
   const [role, setRole] = useState<"admin" | "editor" | "viewer">(initialRole)
   const [giveAllApps, setGiveAllApps] = useState(false)
-  const [appPermissions, setAppPermissions] = useState<Record<string, string>>({})
+  const [appPermissions, setAppPermissions] = useState<Record<string, AppPermissionLevel>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadingPermissions, setLoadingPermissions] = useState(false)
+
+  // Fetch user profile to get current permissions when modal opens
+  const { data: userProfile, loading: profileLoading } = useApi(
+    () => teamMembersApi.viewProfile(userId),
+    { enabled: open && !initialPermissions, cacheKey: `user_profile_${userId}` }
+  )
 
   // Fetch apps from API
   const { data: appsResponse, loading: appsLoading } = useApi(
@@ -57,9 +74,53 @@ export function ManagePermissionsModal({
     [appsResponse]
   )
 
+
+  // Load current permissions when modal opens
+  useEffect(() => {
+    if (!open) {
+      // Reset when modal closes
+      setAppPermissions({})
+      setRole(initialRole)
+      setGiveAllApps(false)
+      setError(null)
+      return
+    }
+
+    // Use initialPermissions if provided, otherwise fetch from API
+    let permissionsToLoad: Record<string, string> | undefined
+    if (initialPermissions) {
+      permissionsToLoad = initialPermissions
+    } else if (userProfile?.data?.permissions) {
+      permissionsToLoad = userProfile.data.permissions
+    }
+
+    // Normalize and set permissions
+    if (permissionsToLoad && Object.keys(permissionsToLoad).length > 0) {
+      const normalized: Record<string, AppPermissionLevel> = {}
+      Object.entries(permissionsToLoad).forEach(([appId, level]) => {
+        normalized[appId] = normalizePermissionLevelUtil(level)
+      })
+      setAppPermissions(normalized)
+    } else {
+      // If no permissions, ensure empty state
+      setAppPermissions({})
+    }
+
+    // Update role from user profile if available
+    if (userProfile?.data) {
+      const teamRole = teamId
+        ? userProfile.data.teams.find((t) => t.id === teamId)?.role
+        : undefined
+      const effectiveRole = (teamRole || userProfile.data.role || initialRole).toLowerCase()
+      if (effectiveRole === "admin" || effectiveRole === "editor" || effectiveRole === "viewer") {
+        setRole(effectiveRole as "admin" | "editor" | "viewer")
+      }
+    }
+  }, [open, initialPermissions, userProfile, teamId, initialRole])
+
   // Convert Record to Array for AppPermissionsSelector
   const selectedApps = useMemo(
-    () => Object.entries(appPermissions).map(([id, permission]) => ({ id, permission })),
+    () => Object.entries(appPermissions).map(([id, permission]) => ({ id, permission: permission as string })),
     [appPermissions]
   )
 
@@ -69,14 +130,15 @@ export function ManagePermissionsModal({
       if (copy[appId]) {
         delete copy[appId]
       } else {
-        copy[appId] = "view"
+        copy[appId] = AppPermissionLevel.View
       }
       return copy
     })
   }
 
   const updateAppPermission = (appId: string, level: string) => {
-    setAppPermissions((prev) => ({ ...prev, [appId]: level }))
+    const normalizedLevel = normalizePermissionLevelUtil(level)
+    setAppPermissions((prev) => ({ ...prev, [appId]: normalizedLevel }))
   }
 
   const removeApp = (appId: string) => {
@@ -108,12 +170,34 @@ export function ManagePermissionsModal({
       const resp = await teamMembersApi.managePermissions(userId, body)
       if (!resp.success) {
         setError(resp.message || "Failed to update permissions")
+        toast({
+          title: "Error",
+          description: resp.message || "Failed to update permissions",
+          variant: "destructive",
+        })
         setSaving(false)
         return
       }
+      
+      // Show success toast
+      toast({
+        title: "Permissions updated",
+        description: `Permissions for ${userName} have been updated successfully.`,
+      })
+      
+      // Call onSuccess callback to refresh data
+      onSuccess?.()
+      
+      // Close modal
       onOpenChange(false)
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message || e?.message || "Failed to update permissions")
+      const errorMessage = e?.response?.data?.error?.message || e?.message || "Failed to update permissions"
+      setError(errorMessage)
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
       setSaving(false)
     }
   }

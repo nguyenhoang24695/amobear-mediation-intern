@@ -143,14 +143,14 @@ export function OrgTeamsTab({ orgId, orgName = "Organization" }: OrgTeamsTabProp
         }
     }
 
-    // Navigate to team detail
+    // Navigate to team members page
     const handleRowClick = (teamId: string, e: React.MouseEvent) => {
         // Don't navigate if clicking on action button
         const target = e.target as HTMLElement
         if (target.closest('[role="menuitem"]') || target.closest('button')) {
             return
         }
-        router.push(`/organizations/${orgId}/teams/${teamId}`)
+        router.push(`/team-members?teamId=${teamId}`)
     }
 
     return (

@@ -10,6 +10,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  AppPermissionLevel,
+  APP_PERMISSION_LEVELS,
+  APP_PERMISSION_LEVELS_WITH_OWNER,
+  getPermissionLevelLabel,
+} from "@/lib/enums/app-permission-level"
 
 export interface App {
   id: string
@@ -50,8 +56,8 @@ export function AppPermissionsSelector({
   const [appsOpen, setAppsOpen] = useState(false)
 
   const permissionLevels = showOwnerPermission
-    ? ["view", "edit", "manage", "owner"]
-    : ["view", "edit", "manage"]
+    ? APP_PERMISSION_LEVELS_WITH_OWNER
+    : APP_PERMISSION_LEVELS
 
   // Convert selectedApps array to object for easier lookup (for list mode)
   const selectedAppsMap = selectedApps.reduce(
@@ -184,7 +190,7 @@ export function AppPermissionsSelector({
                             <SelectContent>
                               {permissionLevels.map((level) => (
                                 <SelectItem key={level} value={level}>
-                                  {level.charAt(0).toUpperCase() + level.slice(1)}
+                                  {getPermissionLevelLabel(level)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -268,7 +274,7 @@ export function AppPermissionsSelector({
                           <SelectContent>
                             {permissionLevels.map((level) => (
                               <SelectItem key={level} value={level}>
-                                {level.charAt(0).toUpperCase() + level.slice(1)}
+                                {getPermissionLevelLabel(level)}
                               </SelectItem>
                             ))}
                           </SelectContent>

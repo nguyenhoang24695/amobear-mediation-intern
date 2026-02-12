@@ -391,6 +391,14 @@ export const teamMembersApi = {
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/add-to-team/${userId}`, body)
     },
+
+    // Remove user from a team
+    removeUserFromTeam: async (
+        userId: string,
+        teamId: string
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/remove-from-team`, { userId, teamId })
+    },
 }
 
 // Dashboard API Service

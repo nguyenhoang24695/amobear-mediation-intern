@@ -45,6 +45,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
 import type { TeamMember } from "@/types/api"
 
 interface UsersTableProps {
@@ -77,7 +88,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   const [permissionsUserId, setPermissionsUserId] = useState<string | null>(null)
   const [permissionsUserName, setPermissionsUserName] = useState<string>("")
   const [permissionsUserRole, setPermissionsUserRole] = useState<"admin" | "editor" | "viewer">("viewer")
+  const [initialPermissions, setInitialPermissions] = useState<Record<string, string>>({})
   const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] = useState(false)
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
+  const [usersToRemove, setUsersToRemove] = useState<string[]>([])
+  const [removing, setRemoving] = useState(false)
+  const { toast } = useToast()
 
   // Build filter request
   const filterRequest = useMemo(() => ({
@@ -122,7 +138,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     
     return filterResponse.data.items.map((user: TeamMember) => {
       const appAccessCount = user.permissions ? Object.keys(user.permissions).length : 0
-      const hasAllApps = appAccessCount === 0 || user.role === "super_admin" || user.role === "admin"
       
       // Nếu đang filter theo teamId, ưu tiên role của user trong team đó; fallback về user.role tổng thể
       const teamRole = teamId ? user.teams.find((t) => t.id === teamId)?.role : undefined
@@ -145,12 +160,13 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         role: roleKey,
         // hiển thị tên role theo effectiveRole (giữ nguyên chữ thường/hoa nếu sau này cần)
         teams: user.teams.map(t => t.name),
-        appAccess: hasAllApps ? "all" : appAccessCount,
+        appAccess: appAccessCount,
         status: displayStatus as "active" | "invited" | "inactive" | "pending",
         lastActive: "N/A", // TODO: Get lastActive from API if available
+        permissions: user.permissions, // Store permissions for modal
       }
     })
-  }, [filterResponse])
+  }, [filterResponse, teamId])
 
   const totalUsers = filterResponse?.data?.total || 0
   const totalPages = filterResponse?.data?.totalPages || 0
@@ -174,6 +190,93 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
+  }
+
+  const handleRemoveClick = (userIds: string[]) => {
+    if (!teamId) {
+      toast({
+        title: "Error",
+        description: "Team ID is required to remove users",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (userIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one user to remove",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Update both states - React will batch these updates
+    setUsersToRemove(userIds)
+    // Use setTimeout to ensure state is updated before opening modal
+    setTimeout(() => {
+      setRemoveConfirmOpen(true)
+    }, 0)
+  }
+
+  const handleConfirmRemove = async () => {
+    if (!teamId || usersToRemove.length === 0) return
+
+    setRemoving(true)
+    try {
+      const results: Array<{ userId: string; success: boolean; error?: string }> = []
+
+      for (const userId of usersToRemove) {
+        try {
+          const response = await teamMembersApi.removeUserFromTeam(userId, teamId)
+          if (response.success) {
+            results.push({ userId, success: true })
+          } else {
+            results.push({
+              userId,
+              success: false,
+              error: response.message || "Failed to remove user from team",
+            })
+          }
+        } catch (err: any) {
+          results.push({
+            userId,
+            success: false,
+            error: err?.response?.data?.error?.message || err?.message || "Failed to remove user from team",
+          })
+        }
+      }
+
+      const successCount = results.filter((r) => r.success).length
+      const failCount = results.filter((r) => !r.success).length
+
+      if (failCount > 0) {
+        toast({
+          title: "Partial success",
+          description: `${successCount} of ${usersToRemove.length} users removed successfully. ${failCount} failed.`,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Users removed",
+          description: `${successCount} user${successCount > 1 ? "s" : ""} removed from team successfully.`,
+        })
+      }
+
+      // Refresh data
+      refetch()
+      setSelectedUsers([])
+      setRemoveConfirmOpen(false)
+      setUsersToRemove([])
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.error?.message || err?.message || "Failed to remove users from team",
+        variant: "destructive",
+      })
+    } finally {
+      setRemoving(false)
+    }
   }
 
   if (loading) {
@@ -224,11 +327,15 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-b border-blue-100">
             <span className="text-sm font-medium text-blue-700">{selectedUsers.length} users selected</span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Change Role
-              </Button>
-              <Button variant="outline" size="sm">
-                Add to Team
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 hover:text-red-700 bg-transparent"
+                onClick={() => handleRemoveClick(selectedUsers)}
+                disabled={!teamId}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remove
               </Button>
               <Button variant="outline" size="sm" className="text-amber-600 hover:text-amber-700 bg-transparent">
                 Deactivate
@@ -330,12 +437,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                   <TableCell>
                     <Tooltip>
                       <TooltipTrigger className="flex items-center gap-1 text-sm">
-                        {user.appAccess === "all" ? "All Apps" : `${user.appAccess} Apps`}
+                        {`${user.appAccess} Apps`}
                         <Info className="w-3.5 h-3.5 text-slate-400" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">
-                          {user.appAccess === "all" ? "Has access to all apps" : `Has access to ${user.appAccess} apps`}
+                          {`Has access to ${user.appAccess} apps`}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -375,10 +482,14 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                               setSelfPermissionWarningOpen(true)
                               return
                             }
+                            // Find the user data from filteredUsers to get permissions
+                            const userData = filteredUsers.find((u) => u.id === user.id)
                             setPermissionsUserId(user.id)
                             setPermissionsUserName(user.name)
                             setPermissionsUserRole(user.role)
                             setPermissionsModalOpen(true)
+                            // Store initial permissions to pass to modal
+                            setInitialPermissions((userData as any)?.permissions || {})
                           }}
                         >
                           <Shield className="w-4 h-4 mr-2" />
@@ -396,9 +507,13 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           {user.status === "inactive" ? "Reactivate User" : "Deactivate User"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          disabled={!teamId}
+                          onClick={() => handleRemoveClick([user.id])}
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Remove from Organization
+                          Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -483,6 +598,11 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           userName={permissionsUserName}
           initialRole={permissionsUserRole}
           teamId={teamId}
+          initialPermissions={initialPermissions}
+          onSuccess={() => {
+            // Refresh the users table data
+            refetch()
+          }}
         />
       )}
 
@@ -502,6 +622,37 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Confirm Modal */}
+      <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {usersToRemove.length === 1 ? "User" : "Users"} from Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              {usersToRemove.length === 1 ? (
+                <>
+                  Are you sure you want to remove this user from the team? This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to remove {usersToRemove.length} users from the team? This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              disabled={removing}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {removing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {removing ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   )
 }

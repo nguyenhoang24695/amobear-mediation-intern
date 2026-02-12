@@ -34,9 +34,6 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
       <div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-slate-900">Team Members</h1>
-          <Badge variant="secondary" className="rounded-full">
-            45 users
-          </Badge>
         </div>
         <p className="text-sm text-slate-500 mt-1">
           {teamName ? (
@@ -103,8 +100,8 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards - Temporarily hidden */}
+      {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statsData.map((stat) => (
           <Card key={stat.label} className="border-slate-200">
             <CardContent className="p-4">
@@ -120,7 +117,7 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </div> */}
 
       {/* Users Table */}
       <UsersTable
