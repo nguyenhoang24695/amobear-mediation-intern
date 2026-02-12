@@ -889,6 +889,7 @@ export const organizationsApi = {
 
 // Create organization user request
 export interface CreateOrganizationUserRequest {
+    organizationId?: string
     email: string
     password: string
     firstName?: string

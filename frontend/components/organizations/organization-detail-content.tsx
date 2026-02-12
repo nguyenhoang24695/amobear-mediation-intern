@@ -199,7 +199,7 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
         </TabsContent>
 
         <TabsContent value="users">
-          <OrgUsersTab org={orgTabData} orgId={orgId} />
+          <OrgUsersTab org={orgTabData} orgId={orgId} isSuperAdmin={isSuperAdmin} />
         </TabsContent>
 
         <TabsContent value="teams">

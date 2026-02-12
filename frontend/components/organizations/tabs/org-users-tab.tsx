@@ -19,16 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import {
   Search,
   Plus,
@@ -36,13 +27,13 @@ import {
   Eye,
   Edit,
   KeyRound,
-  UserMinus,
+
   ToggleLeft,
   ToggleRight,
   Mail,
   Users,
   Loader2,
-  AlertTriangle,
+
   UserPlus,
 } from "lucide-react"
 import Link from "next/link"
@@ -50,7 +41,8 @@ import { Pagination } from "@/components/shared/pagination"
 import { AddUserToOrgModal } from "../add-user-to-org-modal"
 import { AddEditUserModal } from "../modals/add-edit-user-modal"
 import { AddUserToTeamModal } from "../add-user-to-team-modal"
-import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
+import { organizationsApi, teamMembersApi, type OrgUserItem } from "@/lib/api/services"
+import { toast } from "sonner"
 
 interface OrgUsersTabProps {
   org: {
@@ -58,6 +50,7 @@ interface OrgUsersTabProps {
     users: number
   }
   orgId: string
+  isSuperAdmin?: boolean
 }
 
 const roleConfig: Record<string, { label: string; color: string }> = {
@@ -95,7 +88,7 @@ function formatLastActive(lastLoginAt?: string): string {
   return formatDate(lastLoginAt)
 }
 
-export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
+export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -103,7 +96,7 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const [removeUser, setRemoveUser] = useState<{ id: string; name: string } | null>(null)
+
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [editUser, setEditUser] = useState<OrgUserItem | null>(null)
   const [editUserOpen, setEditUserOpen] = useState(false)
@@ -117,6 +110,10 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Stats from organization statistics API
+  const [activeCount, setActiveCount] = useState(0)
+  const [inactiveCount, setInactiveCount] = useState(0)
 
   // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState("")
@@ -134,16 +131,21 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
     try {
       setLoading(true)
       setError(null)
-      const result = await organizationsApi.getUsers(orgId, {
-        page: currentPage,
-        pageSize,
-        search: debouncedSearch || undefined,
-        role: roleFilter !== "all" ? roleFilter : undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-      })
+      const [result, stats] = await Promise.all([
+        organizationsApi.getUsers(orgId, {
+          page: currentPage,
+          pageSize,
+          search: debouncedSearch || undefined,
+          role: roleFilter !== "all" ? roleFilter : undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+        }),
+        organizationsApi.getStatistics(orgId),
+      ])
       setUsers(result.items)
       setTotal(result.total)
       setTotalPages(result.totalPages)
+      setActiveCount(stats.activeUsers)
+      setInactiveCount(stats.totalUsers - stats.activeUsers)
     } catch (err) {
       console.error("Failed to fetch organization users:", err)
       setError("Failed to load users")
@@ -168,10 +170,7 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
 
   const getInitials = (name: string) => name.split(" ").map((n) => n[0]).join("").toUpperCase()
 
-  // Count stats from current dataset (approximate from total/filters)
-  const activeCount = users.filter((u) => u.status === "active").length
-  const invitedCount = users.filter((u) => u.status === "invited").length
-  const inactiveCount = users.filter((u) => u.status === "inactive").length
+
 
   return (
     <div className="space-y-6">
@@ -202,7 +201,6 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
           <SelectTrigger className="w-36"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="super_admin">Super Admin</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="editor">Editor</SelectItem>
             <SelectItem value="viewer">Viewer</SelectItem>
@@ -213,7 +211,6 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="invited">Invited</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
@@ -225,8 +222,6 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
           <span className="text-slate-500">Total: <span className="font-semibold text-slate-900">{total}</span></span>
           <span className="text-slate-300">|</span>
           <span className="text-slate-500">Active: <span className="font-semibold text-green-600">{activeCount}</span></span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">Invited: <span className="font-semibold text-amber-600">{invitedCount}</span></span>
           <span className="text-slate-300">|</span>
           <span className="text-slate-500">Inactive: <span className="font-semibold text-red-600">{inactiveCount}</span></span>
         </div>
@@ -249,7 +244,7 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
                     id: u.id,
                     name: u.fullName || u.email,
                   }))
-                
+
                 if (selectedUserData.length > 0) {
                   setAddToTeamUserIds(selectedUserData.map((u) => u.id))
                   setAddToTeamUserNames(selectedUserData.map((u) => u.name))
@@ -388,47 +383,58 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
                                   View Profile
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {
-                                setEditUser(user)
-                                setEditUserOpen(true)
-                              }}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setAddToTeamUserIds([user.id])
-                                  setAddToTeamUserNames([user.fullName || user.email])
-                                  setAddToTeamOpen(true)
-                                }}
-                              >
-                                <UserPlus className="w-4 h-4 mr-2" />
-                                Add To Team
-                              </DropdownMenuItem>
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent>
-                                  <DropdownMenuItem>Admin</DropdownMenuItem>
-                                  <DropdownMenuItem>Editor</DropdownMenuItem>
-                                  <DropdownMenuItem>Viewer</DropdownMenuItem>
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                              <DropdownMenuSeparator />
-                              {user.status === "invited" && (
-                                <DropdownMenuItem><Mail className="w-4 h-4 mr-2" />Resend Invitation</DropdownMenuItem>
+                              {(isSuperAdmin || (user.role !== "super_admin" && user.role !== "admin")) && (
+                                <>
+                                  <DropdownMenuItem onClick={() => {
+                                    setEditUser(user)
+                                    setEditUserOpen(true)
+                                  }}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setAddToTeamUserIds([user.id])
+                                      setAddToTeamUserNames([user.fullName || user.email])
+                                      setAddToTeamOpen(true)
+                                    }}
+                                  >
+                                    <UserPlus className="w-4 h-4 mr-2" />
+                                    Add To Team
+                                  </DropdownMenuItem>
+                                  {/* <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                      {isSuperAdmin && <DropdownMenuItem>Admin</DropdownMenuItem>}
+                                      <DropdownMenuItem>Editor</DropdownMenuItem>
+                                      <DropdownMenuItem>Viewer</DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                  </DropdownMenuSub> */}
+                                  <DropdownMenuSeparator />
+                                  {user.status === "invited" && (
+                                    <DropdownMenuItem><Mail className="w-4 h-4 mr-2" />Resend Invitation</DropdownMenuItem>
+                                  )}
+                                  {/* <DropdownMenuItem><KeyRound className="w-4 h-4 mr-2" />Reset Password</DropdownMenuItem> */}
+                                  {/* <DropdownMenuSeparator /> */}
+                                  <DropdownMenuItem onClick={async () => {
+                                    const newStatus = user.status === "active" ? "inactive" : "active"
+                                    try {
+                                      await teamMembersApi.updateUser(user.id, { status: newStatus })
+                                      toast.success(newStatus === "active" ? "User activated" : "User deactivated")
+                                      fetchUsers()
+                                    } catch (err) {
+                                      toast.error("Failed to update user status")
+                                    }
+                                  }}>
+                                    {user.status === "active" ? (
+                                      <><ToggleLeft className="w-4 h-4 mr-2" />Deactivate User</>
+                                    ) : user.status === "inactive" ? (
+                                      <><ToggleRight className="w-4 h-4 mr-2" />Activate User</>
+                                    ) : null}
+                                  </DropdownMenuItem>
+
+                                </>
                               )}
-                              <DropdownMenuItem><KeyRound className="w-4 h-4 mr-2" />Reset Password</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem>
-                                {user.status === "active" ? (
-                                  <><ToggleLeft className="w-4 h-4 mr-2" />Deactivate User</>
-                                ) : user.status === "inactive" ? (
-                                  <><ToggleRight className="w-4 h-4 mr-2" />Activate User</>
-                                ) : null}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setRemoveUser({ id: user.id, name: user.fullName || user.email })}>
-                                <UserMinus className="w-4 h-4 mr-2" />Remove from Organization
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -452,38 +458,17 @@ export function OrgUsersTab({ org, orgId }: OrgUsersTabProps) {
         </Card>
       )}
 
-      {/* Remove User Confirmation */}
-      <AlertDialog open={!!removeUser} onOpenChange={(open) => { if (!open) setRemoveUser(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <AlertDialogTitle>Remove User from Organization</AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="space-y-2">
-              <span>Are you sure you want to remove <span className="font-semibold text-slate-900">{removeUser?.name}</span> from <span className="font-semibold text-slate-900">{org.name}</span>?</span>
-              <span className="block text-slate-500">This user will lose access to all organization resources. This action cannot be undone.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={() => setRemoveUser(null)}>
-              Remove User
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
 
       {/* Add User Modal */}
-      <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgName={org.name} onUserCreated={fetchUsers} />
+      <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgId={orgId} orgName={org.name} isSuperAdmin={isSuperAdmin} onUserCreated={fetchUsers} />
 
       {/* Edit User Modal */}
       <AddEditUserModal
         open={editUserOpen}
         onOpenChange={setEditUserOpen}
         mode="edit"
+        isSuperAdmin={isSuperAdmin}
         user={editUser ? {
           id: editUser.id,
           name: editUser.fullName,

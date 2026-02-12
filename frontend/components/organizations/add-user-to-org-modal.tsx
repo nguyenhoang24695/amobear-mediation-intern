@@ -25,14 +25,16 @@ import { UserRole } from "@/lib/enums/user-role"
 interface AddUserToOrgModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  orgId: string
   orgName: string
+  isSuperAdmin?: boolean
   onUserCreated?: () => void
 }
 
 type ActiveTab = "invite" | "create"
 type Step = "form" | "success"
 
-export function AddUserToOrgModal({ open, onOpenChange, orgName, onUserCreated }: AddUserToOrgModalProps) {
+export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, isSuperAdmin = false, onUserCreated }: AddUserToOrgModalProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("invite")
   const [step, setStep] = useState<Step>("form")
   const [saving, setSaving] = useState(false)
@@ -144,6 +146,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgName, onUserCreated }
     setSaving(true)
     try {
       await organizationsApi.createUser({
+        organizationId: orgId,
         email: createEmail.trim(),
         password: createPassword,
         firstName: createFirstName.trim() || undefined,
@@ -171,13 +174,15 @@ export function AddUserToOrgModal({ open, onOpenChange, orgName, onUserCreated }
   // --- Shared role selector ---
   const RoleSelector = ({ value, onChange }: { value: UserRole; onChange: (v: UserRole) => void }) => (
     <RadioGroup value={value} onValueChange={(v) => onChange(v as UserRole)} className="space-y-2">
-      <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
-        <RadioGroupItem value={UserRole.Admin} className="mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-slate-900">Admin</p>
-          <p className="text-xs text-slate-500">Full access to organization settings and user management</p>
-        </div>
-      </label>
+      {isSuperAdmin && (
+        <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
+          <RadioGroupItem value={UserRole.Admin} className="mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-slate-900">Admin</p>
+            <p className="text-xs text-slate-500">Full access to organization settings and user management</p>
+          </div>
+        </label>
+      )}
       <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
         <RadioGroupItem value={UserRole.Editor} className="mt-0.5" />
         <div>

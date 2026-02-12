@@ -22,6 +22,7 @@ interface AddEditUserModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     mode: "add" | "edit"
+    isSuperAdmin?: boolean
     user?: {
         id: string
         name: string
@@ -32,7 +33,7 @@ interface AddEditUserModalProps {
     onSuccess?: () => void
 }
 
-export function AddEditUserModal({ open, onOpenChange, mode, user, onSuccess }: AddEditUserModalProps) {
+export function AddEditUserModal({ open, onOpenChange, mode, isSuperAdmin = false, user, onSuccess }: AddEditUserModalProps) {
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
@@ -167,9 +168,8 @@ export function AddEditUserModal({ open, onOpenChange, mode, user, onSuccess }: 
                                 <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="super_admin">Super Admin</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="manager">Manager</SelectItem>
+                                {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
+                                <SelectItem value="editor">Editor</SelectItem>
                                 <SelectItem value="viewer">Viewer</SelectItem>
                             </SelectContent>
                         </Select>
