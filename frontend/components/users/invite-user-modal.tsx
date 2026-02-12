@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
+import { teamMembersApi, structureApi } from "@/lib/api/services"
+import { useApi } from "@/hooks/use-api"
 import {
   Dialog,
   DialogContent,
@@ -16,33 +18,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { X, Loader2, CheckCircle2, ChevronDown, Check, ChevronsUpDown, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { RoleSelector } from "./role-selector"
+import { AppPermissionsSelector } from "./app-permissions-selector"
 
 interface InviteUserModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
-
-const teams = [
-  { value: "mobile", label: "Mobile Team" },
-  { value: "analytics", label: "Analytics Team" },
-  { value: "product", label: "Product Team" },
-  { value: "marketing", label: "Marketing Team" },
-]
-
-const apps = [
-  { id: "1", name: "Weather Plus Pro", icon: "🌤️" },
-  { id: "2", name: "Game Master", icon: "🎮" },
-  { id: "3", name: "Photo Editor Pro", icon: "📷" },
-  { id: "4", name: "Fitness Tracker", icon: "💪" },
-  { id: "5", name: "Music Player", icon: "🎵" },
-]
 
 type ModalState = "form" | "loading" | "success" | "partial-error"
 
@@ -50,15 +38,27 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const [state, setState] = useState<ModalState>("form")
   const [emailInput, setEmailInput] = useState("")
   const [emails, setEmails] = useState<string[]>([])
-  const [role, setRole] = useState("viewer")
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([])
-  const [teamsOpen, setTeamsOpen] = useState(false)
+  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
   const [giveAllApps, setGiveAllApps] = useState(false)
   const [selectedApps, setSelectedApps] = useState<{ id: string; permission: string }[]>([])
-  const [appsOpen, setAppsOpen] = useState(false)
   const [message, setMessage] = useState("")
   const [showPreview, setShowPreview] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [inviteResults, setInviteResults] = useState<Array<{ email: string; success: boolean; error?: string }>>([])
+
+  // Fetch apps from API
+  const { data: appsResponse, loading: appsLoading } = useApi(
+    () => structureApi.getApps(),
+    { enabled: open, cacheKey: 'apps_list_for_invite' }
+  )
+
+  // Map API apps to AppPermissionsSelector format
+  const apps = appsResponse?.apps?.map((app) => ({
+    id: app.appId, // Use appId (string) as id
+    name: app.displayName || app.name,
+    icon: app.iconUri,
+    platform: app.platform,
+  })) || []
 
   const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -97,10 +97,6 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setEmails(emails.filter((e) => e !== email))
   }
 
-  const toggleTeam = (team: string) => {
-    setSelectedTeams((prev) => (prev.includes(team) ? prev.filter((t) => t !== team) : [...prev, team]))
-  }
-
   const toggleApp = (appId: string) => {
     setSelectedApps((prev) => {
       const exists = prev.find((a) => a.id === appId)
@@ -123,8 +119,58 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     if (emails.length === 0) return
 
     setState("loading")
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setState("success")
+
+    // Prepare request data
+    const appPermissions = giveAllApps 
+      ? undefined // If giveAllApps is true, don't send appPermissions (backend will handle it)
+      : selectedApps.length > 0 
+        ? selectedApps.map(app => ({ AppId: app.id, Level: app.permission }))
+        : undefined
+
+    // Send invitation for each email
+    const results: Array<{ email: string; success: boolean; error?: string }> = []
+    
+    for (const email of emails) {
+      try {
+        const response = await teamMembersApi.inviteUser({
+          email,
+          role,
+          appPermissions,
+          message: message || undefined,
+        })
+
+        if (response.success) {
+          results.push({ email, success: true })
+        } else {
+          results.push({ 
+            email, 
+            success: false, 
+            error: (response as any).error?.message || "Failed to send invitation" 
+          })
+        }
+      } catch (error: any) {
+        const errorMessage = error?.response?.data?.error?.message || error?.message || "Failed to send invitation"
+        results.push({ email, success: false, error: errorMessage })
+      }
+    }
+
+    // Store results for display
+    setInviteResults(results)
+
+    // Determine final state
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+
+    if (failCount === 0) {
+      // All succeeded
+      setState("success")
+    } else if (successCount > 0) {
+      // Partial success
+      setState("partial-error")
+    } else {
+      // All failed - show error
+      setState("partial-error")
+    }
   }
 
   const handleInviteMore = () => {
@@ -132,10 +178,10 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setEmails([])
     setEmailInput("")
     setRole("viewer")
-    setSelectedTeams([])
     setGiveAllApps(false)
     setSelectedApps([])
     setMessage("")
+    setInviteResults([])
   }
 
   const handleClose = () => {
@@ -145,11 +191,11 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       setEmails([])
       setEmailInput("")
       setRole("viewer")
-      setSelectedTeams([])
       setGiveAllApps(false)
       setSelectedApps([])
       setMessage("")
       setEmailError(null)
+      setInviteResults([])
     }, 200)
   }
 
@@ -197,199 +243,27 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               </div>
 
               {/* Role Selection */}
-              <div className="space-y-3">
-                <Label>Role</Label>
-                <RadioGroup value={role} onValueChange={setRole} className="space-y-3">
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value="admin" id="admin" className="mt-0.5" />
-                    <div>
-                      <Label htmlFor="admin" className="font-medium cursor-pointer">
-                        Admin
-                      </Label>
-                      <p className="text-xs text-slate-500">Full access to all features including user management</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value="editor" id="editor" className="mt-0.5" />
-                    <div>
-                      <Label htmlFor="editor" className="font-medium cursor-pointer">
-                        Editor
-                      </Label>
-                      <p className="text-xs text-slate-500">Can view and edit apps, mediation groups, and reports</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value="viewer" id="viewer" className="mt-0.5" />
-                    <div>
-                      <Label htmlFor="viewer" className="font-medium cursor-pointer">
-                        Viewer
-                      </Label>
-                      <p className="text-xs text-slate-500">Read-only access to assigned apps and reports</p>
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Team Assignment */}
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-slate-500 text-xs uppercase tracking-wide">Team Assignment (Optional)</Label>
-                <div className="space-y-2">
-                  <Label>Add to teams</Label>
-                  <Popover open={teamsOpen} onOpenChange={setTeamsOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={teamsOpen}
-                        className="w-full justify-between font-normal bg-transparent"
-                      >
-                        {selectedTeams.length > 0 ? `${selectedTeams.length} team(s) selected` : "Select teams..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search teams..." />
-                        <CommandList>
-                          <CommandEmpty>No team found.</CommandEmpty>
-                          <CommandGroup>
-                            {teams.map((team) => (
-                              <CommandItem key={team.value} onSelect={() => toggleTeam(team.value)}>
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedTeams.includes(team.value) ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                                {team.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {selectedTeams.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTeams.map((teamId) => {
-                        const team = teams.find((t) => t.value === teamId)
-                        return (
-                          <Badge key={teamId} variant="secondary" className="gap-1">
-                            {team?.label}
-                            <button onClick={() => toggleTeam(teamId)} className="ml-1 hover:text-red-500">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <RoleSelector
+                value={role}
+                onValueChange={setRole}
+                label="Role"
+                idPrefix="invite"
+              />
 
               {/* App Permissions */}
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-slate-500 text-xs uppercase tracking-wide">App Permissions (Optional)</Label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Grant access to specific apps</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="all-apps"
-                        checked={giveAllApps}
-                        onChange={(e) => setGiveAllApps(e.target.checked)}
-                        className="rounded border-slate-300"
-                      />
-                      <label htmlFor="all-apps" className="text-sm text-slate-600 cursor-pointer">
-                        Give access to all apps
-                      </label>
-                    </div>
-                  </div>
-
-                  {!giveAllApps && (
-                    <>
-                      <Popover open={appsOpen} onOpenChange={setAppsOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between font-normal bg-transparent"
-                          >
-                            Select apps...
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search apps..." />
-                            <CommandList>
-                              <CommandEmpty>No app found.</CommandEmpty>
-                              <CommandGroup>
-                                {apps.map((app) => (
-                                  <CommandItem key={app.id} onSelect={() => toggleApp(app.id)}>
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedApps.find((a) => a.id === app.id) ? "opacity-100" : "opacity-0",
-                                      )}
-                                    />
-                                    <span className="mr-2">{app.icon}</span>
-                                    {app.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-
-                      {/* Selected Apps List */}
-                      {selectedApps.length > 0 && (
-                        <div className="space-y-2">
-                          {selectedApps.map((selected) => {
-                            const app = apps.find((a) => a.id === selected.id)
-                            return (
-                              <div
-                                key={selected.id}
-                                className="flex items-center justify-between p-2 bg-slate-50 rounded-md"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span>{app?.icon}</span>
-                                  <span className="text-sm">{app?.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Select
-                                    value={selected.permission}
-                                    onValueChange={(v) => updateAppPermission(selected.id, v)}
-                                  >
-                                    <SelectTrigger className="w-24 h-8">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="view">View</SelectItem>
-                                      <SelectItem value="edit">Edit</SelectItem>
-                                      <SelectItem value="manage">Manage</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => removeApp(selected.id)}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+              <AppPermissionsSelector
+                apps={apps}
+                giveAllApps={giveAllApps}
+                onGiveAllAppsChange={setGiveAllApps}
+                selectedApps={selectedApps}
+                onToggleApp={toggleApp}
+                onUpdateAppPermission={updateAppPermission}
+                onRemoveApp={removeApp}
+                label="App Permissions (Optional)"
+                showOwnerPermission={false}
+                mode="popover"
+                hideGiveAllApps={true}
+              />
 
               {/* Personal Message */}
               <div className="space-y-2 pt-2 border-t">
@@ -495,20 +369,31 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 <AlertCircle className="w-8 h-8 text-amber-600" />
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">Partial success</h2>
-              <p className="text-sm text-slate-500 mb-4">2 of 3 invitations sent. 1 failed:</p>
+              <p className="text-sm text-slate-500 mb-4">
+                {inviteResults.filter(r => r.success).length} of {inviteResults.length} invitation{inviteResults.length > 1 ? "s" : ""} sent.
+                {inviteResults.filter(r => !r.success).length > 0 && ` ${inviteResults.filter(r => !r.success).length} failed:`}
+              </p>
               <div className="space-y-2 w-full max-w-sm">
-                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  john@example.com
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  sarah@example.com
-                </div>
-                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">
-                  <X className="w-4 h-4 text-red-500" />
-                  existing@company.com - Already a member
-                </div>
+                {inviteResults.map((result) => (
+                  <div
+                    key={result.email}
+                    className={`flex items-center gap-2 text-sm rounded-md px-3 py-2 ${
+                      result.success
+                        ? "text-slate-600 bg-slate-50"
+                        : "text-red-600 bg-red-50"
+                    }`}
+                  >
+                    {result.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <X className="w-4 h-4 text-red-500" />
+                    )}
+                    <span className="flex-1 text-left">{result.email}</span>
+                    {result.error && (
+                      <span className="text-xs text-red-500">- {result.error}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
             <DialogFooter>

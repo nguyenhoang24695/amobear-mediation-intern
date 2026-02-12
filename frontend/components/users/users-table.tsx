@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,114 +30,42 @@ import {
   Users,
   Search,
   X,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
+import { useApi } from "@/hooks/use-api"
+import { teamMembersApi } from "@/lib/api/services"
+import { ManagePermissionsModal } from "./manage-permissions-modal"
+import { getCurrentUser } from "@/lib/auth"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
+import type { TeamMember } from "@/types/api"
 
 interface UsersTableProps {
   searchQuery: string
   roleFilter: string
   statusFilter: string
-  teamFilter: string
+  teamId?: string
+  onInviteClick?: () => void
+  onTeamNameChange?: (name?: string) => void
 }
-
-const usersData = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@company.com",
-    avatar: "/professional-man-avatar.png",
-    isOnline: true,
-    role: "admin" as const,
-    teams: ["Mobile Team", "Analytics Team", "Product Team"],
-    appAccess: "all",
-    status: "active" as const,
-    lastActive: "2 hours ago",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.j@company.com",
-    avatar: "",
-    isOnline: true,
-    role: "editor" as const,
-    teams: ["Mobile Team"],
-    appAccess: 12,
-    status: "active" as const,
-    lastActive: "5 minutes ago",
-  },
-  {
-    id: "3",
-    name: "Michael Chen",
-    email: "m.chen@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "editor" as const,
-    teams: ["Analytics Team", "Product Team"],
-    appAccess: 8,
-    status: "active" as const,
-    lastActive: "Yesterday",
-  },
-  {
-    id: "4",
-    name: "Emily Parker",
-    email: "emily.p@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "viewer" as const,
-    teams: [],
-    appAccess: 5,
-    status: "invited" as const,
-    lastActive: "Never",
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "d.wilson@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "viewer" as const,
-    teams: ["Mobile Team"],
-    appAccess: 3,
-    status: "inactive" as const,
-    lastActive: "2 weeks ago",
-  },
-  {
-    id: "6",
-    name: "Lisa Anderson",
-    email: "l.anderson@company.com",
-    avatar: "",
-    isOnline: true,
-    role: "admin" as const,
-    teams: ["Product Team"],
-    appAccess: "all",
-    status: "active" as const,
-    lastActive: "1 hour ago",
-  },
-  {
-    id: "7",
-    name: "Robert Kim",
-    email: "r.kim@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "editor" as const,
-    teams: ["Mobile Team", "Analytics Team"],
-    appAccess: 15,
-    status: "active" as const,
-    lastActive: "3 hours ago",
-  },
-  {
-    id: "8",
-    name: "Jennifer Lee",
-    email: "j.lee@company.com",
-    avatar: "",
-    isOnline: false,
-    role: "viewer" as const,
-    teams: [],
-    appAccess: 2,
-    status: "invited" as const,
-    lastActive: "Never",
-  },
-]
 
 const roleColors = {
   admin: "bg-purple-100 text-purple-700",
@@ -149,24 +77,99 @@ const statusConfig = {
   active: { color: "bg-green-500", label: "Active" },
   invited: { color: "bg-amber-500", label: "Invited" },
   inactive: { color: "bg-slate-400", label: "Inactive" },
+  pending: { color: "bg-blue-500", label: "Pending" },
 }
 
-export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }: UsersTableProps) {
+export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [pageSize, setPageSize] = useState("20")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
+  const [permissionsUserId, setPermissionsUserId] = useState<string | null>(null)
+  const [permissionsUserName, setPermissionsUserName] = useState<string>("")
+  const [permissionsUserRole, setPermissionsUserRole] = useState<"admin" | "editor" | "viewer">("viewer")
+  const [initialPermissions, setInitialPermissions] = useState<Record<string, string>>({})
+  const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] = useState(false)
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
+  const [usersToRemove, setUsersToRemove] = useState<string[]>([])
+  const [removing, setRemoving] = useState(false)
+  const { toast } = useToast()
 
-  const filteredUsers = usersData.filter((user) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      if (!user.name.toLowerCase().includes(query) && !user.email.toLowerCase().includes(query)) {
-        return false
-      }
+  // Build filter request
+  const filterRequest = useMemo(() => ({
+    page,
+    pageSize,
+    search: searchQuery || undefined,
+    role: roleFilter !== "all" ? roleFilter : undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    teamId: teamId || undefined,
+  }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamId])
+
+  // Fetch team members from API
+  const { data: filterResponse, loading, refetch } = useApi(
+    () => teamMembersApi.filterTeamMembers(filterRequest),
+    { 
+      enabled: true,
+      cacheKey: `team_members_filter_${JSON.stringify(filterRequest)}`
     }
-    if (roleFilter !== "all" && user.role !== roleFilter) return false
-    if (statusFilter !== "all" && user.status !== statusFilter) return false
-    if (teamFilter !== "all" && !user.teams.some((t) => t.toLowerCase().includes(teamFilter))) return false
-    return true
-  })
+  )
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, roleFilter, statusFilter, teamId])
+
+  // Nếu filter theo teamId, lấy tên team từ phần tử đầu tiên (teams[0].name)
+  const teamNameFromItems = useMemo(() => {
+    if (!teamId || !filterResponse?.data?.items || filterResponse.data.items.length === 0) return undefined
+    const first = filterResponse.data.items[0] as TeamMember
+    return first.teams && first.teams.length > 0 ? first.teams[0].name : undefined
+  }, [teamId, filterResponse])
+
+  // Đẩy teamName lên cho header sử dụng
+  useEffect(() => {
+    if (!onTeamNameChange) return
+    onTeamNameChange(teamNameFromItems)
+  }, [teamNameFromItems, onTeamNameChange])
+
+  // Transform API response to display format
+  const filteredUsers = useMemo(() => {
+    if (!filterResponse?.data?.items) return []
+    
+    return filterResponse.data.items.map((user: TeamMember) => {
+      const appAccessCount = user.permissions ? Object.keys(user.permissions).length : 0
+      
+      // Nếu đang filter theo teamId, ưu tiên role của user trong team đó; fallback về user.role tổng thể
+      const teamRole = teamId ? user.teams.find((t) => t.id === teamId)?.role : undefined
+      const effectiveRole = (teamRole || user.role || "viewer").toLowerCase()
+      const roleKey: "admin" | "editor" | "viewer" =
+        effectiveRole === "admin" || effectiveRole === "editor" || effectiveRole === "viewer"
+          ? (effectiveRole as "admin" | "editor" | "viewer")
+          : "viewer"
+      
+      // Get status from first team member status, or fallback to user status logic
+      const teamMemberStatus = user.teams.length > 0 ? user.teams[0].status : null
+      const displayStatus = teamMemberStatus || (user.organization?.id ? "active" : "invited")
+      
+      return {
+        id: user.id,
+        name: user.fullName || user.email,
+        email: user.email,
+        avatar: user.avatarUrl || "",
+        isOnline: false, // TODO: Add online status if available
+        role: roleKey,
+        // hiển thị tên role theo effectiveRole (giữ nguyên chữ thường/hoa nếu sau này cần)
+        teams: user.teams.map(t => t.name),
+        appAccess: appAccessCount,
+        status: displayStatus as "active" | "invited" | "inactive" | "pending",
+        lastActive: "N/A", // TODO: Get lastActive from API if available
+        permissions: user.permissions, // Store permissions for modal
+      }
+    })
+  }, [filterResponse, teamId])
+
+  const totalUsers = filterResponse?.data?.total || 0
+  const totalPages = filterResponse?.data?.totalPages || 0
 
   const toggleSelectAll = () => {
     if (selectedUsers.length === filteredUsers.length) {
@@ -180,19 +183,117 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
     setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
   }
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(Number(newSize))
+    setPage(1)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleRemoveClick = (userIds: string[]) => {
+    if (!teamId) {
+      toast({
+        title: "Error",
+        description: "Team ID is required to remove users",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (userIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one user to remove",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Update both states - React will batch these updates
+    setUsersToRemove(userIds)
+    // Use setTimeout to ensure state is updated before opening modal
+    setTimeout(() => {
+      setRemoveConfirmOpen(true)
+    }, 0)
+  }
+
+  const handleConfirmRemove = async () => {
+    if (!teamId || usersToRemove.length === 0) return
+
+    setRemoving(true)
+    try {
+      const results: Array<{ userId: string; success: boolean; error?: string }> = []
+
+      for (const userId of usersToRemove) {
+        try {
+          const response = await teamMembersApi.removeUserFromTeam(userId, teamId)
+          if (response.success) {
+            results.push({ userId, success: true })
+          } else {
+            results.push({
+              userId,
+              success: false,
+              error: response.message || "Failed to remove user from team",
+            })
+          }
+        } catch (err: any) {
+          results.push({
+            userId,
+            success: false,
+            error: err?.response?.data?.error?.message || err?.message || "Failed to remove user from team",
+          })
+        }
+      }
+
+      const successCount = results.filter((r) => r.success).length
+      const failCount = results.filter((r) => !r.success).length
+
+      if (failCount > 0) {
+        toast({
+          title: "Partial success",
+          description: `${successCount} of ${usersToRemove.length} users removed successfully. ${failCount} failed.`,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Users removed",
+          description: `${successCount} user${successCount > 1 ? "s" : ""} removed from team successfully.`,
+        })
+      }
+
+      // Refresh data
+      refetch()
+      setSelectedUsers([])
+      setRemoveConfirmOpen(false)
+      setUsersToRemove([])
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.error?.message || err?.message || "Failed to remove users from team",
+        variant: "destructive",
+      })
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card className="border-slate-200">
+        <CardContent className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        </CardContent>
+      </Card>
+    )
   }
 
   if (filteredUsers.length === 0) {
     return (
       <Card className="border-slate-200">
         <CardContent className="flex flex-col items-center justify-center py-16">
-          {searchQuery || roleFilter !== "all" || statusFilter !== "all" || teamFilter !== "all" ? (
+          {searchQuery || roleFilter !== "all" || statusFilter !== "all" ? (
             <>
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="w-8 h-8 text-slate-400" />
@@ -210,7 +311,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-1">No team members yet</h3>
               <p className="text-sm text-slate-500 mb-4">Start by inviting your first team member</p>
-              <Button className="bg-blue-600 hover:bg-blue-700">Invite User</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => onInviteClick?.()}>Invite User</Button>
             </>
           )}
         </CardContent>
@@ -226,11 +327,15 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
           <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-b border-blue-100">
             <span className="text-sm font-medium text-blue-700">{selectedUsers.length} users selected</span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Change Role
-              </Button>
-              <Button variant="outline" size="sm">
-                Add to Team
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 hover:text-red-700 bg-transparent"
+                onClick={() => handleRemoveClick(selectedUsers)}
+                disabled={!teamId}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remove
               </Button>
               <Button variant="outline" size="sm" className="text-amber-600 hover:text-amber-700 bg-transparent">
                 Deactivate
@@ -277,12 +382,16 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                     />
                   </TableCell>
                   <TableCell>
-                    <Link href={`/users/${user.id}`} className="flex items-center gap-3 group">
+                    <Link href={`/team-members/${user.id}`} className="flex items-center gap-3 group">
                       <div className="relative">
                         <Avatar className="h-9 w-9">
-                          {user.avatar && <AvatarImage src={user.avatar || "/placeholder.svg"} />}
+                          {user.avatar && <AvatarImage src={user.avatar} />}
                           <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                            {getInitials(user.name)}
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         {user.isOnline && (
@@ -328,12 +437,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                   <TableCell>
                     <Tooltip>
                       <TooltipTrigger className="flex items-center gap-1 text-sm">
-                        {user.appAccess === "all" ? "All Apps" : `${user.appAccess} Apps`}
+                        {`${user.appAccess} Apps`}
                         <Info className="w-3.5 h-3.5 text-slate-400" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">
-                          {user.appAccess === "all" ? "Has access to all apps" : `Has access to ${user.appAccess} apps`}
+                          {`Has access to ${user.appAccess} apps`}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -354,7 +463,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                          <Link href={`/users/${user.id}`}>
+                          <Link href={`/team-members/${user.id}`}>
                             <User className="w-4 h-4 mr-2" />
                             View Profile
                           </Link>
@@ -363,7 +472,26 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                           <Edit className="w-4 h-4 mr-2" />
                           Edit User
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!teamId}
+                          onClick={() => {
+                            if (!teamId) return
+                            const currentUser = getCurrentUser()
+                            if (currentUser && user.id === currentUser.id) {
+                              // User is trying to manage their own permissions
+                              setSelfPermissionWarningOpen(true)
+                              return
+                            }
+                            // Find the user data from filteredUsers to get permissions
+                            const userData = filteredUsers.find((u) => u.id === user.id)
+                            setPermissionsUserId(user.id)
+                            setPermissionsUserName(user.name)
+                            setPermissionsUserRole(user.role)
+                            setPermissionsModalOpen(true)
+                            // Store initial permissions to pass to modal
+                            setInitialPermissions((userData as any)?.permissions || {})
+                          }}
+                        >
                           <Shield className="w-4 h-4 mr-2" />
                           Manage Permissions
                         </DropdownMenuItem>
@@ -379,9 +507,13 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
                           {user.status === "inactive" ? "Reactivate User" : "Deactivate User"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          disabled={!teamId}
+                          onClick={() => handleRemoveClick([user.id])}
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Remove from Organization
+                          Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -395,12 +527,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <p className="text-sm text-slate-500">
-            Showing 1-{filteredUsers.length} of {filteredUsers.length} users
+            Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalUsers)} of {totalUsers} users
           </p>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Rows per page:</span>
-              <Select value={pageSize} onValueChange={setPageSize}>
+              <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
                 <SelectTrigger className="w-16 h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -412,19 +544,115 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamFilter }
               </Select>
             </div>
             <div className="flex gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 bg-transparent" 
+                disabled={page === 1}
+                onClick={() => handlePageChange(page - 1)}
+              >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" className="h-8 min-w-8 bg-blue-50 text-blue-600 border-blue-200">
-                1
-              </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 5) {
+                  pageNum = i + 1
+                } else if (page <= 3) {
+                  pageNum = i + 1
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i
+                } else {
+                  pageNum = page - 2 + i
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant="outline"
+                    size="sm"
+                    className={`h-8 min-w-8 ${page === pageNum ? "bg-blue-50 text-blue-600 border-blue-200" : ""}`}
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 bg-transparent" 
+                disabled={page >= totalPages}
+                onClick={() => handlePageChange(page + 1)}
+              >
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </div>
       </Card>
+      {/* Manage Permissions Modal */}
+      {permissionsUserId && teamId && (
+        <ManagePermissionsModal
+          open={permissionsModalOpen}
+          onOpenChange={setPermissionsModalOpen}
+          userId={permissionsUserId}
+          userName={permissionsUserName}
+          initialRole={permissionsUserRole}
+          teamId={teamId}
+          initialPermissions={initialPermissions}
+          onSuccess={() => {
+            // Refresh the users table data
+            refetch()
+          }}
+        />
+      )}
+
+      {/* Self Permission Warning Modal */}
+      <Dialog open={selfPermissionWarningOpen} onOpenChange={setSelfPermissionWarningOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cannot Change Own Permissions</DialogTitle>
+            <DialogDescription>
+              You cannot change your own permissions. Please contact an administrator if you need to update your access level.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelfPermissionWarningOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Confirm Modal */}
+      <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {usersToRemove.length === 1 ? "User" : "Users"} from Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              {usersToRemove.length === 1 ? (
+                <>
+                  Are you sure you want to remove this user from the team? This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to remove {usersToRemove.length} users from the team? This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              disabled={removing}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {removing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {removing ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   )
 }

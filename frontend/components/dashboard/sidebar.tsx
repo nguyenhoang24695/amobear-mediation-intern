@@ -19,12 +19,14 @@ import {
   ChevronLeft,
   Zap,
   Users,
+  Building2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
 import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, type AuthUser } from "@/lib/auth"
+import { UserRole } from "@/lib/enums/user-role"
 
 interface SidebarProps {
   collapsed: boolean
@@ -37,7 +39,7 @@ const navItems = [
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
   { icon: BarChart3, label: "Reports", href: "/reports", hasSubmenu: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
-  { icon: Users, label: "Team Members", href: "/users" },
+  { icon: Building2, label: "Organizations", href: "/organizations" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
@@ -83,6 +85,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+
+            // Only show Organizations menu for admin and super_admin roles
+            if (item.label === "Organizations") {
+              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
+                return null
+              }
+            }
 
             return (
               <Tooltip key={item.label}>
@@ -167,9 +176,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             {!collapsed && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 text-slate-400 hover:text-slate-600"
                     onClick={async () => {
                       try {
@@ -193,7 +202,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       } catch (err) {
                         // Even if API call fails, clear local data and redirect
                         clearAuthData()
-                        
+
                         toast({
                           title: "Logged out",
                           description: "Your local session has been cleared.",

@@ -17,12 +17,16 @@ const statsData = [
   { label: "Admins", value: 5, icon: Shield, color: "text-purple-600" },
 ]
 
-export function UserManagementContent() {
+interface UserManagementContentProps {
+  teamId?: string
+}
+
+export function UserManagementContent({ teamId }: UserManagementContentProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [teamFilter, setTeamFilter] = useState("all")
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [teamName, setTeamName] = useState<string | undefined>(undefined)
 
   return (
     <div className="space-y-6">
@@ -30,11 +34,17 @@ export function UserManagementContent() {
       <div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-slate-900">Team Members</h1>
-          <Badge variant="secondary" className="rounded-full">
-            45 users
-          </Badge>
         </div>
-        <p className="text-sm text-slate-500 mt-1">Manage your organization's team members and their access</p>
+        <p className="text-sm text-slate-500 mt-1">
+          {teamName ? (
+            <>
+              Manage <span className="font-semibold text-slate-900">{teamName}</span>
+              {"'s team members and their access"}
+            </>
+          ) : (
+            "Manage your organization's team members and their access"
+          )}
+        </p>
       </div>
 
       {/* Action Bar */}
@@ -76,19 +86,6 @@ export function UserManagementContent() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Team Filter */}
-          <Select value={teamFilter} onValueChange={setTeamFilter}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="Team" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              <SelectItem value="mobile">Mobile Team</SelectItem>
-              <SelectItem value="analytics">Analytics Team</SelectItem>
-              <SelectItem value="product">Product Team</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="flex gap-2">
@@ -103,8 +100,8 @@ export function UserManagementContent() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards - Temporarily hidden */}
+      {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statsData.map((stat) => (
           <Card key={stat.label} className="border-slate-200">
             <CardContent className="p-4">
@@ -120,14 +117,16 @@ export function UserManagementContent() {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </div> */}
 
       {/* Users Table */}
       <UsersTable
         searchQuery={searchQuery}
         roleFilter={roleFilter}
         statusFilter={statusFilter}
-        teamFilter={teamFilter}
+        teamId={teamId}
+        onTeamNameChange={setTeamName}
+        onInviteClick={() => setInviteModalOpen(true)}
       />
 
       {/* Invite User Modal */}
