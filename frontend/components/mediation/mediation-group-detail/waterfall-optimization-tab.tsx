@@ -358,15 +358,15 @@ export function WaterfallOptimizationTab({
   const calculateChanges = useCallback(() => {
     const modifiedFloors = optimizedWaterfall.filter((s) => s.changeType === "modified" && s.status !== "inactive")
 
-    // Added = số nguồn "new" từ recommendation (suggested lines từ API)
-    const addedFromRecommendation = aiSuggestedWaterfall.filter((s) => s.changeType === "new").length
-    // Kept = số dòng current được giữ trong suggestion (không phải new)
-    const keptInRecommendation = aiSuggestedWaterfall.length - addedFromRecommendation
-    // Removed = số dòng current bị recommendation bỏ (REMOVE)
-    const removedByRecommendation = Math.max(
-      0,
-      currentSetup.waterfall.length - keptInRecommendation,
-    )
+    // Thêm mới: mọi source có changeType="new" (dù là từ recommendation hay user tự thêm)
+    const addedCount = optimizedWaterfall.filter((s) => s.changeType === "new").length
+
+    // Removed: mọi dòng hiện tại không còn được map sang optimized (dựa trên lineId rec_<id>_*),
+    // bất kể là do recommendation REMOVE hay user tự mark removed.
+    const active = optimizedWaterfall.filter((s) => s.changeType !== "removed")
+    const removedCount = currentSetup.waterfall.filter(
+      (c) => !active.some((o) => o.id.startsWith(`rec_${c.id}_`)),
+    ).length
 
     const avgFloorIncrease =
       modifiedFloors.length > 0
@@ -376,21 +376,23 @@ export function WaterfallOptimizationTab({
     // Recalculate estimated monthly based on changes
     const baseMonthly = currentSetup.estimatedMonthly
     const improvementFactor =
-      1 + (avgFloorIncrease / 100) * 0.5 + addedFromRecommendation * 0.02 - removedByRecommendation * 0.015
+      1 + (avgFloorIncrease / 100) * 0.5 + addedCount * 0.02 - removedCount * 0.015
     const estimatedMonthly = Math.round(baseMonthly * improvementFactor)
     const improvement = ((estimatedMonthly - baseMonthly) / baseMonthly) * 100
 
     return {
       modifiedCount: modifiedFloors.length,
-      addedCount: addedFromRecommendation,
-      removedCount: removedByRecommendation,
+      addedCount,
+      removedCount,
       avgFloorIncrease,
       estimatedMonthly,
       improvement: improvement.toFixed(1),
       hasChanges:
-        modifiedFloors.length > 0 || addedFromRecommendation > 0 || removedByRecommendation > 0,
+        modifiedFloors.length > 0 ||
+        addedCount > 0 ||
+        removedCount > 0,
     }
-  }, [optimizedWaterfall, aiSuggestedWaterfall, currentSetup.waterfall.length, currentSetup.estimatedMonthly])
+  }, [optimizedWaterfall, currentSetup.waterfall, currentSetup.estimatedMonthly])
 
   const changes = calculateChanges()
 
@@ -429,14 +431,7 @@ export function WaterfallOptimizationTab({
       }))
 
     const sourcesRemoved = currentSetup.waterfall
-      .filter(
-        (c) =>
-          !active.some(
-            (o) =>
-              o.id.startsWith(`rec_${c.id}_`) ||
-              (o.network != null && o.network === (c.network ?? "")),
-          ),
-      )
+      .filter((c) => !active.some((o) => o.id.startsWith(`rec_${c.id}_`)))
       .map((c) => ({ name: c.name, lineId: c.id }))
 
     return { floorsModified, sourcesAdded, sourcesRemoved }

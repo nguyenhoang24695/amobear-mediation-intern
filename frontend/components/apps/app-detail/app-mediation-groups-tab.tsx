@@ -230,7 +230,14 @@ const getNetworkName = (adSourceId?: string, title?: string): string => {
 type SortField = "name" | "ecpm" | "revenue"
 type SortDirection = "asc" | "desc"
 
-export function AppMediationGroupsTab() {
+export interface AppMediationGroupsTabProps {
+  /** Danh sách mediation groups đã load từ parent (app detail). Nếu có thì tab không gọi API lại. */
+  mediationGroups?: MediationGroup[] | null
+  /** Loading state từ parent khi đang load mediation groups. */
+  loadingMediationGroups?: boolean
+}
+
+export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromParent, loadingMediationGroups: loadingFromParent }: AppMediationGroupsTabProps = {}) {
   const params = useParams()
   const appIdFromParams = (params as any)?.id as string | undefined
   const hasValidAppId = !!appIdFromParams
@@ -242,18 +249,21 @@ export function AppMediationGroupsTab() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  // Load app by AdMob app_id, rồi load mediation groups (backend trả metrics mặc định từ cache 7 ngày)
+  const useOwnFetch = mediationGroupsFromParent === undefined
   const { data: app } = useApi(
     () => structureApi.getAppByAppId(appIdFromParams!),
-    { enabled: hasValidAppId, cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
+    { enabled: useOwnFetch && hasValidAppId, cacheKey: useOwnFetch && hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
   )
-  const { data: mediationGroups, loading } = useApi<MediationGroup[]>(
+  const { data: mediationGroupsFetched, loading: loadingFetched } = useApi<MediationGroup[]>(
     () => structureApi.getAppMediationGroups(app!.id),
     {
-      enabled: !!app,
-      cacheKey: app ? `app_mediation_groups_${app.appId}` : undefined,
+      enabled: useOwnFetch && !!app?.id,
+      cacheKey: useOwnFetch && app ? `app_mediation_groups_${app.appId}` : undefined,
     },
   )
+
+  const mediationGroups = useOwnFetch ? mediationGroupsFetched : mediationGroupsFromParent ?? null
+  const loading = useOwnFetch ? loadingFetched : (loadingFromParent ?? false)
 
   const filteredGroups = useMemo(() => {
     if (!mediationGroups) return []

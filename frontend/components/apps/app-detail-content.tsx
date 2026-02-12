@@ -29,7 +29,7 @@ import {
 } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
-import type { App } from "@/types/api"
+import type { App, MediationGroup } from "@/types/api"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
@@ -51,6 +51,16 @@ export function AppDetailContent() {
       cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined,
     },
   )
+
+  const { data: mediationGroups, loading: mediationGroupsLoading } = useApi<MediationGroup[]>(
+    () => structureApi.getAppMediationGroups(app!.id),
+    {
+      enabled: hasValidAppId && !!app?.id,
+      cacheKey: app?.id != null ? `app_mediation_groups_${app.id}` : undefined,
+    },
+  )
+
+  const mediationGroupsCount = mediationGroups?.length ?? 0
 
   const initialTab = searchParams.get("tab") || "overview"
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -229,7 +239,7 @@ export function AppDetailContent() {
             <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
               Mediation Groups
               <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {app?.mediationGroupsCount ?? 0}
+                {mediationGroupsLoading ? "…" : mediationGroupsCount}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">
@@ -247,7 +257,10 @@ export function AppDetailContent() {
             <AppAdUnitsTab />
           </TabsContent>
           <TabsContent value="mediation-groups" className="mt-6">
-            <AppMediationGroupsTab />
+            <AppMediationGroupsTab
+              mediationGroups={mediationGroups ?? null}
+              loadingMediationGroups={mediationGroupsLoading}
+            />
           </TabsContent>
           <TabsContent value="performance" className="mt-6">
             <div className="flex items-center justify-center h-64 text-slate-500">
