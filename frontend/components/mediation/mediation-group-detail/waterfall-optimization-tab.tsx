@@ -30,10 +30,14 @@ import {
   Lock,
   AlertCircle,
   RotateCcw,
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
-import { structureApi, sowApi } from "@/lib/api/services"
+import { structureApi } from "@/lib/api/services"
+import type { AdUnit, App } from "@/types/api"
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
 
@@ -88,30 +92,103 @@ export function WaterfallOptimizationTab({
   )
 
   const mediationGroupId = (groupDetail as { mediationGroupId?: string } | undefined)?.mediationGroupId ?? mediationGroupIdFromParams ?? ""
-  const endDate = useMemo(() => new Date(), [])
-  const startDate = useMemo(() => {
-    const d = new Date()
-    d.setDate(d.getDate() - 7)
-    return d
-  }, [])
+  const appIdFromDetail = (groupDetail as { appId?: number; AppId?: number } | undefined)?.appId ?? (groupDetail as { AppId?: number })?.AppId
+  const appAdMobIdFromDetail = (groupDetail as { appAdMobId?: string; AppAdMobId?: string } | undefined)?.appAdMobId ?? (groupDetail as { AppAdMobId?: string })?.AppAdMobId
+  const appName = (groupDetail as { appName?: string; AppName?: string } | undefined)?.appName ?? (groupDetail as { AppName?: string })?.AppName
+  const appIconUri = (groupDetail as { appIconUri?: string; AppIconUri?: string } | undefined)?.appIconUri ?? (groupDetail as { AppIconUri?: string })?.AppIconUri
+  const platform = (groupDetail as { platform?: string; Platform?: string } | undefined)?.platform ?? (groupDetail as { Platform?: string })?.Platform
 
-  const { data: sowResponse } = useApi(
-    () =>
-      sowApi.getSoWData({
-        mediationGroupId: mediationGroupId || undefined,
-        startDate: startDate.toISOString().slice(0, 10),
-        endDate: endDate.toISOString().slice(0, 10),
-        pageSize: 500,
-      }),
-    {
-      enabled: !!mediationGroupId,
-      cacheKey: mediationGroupId ? `sow_${mediationGroupId}_7d` : undefined,
+  /** Từ adUnitMappings (key dạng ca-app-pub-xxx/unitId) lấy prefix làm app AdMob id khi API detail không trả appAdMobId. */
+  const derivedAppAdMobIdFromMappings = useMemo(() => {
+    const rawLines = (groupDetail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown })?.mediationGroupLines
+      ?? (groupDetail as { MediationGroupLines?: unknown })?.MediationGroupLines
+    if (typeof rawLines !== "object" || rawLines === null) return undefined
+    const lines = Array.isArray(rawLines) ? rawLines : Object.values(rawLines as Record<string, unknown>)
+    for (const line of lines) {
+      const mappings = (line as { adUnitMappings?: Record<string, string>; AdUnitMappings?: Record<string, string> })?.adUnitMappings
+        ?? (line as { AdUnitMappings?: Record<string, string> })?.AdUnitMappings
+      if (!mappings) continue
+      const firstKey = Object.keys(mappings)[0]
+      if (firstKey?.includes("/")) return firstKey.split("/")[0]
     }
+    return undefined
+  }, [groupDetail])
+
+  const appAdMobId = appAdMobIdFromDetail ?? derivedAppAdMobIdFromMappings
+
+  /** Lấy app (có id nội bộ) khi có appAdMobId — từ detail hoặc từ adUnitKey — để sau đó gọi getAppAdUnits(app.id). */
+  const { data: appByAdMobId } = useApi(
+    () => structureApi.getAppByAppId(appAdMobId!),
+    { enabled: !!appAdMobId && appIdFromDetail == null, cacheKey: appAdMobId && !appIdFromDetail ? `app_by_appid_${appAdMobId}` : undefined }
+  )
+  const effectiveAppId = appIdFromDetail ?? (appByAdMobId as App | undefined)?.id ?? (appByAdMobId as { Id?: number })?.Id
+
+  /** Gọi API lấy chi tiết Ad Units của app để hiển thị đúng DisplayName (tên Ad Unit). Luôn bật khi có effectiveAppId (từ detail hoặc từ app lấy bằng appAdMobId). */
+  const { data: appAdUnits, loading: loadingAppAdUnits } = useApi(
+    () => structureApi.getAppAdUnits(effectiveAppId!),
+    { enabled: !!effectiveAppId, cacheKey: effectiveAppId != null ? `app_ad_units_${effectiveAppId}` : undefined }
+  )
+  /** Ad units trong mediation group: trích từ mediationGroupLines (list/array hoặc object) → từng line.adUnitMappings (key = ca-app-pub-xxx/unitId). */
+  const mediationAdUnitsFromMappings = useMemo(() => {
+    const rawLines = (groupDetail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown })?.mediationGroupLines
+      ?? (groupDetail as { MediationGroupLines?: unknown })?.MediationGroupLines
+    if (typeof rawLines !== "object" || rawLines === null) return []
+    type LineShape = {
+      id?: string
+      displayName?: string
+      adSourceId?: string
+      cpmMicros?: string
+      state?: string
+      adUnitMappings?: Record<string, string>
+      AdUnitMappings?: Record<string, string>
+    }
+    // API có thể trả list (array) hoặc object (key = line id); duyệt hết mọi line
+    const lineList: LineShape[] = Array.isArray(rawLines)
+      ? (rawLines as LineShape[])
+      : Object.values(rawLines as Record<string, LineShape>)
+    const seen = new Set<string>()
+    const result: { adUnitKey: string; unitId: string; lineDisplayName?: string; cpmFloor?: number }[] = []
+    for (const line of lineList) {
+      if (!line || typeof line !== "object") continue
+      const mappings = line.adUnitMappings ?? line.AdUnitMappings ?? {}
+      const lineDisplayName = line.displayName ?? (line as { DisplayName?: string }).DisplayName
+      const cpmMicros = line.cpmMicros ?? (line as { CpmMicros?: string }).CpmMicros
+      const cpmFloor = cpmMicros != null && cpmMicros !== "" ? parseInt(String(cpmMicros), 10) / 1_000_000 : undefined
+      for (const adUnitKey of Object.keys(mappings)) {
+        if (seen.has(adUnitKey)) continue
+        seen.add(adUnitKey)
+        const unitId = adUnitKey.includes("/") ? adUnitKey.split("/").slice(-1)[0]! : adUnitKey
+        result.push({ adUnitKey, unitId, lineDisplayName, cpmFloor })
+      }
+    }
+    return result
+  }, [groupDetail])
+
+  /** Set adUnitKey từ mediationGroupLines (để lọc API response chỉ lấy ad unit có trong mediation group). */
+  const mediationAdUnitKeySet = useMemo(
+    () => new Set(mediationAdUnitsFromMappings.map((u) => u.adUnitKey)),
+    [mediationAdUnitsFromMappings]
   )
 
-  const sowDataList = sowResponse?.data ?? []
+  /** Chi tiết ad unit từ API getAppAdUnits: chỉ lấy các adUnitId trùng với mediationGroupLines. Map adUnitKey → displayName, adFormat, ecpm. */
+  const adUnitDetailsByKey = useMemo(() => {
+    const list = (appAdUnits as (AdUnit & { DisplayName?: string; AdUnitId?: string })[] | undefined) ?? []
+    const map: Record<string, { displayName: string; adFormat?: string; ecpm?: number }> = {}
+    for (const u of list) {
+      const adUnitKey = (u.adUnitId ?? u.AdUnitId)?.trim()
+      if (!adUnitKey || !mediationAdUnitKeySet.has(adUnitKey)) continue
+      const displayName = (u.displayName ?? u.DisplayName ?? u.name)?.trim() || ""
+      const ecpm = u.ecpm != null ? Number(u.ecpm) : undefined
+      map[adUnitKey] = { displayName: displayName || adUnitKey, adFormat: u.adFormat, ecpm }
+    }
+    return map
+  }, [appAdUnits, mediationAdUnitKeySet])
 
-  // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại)
+  const [selectedAdUnitIds, setSelectedAdUnitIds] = useState<string[]>([])
+  const [adUnitsPageSize, setAdUnitsPageSize] = useState(15)
+  const [adUnitsPage, setAdUnitsPage] = useState(1)
+
+  // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại). Không gọi SoWData riêng — ecpmByAdSourceId lấy từ recommendations.
   const { data: recommendationsResponse } = useApi(
     () => structureApi.getMediationGroupRecommendationsByAdMobId(mediationGroupIdFromParams!),
     {
@@ -121,16 +198,17 @@ export function WaterfallOptimizationTab({
   )
   const recommendations = recommendationsResponse?.recommendations ?? []
 
+  // eCPM theo adSourceId: lấy từ recommendations (observedEcpm), không gọi API SoWData riêng
   const ecpmByAdSourceId = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const row of sowDataList) {
-      const ecpm = row.avgEcpmMicros / 1_000_000
-      if (!map[row.adSourceId] || ecpm > (map[row.adSourceId] ?? 0)) {
-        map[row.adSourceId] = ecpm
+    for (const r of recommendations) {
+      const ecpm = r.observedEcpm != null ? Number(r.observedEcpm) : null
+      if (ecpm != null && ecpm > 0 && (!map[r.adSourceId] || ecpm > (map[r.adSourceId] ?? 0))) {
+        map[r.adSourceId] = ecpm
       }
     }
     return map
-  }, [sowDataList])
+  }, [recommendations])
 
   // Build từ mediation_group_lines_json (PostgreSQL) theo format Dolphin 2.0
   const currentSetup = useMemo(() => {
@@ -316,6 +394,14 @@ export function WaterfallOptimizationTab({
 
   const changes = calculateChanges()
 
+  /** Chuẩn hóa network/title sang adSourceId cho API apply (backend hiện chỉ hỗ trợ "admob"). */
+  const toAdSourceIdForApply = (network?: string): string => {
+    if (!network) return "admob"
+    const n = network.toLowerCase()
+    if (n === "admob" || n === "admob network") return "admob"
+    return network
+  }
+
   /** Tính bộ thay đổi thật để truyền vào popup Apply Direct (floors modified, added, removed) */
   const getApplyDirectChanges = useCallback((): ApplyDirectChanges => {
     const active = optimizedWaterfall.filter((s) => s.changeType !== "removed")
@@ -336,7 +422,11 @@ export function WaterfallOptimizationTab({
 
     const sourcesAdded = optimizedWaterfall
       .filter((s) => s.changeType === "new")
-      .map((s) => ({ name: s.name, floor: s.floor }))
+      .map((s) => ({
+        name: s.name,
+        floor: s.floor,
+        adSourceId: toAdSourceIdForApply(s.network),
+      }))
 
     const sourcesRemoved = currentSetup.waterfall
       .filter(
@@ -525,6 +615,26 @@ export function WaterfallOptimizationTab({
   const optimizedAvgFloor =
     activeWaterfall.length > 0 ? activeWaterfall.reduce((sum, s) => sum + s.floor, 0) / activeWaterfall.length : 0
 
+  // Ad units pagination & selection (hooks phải gọi trước mọi return)
+  const paginatedAdUnits = useMemo(() => {
+    const list = mediationAdUnitsFromMappings
+    const start = (adUnitsPage - 1) * adUnitsPageSize
+    return list.slice(start, start + adUnitsPageSize)
+  }, [mediationAdUnitsFromMappings, adUnitsPage, adUnitsPageSize])
+  const totalAdUnits = mediationAdUnitsFromMappings.length
+  const totalAdUnitsPages = Math.max(1, Math.ceil(totalAdUnits / adUnitsPageSize))
+  const toggleAdUnitSelection = useCallback((adUnitKey: string) => {
+    setSelectedAdUnitIds((prev) =>
+      prev.includes(adUnitKey) ? prev.filter((id) => id !== adUnitKey) : [...prev, adUnitKey],
+    )
+  }, [])
+  const toggleAllAdUnitsSelection = useCallback(() => {
+    setSelectedAdUnitIds((prev) => {
+      if (prev.length === paginatedAdUnits.length) return []
+      return paginatedAdUnits.map((u) => u.adUnitKey)
+    })
+  }, [paginatedAdUnits])
+
   if (loadingDetail && hasValidId) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -549,107 +659,257 @@ export function WaterfallOptimizationTab({
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6 pb-24">
-        {/* Section 1: Optimization Status Banner */}
-        {!bannerDismissed && (
-          <>
-            {/* STATE A - Has Optimization Available */}
-            {bannerState === "optimization" && (
-              <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-4 flex items-start gap-3 relative">
-                <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">Optimization Available</h3>
-                  <p className="text-sm text-slate-700 mt-0.5">
-                    Our analysis suggests changes that could increase eCPM by ~{changes.improvement}% ($
-                    {(changes.estimatedMonthly - currentSetup.estimatedMonthly).toFixed(0)})
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Based on last 14 days performance data • Confidence: 87%
-                  </p>
-                  <div className="flex items-center gap-3 mt-3">
-                    <Button variant="link" className="h-auto p-0 text-blue-600">
-                      View Changes
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
-                      Apply Direct
-                    </Button>
-                    <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
-                      Run A/B Test
+        {/* Section 1: Ad units + Optimization Status Banner (2 cột như Current Setup / Optimized) */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Cột trái: Ad units */}
+          <Card className="border-slate-200 overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <CardTitle className="text-base font-semibold">Ad units</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="link" className="h-auto p-0 text-blue-600 text-sm" asChild>
+                    <a href={effectiveAppId ? `/apps/${effectiveAppId}` : "#"}>Add ad units</a>
+                  </Button>
+                  <span className="text-slate-300">|</span>
+                  <Button
+                    variant="link"
+                    className={cn("h-auto p-0 text-sm", selectedAdUnitIds.length ? "text-slate-700" : "text-slate-400 cursor-not-allowed")}
+                    disabled={selectedAdUnitIds.length === 0}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {mediationAdUnitsFromMappings.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-sm">
+                  Chưa có ad unit nào trong mediation group (mediationGroupLines / adUnitMappings trống).
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-slate-50/80">
+                          <th className="w-10 px-3 py-2.5 text-left">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300"
+                              checked={paginatedAdUnits.length > 0 && selectedAdUnitIds.length === paginatedAdUnits.length}
+                              onChange={toggleAllAdUnitsSelection}
+                            />
+                          </th>
+                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">Ad unit</th>
+                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">Ad Format</th>
+                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">App</th>
+                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1">
+                              eCPM
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-slate-400 cursor-help"><HelpCircle className="w-3.5 h-3.5" /></span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  Effective CPM from ad unit performance (API apps/adunits).
+                                </TooltipContent>
+                              </Tooltip>
+                            </span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedAdUnits.map((unit) => {
+                          const details = adUnitDetailsByKey[unit.adUnitKey]
+                          return (
+                            <tr key={unit.adUnitKey} className="border-b border-slate-100 hover:bg-slate-50/50">
+                              <td className="w-10 px-3 py-2.5">
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-slate-300"
+                                  checked={selectedAdUnitIds.includes(unit.adUnitKey)}
+                                  onChange={() => toggleAdUnitSelection(unit.adUnitKey)}
+                                />
+                              </td>
+                              <td className="px-3 py-2.5 font-medium text-slate-900">
+                                {loadingAppAdUnits && !details
+                                  ? "Đang tải..."
+                                  : (details?.displayName ?? unit.unitId)}
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-600">
+                                {details?.adFormat ?? "—"}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center gap-2">
+                                  {appIconUri ? (
+                                    <img src={appIconUri} alt="" className="w-8 h-8 rounded object-contain bg-slate-100" />
+                                  ) : (
+                                    <span className="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-slate-500 text-xs">App</span>
+                                  )}
+                                  <div>
+                                    <div className="font-medium text-slate-800">{appName || "—"}</div>
+                                    <div className="text-xs text-slate-500">{platform ? `${platform} • Free` : "—"}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-600">
+                                {details?.ecpm != null && details.ecpm > 0
+                                  ? `$${details.ecpm.toFixed(2)}`
+                                  : "—"}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-t bg-slate-50/50 text-sm text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span>Show rows:</span>
+                      <Select value={String(adUnitsPageSize)} onValueChange={(v) => { setAdUnitsPageSize(Number(v)); setAdUnitsPage(1) }}>
+                        <SelectTrigger className="w-16 h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[10, 15, 25, 50].map((n) => (
+                            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>
+                        {(adUnitsPage - 1) * adUnitsPageSize + 1}-{Math.min(adUnitsPage * adUnitsPageSize, totalAdUnits)} of {totalAdUnits}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={adUnitsPage <= 1}
+                        onClick={() => setAdUnitsPage((p) => Math.max(1, p - 1))}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={adUnitsPage >= totalAdUnitsPages}
+                        onClick={() => setAdUnitsPage((p) => Math.min(totalAdUnitsPages, p + 1))}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cột phải: Optimization Status Banner */}
+          <div className="min-h-0">
+            {!bannerDismissed && (
+              <>
+                {/* STATE A - Has Optimization Available */}
+                {bannerState === "optimization" && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-4 flex items-start gap-3 relative">
+                    <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">Optimization Available</h3>
+                      <p className="text-sm text-slate-700 mt-0.5">
+                        Our analysis suggests changes that could increase eCPM by ~{changes.improvement}% ($
+                        {(changes.estimatedMonthly - currentSetup.estimatedMonthly).toFixed(0)})
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Based on last 14 days performance data • Confidence: 87%
+                      </p>
+                      <div className="flex items-center gap-3 mt-3">
+                        <Button variant="link" className="h-auto p-0 text-blue-600">
+                          View Changes
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
+                          Apply Direct
+                        </Button>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
+                          Run A/B Test
+                        </Button>
+                      </div>
+                    </div>
+                    <button onClick={() => setBannerDismissed(true)} className="text-slate-400 hover:text-slate-600">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* STATE B - A/B Test Running */}
+                {bannerState === "running" && (
+                  <div className="bg-purple-50 border-l-4 border-purple-500 rounded-r-lg p-4 flex items-start gap-3">
+                    <FlaskConical className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">A/B Test In Progress</h3>
+                      <p className="text-sm text-slate-700 mt-0.5">
+                        Testing optimized waterfall • Day {testDay} of {testDuration} • Traffic split: 50/50
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Early results: Variant B (Optimized) leading by +8.2% eCPM
+                      </p>
+                      <Progress
+                        value={(testDay / testDuration) * 100}
+                        className="h-2 mt-3 max-w-xs bg-purple-200 [&>div]:bg-purple-500"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" className="h-8 bg-transparent flex-shrink-0">
+                      View Test Details
                     </Button>
                   </div>
-                </div>
-                <button onClick={() => setBannerDismissed(true)} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            )}
+                )}
 
-            {/* STATE B - A/B Test Running */}
-            {bannerState === "running" && (
-              <div className="bg-purple-50 border-l-4 border-purple-500 rounded-r-lg p-4 flex items-start gap-3">
-                <FlaskConical className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">A/B Test In Progress</h3>
-                  <p className="text-sm text-slate-700 mt-0.5">
-                    Testing optimized waterfall • Day {testDay} of {testDuration} • Traffic split: 50/50
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Early results: Variant B (Optimized) leading by +8.2% eCPM
-                  </p>
-                  <Progress
-                    value={(testDay / testDuration) * 100}
-                    className="h-2 mt-3 max-w-xs bg-purple-200 [&>div]:bg-purple-500"
-                  />
-                </div>
-                <Button variant="outline" size="sm" className="h-8 bg-transparent flex-shrink-0">
-                  View Test Details
-                </Button>
-              </div>
-            )}
-
-            {/* STATE C - No Optimization Needed */}
-            {bannerState === "optimized" && (
-              <div className="bg-green-50 border-l-4 border-green-500 rounded-r-lg p-4 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">Waterfall Optimized</h3>
-                  <p className="text-sm text-slate-700 mt-0.5">Current configuration is performing optimally</p>
-                  <p className="text-xs text-slate-500 mt-1">Last analyzed: 2 hours ago</p>
-                </div>
-                <Button variant="link" className="h-auto p-0 text-green-600">
-                  Re-analyze Now
-                </Button>
-              </div>
-            )}
-
-            {/* STATE D - Has Unsaved Changes */}
-            {bannerState === "unsaved" && (
-              <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4 flex items-start gap-3">
-                <Pencil className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">Unsaved Changes</h3>
-                  <p className="text-sm text-slate-700 mt-0.5">
-                    You have modified the optimized waterfall configuration
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {changes.modifiedCount + changes.addedCount + changes.removedCount} changes pending • Don't forget
-                    to apply or test
-                  </p>
-                  <div className="flex items-center gap-3 mt-3">
-                    <Button variant="link" className="h-auto p-0 text-red-600" onClick={discardAllChanges}>
-                      Discard Changes
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
-                      Apply Direct
-                    </Button>
-                    <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
-                      Run A/B Test
+                {/* STATE C - No Optimization Needed */}
+                {bannerState === "optimized" && (
+                  <div className="bg-green-50 border-l-4 border-green-500 rounded-r-lg p-4 flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">Waterfall Optimized</h3>
+                      <p className="text-sm text-slate-700 mt-0.5">Current configuration is performing optimally</p>
+                      <p className="text-xs text-slate-500 mt-1">Last analyzed: 2 hours ago</p>
+                    </div>
+                    <Button variant="link" className="h-auto p-0 text-green-600">
+                      Re-analyze Now
                     </Button>
                   </div>
-                </div>
-              </div>
+                )}
+
+                {/* STATE D - Has Unsaved Changes */}
+                {bannerState === "unsaved" && (
+                  <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4 flex items-start gap-3">
+                    <Pencil className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">Unsaved Changes</h3>
+                      <p className="text-sm text-slate-700 mt-0.5">
+                        You have modified the optimized waterfall configuration
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {changes.modifiedCount + changes.addedCount + changes.removedCount} changes pending • Don't forget
+                        to apply or test
+                      </p>
+                      <div className="flex items-center gap-3 mt-3">
+                        <Button variant="link" className="h-auto p-0 text-red-600" onClick={discardAllChanges}>
+                          Discard Changes
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
+                          Apply Direct
+                        </Button>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
+                          Run A/B Test
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
 
         {/* Section 2: Side-by-Side Waterfall Comparison */}
         <div className="space-y-4">

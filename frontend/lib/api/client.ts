@@ -1,6 +1,9 @@
 // Base API Client
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
+/** Timeout mặc định (ms). API recommendations có thể chạy lâu khi cache chưa có. */
+const DEFAULT_REQUEST_TIMEOUT_MS = 90_000
+
 // Global flag to prevent multiple simultaneous redirects
 let isRedirecting = false
 
@@ -20,8 +23,12 @@ export class ApiClient {
         // Get access token from localStorage
         const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
 
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+
         const config: RequestInit = {
             ...options,
+            signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
                 ...(token && { Authorization: `Bearer ${token}` }),
@@ -31,6 +38,7 @@ export class ApiClient {
 
         try {
             const response = await fetch(url, config)
+            clearTimeout(timeoutId)
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({
@@ -65,12 +73,18 @@ export class ApiClient {
             // Handle empty responses
             const contentType = response.headers.get('content-type')
             if (contentType && contentType.includes('application/json')) {
-                return await response.json()
+                const data = await response.json()
+                clearTimeout(timeoutId)
+                return data
             }
-
+            clearTimeout(timeoutId)
             return {} as T
         } catch (error) {
+            clearTimeout(timeoutId)
             if (error instanceof Error) {
+                if ((error as any).name === 'AbortError') {
+                    throw new Error('Request timeout. The server took too long to respond.')
+                }
                 throw error
             }
             throw new Error('Unknown error occurred')

@@ -9,7 +9,8 @@ import { waterfallManagementApi } from "@/lib/api/services"
 /** Dữ liệu thay đổi khi Apply Direct / Apply Winner — dùng dữ liệu thật từ waterfall optimization */
 export interface ApplyDirectChanges {
   floorsModified: Array<{ name: string; lineId: string; oldValue: number; newValue: number }>
-  sourcesAdded: Array<{ name: string; floor: number }>
+  /** adSourceId bắt buộc để backend tạo waterfall unit + mapping (ví dụ "admob" cho AdMob Network). */
+  sourcesAdded: Array<{ name: string; floor: number; adSourceId: string }>
   sourcesRemoved: Array<{ name: string; lineId: string }>
 }
 
@@ -127,7 +128,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
                   </div>
                 )}
 
-                {/* Sources Added */}
+                {/* Sources Added — backend gọi AdMob batchCreate + batchCreateAdUnitMappings + patch (theo Dolphin) */}
                 {effectiveChanges.sourcesAdded.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-green-700">
