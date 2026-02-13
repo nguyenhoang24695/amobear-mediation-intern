@@ -34,29 +34,25 @@ function getDayName(date: Date): string {
 
 export function RevenueChart() {
   const [activeTab, setActiveTab] = useState<"revenue" | "ecpm" | "impressions">("revenue")
-  const { dateRange, preset, refreshKey } = useDashboardDate()
+  const { appliedDateRange, appliedPreset, refreshKey } = useDashboardDate()
   const config = tabConfig[activeTab]
 
-  // Use dateRange from context (default: last7days, can be changed when Apply is clicked)
+  // Chỉ dùng giá trị đã Apply — tránh gọi API khi chỉ đổi date picker
   const currentApiParams = useMemo(() => {
-    // Default to 7days if no preset is set
-    const effectivePreset = preset || '7days'
-    
-    if (effectivePreset === 'custom' && dateRange?.from && dateRange?.to) {
+    const effectivePreset = appliedPreset || '7days'
+    if (effectivePreset === 'custom' && appliedDateRange?.from && appliedDateRange?.to) {
       return {
         range: 'custom' as DateRangeType,
-        startDate: formatDateForAPI(dateRange.from),
-        endDate: formatDateForAPI(dateRange.to),
+        startDate: formatDateForAPI(appliedDateRange.from),
+        endDate: formatDateForAPI(appliedDateRange.to),
         metric: activeTab,
       }
     }
-    
-    // Map preset to DateRangeType
     return {
       range: mapPresetToDateRangeType(effectivePreset),
       metric: activeTab,
     }
-  }, [preset, dateRange, activeTab])
+  }, [appliedPreset, appliedDateRange, activeTab])
 
   // Calculate previous period for comparison (same range type)
   const previousApiParams = useMemo(() => {
@@ -76,16 +72,13 @@ export function RevenueChart() {
     [previousApiParams, activeTab]
   )
 
-  // Build cache key based on params
   const cacheKey = useMemo(() => {
-    const effectivePreset = preset || '7days'
-    
-    if (effectivePreset === 'custom' && dateRange?.from && dateRange?.to) {
-      return `revenue_overview_custom_${formatDateForAPI(dateRange.from)}_${formatDateForAPI(dateRange.to)}_${activeTab}`
+    const effectivePreset = appliedPreset || '7days'
+    if (effectivePreset === 'custom' && appliedDateRange?.from && appliedDateRange?.to) {
+      return `revenue_overview_custom_${formatDateForAPI(appliedDateRange.from)}_${formatDateForAPI(appliedDateRange.to)}_${activeTab}`
     }
-    
     return `revenue_overview_${effectivePreset}_${activeTab}`
-  }, [preset, dateRange, activeTab])
+  }, [appliedPreset, appliedDateRange, activeTab])
 
   // Fetch chart data
   const { data: revenueOverviewData, loading: chartLoading, refetch: refetchChart } = useApi(
@@ -99,7 +92,7 @@ export function RevenueChart() {
     { enabled: activeTab === "revenue", cacheKey: `${cacheKey}_previous` }
   )
 
-  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  // Refetch only when Apply/Refresh is clicked (one run per refreshKey change)
   useEffect(() => {
     if (refreshKey > 0) {
       refetchChart()
@@ -107,7 +100,8 @@ export function RevenueChart() {
         refetchPrevious()
       }
     }
-  }, [refreshKey, activeTab, refetchChart, refetchPrevious])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only on refreshKey to avoid multiple refetches
+  }, [refreshKey])
 
   // Process chart data from new API format
   const processedChartData = useMemo(() => {

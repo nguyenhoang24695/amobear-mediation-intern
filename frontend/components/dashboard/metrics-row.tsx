@@ -8,6 +8,7 @@ import { Area, AreaChart, ResponsiveContainer } from "recharts"
 import { useApi } from "@/hooks/use-api"
 import { dashboardApi } from "@/lib/api/services"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
+import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
 import type { DateRangeType } from "@/types/api"
 
 // Format number with commas
@@ -27,27 +28,44 @@ function formatCurrency(num: number): string {
 }
 
 export function MetricsRow() {
-  const { refreshKey } = useDashboardDate()
-  
-  // Always use "today" for metrics cards
-  const apiParams = useMemo(() => {
-    return {
-      range: 'today' as DateRangeType,
-    }
-  }, [])
+  const { refreshKey, appliedPreset, appliedDateRange } = useDashboardDate()
 
-  // Fetch key metrics from new API (always "today")
+  // Chỉ dùng giá trị đã Apply — tránh gọi API khi chỉ đổi date picker
+  const apiParams = useMemo(() => {
+    const effectivePreset = appliedPreset || "7days"
+    if (effectivePreset === "custom" && appliedDateRange?.from && appliedDateRange?.to) {
+      return {
+        range: "custom" as DateRangeType,
+        startDate: formatDateForAPI(appliedDateRange.from),
+        endDate: formatDateForAPI(appliedDateRange.to),
+      }
+    }
+    return {
+      range: mapPresetToDateRangeType(effectivePreset) as DateRangeType,
+    }
+  }, [appliedPreset, appliedDateRange])
+
+  const cacheKey = useMemo(() => {
+    const effectivePreset = appliedPreset || "7days"
+    if (effectivePreset === "custom" && appliedDateRange?.from && appliedDateRange?.to) {
+      return `key_metrics_custom_${formatDateForAPI(appliedDateRange.from)}_${formatDateForAPI(appliedDateRange.to)}`
+    }
+    return `key_metrics_${effectivePreset}`
+  }, [appliedPreset, appliedDateRange])
+
+  // Fetch key metrics theo range đã chọn
   const { data: keyMetricsData, loading: metricsLoading, refetch: refetchMetrics } = useApi(
     () => dashboardApi.getKeyMetrics(apiParams),
-    { enabled: true, cacheKey: `key_metrics_today` }
+    { enabled: true, cacheKey }
   )
 
-  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  // Refetch when user clicks Apply or Refresh in dashboard date picker (refreshKey increments)
   useEffect(() => {
     if (refreshKey > 0) {
       refetchMetrics()
     }
-  }, [refreshKey, refetchMetrics])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when refreshKey changes
+  }, [refreshKey])
 
   // Process key metrics from API
   const metrics = useMemo(() => {
@@ -62,9 +80,10 @@ export function MetricsRow() {
       return sparkline.map((value, index) => ({ value }))
     }
 
+    const periodLabel = appliedPreset === "today" ? "Today" : appliedPreset === "30days" ? "30 days" : appliedPreset === "custom" ? "Custom" : "7 days"
     return [
       {
-        title: "Revenue Today",
+        title: `Revenue (${periodLabel})`,
         value: m.revenue.formattedValue,
         change: `${m.revenue.change >= 0 ? '+' : ''}${m.revenue.change.toFixed(1)}%`,
         trend: m.revenue.changeDirection as "up" | "down",
@@ -73,7 +92,7 @@ export function MetricsRow() {
         color: "#2563eb",
       },
       {
-        title: "Average eCPM",
+        title: `Average eCPM (${periodLabel})`,
         value: m.averageEcpm.formattedValue,
         change: `${m.averageEcpm.change >= 0 ? '+' : ''}${m.averageEcpm.change.toFixed(1)}%`,
         trend: m.averageEcpm.changeDirection as "up" | "down",
@@ -82,7 +101,7 @@ export function MetricsRow() {
         color: "#2563eb",
       },
       {
-        title: "Impressions",
+        title: `Impressions (${periodLabel})`,
         value: m.impressions.formattedValue,
         change: `${m.impressions.change >= 0 ? '+' : ''}${m.impressions.change.toFixed(1)}%`,
         trend: m.impressions.changeDirection as "up" | "down",
@@ -91,7 +110,7 @@ export function MetricsRow() {
         color: "#2563eb",
       },
       {
-        title: "Fill Rate",
+        title: `Fill Rate (${periodLabel})`,
         value: m.fillRate.formattedValue,
         change: `${m.fillRate.change >= 0 ? '+' : ''}${m.fillRate.change.toFixed(1)}%`,
         trend: m.fillRate.changeDirection as "up" | "down",
@@ -100,7 +119,7 @@ export function MetricsRow() {
         color: m.fillRate.changeDirection === 'up' ? "#2563eb" : "#ef4444",
       },
     ]
-  }, [keyMetricsData])
+  }, [keyMetricsData, appliedPreset])
 
   const isLoading = metricsLoading
 
@@ -157,7 +176,7 @@ export function MetricsRow() {
                     )}
                     {metric.change}
                   </Badge>
-                  <span className="text-xs text-slate-400">vs yesterday</span>
+                  <span className="text-xs text-slate-400">vs previous period</span>
                 </div>
               </div>
               <div className="w-20 h-12">

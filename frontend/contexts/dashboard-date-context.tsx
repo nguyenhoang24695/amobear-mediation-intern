@@ -10,8 +10,12 @@ export interface DateRange {
 }
 
 interface DashboardDateContextType {
+  /** Giá trị đang chọn trên UI (chưa Apply) */
   dateRange: DateRange
   preset: DateRangePreset
+  /** Chỉ thay đổi khi bấm Apply/Refresh — dùng cho API và cacheKey để tránh gọi API khi chỉ đổi date picker */
+  appliedDateRange: DateRange
+  appliedPreset: DateRangePreset
   refreshKey: number
   setDateRange: (range: DateRange) => void
   setPreset: (preset: DateRangePreset) => void
@@ -46,9 +50,16 @@ const getPresetRange = (preset: DateRangePreset): DateRange => {
 }
 
 export function DashboardDateProvider({ children }: { children: ReactNode }) {
-  // Default to 7days for Top Apps and Revenue Chart
-  const [preset, setPresetState] = useState<DateRangePreset>("7days")
-  const [dateRange, setDateRangeState] = useState<DateRange>(() => getPresetRange("7days"))
+  const defaultPreset: DateRangePreset = "7days"
+  const defaultRange = getPresetRange(defaultPreset)
+
+  // UI state: thay đổi ngay khi user đổi select/calendar (chưa Apply)
+  const [preset, setPresetState] = useState<DateRangePreset>(defaultPreset)
+  const [dateRange, setDateRangeState] = useState<DateRange>(() => defaultRange)
+
+  // Applied state: chỉ cập nhật khi bấm Apply hoặc Refresh — dùng cho API để tránh flood
+  const [appliedPreset, setAppliedPreset] = useState<DateRangePreset>(defaultPreset)
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange>(() => defaultRange)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const setPreset = useCallback((newPreset: DateRangePreset) => {
@@ -64,20 +75,24 @@ export function DashboardDateProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const applyDateRange = useCallback(() => {
-    // Trigger refresh by updating key
+    setAppliedPreset(preset)
+    setAppliedDateRange({ from: new Date(dateRange.from), to: new Date(dateRange.to) })
     setRefreshKey(prev => prev + 1)
-  }, [])
+  }, [preset, dateRange])
 
   const refresh = useCallback(() => {
-    // Same as apply - refresh current date range
+    setAppliedPreset(preset)
+    setAppliedDateRange({ from: new Date(dateRange.from), to: new Date(dateRange.to) })
     setRefreshKey(prev => prev + 1)
-  }, [])
+  }, [preset, dateRange])
 
   return (
     <DashboardDateContext.Provider
       value={{
         dateRange,
         preset,
+        appliedDateRange,
+        appliedPreset,
         setDateRange,
         setPreset,
         applyDateRange,

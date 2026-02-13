@@ -26,10 +26,10 @@ function formatCurrency(num: number): string {
 }
 
 export function MetricsRow() {
-  const { refreshKey, preset } = useDashboardDate()
-  
-  // Map preset to period for cache
-  const period = preset === 'today' ? 'today' : preset === '7days' ? '7days' : '30days'
+  const { refreshKey, appliedPreset } = useDashboardDate()
+
+  // Chỉ dùng giá trị đã Apply
+  const period = appliedPreset === 'today' ? 'today' : appliedPreset === '7days' ? '7days' : '30days'
 
   // Fetch metrics from cache
   const { data: metricsData, loading: metricsLoading, refetch: refetchMetrics } = useApi(
@@ -71,14 +71,15 @@ export function MetricsRow() {
     { enabled: true, cacheKey: `performance_yesterday_${yesterdayStr}` }
   )
 
-  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  // Refetch only when Apply/Refresh is clicked (one run per refreshKey change)
   useEffect(() => {
     if (refreshKey > 0) {
       refetchMetrics()
       refetchToday()
       refetchYesterday()
     }
-  }, [refreshKey, refetchMetrics, refetchToday, refetchYesterday])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only on refreshKey to avoid multiple refetches
+  }, [refreshKey])
 
   // Use cached metrics if available, otherwise calculate from raw data
   const metrics = useMemo(() => {

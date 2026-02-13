@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 
 interface UseApiOptions<T> {
   onSuccess?: (data: T) => void
@@ -134,31 +134,26 @@ export function useApi<T>(
     }
   }, [enabled, requestKey]) // Remove stableApiCall from deps - it's stable
 
-  const refetch = async () => {
-    // Clear cache and pending request
+  const refetch = useCallback(async () => {
     requestCache.delete(requestKey)
     pendingRequests.delete(requestKey)
-    
     try {
       setLoading(true)
       setError(null)
-      const result = await apiCall()
-      
-      // Cache the result
+      const result = await apiCallRef.current()
       requestCache.set(requestKey, { data: result, timestamp: Date.now() })
-      
       setData(result)
-      onSuccess?.(result)
+      onSuccessRef.current?.(result)
       return result
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error')
       setError(error)
-      onError?.(error)
+      onErrorRef.current?.(error)
       throw error
     } finally {
       setLoading(false)
     }
-  }
+  }, [requestKey])
 
   return { data, loading, error, refetch }
 }

@@ -10,7 +10,7 @@ import { useApi } from "@/hooks/use-api"
 import { dashboardApi } from "@/lib/api/services"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
 import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
-import type { DateRangeType, TopApps } from "@/types/api"
+import type { TopApps } from "@/types/api"
 
 // Format currency
 function formatCurrency(num: number): string {
@@ -18,57 +18,46 @@ function formatCurrency(num: number): string {
 }
 
 export function TopApps() {
-  const { dateRange, preset, refreshKey } = useDashboardDate()
+  const { refreshKey, appliedPreset, appliedDateRange } = useDashboardDate()
 
-  // Use dateRange from context (default: last7days, can be changed when Apply is clicked)
-  const apiParams = useMemo((): {
-    range: DateRangeType
-    startDate?: string
-    endDate?: string
-    limit: number
-  } => {
-    // Default to 7days if no preset is set
-    const effectivePreset = preset || '7days'
-    
-    if (effectivePreset === 'custom' && dateRange?.from && dateRange?.to) {
+  // Chỉ dùng giá trị đã Apply — tránh gọi API khi chỉ đổi date picker
+  const apiParams = useMemo(() => {
+    const effectivePreset = appliedPreset || "7days"
+    if (effectivePreset === "custom" && appliedDateRange?.from && appliedDateRange?.to) {
       return {
-        range: 'custom' as DateRangeType,
-        startDate: formatDateForAPI(dateRange.from),
-        endDate: formatDateForAPI(dateRange.to),
+        range: "custom" as const,
+        startDate: formatDateForAPI(appliedDateRange.from),
+        endDate: formatDateForAPI(appliedDateRange.to),
         limit: 4,
       }
     }
-    
-    // Map preset to DateRangeType
     return {
       range: mapPresetToDateRangeType(effectivePreset),
       limit: 4,
     }
-  }, [preset, dateRange])
+  }, [appliedPreset, appliedDateRange])
 
-  // Build cache key based on params
   const cacheKey = useMemo(() => {
-    const effectivePreset = preset || '7days'
-    
-    if (effectivePreset === 'custom' && dateRange?.from && dateRange?.to) {
-      return `topapps_custom_${formatDateForAPI(dateRange.from)}_${formatDateForAPI(dateRange.to)}`
+    const effectivePreset = appliedPreset || "7days"
+    if (effectivePreset === "custom" && appliedDateRange?.from && appliedDateRange?.to) {
+      return `topapps_custom_${formatDateForAPI(appliedDateRange.from)}_${formatDateForAPI(appliedDateRange.to)}`
     }
-    
     return `topapps_${effectivePreset}`
-  }, [preset, dateRange])
+  }, [appliedPreset, appliedDateRange])
 
-  // Fetch top apps from API
+  // Fetch top apps theo range đã chọn
   const { data: topAppsResponse, loading, refetch: refetchTopApps } = useApi<TopApps>(
     () => dashboardApi.getTopApps(apiParams),
     { enabled: true, cacheKey }
   )
 
-  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  // Refetch when user clicks Apply or Refresh in dashboard date picker (refreshKey increments)
   useEffect(() => {
     if (refreshKey > 0) {
       refetchTopApps()
     }
-  }, [refreshKey, refetchTopApps])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when refreshKey changes
+  }, [refreshKey])
 
   const topApps = useMemo(() => {
     if (!topAppsResponse?.apps) return []

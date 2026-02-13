@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { dashboardApi } from "@/lib/api/services"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
+import { formatDateForAPI } from "@/lib/utils/dashboard"
 import type { DateRangeType } from "@/types/api"
 
 // Network colors mapping
@@ -27,37 +28,44 @@ function formatCurrency(num: number): string {
 }
 
 export function NetworkPerformance() {
-  const { refreshKey, preset, dateRange } = useDashboardDate()
+  const { refreshKey, appliedPreset, appliedDateRange } = useDashboardDate()
 
-  // Map preset to DateRangeType for API
-  const rangeType = preset === 'today' ? 'today' : preset === '7days' ? 'last7days' : preset === '30days' ? 'last30days' : 'custom'
-  
-  // Prepare API params
+  const rangeType = appliedPreset === 'today' ? 'today' : appliedPreset === '7days' ? 'last7days' : appliedPreset === '30days' ? 'last30days' : 'custom'
+
+  // Chỉ dùng giá trị đã Apply — tránh gọi API khi chỉ đổi date picker. formatDateForAPI tránh lệch ngày UTC.
   const apiParams = useMemo(() => {
-    if (preset === 'custom' && dateRange.from && dateRange.to) {
+    if (appliedPreset === 'custom' && appliedDateRange.from && appliedDateRange.to) {
       return {
         range: 'custom' as const,
-        startDate: dateRange.from.toISOString().split('T')[0],
-        endDate: dateRange.to.toISOString().split('T')[0],
+        startDate: formatDateForAPI(appliedDateRange.from),
+        endDate: formatDateForAPI(appliedDateRange.to),
       }
     }
     return {
       range: rangeType as DateRangeType,
     }
-  }, [preset, dateRange, rangeType])
+  }, [appliedPreset, appliedDateRange, rangeType])
 
-  // Fetch revenue by network from new API
+  const networkCacheKey = useMemo(() => {
+    if (appliedPreset === 'custom' && appliedDateRange.from && appliedDateRange.to) {
+      return `network_revenue_custom_${formatDateForAPI(appliedDateRange.from)}_${formatDateForAPI(appliedDateRange.to)}`
+    }
+    return `network_revenue_${appliedPreset}`
+  }, [appliedPreset, appliedDateRange])
+
+  // Fetch revenue by network từ API
   const { data: networkData, loading, refetch: refetchNetwork } = useApi(
     () => dashboardApi.getRevenueByNetwork(apiParams),
-    { enabled: true, cacheKey: `network_revenue_${preset}_${dateRange.from?.toISOString()}_${dateRange.to?.toISOString()}` }
+    { enabled: true, cacheKey: networkCacheKey }
   )
 
-  // Only refetch when refreshKey changes
+  // Refetch only when Apply/Refresh is clicked (one run per refreshKey change)
   useEffect(() => {
     if (refreshKey > 0) {
       refetchNetwork()
     }
-  }, [refreshKey, refetchNetwork])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only on refreshKey to avoid multiple refetches
+  }, [refreshKey])
 
   const networks = useMemo(() => {
     if (!networkData?.networks) return []

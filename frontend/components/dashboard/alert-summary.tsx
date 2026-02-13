@@ -29,7 +29,7 @@ export function AlertSummary() {
     { enabled: true, cacheKey: "active_alerts_today_page1_size5" } // Fetch always; only render when expanded
   )
 
-  // Only refetch when refreshKey changes (when Apply/Refresh button is clicked)
+  // Refetch only when Apply/Refresh is clicked (one run per refreshKey change)
   useEffect(() => {
     if (refreshKey > 0) {
       refetchSummary()
@@ -37,7 +37,8 @@ export function AlertSummary() {
         refetchAlerts()
       }
     }
-  }, [refreshKey, refetchSummary, refetchAlerts, expanded])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only on refreshKey to avoid multiple refetches
+  }, [refreshKey])
 
   const severityCounts = alertsSummary
     ? {
