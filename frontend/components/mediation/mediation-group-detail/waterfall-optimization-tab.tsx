@@ -398,9 +398,9 @@ export function WaterfallOptimizationTab({
 
   /** Chuẩn hóa network/title sang adSourceId cho API apply (backend hiện chỉ hỗ trợ "admob"). */
   const toAdSourceIdForApply = (network?: string): string => {
-    if (!network) return "admob"
+    if (!network) return "1215381445328257950"
     const n = network.toLowerCase()
-    if (n === "admob" || n === "admob network") return "admob"
+    if (n === "admob" || n === "admob network") return "1215381445328257950"
     return network
   }
 
