@@ -29,9 +29,10 @@ import {
 } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
-import type { App, MediationGroup } from "@/types/api"
+import type { App, MediationGroup, WaterfallAdUnit } from "@/types/api"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
+import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
 import { useToast } from "@/hooks/use-toast"
 
@@ -59,8 +60,16 @@ export function AppDetailContent() {
       cacheKey: app?.id != null ? `app_mediation_groups_${app.id}` : undefined,
     },
   )
+  const { data: waterfallAdUnits, loading: waterfallAdUnitsLoading } = useApi<WaterfallAdUnit[]>(
+    () => structureApi.getAppWaterfallAdUnits(app!.id),
+    {
+      enabled: hasValidAppId && !!app?.id,
+      cacheKey: app?.id != null ? `app_waterfall_ad_units_${app.id}` : undefined,
+    },
+  )
 
   const mediationGroupsCount = mediationGroups?.length ?? 0
+  const waterfallAdUnitsCount = waterfallAdUnits?.length ?? 0
 
   const initialTab = searchParams.get("tab") || "overview"
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -233,7 +242,13 @@ export function AppDetailContent() {
             <TabsTrigger value="ad-units" className="px-4 data-[state=active]:bg-white">
               Ad Units
               <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                  {app?.adUnitsCount ?? 0}
+                {app?.adUnitsCount ?? 0}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="waterfall-ad-units" className="px-4 data-[state=active]:bg-white">
+              Waterfall Ad Units
+              <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                {waterfallAdUnitsLoading ? "…" : waterfallAdUnitsCount}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
@@ -255,6 +270,12 @@ export function AppDetailContent() {
           </TabsContent>
           <TabsContent value="ad-units" className="mt-6">
             <AppAdUnitsTab />
+          </TabsContent>
+          <TabsContent value="waterfall-ad-units" className="mt-6">
+            <AppWaterfallAdUnitsTab
+              waterfallAdUnits={waterfallAdUnits ?? null}
+              loadingWaterfallAdUnits={waterfallAdUnitsLoading}
+            />
           </TabsContent>
           <TabsContent value="mediation-groups" className="mt-6">
             <AppMediationGroupsTab

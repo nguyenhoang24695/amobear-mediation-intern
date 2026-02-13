@@ -6,6 +6,7 @@ import type {
     DateRangeType,
     MediationGroup,
     PagedResponse,
+    WaterfallAdUnit,
     PerformanceData,
     PerformanceSummary,
     RecentActivities,
@@ -131,6 +132,10 @@ export const structureApi = {
 
     getAppMediationGroups: async (id: number): Promise<MediationGroup[]> => {
         return apiClient.get<MediationGroup[]>(`/api/Structure/apps/${id}/mediationgroups`)
+    },
+
+    getAppWaterfallAdUnits: async (id: number): Promise<WaterfallAdUnit[]> => {
+        return apiClient.get<WaterfallAdUnit[]>(`/api/Structure/apps/${id}/waterfalladunits`)
     },
 
     // Mediation Groups

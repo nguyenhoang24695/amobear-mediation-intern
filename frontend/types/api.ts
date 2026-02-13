@@ -56,6 +56,22 @@ export interface AdUnit {
   status?: string
 }
 
+/** AdMob Network Waterfall Ad Unit (placement waterfall theo app). */
+export interface WaterfallAdUnit {
+  id: number
+  name: string
+  admobNetworkWaterfallAdUnitId: string
+  displayName?: string
+  appId: number
+  format?: string
+  adTypesJson?: string
+  globalFloorMicros?: number | null
+  publisherId: string
+  createdAt: string
+  updatedAt: string
+  lastSyncedAt?: string
+}
+
 export interface AdSourceInfo {
   adSourceId: string
   title: string
