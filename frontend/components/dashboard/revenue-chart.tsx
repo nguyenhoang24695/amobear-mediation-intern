@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Loader2 } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { dashboardApi } from "@/lib/api/services"
@@ -26,10 +26,23 @@ function formatCurrency(num: number): string {
   return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-// Get day name from date
-function getDayName(date: Date): string {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  return days[date.getDay()]
+// Format date as M-d (e.g. 2-4, 12-25)
+function formatMonthDay(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}-${d.getDate()}`
+}
+
+// Format Y-axis: tự động chọn đơn vị K / M cho phù hợp (Revenue, Impressions)
+function formatAxisCompact(value: number): string {
+  if (value >= 1_000_000) {
+    const m = value / 1_000_000
+    return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`
+  }
+  if (value >= 1000) {
+    const k = value / 1000
+    return k % 1 === 0 ? `${k}K` : `${k.toFixed(1)}K`
+  }
+  return String(value)
 }
 
 export function RevenueChart() {
@@ -107,11 +120,10 @@ export function RevenueChart() {
   const processedChartData = useMemo(() => {
     if (!revenueOverviewData?.data || revenueOverviewData.data.length === 0) return []
 
-    // Map API data to chart format
+    // Map API data to chart format (trục X: M-d)
     const mappedData = revenueOverviewData.data.map(item => {
-      const dateObj = new Date(item.date)
       return {
-        day: getDayName(dateObj),
+        dateLabel: formatMonthDay(item.date),
         date: item.date,
         revenue: activeTab === 'revenue' ? item.value : 0,
         previousRevenue: activeTab === 'revenue' ? (item.comparisonValue || 0) : 0,
@@ -207,7 +219,7 @@ export function RevenueChart() {
       <CardContent className="pt-4">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={processedChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart data={processedChartData} margin={{ top: 10, right: 10, left: 36, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={config.color} stopOpacity={0.2} />
@@ -215,13 +227,14 @@ export function RevenueChart() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} dy={10} />
+              <XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} dy={10} />
               <YAxis
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 12, fill: "#64748b" }}
-                tickFormatter={config.format}
+                tickFormatter={activeTab === "revenue" || activeTab === "impressions" ? formatAxisCompact : config.format}
                 dx={-10}
+                width={36}
               />
               <Tooltip
                 content={({ active, payload, label }) => {
@@ -245,6 +258,14 @@ export function RevenueChart() {
                   }
                   return null
                 }}
+              />
+              <Legend
+                wrapperStyle={{ width: "100%", paddingTop: 8 }}
+                formatter={(value) => (value === "previousRevenue" ? "Previous period" : config.label)}
+                iconSize={10}
+                iconType="line"
+                layout="horizontal"
+                align="center"
               />
               <Area
                 type="monotone"
