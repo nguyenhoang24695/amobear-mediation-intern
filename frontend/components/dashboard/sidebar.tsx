@@ -20,6 +20,7 @@ import {
   Zap,
   Users,
   Building2,
+  Briefcase,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -40,6 +41,7 @@ const navItems = [
   { icon: BarChart3, label: "Reports", href: "/reports", hasSubmenu: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
   { icon: Building2, label: "Organizations", href: "/organizations" },
+  { icon: Briefcase, label: "Job Management", href: "/jobs" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
@@ -88,6 +90,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
             // Only show Organizations menu for admin and super_admin roles
             if (item.label === "Organizations") {
+              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
+                return null
+              }
+            }
+
+            // Only show Job Management menu for admin and super_admin roles
+            if (item.label === "Job Management") {
               if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
                 return null
               }

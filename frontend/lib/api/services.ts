@@ -17,6 +17,8 @@ import type {
     TeamMember,
     TeamMemberFilterRequest,
     PagedTeamMembersResponse,
+    HangfireJobSchedule,
+    JobScheduleUpdateRequest,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -983,5 +985,31 @@ export const userApi = {
     getMyTeams: async (): Promise<UserTeamWithMembers[]> => {
         const response = await apiClient.get<{ success: boolean; data: UserTeamWithMembers[] }>('/api/v1/user/teams')
         return response.data
+    },
+}
+
+// Job Schedules API Service
+export const jobSchedulesApi = {
+    // Get all job schedules
+    list: async (): Promise<HangfireJobSchedule[]> => {
+        return apiClient.get<HangfireJobSchedule[]>('/api/v1/job-schedules')
+    },
+
+    // Update a job schedule
+    update: async (jobId: string, request: JobScheduleUpdateRequest): Promise<HangfireJobSchedule> => {
+        return apiClient.put<HangfireJobSchedule>(`/api/v1/job-schedules/${jobId}`, request)
+    },
+
+    // Reload schedules from database to Hangfire
+    reload: async (): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post<{ success: boolean; message?: string }>('/api/v1/job-schedules/reload', {})
+    },
+}
+
+// Jobs Test API Service (for running jobs manually)
+export const jobsTestApi = {
+    // Run a job immediately (not via Hangfire schedule)
+    runJob: async (jobName: string): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post<{ success: boolean; message?: string }>(`/api/v1/jobs-test/${jobName}`, {})
     },
 }

@@ -355,3 +355,27 @@ export interface PagedTeamMembersResponse {
   pageSize: number
   totalPages: number
 }
+
+// Hangfire Job Schedule Types
+export interface HangfireJobSchedule {
+  id: number
+  jobId: string
+  jobTypeName?: string
+  jobMethodName?: string
+  displayName?: string
+  cronExpression: string
+  timeZoneId: string
+  enabled: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface JobScheduleUpdateRequest {
+  cronExpression?: string
+  timeZoneId?: string
+  enabled?: boolean
+  displayName?: string
+  jobTypeName?: string
+  jobMethodName?: string
+}
