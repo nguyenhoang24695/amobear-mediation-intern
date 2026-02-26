@@ -5,6 +5,7 @@ export interface App {
   name: string
   appId: string
   platform?: string
+  type?: "game" | "app" | null
   displayName?: string
   appStoreId?: string
   iconUri?: string

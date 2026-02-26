@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 import type { Job } from "./job-management-content"
+import { CronBuilder } from "./cron-builder"
 
 interface EditJobDialogProps {
   open: boolean
@@ -80,7 +81,7 @@ export function EditJobDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Job Schedule</DialogTitle>
           <DialogDescription>
@@ -126,6 +127,20 @@ export function EditJobDialog({
             {errors.cronExpression && (
               <p className="text-xs text-red-500">{errors.cronExpression}</p>
             )}
+          </div>
+
+          {/* Cron Builder */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <Label>Generate Cron Expression</Label>
+              <p className="text-xs text-slate-500">
+                Use this interface to generate cron expressions based on engine.
+              </p>
+            </div>
+            <CronBuilder
+              cronExpression={cronExpression}
+              onChange={(newCron) => setCronExpression(newCron)}
+            />
           </div>
 
           {/* Timezone */}
