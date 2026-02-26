@@ -29,7 +29,8 @@ interface CreateEditRuleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   rule: WaterfallRule | null
-  onSave: (data: Omit<WaterfallRule, "id" | "updatedAt">) => void
+  onSave: (data: Omit<WaterfallRule, "id" | "updatedAt">) => Promise<void>
+  saving?: boolean
 }
 
 const actionTypes = [
@@ -47,6 +48,7 @@ export function CreateEditRuleDialog({
   onOpenChange,
   rule,
   onSave,
+  saving = false,
 }: CreateEditRuleDialogProps) {
   const isEditing = !!rule
 
@@ -72,7 +74,6 @@ export function CreateEditRuleDialog({
   const [useMidpoint, setUseMidpoint] = useState(false)
   const [reasonTemplate, setReasonTemplate] = useState("")
 
-  const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -113,7 +114,6 @@ export function CreateEditRuleDialog({
         setReasonTemplate("")
       }
       setErrors({})
-      setSaving(false)
     }
   }, [open, rule])
 
@@ -137,11 +137,10 @@ export function CreateEditRuleDialog({
     return Object.keys(errs).length === 0
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return
-    setSaving(true)
-    setTimeout(() => {
-      onSave({
+    try {
+      await onSave({
         name: name.trim(),
         displayOrder: Number(displayOrder),
         active,
@@ -160,8 +159,9 @@ export function CreateEditRuleDialog({
         useMidpoint,
         reasonTemplate,
       })
-      setSaving(false)
-    }, 300)
+    } catch (error) {
+      // Error handling is done in parent component
+    }
   }
 
   return (
