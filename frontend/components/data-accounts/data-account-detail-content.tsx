@@ -35,7 +35,7 @@ import { AddEditAccountModal } from "./add-edit-account-modal"
 import { DataAccountOverviewTab } from "./tabs/data-account-overview-tab"
 import { DataAccountSyncHistoryTab } from "./tabs/data-account-sync-history-tab"
 import { DataAccountSettingsTab } from "./tabs/data-account-settings-tab"
-import { useApi } from "@/hooks/use-api"
+import { useApi, invalidateCache } from "@/hooks/use-api"
 import { dataAccountsApi, type DataAccountItem } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 
@@ -145,6 +145,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
         await dataAccountsApi.enable(account.network, account.id)
         toast({ title: "Account enabled" })
       }
+      invalidateCache("data-accounts-list")
       refetch()
     } catch {
       toast({ title: "Error", description: "Failed to update account status.", variant: "destructive" })
@@ -155,6 +156,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     try {
       await dataAccountsApi.delete(account.network, account.id)
       toast({ title: "Account deleted", description: `"${account.name}" has been deleted.` })
+      invalidateCache("data-accounts-list")
       router.push("/data-accounts")
     } catch {
       toast({ title: "Error", description: "Failed to delete account.", variant: "destructive" })
@@ -253,7 +255,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
             >
               <Edit className="w-4 h-4" />
               Edit
-            </Button>            
+            </Button>
           </div>
         </div>
 

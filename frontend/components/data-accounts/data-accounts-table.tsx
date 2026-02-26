@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -85,6 +86,7 @@ export function DataAccountsTable({
   onAddAccount,
   onRefresh,
 }: DataAccountsTableProps) {
+  const router = useRouter()
   const { toast } = useToast()
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -321,6 +323,7 @@ export function DataAccountsTable({
                     <TableRow
                       key={`${account.network}-${account.id}`}
                       className={`hover:bg-slate-50 cursor-pointer transition-colors ${!account.enabled ? "opacity-60" : ""}`}
+                      onClick={() => router.push(`/data-accounts/${account.network}-${account.id}`)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -350,7 +353,7 @@ export function DataAccountsTable({
                       <TableCell className="text-sm text-slate-500">
                         {new Date(account.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -399,7 +402,11 @@ export function DataAccountsTable({
           const net = getNetworkInfo(account.network)
           const stat = statusConfig[account.status] || statusConfig.active
           return (
-            <Card key={`${account.network}-${account.id}`} className={`border-slate-200 ${!account.enabled ? "opacity-60" : ""}`}>
+            <Card
+              key={`${account.network}-${account.id}`}
+              className={`border-slate-200 cursor-pointer transition-colors hover:border-slate-300 ${!account.enabled ? "opacity-60" : ""}`}
+              onClick={() => router.push(`/data-accounts/${account.network}-${account.id}`)}
+            >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -413,47 +420,49 @@ export function DataAccountsTable({
                       <p className="text-xs text-slate-500">{account.accountId}</p>
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/data-accounts/${account.network}-${account.id}`} className="flex items-center">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(account)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleToggleStatus(account)}>
-                        {account.enabled ? (
-                          <>
-                            <ToggleLeft className="w-4 h-4 mr-2" />
-                            Disable
-                          </>
-                        ) : (
-                          <>
-                            <ToggleRight className="w-4 h-4 mr-2" />
-                            Enable
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onClick={() => setDeleteAccount({ id: account.id, name: account.name, network: account.network })}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/data-accounts/${account.network}-${account.id}`} className="flex items-center">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(account)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleToggleStatus(account)}>
+                          {account.enabled ? (
+                            <>
+                              <ToggleLeft className="w-4 h-4 mr-2" />
+                              Disable
+                            </>
+                          ) : (
+                            <>
+                              <ToggleRight className="w-4 h-4 mr-2" />
+                              Enable
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => setDeleteAccount({ id: account.id, name: account.name, network: account.network })}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 <div className="mt-3 ml-13 flex flex-wrap items-center gap-3 text-sm">
                   <Badge variant="outline" className={`font-medium ${net.className}`}>
