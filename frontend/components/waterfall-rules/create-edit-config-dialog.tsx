@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,28 +27,28 @@ interface CreateEditConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   config: AppConfig | null
-  onSave: (data: Omit<AppConfig, "id" | "updatedAt">) => void
+  onSave: (data: Omit<AppConfig, "id" | "updatedAt">) => Promise<void>
+  saving?: boolean
+  apps?: Array<{ id: number; appId: string; name: string; displayName?: string }>
 }
-
-// Tạm thời dùng mock app list; sau này có thể thay bằng API apps
-const availableApps = [
-  { id: "a1", name: "Bubble Pop" },
-  { id: "a2", name: "Word Master" },
-  { id: "a3", name: "Puzzle Quest" },
-  { id: "a4", name: "Speed Racer" },
-  { id: "a5", name: "Card Clash" },
-  { id: "a6", name: "Tower Defense Pro" },
-  { id: "a7", name: "Fitness Tracker" },
-  { id: "a8", name: "Weather Now" },
-]
 
 export function CreateEditConfigDialog({
   open,
   onOpenChange,
   config,
   onSave,
+  saving = false,
+  apps = [],
 }: CreateEditConfigDialogProps) {
   const isEditing = !!config
+
+  // Map apps to dropdown format
+  const availableApps = useMemo(() => {
+    return apps.map((app) => ({
+      id: app.appId,
+      name: app.displayName || app.name || app.appId,
+    }))
+  }, [apps])
 
   const [selectedAppId, setSelectedAppId] = useState("")
   const [isGlobal, setIsGlobal] = useState(false)
@@ -56,7 +56,6 @@ export function CreateEditConfigDialog({
   const [maxRec, setMaxRec] = useState("20")
   const [minMatchRate, setMinMatchRate] = useState("3.0")
   const [minSoW, setMinSoW] = useState("0.9")
-  const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -77,7 +76,6 @@ export function CreateEditConfigDialog({
         setMinSoW("0.9")
       }
       setErrors({})
-      setSaving(false)
     }
   }, [open, config])
 
@@ -101,11 +99,10 @@ export function CreateEditConfigDialog({
     return Object.keys(errs).length === 0
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return
-    setSaving(true)
-    setTimeout(() => {
-      onSave({
+    try {
+      await onSave({
         appId: isGlobal ? "global" : selectedAppId,
         appName: isGlobal ? "Global" : (selectedApp?.name ?? ""),
         isGlobal,
@@ -114,8 +111,9 @@ export function CreateEditConfigDialog({
         minMatchRate: Number(minMatchRate),
         minSoW: Number(minSoW),
       })
-      setSaving(false)
-    }, 300)
+    } catch (error) {
+      // Error handling is done in parent component
+    }
   }
 
   return (

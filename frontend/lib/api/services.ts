@@ -19,6 +19,8 @@ import type {
     PagedTeamMembersResponse,
     HangfireJobSchedule,
     JobScheduleUpdateRequest,
+    WaterfallRecommendationConfigDto,
+    WaterfallRecommendationRuleDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -1011,5 +1013,55 @@ export const jobsTestApi = {
     // Run a job immediately (not via Hangfire schedule)
     runJob: async (jobName: string): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post<{ success: boolean; message?: string }>(`/api/v1/jobs-test/${jobName}`, {})
+    },
+}
+
+// Waterfall Recommendation Settings API Service
+export const waterfallRecommendationSettingsApi = {
+    // Configs
+    getAllConfigs: async (): Promise<WaterfallRecommendationConfigDto[]> => {
+        return apiClient.get<WaterfallRecommendationConfigDto[]>('/api/waterfall-recommendation-settings/configs')
+    },
+
+    getConfig: async (appId?: string | null): Promise<WaterfallRecommendationConfigDto> => {
+        const params = appId ? `?appId=${encodeURIComponent(appId)}` : ''
+        return apiClient.get<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/config${params}`)
+    },
+
+    getConfigById: async (id: number): Promise<WaterfallRecommendationConfigDto> => {
+        return apiClient.get<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/configs/${id}`)
+    },
+
+    createConfig: async (config: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<WaterfallRecommendationConfigDto> => {
+        return apiClient.post<WaterfallRecommendationConfigDto>('/api/waterfall-recommendation-settings/configs', config)
+    },
+
+    updateConfig: async (id: number, config: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<WaterfallRecommendationConfigDto> => {
+        return apiClient.put<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/configs/${id}`, config)
+    },
+
+    deleteConfig: async (id: number): Promise<void> => {
+        return apiClient.delete(`/api/waterfall-recommendation-settings/configs/${id}`)
+    },
+
+    // Rules
+    getAllRules: async (): Promise<WaterfallRecommendationRuleDto[]> => {
+        return apiClient.get<WaterfallRecommendationRuleDto[]>('/api/waterfall-recommendation-settings/rules')
+    },
+
+    getRuleById: async (id: number): Promise<WaterfallRecommendationRuleDto> => {
+        return apiClient.get<WaterfallRecommendationRuleDto>(`/api/waterfall-recommendation-settings/rules/${id}`)
+    },
+
+    createRule: async (rule: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<WaterfallRecommendationRuleDto> => {
+        return apiClient.post<WaterfallRecommendationRuleDto>('/api/waterfall-recommendation-settings/rules', rule)
+    },
+
+    updateRule: async (id: number, rule: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<WaterfallRecommendationRuleDto> => {
+        return apiClient.put<WaterfallRecommendationRuleDto>(`/api/waterfall-recommendation-settings/rules/${id}`, rule)
+    },
+
+    deleteRule: async (id: number): Promise<void> => {
+        return apiClient.delete(`/api/waterfall-recommendation-settings/rules/${id}`)
     },
 }
