@@ -31,7 +31,7 @@ import { CreateEditRuleDialog } from "./create-edit-rule-dialog"
 import { useApi } from "@/hooks/use-api"
 import { waterfallRecommendationSettingsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
-import type { WaterfallRecommendationConfigDto } from "@/types/api"
+import type { WaterfallRecommendationConfigDto, WaterfallRecommendationRuleDto } from "@/types/api"
 
 // --- Types ---
 export interface AppConfig {
@@ -152,14 +152,53 @@ export function WaterfallRulesContent() {
   const [createConfigOpen, setCreateConfigOpen] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
 
+  // Fetch rules from API
+  const { data: rulesData, loading: rulesLoading, refetch: refetchRules } = useApi(
+    () => waterfallRecommendationSettingsApi.getAllRules(),
+    { enabled: true, cacheKey: 'waterfall_recommendation_rules' }
+  )
+
+  // Map backend DTOs to frontend WaterfallRule type
+  const rules = useMemo<WaterfallRule[]>(() => {
+    if (!rulesData) return []
+    return rulesData.map((dto) => {
+      // Map conditionIsHighestFloor: boolean? -> "yes" | "no" | "any" | null
+      let isHighestFloor: "yes" | "no" | "any" | null = null
+      if (dto.conditionIsHighestFloor === true) {
+        isHighestFloor = "yes"
+      } else if (dto.conditionIsHighestFloor === false) {
+        isHighestFloor = "no"
+      }
+
+      return {
+        id: dto.id.toString(),
+        name: dto.name,
+        displayOrder: dto.displayOrder,
+        active: dto.isActive,
+        priority: dto.priority as "high" | "medium" | "low",
+        sowMin: dto.conditionSowMin ? Number(dto.conditionSowMin) : null,
+        sowMax: dto.conditionSowMax ? Number(dto.conditionSowMax) : null,
+        matchRateMin: dto.conditionMatchRateMin ? Number(dto.conditionMatchRateMin) : null,
+        matchRateMax: dto.conditionMatchRateMax ? Number(dto.conditionMatchRateMax) : null,
+        onlyOneInstance: dto.conditionOnlyOneInstance ?? null,
+        isHighestFloor,
+        actionType: dto.action,
+        multiplier: dto.actionMultiplier ? Number(dto.actionMultiplier) : null,
+        useMidpoint: dto.actionUseMidpoint,
+        reasonTemplate: dto.reasonTemplate || "",
+        updatedAt: dto.updatedAt,
+      }
+    })
+  }, [rulesData])
+
   // Rule state
-  const [rules, setRules] = useState<WaterfallRule[]>(mockRules)
   const [ruleSearch, setRuleSearch] = useState("")
   const [ruleStatusFilter, setRuleStatusFilter] = useState("all")
   const [rulePriorityFilter, setRulePriorityFilter] = useState("all")
   const [ruleActionFilter, setRuleActionFilter] = useState("all")
   const [editRule, setEditRule] = useState<WaterfallRule | null>(null)
   const [createRuleOpen, setCreateRuleOpen] = useState(false)
+  const [savingRule, setSavingRule] = useState(false)
 
   // Group configs by app
   const appConfigGroups = useMemo<AppConfigGroup[]>(() => {
@@ -340,62 +379,180 @@ export function WaterfallRulesContent() {
 
   // Rule CRUD
   const handleSaveRule = useCallback(
-    (data: Omit<WaterfallRule, "id" | "updatedAt">) => {
-      if (editRule) {
-        setRules((prev) =>
-          prev.map((r) =>
-            r.id === editRule.id
-              ? { ...r, ...data, updatedAt: new Date().toISOString() }
-              : r
-          )
-        )
-        setEditRule(null)
-      } else {
-        setRules((prev) => [
-          ...prev,
-          {
-            ...data,
-            id: `r${Date.now()}`,
-            updatedAt: new Date().toISOString(),
-          },
-        ])
-        setCreateRuleOpen(false)
+    async (data: Omit<WaterfallRule, "id" | "updatedAt">) => {
+      setSavingRule(true)
+      try {
+        // Map frontend type to backend DTO
+        // Map isHighestFloor: "yes" | "no" | "any" | null -> boolean?
+        let conditionIsHighestFloor: boolean | null = null
+        if (data.isHighestFloor === "yes") {
+          conditionIsHighestFloor = true
+        } else if (data.isHighestFloor === "no") {
+          conditionIsHighestFloor = false
+        }
+
+        const payload: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'> = {
+          displayOrder: data.displayOrder,
+          name: data.name,
+          isActive: data.active,
+          conditionSowMin: data.sowMin,
+          conditionSowMax: data.sowMax,
+          conditionMatchRateMin: data.matchRateMin,
+          conditionMatchRateMax: data.matchRateMax,
+          conditionOnlyOneInstance: data.onlyOneInstance,
+          conditionIsHighestFloor,
+          action: data.actionType,
+          actionMultiplier: data.multiplier,
+          actionUseMidpoint: data.useMidpoint,
+          reasonTemplate: data.reasonTemplate || null,
+          priority: data.priority,
+        }
+
+        if (editRule) {
+          // Update existing rule
+          await waterfallRecommendationSettingsApi.updateRule(Number(editRule.id), payload)
+          toast({
+            title: "Success",
+            description: "Rule updated successfully",
+          })
+          setEditRule(null)
+        } else {
+          // Create new rule
+          await waterfallRecommendationSettingsApi.createRule(payload)
+          toast({
+            title: "Success",
+            description: "Rule created successfully",
+          })
+          setCreateRuleOpen(false)
+        }
+        // Refetch rules from API
+        await refetchRules()
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to save rule",
+          variant: "destructive",
+        })
+      } finally {
+        setSavingRule(false)
       }
     },
-    [editRule]
+    [editRule, toast, refetchRules]
   )
 
-  const handleDeleteRule = useCallback((id: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== id))
-  }, [])
+  const handleDeleteRule = useCallback(async (id: string) => {
+    try {
+      await waterfallRecommendationSettingsApi.deleteRule(Number(id))
+      toast({
+        title: "Success",
+        description: "Rule deleted successfully",
+      })
+      await refetchRules()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete rule",
+        variant: "destructive",
+      })
+    }
+  }, [toast, refetchRules])
 
   const handleDuplicateRule = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const rule = rules.find((r) => r.id === id)
-      if (rule) {
-        setRules((prev) => [
-          ...prev,
-          {
-            ...rule,
-            id: `r${Date.now()}`,
-            name: `${rule.name} (Copy)`,
-            displayOrder: Math.max(...prev.map((r) => r.displayOrder)) + 1,
-            updatedAt: new Date().toISOString(),
-          },
-        ])
+      if (!rule) return
+
+      setSavingRule(true)
+      try {
+        // Map isHighestFloor
+        let conditionIsHighestFloor: boolean | null = null
+        if (rule.isHighestFloor === "yes") {
+          conditionIsHighestFloor = true
+        } else if (rule.isHighestFloor === "no") {
+          conditionIsHighestFloor = false
+        }
+
+        const payload: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'> = {
+          displayOrder: Math.max(...rules.map((r) => r.displayOrder), 0) + 1,
+          name: `${rule.name} (Copy)`,
+          isActive: rule.active,
+          conditionSowMin: rule.sowMin,
+          conditionSowMax: rule.sowMax,
+          conditionMatchRateMin: rule.matchRateMin,
+          conditionMatchRateMax: rule.matchRateMax,
+          conditionOnlyOneInstance: rule.onlyOneInstance,
+          conditionIsHighestFloor,
+          action: rule.actionType,
+          actionMultiplier: rule.multiplier,
+          actionUseMidpoint: rule.useMidpoint,
+          reasonTemplate: rule.reasonTemplate || null,
+          priority: rule.priority,
+        }
+        await waterfallRecommendationSettingsApi.createRule(payload)
+        toast({
+          title: "Success",
+          description: "Rule duplicated successfully",
+        })
+        await refetchRules()
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to duplicate rule",
+          variant: "destructive",
+        })
+      } finally {
+        setSavingRule(false)
       }
     },
-    [rules]
+    [rules, toast, refetchRules]
   )
 
-  const handleToggleRule = useCallback((id: string) => {
-    setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r))
-    )
-  }, [])
+  const handleToggleRule = useCallback(async (id: string) => {
+    const rule = rules.find((r) => r.id === id)
+    if (!rule) return
+
+    try {
+      // Map isHighestFloor
+      let conditionIsHighestFloor: boolean | null = null
+      if (rule.isHighestFloor === "yes") {
+        conditionIsHighestFloor = true
+      } else if (rule.isHighestFloor === "no") {
+        conditionIsHighestFloor = false
+      }
+
+      const payload: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'> = {
+        displayOrder: rule.displayOrder,
+        name: rule.name,
+        isActive: !rule.active, // Toggle
+        conditionSowMin: rule.sowMin,
+        conditionSowMax: rule.sowMax,
+        conditionMatchRateMin: rule.matchRateMin,
+        conditionMatchRateMax: rule.matchRateMax,
+        conditionOnlyOneInstance: rule.onlyOneInstance,
+        conditionIsHighestFloor,
+        action: rule.actionType,
+        actionMultiplier: rule.multiplier,
+        actionUseMidpoint: rule.useMidpoint,
+        reasonTemplate: rule.reasonTemplate || null,
+        priority: rule.priority,
+      }
+      await waterfallRecommendationSettingsApi.updateRule(Number(id), payload)
+      toast({
+        title: "Success",
+        description: `Rule ${!rule.active ? "enabled" : "disabled"} successfully`,
+      })
+      await refetchRules()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to toggle rule",
+        variant: "destructive",
+      })
+    }
+  }, [rules, toast, refetchRules])
 
   const handleMoveRule = useCallback(
-    (id: string, direction: "up" | "down") => {
+    async (id: string, direction: "up" | "down") => {
       const sorted = [...rules].sort(
         (a, b) => a.displayOrder - b.displayOrder
       )
@@ -405,30 +562,168 @@ export function WaterfallRulesContent() {
       if (direction === "down" && index === sorted.length - 1) return
 
       const swapIndex = direction === "up" ? index - 1 : index + 1
-      const tempOrder = sorted[index].displayOrder
-      sorted[index].displayOrder = sorted[swapIndex].displayOrder
-      sorted[swapIndex].displayOrder = tempOrder
+      const rule1 = sorted[index]
+      const rule2 = sorted[swapIndex]
+      const tempOrder = rule1.displayOrder
+      rule1.displayOrder = rule2.displayOrder
+      rule2.displayOrder = tempOrder
 
-      setRules(sorted)
+      // Update both rules via API
+      try {
+        const updatePromises = [rule1, rule2].map(async (rule) => {
+          let conditionIsHighestFloor: boolean | null = null
+          if (rule.isHighestFloor === "yes") {
+            conditionIsHighestFloor = true
+          } else if (rule.isHighestFloor === "no") {
+            conditionIsHighestFloor = false
+          }
+
+          const payload: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'> = {
+            displayOrder: rule.displayOrder,
+            name: rule.name,
+            isActive: rule.active,
+            conditionSowMin: rule.sowMin,
+            conditionSowMax: rule.sowMax,
+            conditionMatchRateMin: rule.matchRateMin,
+            conditionMatchRateMax: rule.matchRateMax,
+            conditionOnlyOneInstance: rule.onlyOneInstance,
+            conditionIsHighestFloor,
+            action: rule.actionType,
+            actionMultiplier: rule.multiplier,
+            actionUseMidpoint: rule.useMidpoint,
+            reasonTemplate: rule.reasonTemplate || null,
+            priority: rule.priority,
+          }
+          return waterfallRecommendationSettingsApi.updateRule(Number(rule.id), payload)
+        })
+
+        await Promise.all(updatePromises)
+        toast({
+          title: "Success",
+          description: "Rule order updated successfully",
+        })
+        await refetchRules()
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to move rule",
+          variant: "destructive",
+        })
+      }
     },
-    [rules]
+    [rules, toast, refetchRules]
   )
 
-  const handleBulkEnableRules = useCallback((ids: string[]) => {
-    setRules((prev) =>
-      prev.map((r) => (ids.includes(r.id) ? { ...r, active: true } : r))
-    )
-  }, [])
+  const handleBulkEnableRules = useCallback(async (ids: string[]) => {
+    try {
+      const updatePromises = ids.map(async (id) => {
+        const rule = rules.find((r) => r.id === id)
+        if (!rule || rule.active) return
 
-  const handleBulkDisableRules = useCallback((ids: string[]) => {
-    setRules((prev) =>
-      prev.map((r) => (ids.includes(r.id) ? { ...r, active: false } : r))
-    )
-  }, [])
+        let conditionIsHighestFloor: boolean | null = null
+        if (rule.isHighestFloor === "yes") {
+          conditionIsHighestFloor = true
+        } else if (rule.isHighestFloor === "no") {
+          conditionIsHighestFloor = false
+        }
 
-  const handleBulkDeleteRules = useCallback((ids: string[]) => {
-    setRules((prev) => prev.filter((r) => !ids.includes(r.id)))
-  }, [])
+        const payload: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'> = {
+          displayOrder: rule.displayOrder,
+          name: rule.name,
+          isActive: true,
+          conditionSowMin: rule.sowMin,
+          conditionSowMax: rule.sowMax,
+          conditionMatchRateMin: rule.matchRateMin,
+          conditionMatchRateMax: rule.matchRateMax,
+          conditionOnlyOneInstance: rule.onlyOneInstance,
+          conditionIsHighestFloor,
+          action: rule.actionType,
+          actionMultiplier: rule.multiplier,
+          actionUseMidpoint: rule.useMidpoint,
+          reasonTemplate: rule.reasonTemplate || null,
+          priority: rule.priority,
+        }
+        return waterfallRecommendationSettingsApi.updateRule(Number(id), payload)
+      })
+
+      await Promise.all(updatePromises)
+      toast({
+        title: "Success",
+        description: `${ids.length} rule(s) enabled successfully`,
+      })
+      await refetchRules()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to enable rules",
+        variant: "destructive",
+      })
+    }
+  }, [rules, toast, refetchRules])
+
+  const handleBulkDisableRules = useCallback(async (ids: string[]) => {
+    try {
+      const updatePromises = ids.map(async (id) => {
+        const rule = rules.find((r) => r.id === id)
+        if (!rule || !rule.active) return
+
+        let conditionIsHighestFloor: boolean | null = null
+        if (rule.isHighestFloor === "yes") {
+          conditionIsHighestFloor = true
+        } else if (rule.isHighestFloor === "no") {
+          conditionIsHighestFloor = false
+        }
+
+        const payload: Omit<WaterfallRecommendationRuleDto, 'id' | 'createdAt' | 'updatedAt'> = {
+          displayOrder: rule.displayOrder,
+          name: rule.name,
+          isActive: false,
+          conditionSowMin: rule.sowMin,
+          conditionSowMax: rule.sowMax,
+          conditionMatchRateMin: rule.matchRateMin,
+          conditionMatchRateMax: rule.matchRateMax,
+          conditionOnlyOneInstance: rule.onlyOneInstance,
+          conditionIsHighestFloor,
+          action: rule.actionType,
+          actionMultiplier: rule.multiplier,
+          actionUseMidpoint: rule.useMidpoint,
+          reasonTemplate: rule.reasonTemplate || null,
+          priority: rule.priority,
+        }
+        return waterfallRecommendationSettingsApi.updateRule(Number(id), payload)
+      })
+
+      await Promise.all(updatePromises)
+      toast({
+        title: "Success",
+        description: `${ids.length} rule(s) disabled successfully`,
+      })
+      await refetchRules()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to disable rules",
+        variant: "destructive",
+      })
+    }
+  }, [rules, toast, refetchRules])
+
+  const handleBulkDeleteRules = useCallback(async (ids: string[]) => {
+    try {
+      await Promise.all(ids.map((id) => waterfallRecommendationSettingsApi.deleteRule(Number(id))))
+      toast({
+        title: "Success",
+        description: `${ids.length} rule(s) deleted successfully`,
+      })
+      await refetchRules()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete rules",
+        variant: "destructive",
+      })
+    }
+  }, [toast, refetchRules])
 
   return (
     <div className="space-y-6">
@@ -459,15 +754,23 @@ export function WaterfallRulesContent() {
             variant="ghost" 
             className="text-slate-600"
             onClick={() => {
-              refetchConfigs()
-              toast({
-                title: "Refreshed",
-                description: "Configurations refreshed",
-              })
+              if (activeTab === "configs") {
+                refetchConfigs()
+                toast({
+                  title: "Refreshed",
+                  description: "Configurations refreshed",
+                })
+              } else {
+                refetchRules()
+                toast({
+                  title: "Refreshed",
+                  description: "Rules refreshed",
+                })
+              }
             }}
-            disabled={configsLoading}
+            disabled={activeTab === "configs" ? configsLoading : rulesLoading}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${configsLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 ${(activeTab === "configs" ? configsLoading : rulesLoading) ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -819,6 +1122,7 @@ export function WaterfallRulesContent() {
         }}
         rule={editRule}
         onSave={handleSaveRule}
+        saving={savingRule}
       />
     </div>
   )
