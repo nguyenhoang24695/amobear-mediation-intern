@@ -379,3 +379,35 @@ export interface JobScheduleUpdateRequest {
   jobTypeName?: string
   jobMethodName?: string
 }
+
+// Waterfall Recommendation Types
+export interface WaterfallRecommendationConfigDto {
+  id: number
+  appId?: string | null
+  minRecommendations: number
+  maxRecommendations: number
+  minMatchRatePercent: number
+  minSowPercent: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WaterfallRecommendationRuleDto {
+  id: number
+  displayOrder: number
+  name: string
+  isActive: boolean
+  conditionSowMin?: number | null
+  conditionSowMax?: number | null
+  conditionMatchRateMin?: number | null
+  conditionMatchRateMax?: number | null
+  conditionOnlyOneInstance?: boolean | null
+  conditionIsHighestFloor?: boolean | null
+  action: string
+  actionMultiplier?: number | null
+  actionUseMidpoint: boolean
+  reasonTemplate?: string | null
+  priority: string
+  createdAt: string
+  updatedAt: string
+}

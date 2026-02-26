@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,10 @@ import { ConfigsTable } from "./configs-table"
 import { RulesTable } from "./rules-table"
 import { CreateEditConfigDialog } from "./create-edit-config-dialog"
 import { CreateEditRuleDialog } from "./create-edit-rule-dialog"
+import { useApi } from "@/hooks/use-api"
+import { waterfallRecommendationSettingsApi, structureApi } from "@/lib/api/services"
+import { useToast } from "@/hooks/use-toast"
+import type { WaterfallRecommendationConfigDto } from "@/types/api"
 
 // --- Types ---
 export interface AppConfig {
@@ -105,14 +109,48 @@ const mockRules: WaterfallRule[] = [
 ]
 
 export function WaterfallRulesContent() {
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<"configs" | "rules">("configs")
 
+  // Fetch configs from API
+  const { data: configsData, loading: configsLoading, refetch: refetchConfigs } = useApi(
+    () => waterfallRecommendationSettingsApi.getAllConfigs(),
+    { enabled: true, cacheKey: 'waterfall_recommendation_configs' }
+  )
+
+  // Fetch apps for app selection
+  const { data: appsResponse } = useApi(
+    () => structureApi.getApps(),
+    { enabled: true, cacheKey: 'apps_list_for_waterfall_configs' }
+  )
+
+  // Map backend DTOs to frontend AppConfig type
+  const configs = useMemo<AppConfig[]>(() => {
+    if (!configsData) return []
+    const apps = appsResponse?.apps || []
+    return configsData.map((dto) => {
+      const isGlobal = !dto.appId
+      const app = apps.find((a) => a.appId === dto.appId)
+      return {
+        id: dto.id.toString(),
+        appId: dto.appId || "global",
+        appName: isGlobal ? "Global" : (app?.displayName || app?.name || dto.appId || "Unknown"),
+        isGlobal,
+        minRecommendations: dto.minRecommendations,
+        maxRecommendations: dto.maxRecommendations,
+        minMatchRate: Number(dto.minMatchRatePercent),
+        minSoW: Number(dto.minSowPercent),
+        updatedAt: dto.updatedAt,
+      }
+    })
+  }, [configsData, appsResponse])
+
   // Config state
-  const [configs, setConfigs] = useState<AppConfig[]>(mockConfigs)
   const [configSearch, setConfigSearch] = useState("")
   const [configTypeFilter, setConfigTypeFilter] = useState("all")
   const [editConfig, setEditConfig] = useState<AppConfig | null>(null)
   const [createConfigOpen, setCreateConfigOpen] = useState(false)
+  const [savingConfig, setSavingConfig] = useState(false)
 
   // Rule state
   const [rules, setRules] = useState<WaterfallRule[]>(mockRules)
@@ -188,54 +226,116 @@ export function WaterfallRulesContent() {
 
   // Config CRUD
   const handleSaveConfig = useCallback(
-    (data: Omit<AppConfig, "id" | "updatedAt">) => {
-      if (editConfig) {
-        setConfigs((prev) =>
-          prev.map((c) =>
-            c.id === editConfig.id
-              ? { ...c, ...data, updatedAt: new Date().toISOString() }
-              : c
-          )
-        )
-        setEditConfig(null)
-      } else {
-        setConfigs((prev) => [
-          ...prev,
-          {
-            ...data,
-            id: `c${Date.now()}`,
-            updatedAt: new Date().toISOString(),
-          },
-        ])
-        setCreateConfigOpen(false)
+    async (data: Omit<AppConfig, "id" | "updatedAt">) => {
+      setSavingConfig(true)
+      try {
+        const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+          appId: data.isGlobal ? null : (data.appId === "global" ? null : data.appId),
+          minRecommendations: data.minRecommendations,
+          maxRecommendations: data.maxRecommendations,
+          minMatchRatePercent: data.minMatchRate,
+          minSowPercent: data.minSoW,
+        }
+
+        if (editConfig) {
+          // Update existing config
+          await waterfallRecommendationSettingsApi.updateConfig(Number(editConfig.id), payload)
+          toast({
+            title: "Success",
+            description: "Configuration updated successfully",
+          })
+          setEditConfig(null)
+        } else {
+          // Create new config
+          await waterfallRecommendationSettingsApi.createConfig(payload)
+          toast({
+            title: "Success",
+            description: "Configuration created successfully",
+          })
+          setCreateConfigOpen(false)
+        }
+        // Refetch configs from API
+        await refetchConfigs()
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to save configuration",
+          variant: "destructive",
+        })
+      } finally {
+        setSavingConfig(false)
       }
     },
-    [editConfig]
+    [editConfig, toast, refetchConfigs]
   )
 
-  const handleDeleteConfig = useCallback((id: string) => {
-    setConfigs((prev) => prev.filter((c) => c.id !== id))
-  }, [])
+  const handleDeleteConfig = useCallback(async (id: string) => {
+    try {
+      await waterfallRecommendationSettingsApi.deleteConfig(Number(id))
+      toast({
+        title: "Success",
+        description: "Configuration deleted successfully",
+      })
+      await refetchConfigs()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete configuration",
+        variant: "destructive",
+      })
+    }
+  }, [toast, refetchConfigs])
 
-  const handleDeleteApp = useCallback((appId: string) => {
-    setConfigs((prev) => prev.filter((c) => c.appId !== appId))
-  }, [])
+  const handleDeleteApp = useCallback(async (appId: string) => {
+    try {
+      // Delete all configs for this app
+      const configsToDelete = configs.filter((c) => c.appId === appId)
+      await Promise.all(configsToDelete.map((c) => waterfallRecommendationSettingsApi.deleteConfig(Number(c.id))))
+      toast({
+        title: "Success",
+        description: `Deleted ${configsToDelete.length} configuration(s) for ${appId === "global" ? "Global" : appId}`,
+      })
+      await refetchConfigs()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete configurations",
+        variant: "destructive",
+      })
+    }
+  }, [configs, toast, refetchConfigs])
 
   const handleDuplicateConfig = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const config = configs.find((c) => c.id === id)
-      if (config) {
-        setConfigs((prev) => [
-          ...prev,
-          {
-            ...config,
-            id: `c${Date.now()}`,
-            updatedAt: new Date().toISOString(),
-          },
-        ])
+      if (!config) return
+
+      setSavingConfig(true)
+      try {
+        const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+          appId: config.isGlobal ? null : (config.appId === "global" ? null : config.appId),
+          minRecommendations: config.minRecommendations,
+          maxRecommendations: config.maxRecommendations,
+          minMatchRatePercent: config.minMatchRate,
+          minSowPercent: config.minSoW,
+        }
+        await waterfallRecommendationSettingsApi.createConfig(payload)
+        toast({
+          title: "Success",
+          description: "Configuration duplicated successfully",
+        })
+        await refetchConfigs()
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to duplicate configuration",
+          variant: "destructive",
+        })
+      } finally {
+        setSavingConfig(false)
       }
     },
-    [configs]
+    [configs, toast, refetchConfigs]
   )
 
   // Rule CRUD
@@ -355,8 +455,19 @@ export function WaterfallRulesContent() {
             <Plus className="w-4 h-4 mr-2" />
             {activeTab === "configs" ? "Create Config" : "Create Rule"}
           </Button>
-          <Button variant="ghost" className="text-slate-600">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            variant="ghost" 
+            className="text-slate-600"
+            onClick={() => {
+              refetchConfigs()
+              toast({
+                title: "Refreshed",
+                description: "Configurations refreshed",
+              })
+            }}
+            disabled={configsLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${configsLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -693,6 +804,8 @@ export function WaterfallRulesContent() {
         }}
         config={editConfig}
         onSave={handleSaveConfig}
+        saving={savingConfig}
+        apps={appsResponse?.apps || []}
       />
 
       {/* Create/Edit Rule Dialog */}
