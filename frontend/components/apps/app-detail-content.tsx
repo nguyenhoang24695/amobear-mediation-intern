@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   Copy,
   ExternalLink,
-  RefreshCw,
   MoreHorizontal,
   Apple,
   Pause,
@@ -74,7 +73,7 @@ export function AppDetailContent() {
   const initialTab = searchParams.get("tab") || "overview"
   const [activeTab, setActiveTab] = useState(initialTab)
   const [copied, setCopied] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
+
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
@@ -97,30 +96,18 @@ export function AppDetailContent() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleSync = async () => {
-    setIsSyncing(true)
-    toast({
-      title: "Syncing...",
-      description: "Syncing app data with AdMob",
-    })
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    toast({
-      title: "Sync Complete",
-      description: "App data has been synced successfully",
-    })
-    setIsSyncing(false)
-  }
+
 
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6">
         {/* Back Link */}
         <Link
-          href="/apps"
+          href={searchParams.get("from") === "account" && searchParams.get("accountId") ? `/data-accounts/${searchParams.get("accountId")}` : "/apps"}
           className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Apps
+          {searchParams.get("from") === "account" ? "Back to Account" : "Back to Apps"}
         </Link>
 
         {/* Page Header */}
@@ -192,15 +179,7 @@ export function AppDetailContent() {
               <Apple className="w-4 h-4" />
               View in App Store
             </Button>
-            <Button
-              variant="outline"
-              className="h-9 gap-2 bg-transparent text-sm"
-              onClick={handleSync}
-              disabled={isSyncing}
-            >
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Sync Now
-            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-9 w-9 p-0 bg-transparent">

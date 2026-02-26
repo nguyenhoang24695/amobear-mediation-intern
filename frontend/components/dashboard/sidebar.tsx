@@ -21,6 +21,7 @@ import {
   Users,
   Building2,
   Briefcase,
+  KeyRound,
   ListChecks,
 } from "lucide-react"
 import Link from "next/link"
@@ -44,6 +45,7 @@ const navItems = [
   { icon: Building2, label: "Organizations", href: "/organizations" },
   { icon: Briefcase, label: "Job Management", href: "/jobs" },
   { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules" },
+  { icon: KeyRound, label: "Data Accounts", href: "/data-accounts" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
@@ -99,6 +101,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
             // Only show Job Management menu for admin and super_admin roles
             if (item.label === "Job Management") {
+              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
+                return null
+              }
+            }
+
+            // Only show Data Accounts menu for admin and super_admin roles
+            if (item.label === "Data Accounts") {
               if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
                 return null
               }

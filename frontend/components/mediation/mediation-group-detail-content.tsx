@@ -17,7 +17,6 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   ArrowLeft,
   ExternalLink,
-  RefreshCw,
   MoreHorizontal,
   Pause,
   Copy,
@@ -71,7 +70,7 @@ export function MediationGroupDetailContent() {
   const [applyMode, setApplyMode] = useState<"direct" | "test-winner">("direct")
   const [applyDirectChanges, setApplyDirectChanges] = useState<ApplyDirectChanges | undefined>(undefined)
   const [applyMediationGroupId, setApplyMediationGroupId] = useState<string | undefined>(undefined)
-  const [isSyncing, setIsSyncing] = useState(false)
+
 
   // Extract data from API response (cache key: dashboard:mediationgroup:{mediationGroupId}:detail:today)
   const groupData = useMemo(() => {
@@ -126,19 +125,7 @@ export function MediationGroupDetailContent() {
     setApplyVariantModalOpen(true)
   }
 
-  const handleSync = async () => {
-    setIsSyncing(true)
-    toast({
-      title: "Syncing...",
-      description: "Syncing mediation group with AdMob",
-    })
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    toast({
-      title: "Sync Complete",
-      description: "Mediation group has been synced successfully",
-    })
-    setIsSyncing(false)
-  }
+
 
   if (loading) {
     return (
@@ -231,15 +218,7 @@ export function MediationGroupDetailContent() {
               <ExternalLink className="w-4 h-4" />
               View in AdMob
             </Button>
-            <Button
-              variant="outline"
-              className="h-9 gap-2 bg-transparent text-sm"
-              onClick={handleSync}
-              disabled={isSyncing}
-            >
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Sync Now
-            </Button>
+
             <Button
               variant="outline"
               className="h-9 gap-2 bg-transparent text-sm text-amber-600 border-amber-200 hover:bg-amber-50"
