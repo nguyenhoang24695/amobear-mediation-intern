@@ -13,6 +13,7 @@ import { structureApi } from "@/lib/api/services"
 
 const platformOptions = ["All Platforms", "ANDROID", "IOS"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
+const typeOptions = ["All Types", "game", "app"]
 const networkOptions = ["All Networks", "AdMob", "Unity Ads", "ironSource", "AppLovin"]
 const ALL_ACCOUNTS_VALUE = "All Accounts"
 
@@ -25,10 +26,12 @@ export function AppsPageContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [platform, setPlatform] = useState("All Platforms")
   const [status, setStatus] = useState("All Status")
+  const [type, setType] = useState("All Types")
   const [network, setNetwork] = useState("All Networks")
   const [admobAccount, setAdmobAccount] = useState(ALL_ACCOUNTS_VALUE)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [selectedApps, setSelectedApps] = useState<string[]>([])
+  const [updatingType, setUpdatingType] = useState<"game" | "app" | null>(null)
 
   // Fetch apps từ API (khi chọn "All Accounts" = getApps(), khi chọn 1 tài khoản = getApps(publisherId))
   const { data: appsResponse, loading: appsLoading, refetch: refetchApps } = useApi(
@@ -86,6 +89,9 @@ export function AppsPageContent() {
       case "Status":
         setStatus(value)
         break
+      case "Type":
+        setType(value)
+        break
       case "Network":
         setNetwork(value)
         break
@@ -104,6 +110,9 @@ export function AppsPageContent() {
       case "Status":
         setStatus("All Status")
         break
+      case "Type":
+        setType("All Types")
+        break
       case "Network":
         setNetwork("All Networks")
         break
@@ -120,6 +129,25 @@ export function AppsPageContent() {
     setNetwork("All Networks")
     setAdmobAccount(ALL_ACCOUNTS_VALUE)
     setSearchQuery("")
+  }
+
+  const bulkSetType = async (targetType: "game" | "app") => {
+    if (!apps || selectedApps.length === 0) return
+    const appIds = apps
+      .filter((app) => selectedApps.includes(app.id.toString()))
+      .map((app) => app.appId)
+      .filter(Boolean)
+
+    if (appIds.length === 0) return
+
+    try {
+      setUpdatingType(targetType)
+      await structureApi.updateAppsType({ appIds, type: targetType })
+      await refetchApps()
+      setSelectedApps([])
+    } finally {
+      setUpdatingType(null)
+    }
   }
 
   return (
@@ -175,6 +203,19 @@ export function AppsPageContent() {
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={type} onValueChange={(v) => handleFilterChange("Type", v)}>
+              <SelectTrigger className="w-32 h-10 bg-white">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {typeOptions.map((opt) => (
                   <SelectItem key={opt} value={opt}>
                     {opt}
                   </SelectItem>
@@ -364,13 +405,31 @@ export function AppsPageContent() {
           <span className="text-sm font-medium">{selectedApps.length} apps selected</span>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Pause Selected
+                Pause Selected
             </Button>
             <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Resume Selected
+                Resume Selected
             </Button>
             <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Export Selected
+                Export Selected
+            </Button>
+            <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
+                disabled={updatingType !== null}
+                onClick={() => bulkSetType("game")}
+              >
+                {updatingType === "game" ? "Setting as Game..." : "Set type: Game"}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
+              disabled={updatingType !== null}
+              onClick={() => bulkSetType("app")}
+            >
+              {updatingType === "app" ? "Setting as App..." : "Set type: App"}
             </Button>
             <button onClick={() => setSelectedApps([])} className="text-sm text-slate-300 hover:text-white ml-2">
               Clear selection
@@ -386,6 +445,7 @@ export function AppsPageContent() {
         searchQuery={searchQuery}
         platformFilter={platform}
         statusFilter={status}
+        typeFilter={type}
         networkFilter={network}
         selectedApps={selectedApps}
         onSelectionChange={setSelectedApps}

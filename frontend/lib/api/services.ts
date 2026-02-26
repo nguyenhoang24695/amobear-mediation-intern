@@ -142,6 +142,11 @@ export const structureApi = {
         return apiClient.get<WaterfallAdUnit[]>(`/api/Structure/apps/${id}/waterfalladunits`)
     },
 
+    /** Bulk update app type (game/app) for selected apps by AppId (AdMob app_id) */
+    updateAppsType: async (payload: { appIds: string[]; type: "game" | "app" }) => {
+        return apiClient.post(`/api/Structure/apps/bulk-type`, payload)
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,

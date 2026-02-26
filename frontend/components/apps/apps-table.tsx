@@ -54,6 +54,7 @@ interface AppsTableProps {
   searchQuery: string
   platformFilter: string
   statusFilter: string
+  typeFilter: string
   networkFilter: string
   selectedApps: string[]
   onSelectionChange: (apps: string[]) => void
@@ -68,6 +69,7 @@ export function AppsTable({
   searchQuery,
   platformFilter,
   statusFilter,
+  typeFilter,
   selectedApps,
   onSelectionChange,
 }: AppsTableProps) {
@@ -122,6 +124,13 @@ export function AppsTable({
     }
     if (statusFilter !== "All Status" && app.status !== statusFilter) {
       return false
+    }
+    if (typeFilter !== "All Types") {
+      // Nếu type trong DB là null thì mặc định coi là "app"
+      const effectiveType = app._original.type ?? "app"
+      if (effectiveType !== typeFilter) {
+        return false
+      }
     }
     return true
   })
