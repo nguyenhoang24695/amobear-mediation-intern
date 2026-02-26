@@ -21,6 +21,7 @@ import {
   Users,
   Building2,
   Briefcase,
+  ListChecks,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -42,6 +43,7 @@ const navItems = [
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
   { icon: Building2, label: "Organizations", href: "/organizations" },
   { icon: Briefcase, label: "Job Management", href: "/jobs" },
+  { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
@@ -97,6 +99,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
             // Only show Job Management menu for admin and super_admin roles
             if (item.label === "Job Management") {
+              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
+                return null
+              }
+            }
+
+            // Only show Waterfall Rules menu for admin and super_admin roles
+            if (item.label === "Waterfall Rules") {
               if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
                 return null
               }
