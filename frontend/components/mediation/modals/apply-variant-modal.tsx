@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, Check, Loader2, CheckCircle2, XCircle, Circle, ArrowRight } from "lucide-react"
+import { AlertTriangle, Check, Loader2, CheckCircle2, XCircle, ArrowRight } from "lucide-react"
 import { waterfallManagementApi } from "@/lib/api/services"
 
 /** Dữ liệu thay đổi khi Apply Direct / Apply Winner — dùng dữ liệu thật từ waterfall optimization */
@@ -21,9 +21,16 @@ interface ApplyVariantModalProps {
   /** AdMob mediation group id (bắt buộc khi mode = direct để gọi API apply). */
   mediationGroupId?: string
   changes?: ApplyDirectChanges
+  /** Gọi sau khi toàn bộ tiến trình xong (apply + sync) — đóng modal và refetch trang. */
+  onSuccess?: () => void
 }
 
 type ModalState = "confirm" | "loading" | "success" | "error"
+
+const PROCESS_STEPS = [
+  { label: "Apply waterfall to AdMob", description: "Applying all changes in one request" },
+  { label: "Sync from AdMob", description: "Reloading mediation group configuration" },
+] as const
 
 const emptyChanges: ApplyDirectChanges = {
   floorsModified: [],
@@ -31,29 +38,29 @@ const emptyChanges: ApplyDirectChanges = {
   sourcesRemoved: [],
 }
 
-export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, changes }: ApplyVariantModalProps) {
+export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, changes, onSuccess }: ApplyVariantModalProps) {
   const effectiveChanges = changes ?? emptyChanges
   const [modalState, setModalState] = useState<ModalState>("confirm")
-  const [currentStep, setCurrentStep] = useState(0)
-  const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  const [processStep, setProcessStep] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string>("")
 
-  const totalSteps =
+  const totalChangeCount =
     effectiveChanges.floorsModified.length +
     effectiveChanges.sourcesAdded.length +
     effectiveChanges.sourcesRemoved.length
 
-  const canApplyDirect = mode === "direct" ? !!mediationGroupId && totalSteps > 0 : totalSteps > 0
+  const canApplyDirect = mode === "direct" ? !!mediationGroupId && totalChangeCount > 0 : totalChangeCount > 0
 
   const handleApply = async () => {
     if (mode === "direct" && !mediationGroupId) return
     setModalState("loading")
-    setCurrentStep(0)
-    setCompletedSteps([])
+    setProcessStep(0)
     setErrorMessage("")
 
     try {
       if (mode === "direct") {
+        // Bước 1: Apply waterfall một lần cho toàn bộ thay đổi
+        setProcessStep(0)
         const res = await waterfallManagementApi.apply({
           mediationGroupId: mediationGroupId!,
           floorsModified: effectiveChanges.floorsModified,
@@ -65,11 +72,21 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
           setModalState("error")
           return
         }
-        setCompletedSteps(Array.from({ length: totalSteps }, (_, i) => i))
-        setModalState("success")
+
+        // Bước 2: Sync từ AdMob để load lại cấu hình
+        setProcessStep(1)
+        const syncRes = await waterfallManagementApi.sync(mediationGroupId!)
+        if (!syncRes.success) {
+          setErrorMessage(syncRes.error ?? "Sync failed after apply. You can use Sync Now later.")
+          setModalState("error")
+          return
+        }
+
+        // Kết thúc: đóng modal và reload trang
+        onSuccess?.()
       } else {
-        setCompletedSteps(Array.from({ length: totalSteps }, (_, i) => i))
         setModalState("success")
+        onSuccess?.()
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -82,8 +99,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
     onOpenChange(false)
     setTimeout(() => {
       setModalState("confirm")
-      setCurrentStep(0)
-      setCompletedSteps([])
+      setProcessStep(0)
     }, 200)
   }
 
@@ -203,94 +219,30 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
           </>
         )}
 
-        {/* Loading State */}
+        {/* Loading State: Apply (1 request) → Sync → sau đó onSuccess đóng modal và reload */}
         {modalState === "loading" && (
           <div className="py-8 px-4">
             <DialogHeader className="mb-6">
-              <DialogTitle className="text-center">Applying Changes to AdMob...</DialogTitle>
+              <DialogTitle className="text-center">Applying &amp; Syncing...</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-2 max-w-sm mx-auto max-h-64 overflow-y-auto">
-              {/* Floors */}
-              {effectiveChanges.floorsModified.map((change, index) => (
-                <div key={change.name} className="flex items-center gap-3 text-sm py-1">
-                  {completedSteps.includes(index) ? (
-                    <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  ) : currentStep === index ? (
-                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
-                  ) : (
-                    <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                  )}
-                  <span
-                    className={
-                      completedSteps.includes(index)
-                        ? "text-slate-700"
-                        : currentStep === index
-                          ? "text-slate-700"
-                          : "text-slate-400"
-                    }
-                  >
-                    {change.name}: ${change.oldValue.toFixed(2)} → ${change.newValue.toFixed(2)}
-                    {completedSteps.includes(index) && <span className="text-green-500 ml-1">✓</span>}
-                  </span>
-                </div>
-              ))}
-
-              {/* Added Sources */}
-              {effectiveChanges.sourcesAdded.map((source, i) => {
-                const index = effectiveChanges.floorsModified.length + i
+            <div className="space-y-4 max-w-sm mx-auto">
+              {PROCESS_STEPS.map((step, index) => {
+                const done = processStep > index
+                const current = processStep === index
                 return (
-                  <div key={source.name} className="flex items-center gap-3 text-sm py-1">
-                    {completedSteps.includes(index) ? (
-                      <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    ) : currentStep === index ? (
-                      <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+                  <div key={step.label} className="flex items-start gap-3 text-sm">
+                    {done ? (
+                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    ) : current ? (
+                      <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0 mt-0.5" />
                     ) : (
-                      <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                      <span className="w-5 h-5 rounded-full border-2 border-slate-200 flex-shrink-0 mt-0.5" />
                     )}
-                    <span
-                      className={
-                        completedSteps.includes(index)
-                          ? "text-slate-700"
-                          : currentStep === index
-                            ? "text-slate-700"
-                            : "text-slate-400"
-                      }
-                    >
-                      Adding {source.name}
-                      {completedSteps.includes(index) && <span className="text-green-500 ml-1">✓</span>}
-                    </span>
-                  </div>
-                )
-              })}
-
-              {/* Removed Sources */}
-              {effectiveChanges.sourcesRemoved.map((source, i) => {
-                const index =
-                  effectiveChanges.floorsModified.length +
-                  effectiveChanges.sourcesAdded.length +
-                  i
-                return (
-                  <div key={source.name} className="flex items-center gap-3 text-sm py-1">
-                    {completedSteps.includes(index) ? (
-                      <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    ) : currentStep === index ? (
-                      <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                    )}
-                    <span
-                      className={
-                        completedSteps.includes(index)
-                          ? "text-slate-700"
-                          : currentStep === index
-                            ? "text-slate-700"
-                            : "text-slate-400"
-                      }
-                    >
-                      Removing {source.name}
-                      {completedSteps.includes(index) && <span className="text-green-500 ml-1">✓</span>}
-                    </span>
+                    <div className={done ? "text-slate-700" : current ? "text-slate-900 font-medium" : "text-slate-400"}>
+                      <p>{step.label}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{step.description}</p>
+                    </div>
                   </div>
                 )
               })}
@@ -300,17 +252,14 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
           </div>
         )}
 
-        {/* Success State */}
+        {/* Success State (chỉ cho test-winner; direct mode đã gọi onSuccess và đóng modal) */}
         {modalState === "success" && (
           <div className="py-12 px-4 text-center">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
-            <DialogTitle className="mb-2">Changes Applied Successfully!</DialogTitle>
-            <p className="text-sm text-slate-600 mb-2">Your waterfall has been updated in AdMob.</p>
-            <p className="text-xs text-slate-500 mb-1">Changes will take effect within a few minutes.</p>
-            <p className="text-xs text-slate-500 mb-6">Next sync scheduled: 5 minutes</p>
-
+            <DialogTitle className="mb-2">Done</DialogTitle>
+            <p className="text-sm text-slate-600 mb-6">The page will refresh.</p>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
               Done
             </Button>
@@ -333,10 +282,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
             </p>
 
             <div className="flex items-center justify-center gap-3">
-              <Button variant="outline" onClick={handleClose}>
-                View Details
-              </Button>
-              <Button variant="outline" onClick={handleApply}>
+              <Button variant="outline" onClick={() => void handleApply()}>
                 Retry
               </Button>
               <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>

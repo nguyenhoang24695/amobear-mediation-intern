@@ -1,8 +1,8 @@
 // Base API Client
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
-/** Timeout mặc định (ms). API recommendations có thể chạy lâu khi cache chưa có. */
-const DEFAULT_REQUEST_TIMEOUT_MS = 90_000
+/** Timeout mặc định (ms). Sync/Apply gọi AdMob có thể chạy lâu; recommendations khi cache chưa có. */
+const DEFAULT_REQUEST_TIMEOUT_MS = 180_000
 
 // Global flag to prevent multiple simultaneous redirects
 let isRedirecting = false

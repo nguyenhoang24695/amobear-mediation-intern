@@ -33,7 +33,7 @@ import { WaterfallOptimizationTab } from "./mediation-group-detail/waterfall-opt
 import { ABTestsTab } from "./mediation-group-detail/ab-tests-tab"
 import { CreateABTestModal } from "./modals/create-ab-test-modal"
 import { ApplyVariantModal, type ApplyDirectChanges } from "./modals/apply-variant-modal"
-import { useToast } from "@/hooks/use-toast"
+import { SyncNowModal } from "./modals/sync-now-modal"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 
@@ -50,13 +50,12 @@ export function MediationGroupDetailContent() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { toast } = useToast()
 
   const mediationGroupIdFromParams = (params as any)?.id as string | undefined
   const hasValidId = !!mediationGroupIdFromParams
 
   // Fetch mediation group by AdMob mediation_group_id (cache key đồng nhất: mediation_group_detail_{mediationGroupId})
-  const { data: groupDetail, loading } = useApi(
+  const { data: groupDetail, loading, refetch: refetchGroupDetail } = useApi(
     () => structureApi.getMediationGroupByAdMobId(mediationGroupIdFromParams!),
     {
       enabled: hasValidId,
@@ -71,7 +70,8 @@ export function MediationGroupDetailContent() {
   const [applyMode, setApplyMode] = useState<"direct" | "test-winner">("direct")
   const [applyDirectChanges, setApplyDirectChanges] = useState<ApplyDirectChanges | undefined>(undefined)
   const [applyMediationGroupId, setApplyMediationGroupId] = useState<string | undefined>(undefined)
-  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncNowModalOpen, setSyncNowModalOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Extract data from API response (cache key: dashboard:mediationgroup:{mediationGroupId}:detail:today)
   const groupData = useMemo(() => {
@@ -126,18 +126,8 @@ export function MediationGroupDetailContent() {
     setApplyVariantModalOpen(true)
   }
 
-  const handleSync = async () => {
-    setIsSyncing(true)
-    toast({
-      title: "Syncing...",
-      description: "Syncing mediation group with AdMob",
-    })
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    toast({
-      title: "Sync Complete",
-      description: "Mediation group has been synced successfully",
-    })
-    setIsSyncing(false)
+  const handleSync = () => {
+    setSyncNowModalOpen(true)
   }
 
   if (loading) {
@@ -235,9 +225,8 @@ export function MediationGroupDetailContent() {
               variant="outline"
               className="h-9 gap-2 bg-transparent text-sm"
               onClick={handleSync}
-              disabled={isSyncing}
             >
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <RefreshCw className="w-4 h-4" />
               Sync Now
             </Button>
             <Button
@@ -309,6 +298,7 @@ export function MediationGroupDetailContent() {
               hasRunningTest={groupData.hasRunningTest}
               testDay={groupData.testDay}
               testDuration={groupData.testDuration}
+              refreshKey={refreshKey}
             />
           </TabsContent>
           <TabsContent value="ab-tests" className="mt-6">
@@ -334,6 +324,21 @@ export function MediationGroupDetailContent() {
           mode={applyMode}
           mediationGroupId={applyMode === "direct" ? applyMediationGroupId : undefined}
           changes={applyMode === "direct" ? applyDirectChanges : undefined}
+          onSuccess={() => {
+            setApplyVariantModalOpen(false)
+            void refetchGroupDetail()
+            setRefreshKey((k) => k + 1)
+          }}
+        />
+        <SyncNowModal
+          open={syncNowModalOpen}
+          onOpenChange={setSyncNowModalOpen}
+          mediationGroupId={groupData?.mediationGroupId ?? mediationGroupIdFromParams ?? ""}
+          onSuccess={() => {
+            setSyncNowModalOpen(false)
+            void refetchGroupDetail()
+            setRefreshKey((k) => k + 1)
+          }}
         />
       </div>
     </TooltipProvider>
