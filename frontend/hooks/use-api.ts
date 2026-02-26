@@ -14,6 +14,12 @@ const pendingRequests = new Map<string, Promise<any>>()
 const requestCache = new Map<string, { data: any; timestamp: number }>()
 const CACHE_TTL = 60000 // 1 minute cache
 
+/** Invalidate a specific cache key so the next useApi call re-fetches */
+export function invalidateCache(key: string) {
+  requestCache.delete(key)
+  pendingRequests.delete(key)
+}
+
 export function useApi<T>(
   apiCall: () => Promise<T>,
   options: UseApiOptions<T> = {}
@@ -36,7 +42,7 @@ export function useApi<T>(
   // Generate request key for deduplication
   const requestKey = useMemo(() => {
     if (cacheKey) return cacheKey
-    
+
     // Try to extract a unique key from the function
     const funcStr = apiCall.toString()
     // Use a hash of the function string as key
@@ -80,24 +86,24 @@ export function useApi<T>(
 
         // Check if there's a pending request for the same key
         let requestPromise = pendingRequests.get(requestKey)
-        
+
         if (!requestPromise) {
           // Create new request
           setLoading(true)
           setError(null)
-          
+
           requestPromise = stableApiCall()
           pendingRequests.set(requestKey, requestPromise)
         }
 
         const result = await requestPromise
-        
+
         // Remove from pending
         pendingRequests.delete(requestKey)
-        
+
         // Cache the result
         requestCache.set(requestKey, { data: result, timestamp: Date.now() })
-        
+
         if (!cancelled) {
           setData(result)
           onSuccessRef.current?.(result)
@@ -105,10 +111,10 @@ export function useApi<T>(
       } catch (err) {
         // Remove from pending on error
         pendingRequests.delete(requestKey)
-        
+
         if (!cancelled) {
           const error = err instanceof Error ? err : new Error('Unknown error')
-          
+
           // Don't set error or call onError for 401 - it's handled by API client redirect
           // This prevents infinite loops and error state updates
           if (error && (error as any).response?.status === 401) {
@@ -116,7 +122,7 @@ export function useApi<T>(
             setLoading(false)
             return
           }
-          
+
           setError(error)
           onErrorRef.current?.(error)
         }
