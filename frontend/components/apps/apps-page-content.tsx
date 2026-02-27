@@ -14,6 +14,7 @@ import { structureApi } from "@/lib/api/services"
 const platformOptions = ["All Platforms", "ANDROID", "IOS"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
 const typeOptions = ["All Types", "game", "app"]
+const wfOptions = ["All %WF", ">= 40%", "< 40%"]
 const networkOptions = ["All Networks", "AdMob", "Unity Ads", "ironSource", "AppLovin"]
 const ALL_ACCOUNTS_VALUE = "All Accounts"
 
@@ -27,6 +28,7 @@ export function AppsPageContent() {
   const [platform, setPlatform] = useState("All Platforms")
   const [status, setStatus] = useState("All Status")
   const [type, setType] = useState("All Types")
+  const [wfFilter, setWfFilter] = useState("All %WF")
   const [network, setNetwork] = useState("All Networks")
   const [admobAccount, setAdmobAccount] = useState(ALL_ACCOUNTS_VALUE)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
@@ -92,6 +94,9 @@ export function AppsPageContent() {
       case "Type":
         setType(value)
         break
+      case "% WF":
+        setWfFilter(value)
+        break
       case "Network":
         setNetwork(value)
         break
@@ -113,6 +118,9 @@ export function AppsPageContent() {
       case "Type":
         setType("All Types")
         break
+      case "% WF":
+        setWfFilter("All %WF")
+        break
       case "Network":
         setNetwork("All Networks")
         break
@@ -126,6 +134,8 @@ export function AppsPageContent() {
     setActiveFilters([])
     setPlatform("All Platforms")
     setStatus("All Status")
+    setType("All Types")
+    setWfFilter("All %WF")
     setNetwork("All Networks")
     setAdmobAccount(ALL_ACCOUNTS_VALUE)
     setSearchQuery("")
@@ -244,6 +254,20 @@ export function AppsPageContent() {
                 {admobAccountSelectOptions.map((opt) => (
                   <SelectItem key={opt} value={opt}>
                     {opt === ALL_ACCOUNTS_VALUE ? "All Accounts" : opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+
+            <Select value={wfFilter} onValueChange={(v) => handleFilterChange("% WF", v)}>
+              <SelectTrigger className="w-32 h-10 bg-white">
+                <SelectValue placeholder="% WF" />
+              </SelectTrigger>
+              <SelectContent>
+                {wfOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -446,6 +470,7 @@ export function AppsPageContent() {
         platformFilter={platform}
         statusFilter={status}
         typeFilter={type}
+        wfFilter={wfFilter}
         networkFilter={network}
         selectedApps={selectedApps}
         onSelectionChange={setSelectedApps}
