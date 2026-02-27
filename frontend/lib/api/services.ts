@@ -268,7 +268,31 @@ export interface ApplyWaterfallResponse {
     updatedAt: string
 }
 
+export interface WaterfallConfigurationResponse {
+    name: string
+    mediationGroupId: string
+    displayName?: string
+    state?: string
+    targeting?: { platform?: string; format?: string; adUnitIds?: string[] }
+    mediationGroupLines?: Record<string, unknown>
+    updatedAt?: string
+}
+
+export interface SyncMediationGroupResponse {
+    success: boolean
+    updatedAt?: string
+    error?: string
+}
+
 export const waterfallManagementApi = {
+    getConfiguration: async (mediationGroupId: string): Promise<WaterfallConfigurationResponse> => {
+        return apiClient.get<WaterfallConfigurationResponse>(`/api/WaterfallManagement/configuration/${encodeURIComponent(mediationGroupId)}`)
+    },
+
+    sync: async (mediationGroupId: string): Promise<SyncMediationGroupResponse> => {
+        return apiClient.post<SyncMediationGroupResponse>(`/api/WaterfallManagement/sync/${encodeURIComponent(mediationGroupId)}`)
+    },
+
     apply: async (body: ApplyWaterfallRequest): Promise<ApplyWaterfallResponse> => {
         return apiClient.post<ApplyWaterfallResponse>('/api/WaterfallManagement/apply', body)
     },

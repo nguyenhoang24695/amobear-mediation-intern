@@ -48,6 +48,8 @@ interface WaterfallOptimizationTabProps {
   hasRunningTest: boolean
   testDay: number
   testDuration: number
+  /** Tăng lên sau Apply/Sync thành công để tab refetch group detail + recommendations */
+  refreshKey?: number
 }
 
 interface WaterfallSource {
@@ -81,12 +83,13 @@ export function WaterfallOptimizationTab({
   hasRunningTest,
   testDay,
   testDuration,
+  refreshKey = 0,
 }: WaterfallOptimizationTabProps) {
   const params = useParams()
   const mediationGroupIdFromParams = (params as { id?: string })?.id as string | undefined
   const hasValidId = !!mediationGroupIdFromParams
 
-  const { data: groupDetail, loading: loadingDetail } = useApi(
+  const { data: groupDetail, loading: loadingDetail, refetch: refetchGroupDetail } = useApi(
     () => structureApi.getMediationGroupByAdMobId(mediationGroupIdFromParams!),
     { enabled: hasValidId, cacheKey: hasValidId ? `mediation_group_detail_${mediationGroupIdFromParams}` : undefined }
   )
@@ -189,7 +192,7 @@ export function WaterfallOptimizationTab({
   const [adUnitsPage, setAdUnitsPage] = useState(1)
 
   // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại). Không gọi SoWData riêng — ecpmByAdSourceId lấy từ recommendations.
-  const { data: recommendationsResponse } = useApi(
+  const { data: recommendationsResponse, refetch: refetchRecommendations } = useApi(
     () => structureApi.getMediationGroupRecommendationsByAdMobId(mediationGroupIdFromParams!),
     {
       enabled: hasValidId && !!mediationGroupIdFromParams,
@@ -197,6 +200,29 @@ export function WaterfallOptimizationTab({
     }
   )
   const recommendations = recommendationsResponse?.recommendations ?? []
+
+  // Refetch group detail + recommendations khi Apply/Sync thành công (parent tăng refreshKey).
+  useEffect(() => {
+    if (refreshKey > 0 && hasValidId) {
+      void refetchGroupDetail()
+      void refetchRecommendations()
+    }
+  }, [refreshKey, hasValidId, refetchGroupDetail, refetchRecommendations])
+
+  /** Thời gian cập nhật lần cuối (từ group detail) — hiển thị bên Current. */
+  const updatedAt = useMemo(() => {
+    const d = groupDetail as { updatedAt?: string } | undefined
+    return d?.updatedAt
+  }, [groupDetail])
+
+  const formatUpdatedAt = (iso: string | undefined): string => {
+    if (!iso) return "—"
+    try {
+      return new Date(iso).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
+    } catch {
+      return iso
+    }
+  }
 
   // eCPM theo adSourceId: lấy từ recommendations (observedEcpm), không gọi API SoWData riêng
   const ecpmByAdSourceId = useMemo(() => {
@@ -268,36 +294,28 @@ export function WaterfallOptimizationTab({
     return { bidding: biddingList, waterfall: waterfallList, estimatedMonthly }
   }, [groupDetail, ecpmByAdSourceId])
 
-  // Optimized (Suggested): từ 8-Rule Recommendation API; có thể có line mới (ADD LAYER / ADD HIGHER). Sort theo floor DESC.
+  // Optimized (Suggested): chỉ lấy từ API recommendations, không merge với Current.
   const recommendedWaterfall = useMemo(() => {
-    if (recommendations.length > 0) {
-      const mapped = recommendations.map((r, i) => {
-        const floor = (r.newFloorMicros ?? r.currentFloorMicros) / 1_000_000
-        const originalFloor = r.currentFloorMicros / 1_000_000
-        const isNewSuggestedLine = r.lineId.startsWith("suggested_")
-        return {
-          id: `rec_${r.lineId}_${i}`,
-          name: r.displayName ?? r.adSourceId ?? "Unknown",
-          floor,
-          ecpm: r.observedEcpm ?? floor,
-          status: r.action === "REMOVE" ? ("inactive" as const) : ("active" as const),
-          originalFloor,
-          changeType: isNewSuggestedLine ? ("new" as const) : r.action === "REMOVE" ? ("removed" as const) : r.action !== "KEEP" ? ("modified" as const) : undefined,
-          network: r.adSourceId,
-          recommendationAction: r.action,
-          reason: r.reason,
-        } satisfies WaterfallSource
-      })
-      return mapped.sort((a, b) => b.floor - a.floor)
-    }
-    const w = [...currentSetup.waterfall]
-    return w.map((s, i) => ({
-      ...s,
-      id: `rec_${s.id}_${i}`,
-      originalFloor: s.floor,
-      changeType: "modified" as const,
-    }))
-  }, [currentSetup.waterfall, recommendations])
+    if (recommendations.length === 0) return []
+    const mapped = recommendations.map((r, i) => {
+      const floor = (r.newFloorMicros ?? r.currentFloorMicros) / 1_000_000
+      const originalFloor = r.currentFloorMicros / 1_000_000
+      const isNewSuggestedLine = r.lineId.startsWith("suggested_")
+      return {
+        id: `rec_${r.lineId}_${i}`,
+        name: r.displayName ?? r.adSourceId ?? "Unknown",
+        floor,
+        ecpm: r.observedEcpm ?? floor,
+        status: r.action === "REMOVE" ? ("inactive" as const) : ("active" as const),
+        originalFloor,
+        changeType: isNewSuggestedLine ? ("new" as const) : r.action === "REMOVE" ? ("removed" as const) : r.action !== "KEEP" ? ("modified" as const) : undefined,
+        network: r.adSourceId,
+        recommendationAction: r.action,
+        reason: r.reason,
+      } satisfies WaterfallSource
+    })
+    return mapped.sort((a, b) => b.floor - a.floor)
+  }, [recommendations])
 
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [viewMode, setViewMode] = useState("side-by-side")
@@ -321,10 +339,9 @@ export function WaterfallOptimizationTab({
     if (recommendedWaterfall.length > 0) {
       setOptimizedWaterfall([...recommendedWaterfall])
       setAiSuggestedWaterfall([...recommendedWaterfall])
-    } else if (currentSetup.waterfall.length > 0) {
-      const fallback = currentSetup.waterfall.map((s) => ({ ...s }))
-      setOptimizedWaterfall(fallback)
-      setAiSuggestedWaterfall(fallback)
+    } else {
+      setOptimizedWaterfall([])
+      setAiSuggestedWaterfall([])
     }
   }, [mediationGroupIdFromParams, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, recommendations.length, recommendedWaterfall])
 
@@ -979,6 +996,7 @@ export function WaterfallOptimizationTab({
                       <Lock className="w-4 h-4 text-teal-200" />
                     </div>
                     <p className="text-teal-100 text-sm">Variant A • Active • Read-only</p>
+                    <p className="text-teal-200 text-xs mt-1">Last updated: {formatUpdatedAt(updatedAt)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-teal-100">Estimated Monthly</p>
@@ -1031,11 +1049,12 @@ export function WaterfallOptimizationTab({
                         <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-medium flex items-center justify-center">
                           {index + 1}
                         </span>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-slate-900">{source.name}</p>
                           <p className="text-xs text-slate-500">${source.floor.toFixed(2)}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">Updated: {formatUpdatedAt(updatedAt)}</p>
                         </div>
-                        <p className="text-sm text-slate-600">eCPM: ${source.ecpm.toFixed(2)}</p>
+                        <p className="text-sm text-slate-600 shrink-0">eCPM: ${source.ecpm.toFixed(2)}</p>
                       </div>
                     ))}
                   </CollapsibleContent>
