@@ -78,6 +78,7 @@ export function clearAuthData(): void {
   localStorage.removeItem('refreshToken')
   localStorage.removeItem('user')
   localStorage.removeItem('rememberMe')
+  localStorage.removeItem('rememberedOrganization')
 }
 
 /**
@@ -86,6 +87,28 @@ export function clearAuthData(): void {
 export function isRememberMeEnabled(): boolean {
   if (typeof window === 'undefined') return false
   return localStorage.getItem('rememberMe') === 'true'
+}
+
+const REMEMBERED_ORGANIZATION_KEY = 'rememberedOrganization'
+
+/**
+ * Get organization slug saved when "Remember me" was used (for login form pre-fill).
+ */
+export function getRememberedOrganization(): string {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(REMEMBERED_ORGANIZATION_KEY) ?? ''
+}
+
+/**
+ * Save organization slug when login succeeds with "Remember me".
+ */
+export function setRememberedOrganization(slug: string): void {
+  if (typeof window === 'undefined') return
+  if (slug) {
+    localStorage.setItem(REMEMBERED_ORGANIZATION_KEY, slug)
+  } else {
+    localStorage.removeItem(REMEMBERED_ORGANIZATION_KEY)
+  }
 }
 
 /**

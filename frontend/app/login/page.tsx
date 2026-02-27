@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { setAuthData } from "@/lib/auth"
+import { setAuthData, isRememberMeEnabled, getRememberedOrganization, setRememberedOrganization } from "@/lib/auth"
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail, Zap } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -29,6 +29,20 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
+
+  // Khôi phục Remember me và Organization đã lưu (khi user từng đăng nhập với Remember me).
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const savedRememberMe = isRememberMeEnabled()
+    setRememberMe(savedRememberMe)
+    if (savedRememberMe) {
+      const savedOrg = getRememberedOrganization()
+      if (savedOrg) {
+        setFormData((prev) => ({ ...prev, organization: savedOrg }))
+      }
+    }
+  }, [])
+
   const [validationErrors, setValidationErrors] = useState<{
     organization?: string
     email?: string
@@ -91,8 +105,10 @@ export default function LoginPage() {
 
         if (rememberMe) {
           localStorage.setItem('rememberMe', 'true')
+          setRememberedOrganization(formData.organization.trim())
         } else {
           localStorage.removeItem('rememberMe')
+          setRememberedOrganization('')
         }
 
         toast({
