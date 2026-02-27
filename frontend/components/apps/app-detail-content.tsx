@@ -34,6 +34,7 @@ import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
+import { AppSettingsTab } from "./app-detail/app-settings-tab"
 import { useToast } from "@/hooks/use-toast"
 
 export function AppDetailContent() {
@@ -289,9 +290,7 @@ export function AppDetailContent() {
             </div>
           </TabsContent>
           <TabsContent value="settings" className="mt-6">
-            <div className="flex items-center justify-center h-64 text-slate-500">
-              Settings tab content coming soon...
-            </div>
+            <AppSettingsTab app={app ?? null} />
           </TabsContent>
         </Tabs>
       </div>

@@ -52,7 +52,7 @@ export class ApiClient {
                         localStorage.removeItem('accessToken')
                         localStorage.removeItem('refreshToken')
                         localStorage.removeItem('user')
-                        
+
                         // Only redirect once to prevent infinite loops
                         if (!isRedirecting && !window.location.pathname.startsWith('/login')) {
                             isRedirecting = true
@@ -115,6 +115,13 @@ export class ApiClient {
     async put<T>(endpoint: string, data?: unknown): Promise<T> {
         return this.request<T>(endpoint, {
             method: 'PUT',
+            body: data ? JSON.stringify(data) : undefined,
+        })
+    }
+
+    async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+        return this.request<T>(endpoint, {
+            method: 'PATCH',
             body: data ? JSON.stringify(data) : undefined,
         })
     }
