@@ -39,6 +39,8 @@ export interface AppConfig {
   appId: string
   appName: string
   isGlobal: boolean
+  platform?: string
+  iconUrl?: string
   minRecommendations: number
   maxRecommendations: number
   minMatchRate: number
@@ -136,6 +138,8 @@ export function WaterfallRulesContent() {
         appId: dto.appId || "global",
         appName: isGlobal ? "Global" : (app?.displayName || app?.name || dto.appId || "Unknown"),
         isGlobal,
+        platform: app?.platform,
+        iconUrl: app?.iconUri,
         minRecommendations: dto.minRecommendations,
         maxRecommendations: dto.maxRecommendations,
         minMatchRate: Number(dto.minMatchRatePercent),
@@ -218,6 +222,11 @@ export function WaterfallRulesContent() {
     return Array.from(map.values())
   }, [configs])
 
+  // Danh sách appId đã có config (app-specific). Dùng để chặn tạo thêm config cho cùng app.
+  const appsWithConfig = useMemo(() => {
+    return configs.filter((c) => !c.isGlobal).map((c) => c.appId)
+  }, [configs])
+
   // Config stats
   const totalApps = appConfigGroups.length
   const totalConfigs = configs.length
@@ -265,18 +274,18 @@ export function WaterfallRulesContent() {
 
   // Config CRUD
   const handleSaveConfig = useCallback(
-    async (data: Omit<AppConfig, "id" | "updatedAt">) => {
+    async (targets: Array<Omit<AppConfig, "id" | "updatedAt">>) => {
       setSavingConfig(true)
       try {
-        const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
-          appId: data.isGlobal ? null : (data.appId === "global" ? null : data.appId),
-          minRecommendations: data.minRecommendations,
-          maxRecommendations: data.maxRecommendations,
-          minMatchRatePercent: data.minMatchRate,
-          minSowPercent: data.minSoW,
-        }
-
         if (editConfig) {
+          const data = targets[0]
+          const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+            appId: data.isGlobal ? null : (data.appId === "global" ? null : data.appId),
+            minRecommendations: data.minRecommendations,
+            maxRecommendations: data.maxRecommendations,
+            minMatchRatePercent: data.minMatchRate,
+            minSowPercent: data.minSoW,
+          }
           // Update existing config
           await waterfallRecommendationSettingsApi.updateConfig(Number(editConfig.id), payload)
           toast({
@@ -285,11 +294,22 @@ export function WaterfallRulesContent() {
           })
           setEditConfig(null)
         } else {
-          // Create new config
-          await waterfallRecommendationSettingsApi.createConfig(payload)
+          // Create new config(s) for one or more apps / global
+          for (const data of targets) {
+            const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+              appId: data.isGlobal ? null : (data.appId === "global" ? null : data.appId),
+              minRecommendations: data.minRecommendations,
+              maxRecommendations: data.maxRecommendations,
+              minMatchRatePercent: data.minMatchRate,
+              minSowPercent: data.minSoW,
+            }
+            await waterfallRecommendationSettingsApi.createConfig(payload)
+          }
           toast({
             title: "Success",
-            description: "Configuration created successfully",
+            description: targets.length > 1
+              ? `Created ${targets.length} configurations successfully`
+              : "Configuration created successfully",
           })
           setCreateConfigOpen(false)
         }
@@ -343,39 +363,6 @@ export function WaterfallRulesContent() {
       })
     }
   }, [configs, toast, refetchConfigs])
-
-  const handleDuplicateConfig = useCallback(
-    async (id: string) => {
-      const config = configs.find((c) => c.id === id)
-      if (!config) return
-
-      setSavingConfig(true)
-      try {
-        const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
-          appId: config.isGlobal ? null : (config.appId === "global" ? null : config.appId),
-          minRecommendations: config.minRecommendations,
-          maxRecommendations: config.maxRecommendations,
-          minMatchRatePercent: config.minMatchRate,
-          minSowPercent: config.minSoW,
-        }
-        await waterfallRecommendationSettingsApi.createConfig(payload)
-        toast({
-          title: "Success",
-          description: "Configuration duplicated successfully",
-        })
-        await refetchConfigs()
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error?.message || "Failed to duplicate configuration",
-          variant: "destructive",
-        })
-      } finally {
-        setSavingConfig(false)
-      }
-    },
-    [configs, toast, refetchConfigs]
-  )
 
   // Rule CRUD
   const handleSaveRule = useCallback(
@@ -938,7 +925,6 @@ export function WaterfallRulesContent() {
             groups={filteredGroups}
             onEditConfig={setEditConfig}
             onDeleteConfig={handleDeleteConfig}
-            onDuplicateConfig={handleDuplicateConfig}
             onDeleteApp={handleDeleteApp}
             hasFilters={configSearch !== "" || configTypeFilter !== "all"}
             onClearFilters={() => {
@@ -1109,6 +1095,7 @@ export function WaterfallRulesContent() {
         onSave={handleSaveConfig}
         saving={savingConfig}
         apps={appsResponse?.apps || []}
+        appsWithConfig={appsWithConfig}
       />
 
       {/* Create/Edit Rule Dialog */}

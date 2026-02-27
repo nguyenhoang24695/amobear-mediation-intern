@@ -13,23 +13,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
+import { Loader2, Smartphone, Globe } from "lucide-react"
 import type { AppConfig } from "./waterfall-rules-content"
 
 interface CreateEditConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   config: AppConfig | null
-  onSave: (data: Omit<AppConfig, "id" | "updatedAt">) => Promise<void>
+  /**
+   * onSave nhận danh sách target configs:
+   * - Edit: 1 phần tử (app hiện tại)
+   * - Create: 1..n app (multi-select)
+   */
+  onSave: (targets: Array<Omit<AppConfig, "id" | "updatedAt">>) => Promise<void>
   saving?: boolean
-  apps?: Array<{ id: number; appId: string; name: string; displayName?: string }>
+  apps?: Array<{ id: number; appId: string; name: string; displayName?: string; platform?: string; iconUri?: string }>
+  /** Danh sách appId đã có config (app-specific). Dùng để chặn tạo trùng app. */
+  appsWithConfig?: string[]
 }
 
 export function CreateEditConfigDialog({
@@ -39,6 +39,7 @@ export function CreateEditConfigDialog({
   onSave,
   saving = false,
   apps = [],
+  appsWithConfig = [],
 }: CreateEditConfigDialogProps) {
   const isEditing = !!config
 
@@ -47,10 +48,13 @@ export function CreateEditConfigDialog({
     return apps.map((app) => ({
       id: app.appId,
       name: app.displayName || app.name || app.appId,
+      platform: app.platform,
+      iconUrl: app.iconUri,
     }))
   }, [apps])
 
-  const [selectedAppId, setSelectedAppId] = useState("")
+  // Create mode: cho phép multi-select app; Edit mode: chỉ hiển thị app hiện tại (không đổi).
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([])
   const [isGlobal, setIsGlobal] = useState(false)
   const [minRec, setMinRec] = useState("5")
   const [maxRec, setMaxRec] = useState("20")
@@ -61,14 +65,15 @@ export function CreateEditConfigDialog({
   useEffect(() => {
     if (open) {
       if (config) {
-        setSelectedAppId(config.appId)
+        // Edit mode: khóa app, chỉ hiển thị thông tin; không đổi appId/isGlobal.
+        setSelectedAppIds(config.isGlobal ? [] : [config.appId])
         setIsGlobal(config.isGlobal)
         setMinRec(String(config.minRecommendations))
         setMaxRec(String(config.maxRecommendations))
         setMinMatchRate(String(config.minMatchRate))
         setMinSoW(String(config.minSoW))
       } else {
-        setSelectedAppId("")
+        setSelectedAppIds([])
         setIsGlobal(false)
         setMinRec("5")
         setMaxRec("20")
@@ -79,12 +84,19 @@ export function CreateEditConfigDialog({
     }
   }, [open, config])
 
-  const selectedApp = availableApps.find((a) => a.id === selectedAppId)
+  const selectedApps = availableApps.filter((a) => selectedAppIds.includes(a.id))
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!isGlobal && !selectedAppId)
-      errs.app = "Select an app or mark as global"
+    if (!isGlobal && !isEditing && selectedAppIds.length === 0)
+      errs.app = "Select at least one app or mark as global"
+    // Nếu đang tạo mới (không phải edit) và chọn app đã có config thì chặn.
+    if (!isEditing && !isGlobal && selectedAppIds.length > 0) {
+      const conflicted = selectedAppIds.filter((id) => appsWithConfig.includes(id))
+      if (conflicted.length > 0) {
+        errs.app = "Some selected apps already have a configuration. Each app can only have one config."
+      }
+    }
     const min = Number(minRec)
     const max = Number(maxRec)
     if (!min || min < 1 || min > 100) errs.minRec = "Must be 1-100"
@@ -102,15 +114,46 @@ export function CreateEditConfigDialog({
   const handleSave = async () => {
     if (!validate()) return
     try {
-      await onSave({
-        appId: isGlobal ? "global" : selectedAppId,
-        appName: isGlobal ? "Global" : (selectedApp?.name ?? ""),
-        isGlobal,
-        minRecommendations: Number(minRec),
-        maxRecommendations: Number(maxRec),
-        minMatchRate: Number(minMatchRate),
-        minSoW: Number(minSoW),
-      })
+      if (isEditing && config) {
+        // Edit: chỉ cập nhật config hiện tại (không đổi app/global)
+        await onSave([
+          {
+            appId: config.appId,
+            appName: config.appName,
+            isGlobal: config.isGlobal,
+            minRecommendations: Number(minRec),
+            maxRecommendations: Number(maxRec),
+            minMatchRate: Number(minMatchRate),
+            minSoW: Number(minSoW),
+          },
+        ])
+      } else {
+        // Create: có thể tạo cho Global hoặc cho nhiều app.
+        if (isGlobal) {
+          await onSave([
+            {
+              appId: "global",
+              appName: "Global",
+              isGlobal: true,
+              minRecommendations: Number(minRec),
+              maxRecommendations: Number(maxRec),
+              minMatchRate: Number(minMatchRate),
+              minSoW: Number(minSoW),
+            },
+          ])
+        } else {
+          const payloads = selectedApps.map((app) => ({
+            appId: app.id,
+            appName: app.name,
+            isGlobal: false,
+            minRecommendations: Number(minRec),
+            maxRecommendations: Number(maxRec),
+            minMatchRate: Number(minMatchRate),
+            minSoW: Number(minSoW),
+          }))
+          await onSave(payloads)
+        }
+      }
     } catch (error) {
       // Error handling is done in parent component
     }
@@ -134,44 +177,139 @@ export function CreateEditConfigDialog({
           {/* App Selection */}
           <div className="space-y-2">
             <Label>App</Label>
-            <div className="flex items-center gap-2 mb-2">
-              <Checkbox
-                id="global-check"
-                checked={isGlobal}
-                onCheckedChange={(checked) => {
-                  setIsGlobal(!!checked)
-                  if (checked) setSelectedAppId("")
-                }}
-              />
-              <label
-                htmlFor="global-check"
-                className="text-sm text-slate-700 cursor-pointer"
-              >
-                Global (All Apps)
-              </label>
-            </div>
 
-            {!isGlobal && (
+            {isEditing && config ? (
+              // Edit mode: chỉ hiển thị thông tin app, không cho đổi
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
+                  {config.isGlobal ? (
+                    <Globe className="w-4 h-4 text-slate-500" />
+                  ) : config.iconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={config.iconUrl}
+                      alt={config.appName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Smartphone className="w-4 h-4 text-blue-600" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">
+                    {config.isGlobal ? "Global (All Apps)" : config.appName}
+                  </p>
+                  {!config.isGlobal && (
+                    <>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {config.appId}
+                      </p>
+                      {config.platform && (
+                        <p className="text-[11px] text-slate-400">
+                          {config.platform}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {config.isGlobal && (
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Default configuration applied to all apps
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
               <>
-                <Select value={selectedAppId} onValueChange={setSelectedAppId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an app" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableApps.map((app) => (
-                      <SelectItem key={app.id} value={app.id}>
-                        {app.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500">
-                  Select the app this configuration applies to.
-                </p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Checkbox
+                    id="global-check"
+                    checked={isGlobal}
+                    onCheckedChange={(checked) => {
+                      setIsGlobal(!!checked)
+                      if (checked) setSelectedAppIds([])
+                    }}
+                  />
+                  <label
+                    htmlFor="global-check"
+                    className="text-sm text-slate-700 cursor-pointer"
+                  >
+                    Global (All Apps)
+                  </label>
+                </div>
+
+                {!isGlobal && (
+                  <>
+                    <div className="border rounded-md border-slate-200 max-h-52 overflow-y-auto p-2 space-y-1">
+                      {availableApps.map((app) => {
+                        const disabled =
+                          appsWithConfig.includes(app.id)
+                        const checked = selectedAppIds.includes(app.id)
+                        return (
+                          <div
+                            key={app.id}
+                            className="flex items-center gap-3 px-1 py-0.5 rounded hover:bg-slate-50"
+                          >
+                            <Checkbox
+                              id={`app-${app.id}`}
+                              checked={checked}
+                              disabled={disabled}
+                              onCheckedChange={(value) => {
+                                const v = value === true
+                                setSelectedAppIds((prev) => {
+                                  if (v) {
+                                    if (prev.includes(app.id)) return prev
+                                    return [...prev, app.id]
+                                  } else {
+                                    return prev.filter((id) => id !== app.id)
+                                  }
+                                })
+                              }}
+                            />
+                            <div className="h-8 w-8 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
+                              {app.iconUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={app.iconUrl}
+                                  alt={app.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Smartphone className="w-4 h-4 text-blue-600" />
+                              )}
+                            </div>
+                            <label
+                              htmlFor={`app-${app.id}`}
+                              className={`flex-1 text-sm cursor-pointer ${
+                                disabled ? "text-slate-400" : "text-slate-700"
+                              }`}
+                            >
+                              <span className="block">
+                                {app.name}
+                                {disabled ? " (already has config)" : ""}
+                              </span>
+                              <span className="block text-xs text-slate-400">
+                                {app.id}
+                              </span>
+                              {app.platform && (
+                                <span className="block text-[11px] text-slate-400">
+                                  {app.platform}
+                                </span>
+                              )}
+                            </label>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Select one or more apps this configuration applies to.
+                    </p>
+                  </>
+                )}
+
+                {errors.app && (
+                  <p className="text-xs text-red-600">{errors.app}</p>
+                )}
               </>
-            )}
-            {errors.app && (
-              <p className="text-xs text-red-600">{errors.app}</p>
             )}
           </div>
 
