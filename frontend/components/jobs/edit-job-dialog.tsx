@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
+import { Loader2, ChevronDown, ChevronRight } from "lucide-react"
 import type { Job } from "./job-management-content"
 import { CronBuilder } from "./cron-builder"
 
@@ -48,6 +48,7 @@ export function EditJobDialog({
   const [enabled, setEnabled] = useState(job.enabled)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showCronBuilder, setShowCronBuilder] = useState(true)
 
   useEffect(() => {
     setDisplayName(job.displayName || job.jobId)
@@ -131,16 +132,34 @@ export function EditJobDialog({
 
           {/* Cron Builder */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <Label>Generate Cron Expression</Label>
+            <div
+              className="flex items-center justify-between gap-2 cursor-pointer select-none"
+              onClick={() => setShowCronBuilder((v) => !v)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-slate-600">
+                  {showCronBuilder ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </span>
+                <Label className="cursor-pointer">
+                  Generate Cron Expression
+                </Label>
+              </div>
               <p className="text-xs text-slate-500">
                 Use this interface to generate cron expressions based on engine.
               </p>
             </div>
-            <CronBuilder
-              cronExpression={cronExpression}
-              onChange={(newCron) => setCronExpression(newCron)}
-            />
+            {showCronBuilder && (
+              <div className="mt-1">
+                <CronBuilder
+                  cronExpression={cronExpression}
+                  onChange={(newCron) => setCronExpression(newCron)}
+                />
+              </div>
+            )}
           </div>
 
           {/* Timezone */}

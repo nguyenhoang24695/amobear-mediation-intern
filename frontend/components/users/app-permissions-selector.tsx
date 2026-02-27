@@ -132,10 +132,12 @@ export function AppPermissionsSelector({
                                   </span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-2">
-                                <span>{app.name}</span>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{app.name}</span>
                                 {app.platform && (
-                                  <span className="text-xs text-slate-500">({app.platform})</span>
+                                  <span className="text-[11px] text-slate-400">
+                                    {app.platform}
+                                  </span>
                                 )}
                               </div>
                             </CommandItem>
@@ -147,9 +149,9 @@ export function AppPermissionsSelector({
                 </PopoverContent>
               </Popover>
 
-              {/* Selected Apps List */}
+              {/* Selected Apps List (scrollable only for details) */}
               {selectedApps.length > 0 && (
-                <div className="space-y-2">
+                <div className="max-h-64 overflow-y-auto pr-1 space-y-2">
                   {selectedApps.map((selected) => {
                     const app = apps.find((a) => a.id === selected.id)
                     return (
@@ -172,10 +174,12 @@ export function AppPermissionsSelector({
                               </span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col">
                             <span className="text-sm">{app?.name}</span>
                             {app?.platform && (
-                              <span className="text-xs text-slate-500">({app.platform})</span>
+                              <span className="text-[11px] text-slate-400">
+                                {app.platform}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -254,10 +258,14 @@ export function AppPermissionsSelector({
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-slate-900">{app.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-900">
+                          {app.name}
+                        </span>
                         {app.platform && (
-                          <span className="text-xs text-slate-500">({app.platform})</span>
+                          <span className="text-[11px] text-slate-400">
+                            {app.platform}
+                          </span>
                         )}
                       </div>
                     </div>
