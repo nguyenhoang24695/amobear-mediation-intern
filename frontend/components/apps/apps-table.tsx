@@ -54,6 +54,7 @@ interface AppsTableProps {
   platformFilter: string
   statusFilter: string
   typeFilter: string
+  wfFilter: string
   networkFilter: string
   selectedApps: string[]
   onSelectionChange: (apps: string[]) => void
@@ -69,6 +70,7 @@ export function AppsTable({
   platformFilter,
   statusFilter,
   typeFilter,
+  wfFilter,
   selectedApps,
   onSelectionChange,
 }: AppsTableProps) {
@@ -113,6 +115,12 @@ export function AppsTable({
     }))
   }, [apps])
 
+  // Helper: % WaterFall = tỷ trọng waterfall trong tổng revenue (waterfall / (adUnit + waterfall) * 100), null nếu tổng = 0
+  const getWaterfallPct = (app: { adUnitsRevenue: number; waterfallAdUnitsRevenue: number }) => {
+    const total = app.adUnitsRevenue + app.waterfallAdUnitsRevenue
+    return total > 0 ? (app.waterfallAdUnitsRevenue / total) * 100 : null
+  }
+
   // Filter apps
   const filteredApps = transformedApps.filter((app) => {
     if (searchQuery && !app.name.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -131,14 +139,21 @@ export function AppsTable({
         return false
       }
     }
+
+    if (wfFilter === ">= 40%") {
+      const pct = getWaterfallPct(app)
+      if (pct == null || pct < 40) {
+        return false
+      }
+    } else if (wfFilter === "< 40%") {
+      const pct = getWaterfallPct(app)
+      if (pct == null || pct >= 40) {
+        return false
+      }
+    }
+
     return true
   })
-
-  // Helper: % WaterFall = tỷ trọng waterfall trong tổng revenue (waterfall / (adUnit + waterfall) * 100), null nếu tổng = 0
-  const getWaterfallPct = (app: { adUnitsRevenue: number; waterfallAdUnitsRevenue: number }) => {
-    const total = app.adUnitsRevenue + app.waterfallAdUnitsRevenue
-    return total > 0 ? (app.waterfallAdUnitsRevenue / total) * 100 : null
-  }
 
   // Sort apps (khi sort theo waterfallPct: giá trị 0/null đẩy xuống cuối)
   const sortedApps = [...filteredApps].sort((a, b) => {
@@ -401,12 +416,12 @@ export function AppsTable({
                       variant="outline"
                       className={cn(
                         "gap-1",
-                        app.platform === "Android"
+                        app.platform === "ANDROID"
                           ? "border-green-200 bg-green-50 text-green-700"
                           : "border-slate-200 bg-slate-50 text-slate-700",
                       )}
                     >
-                      {app.platform === "Android" ? (
+                      {app.platform === "ANDROID" ? (
                         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
                         </svg>
