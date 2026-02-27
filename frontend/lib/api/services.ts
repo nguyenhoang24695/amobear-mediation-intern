@@ -1094,3 +1094,52 @@ export const waterfallRecommendationSettingsApi = {
         return apiClient.delete(`/api/waterfall-recommendation-settings/rules/${id}`)
     },
 }
+
+// Permission Management (RBAC) API
+export interface PermissionRoleDto {
+    id: string
+    name: string
+    description: string
+    userCount: number
+    isSystem: boolean
+}
+
+export interface PermissionFunctionDto {
+    id: string
+    label: string
+}
+
+export interface PermissionScreenDto {
+    id: string
+    name: string
+    module: string
+    functions: PermissionFunctionDto[]
+}
+
+export interface RolePermissionsDto {
+    permissions: Record<string, string[]>
+}
+
+export const permissionApi = {
+    getRoles: async (): Promise<PermissionRoleDto[]> => {
+        return apiClient.get<PermissionRoleDto[]>('/api/v1/permissions/roles')
+    },
+    getScreens: async (): Promise<PermissionScreenDto[]> => {
+        return apiClient.get<PermissionScreenDto[]>('/api/v1/permissions/screens')
+    },
+    getRolePermissions: async (roleId: string): Promise<RolePermissionsDto> => {
+        return apiClient.get<RolePermissionsDto>(`/api/v1/permissions/roles/${roleId}/permissions`)
+    },
+    saveRolePermissions: async (roleId: string, permissions: Record<string, string[]>): Promise<void> => {
+        await apiClient.put(`/api/v1/permissions/roles/${roleId}/permissions`, { permissions })
+    },
+    createRole: async (name: string, description: string): Promise<PermissionRoleDto> => {
+        return apiClient.post<PermissionRoleDto>('/api/v1/permissions/roles', { name, description })
+    },
+    updateRole: async (roleId: string, name: string, description: string): Promise<void> => {
+        await apiClient.put(`/api/v1/permissions/roles/${roleId}`, { name, description })
+    },
+    deleteRole: async (roleId: string): Promise<void> => {
+        await apiClient.delete(`/api/v1/permissions/roles/${roleId}`)
+    },
+}

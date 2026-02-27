@@ -22,6 +22,7 @@ import {
   Building2,
   Briefcase,
   ListChecks,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -39,12 +40,20 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Smartphone, label: "Apps", href: "/apps" },
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
-  { icon: BarChart3, label: "Reports", href: "/reports", hasSubmenu: true },
+  { icon: BarChart3, label: "Reports", href: "/reports" },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
-  { icon: Building2, label: "Organizations", href: "/organizations" },
-  { icon: Briefcase, label: "Job Management", href: "/jobs" },
-  { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules" },
-  { icon: Settings, label: "Settings", href: "/settings" },
+  {
+    icon: Settings,
+    label: "Settings",
+    href: "#",
+    hasSubmenu: true,
+    children: [
+      { icon: Building2, label: "Organizations", href: "/organizations", adminOnly: true },
+      { icon: Briefcase, label: "Job Management", href: "/jobs", adminOnly: true },
+      { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", adminOnly: true },
+      { icon: Shield, label: "Permissions", href: "/permissions", adminOnly: true },
+    ],
+  },
 ]
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
@@ -52,6 +61,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     // Get user from localStorage
@@ -88,64 +98,116 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+            const hasSubmenu = !!item.hasSubmenu
+            const anyChildActive =
+              Array.isArray((item as any).children) &&
+              (item as any).children.some(
+                (child: any) => pathname === child.href || (child.href !== "/" && pathname.startsWith(child.href)),
+              )
 
-            // Only show Organizations menu for admin and super_admin roles
-            if (item.label === "Organizations") {
-              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
-                return null
-              }
-            }
+            const isExpanded = hasSubmenu ? openMenus[item.label] ?? anyChildActive : false
+            const isActive = hasSubmenu
+              ? anyChildActive
+              : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
 
-            // Only show Job Management menu for admin and super_admin roles
-            if (item.label === "Job Management") {
-              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
-                return null
-              }
-            }
-
-            // Only show Waterfall Rules menu for admin and super_admin roles
-            if (item.label === "Waterfall Rules") {
-              if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
-                return null
-              }
-            }
-
-            return (
-              <Tooltip key={item.label}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                      isActive ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                    )}
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {!collapsed && (
-                      <>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        {item.hasSubmenu && <ChevronRight className="w-4 h-4 text-slate-400" />}
-                        {item.badge && (
-                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
-                            {item.badge}
-                          </Badge>
+            const content = (
+              <div
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                  isActive ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                )}
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {hasSubmenu && (
+                      <ChevronRight
+                        className={cn(
+                          "w-4 h-4 text-slate-400 transition-transform",
+                          isExpanded && "rotate-90",
                         )}
-                      </>
+                      />
                     )}
-                    {collapsed && item.badge && (
-                      <Badge variant="destructive" className="absolute left-10 top-1 h-4 min-w-4 px-1 text-xs">
+                    {item.badge && !hasSubmenu && (
+                      <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
                         {item.badge}
                       </Badge>
                     )}
-                  </Link>
-                </TooltipTrigger>
-                {collapsed && (
-                  <TooltipContent side="right">
-                    <p>{item.label}</p>
-                  </TooltipContent>
+                  </>
                 )}
-              </Tooltip>
+                {collapsed && item.badge && !hasSubmenu && (
+                  <Badge variant="destructive" className="absolute left-10 top-1 h-4 min-w-4 px-1 text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </div>
+            )
+
+            return (
+              <div key={item.label}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {hasSubmenu ? (
+                      // hasSubmenu: không điều hướng, chỉ toggle collapse/expand
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenMenus((prev) => ({
+                            ...prev,
+                            [item.label]: !isExpanded,
+                          }))
+                        }
+                        className="w-full text-left"
+                      >
+                        {content}
+                      </button>
+                    ) : (
+                      <Link href={item.href} className="block">
+                        {content}
+                      </Link>
+                    )}
+                  </TooltipTrigger>
+                  {collapsed && (
+                    <TooltipContent side="right">
+                      <p>{item.label}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+
+                {/* Submenu items (vd: Settings) */}
+                {!collapsed && isExpanded && (item as any).children && (item as any).children.length > 0 && (
+                  <div className="mt-0.5 ml-10 space-y-0.5">
+                    {(item as any).children.map((child: any) => {
+                      // Only show some items for admin / super_admin
+                      if (child.adminOnly) {
+                        if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
+                          return null
+                        }
+                      }
+
+                      const childActive =
+                        pathname === child.href || (child.href !== "/" && pathname.startsWith(child.href))
+
+                      return (
+                        <Link
+                          key={child.label}
+                          href={child.href}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            childActive
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                          )}
+                        >
+                          {child.icon && <child.icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                          <span className="flex-1 text-left">{child.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>
