@@ -17,7 +17,6 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   ArrowLeft,
   ExternalLink,
-  RefreshCw,
   MoreHorizontal,
   Pause,
   Copy,
@@ -27,6 +26,7 @@ import {
   FlaskConical,
   Download,
   Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { MediationGroupOverviewTab } from "./mediation-group-detail/overview-tab"
 import { WaterfallOptimizationTab } from "./mediation-group-detail/waterfall-optimization-tab"
@@ -229,6 +229,7 @@ export function MediationGroupDetailContent() {
               <RefreshCw className="w-4 h-4" />
               Sync Now
             </Button>
+
             <Button
               variant="outline"
               className="h-9 gap-2 bg-transparent text-sm text-amber-600 border-amber-200 hover:bg-amber-50"

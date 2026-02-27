@@ -19,6 +19,7 @@ export interface App {
   waterfallAdUnitsCount?: number
   mediationGroupsCount?: number
   averageEcpm?: number
+  firebaseParams?: string | null
 
   // Metrics from dashboard cache (today) - returned by /api/Structure/apps. Tách: ad unit (placement không waterfall) + waterfall (placement có trong ít nhất 1 waterfall).
   todayRevenue?: number
@@ -96,7 +97,7 @@ export interface MediationGroup {
   adSourcesInfo?: AdSourceInfo[] // New field with detailed info from database
   countries?: string[]
   status?: string
-  
+
   // Detailed metrics (from cache)
   revenue?: number
   impressions?: number
@@ -113,13 +114,13 @@ export interface MediationGroup {
   impressionsChangePct?: number
   ecpmChangePct?: number
   fillRateChangePct?: number
-  
+
   // App info
   appId?: number
   appAdMobId?: string
   appName?: string
   appIconUri?: string
-  
+
   // Ad sources breakdown (from detail/cache)
   biddingSources?: string[]
   waterfallSources?: string[]

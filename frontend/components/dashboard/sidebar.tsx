@@ -21,6 +21,7 @@ import {
   Users,
   Building2,
   Briefcase,
+  KeyRound,
   ListChecks,
   Shield,
 } from "lucide-react"
@@ -36,7 +37,16 @@ interface SidebarProps {
   onToggle: () => void
 }
 
-const navItems = [
+type NavItem = {
+  icon: any
+  label: string
+  href: string
+  hasSubmenu?: boolean
+  badge?: number
+  children?: { icon: any; label: string; href: string }[]
+}
+
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Smartphone, label: "Apps", href: "/apps" },
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
@@ -52,7 +62,10 @@ const navItems = [
       { icon: Briefcase, label: "Job Management", href: "/jobs", adminOnly: true },
       { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", adminOnly: true },
       { icon: Shield, label: "Permissions", href: "/permissions", adminOnly: true },
+      { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", adminOnly: true  }
     ],
+  },
+]
   },
 ]
 
@@ -62,6 +75,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { toast } = useToast()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    setOpenMenu(null)
+  }, [pathname])
 
   useEffect(() => {
     // Get user from localStorage
@@ -149,7 +166,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     {hasSubmenu ? (
-                      // hasSubmenu: không điều hướng, chỉ toggle collapse/expand
+                      // hasSubmenu: kh�ng di?u hu?ng, ch? toggle collapse/expand
                       <button
                         type="button"
                         onClick={() =>
@@ -168,7 +185,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       </Link>
                     )}
                   </TooltipTrigger>
-                  {collapsed && (
+                  {collapsed && !item.children && (
                     <TooltipContent side="right">
                       <p>{item.label}</p>
                     </TooltipContent>

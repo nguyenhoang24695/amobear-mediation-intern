@@ -147,6 +147,11 @@ export const structureApi = {
         return apiClient.post(`/api/Structure/apps/bulk-type`, payload)
     },
 
+    /** Update Firebase params for an app. Pass null to clear. Uses numeric app.id (not appId string). */
+    updateAppFirebaseParams: async (id: number, firebaseParams: object | string | null): Promise<{ id: number; firebaseParams: string | null }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/firebase-params`, { firebaseParams })
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,
@@ -1143,3 +1148,122 @@ export const permissionApi = {
         await apiClient.delete(`/api/v1/permissions/roles/${roleId}`)
     },
 }
+
+// Data Accounts Types
+export interface DataAccountItem {
+    id: number
+    name: string
+    network: 'admob' | 'applovin' | 'xmp'
+    accountId: string
+    status: string
+    enabled: boolean
+    isDefault: boolean
+    reportKey?: string
+    // AdMob specific
+    clientId?: string
+    clientSecret?: string
+    accessToken?: string
+    refreshToken?: string
+    tokenType?: string
+    timezoneOffsetHours?: number
+    baseUrl?: string
+    xmpClientId?: string
+    xmpClientSecret?: string
+    hasToken?: boolean
+    tokenExpiresAt?: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateDataAccountRequest {
+    network: string
+    name: string
+    isDefault?: boolean
+    // AdMob specific
+    accountId?: string
+    clientId?: string
+    clientSecret?: string
+    accessToken?: string
+    refreshToken?: string
+    tokenType?: string
+    timezoneOffsetHours?: number
+    // AppLovin
+    reportKey?: string
+    baseUrl?: string
+    // XMP
+    xmpClientId?: string
+    xmpClientSecret?: string
+}
+
+export interface UpdateDataAccountRequest {
+    name?: string
+    isDefault?: boolean
+    accountId?: string
+    clientId?: string
+    clientSecret?: string
+    accessToken?: string
+    refreshToken?: string
+    tokenType?: string
+    timezoneOffsetHours?: number
+    reportKey?: string
+    baseUrl?: string
+    xmpClientId?: string
+    xmpClientSecret?: string
+}
+
+// Data Accounts API Service
+export const dataAccountsApi = {
+    // Get all data accounts across all networks
+    getAll: async (): Promise<DataAccountItem[]> => {
+        return apiClient.get<DataAccountItem[]>('/api/v1/data-accounts')
+    },
+
+    // Get a single data account
+    getById: async (network: string, id: number): Promise<DataAccountItem> => {
+        return apiClient.get<DataAccountItem>(`/api/v1/data-accounts/${network}/${id}`)
+    },
+
+    // Create a new data account
+    create: async (request: CreateDataAccountRequest): Promise<DataAccountItem> => {
+        return apiClient.post<DataAccountItem>('/api/v1/data-accounts', request)
+    },
+
+    // Update a data account
+    update: async (network: string, id: number, request: UpdateDataAccountRequest): Promise<DataAccountItem> => {
+        return apiClient.put<DataAccountItem>(`/api/v1/data-accounts/${network}/${id}`, request)
+    },
+
+    // Enable a data account
+    enable: async (network: string, id: number): Promise<{ message: string }> => {
+        return apiClient.post<{ message: string }>(`/api/v1/data-accounts/${network}/${id}/enable`, {})
+    },
+
+    // Disable a data account
+    disable: async (network: string, id: number): Promise<{ message: string }> => {
+        return apiClient.post<{ message: string }>(`/api/v1/data-accounts/${network}/${id}/disable`, {})
+    },
+
+    // Delete a data account
+    delete: async (network: string, id: number): Promise<{ message: string }> => {
+        return apiClient.delete(`/api/v1/data-accounts/${network}/${id}`)
+    },
+
+    // Get apps belonging to an AdMob account
+    getApps: async (accountId: number): Promise<{ apps: AccountAppItem[]; total: number }> => {
+        return apiClient.get<{ apps: AccountAppItem[]; total: number }>(`/api/v1/data-accounts/admob/${accountId}/apps`)
+    },
+}
+
+export interface AccountAppItem {
+    id: number
+    name: string
+    appId: string
+    platform?: string
+    displayName?: string
+    appStoreId?: string
+    iconUri?: string
+    approvalState?: string
+    createdAt: string
+    updatedAt: string
+}
+
