@@ -38,7 +38,6 @@ import {
   TrendingDown,
   Smartphone,
   ImageIcon,
-  RefreshCw,
   Trash2,
   Loader2,
 } from "lucide-react"
@@ -245,18 +244,7 @@ export function AppsTable({
     }
   }
 
-  const handleSync = async (app: typeof transformedApps[0], e: React.MouseEvent) => {
-    e.stopPropagation()
-    toast({
-      title: "Syncing...",
-      description: `Syncing ${app.name} with AdMob`,
-    })
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    toast({
-      title: "Sync Complete",
-      description: `${app.name} has been synced successfully`,
-    })
-  }
+
 
   const handlePauseResume = async () => {
     if (!selectedAppForAction) return
@@ -399,7 +387,7 @@ export function AppsTable({
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedApps.includes(app.id)}
-                      onCheckedChange={() => {}}
+                      onCheckedChange={() => { }}
                       onClick={(e) => toggleSelectApp(app.id, e)}
                     />
                   </td>
@@ -551,10 +539,7 @@ export function AppsTable({
                           <ExternalLink className="w-4 h-4" />
                           View in AdMob
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer" onClick={(e) => handleSync(app, e)}>
-                          <RefreshCw className="w-4 h-4" />
-                          Sync Now
-                        </DropdownMenuItem>
+
                         <DropdownMenuSeparator />
                         {app.status === "Active" ? (
                           <DropdownMenuItem

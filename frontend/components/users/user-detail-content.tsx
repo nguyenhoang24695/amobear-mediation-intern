@@ -82,7 +82,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
 
   const { data: userResponse, loading, error } = useApi(
     () => userId ? teamMembersApi.viewProfile(userId) : Promise.resolve({ success: false, data: undefined }),
-    { enabled: !!userId }
+    { enabled: !!userId, cacheKey: `user-profile-${userId}` }
   )
 
   const user = userResponse?.data
