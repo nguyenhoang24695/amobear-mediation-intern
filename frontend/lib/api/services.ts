@@ -147,6 +147,11 @@ export const structureApi = {
         return apiClient.post(`/api/Structure/apps/bulk-type`, payload)
     },
 
+    /** Update Firebase params for an app. Pass null to clear. Uses numeric app.id (not appId string). */
+    updateAppFirebaseParams: async (id: number, firebaseParams: object | string | null): Promise<{ id: number; firebaseParams: string | null }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/firebase-params`, { firebaseParams })
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,
