@@ -72,6 +72,10 @@ export interface WaterfallAdUnit {
   createdAt: string
   updatedAt: string
   lastSyncedAt?: string
+  /** Revenue từ StarRocks bronze.mediation_table (tổng theo ad_unit mapping), 7 ngày gần nhất. */
+  revenue?: number
+  /** Các country có dữ liệu (từ mediation_table). */
+  countries?: string[]
 }
 
 export interface AdSourceInfo {

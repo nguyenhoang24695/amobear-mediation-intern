@@ -19,10 +19,18 @@ import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
 import type { WaterfallAdUnit } from "@/types/api"
 
-type SortField = "name" | "displayName" | "format"
+type SortField = "displayName" | "format" | "revenue"
 type SortDirection = "asc" | "desc"
 
 const formatDisplay = (format?: string) => (format ? format.replace(/_/g, " ") : "—")
+
+// Country flags (giống cột Targeting trong mediation-groups-table)
+const countryFlags: Record<string, string> = {
+  US: "🇺🇸", UK: "🇬🇧", GB: "🇬🇧", DE: "🇩🇪", FR: "🇫🇷", JP: "🇯🇵", CA: "🇨🇦", AU: "🇦🇺",
+  IN: "🇮🇳", CN: "🇨🇳", KR: "🇰🇷", BR: "🇧🇷", MX: "🇲🇽", ES: "🇪🇸", IT: "🇮🇹", NL: "🇳🇱",
+  SE: "🇸🇪", NO: "🇳🇴", DK: "🇩🇰", FI: "🇫🇮", PL: "🇵🇱", RU: "🇷🇺", TR: "🇹🇷", SA: "🇸🇦",
+  AE: "🇦🇪", SG: "🇸🇬", MY: "🇲🇾", TH: "🇹🇭", ID: "🇮🇩", PH: "🇵🇭", VN: "🇻🇳",
+}
 
 export interface AppWaterfallAdUnitsTabProps {
   /** Khi parent đã load, truyền vào để tránh gọi API trùng. */
@@ -39,8 +47,8 @@ export function AppWaterfallAdUnitsTab({
   const hasValidAppId = !!appIdFromParams
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [sortField, setSortField] = useState<SortField>("name")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const [sortField, setSortField] = useState<SortField>("revenue")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -75,12 +83,12 @@ export function AppWaterfallAdUnitsTab({
     const mult = sortDirection === "asc" ? 1 : -1
     return [...filtered].sort((a, b) => {
       switch (sortField) {
-        case "name":
-          return mult * (a.name ?? "").localeCompare(b.name ?? "")
         case "displayName":
           return mult * (a.displayName ?? a.name ?? "").localeCompare(b.displayName ?? b.name ?? "")
         case "format":
           return mult * (a.format ?? "").localeCompare(b.format ?? "")
+        case "revenue":
+          return mult * ((a.revenue ?? 0) - (b.revenue ?? 0))
         default:
           return 0
       }
@@ -101,7 +109,7 @@ export function AppWaterfallAdUnitsTab({
     if (sortField === field) setSortDirection((d) => (d === "asc" ? "desc" : "asc"))
     else {
       setSortField(field)
-      setSortDirection("asc")
+      setSortDirection(field === "revenue" ? "desc" : "asc")
     }
   }
 
@@ -147,9 +155,6 @@ export function AppWaterfallAdUnitsTab({
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr className="text-xs text-slate-500 font-medium">
-                  <th className="px-4 py-3 text-left min-w-[180px]">
-                    <SortHeader field="name">Name</SortHeader>
-                  </th>
                   <th className="px-4 py-3 text-left min-w-[140px]">
                     <SortHeader field="displayName">Display Name</SortHeader>
                   </th>
@@ -157,6 +162,10 @@ export function AppWaterfallAdUnitsTab({
                   <th className="px-4 py-3 text-left">
                     <SortHeader field="format">Format</SortHeader>
                   </th>
+                  <th className="px-4 py-3 text-right">
+                    <SortHeader field="revenue">Revenue</SortHeader>
+                  </th>
+                  <th className="px-4 py-3 text-left min-w-[100px]">Country</th>
                   <th className="px-4 py-3 text-right">Global Floor</th>
                   <th className="px-4 py-3 text-right w-16">Actions</th>
                 </tr>
@@ -164,22 +173,21 @@ export function AppWaterfallAdUnitsTab({
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                       Loading waterfall ad units...
                     </td>
                   </tr>
                 ) : sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                       {searchQuery ? "No waterfall ad units match your search." : "No waterfall ad units for this app."}
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((w) => (
+                  paginated.map((w) => {
+                    const countries = w.countries ?? []
+                    return (
                     <tr key={w.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-slate-900">{w.name || "—"}</span>
-                      </td>
                       <td className="px-4 py-3 text-sm text-slate-700">
                         {w.displayName || "—"}
                       </td>
@@ -210,6 +218,25 @@ export function AppWaterfallAdUnitsTab({
                         {formatDisplay(w.format)}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
+                        {w.revenue != null && w.revenue > 0 ? `$${Number(w.revenue).toFixed(2)}` : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {countries.length > 0 ? (
+                          <div className="flex items-center gap-0.5 flex-wrap">
+                            {countries.slice(0, 3).map((country: string, idx: number) => (
+                              <span key={idx} className="text-base" title={country}>
+                                {countryFlags[country] ?? country}
+                              </span>
+                            ))}
+                            {countries.length > 3 && (
+                              <span className="text-xs text-slate-500 ml-1">+{countries.length - 3}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
                         {floorDisplay(w.globalFloorMicros)}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -236,7 +263,8 @@ export function AppWaterfallAdUnitsTab({
                         </DropdownMenu>
                       </td>
                     </tr>
-                  ))
+                    )
+                  })
                 )}
               </tbody>
             </table>
