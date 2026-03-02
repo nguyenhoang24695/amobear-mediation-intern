@@ -177,7 +177,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
                 {/* Submenu items (vd: Settings) */}
                 {!collapsed && isExpanded && (item as any).children && (item as any).children.length > 0 && (
-                  <div className="mt-0.5 ml-10 space-y-0.5">
+                  <div className="mt-0.5 ml-5 space-y-0.5">
                     {(item as any).children.map((child: any) => {
                       // Only show some items for admin / super_admin
                       if (child.adminOnly) {

@@ -73,6 +73,20 @@ export interface WaterfallAdUnit {
   lastSyncedAt?: string
 }
 
+/** Waterfall ad unit chưa được gắn với ad unit nào (orphan) – trả về từ API orphan-waterfall. */
+export interface OrphanWaterfallItem {
+  id: number
+  name: string
+  admobNetworkWaterfallAdUnitId: string
+  displayName?: string | null
+  appId: number
+  format?: string | null
+  globalFloorMicros?: number | null
+  publisherId: string
+  appDisplayName?: string | null
+  appAdMobId?: string | null
+}
+
 export interface AdSourceInfo {
   adSourceId: string
   title: string

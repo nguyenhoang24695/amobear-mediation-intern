@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RefreshCw, Download, Search, X, Cloud, Smartphone, Layers, DollarSign, Loader2 } from "lucide-react"
+import { RefreshCw, Download, Search, X, Cloud, Smartphone, Layers, DollarSign, Loader2, AlertCircle, ArrowRight } from "lucide-react"
+import Link from "next/link"
 import { AppsTable } from "./apps-table"
 import { Card } from "@/components/ui/card"
 import { useApi } from "@/hooks/use-api"
@@ -44,6 +45,13 @@ export function AppsPageContent() {
   const apps = appsResponse?.apps || []
   const summary = appsResponse?.summary
 
+  // Số waterfall chưa được gắn với ad unit nào (orphan). Gọi theo publisherId khi chọn 1 account.
+  const { data: orphanWaterfallData, loading: orphanWaterfallLoading } = useApi(
+    () => structureApi.getOrphanWaterfallCount(admobAccount === ALL_ACCOUNTS_VALUE ? undefined : admobAccount),
+    { enabled: true, cacheKey: `orphan_waterfall_count_${admobAccount}` }
+  )
+  const orphanWaterfallCount = orphanWaterfallData?.count ?? 0
+
   // Danh sách AdMob accounts cho dropdown: lấy unique publisherId từ apps khi đang "All Accounts"
   const [admobAccountOptions, setAdmobAccountOptions] = useState<string[]>([])
   useEffect(() => {
@@ -60,17 +68,18 @@ export function AppsPageContent() {
     return opts
   }, [admobAccountOptions, admobAccount])
 
-  // Summary từ API: Total Apps = tất cả (kể cả chưa APPROVED), Active = đã APPROVED, Total Ad Units / Total Waterfall Ad Units
+  // Summary từ API: Total Apps = tất cả (kể cả chưa APPROVED), Active = đã APPROVED, Total Ad Units / Total Waterfall Ad Units, orphan waterfall count
   const summaryStats = useMemo(() => {
-    if (!appsResponse) return { total: 0, active: 0, totalAdUnits: 0, totalWaterfallAdUnits: 0, avgEcpm: 0 }
+    if (!appsResponse) return { total: 0, active: 0, totalAdUnits: 0, totalWaterfallAdUnits: 0, avgEcpm: 0, orphanWaterfallCount: 0 }
     return {
       total: summary?.totalApps ?? apps.length,
       active: summary?.totalApprovedApps ?? apps.filter(app => app.approvalState === "APPROVED" || !app.approvalState).length,
       totalAdUnits: summary?.totalAdUnits ?? 0,
       totalWaterfallAdUnits: summary?.totalWaterfallAdUnits ?? 0,
       avgEcpm: summary?.averageEcpm ?? 0,
+      orphanWaterfallCount,
     }
-  }, [appsResponse, apps, summary])
+  }, [appsResponse, apps, summary, orphanWaterfallCount])
 
   const handleFilterChange = (type: string, value: string) => {
     if (value.startsWith("All")) {
@@ -343,7 +352,7 @@ export function AppsPageContent() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <Card className="p-4 border-slate-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
@@ -419,6 +428,32 @@ export function AppsPageContent() {
                 </p>
               )}
             </div>
+          </div>
+        </Card>
+        <Card className="p-4 border-slate-200">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Unused Waterfalls</p>
+                {orphanWaterfallLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                ) : (
+                  <p className="text-xl font-semibold text-slate-900">{summaryStats.orphanWaterfallCount.toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+            {summaryStats.orphanWaterfallCount > 0 && (
+              <Link
+                href={admobAccount === ALL_ACCOUNTS_VALUE ? "/apps/waterfall-unused" : `/apps/waterfall-unused?publisherId=${encodeURIComponent(admobAccount)}`}
+                className="text-xs font-medium text-orange-600 hover:text-orange-700 flex items-center gap-1 mt-1"
+              >
+                View details
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
           </div>
         </Card>
       </div>

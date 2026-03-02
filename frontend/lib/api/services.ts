@@ -5,6 +5,7 @@ import type {
     DashboardKeyMetrics,
     DateRangeType,
     MediationGroup,
+    OrphanWaterfallItem,
     PagedResponse,
     WaterfallAdUnit,
     PerformanceData,
@@ -140,6 +141,25 @@ export const structureApi = {
 
     getAppWaterfallAdUnits: async (id: number): Promise<WaterfallAdUnit[]> => {
         return apiClient.get<WaterfallAdUnit[]>(`/api/Structure/apps/${id}/waterfalladunits`)
+    },
+
+    /** Số waterfall ad units chưa được gắn với ad unit nào (orphan). Có thể lọc theo publisherId. */
+    getOrphanWaterfallCount: async (publisherId?: string): Promise<{ count: number }> => {
+        return apiClient.get('/api/Structure/orphan-waterfall/count', { publisherId })
+    },
+
+    /** Danh sách waterfall ad units chưa được gắn với ad unit nào (orphan). Phân trang, có thể lọc theo publisherId. */
+    getOrphanWaterfallList: async (params?: {
+        publisherId?: string
+        page?: number
+        pageSize?: number
+    }): Promise<{
+        items: OrphanWaterfallItem[]
+        totalCount: number
+        page: number
+        pageSize: number
+    }> => {
+        return apiClient.get('/api/Structure/orphan-waterfall', params)
     },
 
     /** Bulk update app type (game/app) for selected apps by AppId (AdMob app_id) */
