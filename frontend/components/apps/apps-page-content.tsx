@@ -447,7 +447,7 @@ export function AppsPageContent() {
             </div>
             {summaryStats.orphanWaterfallCount > 0 && (
               <Link
-                href={admobAccount === ALL_ACCOUNTS_VALUE ? "/apps/waterfall-unused" : `/apps/waterfall-unused?publisherId=${encodeURIComponent(admobAccount)}`}
+                href={admobAccount === ALL_ACCOUNTS_VALUE ? "/waterfall" : `/waterfall?publisherId=${encodeURIComponent(admobAccount)}`}
                 className="text-xs font-medium text-orange-600 hover:text-orange-700 flex items-center gap-1 mt-1"
               >
                 View details

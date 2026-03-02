@@ -85,6 +85,12 @@ export interface OrphanWaterfallItem {
   publisherId: string
   appDisplayName?: string | null
   appAdMobId?: string | null
+  lastSyncedAt?: string | null
+}
+
+/** Waterfall list item from GET /api/Structure/waterfall (all or unused only). */
+export interface WaterfallListItem extends OrphanWaterfallItem {
+  lastSyncedAt?: string | null
 }
 
 export interface AdSourceInfo {

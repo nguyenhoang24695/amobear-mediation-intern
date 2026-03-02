@@ -23,6 +23,7 @@ import {
   Briefcase,
   ListChecks,
   Shield,
+  ListFilter,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -39,6 +40,7 @@ interface SidebarProps {
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Smartphone, label: "Apps", href: "/apps" },
+  { icon: ListFilter, label: "Waterfall", href: "/waterfall" },
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
   { icon: BarChart3, label: "Reports", href: "/reports" },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },

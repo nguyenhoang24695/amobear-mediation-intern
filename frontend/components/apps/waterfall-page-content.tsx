@@ -8,26 +8,34 @@ import { ArrowLeft, Copy, Loader2, Layers } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
-import type { OrphanWaterfallItem } from "@/types/api"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import type { WaterfallListItem } from "@/types/api"
 
-export function WaterfallUnusedPageContent() {
+const FILTER_UNUSED = "unused"
+const FILTER_NO_REVENUE = "noRevenue"
+
+export function WaterfallPageContent() {
   const searchParams = useSearchParams()
   const publisherIdFromUrl = searchParams.get("publisherId") ?? undefined
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [filterMode, setFilterMode] = useState<string>(FILTER_UNUSED)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const { data, loading } = useApi(
     () =>
-      structureApi.getOrphanWaterfallList({
+      structureApi.getWaterfallList({
         publisherId: publisherIdFromUrl,
+        unusedOnly: filterMode === FILTER_UNUSED,
+        noRevenue: filterMode === FILTER_NO_REVENUE,
         page,
         pageSize,
       }),
     {
       enabled: true,
-      cacheKey: `orphan_waterfall_list_${publisherIdFromUrl ?? "all"}_${page}_${pageSize}`,
+      cacheKey: `waterfall_list_${publisherIdFromUrl ?? "all"}_${filterMode}_${page}_${pageSize}`,
     }
   )
 
@@ -37,7 +45,7 @@ export function WaterfallUnusedPageContent() {
 
   useEffect(() => {
     setPage(1)
-  }, [publisherIdFromUrl, pageSize])
+  }, [publisherIdFromUrl, filterMode, pageSize])
 
   const copyId = (id: string) => {
     navigator.clipboard.writeText(id)
@@ -48,6 +56,19 @@ export function WaterfallUnusedPageContent() {
   const formatFloor = (micros?: number | null) => {
     if (micros == null) return "—"
     return `$${(micros / 1_000_000).toFixed(2)}`
+  }
+
+  const formatDateTime = (iso?: string | null) => {
+    if (!iso) return "—"
+    try {
+      const d = new Date(iso)
+      return d.toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    } catch {
+      return "—"
+    }
   }
 
   return (
@@ -63,15 +84,36 @@ export function WaterfallUnusedPageContent() {
           </Link>
           <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
             <Layers className="w-6 h-6 text-orange-500" />
-            Unused Waterfalls
+            Waterfalls
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Waterfall ad units not linked to any ad unit in a mediation group.
+            {filterMode === FILTER_UNUSED
+              ? "Waterfall ad units not linked to any ad unit in a mediation group."
+              : "Waterfall ad units with no revenue in the last 30 days."}
             {publisherIdFromUrl && (
-              <span className="ml-1">Filtered by publisher: <strong>{publisherIdFromUrl}</strong></span>
+              <span className="ml-1">
+                Filtered by publisher: <strong>{publisherIdFromUrl}</strong>
+              </span>
             )}
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <RadioGroup value={filterMode} onValueChange={setFilterMode} className="flex flex-wrap gap-6">
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value={FILTER_UNUSED} id="filter-unused" />
+            <Label htmlFor="filter-unused" className="text-sm font-normal cursor-pointer">
+              Show Unused waterfalls
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value={FILTER_NO_REVENUE} id="filter-no-revenue" />
+            <Label htmlFor="filter-no-revenue" className="text-sm font-normal cursor-pointer">
+              Show waterfalls without revenue
+            </Label>
+          </div>
+        </RadioGroup>
       </div>
 
       <Card className="border-slate-200 overflow-hidden">
@@ -81,7 +123,9 @@ export function WaterfallUnusedPageContent() {
           </div>
         ) : items.length === 0 ? (
           <div className="py-16 text-center text-slate-500">
-            No unused waterfalls.
+            {filterMode === FILTER_UNUSED
+              ? "No unused waterfalls."
+              : "No waterfalls without revenue."}
           </div>
         ) : (
           <>
@@ -95,10 +139,11 @@ export function WaterfallUnusedPageContent() {
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Floor</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Publisher</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">Last synced</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((row: OrphanWaterfallItem) => (
+                  {items.map((row: WaterfallListItem) => (
                     <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                       <td className="py-3 px-4">
                         {row.appAdMobId ? (
@@ -130,6 +175,9 @@ export function WaterfallUnusedPageContent() {
                         </button>
                       </td>
                       <td className="py-3 px-4 text-slate-600 font-mono text-xs">{row.publisherId}</td>
+                      <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                        {formatDateTime(row.lastSyncedAt)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -147,7 +195,7 @@ export function WaterfallUnusedPageContent() {
                     setPageSize(size)
                     setPage(1)
                   }}
-                  itemName="waterfall"
+                  itemName="waterfalls"
                 />
               </div>
             )}

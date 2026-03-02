@@ -5,8 +5,8 @@ import type {
     DashboardKeyMetrics,
     DateRangeType,
     MediationGroup,
-    OrphanWaterfallItem,
     PagedResponse,
+    WaterfallListItem,
     WaterfallAdUnit,
     PerformanceData,
     PerformanceSummary,
@@ -148,18 +148,26 @@ export const structureApi = {
         return apiClient.get('/api/Structure/orphan-waterfall/count', { publisherId })
     },
 
-    /** Danh sách waterfall ad units chưa được gắn với ad unit nào (orphan). Phân trang, có thể lọc theo publisherId. */
-    getOrphanWaterfallList: async (params?: {
+    /** List waterfall ad units with optional filter: Unused only or No revenue. Supports pagination and publisherId. */
+    getWaterfallList: async (params?: {
         publisherId?: string
+        unusedOnly?: boolean
+        noRevenue?: boolean
         page?: number
         pageSize?: number
     }): Promise<{
-        items: OrphanWaterfallItem[]
+        items: WaterfallListItem[]
         totalCount: number
         page: number
         pageSize: number
     }> => {
-        return apiClient.get('/api/Structure/orphan-waterfall', params)
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.page != null) query.page = params.page
+        if (params?.pageSize != null) query.pageSize = params.pageSize
+        return apiClient.get('/api/Structure/waterfall', query)
     },
 
     /** Bulk update app type (game/app) for selected apps by AppId (AdMob app_id) */
