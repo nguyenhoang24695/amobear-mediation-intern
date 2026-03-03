@@ -101,6 +101,67 @@ export interface CurrentUser {
     organizationId?: string
 }
 
+export interface PagedResult<T> {
+    items: T[]
+    total: number
+    page: number
+    pageSize: number
+    totalPages: number
+}
+
+export interface ActivityLogRef {
+    refType: string
+    refId: string
+    refKey?: string | null
+    refLabel?: string | null
+}
+
+export interface ActivityLogListItem {
+    id: number
+    occurredAt: string
+    actorName?: string | null
+    actorRole?: string | null
+    source: string
+    domain: string
+    eventType: string
+    status: string
+    severity: string
+    summary: string
+    appId?: number | null
+    mediationGroupId?: string | null
+    jobName?: string | null
+    targetType?: string | null
+    targetId?: string | null
+    targetName?: string | null
+    correlationId?: string | null
+    metadata?: unknown
+}
+
+export interface ActivityLogDetail extends ActivityLogListItem {
+    actorUserId?: string | null
+    organizationId?: string | null
+    createdAt: string
+    refs: ActivityLogRef[]
+}
+
+export interface ActivityLogQueryParams {
+    from?: string
+    to?: string
+    domain?: string
+    eventType?: string
+    status?: string
+    actorUserId?: string
+    actor?: string
+    appId?: number
+    mediationGroupId?: string
+    jobName?: string
+    targetType?: string
+    targetId?: string
+    q?: string
+    page?: number
+    pageSize?: number
+}
+
 export interface UpdateAppFirebaseParamsPayload {
     firebaseParams?: object | string | null
     enabled?: boolean
@@ -1046,6 +1107,16 @@ export const jobSchedulesApi = {
     // Reload schedules from database to Hangfire
     reload: async (): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post<{ success: boolean; message?: string }>('/api/v1/job-schedules/reload', {})
+    },
+}
+
+export const activityLogsApi = {
+    list: async (params?: ActivityLogQueryParams): Promise<PagedResult<ActivityLogListItem>> => {
+        return apiClient.get<PagedResult<ActivityLogListItem>>('/api/v1/activity-logs', params as Record<string, string | number | undefined>)
+    },
+
+    getById: async (id: number): Promise<ActivityLogDetail> => {
+        return apiClient.get<ActivityLogDetail>(`/api/v1/activity-logs/${id}`)
     },
 }
 

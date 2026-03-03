@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,10 +34,12 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
+  Activity,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
+import { buildActivityLogsHref } from "@/lib/activity-logs"
 import type { AdUnit, App } from "@/types/api"
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
@@ -964,6 +967,19 @@ export function WaterfallOptimizationTab({
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Waterfall Configuration</h2>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-9 bg-transparent" asChild>
+                <Link
+                  href={buildActivityLogsHref({
+                    domain: "waterfall",
+                    targetType: "mediation_group",
+                    targetId: mediationGroupId,
+                    mediationGroupId,
+                  })}
+                >
+                  <Activity className="w-4 h-4" />
+                  View Activity
+                </Link>
+              </Button>
               <Select value={viewMode} onValueChange={setViewMode}>
                 <SelectTrigger className="w-[140px] h-9 bg-white">
                   <SelectValue />
