@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowLeft, Edit, MoreHorizontal, Copy, ToggleLeft, Trash2, CheckCircle2, Loader2 } from "lucide-react"
+import { ArrowLeft, Edit, MoreHorizontal, Copy, ToggleLeft, Trash2, CheckCircle2, Loader2, Activity } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { OrgOverviewTab } from "./tabs/org-overview-tab"
@@ -23,6 +23,7 @@ import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
 import { getCurrentUser } from "@/lib/auth"
 import { UserRole } from "@/lib/enums/user-role"
 import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
+import { buildActivityLogsHref } from "@/lib/activity-logs"
 
 interface OrganizationDetailContentProps {
   orgId: string
@@ -154,6 +155,18 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2 bg-transparent" asChild>
+            <Link
+              href={buildActivityLogsHref({
+                domain: "organization",
+                targetType: "organization",
+                targetId: org.id,
+              })}
+            >
+              <Activity className="w-4 h-4" />
+              View Activity
+            </Link>
+          </Button>
           <Button variant="outline" className="gap-2 bg-transparent">
             <Edit className="w-4 h-4" />
             Edit

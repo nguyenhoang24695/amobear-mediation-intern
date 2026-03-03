@@ -4,6 +4,7 @@ import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import Link from "next/link"
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
   Search,
   RefreshCw,
   Briefcase,
+  Activity,
   CheckCircle,
   XCircle,
   Clock,
@@ -37,6 +39,7 @@ import { RunJobDialog } from "./run-job-dialog"
 import { JobDetailsDialog } from "./job-details-dialog"
 import { useApi } from "@/hooks/use-api"
 import { jobSchedulesApi } from "@/lib/api/services"
+import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { useToast } from "@/hooks/use-toast"
 import type { HangfireJobSchedule } from "@/types/api"
 import { formatDistanceToNow } from "date-fns"
@@ -186,6 +189,12 @@ export function JobManagementContent() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2 bg-transparent" asChild>
+            <Link href={buildActivityLogsHref({ domain: "job" })}>
+              <Activity className="w-4 h-4" />
+              View Activity
+            </Link>
+          </Button>
           <Button
             variant="outline"
             className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
@@ -344,8 +353,8 @@ export function JobManagementContent() {
             if (!open) setEditJob(null)
           }}
           job={editJob}
-          onSave={(data) => {
-            handleSaveJob(editJob.jobId, data)
+          onSave={async (data) => {
+            await handleSaveJob(editJob.jobId, data)
           }}
         />
       )}

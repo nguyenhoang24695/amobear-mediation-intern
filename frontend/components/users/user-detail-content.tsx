@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   ArrowLeft,
+  Activity,
   Edit,
   MoreHorizontal,
   KeyRound,
@@ -37,6 +38,7 @@ import {
 import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
 import { teamMembersApi } from "@/lib/api/services"
+import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 // Mock data for sections not yet in API
@@ -185,6 +187,18 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
         </div>
 
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link
+              href={buildActivityLogsHref({
+                domain: "user",
+                targetType: "user",
+                targetId: user.id,
+              })}
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              View Activity
+            </Link>
+          </Button>
           <Button variant="outline">
             <Edit className="w-4 h-4 mr-2" />
             Edit User

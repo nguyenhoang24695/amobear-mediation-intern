@@ -23,6 +23,7 @@ import {
   Briefcase,
   KeyRound,
   ListChecks,
+  Activity,
   Shield,
   ListFilter,
 } from "lucide-react"
@@ -54,6 +55,7 @@ const navItems: NavItem[] = [
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
   { icon: BarChart3, label: "Reports", href: "/reports" },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
+  { icon: Activity, label: "Activity Logs", href: "/activity-logs" },
   {
     icon: Settings,
     label: "Settings",
