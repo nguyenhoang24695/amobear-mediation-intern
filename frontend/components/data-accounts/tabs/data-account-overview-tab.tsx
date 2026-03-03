@@ -32,6 +32,7 @@ interface OverviewProps {
     status: string
     enabled?: boolean
     isDefault?: boolean
+    // AdMob
     clientId?: string
     clientSecret?: string
     accessToken?: string
@@ -39,6 +40,12 @@ interface OverviewProps {
     tokenType?: string
     tokenExpiresAt?: string
     timezoneOffsetHours?: number
+    // AppLovin
+    reportKey?: string
+    baseUrl?: string
+    // XMP
+    xmpClientId?: string
+    xmpClientSecret?: string
     createdAt?: string
     updatedAt?: string
   }
@@ -103,29 +110,46 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            {/* Common fields */}
             <DetailItem label="ID" value={account.id} />
             <DetailItem label="Display Name" value={account.name} />
 
-            <DetailItem label="Account ID" value={account.accountId} isCode />
-            <DetailItem label="Client ID" value={account.clientId || "—"} isCode={!!account.clientId} />
-
-            <DetailItem label="Client Secret" value={account.clientSecret || "—"} isCode={!!account.clientSecret} />
-            <DetailItem label="Timezone Offset Hours" value={account.timezoneOffsetHours?.toString() ?? "0"} />
-
-            <DetailItem label="Is Default" value={account.isDefault ? "Yes" : "No"} />
-            <DetailItem label="Enabled" value={account.enabled ? "Yes" : "No"} />
-
-            <DetailItem label="Created At" value={formatDate(account.createdAt)} />
-            <DetailItem label="Updated At" value={formatDate(account.updatedAt)} />
-
+            {/* AdMob-specific fields */}
             {account.network === "admob" && (
               <>
+                <DetailItem label="Account ID" value={account.accountId} isCode />
+                <DetailItem label="Client ID" value={account.clientId || "—"} isCode={!!account.clientId} />
+                <DetailItem label="Client Secret" value={account.clientSecret || "—"} isCode={!!account.clientSecret} />
+                <DetailItem label="Timezone Offset Hours" value={account.timezoneOffsetHours?.toString() ?? "0"} />
                 <DetailItem label="Access Token" value={account.accessToken || "—"} isCode={!!account.accessToken} />
                 <DetailItem label="Refresh Token" value={account.refreshToken || "—"} isCode={!!account.refreshToken} />
                 <DetailItem label="Token Type" value={account.tokenType || "—"} />
                 <DetailItem label="Token Expires At" value={formatDate(account.tokenExpiresAt)} />
               </>
             )}
+
+            {/* AppLovin-specific fields */}
+            {account.network === "applovin" && (
+              <>
+                <DetailItem label="Report Key" value={account.reportKey || "—"} isCode={!!account.reportKey} />
+                <DetailItem label="Base URL" value={account.baseUrl || "—"} isCode={!!account.baseUrl} />
+              </>
+            )}
+
+            {/* XMP-specific fields */}
+            {account.network === "xmp" && (
+              <>
+                <DetailItem label="Client ID" value={account.xmpClientId || "—"} isCode={!!account.xmpClientId} />
+                <DetailItem label="Client Secret" value={account.xmpClientSecret || "—"} isCode={!!account.xmpClientSecret} />
+              </>
+            )}
+
+            {/* Common status fields */}
+            <DetailItem label="Is Default" value={account.isDefault ? "Yes" : "No"} />
+            <DetailItem label="Enabled" value={account.enabled ? "Yes" : "No"} />
+
+            <DetailItem label="Created At" value={formatDate(account.createdAt)} />
+            <DetailItem label="Updated At" value={formatDate(account.updatedAt)} />
           </div>
         </CardContent>
       </Card>

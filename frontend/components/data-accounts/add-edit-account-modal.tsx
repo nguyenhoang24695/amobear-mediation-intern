@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import { Loader2, Eye, EyeOff, Plug, Upload, X, CheckCircle2, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { dataAccountsApi } from "@/lib/api/services"
@@ -33,11 +33,10 @@ export interface DataAccount {
   tokenType?: string
   // applovin
   reportKey?: string
-  sdkKey?: string
+  baseUrl?: string
   // xmp
-  apiKey?: string
-  apiSecret?: string
-  apiDomain?: string
+  xmpClientId?: string
+  xmpClientSecret?: string
 }
 
 interface AddEditAccountModalProps {
@@ -71,14 +70,13 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [applovinName, setApplovinName] = useState("")
   const [reportKey, setReportKey] = useState("")
   const [showReportKey, setShowReportKey] = useState(false)
-  const [sdkKey, setSdkKey] = useState("")
+  const [baseUrl, setBaseUrl] = useState("https://r.applovin.com")
 
   // XMP fields
   const [xmpName, setXmpName] = useState("")
-  const [apiKey, setApiKey] = useState("")
-  const [apiSecret, setApiSecret] = useState("")
-  const [showApiSecret, setShowApiSecret] = useState(false)
-  const [apiDomain, setApiDomain] = useState("global")
+  const [xmpClientId, setXmpClientId] = useState("")
+  const [xmpClientSecret, setXmpClientSecret] = useState("")
+  const [showXmpClientSecret, setShowXmpClientSecret] = useState(false)
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -89,7 +87,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
       setErrors({})
       setSaving(false)
       setShowReportKey(false)
-      setShowApiSecret(false)
+      setShowXmpClientSecret(false)
       if (editAccount) {
         setActiveTab(editAccount.network)
         if (editAccount.network === "admob") {
@@ -103,12 +101,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         } else if (editAccount.network === "applovin") {
           setApplovinName(editAccount.name)
           setReportKey(editAccount.reportKey ?? "")
-          setSdkKey(editAccount.sdkKey ?? "")
+          setBaseUrl(editAccount.baseUrl ?? "https://r.applovin.com")
         } else {
           setXmpName(editAccount.name)
-          setApiKey(editAccount.apiKey ?? "")
-          setApiSecret(editAccount.apiSecret ?? "")
-          setApiDomain(editAccount.apiDomain ?? "global")
+          setXmpClientId(editAccount.xmpClientId ?? "")
+          setXmpClientSecret(editAccount.xmpClientSecret ?? "")
         }
       } else {
         setActiveTab("admob")
@@ -121,11 +118,10 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         setTokenType("Bearer")
         setApplovinName("")
         setReportKey("")
-        setSdkKey("")
+        setBaseUrl("https://r.applovin.com")
         setXmpName("")
-        setApiKey("")
-        setApiSecret("")
-        setApiDomain("global")
+        setXmpClientId("")
+        setXmpClientSecret("")
       }
     }
   }, [open, editAccount])
@@ -139,7 +135,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
       if (!applovinName.trim()) newErrors.applovinName = "Account name is required"
     } else {
       if (!xmpName.trim()) newErrors.xmpName = "Account name is required"
-      if (!apiKey.trim()) newErrors.apiKey = "API Key is required"
+      if (!xmpClientId.trim()) newErrors.xmpClientId = "Client ID is required"
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -180,12 +176,13 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           await dataAccountsApi.update(network, id, {
             name: applovinName.trim(),
             reportKey: reportKey || undefined,
+            baseUrl: baseUrl.trim() || undefined,
           })
         } else {
           await dataAccountsApi.update(network, id, {
             name: xmpName.trim(),
-            xmpClientId: apiKey || undefined,
-            xmpClientSecret: apiSecret || undefined,
+            xmpClientId: xmpClientId.trim() || undefined,
+            xmpClientSecret: xmpClientSecret.trim() || undefined,
           })
         }
       } else {
@@ -206,13 +203,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             network: "applovin",
             name: applovinName.trim(),
             reportKey: reportKey || undefined,
+            baseUrl: baseUrl.trim() || undefined,
           })
         } else {
           await dataAccountsApi.create({
             network: "xmp",
             name: xmpName.trim(),
-            xmpClientId: apiKey || undefined,
-            xmpClientSecret: apiSecret || undefined,
+            xmpClientId: xmpClientId.trim() || undefined,
+            xmpClientSecret: xmpClientSecret.trim() || undefined,
           })
         }
       }
@@ -413,12 +411,12 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sdk-key">SDK Key</Label>
+                <Label htmlFor="base-url">Base URL</Label>
                 <Input
-                  id="sdk-key"
-                  placeholder="Enter SDK Key"
-                  value={sdkKey}
-                  onChange={(e) => setSdkKey(e.target.value)}
+                  id="base-url"
+                  placeholder="https://r.applovin.com"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
                   disabled={saving}
                 />
               </div>
@@ -442,53 +440,40 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="api-key">
-                  API Key <span className="text-red-500">*</span>
+                <Label htmlFor="xmp-client-id">
+                  Client ID <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  id="api-key"
-                  placeholder="Enter API Key"
-                  value={apiKey}
-                  onChange={(e) => { setApiKey(e.target.value); setErrors((p) => ({ ...p, apiKey: "" })) }}
-                  className={errors.apiKey ? "border-red-500" : ""}
+                  id="xmp-client-id"
+                  placeholder="Enter Client ID"
+                  value={xmpClientId}
+                  onChange={(e) => { setXmpClientId(e.target.value); setErrors((p) => ({ ...p, xmpClientId: "" })) }}
+                  className={errors.xmpClientId ? "border-red-500" : ""}
                   disabled={saving}
                 />
-                {errors.apiKey && <p className="text-xs text-red-500">{errors.apiKey}</p>}
+                {errors.xmpClientId && <p className="text-xs text-red-500">{errors.xmpClientId}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="api-secret">API Secret</Label>
+                <Label htmlFor="xmp-client-secret">Client Secret</Label>
                 <div className="relative">
                   <Input
-                    id="api-secret"
-                    type={showApiSecret ? "text" : "password"}
-                    placeholder="Enter API Secret"
-                    value={apiSecret}
-                    onChange={(e) => setApiSecret(e.target.value)}
+                    id="xmp-client-secret"
+                    type={showXmpClientSecret ? "text" : "password"}
+                    placeholder="Enter Client Secret"
+                    value={xmpClientSecret}
+                    onChange={(e) => setXmpClientSecret(e.target.value)}
                     className="pr-10"
                     disabled={saving}
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    onClick={() => setShowApiSecret(!showApiSecret)}
+                    onClick={() => setShowXmpClientSecret(!showXmpClientSecret)}
                   >
-                    {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showXmpClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="api-domain">API Domain</Label>
-                <Select value={apiDomain} onValueChange={setApiDomain} disabled={saving}>
-                  <SelectTrigger id="api-domain">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="global">Global</SelectItem>
-                    <SelectItem value="china">China</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </TabsContent>
           </Tabs>

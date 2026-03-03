@@ -236,6 +236,41 @@ export function WaterfallOptimizationTab({
     return map
   }, [recommendations])
 
+  // Match rate (%) theo adSourceId: lấy từ recommendations (matchRatePercent) — fallback khi API không trả match rate theo line
+  const matchRateByAdSourceId = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const r of recommendations) {
+      const mr = r.matchRatePercent != null ? Number(r.matchRatePercent) : null
+      if (mr != null && !Number.isNaN(mr) && r.adSourceId) {
+        map[r.adSourceId] = mr
+      }
+    }
+    return map
+  }, [recommendations])
+
+  // Match rate (%) từ API mediation group detail (StarRocks bronze.mediation_table) — ưu tiên dùng thay cho recommendations
+  const matchRateFromMediationLines = useMemo(() => {
+    const rawLines = (groupDetail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown })?.mediationGroupLines
+      ?? (groupDetail as { MediationGroupLines?: unknown })?.MediationGroupLines
+    if (typeof rawLines !== "object" || rawLines === null) return { byLineId: {} as Record<string, number>, byAdSourceId: {} as Record<string, number> }
+    const byLineId: Record<string, number> = {}
+    const byAdSourceId: Record<string, number> = {}
+    const entries = Array.isArray(rawLines) ? (rawLines as unknown[]).map((v, i) => [String(i), v]) : Object.entries(rawLines as Record<string, unknown>)
+    for (const [key, line] of entries) {
+      const keyStr = String(key)
+      const row = line as { id?: string; adSourceId?: string; matchRatePercent?: number; MatchRatePercent?: number }
+      const mr = row?.matchRatePercent ?? row?.MatchRatePercent
+      const num = mr != null ? Number(mr) : NaN
+      if (!Number.isNaN(num)) {
+        const lineId: string = typeof row?.id === "string" ? row.id : keyStr
+        if (lineId) byLineId[lineId] = num
+        const adSourceId = typeof row?.adSourceId === "string" ? row.adSourceId : ""
+        if (adSourceId) byAdSourceId[adSourceId] = num
+      }
+    }
+    return { byLineId, byAdSourceId }
+  }, [groupDetail])
+
   // Build từ mediation_group_lines_json (PostgreSQL) theo format Dolphin 2.0
   const currentSetup = useMemo(() => {
     const detail = groupDetail as {
@@ -1044,19 +1079,38 @@ export function WaterfallOptimizationTab({
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
-                    {currentSetup.waterfall.map((source, index) => (
-                      <div key={source.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-medium flex items-center justify-center">
-                          {index + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900">{source.name}</p>
-                          <p className="text-xs text-slate-500">${source.floor.toFixed(2)}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">Updated: {formatUpdatedAt(updatedAt)}</p>
+                    {currentSetup.waterfall.map((source, index) => {
+                      const matchRate = matchRateFromMediationLines.byLineId[source.id]
+                        ?? (source.network ? matchRateFromMediationLines.byAdSourceId[source.network] : undefined)
+                        ?? (source.network ? matchRateByAdSourceId[source.network] : undefined)
+                      return (
+                        <div key={source.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                          <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-medium flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900">{source.name}</p>
+                            <p className="text-xs text-slate-500">${source.floor.toFixed(2)}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Updated: {formatUpdatedAt(updatedAt)}</p>
+                          </div>
+                          <div className="shrink-0 flex flex-col items-end gap-0.5">
+                            <p className="text-sm text-slate-600">eCPM: ${source.ecpm.toFixed(2)}</p>
+                            {matchRate != null && !Number.isNaN(matchRate) ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className="text-xs text-slate-500 cursor-help">MR: {matchRate.toFixed(1)}%</p>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left">
+                                    <p>Match rate: tỷ lệ request có ad trả về / tổng request</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : null}
+                          </div>
                         </div>
-                        <p className="text-sm text-slate-600 shrink-0">eCPM: ${source.ecpm.toFixed(2)}</p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </CollapsibleContent>
                 </Collapsible>
               </CardContent>

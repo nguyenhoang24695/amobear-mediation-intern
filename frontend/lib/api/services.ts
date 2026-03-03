@@ -102,6 +102,13 @@ export interface CurrentUser {
     organizationId?: string
 }
 
+export interface UpdateAppFirebaseParamsPayload {
+    firebaseParams?: object | string | null
+    enabled?: boolean
+    firebaseAppKey?: string
+    serviceAccountJson?: object | string | null
+}
+
 // Structure API Service
 export const structureApi = {
     // Apps - Returns apps with metrics from cache and summary
@@ -176,8 +183,8 @@ export const structureApi = {
     },
 
     /** Update Firebase params for an app. Pass null to clear. Uses numeric app.id (not appId string). */
-    updateAppFirebaseParams: async (id: number, firebaseParams: object | string | null): Promise<{ id: number; firebaseParams: string | null }> => {
-        return apiClient.patch(`/api/Structure/apps/${id}/firebase-params`, { firebaseParams })
+    updateAppFirebaseParams: async (id: number, payload: UpdateAppFirebaseParamsPayload | null): Promise<{ id: number; firebaseParams: string | null }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/firebase-params`, payload ?? { firebaseParams: null })
     },
 
     // Mediation Groups

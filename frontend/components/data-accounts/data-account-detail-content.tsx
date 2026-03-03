@@ -174,10 +174,9 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     refreshToken: account.network === "admob" ? account.refreshToken : undefined,
     tokenType: account.network === "admob" ? account.tokenType : undefined,
     reportKey: account.network === "applovin" ? account.reportKey : undefined,
-    sdkKey: undefined,
-    apiKey: account.network === "xmp" ? account.xmpClientId : undefined,
-    apiSecret: account.network === "xmp" ? account.xmpClientSecret : undefined,
-    apiDomain: "global",
+    baseUrl: account.network === "applovin" ? account.baseUrl : undefined,
+    xmpClientId: account.network === "xmp" ? account.xmpClientId : undefined,
+    xmpClientSecret: account.network === "xmp" ? account.xmpClientSecret : undefined,
   }
 
   // Build account-like object for tabs that expect it
@@ -199,13 +198,11 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     autoSync: account.enabled,
     syncInterval: "1h",
     publisherId: account.network === "admob" ? account.accountId : undefined,
-    reportKey: account.reportKey,
-    apiKey: account.xmpClientId,
-    apiDomain: "global",
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
     enabled: account.enabled,
     isDefault: account.isDefault,
+    // AdMob
     clientId: account.clientId,
     clientSecret: account.clientSecret,
     accessToken: account.accessToken,
@@ -213,6 +210,12 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     tokenType: account.tokenType,
     tokenExpiresAt: account.tokenExpiresAt,
     timezoneOffsetHours: account.timezoneOffsetHours,
+    // AppLovin
+    reportKey: account.reportKey,
+    baseUrl: account.baseUrl,
+    // XMP
+    xmpClientId: account.xmpClientId,
+    xmpClientSecret: account.xmpClientSecret,
   }
 
   return (
