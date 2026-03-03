@@ -147,7 +147,7 @@ export function AppsTable({
       }
     } else if (wfFilter === "< 40%") {
       const pct = getWaterfallPct(app)
-      if (pct == null || pct >= 40) {
+      if (pct != null && pct >= 40) {
         return false
       }
     }

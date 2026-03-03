@@ -24,6 +24,7 @@ import {
   KeyRound,
   ListChecks,
   Shield,
+  ListFilter,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -49,6 +50,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Smartphone, label: "Apps", href: "/apps" },
+  { icon: ListFilter, label: "Waterfall", href: "/waterfall" },
   { icon: Layers, label: "Mediation Groups", href: "/mediation" },
   { icon: BarChart3, label: "Reports", href: "/reports" },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
@@ -194,7 +196,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
                 {/* Submenu items (vd: Settings) */}
                 {!collapsed && isExpanded && (item as any).children && (item as any).children.length > 0 && (
-                  <div className="mt-0.5 ml-10 space-y-0.5">
+                  <div className="mt-0.5 ml-5 space-y-0.5">
                     {(item as any).children.map((child: any) => {
                       // Only show some items for admin / super_admin
                       if (child.adminOnly) {

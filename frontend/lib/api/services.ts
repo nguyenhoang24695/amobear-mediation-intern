@@ -6,6 +6,7 @@ import type {
     DateRangeType,
     MediationGroup,
     PagedResponse,
+    WaterfallListItem,
     WaterfallAdUnit,
     PerformanceData,
     PerformanceSummary,
@@ -140,6 +141,33 @@ export const structureApi = {
 
     getAppWaterfallAdUnits: async (id: number): Promise<WaterfallAdUnit[]> => {
         return apiClient.get<WaterfallAdUnit[]>(`/api/Structure/apps/${id}/waterfalladunits`)
+    },
+
+    /** Số waterfall ad units chưa được gắn với ad unit nào (orphan). Có thể lọc theo publisherId. */
+    getOrphanWaterfallCount: async (publisherId?: string): Promise<{ count: number }> => {
+        return apiClient.get('/api/Structure/orphan-waterfall/count', { publisherId })
+    },
+
+    /** List waterfall ad units with optional filter: Unused only or No revenue. Supports pagination and publisherId. */
+    getWaterfallList: async (params?: {
+        publisherId?: string
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        page?: number
+        pageSize?: number
+    }): Promise<{
+        items: WaterfallListItem[]
+        totalCount: number
+        page: number
+        pageSize: number
+    }> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.page != null) query.page = params.page
+        if (params?.pageSize != null) query.pageSize = params.pageSize
+        return apiClient.get('/api/Structure/waterfall', query)
     },
 
     /** Bulk update app type (game/app) for selected apps by AppId (AdMob app_id) */
