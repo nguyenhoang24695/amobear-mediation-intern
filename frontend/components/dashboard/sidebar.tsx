@@ -31,7 +31,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, type AuthUser } from "@/lib/auth"
+import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, hasScreenFunction, type AuthUser } from "@/lib/auth"
 import { UserRole } from "@/lib/enums/user-role"
 
 interface SidebarProps {
@@ -45,24 +45,32 @@ type NavItem = {
   href: string
   hasSubmenu?: boolean
   badge?: number
-  children?: { icon: any; label: string; href: string; adminOnly?: boolean }[]
+  /** If false or returns false, item is hidden in sidebar. Default true. */
+  isShow?: boolean | (() => boolean)
+  children?: { icon: any; label: string; href: string; adminOnly?: boolean; isShow?: boolean | (() => boolean) }[]
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: Smartphone, label: "Apps", href: "/apps" },
-  { icon: ListFilter, label: "Waterfall", href: "/waterfall" },
-  { icon: Layers, label: "Mediation Groups", href: "/mediation" },
-  { icon: BarChart3, label: "Reports", href: "/reports" },
-  { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3 },
-  { icon: Activity, label: "Activity Logs", href: "/activity-logs" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/", isShow: true },
+  {
+    icon: Smartphone,
+    label: "Apps",
+    href: "/apps",
+    isShow: () => hasScreenFunction("s-apps", "view"),
+  },
+  { icon: ListFilter, label: "Waterfall", href: "/waterfall", isShow: true },
+  { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: true },
+  { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
+  { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3, isShow: true },
+  { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: true },
   {
     icon: Settings,
     label: "Settings",
     href: "#",
     hasSubmenu: true,
+    isShow: true,
     children: [
-      { icon: Building2, label: "Organizations", href: "/organizations", adminOnly: true },
+      { icon: Building2, label: "Organizations", href: "/organizations", adminOnly: true, isShow: () => hasScreenFunction("s-orgs", "view") },
       { icon: Briefcase, label: "Job Management", href: "/jobs", adminOnly: true },
       { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", adminOnly: true },
       { icon: Shield, label: "Permissions", href: "/permissions", adminOnly: true },
@@ -117,6 +125,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => {
+            const isVisible =
+              item.isShow === undefined
+                ? true
+                : typeof item.isShow === "function"
+                  ? item.isShow()
+                  : item.isShow
+            if (!isVisible) return null
             const hasSubmenu = !!item.hasSubmenu
             const anyChildActive =
               Array.isArray((item as any).children) &&
@@ -204,6 +219,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           return null
                         }
                       }
+                      const childVisible =
+                        child.isShow === undefined
+                          ? true
+                          : typeof child.isShow === "function"
+                            ? child.isShow()
+                            : child.isShow
+                      if (!childVisible) return null
 
                       const childActive =
                         pathname === child.href || (child.href !== "/" && pathname.startsWith(child.href))

@@ -55,6 +55,15 @@ export function getCurrentUser(): AuthUser | null {
 }
 
 /**
+ * Kiểm tra user có quyền function trên screen không (theo rolePermissions).
+ */
+export function hasScreenFunction(screenKey: string, functionKey: string): boolean {
+  const user = getCurrentUser()
+  if (!user?.rolePermissions) return false
+  return (user.rolePermissions[screenKey] ?? []).includes(functionKey)
+}
+
+/**
  * Check if user is authenticated
  */
 export function isAuthenticated(): boolean {

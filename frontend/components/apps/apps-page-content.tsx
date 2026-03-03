@@ -11,6 +11,18 @@ import { AppsTable } from "./apps-table"
 import { Card } from "@/components/ui/card"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+
+const SCREEN_APPS = "s-apps"
+const FN_VIEW = "view"
+const FN_EXPORT = "export"
+const FN_SYNC_FROM_ADMOB = "sync-from-admob"
+const FN_PAUSE = "pause"
+const FN_RESUME = "resume"
+const FN_VIEW_DETAILS = "view-details"
+const FN_VIEW_IN_ADMOB = "view-in-admob"
+const FN_SET_TYPE = "set-type"
 
 const platformOptions = ["All Platforms", "ANDROID", "IOS"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
@@ -169,6 +181,19 @@ export function AppsPageContent() {
     }
   }
 
+  const canView = hasScreenFunction(SCREEN_APPS, FN_VIEW)
+  const canExport = hasScreenFunction(SCREEN_APPS, FN_EXPORT)
+  const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
+  const canPause = hasScreenFunction(SCREEN_APPS, FN_PAUSE)
+  const canResume = hasScreenFunction(SCREEN_APPS, FN_RESUME)
+  const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
+  const canViewInAdmob = hasScreenFunction(SCREEN_APPS, FN_VIEW_IN_ADMOB)
+  const canSetType = hasScreenFunction(SCREEN_APPS, FN_SET_TYPE)
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
@@ -286,18 +311,22 @@ export function AppsPageContent() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-10 gap-2 bg-transparent">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-          <Button 
-            className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
-            onClick={() => refetchApps()}
-            disabled={appsLoading}
-          >
-            <RefreshCw className={`w-4 h-4 ${appsLoading ? 'animate-spin' : ''}`} />
-            {appsLoading ? 'Syncing...' : 'Sync from AdMob'}
-          </Button>
+          {canExport && (
+            <Button variant="outline" className="h-10 gap-2 bg-transparent">
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+          )}
+          {canSyncFromAdmob && (
+            <Button 
+              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+              onClick={() => refetchApps()}
+              disabled={appsLoading}
+            >
+              <RefreshCw className={`w-4 h-4 ${appsLoading ? 'animate-spin' : ''}`} />
+              {appsLoading ? 'Syncing...' : 'Sync from AdMob'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -459,37 +488,47 @@ export function AppsPageContent() {
       </div>
 
       {/* Bulk Actions Bar */}
-      {selectedApps.length > 0 && (
+      {selectedApps.length > 0 && (canPause || canResume || canExport || canSetType) && (
         <div className="bg-slate-900 text-white rounded-lg px-4 py-3 flex items-center justify-between">
           <span className="text-sm font-medium">{selectedApps.length} apps selected</span>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+            {canPause && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
                 Pause Selected
-            </Button>
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              </Button>
+            )}
+            {canResume && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
                 Resume Selected
-            </Button>
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              </Button>
+            )}
+            {canExport && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
                 Export Selected
-            </Button>
-            <Button
-                variant="secondary"
-                size="sm"
-                className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
-                disabled={updatingType !== null}
-                onClick={() => bulkSetType("game")}
-              >
-                {updatingType === "game" ? "Setting as Game..." : "Set type: Game"}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
-              disabled={updatingType !== null}
-              onClick={() => bulkSetType("app")}
-            >
-              {updatingType === "app" ? "Setting as App..." : "Set type: App"}
-            </Button>
+              </Button>
+            )}
+            {canSetType && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
+                  disabled={updatingType !== null}
+                  onClick={() => bulkSetType("game")}
+                >
+                  {updatingType === "game" ? "Setting as Game..." : "Set type: Game"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
+                  disabled={updatingType !== null}
+                  onClick={() => bulkSetType("app")}
+                >
+                  {updatingType === "app" ? "Setting as App..." : "Set type: App"}
+                </Button>
+              </>
+            )}
             <button onClick={() => setSelectedApps([])} className="text-sm text-slate-300 hover:text-white ml-2">
               Clear selection
             </button>
@@ -509,6 +548,10 @@ export function AppsPageContent() {
         networkFilter={network}
         selectedApps={selectedApps}
         onSelectionChange={setSelectedApps}
+        canViewDetails={canViewDetails}
+        canViewInAdmob={canViewInAdmob}
+        canPause={canPause}
+        canResume={canResume}
       />
     </div>
   )

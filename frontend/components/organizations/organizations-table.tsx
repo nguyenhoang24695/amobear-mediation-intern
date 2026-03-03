@@ -43,6 +43,11 @@ interface OrganizationsTableProps {
   onDeleteOrg: (org: OrganizationListItem) => void
   onToggleStatus: (org: OrganizationListItem) => void
   isSuperAdmin?: boolean
+  canViewDetails?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  canManageSettings?: boolean
+  canCreate?: boolean
 }
 
 type SortField = "name" | "users" | "status" | "created"
@@ -63,6 +68,11 @@ export function OrganizationsTable({
   onDeleteOrg,
   onToggleStatus,
   isSuperAdmin = false,
+  canViewDetails = true,
+  canEdit = true,
+  canDelete = true,
+  canManageSettings = true,
+  canCreate = true,
 }: OrganizationsTableProps) {
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -155,7 +165,7 @@ export function OrganizationsTable({
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-1">No organizations yet</h3>
               <p className="text-sm text-slate-500 mb-4">Create your first organization to get started</p>
-              {isSuperAdmin && (
+              {canCreate && (
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={onCreateOrg}>
                   <Plus className="w-4 h-4" />
                   Create Organization
@@ -225,17 +235,31 @@ export function OrganizationsTable({
                       className={`hover:bg-slate-50 cursor-pointer transition-colors ${!org.isActive ? "opacity-60" : ""}`}
                     >
                       <TableCell>
-                        <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 rounded-lg">
-                            <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
-                              {getOrgInitials(org.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-slate-900">{org.name}</p>
-                            <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                        {canViewDetails ? (
+                          <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 rounded-lg">
+                              <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
+                                {getOrgInitials(org.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold text-slate-900">{org.name}</p>
+                              <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 rounded-lg">
+                              <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
+                                {getOrgInitials(org.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold text-slate-900">{org.name}</p>
+                              <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                            </div>
                           </div>
-                        </Link>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5 text-sm text-slate-600">
@@ -258,47 +282,46 @@ export function OrganizationsTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-52">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/organizations/${org.id}`}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/organizations/${org.id}?tab=settings`}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Organization
-                              </Link>
-                            </DropdownMenuItem>
-                            {isSuperAdmin && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => onToggleStatus(org)}>
-                                  {org.isActive ? (
-                                    <>
-                                      <ToggleLeft className="w-4 h-4 mr-2" />
-                                      Deactivate Organization
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ToggleRight className="w-4 h-4 mr-2" />
-                                      Activate Organization
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                              </>
+                            {canViewDetails && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/organizations/${org.id}`}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </Link>
+                              </DropdownMenuItem>
                             )}
-                            {isSuperAdmin && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => onDeleteOrg(org)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete Organization
-                                </DropdownMenuItem>
-                              </>
+                            {canEdit && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/organizations/${org.id}?tab=settings`}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Organization
+                                </Link>
+                              </DropdownMenuItem>
+                            )}
+                            {(canManageSettings || canDelete) && <DropdownMenuSeparator />}
+                            {canManageSettings && (
+                              <DropdownMenuItem onClick={() => onToggleStatus(org)}>
+                                {org.isActive ? (
+                                  <>
+                                    <ToggleLeft className="w-4 h-4 mr-2" />
+                                    Deactivate Organization
+                                  </>
+                                ) : (
+                                  <>
+                                    <ToggleRight className="w-4 h-4 mr-2" />
+                                    Activate Organization
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => onDeleteOrg(org)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Organization
+                              </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -333,17 +356,31 @@ export function OrganizationsTable({
             <Card key={org.id} className={`border-slate-200 ${!org.isActive ? "opacity-60" : ""}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
-                  <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 rounded-lg">
-                      <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
-                        {getOrgInitials(org.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-slate-900">{org.name}</p>
-                      <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                  {canViewDetails ? (
+                    <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 rounded-lg">
+                        <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
+                          {getOrgInitials(org.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold text-slate-900">{org.name}</p>
+                        <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 rounded-lg">
+                        <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
+                          {getOrgInitials(org.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold text-slate-900">{org.name}</p>
+                        <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                      </div>
                     </div>
-                  </Link>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -351,47 +388,46 @@ export function OrganizationsTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/organizations/${org.id}`}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/organizations/${org.id}?tab=settings`}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      {isSuperAdmin && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => onToggleStatus(org)}>
-                            {org.isActive ? (
-                              <>
-                                <ToggleLeft className="w-4 h-4 mr-2" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <ToggleRight className="w-4 h-4 mr-2" />
-                                Activate
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        </>
+                      {canViewDetails && (
+                        <DropdownMenuItem asChild>
+                          <Link href={`/organizations/${org.id}`}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
                       )}
-                      {isSuperAdmin && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
-                            onClick={() => onDeleteOrg(org)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </>
+                      {canEdit && (
+                        <DropdownMenuItem asChild>
+                          <Link href={`/organizations/${org.id}?tab=settings`}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {(canManageSettings || canDelete) && <DropdownMenuSeparator />}
+                      {canManageSettings && (
+                        <DropdownMenuItem onClick={() => onToggleStatus(org)}>
+                          {org.isActive ? (
+                            <>
+                              <ToggleLeft className="w-4 h-4 mr-2" />
+                              Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <ToggleRight className="w-4 h-4 mr-2" />
+                              Activate
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => onDeleteOrg(org)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>

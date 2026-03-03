@@ -11,8 +11,16 @@ import { CreateOrganizationModal } from "./create-organization-modal"
 import { OrganizationActionModal, type OrganizationActionType } from "./modals/organization-action-modal"
 import { organizationsApi, type OrganizationListItem } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
-import { getCurrentUser } from "@/lib/auth"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { UserRole } from "@/lib/enums/user-role"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+
+const SCREEN_ORGS = "s-orgs"
+const FN_VIEW = "view"
+const FN_CREATE = "create"
+const FN_EDIT = "edit"
+const FN_DELETE = "delete"
+const FN_MANAGE_SETTINGS = "manage-settings"
 
 export function OrganizationListContent() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -30,6 +38,12 @@ export function OrganizationListContent() {
   const { toast } = useToast()
   const user = getCurrentUser()
   const isSuperAdmin = user?.role === UserRole.SuperAdmin
+
+  const canView = hasScreenFunction(SCREEN_ORGS, FN_VIEW)
+  const canCreate = hasScreenFunction(SCREEN_ORGS, FN_CREATE)
+  const canEdit = hasScreenFunction(SCREEN_ORGS, FN_EDIT)
+  const canDelete = hasScreenFunction(SCREEN_ORGS, FN_DELETE)
+  const canManageSettings = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_SETTINGS)
 
   // Fetch organizations from API
   const fetchOrganizations = async () => {
@@ -122,6 +136,10 @@ export function OrganizationListContent() {
   const handleToggleStatusRequest = (org: OrganizationListItem) => {
     setSelectedOrg(org)
     setActiveAction(org.isActive ? "deactivate" : "activate")
+  }
+
+  if (!canView) {
+    return <NoPermissionView />
   }
 
   return (
@@ -252,6 +270,11 @@ export function OrganizationListContent() {
           onDeleteOrg={handleDeleteRequest}
           onToggleStatus={handleToggleStatusRequest}
           isSuperAdmin={isSuperAdmin}
+          canViewDetails={canView}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          canManageSettings={canManageSettings}
+          canCreate={canCreate}
         />
       )}
 

@@ -58,6 +58,10 @@ interface AppsTableProps {
   networkFilter: string
   selectedApps: string[]
   onSelectionChange: (apps: string[]) => void
+  canViewDetails?: boolean
+  canViewInAdmob?: boolean
+  canPause?: boolean
+  canResume?: boolean
 }
 
 type SortField = "name" | "adUnits" | "revenue" | "waterfallPct" | "ecpm" | "impressions" | "fillRate" | "lastSync"
@@ -71,8 +75,13 @@ export function AppsTable({
   statusFilter,
   typeFilter,
   wfFilter,
+  networkFilter,
   selectedApps,
   onSelectionChange,
+  canViewDetails = true,
+  canViewInAdmob = true,
+  canPause = true,
+  canResume = true,
 }: AppsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -280,6 +289,7 @@ export function AppsTable({
   }
 
   const handleRowClick = (appAdMobId: string) => {
+    if (!canViewDetails) return
     router.push(`/apps/${appAdMobId}`)
   }
 
@@ -380,7 +390,8 @@ export function AppsTable({
                   key={app.id}
                   onClick={() => handleRowClick(app.appId)}
                   className={cn(
-                    "hover:bg-slate-50 transition-colors cursor-pointer",
+                    "hover:bg-slate-50 transition-colors",
+                    canViewDetails && "cursor-pointer",
                     selectedApps.includes(app.id) && "bg-blue-50 hover:bg-blue-50",
                   )}
                 >
@@ -400,13 +411,17 @@ export function AppsTable({
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <Link
-                          href={`/apps/${app.appId}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                        >
-                          {app.name}
-                        </Link>
+                        {canViewDetails ? (
+                          <Link
+                            href={`/apps/${app.appId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                          >
+                            {app.name}
+                          </Link>
+                        ) : (
+                          <span className="text-sm font-medium text-slate-900">{app.name}</span>
+                        )}
                         <p className="text-xs text-slate-500">{app.packageName}</p>
                       </div>
                     </div>
@@ -435,13 +450,17 @@ export function AppsTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5 text-sm">
-                      <Link
-                        href={`/apps/${app.appId}?tab=ad-units`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {app.adUnits} ad
-                      </Link>
+                      {canViewDetails ? (
+                        <Link
+                          href={`/apps/${app.appId}?tab=ad-units`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {app.adUnits} ad
+                        </Link>
+                      ) : (
+                        <span className="text-slate-700">{app.adUnits} ad</span>
+                      )}
                       <span className="text-slate-700">{app.waterfallAdUnits} waterfall</span>
                     </div>
                   </td>
@@ -526,22 +545,25 @@ export function AppsTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/apps/${app.appId}`} className="flex items-center gap-2 cursor-pointer">
-                            <Eye className="w-4 h-4" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="gap-2 cursor-pointer"
-                          onClick={() => window.open("https://admob.google.com", "_blank")}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View in AdMob
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-                        {app.status === "Active" ? (
+                        {canViewDetails && (
+                          <DropdownMenuItem asChild>
+                            <Link href={`/apps/${app.appId}`} className="flex items-center gap-2 cursor-pointer">
+                              <Eye className="w-4 h-4" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
+                        {canViewInAdmob && (
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer"
+                            onClick={() => window.open("https://admob.google.com", "_blank")}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            View in AdMob
+                          </DropdownMenuItem>
+                        )}
+                        {(canPause || canResume) && <DropdownMenuSeparator />}
+                        {canPause && app.status === "Active" && (
                           <DropdownMenuItem
                             className="gap-2 cursor-pointer"
                             onClick={() => {
@@ -552,7 +574,8 @@ export function AppsTable({
                             <Pause className="w-4 h-4" />
                             Pause App
                           </DropdownMenuItem>
-                        ) : (
+                        )}
+                        {canResume && app.status !== "Active" && (
                           <DropdownMenuItem
                             className="gap-2 cursor-pointer"
                             onClick={() => {
