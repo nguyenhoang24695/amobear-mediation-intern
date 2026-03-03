@@ -44,7 +44,7 @@ type NavItem = {
   href: string
   hasSubmenu?: boolean
   badge?: number
-  children?: { icon: any; label: string; href: string }[]
+  children?: { icon: any; label: string; href: string; adminOnly?: boolean }[]
 }
 
 const navItems: NavItem[] = [
@@ -68,8 +68,6 @@ const navItems: NavItem[] = [
     ],
   },
 ]
-  },
-]
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
@@ -79,7 +77,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    setOpenMenu(null)
+    setOpenMenus({})
   }, [pathname])
 
   useEffect(() => {
@@ -168,7 +166,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     {hasSubmenu ? (
-                      // hasSubmenu: không di?u hu?ng, ch? toggle collapse/expand
+                      // hasSubmenu: khï¿½ng di?u hu?ng, ch? toggle collapse/expand
                       <button
                         type="button"
                         onClick={() =>
