@@ -20,6 +20,8 @@ export interface AuthUser {
     name: string
     role: string
   }>
+  /** Quyền màn hình/chức năng theo role: screenKey -> danh sách functionKey */
+  rolePermissions?: Record<string, string[]>
 }
 
 /**
