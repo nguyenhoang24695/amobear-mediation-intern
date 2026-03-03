@@ -163,7 +163,7 @@ export function AppWaterfallAdUnitsTab({
                     <SortHeader field="format">Format</SortHeader>
                   </th>
                   <th className="px-4 py-3 text-right">
-                    <SortHeader field="revenue">Revenue</SortHeader>
+                    <SortHeader field="revenue">Revenue (30D)</SortHeader>
                   </th>
                   <th className="px-4 py-3 text-left min-w-[100px]">Country</th>
                   <th className="px-4 py-3 text-right">Global Floor</th>

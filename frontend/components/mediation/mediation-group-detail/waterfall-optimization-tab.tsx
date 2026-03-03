@@ -65,6 +65,8 @@ interface WaterfallSource {
   originalFloor?: number
   changeType?: "modified" | "new" | "removed"
   network?: string
+  revenue30Days?: number | null
+  admobNetworkWaterfallAdUnitId?: string
   /** 8-Rule recommendation: REMOVE | TEST | REDUCE | KEEP | INCREASE | ADD LAYER | ADD HIGHER */
   recommendationAction?: string
   /** Lý do gợi ý từ API (hiển thị tooltip cho Suggested) */
@@ -295,7 +297,17 @@ export function WaterfallOptimizationTab({
       ?? (detail as { MediationGroupLines?: unknown }).MediationGroupLines
       ?? {}
     const linesObj = typeof rawLines === "object" && rawLines !== null
-      ? (rawLines as Record<string, { id?: string; displayName?: string; adSourceId?: string; cpmMicros?: string; state?: string }>)
+      ? (rawLines as Record<string, {
+        id?: string
+        displayName?: string
+        adSourceId?: string
+        cpmMicros?: string
+        state?: string
+        admobNetworkWaterfallAdUnitId?: string
+        AdmobNetworkWaterfallAdUnitId?: string
+        revenue30Days?: number
+        Revenue30Days?: number
+      }>)
       : {}
     const entries = Object.entries(linesObj)
 
@@ -317,6 +329,8 @@ export function WaterfallOptimizationTab({
       .map(([key, line]) => {
         const cpmMicros = parseFloat(line.cpmMicros ?? "0") || 0
         const floor = cpmMicros / 1_000_000
+        const revenue30Days = line.revenue30Days ?? line.Revenue30Days ?? null
+        const admobNetworkWaterfallAdUnitId = line.admobNetworkWaterfallAdUnitId ?? line.AdmobNetworkWaterfallAdUnitId
         return {
           id: line.id ?? key ?? `w_${line.adSourceId ?? ""}`,
           name: line.displayName ?? line.adSourceId ?? "Unknown",
@@ -324,6 +338,8 @@ export function WaterfallOptimizationTab({
           ecpm: floor, // Current = đúng từ JSON; eCPM SoW chỉ dùng cho recommendation (cột Optimized).
           status: line.state === "DISABLED" || line.state === "REMOVED" ? ("inactive" as const) : ("active" as const),
           network: line.adSourceId ?? "",
+          revenue30Days,
+          admobNetworkWaterfallAdUnitId,
         }
       })
 
@@ -1123,6 +1139,9 @@ export function WaterfallOptimizationTab({
                                 </Tooltip>
                               </TooltipProvider>
                             ) : null}
+                            <p className="text-xs text-slate-500">
+                              Revenue 30D: {source.revenue30Days != null ? `$${source.revenue30Days.toFixed(2)}` : "—"}
+                            </p>
                           </div>
                         </div>
                       )

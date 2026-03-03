@@ -58,6 +58,11 @@ export function WaterfallPageContent() {
     return `$${(micros / 1_000_000).toFixed(2)}`
   }
 
+  const formatRevenue = (value?: number | null) => {
+    if (value == null) return "$0.00"
+    return `$${Number(value).toFixed(2)}`
+  }
+
   const formatDateTime = (iso?: string | null) => {
     if (!iso) return "—"
     try {
@@ -137,6 +142,7 @@ export function WaterfallPageContent() {
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Display name</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Format</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Floor</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">Revenue (30D)</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Publisher</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Last synced</th>
@@ -160,6 +166,7 @@ export function WaterfallPageContent() {
                       <td className="py-3 px-4 text-slate-800">{row.displayName || "—"}</td>
                       <td className="py-3 px-4 text-slate-600">{row.format ?? "—"}</td>
                       <td className="py-3 px-4 text-slate-600">{formatFloor(row.globalFloorMicros)}</td>
+                      <td className="py-3 px-4 text-slate-600">{formatRevenue(row.revenue)}</td>
                       <td className="py-3 px-4">
                         <button
                           type="button"
