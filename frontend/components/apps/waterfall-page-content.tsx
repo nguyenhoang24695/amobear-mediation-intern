@@ -161,7 +161,6 @@ export function WaterfallPageContent() {
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Mediation Group</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Publisher</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Last synced</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Actions</th>
                   </tr>
                 </thead>
@@ -201,9 +200,10 @@ export function WaterfallPageContent() {
                       <td className="py-3 px-4 text-slate-800">{row.displayName || "—"}</td>
                       <td className="py-3 px-4">
                         <div className="space-y-0.5 text-xs">
-                          <div className="text-slate-600">{row.format ?? "—"}</div>
-                          <div className="text-slate-500">Floor: {formatFloor(row.globalFloorMicros)}</div>
-                          <div className="text-green-600 font-medium">{formatRevenue(row.revenue)}</div>
+                          <div className="text-slate-600"><span className="text-slate-400">Format:</span> {row.format ?? "—"}</div>
+                          <div className="text-slate-500"><span className="text-slate-400">Floor:</span> {formatFloor(row.globalFloorMicros)}</div>
+                          <div className="text-green-600 font-medium"><span className="text-slate-400 font-normal">Revenue:</span> {formatRevenue(row.revenue)}</div>
+                          <div className="text-slate-500"><span className="text-slate-400">Synced:</span> {formatDateTime(row.lastSyncedAt)}</div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -244,9 +244,6 @@ export function WaterfallPageContent() {
                         </button>
                       </td>
                       <td className="py-3 px-4 text-slate-600 font-mono text-xs">{row.publisherId}</td>
-                      <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                        {formatDateTime(row.lastSyncedAt)}
-                      </td>
                       <td className="py-3 px-4">
                         {row.appAdMobId && row.admobNetworkWaterfallAdUnitId && (() => {
                           const appIdPart = row.appAdMobId.includes("~") 
