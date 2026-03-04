@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Copy, Loader2, Layers } from "lucide-react"
+import { ArrowLeft, Copy, Loader2, Layers, ExternalLink } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
@@ -143,9 +143,11 @@ export function WaterfallPageContent() {
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Format</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Floor</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Revenue (30D)</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">Mediation Group</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Publisher</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Last synced</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -168,6 +170,29 @@ export function WaterfallPageContent() {
                       <td className="py-3 px-4 text-slate-600">{formatFloor(row.globalFloorMicros)}</td>
                       <td className="py-3 px-4 text-slate-600">{formatRevenue(row.revenue)}</td>
                       <td className="py-3 px-4">
+                        {row.mappingDisplayName || row.adUnitDisplayName ? (
+                          <div className="space-y-0.5">
+                            {row.mappingDisplayName && (
+                              <div className="text-slate-800 text-xs font-medium">{row.mappingDisplayName}</div>
+                            )}
+                            {row.adUnitDisplayName && (
+                              <div className="text-slate-500 text-xs">Ad Unit: {row.adUnitDisplayName}</div>
+                            )}
+                            {row.mappingState && (
+                              <span className={`inline-flex text-[10px] px-1.5 py-0.5 rounded ${
+                                row.mappingState === "ENABLED" 
+                                  ? "bg-green-100 text-green-700" 
+                                  : "bg-slate-100 text-slate-600"
+                              }`}>
+                                {row.mappingState}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         <button
                           type="button"
                           onClick={() => copyId(row.admobNetworkWaterfallAdUnitId)}
@@ -184,6 +209,27 @@ export function WaterfallPageContent() {
                       <td className="py-3 px-4 text-slate-600 font-mono text-xs">{row.publisherId}</td>
                       <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
                         {formatDateTime(row.lastSyncedAt)}
+                      </td>
+                      <td className="py-3 px-4">
+                        {row.appAdMobId && row.admobNetworkWaterfallAdUnitId && (() => {
+                          const appIdPart = row.appAdMobId.includes("~") 
+                            ? row.appAdMobId.split("~").pop() 
+                            : row.appAdMobId
+                          const admobIdPart = row.admobNetworkWaterfallAdUnitId.includes("/")
+                            ? row.admobNetworkWaterfallAdUnitId.split("/").pop()
+                            : row.admobNetworkWaterfallAdUnitId
+                          return (
+                            <a
+                              href={`https://admob.google.com/v2/apps/${encodeURIComponent(appIdPart || "")}/adunits/list?au=${encodeURIComponent(admobIdPart || "")}&upa=t`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              AdMob
+                            </a>
+                          )
+                        })()}
                       </td>
                     </tr>
                   ))}

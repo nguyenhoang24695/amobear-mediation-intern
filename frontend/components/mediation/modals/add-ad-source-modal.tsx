@@ -73,13 +73,6 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
     }
   }, [open, sourceType])
 
-  // Auto-generate ad unit name from floor
-  useEffect(() => {
-    if (ecpmFloor && !isNaN(Number.parseFloat(ecpmFloor))) {
-      setAdUnitName(`Inter${Number.parseFloat(ecpmFloor).toFixed(2)}`)
-    }
-  }, [ecpmFloor])
-
   const validateFloor = (value: string) => {
     const num = Number.parseFloat(value)
     if (isNaN(num) || num <= 0) {
@@ -278,7 +271,7 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
                 <span className="text-lg">{selectedNetworkData?.icon}</span>
                 <div className="flex-1">
                   <p className="font-medium text-slate-900">
-                    {type === "waterfall" ? adUnitName || `Inter${ecpmFloor}` : selectedNetwork}
+                    {type === "waterfall" ? adUnitName || selectedNetwork : selectedNetwork}
                   </p>
                   {type === "waterfall" && ecpmFloor && (
                     <p className="text-xs text-slate-500">${Number.parseFloat(ecpmFloor).toFixed(2)} floor</p>

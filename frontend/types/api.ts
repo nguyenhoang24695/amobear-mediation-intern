@@ -97,6 +97,10 @@ export interface OrphanWaterfallItem {
 export interface WaterfallListItem extends OrphanWaterfallItem {
   lastSyncedAt?: string | null
   revenue?: number
+  mappingDisplayName?: string | null
+  mappingState?: string | null
+  adUnitDisplayName?: string | null
+  adUnitId?: string | null
 }
 
 export interface AdSourceInfo {
