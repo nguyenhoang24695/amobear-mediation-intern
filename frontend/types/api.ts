@@ -90,6 +90,7 @@ export interface OrphanWaterfallItem {
   publisherId: string
   appDisplayName?: string | null
   appAdMobId?: string | null
+  appIconUri?: string | null
   lastSyncedAt?: string | null
 }
 

@@ -47,10 +47,27 @@ export function WaterfallPageContent() {
     setPage(1)
   }, [publisherIdFromUrl, filterMode, pageSize])
 
-  const copyId = (id: string) => {
-    navigator.clipboard.writeText(id)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+  const copyId = async (id: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(id)
+      } else {
+        const textArea = document.createElement("textarea")
+        textArea.value = id
+        textArea.style.position = "fixed"
+        textArea.style.left = "-999999px"
+        textArea.style.top = "-999999px"
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textArea)
+      }
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error("Failed to copy:", err)
+    }
   }
 
   const formatFloor = (micros?: number | null) => {
@@ -140,9 +157,7 @@ export function WaterfallPageContent() {
                   <tr className="border-b border-slate-200 bg-slate-50/80">
                     <th className="text-left py-3 px-4 font-medium text-slate-700">App</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Display name</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Format</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Floor</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Revenue (30D)</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">Info</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Mediation Group</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Publisher</th>
@@ -155,20 +170,42 @@ export function WaterfallPageContent() {
                     <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                       <td className="py-3 px-4">
                         {row.appAdMobId ? (
-                          <Link
-                            href={`/apps/${encodeURIComponent(row.appAdMobId)}`}
-                            className="text-blue-600 hover:underline font-medium"
-                          >
-                            {row.appDisplayName || row.appAdMobId}
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            {row.appIconUri ? (
+                              <img
+                                src={row.appIconUri}
+                                alt=""
+                                className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                <Layers className="w-4 h-4 text-slate-400" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <Link
+                                href={`/apps/${encodeURIComponent(row.appAdMobId)}`}
+                                className="text-blue-600 hover:underline font-medium text-sm block truncate"
+                              >
+                                {row.appDisplayName || row.appAdMobId}
+                              </Link>
+                              <div className="text-[10px] text-slate-400 font-mono truncate">
+                                {row.appAdMobId}
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-slate-800">{row.displayName || "—"}</td>
-                      <td className="py-3 px-4 text-slate-600">{row.format ?? "—"}</td>
-                      <td className="py-3 px-4 text-slate-600">{formatFloor(row.globalFloorMicros)}</td>
-                      <td className="py-3 px-4 text-slate-600">{formatRevenue(row.revenue)}</td>
+                      <td className="py-3 px-4">
+                        <div className="space-y-0.5 text-xs">
+                          <div className="text-slate-600">{row.format ?? "—"}</div>
+                          <div className="text-slate-500">Floor: {formatFloor(row.globalFloorMicros)}</div>
+                          <div className="text-green-600 font-medium">{formatRevenue(row.revenue)}</div>
+                        </div>
+                      </td>
                       <td className="py-3 px-4">
                         {row.mappingDisplayName || row.adUnitDisplayName ? (
                           <div className="space-y-0.5">
