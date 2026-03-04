@@ -10,6 +10,14 @@ import { DataAccountsTable } from "./data-accounts-table"
 import { AddEditAccountModal } from "./add-edit-account-modal"
 import { useApi } from "@/hooks/use-api"
 import { dataAccountsApi, type DataAccountItem } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+
+const SCREEN_DATA_ACCOUNTS = "s-data-accounts"
+const FN_VIEW = "view"
+const FN_CREATE = "create"
+const FN_EDIT = "edit"
+const FN_DELETE = "delete"
 
 interface ActiveFilter {
   type: string
@@ -22,6 +30,12 @@ export function DataAccountsContent() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [addModalOpen, setAddModalOpen] = useState(false)
+
+  // Permission checks
+  const canView = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_VIEW)
+  const canCreate = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_CREATE)
+  const canEdit = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_EDIT)
+  const canDelete = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_DELETE)
 
   const { data: accounts, loading, refetch } = useApi<DataAccountItem[]>(
     () => dataAccountsApi.getAll(),
@@ -84,6 +98,10 @@ export function DataAccountsContent() {
 
   const hasFilters = searchQuery !== "" || networkFilter !== "all" || statusFilter !== "all"
 
+  if (!canView) {
+    return <NoPermissionView />
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -105,10 +123,15 @@ export function DataAccountsContent() {
             <Download className="w-4 h-4" />
             Export
           </Button>}
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Add Account
-          </Button>
+          {canCreate && (
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2" 
+              onClick={() => setAddModalOpen(true)}
+            >
+              <Plus className="w-4 h-4" />
+              Add Account
+            </Button>
+          )}
         </div>
       </div>
 
@@ -250,6 +273,8 @@ export function DataAccountsContent() {
         hasFilters={hasFilters}
         onAddAccount={() => setAddModalOpen(true)}
         onRefresh={refetch}
+        canEdit={canEdit}
+        canDelete={canDelete}
       />
 
       <AddEditAccountModal

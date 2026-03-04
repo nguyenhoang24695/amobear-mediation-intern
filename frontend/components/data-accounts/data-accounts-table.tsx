@@ -57,6 +57,8 @@ interface DataAccountsTableProps {
   hasFilters: boolean
   onAddAccount: () => void
   onRefresh: () => void
+  canEdit?: boolean
+  canDelete?: boolean
 }
 
 type SortField = "name" | "network" | "accountId" | "status" | "createdAt"
@@ -85,6 +87,8 @@ export function DataAccountsTable({
   hasFilters,
   onAddAccount,
   onRefresh,
+  canEdit = true,
+  canDelete = true,
 }: DataAccountsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -367,10 +371,12 @@ export function DataAccountsTable({
                                 View Details
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(account)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
+                            {canEdit && (
+                              <DropdownMenuItem onClick={() => handleEdit(account)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -434,32 +440,38 @@ export function DataAccountsTable({
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(account)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleToggleStatus(account)}>
-                          {account.enabled ? (
-                            <>
-                              <ToggleLeft className="w-4 h-4 mr-2" />
-                              Disable
-                            </>
-                          ) : (
-                            <>
-                              <ToggleRight className="w-4 h-4 mr-2" />
-                              Enable
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
-                          onClick={() => setDeleteAccount({ id: account.id, name: account.name, network: account.network })}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
+                        {canEdit && (
+                          <DropdownMenuItem onClick={() => handleEdit(account)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {canEdit && <DropdownMenuSeparator />}
+                        {canEdit && (
+                          <DropdownMenuItem onClick={() => handleToggleStatus(account)}>
+                            {account.enabled ? (
+                              <>
+                                <ToggleLeft className="w-4 h-4 mr-2" />
+                                Disable
+                              </>
+                            ) : (
+                              <>
+                                <ToggleRight className="w-4 h-4 mr-2" />
+                                Enable
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {canDelete && <DropdownMenuSeparator />}
+                        {canDelete && (
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => setDeleteAccount({ id: account.id, name: account.name, network: account.network })}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

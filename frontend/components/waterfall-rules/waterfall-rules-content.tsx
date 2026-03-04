@@ -31,7 +31,15 @@ import { CreateEditRuleDialog } from "./create-edit-rule-dialog"
 import { useApi } from "@/hooks/use-api"
 import { waterfallRecommendationSettingsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { WaterfallRecommendationConfigDto, WaterfallRecommendationRuleDto } from "@/types/api"
+
+const SCREEN_WATERFALL_RULES = "s-waterfall-rules"
+const FN_VIEW_CONFIGS = "view-configs"
+const FN_MANAGE_CONFIGS = "manage-configs"
+const FN_VIEW_RULES = "view-rules"
+const FN_MANAGE_RULES = "manage-rules"
 
 // --- Types ---
 export interface AppConfig {
@@ -111,8 +119,17 @@ const mockRules: WaterfallRule[] = [
 ]
 
 export function WaterfallRulesContent() {
+  const canViewConfigs = hasScreenFunction(SCREEN_WATERFALL_RULES, FN_VIEW_CONFIGS)
+  const canManageConfigs = hasScreenFunction(SCREEN_WATERFALL_RULES, FN_MANAGE_CONFIGS)
+  const canViewRules = hasScreenFunction(SCREEN_WATERFALL_RULES, FN_VIEW_RULES)
+  const canManageRules = hasScreenFunction(SCREEN_WATERFALL_RULES, FN_MANAGE_RULES)
+
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState<"configs" | "rules">("configs")
+  const [activeTab, setActiveTab] = useState<"configs" | "rules">(canViewConfigs ? "configs" : "rules")
+
+  if (!canViewConfigs && !canViewRules) {
+    return <NoPermissionView />
+  }
 
   // Fetch configs from API
   const { data: configsData, loading: configsLoading, refetch: refetchConfigs } = useApi(
@@ -726,17 +743,19 @@ export function WaterfallRulesContent() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={() =>
-              activeTab === "configs"
-                ? setCreateConfigOpen(true)
-                : setCreateRuleOpen(true)
-            }
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {activeTab === "configs" ? "Create Config" : "Create Rule"}
-          </Button>
+          {((activeTab === "configs" && canManageConfigs) || (activeTab === "rules" && canManageRules)) && (
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() =>
+                activeTab === "configs"
+                  ? setCreateConfigOpen(true)
+                  : setCreateRuleOpen(true)
+              }
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {activeTab === "configs" ? "Create Config" : "Create Rule"}
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             className="text-slate-600"
@@ -766,50 +785,54 @@ export function WaterfallRulesContent() {
       {/* Tabs */}
       <div className="border-b border-slate-200">
         <div className="flex gap-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab("configs")}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "configs"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            App Configs
-            <Badge
-              variant="secondary"
-              className={`text-xs px-1.5 py-0 ${
+          {canViewConfigs && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("configs")}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "configs"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-slate-100 text-slate-600"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
-              {totalApps}
-            </Badge>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("rules")}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "rules"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <ListChecks className="w-4 h-4" />
-            Rules
-            <Badge
-              variant="secondary"
-              className={`text-xs px-1.5 py-0 ${
+              <Settings className="w-4 h-4" />
+              App Configs
+              <Badge
+                variant="secondary"
+                className={`text-xs px-1.5 py-0 ${
+                  activeTab === "configs"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {totalApps}
+              </Badge>
+            </button>
+          )}
+          {canViewRules && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("rules")}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "rules"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-slate-100 text-slate-600"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
-              {activeRulesCount}/{totalRules}
-            </Badge>
-          </button>
+              <ListChecks className="w-4 h-4" />
+              Rules
+              <Badge
+                variant="secondary"
+                className={`text-xs px-1.5 py-0 ${
+                  activeTab === "rules"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {activeRulesCount}/{totalRules}
+              </Badge>
+            </button>
+          )}
         </div>
       </div>
 
@@ -932,6 +955,7 @@ export function WaterfallRulesContent() {
               setConfigTypeFilter("all")
             }}
             onCreateNew={() => setCreateConfigOpen(true)}
+            canManage={canManageConfigs}
           />
         </div>
       ) : (
@@ -1078,6 +1102,7 @@ export function WaterfallRulesContent() {
               setRuleActionFilter("all")
             }}
             onCreateNew={() => setCreateRuleOpen(true)}
+            canManage={canManageRules}
           />
         </div>
       )}

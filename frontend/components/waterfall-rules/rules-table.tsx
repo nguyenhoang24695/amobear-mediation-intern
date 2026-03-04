@@ -66,6 +66,7 @@ interface RulesTableProps {
   hasFilters: boolean
   onClearFilters: () => void
   onCreateNew: () => void
+  canManage?: boolean
 }
 
 const actionColorMap: Record<string, string> = {
@@ -134,6 +135,7 @@ export function RulesTable({
   hasFilters,
   onClearFilters,
   onCreateNew,
+  canManage = true,
 }: RulesTableProps) {
   const [selectedRules, setSelectedRules] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -456,31 +458,37 @@ export function RulesTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => onEdit(rule)}>
-                              <Pencil className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onDuplicate(rule.id)}
-                            >
-                              <Copy className="w-4 h-4 mr-2" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onToggle(rule.id)}>
-                              {rule.active ? (
-                                <>
-                                  <Pause className="w-4 h-4 mr-2" />
-                                  Disable
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-4 h-4 mr-2" />
-                                  Enable
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {!isFirst(rule) && (
+                            {canManage && (
+                              <DropdownMenuItem onClick={() => onEdit(rule)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {canManage && (
+                              <DropdownMenuItem
+                                onClick={() => onDuplicate(rule.id)}
+                              >
+                                <Copy className="w-4 h-4 mr-2" />
+                                Duplicate
+                              </DropdownMenuItem>
+                            )}
+                            {canManage && (
+                              <DropdownMenuItem onClick={() => onToggle(rule.id)}>
+                                {rule.active ? (
+                                  <>
+                                    <Pause className="w-4 h-4 mr-2" />
+                                    Disable
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-4 h-4 mr-2" />
+                                    Enable
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            {canManage && <DropdownMenuSeparator />}
+                            {canManage && !isFirst(rule) && (
                               <DropdownMenuItem
                                 onClick={() => onMove(rule.id, "up")}
                               >
@@ -488,7 +496,7 @@ export function RulesTable({
                                 Move Up
                               </DropdownMenuItem>
                             )}
-                            {!isLast(rule) && (
+                            {canManage && !isLast(rule) && (
                               <DropdownMenuItem
                                 onClick={() => onMove(rule.id, "down")}
                               >
@@ -496,14 +504,16 @@ export function RulesTable({
                                 Move Down
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => setDeleteId(rule.id)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
+                            {canManage && <DropdownMenuSeparator />}
+                            {canManage && (
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => setDeleteId(rule.id)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -567,35 +577,43 @@ export function RulesTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => onEdit(rule)}>
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDuplicate(rule.id)}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onToggle(rule.id)}>
-                        {rule.active ? (
-                          <>
-                            <Pause className="w-4 h-4 mr-2" />
-                            Disable
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Enable
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => setDeleteId(rule.id)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
+                      {canManage && (
+                        <DropdownMenuItem onClick={() => onEdit(rule)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && (
+                        <DropdownMenuItem onClick={() => onDuplicate(rule.id)}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && (
+                        <DropdownMenuItem onClick={() => onToggle(rule.id)}>
+                          {rule.active ? (
+                            <>
+                              <Pause className="w-4 h-4 mr-2" />
+                              Disable
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4 mr-2" />
+                              Enable
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && <DropdownMenuSeparator />}
+                      {canManage && (
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => setDeleteId(rule.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

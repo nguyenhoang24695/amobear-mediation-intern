@@ -31,6 +31,9 @@ import {
   Search,
   X,
   Loader2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
 import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
@@ -80,10 +83,15 @@ const statusConfig = {
   pending: { color: "bg-blue-500", label: "Pending" },
 }
 
+type SortColumn = "name" | "role" | "teams" | "appAccess" | "status" | "joinedAt" | null
+type SortDirection = "asc" | "desc"
+
 export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
   const [permissionsUserId, setPermissionsUserId] = useState<string | null>(null)
   const [permissionsUserName, setPermissionsUserName] = useState<string>("")
@@ -162,7 +170,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         isOnline: false, // TODO: Add online status if available
         role: roleKey,
         // hiển thị tên role theo effectiveRole (giữ nguyên chữ thường/hoa nếu sau này cần)
-        teams: user.teams.map(t => t.name),
+        teams: user.teams.map(t => ({ id: t.id, name: t.name })),
         appAccess: appAccessCount,
         status: displayStatus as "active" | "invited" | "inactive" | "pending",
         lastActive: "N/A", // TODO: Get lastActive from API if available
@@ -172,14 +180,74 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     })
   }, [filterResponse, teamId])
 
+  // Sort users based on sortColumn and sortDirection
+  const sortedUsers = useMemo(() => {
+    if (!sortColumn) return filteredUsers
+
+    return [...filteredUsers].sort((a, b) => {
+      let comparison = 0
+      
+      switch (sortColumn) {
+        case "name":
+          comparison = a.name.localeCompare(b.name)
+          break
+        case "role":
+          const roleOrder = { admin: 0, editor: 1, viewer: 2 }
+          comparison = roleOrder[a.role] - roleOrder[b.role]
+          break
+        case "teams":
+          comparison = a.teams.length - b.teams.length
+          break
+        case "appAccess":
+          comparison = a.appAccess - b.appAccess
+          break
+        case "status":
+          comparison = a.status.localeCompare(b.status)
+          break
+        case "joinedAt":
+          const aDate = a.joinedAt ? new Date(a.joinedAt).getTime() : 0
+          const bDate = b.joinedAt ? new Date(b.joinedAt).getTime() : 0
+          comparison = aDate - bDate
+          break
+        default:
+          comparison = 0
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison
+    })
+  }, [filteredUsers, sortColumn, sortDirection])
+
   const totalUsers = filterResponse?.data?.total || 0
   const totalPages = filterResponse?.data?.totalPages || 0
 
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc")
+      } else {
+        setSortColumn(null)
+        setSortDirection("asc")
+      }
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
+
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />
+    }
+    return sortDirection === "asc" 
+      ? <ArrowUp className="w-4 h-4 ml-1 text-blue-600" />
+      : <ArrowDown className="w-4 h-4 ml-1 text-blue-600" />
+  }
+
   const toggleSelectAll = () => {
-    if (selectedUsers.length === filteredUsers.length) {
+    if (selectedUsers.length === sortedUsers.length) {
       setSelectedUsers([])
     } else {
-      setSelectedUsers(filteredUsers.map((u) => u.id))
+      setSelectedUsers(sortedUsers.map((u) => u.id))
     }
   }
 
@@ -293,7 +361,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     )
   }
 
-  if (filteredUsers.length === 0) {
+  if (sortedUsers.length === 0) {
     return (
       <Card className="border-slate-200">
         <CardContent className="flex flex-col items-center justify-center py-16">
@@ -358,21 +426,69 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
               <TableRow className="bg-slate-50 hover:bg-slate-50">
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                    checked={selectedUsers.length === sortedUsers.length && sortedUsers.length > 0}
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Teams</TableHead>
-                <TableHead>App Access</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>{teamId ? "Joined At" : "Last Active"}</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("name")}
+                  >
+                    User
+                    <SortIcon column="name" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("role")}
+                  >
+                    Role
+                    <SortIcon column="role" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("teams")}
+                  >
+                    Teams
+                    <SortIcon column="teams" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("appAccess")}
+                  >
+                    App Access
+                    <SortIcon column="appAccess" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("status")}
+                  >
+                    Status
+                    <SortIcon column="status" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("joinedAt")}
+                  >
+                    {teamId ? "Joined At" : "Last Active"}
+                    <SortIcon column="joinedAt" />
+                  </button>
+                </TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {sortedUsers.map((user) => (
                 <TableRow
                   key={user.id}
                   className={
@@ -418,11 +534,39 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                   <TableCell>
                     {user.teams.length === 0 ? (
                       <span className="text-sm text-slate-400">No teams</span>
+                    ) : teamId ? (
+                      // Khi filter theo teamId: hiển thị team hiện tại + số team khác
+                      (() => {
+                        const currentTeam = user.teams.find(t => t.id === teamId)
+                        const otherTeamsCount = user.teams.length - 1
+                        return (
+                          <div className="flex flex-wrap gap-1">
+                            {currentTeam && (
+                              <Badge variant="outline" className="text-xs">
+                                {currentTeam.name}
+                              </Badge>
+                            )}
+                            {otherTeamsCount > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{otherTeamsCount}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {user.teams.filter(t => t.id !== teamId).map(t => t.name).join(", ")}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        )
+                      })()
                     ) : (
+                      // Khi không filter theo teamId: hiển thị tối đa 2 team
                       <div className="flex flex-wrap gap-1">
                         {user.teams.slice(0, 2).map((team) => (
-                          <Badge key={team} variant="outline" className="text-xs">
-                            {team}
+                          <Badge key={team.id} variant="outline" className="text-xs">
+                            {team.name}
                           </Badge>
                         ))}
                         {user.teams.length > 2 && (
@@ -432,7 +576,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                                 +{user.teams.length - 2} more
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent>{user.teams.slice(2).join(", ")}</TooltipContent>
+                            <TooltipContent>{user.teams.slice(2).map(t => t.name).join(", ")}</TooltipContent>
                           </Tooltip>
                         )}
                       </div>
@@ -494,8 +638,8 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                               setSelfPermissionWarningOpen(true)
                               return
                             }
-                            // Find the user data from filteredUsers to get permissions
-                            const userData = filteredUsers.find((u) => u.id === user.id)
+                            // Find the user data from sortedUsers to get permissions
+                            const userData = sortedUsers.find((u) => u.id === user.id)
                             setPermissionsUserId(user.id)
                             setPermissionsUserName(user.name)
                             setPermissionsUserRole(user.role)

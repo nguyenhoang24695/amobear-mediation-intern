@@ -32,9 +32,12 @@ interface RoleEditorProps {
   onCreateRole: (name: string, description: string) => void
   onRenameRole: (roleId: string, name: string, description: string) => void
   onDeleteRole: (roleId: string) => void
+  canCreate?: boolean
+  canRename?: boolean
+  canDelete?: boolean
 }
 
-export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, onDeleteRole }: RoleEditorProps) {
+export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, onDeleteRole, canCreate = true, canRename = true, canDelete = true }: RoleEditorProps) {
   const [createOpen, setCreateOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -85,6 +88,8 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             variant="outline"
             className="w-full justify-start text-sm bg-transparent"
             onClick={openCreate}
+            disabled={!canCreate}
+            title={!canCreate ? "You don't have permission to create roles" : undefined}
           >
             <Plus className="w-4 h-4 mr-2 text-blue-600" />
             Create New Role
@@ -93,7 +98,8 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             variant="outline"
             className="w-full justify-start text-sm bg-transparent"
             onClick={openRename}
-            disabled={selectedRole.isSystem}
+            disabled={selectedRole.isSystem || !canRename}
+            title={!canRename ? "You don't have permission to rename roles" : undefined}
           >
             <Pencil className="w-4 h-4 mr-2 text-slate-500" />
             Rename Role
@@ -102,7 +108,8 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             variant="outline"
             className="w-full justify-start text-sm text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
             onClick={() => setDeleteOpen(true)}
-            disabled={selectedRole.isSystem || roles.length <= 1}
+            disabled={selectedRole.isSystem || roles.length <= 1 || !canDelete}
+            title={!canDelete ? "You don't have permission to delete roles" : undefined}
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Delete Role

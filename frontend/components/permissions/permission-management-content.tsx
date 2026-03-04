@@ -8,6 +8,15 @@ import { RoleSelector } from "./role-selector"
 import { RoleEditor } from "./role-editor"
 import { PermissionList } from "./permission-list"
 import { permissionApi } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+
+const SCREEN_PERMISSIONS = "s-permissions"
+const FN_VIEW = "view"
+const FN_CREATE = "create"
+const FN_RENAME = "rename"
+const FN_CHANGE = "change"
+const FN_DELETE = "delete"
 
 // --- Types ---
 export interface FunctionDef {
@@ -50,6 +59,17 @@ export function PermissionManagementContent() {
   const [loadingPermissions, setLoadingPermissions] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSavedToast, setShowSavedToast] = useState(false)
+
+  // Permission checks
+  const canView = hasScreenFunction(SCREEN_PERMISSIONS, FN_VIEW)
+  const canCreate = hasScreenFunction(SCREEN_PERMISSIONS, FN_CREATE)
+  const canRename = hasScreenFunction(SCREEN_PERMISSIONS, FN_RENAME)
+  const canChange = hasScreenFunction(SCREEN_PERMISSIONS, FN_CHANGE)
+  const canDelete = hasScreenFunction(SCREEN_PERMISSIONS, FN_DELETE)
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
 
   // Load roles and screens on mount
   useEffect(() => {
@@ -320,8 +340,9 @@ export function PermissionManagementContent() {
           )}
           <Button
             className="bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={!hasUnsavedChanges || saving || loadingPermissions}
+            disabled={!hasUnsavedChanges || saving || loadingPermissions || !canChange}
             onClick={handleSave}
+            title={!canChange ? "You don't have permission to change permissions" : undefined}
           >
             {saving ? (
               <>
@@ -429,6 +450,9 @@ export function PermissionManagementContent() {
             onCreateRole={handleCreateRole}
             onRenameRole={handleRenameRole}
             onDeleteRole={handleDeleteRole}
+            canCreate={canCreate}
+            canRename={canRename}
+            canDelete={canDelete}
           />
         </div>
 
@@ -439,6 +463,7 @@ export function PermissionManagementContent() {
           onToggleFunction={handleToggleFunction}
           onToggleScreen={handleToggleScreen}
           onToggleAll={handleToggleAll}
+          disabled={!canChange}
         />
       </div>
     </div>

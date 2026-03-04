@@ -32,7 +32,6 @@ import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
 import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, hasScreenFunction, type AuthUser } from "@/lib/auth"
-import { UserRole } from "@/lib/enums/user-role"
 
 interface SidebarProps {
   collapsed: boolean
@@ -47,7 +46,7 @@ type NavItem = {
   badge?: number
   /** If false or returns false, item is hidden in sidebar. Default true. */
   isShow?: boolean | (() => boolean)
-  children?: { icon: any; label: string; href: string; adminOnly?: boolean; isShow?: boolean | (() => boolean) }[]
+  children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean) }[]
 }
 
 const navItems: NavItem[] = [
@@ -58,7 +57,12 @@ const navItems: NavItem[] = [
     href: "/apps",
     isShow: () => hasScreenFunction("s-apps", "view"),
   },
-  { icon: ListFilter, label: "Waterfall", href: "/waterfall", isShow: true },
+  { 
+    icon: ListFilter, 
+    label: "Waterfall", 
+    href: "/waterfall", 
+    isShow: () => hasScreenFunction("s-waterfall", "view") 
+  },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: true },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3, isShow: true },
@@ -70,11 +74,11 @@ const navItems: NavItem[] = [
     hasSubmenu: true,
     isShow: true,
     children: [
-      { icon: Building2, label: "Organizations", href: "/organizations", adminOnly: true, isShow: () => hasScreenFunction("s-orgs", "view") },
-      { icon: Briefcase, label: "Job Management", href: "/jobs", adminOnly: true },
-      { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", adminOnly: true },
-      { icon: Shield, label: "Permissions", href: "/permissions", adminOnly: true },
-      { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", adminOnly: true  }
+      { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
+      { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
+      { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
+      { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
+      { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") }
     ],
   },
 ]
@@ -213,12 +217,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {!collapsed && isExpanded && (item as any).children && (item as any).children.length > 0 && (
                   <div className="mt-0.5 ml-5 space-y-0.5">
                     {(item as any).children.map((child: any) => {
-                      // Only show some items for admin / super_admin
-                      if (child.adminOnly) {
-                        if (user?.role !== UserRole.Admin && user?.role !== UserRole.SuperAdmin) {
-                          return null
-                        }
-                      }
                       const childVisible =
                         child.isShow === undefined
                           ? true
