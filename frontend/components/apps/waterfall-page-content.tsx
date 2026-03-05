@@ -10,16 +10,27 @@ import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { WaterfallListItem } from "@/types/api"
+
+const SCREEN_WATERFALL = "s-waterfall"
+const FN_VIEW = "view"
 
 const FILTER_UNUSED = "unused"
 const FILTER_NO_REVENUE = "noRevenue"
 
 export function WaterfallPageContent() {
+  const canView = hasScreenFunction(SCREEN_WATERFALL, FN_VIEW)
+
   const searchParams = useSearchParams()
   const publisherIdFromUrl = searchParams.get("publisherId") ?? undefined
 
   const [page, setPage] = useState(1)
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
   const [pageSize, setPageSize] = useState(20)
   const [filterMode, setFilterMode] = useState<string>(FILTER_UNUSED)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -155,8 +166,8 @@ export function WaterfallPageContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80">
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">Display Name</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">App</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Display name</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Info</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Mediation Group</th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
@@ -165,39 +176,56 @@ export function WaterfallPageContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((row: WaterfallListItem) => (
+                  {items.map((row: WaterfallListItem) => {
+                    const appIdPart = row.appAdMobId?.includes("~") 
+                      ? row.appAdMobId.split("~").pop() 
+                      : row.appAdMobId
+                    const admobIdPart = row.admobNetworkWaterfallAdUnitId?.includes("/")
+                      ? row.admobNetworkWaterfallAdUnitId.split("/").pop()
+                      : row.admobNetworkWaterfallAdUnitId
+                    const admobUrl = appIdPart && admobIdPart
+                      ? `https://admob.google.com/v2/apps/${encodeURIComponent(appIdPart)}/adunits/list?au=${encodeURIComponent(admobIdPart)}&upa=t`
+                      : null
+
+                    return (
                     <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                       <td className="py-3 px-4">
+                        {admobUrl ? (
+                          <a
+                            href={admobUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm"
+                          >
+                            {row.displayName || "—"}
+                          </a>
+                        ) : (
+                          <span className="text-slate-800">{row.displayName || "—"}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         {row.appAdMobId ? (
-                          <div className="flex items-center gap-2">
+                          <Link
+                            href={`/apps/${encodeURIComponent(row.appAdMobId)}`}
+                            className="inline-block group"
+                            title={`${row.appDisplayName || "App"}\n${row.appAdMobId}`}
+                          >
                             {row.appIconUri ? (
                               <img
                                 src={row.appIconUri}
                                 alt=""
-                                className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+                                className="w-8 h-8 rounded-lg object-cover group-hover:ring-2 group-hover:ring-blue-400 transition-all"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+                              <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center group-hover:ring-2 group-hover:ring-blue-400 transition-all">
                                 <Layers className="w-4 h-4 text-slate-400" />
                               </div>
                             )}
-                            <div className="min-w-0">
-                              <Link
-                                href={`/apps/${encodeURIComponent(row.appAdMobId)}`}
-                                className="text-blue-600 hover:underline font-medium text-sm block truncate"
-                              >
-                                {row.appDisplayName || row.appAdMobId}
-                              </Link>
-                              <div className="text-[10px] text-slate-400 font-mono truncate">
-                                {row.appAdMobId}
-                              </div>
-                            </div>
-                          </div>
+                          </Link>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-slate-800">{row.displayName || "—"}</td>
                       <td className="py-3 px-4">
                         <div className="space-y-0.5 text-xs">
                           <div className="text-slate-600"><span className="text-slate-400">Format:</span> {row.format ?? "—"}</div>
@@ -245,28 +273,21 @@ export function WaterfallPageContent() {
                       </td>
                       <td className="py-3 px-4 text-slate-600 font-mono text-xs">{row.publisherId}</td>
                       <td className="py-3 px-4">
-                        {row.appAdMobId && row.admobNetworkWaterfallAdUnitId && (() => {
-                          const appIdPart = row.appAdMobId.includes("~") 
-                            ? row.appAdMobId.split("~").pop() 
-                            : row.appAdMobId
-                          const admobIdPart = row.admobNetworkWaterfallAdUnitId.includes("/")
-                            ? row.admobNetworkWaterfallAdUnitId.split("/").pop()
-                            : row.admobNetworkWaterfallAdUnitId
-                          return (
-                            <a
-                              href={`https://admob.google.com/v2/apps/${encodeURIComponent(appIdPart || "")}/adunits/list?au=${encodeURIComponent(admobIdPart || "")}&upa=t`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              AdMob
-                            </a>
-                          )
-                        })()}
+                        {admobUrl && (
+                          <a
+                            href={admobUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            AdMob
+                          </a>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                  )})}
+                
                 </tbody>
               </table>
             </div>

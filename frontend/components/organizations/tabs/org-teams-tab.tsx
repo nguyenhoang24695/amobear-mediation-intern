@@ -41,13 +41,14 @@ import { CreateTeamModal } from "../create-team-modal"
 interface OrgTeamsTabProps {
     orgId: string
     orgName?: string
+    canManage?: boolean
 }
 
 function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
-export function OrgTeamsTab({ orgId, orgName = "Organization" }: OrgTeamsTabProps) {
+export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false }: OrgTeamsTabProps) {
     const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
     const [teams, setTeams] = useState<OrgTeam[]>([])
@@ -166,10 +167,12 @@ export function OrgTeamsTab({ orgId, orgName = "Organization" }: OrgTeamsTabProp
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">Manage teams in this organization</p>
                 </div>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
-                    <Plus className="w-4 h-4" />
-                    Create Team
-                </Button>
+                {canManage && (
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
+                        <Plus className="w-4 h-4" />
+                        Create Team
+                    </Button>
+                )}
             </div>
 
             {/* Search */}
@@ -219,7 +222,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization" }: OrgTeamsTabProp
                         <p className="text-sm text-slate-500 mb-4">
                             {searchQuery ? "Try adjusting your search" : "Create your first team to get started"}
                         </p>
-                        {!searchQuery && (
+                        {canManage && !searchQuery && (
                             <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
                                 <Plus className="w-4 h-4" />
                                 Create Team
@@ -289,23 +292,25 @@ export function OrgTeamsTab({ orgId, orgName = "Organization" }: OrgTeamsTabProp
                                             </TableCell>
                                             <TableCell className="text-sm text-slate-500">{formatDate(team.createdAt)}</TableCell>
                                             <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                            <MoreHorizontal className="w-4 h-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => openEdit(team)}>
-                                                            <Pencil className="w-4 h-4 mr-2" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteTeam(team)}>
-                                                            <Trash2 className="w-4 h-4 mr-2" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                {canManage && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                <MoreHorizontal className="w-4 h-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => openEdit(team)}>
+                                                                <Pencil className="w-4 h-4 mr-2" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteTeam(team)}>
+                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}

@@ -20,16 +20,27 @@ import { OrgUsersTab } from "./tabs/org-users-tab"
 import { OrgTeamsTab } from "./tabs/org-teams-tab"
 import { OrgSettingsTab } from "./tabs/org-settings-tab"
 import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
-import { getCurrentUser } from "@/lib/auth"
-import { UserRole } from "@/lib/enums/user-role"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+
+const SCREEN_ORGS = "s-orgs"
+const FN_VIEW_DETAILS = "view-details"
+const FN_EDIT = "edit"
+const FN_DELETE = "delete"
+const FN_VIEW_USERS = "view-users"
+const FN_VIEW_TEAMS = "view-teams"
+const FN_MANAGE_USERS = "manage-users"
+const FN_MANAGE_TEAMS = "manage-teams"
 
 interface OrganizationDetailContentProps {
   orgId: string
+  backLink?: string
+  backLabel?: string
 }
 
-export function OrganizationDetailContent({ orgId }: OrganizationDetailContentProps) {
+export function OrganizationDetailContent({ orgId, backLink = "/organizations", backLabel = "Back to Organizations" }: OrganizationDetailContentProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -40,7 +51,14 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const currentUser = getCurrentUser()
-  const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin
+
+  const canViewDetails = hasScreenFunction(SCREEN_ORGS, FN_VIEW_DETAILS)
+  const canEdit = hasScreenFunction(SCREEN_ORGS, FN_EDIT)
+  const canDelete = hasScreenFunction(SCREEN_ORGS, FN_DELETE)
+  const canViewUsers = hasScreenFunction(SCREEN_ORGS, FN_VIEW_USERS)
+  const canViewTeams = hasScreenFunction(SCREEN_ORGS, FN_VIEW_TEAMS)
+  const canManageUsers = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_USERS)
+  const canManageTeams = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_TEAMS)
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -71,6 +89,10 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
     router.push(`${pathname}?${params.toString()}`)
   }
 
+  if (!canViewDetails) {
+    return <NoPermissionView />
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -83,8 +105,8 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-red-600 mb-4">{error || "Organization not found"}</p>
-        <Link href="/organizations">
-          <Button>Back to Organizations</Button>
+        <Link href={backLink}>
+          <Button>{backLabel}</Button>
         </Link>
       </div>
     )
@@ -107,11 +129,11 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
     <div className="space-y-6">
       {/* Back Link */}
       <Link
-        href="/organizations"
+        href={backLink}
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Organizations
+        {backLabel}
       </Link>
 
       {/* Organization Header */}
@@ -167,34 +189,38 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
               View Activity
             </Link>
           </Button>
-          <Button variant="outline" className="gap-2 bg-transparent">
-            <Edit className="w-4 h-4" />
-            Edit
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="bg-transparent">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {isSuperAdmin && (
-                <DropdownMenuItem>
-                  <ToggleLeft className="w-4 h-4 mr-2" />
-                  {status === "active" ? "Deactivate" : "Activate"}
-                </DropdownMenuItem>
-              )}
-              {isSuperAdmin && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600 focus:text-red-600">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Organization
+          {canEdit && (
+            <Button variant="outline" className="gap-2 bg-transparent">
+              <Edit className="w-4 h-4" />
+              Edit
+            </Button>
+          )}
+          {(canEdit || canDelete) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="bg-transparent">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {canEdit && (
+                  <DropdownMenuItem>
+                    <ToggleLeft className="w-4 h-4 mr-2" />
+                    {status === "active" ? "Deactivate" : "Activate"}
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                )}
+                {canDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Organization
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -202,36 +228,42 @@ export function OrganizationDetailContent({ orgId }: OrganizationDetailContentPr
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="bg-slate-100">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="teams">Teams</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
+          {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
+          {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
           <OrgOverviewTab org={orgTabData} orgId={orgId} />
         </TabsContent>
 
-        <TabsContent value="users">
-          <OrgUsersTab org={orgTabData} orgId={orgId} isSuperAdmin={isSuperAdmin} />
-        </TabsContent>
+        {canViewUsers && (
+          <TabsContent value="users">
+            <OrgUsersTab org={orgTabData} orgId={orgId} canManage={canManageUsers} />
+          </TabsContent>
+        )}
 
-        <TabsContent value="teams">
-          <OrgTeamsTab orgId={orgId} orgName={orgTabData.name} />
-        </TabsContent>
+        {canViewTeams && (
+          <TabsContent value="teams">
+            <OrgTeamsTab orgId={orgId} orgName={orgTabData.name} canManage={canManageTeams} />
+          </TabsContent>
+        )}
 
-        <TabsContent value="settings">
-          <OrgSettingsTab org={orgTabData} orgId={orgId} isSuperAdmin={isSuperAdmin} onStatusChange={() => {
-            const refetch = async () => {
-              try {
-                const data = await organizationsApi.getById(orgId)
-                setOrg(data)
-              } catch (err) {
-                console.error("Failed to refresh organization:", err)
+        {canEdit && (
+          <TabsContent value="settings">
+            <OrgSettingsTab org={orgTabData} orgId={orgId} canEdit={canEdit} onStatusChange={() => {
+              const refetch = async () => {
+                try {
+                  const data = await organizationsApi.getById(orgId)
+                  setOrg(data)
+                } catch (err) {
+                  console.error("Failed to refresh organization:", err)
+                }
               }
-            }
-            refetch()
-          }} />
-        </TabsContent>
+              refetch()
+            }} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

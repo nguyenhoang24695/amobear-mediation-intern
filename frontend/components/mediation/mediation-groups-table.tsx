@@ -212,6 +212,7 @@ interface MediationGroupsTableProps {
   abTestFilter?: string
   selectedGroups: string[]
   onSelectionChange: (groups: string[]) => void
+  canConfig?: boolean
 }
 
 type SortField = "name" | "ecpm" | "lastModified" | "revenue"
@@ -233,6 +234,7 @@ export function MediationGroupsTable({
   abTestFilter = "all",
   selectedGroups,
   onSelectionChange,
+  canConfig = true,
 }: MediationGroupsTableProps) {
   const router = useRouter()
   const [sortField, setSortField] = useState<SortField>("ecpm")
@@ -707,30 +709,34 @@ export function MediationGroupsTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/mediation/${group.mediationGroupId ?? group.id}`} className="flex items-center gap-2 cursor-pointer">
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link
-                              href={`/mediation/${group.mediationGroupId ?? group.id}?tab=waterfall-optimization`}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <Pencil className="w-4 h-4" />
-                              Edit Waterfall
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link
-                              href={`/mediation/${group.mediationGroupId ?? group.id}?tab=ab-tests`}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <FlaskConical className="w-4 h-4" />
-                              View A/B Tests
-                            </Link>
-                          </DropdownMenuItem>
+                          {canConfig && (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/mediation/${group.mediationGroupId ?? group.id}`} className="flex items-center gap-2 cursor-pointer">
+                                  <Eye className="w-4 h-4" />
+                                  View Details
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={`/mediation/${group.mediationGroupId ?? group.id}?tab=waterfall-optimization`}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                  Edit Waterfall
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={`/mediation/${group.mediationGroupId ?? group.id}?tab=ab-tests`}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  <FlaskConical className="w-4 h-4" />
+                                  View A/B Tests
+                                </Link>
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           <DropdownMenuItem
                             className="gap-2 cursor-pointer"
                             onClick={() => window.open("https://admob.google.com", "_blank")}
@@ -738,21 +744,25 @@ export function MediationGroupsTable({
                             <ExternalLink className="w-4 h-4" />
                             View in AdMob
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="gap-2">
-                            <Copy className="w-4 h-4" />
-                            Duplicate
-                          </DropdownMenuItem>
-                          {group.status === "Active" ? (
-                            <DropdownMenuItem className="gap-2">
-                              <Pause className="w-4 h-4" />
-                              Pause
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem className="gap-2">
-                              <Play className="w-4 h-4" />
-                              Resume
-                            </DropdownMenuItem>
+                          {canConfig && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="gap-2">
+                                <Copy className="w-4 h-4" />
+                                Duplicate
+                              </DropdownMenuItem>
+                              {group.status === "Active" ? (
+                                <DropdownMenuItem className="gap-2">
+                                  <Pause className="w-4 h-4" />
+                                  Pause
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem className="gap-2">
+                                  <Play className="w-4 h-4" />
+                                  Resume
+                                </DropdownMenuItem>
+                              )}
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>

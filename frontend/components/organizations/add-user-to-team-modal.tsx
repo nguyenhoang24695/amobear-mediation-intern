@@ -10,11 +10,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Users } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Loader2, Users, Check, ChevronsUpDown, X } from "lucide-react"
 import { organizationsApi, teamMembersApi, type OrgTeam } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { RoleSelector } from "@/components/users/role-selector"
+import { cn } from "@/lib/utils"
 
 interface AddUserToTeamModalProps {
   open: boolean
@@ -33,10 +47,11 @@ export function AddUserToTeamModal({
   userNames,
   onSuccess,
 }: AddUserToTeamModalProps) {
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("")
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
   const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [popoverOpen, setPopoverOpen] = useState(false)
 
   // Fetch teams from API
   const { data: teams, loading: teamsLoading } = useApi(
@@ -47,15 +62,33 @@ export function AddUserToTeamModal({
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
-      setSelectedTeamId("")
+      setSelectedTeamIds([])
       setRole("viewer")
       setError(null)
+      setPopoverOpen(false)
     }
   }, [open])
 
+  const toggleTeam = (teamId: string) => {
+    setSelectedTeamIds(prev => 
+      prev.includes(teamId)
+        ? prev.filter(id => id !== teamId)
+        : [...prev, teamId]
+    )
+  }
+
+  const removeTeam = (teamId: string) => {
+    setSelectedTeamIds(prev => prev.filter(id => id !== teamId))
+  }
+
+  const getSelectedTeams = () => {
+    if (!teams) return []
+    return teams.filter(team => selectedTeamIds.includes(team.id))
+  }
+
   const handleSave = async () => {
-    if (!selectedTeamId) {
-      setError("Please select a team")
+    if (selectedTeamIds.length === 0) {
+      setError("Please select at least one team")
       return
     }
 
@@ -63,39 +96,44 @@ export function AddUserToTeamModal({
     setError(null)
 
     try {
-      // Add each user to the team
-      const results: Array<{ userId: string; success: boolean; error?: string }> = []
+      // Add each user to each selected team
+      const results: Array<{ userId: string; teamId: string; success: boolean; error?: string }> = []
       
       for (const userId of userIds) {
-        try {
-          const response = await teamMembersApi.addUserToTeam(userId, {
-            teamId: selectedTeamId,
-            role: role,
-          })
-          
-          if (response.success) {
-            results.push({ userId, success: true })
-          } else {
+        for (const teamId of selectedTeamIds) {
+          try {
+            const response = await teamMembersApi.addUserToTeam(userId, {
+              teamId: teamId,
+              role: role,
+            })
+            
+            if (response.success) {
+              results.push({ userId, teamId, success: true })
+            } else {
+              results.push({
+                userId,
+                teamId,
+                success: false,
+                error: response.message || "Failed to add user to team"
+              })
+            }
+          } catch (err: any) {
             results.push({
               userId,
+              teamId,
               success: false,
-              error: response.message || "Failed to add user to team"
+              error: err?.response?.data?.error?.message || err?.message || "Failed to add user to team"
             })
           }
-        } catch (err: any) {
-          results.push({
-            userId,
-            success: false,
-            error: err?.response?.data?.error?.message || err?.message || "Failed to add user to team"
-          })
         }
       }
       
       const successCount = results.filter(r => r.success).length
       const failCount = results.filter(r => !r.success).length
+      const totalOperations = userIds.length * selectedTeamIds.length
       
       if (failCount > 0) {
-        setError(`${successCount} of ${userIds.length} users added successfully. ${failCount} failed.`)
+        setError(`${successCount} of ${totalOperations} operations completed. ${failCount} failed.`)
         // Still call onSuccess to refresh the list
         onSuccess?.()
       } else {
@@ -103,7 +141,7 @@ export function AddUserToTeamModal({
         onOpenChange(false)
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error?.message || err?.message || "Failed to add users to team")
+      setError(err?.response?.data?.error?.message || err?.message || "Failed to add users to teams")
     } finally {
       setSaving(false)
     }
@@ -118,15 +156,15 @@ export function AddUserToTeamModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add {userIds.length === 1 ? "User" : "Users"} to Team</DialogTitle>
+          <DialogTitle>Add {userIds.length === 1 ? "User" : "Users"} to Team{selectedTeamIds.length > 1 ? "s" : ""}</DialogTitle>
           <DialogDescription>
             {userIds.length === 1 ? (
               <>
-                Select a team to add <span className="font-semibold text-slate-900">{userNames[0]}</span> to.
+                Select one or more teams to add <span className="font-semibold text-slate-900">{userNames[0]}</span> to.
               </>
             ) : (
               <>
-                Select a team to add <span className="font-semibold text-slate-900">{userIds.length} users</span> to.
+                Select one or more teams to add <span className="font-semibold text-slate-900">{userIds.length} users</span> to.
               </>
             )}
           </DialogDescription>
@@ -141,30 +179,90 @@ export function AddUserToTeamModal({
               </div>
             ) : teams && teams.length > 0 ? (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Team</label>
-                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a team..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex-1">
-                            <p className="font-medium">{team.name}</p>
-                            {team.description && (
-                              <p className="text-xs text-slate-500 mt-0.5">{team.description}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500 ml-4">
-                            <Users className="w-4 h-4" />
-                            <span>{team.memberCount}</span>
-                          </div>
+                <label className="text-sm font-medium text-slate-700">Teams</label>
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <div
+                      role="combobox"
+                      aria-expanded={popoverOpen}
+                      className="flex items-center justify-between w-full min-h-10 px-3 py-2 text-sm border rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                    >
+                      {selectedTeamIds.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {getSelectedTeams().map((team) => (
+                            <Badge
+                              key={team.id}
+                              variant="secondary"
+                              className="mr-1 mb-0.5"
+                            >
+                              {team.name}
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                }}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  removeTeam(team.id)
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    removeTeam(team.id)
+                                  }
+                                }}
+                              >
+                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                              </span>
+                            </Badge>
+                          ))}
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      ) : (
+                        <span className="text-muted-foreground">Select teams...</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search teams..." />
+                      <CommandList>
+                        <CommandEmpty>No team found.</CommandEmpty>
+                        <CommandGroup>
+                          {teams.map((team) => (
+                            <CommandItem
+                              key={team.id}
+                              value={team.name}
+                              onSelect={() => toggleTeam(team.id)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedTeamIds.includes(team.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm">{team.name}</p>
+                                {team.description && (
+                                  <p className="text-xs text-slate-500 truncate">{team.description}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 ml-2">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>{team.memberCount}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -199,12 +297,12 @@ export function AddUserToTeamModal({
           <Button
             className="bg-blue-600 hover:bg-blue-700"
             onClick={handleSave}
-            disabled={saving || !selectedTeamId}
+            disabled={saving || selectedTeamIds.length === 0}
           >
             {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {saving
               ? `Adding ${userIds.length > 1 ? `${userIds.length} users` : "user"}...`
-              : `Add ${userIds.length > 1 ? `${userIds.length} Users` : "User"} to Team`}
+              : `Add ${userIds.length > 1 ? `${userIds.length} Users` : "User"} to ${selectedTeamIds.length > 1 ? `${selectedTeamIds.length} Teams` : "Team"}`}
           </Button>
         </DialogFooter>
       </DialogContent>

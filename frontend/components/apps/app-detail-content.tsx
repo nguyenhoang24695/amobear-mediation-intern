@@ -28,7 +28,12 @@ import {
 } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { App, MediationGroup, WaterfallAdUnit } from "@/types/api"
+
+const SCREEN_APPS = "s-apps"
+const FN_VIEW_DETAILS = "view-details"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
@@ -97,7 +102,11 @@ export function AppDetailContent() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
 
+  if (!canViewDetails) {
+    return <NoPermissionView />
+  }
 
   return (
     <TooltipProvider>

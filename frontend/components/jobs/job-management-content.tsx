@@ -41,8 +41,17 @@ import { useApi } from "@/hooks/use-api"
 import { jobSchedulesApi } from "@/lib/api/services"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { useToast } from "@/hooks/use-toast"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { HangfireJobSchedule } from "@/types/api"
 import { formatDistanceToNow } from "date-fns"
+
+const SCREEN_JOBS = "s-jobs"
+const FN_VIEW = "view"
+const FN_EDIT = "edit"
+const FN_RUN = "run"
+const FN_ENABLE_DISABLE = "enable-disable"
+const FN_RELOAD = "reload"
 
 export interface Job extends HangfireJobSchedule {
   updatedAtLabel: string
@@ -50,6 +59,12 @@ export interface Job extends HangfireJobSchedule {
 }
 
 export function JobManagementContent() {
+  const canView = hasScreenFunction(SCREEN_JOBS, FN_VIEW)
+  const canEdit = hasScreenFunction(SCREEN_JOBS, FN_EDIT)
+  const canRun = hasScreenFunction(SCREEN_JOBS, FN_RUN)
+  const canEnableDisable = hasScreenFunction(SCREEN_JOBS, FN_ENABLE_DISABLE)
+  const canReload = hasScreenFunction(SCREEN_JOBS, FN_RELOAD)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("default")
@@ -60,6 +75,10 @@ export function JobManagementContent() {
   const [detailsJob, setDetailsJob] = useState<Job | null>(null)
   const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null)
   const { toast } = useToast()
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
 
   // Fetch job schedules from API
   const { data: jobSchedules, loading, refetch } = useApi(
@@ -195,14 +214,16 @@ export function JobManagementContent() {
               View Activity
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-            onClick={() => setReloadOpen(true)}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Reload Schedules
-          </Button>
+          {canReload && (
+            <Button
+              variant="outline"
+              className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              onClick={() => setReloadOpen(true)}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reload Schedules
+            </Button>
+          )}
           <Button variant="ghost" className="text-slate-600" onClick={handleRefresh}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -342,6 +363,9 @@ export function JobManagementContent() {
           hasFilters={
             searchQuery !== "" || statusFilter !== "all" || sortBy !== "default"
           }
+          canEdit={canEdit}
+          canRun={canRun}
+          canEnableDisable={canEnableDisable}
         />
       )}
 

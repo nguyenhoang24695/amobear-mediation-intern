@@ -50,7 +50,7 @@ interface OrgUsersTabProps {
     users: number
   }
   orgId: string
-  isSuperAdmin?: boolean
+  canManage?: boolean
 }
 
 const roleConfig: Record<string, { label: string; color: string }> = {
@@ -88,7 +88,7 @@ function formatLastActive(lastLoginAt?: string): string {
   return formatDate(lastLoginAt)
 }
 
-export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabProps) {
+export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -185,10 +185,12 @@ export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabPro
           </div>
           <p className="text-sm text-slate-500 mt-0.5">Manage users in this organization</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddUserOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Add User
-        </Button>
+        {canManage && (
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddUserOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Add User
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -300,7 +302,7 @@ export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabPro
                 ? "Try adjusting your filters"
                 : "Add your first user to get started"}
             </p>
-            {!debouncedSearch && roleFilter === "all" && statusFilter === "all" && (
+            {canManage && !debouncedSearch && roleFilter === "all" && statusFilter === "all" && (
               <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddUserOpen(true)}>
                 <Plus className="w-4 h-4" />
                 Add User
@@ -383,7 +385,7 @@ export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabPro
                                   View Profile
                                 </Link>
                               </DropdownMenuItem>
-                              {(isSuperAdmin || (user.role !== "super_admin" && user.role !== "admin")) && (
+                              {canManage && (
                                 <>
                                   <DropdownMenuItem onClick={() => {
                                     setEditUser(user)
@@ -405,7 +407,7 @@ export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabPro
                                   {/* <DropdownMenuSub>
                                     <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
                                     <DropdownMenuSubContent>
-                                      {isSuperAdmin && <DropdownMenuItem>Admin</DropdownMenuItem>}
+                                      {canManage && <DropdownMenuItem>Admin</DropdownMenuItem>}
                                       <DropdownMenuItem>Editor</DropdownMenuItem>
                                       <DropdownMenuItem>Viewer</DropdownMenuItem>
                                     </DropdownMenuSubContent>
@@ -461,14 +463,14 @@ export function OrgUsersTab({ org, orgId, isSuperAdmin = false }: OrgUsersTabPro
 
 
       {/* Add User Modal */}
-      <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgId={orgId} orgName={org.name} isSuperAdmin={isSuperAdmin} onUserCreated={fetchUsers} />
+      <AddUserToOrgModal open={addUserOpen} onOpenChange={setAddUserOpen} orgId={orgId} orgName={org.name} canManage={canManage} onUserCreated={fetchUsers} />
 
       {/* Edit User Modal */}
       <AddEditUserModal
         open={editUserOpen}
         onOpenChange={setEditUserOpen}
         mode="edit"
-        isSuperAdmin={isSuperAdmin}
+        canManage={canManage}
         user={editUser ? {
           id: editUser.id,
           name: editUser.fullName,

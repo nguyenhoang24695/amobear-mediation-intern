@@ -54,6 +54,9 @@ interface JobsTableProps {
   onViewDetails: (job: Job) => void
   onClearFilters: () => void
   hasFilters: boolean
+  canEdit?: boolean
+  canRun?: boolean
+  canEnableDisable?: boolean
 }
 
 type SortField = "name" | "status" | "schedule" | "type" | "updatedAt"
@@ -70,6 +73,9 @@ export function JobsTable({
   onViewDetails,
   onClearFilters,
   hasFilters,
+  canEdit = true,
+  canRun = true,
+  canEnableDisable = true,
 }: JobsTableProps) {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([])
   const [sortField, setSortField] = useState<SortField>("name")
@@ -448,28 +454,34 @@ export function JobsTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => onEdit(job)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Schedule
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onRunNow(job)}>
-                            <Play className="w-4 h-4 mr-2" />
-                            Run Now
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onToggle(job.jobId)}>
-                            {job.enabled ? (
-                              <>
-                                <ToggleLeft className="w-4 h-4 mr-2" />
-                                Disable
-                              </>
-                            ) : (
-                              <>
-                                <ToggleRight className="w-4 h-4 mr-2" />
-                                Enable
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          {canEdit && (
+                            <DropdownMenuItem onClick={() => onEdit(job)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Schedule
+                            </DropdownMenuItem>
+                          )}
+                          {canRun && (
+                            <DropdownMenuItem onClick={() => onRunNow(job)}>
+                              <Play className="w-4 h-4 mr-2" />
+                              Run Now
+                            </DropdownMenuItem>
+                          )}
+                          {canEnableDisable && (
+                            <DropdownMenuItem onClick={() => onToggle(job.jobId)}>
+                              {job.enabled ? (
+                                <>
+                                  <ToggleLeft className="w-4 h-4 mr-2" />
+                                  Disable
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleRight className="w-4 h-4 mr-2" />
+                                  Enable
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          )}
+                          {(canEdit || canRun || canEnableDisable) && <DropdownMenuSeparator />}
                           <DropdownMenuItem onClick={() => onViewDetails(job)}>
                             <Info className="w-4 h-4 mr-2" />
                             View Details
@@ -534,28 +546,34 @@ export function JobsTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => onEdit(job)}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Schedule
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onRunNow(job)}>
-                      <Play className="w-4 h-4 mr-2" />
-                      Run Now
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onToggle(job.jobId)}>
-                      {job.enabled ? (
-                        <>
-                          <ToggleLeft className="w-4 h-4 mr-2" />
-                          Disable
-                        </>
-                      ) : (
-                        <>
-                          <ToggleRight className="w-4 h-4 mr-2" />
-                          Enable
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    {canEdit && (
+                      <DropdownMenuItem onClick={() => onEdit(job)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Schedule
+                      </DropdownMenuItem>
+                    )}
+                    {canRun && (
+                      <DropdownMenuItem onClick={() => onRunNow(job)}>
+                        <Play className="w-4 h-4 mr-2" />
+                        Run Now
+                      </DropdownMenuItem>
+                    )}
+                    {canEnableDisable && (
+                      <DropdownMenuItem onClick={() => onToggle(job.jobId)}>
+                        {job.enabled ? (
+                          <>
+                            <ToggleLeft className="w-4 h-4 mr-2" />
+                            Disable
+                          </>
+                        ) : (
+                          <>
+                            <ToggleRight className="w-4 h-4 mr-2" />
+                            Enable
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    )}
+                    {(canEdit || canRun || canEnableDisable) && <DropdownMenuSeparator />}
                     <DropdownMenuItem>
                       <Info className="w-4 h-4 mr-2" />
                       View Details

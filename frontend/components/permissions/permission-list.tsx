@@ -30,6 +30,7 @@ interface PermissionListProps {
   onToggleFunction: (screenId: string, functionId: string) => void
   onToggleScreen: (screen: Screen) => void
   onToggleAll: (screens: Screen[]) => void
+  disabled?: boolean
 }
 
 export function PermissionList({
@@ -38,6 +39,7 @@ export function PermissionList({
   onToggleFunction,
   onToggleScreen,
   onToggleAll,
+  disabled = false,
 }: PermissionListProps) {
   const [search, setSearch] = useState("")
   const [moduleFilter, setModuleFilter] = useState("all")
@@ -154,6 +156,7 @@ export function PermissionList({
                   checked={allSelected ? true : someSelected ? "indeterminate" : false}
                   onCheckedChange={() => onToggleAll(filteredScreens)}
                   aria-label="Toggle all permissions"
+                  disabled={disabled}
                 />
                 <span className="text-xs text-slate-500">
                   {allSelected ? "Deselect all" : "Select all"}
@@ -251,6 +254,7 @@ export function PermissionList({
                             }
                             onCheckedChange={() => onToggleScreen(screen)}
                             aria-label={`Toggle all for ${screen.name}`}
+                            disabled={disabled}
                           />
                         </div>
 
@@ -300,6 +304,7 @@ export function PermissionList({
                                     }
                                     className="data-[state=checked]:bg-blue-600 scale-90"
                                     aria-label={`${fn.label} for ${screen.name}`}
+                                    disabled={disabled}
                                   />
                                   <span
                                     className={cn(

@@ -55,6 +55,7 @@ interface ConfigsTableProps {
   hasFilters: boolean
   onClearFilters: () => void
   onCreateNew: () => void
+  canManage?: boolean
 }
 
 type SortField = "appName"
@@ -79,6 +80,7 @@ export function ConfigsTable({
   hasFilters,
   onClearFilters,
   onCreateNew,
+  canManage = true,
 }: ConfigsTableProps) {
   const [sortField, setSortField] = useState<SortField>("appName")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -201,6 +203,7 @@ export function ConfigsTable({
                     group={group}
                     onEditConfig={onEditConfig}
                     onDeleteConfig={(id) => setDeleteConfigId(id)}
+                    canManage={canManage}
                   />
                 ))}
               </TableBody>
@@ -281,18 +284,22 @@ export function ConfigsTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem onClick={() => onEditConfig(config)}>
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => setDeleteConfigId(config.id)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
+                      {canManage && (
+                        <DropdownMenuItem onClick={() => onEditConfig(config)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {canManage && <DropdownMenuSeparator />}
+                      {canManage && (
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => setDeleteConfigId(config.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -369,10 +376,12 @@ function AppRow({
   group,
   onEditConfig,
   onDeleteConfig,
+  canManage = true,
 }: {
   group: AppConfigGroup
   onEditConfig: (config: AppConfig) => void
   onDeleteConfig: (id: string) => void
+  canManage?: boolean
 }) {
   const config = group.configs[0]
   if (!config) return null
@@ -462,18 +471,22 @@ function AppRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem onClick={() => onEditConfig(config)}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={() => onDeleteConfig(config.id)}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
+            {canManage && (
+              <DropdownMenuItem onClick={() => onEditConfig(config)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+            )}
+            {canManage && <DropdownMenuSeparator />}
+            {canManage && (
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={() => onDeleteConfig(config.id)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

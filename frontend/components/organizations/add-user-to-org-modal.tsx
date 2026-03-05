@@ -27,14 +27,14 @@ interface AddUserToOrgModalProps {
   onOpenChange: (open: boolean) => void
   orgId: string
   orgName: string
-  isSuperAdmin?: boolean
+  canManage?: boolean
   onUserCreated?: () => void
 }
 
 type ActiveTab = "invite" | "create"
 type Step = "form" | "success"
 
-export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, isSuperAdmin = false, onUserCreated }: AddUserToOrgModalProps) {
+export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManage = false, onUserCreated }: AddUserToOrgModalProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("invite")
   const [step, setStep] = useState<Step>("form")
   const [saving, setSaving] = useState(false)
@@ -174,7 +174,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, isSuperA
   // --- Shared role selector ---
   const RoleSelector = ({ value, onChange }: { value: UserRole; onChange: (v: UserRole) => void }) => (
     <RadioGroup value={value} onValueChange={(v) => onChange(v as UserRole)} className="space-y-2">
-      {isSuperAdmin && (
+      {canManage && (
         <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
           <RadioGroupItem value={UserRole.Admin} className="mt-0.5" />
           <div>

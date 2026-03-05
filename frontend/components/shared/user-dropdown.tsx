@@ -161,6 +161,14 @@ export function UserDropdown() {
           <DropdownMenuSeparator />
 
           {/* Organization Section */}
+          {user?.organization?.id && (
+            <DropdownMenuItem asChild>
+              <Link href="/my-organization" className="flex items-center gap-2 cursor-pointer">
+                <Users className="w-4 h-4" />
+                My Organization
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem asChild>
             <Link href="/teams" className="flex items-center gap-2 cursor-pointer">
               <UsersRound className="w-4 h-4" />
