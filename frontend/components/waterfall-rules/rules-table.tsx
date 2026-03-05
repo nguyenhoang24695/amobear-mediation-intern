@@ -48,13 +48,18 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
+  ChevronRight,
+  ChevronDown,
+  FolderOpen,
+  Folder,
 } from "lucide-react"
 import { Pagination } from "@/components/shared/pagination"
-import type { WaterfallRule } from "./waterfall-rules-content"
+import type { WaterfallRule, RuleGroup } from "./waterfall-rules-content"
 
 interface RulesTableProps {
   rules: WaterfallRule[]
   allRules: WaterfallRule[]
+  ruleGroups?: RuleGroup[]
   onEdit: (rule: WaterfallRule) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
@@ -67,6 +72,7 @@ interface RulesTableProps {
   onClearFilters: () => void
   onCreateNew: () => void
   canManage?: boolean
+  viewMode?: "flat" | "grouped"
 }
 
 const actionColorMap: Record<string, string> = {
@@ -124,6 +130,7 @@ function conditionsLines(rule: WaterfallRule): string[] {
 export function RulesTable({
   rules,
   allRules,
+  ruleGroups = [],
   onEdit,
   onDelete,
   onDuplicate,
@@ -136,16 +143,60 @@ export function RulesTable({
   onClearFilters,
   onCreateNew,
   canManage = true,
+  viewMode = "grouped",
 }: RulesTableProps) {
   const [selectedRules, setSelectedRules] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<number | "ungrouped">>(new Set())
 
   const sorted = useMemo(() => {
     return [...rules].sort((a, b) => a.displayOrder - b.displayOrder)
   }, [rules])
+
+  // Group rules by groupId
+  const groupedRules = useMemo(() => {
+    const groups: Map<number | "ungrouped", WaterfallRule[]> = new Map()
+    
+    // Initialize groups from ruleGroups (sorted by displayOrder)
+    const sortedGroups = [...ruleGroups].sort((a, b) => a.displayOrder - b.displayOrder)
+    sortedGroups.forEach(g => groups.set(g.id, []))
+    groups.set("ungrouped", [])
+    
+    // Assign rules to groups
+    sorted.forEach(rule => {
+      const key = rule.groupId ?? "ungrouped"
+      if (!groups.has(key)) {
+        groups.set(key, [])
+      }
+      groups.get(key)!.push(rule)
+    })
+    
+    return groups
+  }, [sorted, ruleGroups])
+
+  const toggleGroup = (groupId: number | "ungrouped") => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
+  }
+
+  const expandAllGroups = () => {
+    const allGroupIds: (number | "ungrouped")[] = [...ruleGroups.map(g => g.id), "ungrouped"]
+    setExpandedGroups(new Set(allGroupIds))
+  }
+
+  const collapseAllGroups = () => {
+    setExpandedGroups(new Set())
+  }
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const paginated = sorted.slice(
@@ -315,6 +366,9 @@ export function RulesTable({
                   <TableHead className="w-28 text-xs font-medium uppercase tracking-wide">
                     Priority
                   </TableHead>
+                  <TableHead className="w-32 text-xs font-medium uppercase tracking-wide">
+                    Group
+                  </TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -443,6 +497,17 @@ export function RulesTable({
                         >
                           {rule.priority}
                         </Badge>
+                      </TableCell>
+
+                      {/* Group */}
+                      <TableCell>
+                        {rule.groupName ? (
+                          <Badge variant="outline" className="text-slate-600 border-slate-300">
+                            {rule.groupName}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">—</span>
+                        )}
                       </TableCell>
 
                       {/* Actions */}

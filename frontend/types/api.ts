@@ -440,6 +440,29 @@ export interface WaterfallRecommendationRuleDto {
   actionUseMidpoint: boolean
   reasonTemplate?: string | null
   priority: string
+  groupId?: number | null
+  groupName?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface WaterfallRecommendationRuleGroupDto {
+  id: number
+  name: string
+  description?: string | null
+  displayOrder: number
+  isActive: boolean
+  color?: string | null
+  ruleCount: number
+  appCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateUpdateRuleGroupDto {
+  name: string
+  description?: string | null
+  displayOrder: number
+  isActive: boolean
+  color?: string | null
 }
