@@ -92,6 +92,7 @@ export interface RuleGroup {
   description: string | null
   displayOrder: number
   isActive: boolean
+  isDefault: boolean
   color: string | null
   ruleCount: number
   appCount: number
@@ -247,6 +248,7 @@ export function WaterfallRulesContent() {
       description: dto.description ?? null,
       displayOrder: dto.displayOrder,
       isActive: dto.isActive,
+      isDefault: dto.isDefault,
       color: dto.color ?? null,
       ruleCount: dto.ruleCount,
       appCount: dto.appCount,

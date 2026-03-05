@@ -452,6 +452,7 @@ export interface WaterfallRecommendationRuleGroupDto {
   description?: string | null
   displayOrder: number
   isActive: boolean
+  isDefault: boolean
   color?: string | null
   ruleCount: number
   appCount: number
@@ -464,5 +465,6 @@ export interface CreateUpdateRuleGroupDto {
   description?: string | null
   displayOrder: number
   isActive: boolean
+  isDefault?: boolean
   color?: string | null
 }

@@ -119,6 +119,7 @@ interface GroupData {
   description: string | null
   color: string | null
   isActive: boolean
+  isDefault: boolean
   rules: WaterfallRule[]
   appCount: number
 }
@@ -158,6 +159,7 @@ export function RulesGroupedView({
         description: group.description,
         color: group.color,
         isActive: group.isActive,
+        isDefault: group.isDefault,
         rules: groupRules,
         appCount: group.appCount,
       })
@@ -171,6 +173,7 @@ export function RulesGroupedView({
         description: null,
         color: null,
         isActive: true,
+        isDefault: false,
         rules: ungroupedRules,
         appCount: 0,
       })
@@ -330,13 +333,15 @@ export function RulesGroupedView({
                                 <Pencil className="w-4 h-4 mr-2" />
                                 Edit Group
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => setDeleteGroupId(group.id as number)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete Group
-                              </DropdownMenuItem>
+                              {!group.isDefault && (
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteGroupId(group.id as number)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete Group
+                                </DropdownMenuItem>
+                              )}
                             </>
                           )}
                         </DropdownMenuContent>
