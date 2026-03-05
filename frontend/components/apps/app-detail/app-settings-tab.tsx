@@ -34,7 +34,7 @@ import {
 
 interface AppSettingsTabProps {
     app: App | null
-    onAppUpdated?: (updated: Partial<App>) => void
+    onAppUpdated?: () => void
 }
 
 type ServiceAccountJson = Record<string, unknown>
@@ -305,7 +305,7 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
             setIsDirty(false)
             setIsConfigured(Boolean(response.firebaseParams?.trim()))
             setFileInputKey((prev) => prev + 1)
-            onAppUpdated?.({ firebaseParams: response.firebaseParams })
+            onAppUpdated?.()
 
             toast({
                 title: "Firebase config saved",
@@ -334,7 +334,7 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
             setIsConfigured(false)
             setIsClearDialogOpen(false)
             setFileInputKey((prev) => prev + 1)
-            onAppUpdated?.({ firebaseParams: null })
+            onAppUpdated?.()
 
             toast({
                 title: "Firebase config cleared",
