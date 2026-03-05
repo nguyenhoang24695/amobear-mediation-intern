@@ -22,6 +22,8 @@ import type {
     JobScheduleUpdateRequest,
     WaterfallRecommendationConfigDto,
     WaterfallRecommendationRuleDto,
+    WaterfallRecommendationRuleGroupDto,
+    CreateUpdateRuleGroupDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -1203,6 +1205,27 @@ export const waterfallRecommendationSettingsApi = {
 
     deleteRule: async (id: number): Promise<void> => {
         return apiClient.delete(`/api/waterfall-recommendation-settings/rules/${id}`)
+    },
+
+    // Rule Groups
+    getAllRuleGroups: async (): Promise<WaterfallRecommendationRuleGroupDto[]> => {
+        return apiClient.get<WaterfallRecommendationRuleGroupDto[]>('/api/waterfall-recommendation-settings/rule-groups')
+    },
+
+    getRuleGroupById: async (id: number): Promise<WaterfallRecommendationRuleGroupDto> => {
+        return apiClient.get<WaterfallRecommendationRuleGroupDto>(`/api/waterfall-recommendation-settings/rule-groups/${id}`)
+    },
+
+    createRuleGroup: async (group: CreateUpdateRuleGroupDto): Promise<WaterfallRecommendationRuleGroupDto> => {
+        return apiClient.post<WaterfallRecommendationRuleGroupDto>('/api/waterfall-recommendation-settings/rule-groups', group)
+    },
+
+    updateRuleGroup: async (id: number, group: CreateUpdateRuleGroupDto): Promise<WaterfallRecommendationRuleGroupDto> => {
+        return apiClient.put<WaterfallRecommendationRuleGroupDto>(`/api/waterfall-recommendation-settings/rule-groups/${id}`, group)
+    },
+
+    deleteRuleGroup: async (id: number): Promise<void> => {
+        return apiClient.delete(`/api/waterfall-recommendation-settings/rule-groups/${id}`)
     },
 }
 

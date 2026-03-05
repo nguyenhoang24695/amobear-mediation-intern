@@ -23,14 +23,16 @@ import {
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
-import type { WaterfallRule } from "./waterfall-rules-content"
+import type { WaterfallRule, RuleGroup } from "./waterfall-rules-content"
 
 interface CreateEditRuleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   rule: WaterfallRule | null
+  ruleGroups?: RuleGroup[]
   onSave: (data: Omit<WaterfallRule, "id" | "updatedAt">) => Promise<void>
   saving?: boolean
+  defaultGroupId?: number | null
 }
 
 const actionTypes = [
@@ -47,8 +49,10 @@ export function CreateEditRuleDialog({
   open,
   onOpenChange,
   rule,
+  ruleGroups = [],
   onSave,
   saving = false,
+  defaultGroupId,
 }: CreateEditRuleDialogProps) {
   const isEditing = !!rule
 
@@ -57,6 +61,7 @@ export function CreateEditRuleDialog({
   const [displayOrder, setDisplayOrder] = useState("1")
   const [active, setActive] = useState(true)
   const [priority, setPriority] = useState<"high" | "medium" | "low">("medium")
+  const [groupId, setGroupId] = useState<number | null>(null)
 
   // Conditions
   const [sowMin, setSowMin] = useState("")
@@ -83,6 +88,7 @@ export function CreateEditRuleDialog({
         setDisplayOrder(String(rule.displayOrder))
         setActive(rule.active)
         setPriority(rule.priority)
+        setGroupId(rule.groupId)
         setSowMin(rule.sowMin !== null ? String(rule.sowMin) : "")
         setSowMax(rule.sowMax !== null ? String(rule.sowMax) : "")
         setMatchRateMin(
@@ -102,6 +108,7 @@ export function CreateEditRuleDialog({
         setDisplayOrder("1")
         setActive(true)
         setPriority("medium")
+        setGroupId(defaultGroupId ?? null)
         setSowMin("")
         setSowMax("")
         setMatchRateMin("")
@@ -115,7 +122,7 @@ export function CreateEditRuleDialog({
       }
       setErrors({})
     }
-  }, [open, rule])
+  }, [open, rule, defaultGroupId])
 
   const showMultiplier =
     actionType === "INCREASE 10%" ||
@@ -158,6 +165,8 @@ export function CreateEditRuleDialog({
         multiplier: multiplier ? Number(multiplier) : null,
         useMidpoint,
         reasonTemplate,
+        groupId,
+        groupName: groupId ? ruleGroups.find(g => g.id === groupId)?.name ?? null : null,
       })
     } catch (error) {
       // Error handling is done in parent component
@@ -236,6 +245,29 @@ export function CreateEditRuleDialog({
                   </Select>
                 </div>
               </div>
+
+              {/* Group Selection */}
+              {ruleGroups.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="rule-group">Group</Label>
+                  <Select
+                    value={groupId?.toString() ?? "none"}
+                    onValueChange={(v) => setGroupId(v === "none" ? null : Number(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a group (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Group</SelectItem>
+                      {ruleGroups.filter(g => g.isActive).map((group) => (
+                        <SelectItem key={group.id} value={group.id.toString()}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <Switch

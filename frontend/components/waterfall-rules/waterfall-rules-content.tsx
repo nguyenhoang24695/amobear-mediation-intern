@@ -26,8 +26,10 @@ import {
 } from "lucide-react"
 import { ConfigsTable } from "./configs-table"
 import { RulesTable } from "./rules-table"
+import { RulesGroupedView } from "./rules-grouped-view"
 import { CreateEditConfigDialog } from "./create-edit-config-dialog"
 import { CreateEditRuleDialog } from "./create-edit-rule-dialog"
+import { CreateEditGroupDialog } from "./create-edit-group-dialog"
 import { useApi } from "@/hooks/use-api"
 import { waterfallRecommendationSettingsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
@@ -79,6 +81,22 @@ export interface WaterfallRule {
   multiplier: number | null
   useMidpoint: boolean
   reasonTemplate: string
+  groupId: number | null
+  groupName: string | null
+  updatedAt: string
+}
+
+export interface RuleGroup {
+  id: number
+  name: string
+  description: string | null
+  displayOrder: number
+  isActive: boolean
+  isDefault: boolean
+  color: string | null
+  ruleCount: number
+  appCount: number
+  createdAt: string
   updatedAt: string
 }
 
@@ -114,6 +132,8 @@ const mockRules: WaterfallRule[] = [
     multiplier: null,
     useMidpoint: false,
     reasonTemplate: "SoW {sow}% is below threshold",
+    groupId: null,
+    groupName: null,
     updatedAt: "2026-02-25T08:00:00Z",
   },
 ]
@@ -207,10 +227,35 @@ export function WaterfallRulesContent() {
         multiplier: dto.actionMultiplier ? Number(dto.actionMultiplier) : null,
         useMidpoint: dto.actionUseMidpoint,
         reasonTemplate: dto.reasonTemplate || "",
+        groupId: dto.groupId ?? null,
+        groupName: dto.groupName ?? null,
         updatedAt: dto.updatedAt,
       }
     })
   }, [rulesData])
+
+  // Fetch rule groups
+  const { data: ruleGroupsData, loading: ruleGroupsLoading, refetch: refetchRuleGroups } = useApi(
+    () => waterfallRecommendationSettingsApi.getAllRuleGroups(),
+    { enabled: true, cacheKey: 'waterfall_recommendation_rule_groups' }
+  )
+
+  const ruleGroups = useMemo<RuleGroup[]>(() => {
+    if (!ruleGroupsData) return []
+    return ruleGroupsData.map((dto) => ({
+      id: dto.id,
+      name: dto.name,
+      description: dto.description ?? null,
+      displayOrder: dto.displayOrder,
+      isActive: dto.isActive,
+      isDefault: dto.isDefault,
+      color: dto.color ?? null,
+      ruleCount: dto.ruleCount,
+      appCount: dto.appCount,
+      createdAt: dto.createdAt,
+      updatedAt: dto.updatedAt,
+    }))
+  }, [ruleGroupsData])
 
   // Rule state
   const [ruleSearch, setRuleSearch] = useState("")
@@ -220,6 +265,12 @@ export function WaterfallRulesContent() {
   const [editRule, setEditRule] = useState<WaterfallRule | null>(null)
   const [createRuleOpen, setCreateRuleOpen] = useState(false)
   const [savingRule, setSavingRule] = useState(false)
+  const [createRuleGroupId, setCreateRuleGroupId] = useState<number | null | undefined>(undefined)
+
+  // Group state
+  const [editGroup, setEditGroup] = useState<RuleGroup | null>(null)
+  const [createGroupOpen, setCreateGroupOpen] = useState(false)
+  const [savingGroup, setSavingGroup] = useState(false)
 
   // Group configs by app
   const appConfigGroups = useMemo<AppConfigGroup[]>(() => {
@@ -254,6 +305,11 @@ export function WaterfallRulesContent() {
   const totalRules = rules.length
   const activeRulesCount = rules.filter((r) => r.active).length
   const inactiveRulesCount = rules.filter((r) => !r.active).length
+
+  // Group stats
+  const totalGroups = ruleGroups.length
+  const activeGroupsCount = ruleGroups.filter((g) => g.isActive).length
+  const inactiveGroupsCount = ruleGroups.filter((g) => !g.isActive).length
 
   // Config filters (filter the grouped data)
   const filteredGroups = useMemo(() => {
@@ -410,6 +466,7 @@ export function WaterfallRulesContent() {
           actionUseMidpoint: data.useMidpoint,
           reasonTemplate: data.reasonTemplate || null,
           priority: data.priority,
+          groupId: data.groupId,
         }
 
         if (editRule) {
@@ -554,6 +611,77 @@ export function WaterfallRulesContent() {
       })
     }
   }, [rules, toast, refetchRules])
+
+  // Group CRUD
+  const handleSaveGroup = useCallback(
+    async (data: {
+      name: string
+      description: string | null
+      displayOrder: number
+      isActive: boolean
+      color: string | null
+    }) => {
+      setSavingGroup(true)
+      try {
+        const payload = {
+          name: data.name,
+          description: data.description,
+          displayOrder: data.displayOrder,
+          isActive: data.isActive,
+          color: data.color,
+        }
+
+        if (editGroup) {
+          await waterfallRecommendationSettingsApi.updateRuleGroup(editGroup.id, payload)
+          toast({
+            title: "Success",
+            description: "Group updated successfully",
+          })
+          setEditGroup(null)
+        } else {
+          await waterfallRecommendationSettingsApi.createRuleGroup(payload)
+          toast({
+            title: "Success",
+            description: "Group created successfully",
+          })
+          setCreateGroupOpen(false)
+        }
+        await refetchRuleGroups()
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to save group",
+          variant: "destructive",
+        })
+      } finally {
+        setSavingGroup(false)
+      }
+    },
+    [editGroup, toast, refetchRuleGroups]
+  )
+
+  const handleDeleteGroup = useCallback(async (id: number) => {
+    try {
+      await waterfallRecommendationSettingsApi.deleteRuleGroup(id)
+      toast({
+        title: "Success",
+        description: "Group deleted successfully",
+      })
+      await refetchRuleGroups()
+      await refetchRules()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete group",
+        variant: "destructive",
+      })
+    }
+  }, [toast, refetchRuleGroups, refetchRules])
+
+  const handleCreateRuleInGroup = useCallback((groupId?: number | null) => {
+    setCreateRuleGroupId(groupId)
+    setCreateRuleOpen(true)
+  }, [])
 
   const handleMoveRule = useCallback(
     async (id: string, direction: "up" | "down") => {
@@ -743,17 +871,22 @@ export function WaterfallRulesContent() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {((activeTab === "configs" && canManageConfigs) || (activeTab === "rules" && canManageRules)) && (
+          {activeTab === "configs" && canManageConfigs && (
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() =>
-                activeTab === "configs"
-                  ? setCreateConfigOpen(true)
-                  : setCreateRuleOpen(true)
-              }
+              onClick={() => setCreateConfigOpen(true)}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {activeTab === "configs" ? "Create Config" : "Create Rule"}
+              Create Config
+            </Button>
+          )}
+          {activeTab === "rules" && canManageRules && (
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setCreateGroupOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Group
             </Button>
           )}
           <Button 
@@ -967,10 +1100,13 @@ export function WaterfallRulesContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-500">
-                      Total Rules
+                      Total Groups
                     </p>
                     <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {totalRules}
+                      {totalGroups}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {totalRules} rules
                     </p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-white border border-slate-200">
@@ -983,9 +1119,12 @@ export function WaterfallRulesContent() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-700">Active</p>
+                    <p className="text-sm font-medium text-green-700">Active Groups</p>
                     <p className="text-2xl font-bold text-green-600 mt-1">
-                      {activeRulesCount}
+                      {activeGroupsCount}
+                    </p>
+                    <p className="text-xs text-green-500 mt-0.5">
+                      {activeRulesCount} active rules
                     </p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-white border border-green-200">
@@ -999,10 +1138,13 @@ export function WaterfallRulesContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-500">
-                      Inactive
+                      Inactive Groups
                     </p>
                     <p className="text-2xl font-bold text-slate-600 mt-1">
-                      {inactiveRulesCount}
+                      {inactiveGroupsCount}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {inactiveRulesCount} inactive rules
                     </p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-white border border-slate-200">
@@ -1077,18 +1219,14 @@ export function WaterfallRulesContent() {
             </Button>
           </div>
 
-          {/* Rules Table */}
-          <RulesTable
+          {/* Rules Grouped View */}
+          <RulesGroupedView
             rules={filteredRules}
-            allRules={rules}
+            ruleGroups={ruleGroups}
             onEdit={setEditRule}
             onDelete={handleDeleteRule}
             onDuplicate={handleDuplicateRule}
             onToggle={handleToggleRule}
-            onMove={handleMoveRule}
-            onBulkEnable={handleBulkEnableRules}
-            onBulkDisable={handleBulkDisableRules}
-            onBulkDelete={handleBulkDeleteRules}
             hasFilters={
               ruleSearch !== "" ||
               ruleStatusFilter !== "all" ||
@@ -1101,7 +1239,10 @@ export function WaterfallRulesContent() {
               setRulePriorityFilter("all")
               setRuleActionFilter("all")
             }}
-            onCreateNew={() => setCreateRuleOpen(true)}
+            onCreateNew={handleCreateRuleInGroup}
+            onCreateGroup={() => setCreateGroupOpen(true)}
+            onEditGroup={setEditGroup}
+            onDeleteGroup={handleDeleteGroup}
             canManage={canManageRules}
           />
         </div>
@@ -1130,11 +1271,29 @@ export function WaterfallRulesContent() {
           if (!open) {
             setCreateRuleOpen(false)
             setEditRule(null)
+            setCreateRuleGroupId(undefined)
           }
         }}
         rule={editRule}
+        ruleGroups={ruleGroups}
         onSave={handleSaveRule}
         saving={savingRule}
+        defaultGroupId={createRuleGroupId}
+      />
+
+      {/* Create/Edit Group Dialog */}
+      <CreateEditGroupDialog
+        open={createGroupOpen || !!editGroup}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreateGroupOpen(false)
+            setEditGroup(null)
+          }
+        }}
+        group={editGroup}
+        onSave={handleSaveGroup}
+        saving={savingGroup}
+        nextDisplayOrder={Math.max(...ruleGroups.map(g => g.displayOrder), 0) + 1}
       />
     </div>
   )
