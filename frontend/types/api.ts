@@ -468,3 +468,9 @@ export interface CreateUpdateRuleGroupDto {
   isDefault?: boolean
   color?: string | null
 }
+
+export interface AppRuleGroupMappingDto {
+  appId: string
+  groupId: number | null
+  groupName: string | null
+}

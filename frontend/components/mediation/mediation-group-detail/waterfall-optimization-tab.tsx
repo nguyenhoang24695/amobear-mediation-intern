@@ -38,11 +38,12 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
-import { structureApi } from "@/lib/api/services"
+import { structureApi, waterfallRecommendationSettingsApi } from "@/lib/api/services"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
-import type { AdUnit, App } from "@/types/api"
+import type { AdUnit, App, WaterfallRecommendationRuleGroupDto } from "@/types/api"
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
+import { Loader2, Save, RefreshCw, Settings } from "lucide-react"
 
 interface WaterfallOptimizationTabProps {
   onRunABTest: () => void
@@ -195,6 +196,64 @@ export function WaterfallOptimizationTab({
   const [selectedAdUnitIds, setSelectedAdUnitIds] = useState<string[]>([])
   const [adUnitsPageSize, setAdUnitsPageSize] = useState(15)
   const [adUnitsPage, setAdUnitsPage] = useState(1)
+
+  // Rule Groups: fetch tất cả rule groups và mapping hiện tại của app
+  const { data: ruleGroupsData } = useApi(
+    () => waterfallRecommendationSettingsApi.getAllRuleGroups(),
+    { cacheKey: "all_rule_groups" }
+  )
+  const ruleGroups = (ruleGroupsData ?? []) as WaterfallRecommendationRuleGroupDto[]
+
+  const { data: appRuleGroupMapping, refetch: refetchAppRuleGroupMapping } = useApi(
+    () => waterfallRecommendationSettingsApi.getAppRuleGroupMapping(appAdMobId!),
+    { enabled: !!appAdMobId, cacheKey: appAdMobId ? `app_rule_group_${appAdMobId}` : undefined }
+  )
+
+  const [selectedRuleGroupId, setSelectedRuleGroupId] = useState<number | null>(null)
+  const [savingRuleGroup, setSavingRuleGroup] = useState(false)
+  const [rerunningRecommendation, setRerunningRecommendation] = useState(false)
+  const [ruleGroupChanged, setRuleGroupChanged] = useState(false)
+
+  // Sync selectedRuleGroupId khi appRuleGroupMapping load xong
+  useEffect(() => {
+    if (appRuleGroupMapping) {
+      setSelectedRuleGroupId(appRuleGroupMapping.groupId ?? null)
+      setRuleGroupChanged(false)
+    }
+  }, [appRuleGroupMapping])
+
+  const handleRuleGroupChange = (value: string) => {
+    const newGroupId = value === "none" ? null : parseInt(value, 10)
+    setSelectedRuleGroupId(newGroupId)
+    setRuleGroupChanged(newGroupId !== (appRuleGroupMapping?.groupId ?? null))
+  }
+
+  const handleSaveRuleGroup = async () => {
+    if (!appAdMobId) return
+    setSavingRuleGroup(true)
+    try {
+      await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(appAdMobId, selectedRuleGroupId)
+      await refetchAppRuleGroupMapping()
+      setRuleGroupChanged(false)
+    } catch (err) {
+      console.error("Failed to save rule group mapping:", err)
+    } finally {
+      setSavingRuleGroup(false)
+    }
+  }
+
+  const handleRerunRecommendation = async () => {
+    if (!mediationGroupId) return
+    setRerunningRecommendation(true)
+    try {
+      await waterfallRecommendationSettingsApi.rerunRecommendation(mediationGroupId)
+      await refetchRecommendations()
+    } catch (err) {
+      console.error("Failed to rerun recommendation:", err)
+    } finally {
+      setRerunningRecommendation(false)
+    }
+  }
 
   // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại). Không gọi SoWData riêng — ecpmByAdSourceId lấy từ recommendations.
   const { data: recommendationsResponse, refetch: refetchRecommendations } = useApi(
@@ -976,6 +1035,89 @@ export function WaterfallOptimizationTab({
             )}
           </div>
         </div>
+
+        {/* Rule Group Selection Card */}
+        <Card className="border-slate-200">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Settings className="w-4 h-4 text-slate-500" />
+              <CardTitle className="text-base font-semibold text-slate-900">Recommendation Rule Group</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 max-w-sm">
+                <Select
+                  value={selectedRuleGroupId != null ? String(selectedRuleGroupId) : "none"}
+                  onValueChange={handleRuleGroupChange}
+                >
+                  <SelectTrigger className="h-10 bg-white">
+                    <SelectValue placeholder="Select rule group..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-slate-500">No rule group (use default)</span>
+                    </SelectItem>
+                    {ruleGroups
+                      .filter((g) => g.isActive)
+                      .sort((a, b) => a.displayOrder - b.displayOrder)
+                      .map((group) => (
+                        <SelectItem key={group.id} value={String(group.id)}>
+                          <div className="flex items-center gap-2">
+                            {group.color && (
+                              <span
+                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: group.color }}
+                              />
+                            )}
+                            <span>{group.name}</span>
+                            <span className="text-xs text-slate-400">({group.ruleCount} rules)</span>
+                            {group.isDefault && (
+                              <Badge variant="outline" className="text-xs h-5 px-1.5">Default</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 gap-2"
+                  onClick={handleSaveRuleGroup}
+                  disabled={!ruleGroupChanged || savingRuleGroup}
+                >
+                  {savingRuleGroup ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  Save
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 gap-2"
+                  onClick={handleRerunRecommendation}
+                  disabled={rerunningRecommendation}
+                >
+                  {rerunningRecommendation ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  Rerun Recommendation
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Select a rule group to customize which optimization rules apply to this app's mediation groups.
+              After saving, click "Rerun Recommendation" to recalculate suggestions.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Section 2: Side-by-Side Waterfall Comparison */}
         <div className="space-y-4">
