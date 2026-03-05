@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter, useParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -26,7 +26,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react"
-import { useApi } from "@/hooks/use-api"
+import { useApi, invalidateCache } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
@@ -50,13 +50,21 @@ export function AppDetailContent() {
   const appIdFromParams = (params as any)?.id as string | undefined
   const hasValidAppId = !!appIdFromParams
 
-  const { data: app, loading: appLoading } = useApi<App>(
+  const appCacheKey = hasValidAppId ? `app_detail_${appIdFromParams}` : undefined
+  const { data: app, loading: appLoading, refetch: refetchApp } = useApi<App>(
     () => structureApi.getAppByAppId(appIdFromParams!),
     {
       enabled: hasValidAppId,
-      cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined,
+      cacheKey: appCacheKey,
     },
   )
+
+  const handleAppUpdated = useCallback(() => {
+    if (appCacheKey) {
+      invalidateCache(appCacheKey)
+    }
+    refetchApp()
+  }, [appCacheKey, refetchApp])
 
   const { data: mediationGroups, loading: mediationGroupsLoading } = useApi<MediationGroup[]>(
     () => structureApi.getAppMediationGroups(app!.id),
@@ -278,7 +286,7 @@ export function AppDetailContent() {
             </div>
           </TabsContent>
           <TabsContent value="settings" className="mt-6">
-            <AppSettingsTab app={app ?? null} />
+            <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
           </TabsContent>
         </Tabs>
       </div>

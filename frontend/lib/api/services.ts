@@ -24,6 +24,7 @@ import type {
     WaterfallRecommendationRuleDto,
     WaterfallRecommendationRuleGroupDto,
     CreateUpdateRuleGroupDto,
+    AppRuleGroupMappingDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -1226,6 +1227,25 @@ export const waterfallRecommendationSettingsApi = {
 
     deleteRuleGroup: async (id: number): Promise<void> => {
         return apiClient.delete(`/api/waterfall-recommendation-settings/rule-groups/${id}`)
+    },
+
+    // App-RuleGroup Mapping
+    getAppRuleGroupMapping: async (appId: string): Promise<AppRuleGroupMappingDto> => {
+        return apiClient.get<AppRuleGroupMappingDto>(`/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(appId)}`)
+    },
+
+    updateAppRuleGroupMapping: async (appId: string, groupId: number | null): Promise<AppRuleGroupMappingDto> => {
+        return apiClient.put<AppRuleGroupMappingDto>(
+            `/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(appId)}`,
+            { groupId }
+        )
+    },
+
+    // Rerun Recommendation
+    rerunRecommendation: async (mediationGroupId: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+        return apiClient.post<{ success: boolean; message?: string; error?: string }>(
+            `/api/waterfall-recommendation-settings/rerun-recommendation/${encodeURIComponent(mediationGroupId)}`
+        )
     },
 }
 
