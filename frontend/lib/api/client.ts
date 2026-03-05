@@ -65,7 +65,7 @@ export class ApiClient {
                 }
 
                 // Create error object with response data for better error handling
-                const error = new Error(errorData.error?.message || errorData.message || errorData.error || 'Request failed')
+                const error = new Error(errorData.error?.message || errorData.errorMessage || errorData.message || errorData.error || 'Request failed')
                     ; (error as any).response = { data: errorData, status: response.status }
                 throw error
             }
