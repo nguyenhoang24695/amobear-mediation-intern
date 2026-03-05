@@ -17,10 +17,10 @@ import { NoPermissionView } from "@/components/shared/no-permission-view"
 
 const SCREEN_ORGS = "s-orgs"
 const FN_VIEW = "view"
+const FN_VIEW_DETAILS = "view-details"
 const FN_CREATE = "create"
 const FN_EDIT = "edit"
 const FN_DELETE = "delete"
-const FN_MANAGE_SETTINGS = "manage-settings"
 
 export function OrganizationListContent() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -40,10 +40,10 @@ export function OrganizationListContent() {
   const isSuperAdmin = user?.role === UserRole.SuperAdmin
 
   const canView = hasScreenFunction(SCREEN_ORGS, FN_VIEW)
+  const canViewDetails = hasScreenFunction(SCREEN_ORGS, FN_VIEW_DETAILS)
   const canCreate = hasScreenFunction(SCREEN_ORGS, FN_CREATE)
   const canEdit = hasScreenFunction(SCREEN_ORGS, FN_EDIT)
   const canDelete = hasScreenFunction(SCREEN_ORGS, FN_DELETE)
-  const canManageSettings = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_SETTINGS)
 
   // Fetch organizations from API
   const fetchOrganizations = async () => {
@@ -156,11 +156,7 @@ export function OrganizationListContent() {
           <p className="text-sm text-slate-500 mt-1">Manage all organizations in the platform</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2 bg-transparent">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-          {isSuperAdmin && (
+          {canCreate && (
             <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateModalOpen(true)}>
               <Plus className="w-4 h-4" />
               Create Organization
@@ -270,10 +266,10 @@ export function OrganizationListContent() {
           onDeleteOrg={handleDeleteRequest}
           onToggleStatus={handleToggleStatusRequest}
           isSuperAdmin={isSuperAdmin}
-          canViewDetails={canView}
+          canViewDetails={canViewDetails}
           canEdit={canEdit}
           canDelete={canDelete}
-          canManageSettings={canManageSettings}
+          canManageSettings={canEdit}
           canCreate={canCreate}
         />
       )}

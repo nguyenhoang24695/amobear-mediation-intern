@@ -27,6 +27,13 @@ import { MediationGroupsTable } from "./mediation-groups-table"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
 import { structureApi, mediationGroupMetricsApi, alertsApi } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+
+const SCREEN_MEDIATION_GROUPS = "s-mediation-groups"
+const FN_VIEW = "view"
+const FN_CONFIG = "config"
+const FN_EXPORT = "export"
 
 const appOptions = [
   { value: "all", label: "All Apps" },
@@ -54,7 +61,15 @@ interface ActiveFilter {
 }
 
 export function MediationGroupsPageContent() {
+  const canView = hasScreenFunction(SCREEN_MEDIATION_GROUPS, FN_VIEW)
+  const canConfig = hasScreenFunction(SCREEN_MEDIATION_GROUPS, FN_CONFIG)
+  const canExport = hasScreenFunction(SCREEN_MEDIATION_GROUPS, FN_EXPORT)
+
   const [searchQuery, setSearchQuery] = useState("")
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
   const [selectedApp, setSelectedApp] = useState("all")
   const [format, setFormat] = useState("All Formats")
   const [status, setStatus] = useState("All Status")
@@ -396,18 +411,24 @@ export function MediationGroupsPageContent() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-10 gap-2 bg-transparent">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-          <Button variant="outline" className="h-10 gap-2 bg-transparent">
-            <Pencil className="w-4 h-4" />
-            Bulk Edit
-          </Button>
-          <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" />
-            Create Group
-          </Button>
+          {canExport && (
+            <Button variant="outline" className="h-10 gap-2 bg-transparent">
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+          )}
+          {canConfig && (
+            <Button variant="outline" className="h-10 gap-2 bg-transparent">
+              <Pencil className="w-4 h-4" />
+              Bulk Edit
+            </Button>
+          )}
+          {canConfig && (
+            <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4" />
+              Create Group
+            </Button>
+          )}
         </div>
       </div>
 
@@ -524,18 +545,26 @@ export function MediationGroupsPageContent() {
         <div className="bg-slate-900 text-white rounded-lg px-4 py-3 flex items-center justify-between">
           <span className="text-sm font-medium">{selectedGroups.length} groups selected</span>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Pause All
-            </Button>
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Resume All
-            </Button>
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Bulk Edit eCPM
-            </Button>
-            <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
-              Export
-            </Button>
+            {canConfig && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+                Pause All
+              </Button>
+            )}
+            {canConfig && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+                Resume All
+              </Button>
+            )}
+            {canConfig && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+                Bulk Edit eCPM
+              </Button>
+            )}
+            {canExport && (
+              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+                Export
+              </Button>
+            )}
             <button onClick={() => setSelectedGroups([])} className="text-sm text-slate-300 hover:text-white ml-2">
               Clear selection
             </button>
@@ -555,6 +584,7 @@ export function MediationGroupsPageContent() {
         abTestFilter={abTestFilter}
         selectedGroups={selectedGroups}
         onSelectionChange={setSelectedGroups}
+        canConfig={canConfig}
       />
     </div>
   )

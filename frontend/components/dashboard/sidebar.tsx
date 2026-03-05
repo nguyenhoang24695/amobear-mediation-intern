@@ -63,10 +63,10 @@ const navItems: NavItem[] = [
     href: "/waterfall", 
     isShow: () => hasScreenFunction("s-waterfall", "view") 
   },
-  { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: true },
+  { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3, isShow: true },
-  { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: true },
+  { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
   {
     icon: Settings,
     label: "Settings",

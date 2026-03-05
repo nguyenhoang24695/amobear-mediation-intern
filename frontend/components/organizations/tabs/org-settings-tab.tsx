@@ -21,10 +21,10 @@ interface OrgSettingsTabProps {
   }
   orgId: string
   onStatusChange?: () => void
-  isSuperAdmin?: boolean
+  canEdit?: boolean
 }
 
-export function OrgSettingsTab({ org, orgId, onStatusChange, isSuperAdmin = false }: OrgSettingsTabProps) {
+export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: OrgSettingsTabProps) {
   const router = useRouter()
   const { toast } = useToast()
   // Profile
@@ -121,8 +121,8 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, isSuperAdmin = fals
         </CardContent>
       </Card>
 
-      {/* Section 2: Danger Zone — only for super_admin */}
-      {isSuperAdmin && (
+      {/* Section 2: Danger Zone — only for users with edit permission */}
+      {canEdit && (
         <Card className="border-red-200">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold text-red-700">Danger Zone</CardTitle>
