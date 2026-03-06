@@ -1,11 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Search } from "lucide-react"
 import { NotificationPopup } from "@/components/shared/notification-popup"
 import { UserDropdown } from "@/components/shared/user-dropdown"
+import { GlobalSearch } from "@/components/shared/global-search"
 import { DashboardDatePicker } from "./dashboard-date-picker"
 
 export function Header() {
@@ -18,15 +17,7 @@ export function Header() {
         </div>
 
         {/* Center: Search */}
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search apps, networks, reports..."
-              className="pl-9 pr-16 h-10 bg-slate-50 border-slate-200 focus:bg-white"
-            />
-          </div>
-        </div>
+        <GlobalSearch />
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
