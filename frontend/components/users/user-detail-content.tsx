@@ -36,8 +36,9 @@ import {
   AlertCircle
 } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
-import { teamMembersApi } from "@/lib/api/services"
+import { teamMembersApi, structureApi } from "@/lib/api/services"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -87,7 +88,13 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
     { enabled: !!userId, cacheKey: `user-profile-${userId}` }
   )
 
+  const { data: appsResponse } = useApi(
+    () => structureApi.getApps(),
+    { cacheKey: 'all-apps-for-permissions' }
+  )
+
   const user = userResponse?.data
+  const allApps = appsResponse?.apps
 
   const copyEmail = () => {
     if (user?.email) {
@@ -135,16 +142,19 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
 
   // Parse permissions if they are not already an object (API might return JSON string or object)
   // The interface says Record<string, string>, assuming it's already an object.
-  const permissionsList = Object.entries(user.permissions || {}).map(([appId, level]) => ({
-    appId,
-    level,
-    // Mocking missing data for now
-    appName: `App ${appId}`,
-    icon: "📱",
-    grantedBy: "System",
-    grantedAt: "N/A",
-    expires: "Never"
-  }))
+  const permissionsList = Object.entries(user.permissions || {})
+    .filter(([appId]) => allApps?.some(a => a.appId === appId))
+    .map(([appId, level]) => {
+      const matchedApp = allApps?.find(a => a.appId === appId)
+      return {
+        appId,
+        level,
+        appName: matchedApp?.displayName || matchedApp?.name || appId,
+        icon: matchedApp?.iconUri || null,
+        packageName: matchedApp?.appStoreId || "",
+        platform: matchedApp?.platform || "Unknown",
+      }
+    })
 
   return (
     <div className="space-y-6">
@@ -391,41 +401,72 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
         <TabsContent value="permissions" className="space-y-6 mt-6">
           {/* Direct Permissions */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base font-semibold">Direct Permissions</CardTitle>
                 <Badge variant="secondary" className="text-xs">
                   {permissionsList.length}
                 </Badge>
               </div>
+              {/* TODO: Implement Grant Permission functionality
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="w-4 h-4 mr-1" />
                 Grant Permission
               </Button>
+              */}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>App</TableHead>
+                    <TableHead className="min-w-[280px]">App</TableHead>
+                    <TableHead>Package Name</TableHead>
+                    <TableHead>Platform</TableHead>
                     <TableHead>Permission Level</TableHead>
-                    <TableHead>Granted By</TableHead>
-                    <TableHead>Granted At</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    {/* <TableHead className="w-12"></TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {permissionsList.map((perm) => (
                     <TableRow key={perm.appId}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{perm.icon}</span>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 rounded-lg">
+                            {perm.icon && <AvatarImage src={perm.icon} alt={perm.appName} />}
+                            <AvatarFallback className="rounded-lg bg-slate-100">
+                              <Smartphone className="w-5 h-5 text-slate-400" />
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
-                            <p className="font-medium text-slate-900">{perm.appName}</p>
+                            <p className="text-sm font-medium text-slate-900">{perm.appName}</p>
                             <p className="text-xs text-slate-500">{perm.appId}</p>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-slate-600">{perm.packageName}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "gap-1",
+                            perm.platform === "ANDROID"
+                              ? "border-green-200 bg-green-50 text-green-700"
+                              : "border-slate-200 bg-slate-50 text-slate-700",
+                          )}
+                        >
+                          {perm.platform === "ANDROID" ? (
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
+                            </svg>
+                          )}
+                          {perm.platform}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Select defaultValue={perm.level.toLowerCase()} disabled>
@@ -440,19 +481,16 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">{perm.grantedBy}</TableCell>
-                      <TableCell className="text-sm text-slate-600">{perm.grantedAt}</TableCell>
-                      <TableCell className="text-sm text-slate-600">{perm.expires}</TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600">
                           <X className="w-4 h-4" />
                         </Button>
-                      </TableCell>
+                      </TableCell> */}
                     </TableRow>
                   ))}
                   {permissionsList.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-slate-500 py-6">
+                      <TableCell colSpan={5} className="text-center text-slate-500 py-6">
                         No direct permissions granted
                       </TableCell>
                     </TableRow>
