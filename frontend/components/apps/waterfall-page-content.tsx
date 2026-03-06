@@ -22,7 +22,7 @@ const FN_VIEW = "view"
 const FILTER_UNUSED = "unused"
 const FILTER_NO_REVENUE = "noRevenue"
 
-type SortField = "displayName" | "app" | "info" | "revenue" | "mediationGroup" | "admobId" | "publisher"
+type SortField = "displayName" | "app" | "info" | "mediationGroup" | "admobId" | "publisher"
 type SortDirection = "asc" | "desc"
 
 export function WaterfallPageContent() {
@@ -154,7 +154,7 @@ export function WaterfallPageContent() {
     }
 
     setSortField(field)
-    setSortDirection(field === "revenue" ? "desc" : "asc")
+    setSortDirection("asc")
   }
 
   const SortHeader = ({
@@ -255,9 +255,6 @@ export function WaterfallPageContent() {
                     <th className="text-left py-3 px-4 font-medium text-slate-700">
                       <SortHeader field="info" label="Info" />
                     </th>
-                    <th className="text-right py-3 px-4 font-medium text-slate-700">
-                      <SortHeader field="revenue" label="Revenue" align="right" />
-                    </th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">
                       <SortHeader field="mediationGroup" label="Mediation Group" />
                     </th>
@@ -325,11 +322,9 @@ export function WaterfallPageContent() {
                         <div className="space-y-0.5 text-xs">
                           <div className="text-slate-600"><span className="text-slate-400">Format:</span> {row.format ?? "—"}</div>
                           <div className="text-slate-500"><span className="text-slate-400">Floor:</span> {formatFloor(row.globalFloorMicros)}</div>
+                          <div className="text-green-600 font-medium"><span className="text-slate-400 font-normal">Revenue:</span> {formatRevenue(row.revenue)}</div>
                           <div className="text-slate-500"><span className="text-slate-400">Synced:</span> {formatDateTime(row.lastSyncedAt)}</div>
                         </div>
-                      </td>
-                      <td className="py-3 px-4 text-right text-slate-900 font-medium">
-                        {formatRevenue(row.revenue)}
                       </td>
                       <td className="py-3 px-4">
                         {row.mappingDisplayName || row.adUnitDisplayName ? (
