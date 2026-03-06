@@ -27,7 +27,8 @@ import {
   Eye,
   Edit,
   KeyRound,
-
+  Lock,
+  Unlock,
   ToggleLeft,
   ToggleRight,
   Mail,
@@ -213,6 +214,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="locked">Locked</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
@@ -434,6 +436,32 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                                       <><ToggleRight className="w-4 h-4 mr-2" />Activate User</>
                                     ) : null}
                                   </DropdownMenuItem>
+                                  {user.status === "active" && (
+                                    <DropdownMenuItem onClick={async () => {
+                                      try {
+                                        await teamMembersApi.updateUser(user.id, { status: "locked" })
+                                        toast.success("User locked")
+                                        fetchUsers()
+                                      } catch (err) {
+                                        toast.error("Failed to lock user")
+                                      }
+                                    }}>
+                                      <Lock className="w-4 h-4 mr-2" />Lock User
+                                    </DropdownMenuItem>
+                                  )}
+                                  {user.status === "locked" && (
+                                    <DropdownMenuItem onClick={async () => {
+                                      try {
+                                        await teamMembersApi.updateUser(user.id, { status: "active" })
+                                        toast.success("User unlocked")
+                                        fetchUsers()
+                                      } catch (err) {
+                                        toast.error("Failed to unlock user")
+                                      }
+                                    }}>
+                                      <Unlock className="w-4 h-4 mr-2" />Unlock User
+                                    </DropdownMenuItem>
+                                  )}
 
                                 </>
                               )}

@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Copy, Loader2, Layers, ExternalLink } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Copy, Loader2, Layers, ExternalLink } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
+import { useDashboardDate } from "@/contexts/dashboard-date-context"
+import { formatDateForAPI } from "@/lib/utils/dashboard"
 import { Pagination } from "@/components/shared/pagination"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -20,33 +22,64 @@ const FN_VIEW = "view"
 const FILTER_UNUSED = "unused"
 const FILTER_NO_REVENUE = "noRevenue"
 
+type SortField = "displayName" | "app" | "info" | "revenue" | "mediationGroup" | "admobId" | "publisher"
+type SortDirection = "asc" | "desc"
+
 export function WaterfallPageContent() {
   const canView = hasScreenFunction(SCREEN_WATERFALL, FN_VIEW)
+  const { appliedDateRange, refreshKey } = useDashboardDate()
 
   const searchParams = useSearchParams()
   const publisherIdFromUrl = searchParams.get("publisherId") ?? undefined
 
   const [page, setPage] = useState(1)
 
-  if (!canView) {
-    return <NoPermissionView />
-  }
   const [pageSize, setPageSize] = useState(20)
   const [filterMode, setFilterMode] = useState<string>(FILTER_UNUSED)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<SortField>("displayName")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
 
-  const { data, loading } = useApi(
+  const apiDateRange = useMemo(
+    () => ({
+      startDate: formatDateForAPI(appliedDateRange.from),
+      endDate: formatDateForAPI(appliedDateRange.to),
+    }),
+    [appliedDateRange],
+  )
+
+  const selectedRangeLabel = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+
+    return `${formatter.format(appliedDateRange.from)} - ${formatter.format(appliedDateRange.to)}`
+  }, [appliedDateRange])
+
+  const cacheKey = useMemo(
+    () =>
+      `waterfall_list_${publisherIdFromUrl ?? "all"}_${filterMode}_${page}_${pageSize}_${sortField}_${sortDirection}_${apiDateRange.startDate}_${apiDateRange.endDate}`,
+    [publisherIdFromUrl, filterMode, page, pageSize, sortField, sortDirection, apiDateRange],
+  )
+
+  const { data, loading, refetch } = useApi(
     () =>
       structureApi.getWaterfallList({
         publisherId: publisherIdFromUrl,
         unusedOnly: filterMode === FILTER_UNUSED,
         noRevenue: filterMode === FILTER_NO_REVENUE,
+        startDate: apiDateRange.startDate,
+        endDate: apiDateRange.endDate,
+        sortField,
+        sortDirection,
         page,
         pageSize,
       }),
     {
-      enabled: true,
-      cacheKey: `waterfall_list_${publisherIdFromUrl ?? "all"}_${filterMode}_${page}_${pageSize}`,
+      enabled: canView,
+      cacheKey,
     }
   )
 
@@ -56,7 +89,17 @@ export function WaterfallPageContent() {
 
   useEffect(() => {
     setPage(1)
-  }, [publisherIdFromUrl, filterMode, pageSize])
+  }, [publisherIdFromUrl, filterMode, pageSize, sortField, sortDirection, apiDateRange.startDate, apiDateRange.endDate])
+
+  useEffect(() => {
+    if (refreshKey > 0) {
+      void refetch()
+    }
+  }, [refreshKey, refetch])
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
 
   const copyId = async (id: string) => {
     try {
@@ -104,6 +147,43 @@ export function WaterfallPageContent() {
     }
   }
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+      return
+    }
+
+    setSortField(field)
+    setSortDirection(field === "revenue" ? "desc" : "asc")
+  }
+
+  const SortHeader = ({
+    field,
+    label,
+    align = "left",
+  }: {
+    field: SortField
+    label: string
+    align?: "left" | "right"
+  }) => (
+    <button
+      type="button"
+      onClick={() => handleSort(field)}
+      className={`inline-flex items-center gap-1 hover:text-slate-900 transition-colors ${align === "right" ? "justify-end w-full" : ""}`}
+    >
+      <span>{label}</span>
+      {sortField === field ? (
+        sortDirection === "asc" ? (
+          <ArrowUp className="w-3.5 h-3.5 text-slate-900" />
+        ) : (
+          <ArrowDown className="w-3.5 h-3.5 text-slate-900" />
+        )
+      ) : (
+        <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+      )}
+    </button>
+  )
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -122,7 +202,7 @@ export function WaterfallPageContent() {
           <p className="text-sm text-slate-500 mt-1">
             {filterMode === FILTER_UNUSED
               ? "Waterfall ad units not linked to any ad unit in a mediation group."
-              : "Waterfall ad units with no revenue in the last 30 days."}
+              : `Waterfall ad units with no revenue in the selected range (${selectedRangeLabel}).`}
             {publisherIdFromUrl && (
               <span className="ml-1">
                 Filtered by publisher: <strong>{publisherIdFromUrl}</strong>
@@ -143,7 +223,7 @@ export function WaterfallPageContent() {
           <div className="flex items-center gap-2">
             <RadioGroupItem value={FILTER_NO_REVENUE} id="filter-no-revenue" />
             <Label htmlFor="filter-no-revenue" className="text-sm font-normal cursor-pointer">
-              Show waterfalls without revenue
+              Show waterfalls without revenue in selected range
             </Label>
           </div>
         </RadioGroup>
@@ -158,7 +238,7 @@ export function WaterfallPageContent() {
           <div className="py-16 text-center text-slate-500">
             {filterMode === FILTER_UNUSED
               ? "No unused waterfalls."
-              : "No waterfalls without revenue."}
+              : `No waterfalls without revenue in the selected range (${selectedRangeLabel}).`}
           </div>
         ) : (
           <>
@@ -166,12 +246,27 @@ export function WaterfallPageContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80">
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Display Name</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">App</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Info</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Mediation Group</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">AdMob ID</th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">Publisher</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="displayName" label="Display Name" />
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="app" label="App" />
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="info" label="Info" />
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="revenue" label="Revenue" align="right" />
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="mediationGroup" label="Mediation Group" />
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="admobId" label="AdMob ID" />
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-700">
+                      <SortHeader field="publisher" label="Publisher" />
+                    </th>
                     <th className="text-left py-3 px-4 font-medium text-slate-700">Actions</th>
                   </tr>
                 </thead>
@@ -230,9 +325,11 @@ export function WaterfallPageContent() {
                         <div className="space-y-0.5 text-xs">
                           <div className="text-slate-600"><span className="text-slate-400">Format:</span> {row.format ?? "—"}</div>
                           <div className="text-slate-500"><span className="text-slate-400">Floor:</span> {formatFloor(row.globalFloorMicros)}</div>
-                          <div className="text-green-600 font-medium"><span className="text-slate-400 font-normal">Revenue:</span> {formatRevenue(row.revenue)}</div>
                           <div className="text-slate-500"><span className="text-slate-400">Synced:</span> {formatDateTime(row.lastSyncedAt)}</div>
                         </div>
+                      </td>
+                      <td className="py-3 px-4 text-right text-slate-900 font-medium">
+                        {formatRevenue(row.revenue)}
                       </td>
                       <td className="py-3 px-4">
                         {row.mappingDisplayName || row.adUnitDisplayName ? (

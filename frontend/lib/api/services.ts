@@ -224,6 +224,10 @@ export const structureApi = {
         publisherId?: string
         unusedOnly?: boolean
         noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        sortField?: string
+        sortDirection?: "asc" | "desc"
         page?: number
         pageSize?: number
     }): Promise<{
@@ -236,6 +240,10 @@ export const structureApi = {
         if (params?.publisherId != null) query.publisherId = params.publisherId
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.sortField != null) query.sortField = params.sortField
+        if (params?.sortDirection != null) query.sortDirection = params.sortDirection
         if (params?.page != null) query.page = params.page
         if (params?.pageSize != null) query.pageSize = params.pageSize
         return apiClient.get('/api/Structure/waterfall', query)
