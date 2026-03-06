@@ -248,6 +248,8 @@ export function WaterfallOptimizationTab({
     try {
       await waterfallRecommendationSettingsApi.rerunRecommendation(mediationGroupId)
       await refetchRecommendations()
+      // Tăng forceRefreshKey để force re-init optimizedWaterfall với data mới
+      setForceRefreshKey((k) => k + 1)
     } catch (err) {
       console.error("Failed to rerun recommendation:", err)
     } finally {
@@ -442,10 +444,11 @@ export function WaterfallOptimizationTab({
   const [optimizedWaterfall, setOptimizedWaterfall] = useState<WaterfallSource[]>([])
   const [aiSuggestedWaterfall, setAiSuggestedWaterfall] = useState<WaterfallSource[]>([])
   const lastInitKey = useRef<string>("")
+  const [forceRefreshKey, setForceRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!hasValidId || !groupDetail) return
-    const key = `${mediationGroupIdFromParams}_${recommendations.length}_${currentSetup.waterfall.length}`
+    const key = `${mediationGroupIdFromParams}_${recommendations.length}_${currentSetup.waterfall.length}_${forceRefreshKey}`
     if (lastInitKey.current === key) return
     lastInitKey.current = key
     setOptimizedBidding([...currentSetup.bidding])
@@ -456,7 +459,7 @@ export function WaterfallOptimizationTab({
       setOptimizedWaterfall([])
       setAiSuggestedWaterfall([])
     }
-  }, [mediationGroupIdFromParams, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, recommendations.length, recommendedWaterfall])
+  }, [mediationGroupIdFromParams, hasValidId, groupDetail, currentSetup.bidding, currentSetup.waterfall, recommendations.length, recommendedWaterfall, forceRefreshKey])
 
   // Editing state
   const [editingFloorId, setEditingFloorId] = useState<string | null>(null)
@@ -931,8 +934,9 @@ export function WaterfallOptimizationTab({
             </CardContent>
           </Card>
 
-          {/* Cột phải: Optimization Status Banner */}
-          <div className="min-h-0">
+          {/* Cột phải: Optimization Status Banner + Rule Group */}
+          <div className="flex flex-col gap-4">
+            {/* Optimization Status Banner */}
             {!bannerDismissed && (
               <>
                 {/* STATE A - Has Optimization Available */}
@@ -1033,25 +1037,19 @@ export function WaterfallOptimizationTab({
                 )}
               </>
             )}
-          </div>
-        </div>
 
-        {/* Rule Group Selection Card */}
-        <Card className="border-slate-200">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4 text-slate-500" />
-              <CardTitle className="text-base font-semibold text-slate-900">Recommendation Rule Group</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 max-w-sm">
+            {/* Rule Group Selection */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings className="w-4 h-4 text-slate-500" />
+                <h4 className="text-sm font-semibold text-slate-900">Recommendation Rule Group</h4>
+              </div>
+              <div className="flex flex-col gap-3">
                 <Select
                   value={selectedRuleGroupId != null ? String(selectedRuleGroupId) : "none"}
                   onValueChange={handleRuleGroupChange}
                 >
-                  <SelectTrigger className="h-10 bg-white">
+                  <SelectTrigger className="h-9 bg-white">
                     <SelectValue placeholder="Select rule group..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -1080,44 +1078,40 @@ export function WaterfallOptimizationTab({
                       ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 gap-2"
-                  onClick={handleSaveRuleGroup}
-                  disabled={!ruleGroupChanged || savingRuleGroup}
-                >
-                  {savingRuleGroup ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  Save
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 gap-2"
-                  onClick={handleRerunRecommendation}
-                  disabled={rerunningRecommendation}
-                >
-                  {rerunningRecommendation ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  Rerun Recommendation
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 flex-1"
+                    onClick={handleSaveRuleGroup}
+                    disabled={!ruleGroupChanged || savingRuleGroup}
+                  >
+                    {savingRuleGroup ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 flex-1"
+                    onClick={handleRerunRecommendation}
+                    disabled={rerunningRecommendation}
+                  >
+                    {rerunningRecommendation ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    Rerun
+                  </Button>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Select a rule group to customize which optimization rules apply to this app's mediation groups.
-              After saving, click "Rerun Recommendation" to recalculate suggestions.
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Section 2: Side-by-Side Waterfall Comparison */}
         <div className="space-y-4">
