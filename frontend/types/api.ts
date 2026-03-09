@@ -415,11 +415,14 @@ export interface JobScheduleUpdateRequest {
 // Waterfall Recommendation Types
 export interface WaterfallRecommendationConfigDto {
   id: number
+  configName?: string
   appId?: string | null
+  isActive?: boolean
   minRecommendations: number
   maxRecommendations: number
   minMatchRatePercent: number
   minSowPercent: number
+  notes?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -435,11 +438,16 @@ export interface WaterfallRecommendationRuleDto {
   conditionMatchRateMax?: number | null
   conditionOnlyOneInstance?: boolean | null
   conditionIsHighestFloor?: boolean | null
+  conditionOverlapGapThreshold?: number | null
+  isMgLevelRule?: boolean
   action: string
   actionMultiplier?: number | null
+  actionMultiplier2?: number | null
+  actionStaircaseSteps?: number | null
   actionUseMidpoint: boolean
   reasonTemplate?: string | null
   priority: string
+  notes?: string | null
   groupId?: number | null
   groupName?: string | null
   createdAt: string
@@ -454,6 +462,8 @@ export interface WaterfallRecommendationRuleGroupDto {
   isActive: boolean
   isDefault: boolean
   color?: string | null
+  version?: string | null
+  parentGroupId?: number | null
   ruleCount: number
   appCount: number
   createdAt: string
@@ -467,10 +477,128 @@ export interface CreateUpdateRuleGroupDto {
   isActive: boolean
   isDefault?: boolean
   color?: string | null
+  version?: string | null
+  parentGroupId?: number | null
 }
 
 export interface AppRuleGroupMappingDto {
   appId: string
   groupId: number | null
   groupName: string | null
+}
+
+export interface WaterfallFilterOptionDto {
+  value: string
+  label: string
+}
+
+export interface WaterfallOptimizerFiltersDto {
+  apps: WaterfallFilterOptionDto[]
+  platforms: WaterfallFilterOptionDto[]
+  mediationGroups: WaterfallFilterOptionDto[]
+  statuses: WaterfallFilterOptionDto[]
+}
+
+export interface WaterfallAnalyzeRequestDto {
+  appId?: string | null
+  mediationGroupId?: string | null
+  dateRangeDays?: number
+  overrideMinSow?: number | null
+  overrideMinMatchRate?: number | null
+}
+
+export interface WaterfallConfigUsedDto {
+  configId?: number | null
+  configName: string
+  minSowPercent: number
+  minMatchRatePercent: number
+  ruleGroupId?: number | null
+  ruleGroupName?: string | null
+  ruleGroupVersion?: string | null
+}
+
+export interface WaterfallAnalyzeRecommendationDto {
+  id: number
+  instanceId: string
+  instanceName: string
+  adSourceId: string
+  currentFloor: number
+  currentSow: number
+  currentMatchRate?: number | null
+  currentEcpm?: number | null
+  action: string
+  recommendedFloor?: number | null
+  recommendedFloors: number[]
+  reason: string
+  priority: string
+  ruleId?: number | null
+  ruleName?: string | null
+  status: string
+  expiresAt: string
+  analysisDate: string
+}
+
+export interface WaterfallAnalyzeMediationGroupDto {
+  mediationGroupId: string
+  mediationGroupName: string
+  totalRevenue7d: number
+  instanceCount: number
+  recommendations: WaterfallAnalyzeRecommendationDto[]
+}
+
+export interface WaterfallAnalyzeResponseDto {
+  analysisDate: string
+  appId: string
+  configUsed: WaterfallConfigUsedDto
+  mediationGroups: WaterfallAnalyzeMediationGroupDto[]
+}
+
+export interface WaterfallRecommendationRecordDto {
+  id: number
+  appId: string
+  platform?: string | null
+  mediationGroupId: string
+  mediationGroupName?: string | null
+  instanceId: string
+  instanceName: string
+  adSourceId: string
+  currentFloor: number
+  currentSow: number
+  currentMatchRate?: number | null
+  currentEcpm?: number | null
+  action: string
+  recommendedFloor?: number | null
+  recommendedFloors: number[]
+  reason: string
+  priority: string
+  ruleId?: number | null
+  ruleName?: string | null
+  ruleGroupVersion?: string | null
+  status: string
+  expiresAt: string
+  analysisDate: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WaterfallApplyApprovedResponseDto {
+  success: boolean
+  message?: string
+  errorMessage?: string
+  appliedAt: string
+  mediationGroupId?: string | null
+  appliedCount: number
+}
+
+export interface WaterfallApplyLogDto {
+  id: number
+  recommendationId?: number | null
+  mediationGroupId: string
+  correlationId?: string | null
+  status: string
+  action?: string | null
+  requestJson?: string | null
+  responseJson?: string | null
+  errorMessage?: string | null
+  createdAt: string
 }

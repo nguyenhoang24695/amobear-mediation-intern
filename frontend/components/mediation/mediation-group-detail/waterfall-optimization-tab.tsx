@@ -44,6 +44,7 @@ import type { AdUnit, App, WaterfallRecommendationRuleGroupDto } from "@/types/a
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
 import { Loader2, Save, RefreshCw, Settings } from "lucide-react"
+import { RecommendationWorkflowPanel } from "@/components/waterfall-optimizer/recommendation-workflow-panel"
 
 interface WaterfallOptimizationTabProps {
   onRunABTest: () => void
@@ -92,6 +93,10 @@ export function WaterfallOptimizationTab({
   refreshKey = 0,
 }: WaterfallOptimizationTabProps) {
   const params = useParams()
+  const manualReorderEnabled = false
+  const manualStatusToggleEnabled = false
+  const biddingEditingEnabled = false
+  const abTestingEnabled = false
   const mediationGroupIdFromParams = (params as { id?: string })?.id as string | undefined
   const hasValidId = !!mediationGroupIdFromParams
 
@@ -255,6 +260,16 @@ export function WaterfallOptimizationTab({
     } finally {
       setRerunningRecommendation(false)
     }
+  }
+
+  const handleWorkflowAnalyzeCompleted = async () => {
+    await handleRerunRecommendation()
+  }
+
+  const handleWorkflowApplied = async () => {
+    await refetchGroupDetail()
+    await refetchRecommendations()
+    setForceRefreshKey((k) => k + 1)
   }
 
   // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại). Không gọi SoWData riêng — ecpmByAdSourceId lấy từ recommendations.
@@ -586,6 +601,7 @@ export function WaterfallOptimizationTab({
 
   // Handle inline eCPM floor editing
   const startEditing = (source: WaterfallSource) => {
+    if (source.changeType === "removed") return
     setEditingFloorId(source.id)
     setEditingFloorValue(source.floor.toFixed(2))
   }
@@ -657,16 +673,22 @@ export function WaterfallOptimizationTab({
 
   // Handle drag and drop reordering
   const handleDragStart = (e: React.DragEvent, sourceId: string) => {
+    if (!manualReorderEnabled) {
+      e.preventDefault()
+      return
+    }
     setDraggedItemId(sourceId)
     e.dataTransfer.effectAllowed = "move"
   }
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
+    if (!manualReorderEnabled) return
     e.preventDefault()
     setDragOverIndex(index)
   }
 
   const handleDragEnd = () => {
+    if (!manualReorderEnabled) return
     if (draggedItemId !== null && dragOverIndex !== null) {
       const draggedIndex = optimizedWaterfall.findIndex((s) => s.id === draggedItemId)
       if (draggedIndex !== -1 && draggedIndex !== dragOverIndex) {
@@ -725,6 +747,7 @@ export function WaterfallOptimizationTab({
 
   // Toggle source status
   const toggleSourceStatus = (sourceId: string) => {
+    if (!manualStatusToggleEnabled) return
     setOptimizedWaterfall((prev) =>
       prev.map((source) => {
         if (source.id === sourceId) {
@@ -936,6 +959,13 @@ export function WaterfallOptimizationTab({
 
           {/* Cột phải: Optimization Status Banner + Rule Group */}
           <div className="flex flex-col gap-4">
+            <RecommendationWorkflowPanel
+              mediationGroupId={mediationGroupId}
+              title="Recommendation Lifecycle"
+              compact
+              onAnalyzed={handleWorkflowAnalyzeCompleted}
+              onApplied={handleWorkflowApplied}
+            />
             {/* Optimization Status Banner */}
             {!bannerDismissed && (
               <>
@@ -950,16 +980,20 @@ export function WaterfallOptimizationTab({
                         {(changes.estimatedMonthly - currentSetup.estimatedMonthly).toFixed(0)})
                       </p>
                       <p className="text-xs text-slate-500 mt-1">
-                        Based on last 14 days performance data • Confidence: 87%
+                        Review recommendations in the lifecycle panel before pushing to production.
                       </p>
                       <div className="flex items-center gap-3 mt-3">
-                        <Button variant="link" className="h-auto p-0 text-blue-600">
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-blue-600"
+                          onClick={() => document.getElementById("changes-summary-card")?.scrollIntoView({ behavior: "smooth" })}
+                        >
                           View Changes
                         </Button>
                         <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                           Apply Direct
                         </Button>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!abTestingEnabled}>
                           Run A/B Test
                         </Button>
                       </div>
@@ -1000,9 +1034,9 @@ export function WaterfallOptimizationTab({
                     <div className="flex-1">
                       <h3 className="font-semibold text-slate-900">Waterfall Optimized</h3>
                       <p className="text-sm text-slate-700 mt-0.5">Current configuration is performing optimally</p>
-                      <p className="text-xs text-slate-500 mt-1">Last analyzed: 2 hours ago</p>
+                      <p className="text-xs text-slate-500 mt-1">Use the lifecycle panel above to rerun analysis when needed.</p>
                     </div>
-                    <Button variant="link" className="h-auto p-0 text-green-600">
+                    <Button variant="link" className="h-auto p-0 text-green-600" onClick={() => void handleWorkflowAnalyzeCompleted()}>
                       Re-analyze Now
                     </Button>
                   </div>
@@ -1028,7 +1062,7 @@ export function WaterfallOptimizationTab({
                         <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                           Apply Direct
                         </Button>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!abTestingEnabled}>
                           Run A/B Test
                         </Button>
                       </div>
@@ -1341,7 +1375,7 @@ export function WaterfallOptimizationTab({
                           source.changeType === "new" ? "bg-green-50" : "bg-slate-50",
                         )}
                       >
-                        <Switch checked={source.status === "active"} className="data-[state=checked]:bg-green-500" />
+                        <Switch checked={source.status === "active"} disabled className="data-[state=checked]:bg-green-500" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-slate-900">{source.name}</p>
@@ -1361,14 +1395,11 @@ export function WaterfallOptimizationTab({
                     ))}
                     {/* Add Bidding Source Button */}
                     <button
-                      onClick={() => {
-                        setAddSourceType("bidding")
-                        setAddSourceModalOpen(true)
-                      }}
-                      className="flex items-center gap-2 w-full p-3 border-2 border-dashed border-slate-200 rounded-lg text-sm text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      disabled={!biddingEditingEnabled}
+                      className="flex items-center gap-2 w-full cursor-not-allowed p-3 border-2 border-dashed border-slate-200 rounded-lg text-sm text-slate-400"
                     >
                       <Plus className="w-4 h-4" />
-                      Add Bidding Source
+                      Add Bidding Source (Coming soon)
                     </button>
                   </CollapsibleContent>
                 </Collapsible>
@@ -1396,7 +1427,7 @@ export function WaterfallOptimizationTab({
                       return (
                         <div
                           key={source.id}
-                          draggable={!isRemoved}
+                          draggable={!isRemoved && manualReorderEnabled}
                           onDragStart={(e) => handleDragStart(e, source.id)}
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragEnd={handleDragEnd}
@@ -1413,12 +1444,12 @@ export function WaterfallOptimizationTab({
                           )}
                         >
                           {/* Drag Handle */}
-                          {!isRemoved && (
+                          {!isRemoved && manualReorderEnabled && (
                             <div className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
                               <GripVertical className="w-4 h-4" />
                             </div>
                           )}
-                          {isRemoved && <div className="w-4" />}
+                          {(isRemoved || !manualReorderEnabled) && <div className="w-4" />}
 
                           {/* Position Number */}
                           <span
@@ -1529,6 +1560,7 @@ export function WaterfallOptimizationTab({
                             <Switch
                               checked={source.status === "active"}
                               onCheckedChange={() => toggleSourceStatus(source.id)}
+                              disabled={!manualStatusToggleEnabled}
                               className="data-[state=checked]:bg-green-500"
                             />
                           )}
@@ -1578,7 +1610,7 @@ export function WaterfallOptimizationTab({
         </div>
 
         {/* Section 3: Changes Summary Card */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200" id="changes-summary-card">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1635,26 +1667,26 @@ export function WaterfallOptimizationTab({
                   {/* Confidence Score */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Confidence Score</span>
+                      <span className="text-slate-600">Recommendation Workflow</span>
                       {hasManualChanges() ? (
                         <Tooltip>
                           <TooltipTrigger className="flex items-center gap-1 text-slate-400">
-                            <span>--</span>
+                            <span>Review needed</span>
                             <AlertCircle className="w-3.5 h-3.5" />
                           </TooltipTrigger>
-                          <TooltipContent>Confidence score only available for AI-generated suggestions</TooltipContent>
+                          <TooltipContent>Manual edits should be reviewed against approved recommendations before apply.</TooltipContent>
                         </Tooltip>
                       ) : (
-                        <span className="font-medium text-slate-900">87%</span>
+                        <span className="font-medium text-slate-900">Tracked</span>
                       )}
                     </div>
                     {!hasManualChanges() && (
                       <>
-                        <Progress value={87} className="h-2" />
-                        <p className="text-xs text-slate-500">AI Optimized • Based on 14 days data</p>
+                        <Progress value={100} className="h-2" />
+                        <p className="text-xs text-slate-500">Approve/apply history is tracked in the lifecycle panel.</p>
                       </>
                     )}
-                    {hasManualChanges() && <p className="text-xs text-slate-500">Manual changes applied</p>}
+                    {hasManualChanges() && <p className="text-xs text-slate-500">Manual floor/add/remove changes applied</p>}
                   </div>
 
                   {/* Mini Comparison Table */}
@@ -1749,7 +1781,7 @@ export function WaterfallOptimizationTab({
               >
                 Apply Direct
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!changes.hasChanges}>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!changes.hasChanges || !abTestingEnabled}>
                 Run A/B Test
               </Button>
             </div>
