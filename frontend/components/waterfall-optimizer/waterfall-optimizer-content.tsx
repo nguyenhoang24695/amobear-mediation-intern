@@ -88,8 +88,8 @@ export function WaterfallOptimizerContent() {
   const handleAnalyze = async () => {
     if (selectedAppId === "all" && selectedMediationGroupId === "all") {
       toast({
-        title: "Thiếu phạm vi analyze",
-        description: "Chọn ít nhất một app hoặc mediation group trước khi chạy analyze.",
+        title: "Missing analyze scope",
+        description: "Select at least one app or mediation group before running analysis.",
         variant: "destructive",
       })
       return
@@ -105,12 +105,12 @@ export function WaterfallOptimizerContent() {
       await refetch()
       toast({
         title: "Analyze completed",
-        description: "Đã refresh recommendation snapshot theo filter hiện tại.",
+        description: "Recommendation snapshots have been refreshed for the current filters.",
       })
     } catch (error) {
       toast({
         title: "Analyze failed",
-        description: error instanceof Error ? error.message : "Không thể chạy analyze.",
+        description: error instanceof Error ? error.message : "Unable to run analysis.",
         variant: "destructive",
       })
     } finally {
@@ -128,12 +128,12 @@ export function WaterfallOptimizerContent() {
       await refetch()
       toast({
         title: "Approved",
-        description: `Đã approve ${ids.length} recommendation ưu tiên cao.`,
+        description: `Approved ${ids.length} high-priority recommendations.`,
       })
     } catch (error) {
       toast({
         title: "Bulk approve failed",
-        description: error instanceof Error ? error.message : "Không thể approve hàng loạt.",
+        description: error instanceof Error ? error.message : "Unable to approve recommendations in bulk.",
         variant: "destructive",
       })
     } finally {
@@ -146,8 +146,8 @@ export function WaterfallOptimizerContent() {
     if (approved.length === 0) return
     if (approvedGroups.size > 1) {
       toast({
-        title: "Apply bị giới hạn",
-        description: "Hiện chỉ apply approved recommendations của cùng một mediation group trong mỗi lần chạy.",
+        title: "Apply is limited",
+        description: "You can currently apply approved recommendations from only one mediation group per run.",
         variant: "destructive",
       })
       return
@@ -165,7 +165,7 @@ export function WaterfallOptimizerContent() {
     } catch (error) {
       toast({
         title: "Apply failed",
-        description: error instanceof Error ? error.message : "Không thể apply approved recommendations.",
+        description: error instanceof Error ? error.message : "Unable to apply approved recommendations.",
         variant: "destructive",
       })
     } finally {
@@ -183,7 +183,7 @@ export function WaterfallOptimizerContent() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Waterfall Optimizer</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Analyze recommendation snapshots, bulk approve theo priority và apply có audit trail.
+            Analyze recommendation snapshots, bulk approve by priority, and apply with a full audit trail.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -310,7 +310,7 @@ export function WaterfallOptimizerContent() {
             </div>
           ) : recommendationList.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
-              Không có recommendation nào theo filter hiện tại.
+              No recommendations match the current filters.
             </div>
           ) : (
             <div className="space-y-6">
