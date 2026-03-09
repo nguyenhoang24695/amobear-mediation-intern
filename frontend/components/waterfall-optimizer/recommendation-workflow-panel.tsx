@@ -88,12 +88,12 @@ export function RecommendationWorkflowPanel({
       await onAnalyzed?.()
       toast({
         title: "Analyze completed",
-        description: "Đã tạo recommendation snapshot mới cho mediation group này.",
+        description: "A new recommendation snapshot has been created for this mediation group.",
       })
     } catch (error) {
       toast({
         title: "Analyze failed",
-        description: error instanceof Error ? error.message : "Không thể chạy analyze.",
+        description: error instanceof Error ? error.message : "Unable to run analysis.",
         variant: "destructive",
       })
     } finally {
@@ -109,7 +109,7 @@ export function RecommendationWorkflowPanel({
     } catch (error) {
       toast({
         title: "Approve failed",
-        description: error instanceof Error ? error.message : "Không thể approve recommendation.",
+        description: error instanceof Error ? error.message : "Unable to approve the recommendation.",
         variant: "destructive",
       })
     } finally {
@@ -125,7 +125,7 @@ export function RecommendationWorkflowPanel({
     } catch (error) {
       toast({
         title: "Reject failed",
-        description: error instanceof Error ? error.message : "Không thể reject recommendation.",
+        description: error instanceof Error ? error.message : "Unable to reject the recommendation.",
         variant: "destructive",
       })
     } finally {
@@ -141,12 +141,12 @@ export function RecommendationWorkflowPanel({
       await refetch()
       toast({
         title: "Approved",
-        description: `Đã approve ${highPendingIds.length} recommendation ưu tiên cao.`,
+        description: `Approved ${highPendingIds.length} high-priority recommendations.`,
       })
     } catch (error) {
       toast({
         title: "Bulk approve failed",
-        description: error instanceof Error ? error.message : "Không thể approve hàng loạt.",
+        description: error instanceof Error ? error.message : "Unable to approve recommendations in bulk.",
         variant: "destructive",
       })
     } finally {
@@ -170,7 +170,7 @@ export function RecommendationWorkflowPanel({
     } catch (error) {
       toast({
         title: "Apply failed",
-        description: error instanceof Error ? error.message : "Không thể apply approved recommendations.",
+        description: error instanceof Error ? error.message : "Unable to apply approved recommendations.",
         variant: "destructive",
       })
     } finally {
@@ -186,7 +186,7 @@ export function RecommendationWorkflowPanel({
             <div>
               <CardTitle className="text-base font-semibold text-slate-900">{title}</CardTitle>
               <p className="mt-1 text-sm text-slate-500">
-                Lifecycle thật cho recommendation: analyze, approve/reject, apply và audit history.
+                Real recommendation lifecycle: analyze, approve/reject, apply, and audit history.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -229,7 +229,7 @@ export function RecommendationWorkflowPanel({
             </div>
           ) : recommendationList.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-              Chưa có recommendation snapshot nào cho mediation group này. Chạy `Analyze` để tạo workflow approval/apply thật.
+              No recommendation snapshots exist for this mediation group yet. Run `Analyze` to create the approval/apply workflow.
             </div>
           ) : (
             <div className="space-y-3">
@@ -286,12 +286,12 @@ export function RecommendationWorkflowPanel({
         <SheetContent side="right" className="w-full sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Apply History</SheetTitle>
-            <SheetDescription>Audit trail cho các lần apply recommendation của mediation group này.</SheetDescription>
+            <SheetDescription>Audit trail for recommendation apply operations on this mediation group.</SheetDescription>
           </SheetHeader>
           <div className="space-y-3 overflow-y-auto px-4 pb-4">
             {applyHistoryList.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                Chưa có apply history.
+                No apply history yet.
               </div>
             ) : (
               applyHistoryList.map((item) => (
