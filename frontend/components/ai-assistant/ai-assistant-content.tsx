@@ -1,9 +1,17 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { ContextSidebar } from "./context-sidebar"
 import { ChatMainPanel } from "./chat-main-panel"
 import { CreateContextModal } from "./create-context-modal"
+import { aiAssistantApi } from "@/lib/api/ai-assistant"
+import type {
+  AskResponse,
+  MessageDto,
+  DetailedExplanation,
+  ImageAttachmentRequest,
+  AttachedTableDataRequest,
+} from "@/lib/api/ai-assistant"
 
 export interface AiContext {
   id: string
@@ -14,6 +22,7 @@ export interface AiContext {
   appScope: string
   focusAreas: string[]
   preferredProvider: "claude" | "gemini" | "chatgpt"
+  preferredModel?: string
   explainDetailDefault: boolean
   isShared: boolean
   clonedFrom?: string
@@ -97,212 +106,176 @@ export interface UserQuota {
   warning?: string
 }
 
-// Per-conversation mock messages store
-const mockMessagesByConversation: Record<string, AiMessage[]> = {
-  "1": [
-    {
-      id: "1",
-      role: "user",
-      content: "Show me the top 10 levels with the highest drop rate in the last 7 days for puzzle_blast",
-      timestamp: new Date(Date.now() - 300000),
-    },
-    {
-      id: "2",
-      role: "assistant",
-      content: "Query này lấy top 10 level có drop_rate cao nhất trong 7 ngày qua cho app puzzle_blast.",
-      timestamp: new Date(Date.now() - 240000),
-      metadata: {
-        sql: `SELECT level_id,
-       ROUND(drop_rate, 1) AS drop_rate,
-       start_users
-FROM gold.fact_level_performance_puzzle_blast
-WHERE event_date >= DATE_SUB(CURDATE(), 7)
-ORDER BY drop_rate DESC
-LIMIT 10;`,
-        detailedExplanation: {
-          sqlBreakdown: [
-            { clause: "SELECT level_id, ROUND(drop_rate, 1)", explain: "Lấy level_id và drop_rate làm tròn 1 chữ số thập phân." },
-            { clause: "FROM gold.fact_level_performance_*", explain: "Gold layer: drop_rate đã tính sẵn." },
-            { clause: "WHERE event_date >= DATE_SUB(...)", explain: "Partition pruning: chỉ scan 7 partitions." },
-          ],
-          performanceNotes: "Scan ~3,500 rows (partition pruning).",
-          businessContext: "drop_rate = drop_users / start_users × 100. Level > 15% → cần điều chỉnh game design.",
-          learningTips: ["Gold layer pre-calculate → luôn thử Gold trước", "DATE_SUB + CURDATE() → auto lấy data mới nhất"],
-        },
-        tables: ["fact_level_performance"],
-        complexity: "Low",
-        provider: "claude",
-        usage: { tokens: 450, cost: 0.005 },
-        suggestedChart: "Bar Chart",
-        queryResult: {
-          columns: ["level_id", "drop_rate", "start_users"],
-          rows: [
-            { level_id: 42, drop_rate: "28.5%", start_users: 1234 },
-            { level_id: 87, drop_rate: "25.1%", start_users: 987 },
-            { level_id: 156, drop_rate: "22.3%", start_users: 2456 },
-            { level_id: 23, drop_rate: "19.8%", start_users: 3421 },
-            { level_id: 201, drop_rate: "18.2%", start_users: 892 },
-            { level_id: 78, drop_rate: "17.5%", start_users: 1567 },
-            { level_id: 134, drop_rate: "16.9%", start_users: 2103 },
-            { level_id: 99, drop_rate: "15.4%", start_users: 1890 },
-            { level_id: 167, drop_rate: "14.8%", start_users: 756 },
-            { level_id: 45, drop_rate: "13.2%", start_users: 2890 },
-          ],
-          rowCount: 10,
-          executionTime: 0.23,
-          provider: "claude",
-        },
-      },
-    },
-  ],
-  "2": [
-    {
-      id: "3",
-      role: "user",
-      content: "Show me the level progression funnel for puzzle_blast",
-      timestamp: new Date(Date.now() - 86400000 - 300000),
-    },
-    {
-      id: "4",
-      role: "assistant",
-      content: "Here's the level progression funnel query for puzzle_blast showing how players move through levels.",
-      timestamp: new Date(Date.now() - 86400000 - 240000),
-      metadata: {
-        sql: `SELECT level_id,
-       COUNT(DISTINCT user_id) AS players,
-       ROUND(COUNT(DISTINCT user_id) / LAG(COUNT(DISTINCT user_id)) OVER (ORDER BY level_id) * 100, 1) AS retention_rate
-FROM gold.fact_level_progression
-WHERE app_id = 'puzzle_blast'
-GROUP BY level_id
-ORDER BY level_id;`,
-        tables: ["fact_level_progression"],
-        complexity: "Medium",
-        provider: "claude",
-        usage: { tokens: 380, cost: 0.004 },
-        suggestedChart: "Funnel Chart",
-        queryResult: {
-          columns: ["level_id", "players", "retention_rate"],
-          rows: [
-            { level_id: 1, players: 10000, retention_rate: "100%" },
-            { level_id: 2, players: 8500, retention_rate: "85%" },
-            { level_id: 3, players: 7200, retention_rate: "84.7%" },
-            { level_id: 4, players: 6100, retention_rate: "84.7%" },
-            { level_id: 5, players: 5200, retention_rate: "85.2%" },
-          ],
-          rowCount: 5,
-          executionTime: 0.41,
-          provider: "claude",
-        },
-      },
-    },
-  ],
+const PROVIDER_MAP = ["claude", "gemini", "chatgpt"] as const
+function toProvider(s: string): "claude" | "gemini" | "chatgpt" {
+  const p = s?.toLowerCase()
+  return PROVIDER_MAP.includes(p as typeof PROVIDER_MAP[number]) ? (p as "claude" | "gemini" | "chatgpt") : "claude"
 }
 
-// Mock data
-const mockContexts: AiContext[] = [
-  {
-    id: "1",
-    name: "Game Analytics",
-    icon: "🎮",
-    color: "#3B82F6",
-    appIds: ["puzzle_blast"],
-    appScope: "puzzle_blast",
-    focusAreas: ["Level", "Retention"],
-    preferredProvider: "claude",
+function dtoToContext(d: {
+  id: string
+  name: string
+  icon: string
+  color: string
+  appIds: string[]
+  focusAreas: string[]
+  preferredProvider: string
+  preferredModel?: string
+  isShared: boolean
+}, pinned: PinnedMetric[], saved: SavedQuery[], conversationCount: number): AiContext {
+  return {
+    id: d.id,
+    name: d.name,
+    icon: d.icon || "📊",
+    color: d.color || "#3B82F6",
+    appIds: d.appIds ?? [],
+    appScope: d.appIds?.length ? d.appIds[0] : "all",
+    focusAreas: d.focusAreas ?? [],
+    preferredProvider: toProvider(d.preferredProvider),
+    preferredModel: d.preferredModel ?? undefined,
     explainDetailDefault: false,
-    isShared: false,
-    pinnedMetrics: [
-      { id: "1", name: "drop_rate", formula: "drop_users / start_users * 100" },
-      { id: "2", name: "win_rate", formula: "win_count / start_count * 100" },
-    ],
-    savedQueries: [
-      { id: "1", name: "Top drop levels", sql: "SELECT level_id, drop_rate FROM ..." },
-    ],
-    conversationCount: 3,
-  },
-  {
-    id: "2",
-    name: "Ad Revenue",
-    icon: "💰",
-    color: "#10B981",
-    appIds: ["all_apps"],
-    appScope: "all_apps",
-    focusAreas: ["IAA"],
-    preferredProvider: "chatgpt",
-    explainDetailDefault: true,
-    isShared: false,
-    pinnedMetrics: [
-      { id: "3", name: "eCPM", formula: "ad_revenue / impressions * 1000" },
-    ],
-    savedQueries: [],
-    conversationCount: 7,
-  },
-  {
-    id: "3",
-    name: "IAP (cloned)",
-    icon: "📊",
-    color: "#8B5CF6",
-    appIds: ["premium_games"],
-    appScope: "premium_games",
-    focusAreas: ["IAP"],
-    preferredProvider: "gemini",
-    explainDetailDefault: false,
-    isShared: false,
-    clonedFrom: "shared-1",
-    pinnedMetrics: [],
-    savedQueries: [],
-    conversationCount: 1,
-  },
-]
+    isShared: d.isShared ?? false,
+    pinnedMetrics: pinned,
+    savedQueries: saved,
+    conversationCount,
+  }
+}
 
-const mockConversations: AiConversation[] = [
-  {
-    id: "1",
-    contextId: "1",
-    title: "Drop rate analysis for puzzle_blast",
-    lastMessage: "Query này lấy top 10 level có drop_rate cao nhất...",
+function dtoToConversation(d: { id: string; contextId: string; title: string; summary?: string; updatedAt: string }): AiConversation {
+  return {
+    id: d.id,
+    contextId: d.contextId,
+    title: d.title,
+    lastMessage: d.summary ?? d.title,
+    timestamp: new Date(d.updatedAt),
+  }
+}
+
+function dtoToMessage(m: MessageDto): AiMessage {
+  const detailedExplanation = m.detailedExplanation ? {
+    sqlBreakdown: (m.detailedExplanation.breakdown ?? []).map((b: { clause: string; explanation: string }) => ({ clause: b.clause, explain: b.explanation })),
+    performanceNotes: (m.detailedExplanation as { performance?: { partitionUsage?: string; indexUsage?: string } })?.performance?.partitionUsage ?? "",
+    businessContext: (m.detailedExplanation as { businessContext?: string })?.businessContext ?? "",
+    learningTips: (m.detailedExplanation as { tips?: string[] })?.tips ?? [],
+  } : undefined
+  return {
+    id: m.id,
+    role: m.role === "user" ? "user" : "assistant",
+    content: m.content,
+    timestamp: new Date(m.createdAt),
+    metadata: {
+      sql: m.sql,
+      explanation: m.explanation,
+      detailedExplanation,
+      suggestedChart: m.suggestedChart,
+      tables: m.tablesUsed,
+      complexity: m.estimatedComplexity as "Low" | "Medium" | "High" | undefined,
+      provider: m.provider,
+      usage: m.inputTokens != null ? { tokens: m.inputTokens + m.outputTokens, cost: m.cost } : undefined,
+      queryResult: m.queryRowCount != null && m.queryExecutionMs != null ? {
+        columns: [],
+        rows: [],
+        rowCount: m.queryRowCount,
+        executionTime: m.queryExecutionMs / 1000,
+        provider: m.provider ?? "",
+      } : undefined,
+    },
+  }
+}
+
+function askResponseToMessage(res: AskResponse): AiMessage {
+  const det = res.detailedExplanation as { breakdown?: { clause: string; explanation: string }[]; performance?: { partitionUsage?: string }; businessContext?: string; tips?: string[] } | undefined
+  return {
+    id: res.messageId,
+    role: "assistant",
+    content: res.content,
     timestamp: new Date(),
-  },
-  {
-    id: "2",
-    contextId: "1",
-    title: "Level progression funnel",
-    lastMessage: "Here's the funnel analysis...",
-    timestamp: new Date(Date.now() - 86400000),
-  },
-]
+    metadata: {
+      sql: res.sql,
+      explanation: res.explanation,
+      detailedExplanation: det ? {
+        sqlBreakdown: (det.breakdown ?? []).map(b => ({ clause: b.clause, explain: b.explanation })),
+        performanceNotes: det.performance?.partitionUsage ?? "",
+        businessContext: det.businessContext ?? "",
+        learningTips: det.tips ?? [],
+      } : undefined,
+      suggestedChart: res.suggestedChart,
+      tables: res.tablesUsed,
+      complexity: res.estimatedComplexity as "Low" | "Medium" | "High" | undefined,
+      provider: res.provider,
+      usage: { tokens: res.inputTokens + res.outputTokens, cost: res.cost },
+    },
+  }
+}
 
-const mockQuota: UserQuota = {
-  dailyTokensUsed: 78000,
+function quotaStatusToQuota(s: {
+  dailyTokensUsed: number
+  dailyTokenLimit: number
+  dailyCostUsed: number
+  dailyCostLimit: number
+  monthlyTokensUsed: number
+  monthlyTokenLimit: number
+  monthlyCostUsed: number
+  monthlyCostLimit: number
+  isNearLimit?: boolean
+  isOverLimit?: boolean
+}): UserQuota {
+  let warning: string | undefined
+  if (s.isOverLimit) warning = "Đã vượt giới hạn"
+  else if (s.isNearLimit) warning = `Gần đạt giới hạn (${Math.round((s.dailyTokensUsed / s.dailyTokenLimit) * 100)}%)`
+  return {
+    dailyTokensUsed: s.dailyTokensUsed,
+    dailyTokensLimit: s.dailyTokenLimit,
+    dailyCostUsed: s.dailyCostUsed,
+    dailyCostLimit: s.dailyCostLimit,
+    monthlyTokensUsed: s.monthlyTokensUsed,
+    monthlyTokensLimit: s.monthlyTokenLimit,
+    monthlyCostUsed: s.monthlyCostUsed,
+    monthlyCostLimit: s.monthlyCostLimit,
+    warning,
+  }
+}
+
+const defaultQuota: UserQuota = {
+  dailyTokensUsed: 0,
   dailyTokensLimit: 100000,
-  dailyCostUsed: 1.56,
-  dailyCostLimit: 2.0,
-  monthlyTokensUsed: 640000,
+  dailyCostUsed: 0,
+  dailyCostLimit: 2,
+  monthlyTokensUsed: 0,
   monthlyTokensLimit: 2000000,
-  monthlyCostUsed: 9.6,
-  monthlyCostLimit: 30.0,
-  warning: "Approaching daily limit (78%)",
+  monthlyCostUsed: 0,
+  monthlyCostLimit: 30,
 }
 
 export function AiAssistantContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [contexts, setContexts] = useState<AiContext[]>(mockContexts)
-  const [conversations, setConversations] = useState<AiConversation[]>(mockConversations)
-  const [activeContextId, setActiveContextId] = useState<string>("1")
-  const [activeConversationId, setActiveConversationId] = useState<string>("1")
-  const [messages, setMessages] = useState<AiMessage[]>(mockMessagesByConversation["1"] ?? [])
+  const [contexts, setContexts] = useState<AiContext[]>([])
+  const [conversations, setConversations] = useState<AiConversation[]>([])
+  const [activeContextId, setActiveContextId] = useState<string>("")
+  const [activeConversationId, setActiveConversationId] = useState<string>("")
+  const [messages, setMessages] = useState<AiMessage[]>([])
+  const [quota, setQuota] = useState<UserQuota>(defaultQuota)
   const [selectedProvider, setSelectedProvider] = useState<"claude" | "gemini" | "chatgpt">("claude")
+  const [selectedModelId, setSelectedModelId] = useState<string>("")
   const [autoExplain, setAutoExplain] = useState(false)
   const [createContextOpen, setCreateContextOpen] = useState(false)
+  const [loadingContexts, setLoadingContexts] = useState(true)
+  const [sending, setSending] = useState(false)
 
-  const activeContext = contexts.find((c) => c.id === activeContextId) || contexts[0]
+  const activeContext = contexts.find((c) => c.id === activeContextId) ?? contexts[0] ?? null
   const contextConversations = conversations.filter((c) => c.contextId === activeContextId)
 
-  // Generate welcome message for context
+  // Đồng bộ provider + model từ context khi đổi context
+  useEffect(() => {
+    if (!activeContext) return
+    setSelectedProvider(activeContext.preferredProvider)
+    setSelectedModelId(activeContext.preferredModel ?? "")
+  }, [activeContext?.id, activeContext?.preferredProvider, activeContext?.preferredModel])
+
   const getWelcomeMessage = useCallback((context: AiContext): AiMessage => ({
     id: "welcome-" + Date.now(),
     role: "assistant",
-    content: `Welcome to **${context.name}** context! I'm ready to help you analyze your data.`,
+    content: `Chào bạn đến với context **${context.name}**. Tôi sẵn sàng hỗ trợ phân tích dữ liệu.`,
     timestamp: new Date(),
     metadata: {
       provider: context.preferredProvider,
@@ -316,114 +289,267 @@ export function AiAssistantContent() {
     },
   }), [])
 
-  // Switch context — reload first conversation of that context or show welcome
-  const handleContextSelect = useCallback((contextId: string) => {
-    setActiveContextId(contextId)
-    const firstConv = conversations.find((c) => c.contextId === contextId)
-    if (firstConv) {
-      setActiveConversationId(firstConv.id)
-      setMessages(mockMessagesByConversation[firstConv.id] ?? [])
-    } else {
-      const ctx = contexts.find((c) => c.id === contextId)!
-      setActiveConversationId("new-" + Date.now())
-      setMessages([getWelcomeMessage(ctx)])
+  // Load contexts and quota on mount
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoadingContexts(true)
+      try {
+        const [contextsRes, quotaRes] = await Promise.all([
+          aiAssistantApi.getContexts(),
+          aiAssistantApi.getMyUsage().catch(() => null),
+        ])
+        if (cancelled) return
+        if (quotaRes) setQuota(quotaStatusToQuota(quotaRes))
+        const list = contextsRes ?? []
+        const withExtras: AiContext[] = await Promise.all(
+          list.map(async (d) => {
+            const [pinned, saved, convs] = await Promise.all([
+              aiAssistantApi.getPinnedMetrics(d.id).catch(() => []),
+              aiAssistantApi.getSavedQueries(d.id).catch(() => []),
+              aiAssistantApi.getConversations(d.id).catch(() => []),
+            ])
+            const pinnedM: PinnedMetric[] = (pinned ?? []).map((p: { id: string; metricName: string; metricFormula: string }) => ({
+              id: p.id,
+              name: p.metricName,
+              formula: p.metricFormula,
+            }))
+            const savedQ: SavedQuery[] = (saved ?? []).map((s: { id: string; name: string; sql: string }) => ({ id: s.id, name: s.name, sql: s.sql }))
+            return dtoToContext(d, pinnedM, savedQ, (convs ?? []).length)
+          })
+        )
+        setContexts(withExtras)
+        if (withExtras.length > 0 && !activeContextId) setActiveContextId(withExtras[0].id)
+      } finally {
+        if (!cancelled) setLoadingContexts(false)
+      }
     }
-  }, [conversations, contexts, getWelcomeMessage])
-
-  // Switch conversation — reload its messages
-  const handleConversationSelect = useCallback((convId: string) => {
-    setActiveConversationId(convId)
-    setMessages(mockMessagesByConversation[convId] ?? [])
+    load()
+    return () => { cancelled = true }
   }, [])
 
-  // New chat — clear and show welcome
+  // Load conversations when active context changes
+  useEffect(() => {
+    if (!activeContextId) {
+      setConversations([])
+      setActiveConversationId("")
+      return
+    }
+    let cancelled = false
+    aiAssistantApi.getConversations(activeContextId).then((list) => {
+      if (cancelled) return
+      const convs = (list ?? []).map(dtoToConversation)
+      setConversations(convs)
+      const first = convs[0]
+      if (first) setActiveConversationId(first.id)
+      else setActiveConversationId("new-" + Date.now())
+    }).catch(() => {
+      if (!cancelled) setConversations([])
+    })
+    return () => { cancelled = true }
+  }, [activeContextId])
+
+  // Load messages when active conversation changes
+  useEffect(() => {
+    if (!activeConversationId) return
+    if (activeConversationId.startsWith("new-")) {
+      if (activeContext) setMessages([getWelcomeMessage(activeContext)])
+      return
+    }
+    let cancelled = false
+    aiAssistantApi.getConversation(activeConversationId).then((detail) => {
+      if (cancelled || !detail?.messages) return
+      setMessages(detail.messages.map(dtoToMessage))
+    }).catch(() => {
+      if (!cancelled) setMessages([])
+    })
+    return () => { cancelled = true }
+  }, [activeConversationId, activeContext, getWelcomeMessage])
+
+  // Refresh quota periodically — luôn map API (dailyTokenLimit) sang UserQuota (dailyTokensLimit)
+  useEffect(() => {
+    const t = setInterval(() => {
+      aiAssistantApi.getMyUsage().then((q) => q != null && setQuota(quotaStatusToQuota(q))).catch(() => {})
+    }, 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  const refreshContexts = useCallback(async () => {
+    const list = await aiAssistantApi.getContexts().catch(() => [])
+    const withExtras: AiContext[] = await Promise.all(
+      (list ?? []).map(async (d: { id: string; name: string; icon: string; color: string; appIds: string[]; focusAreas: string[]; preferredProvider: string; preferredModel?: string; isShared: boolean }) => {
+        const [pinned, saved, convs] = await Promise.all([
+          aiAssistantApi.getPinnedMetrics(d.id).catch(() => []),
+          aiAssistantApi.getSavedQueries(d.id).catch(() => []),
+          aiAssistantApi.getConversations(d.id).catch(() => []),
+        ])
+        const pinnedM: PinnedMetric[] = (pinned ?? []).map((p: { id: string; metricName: string; metricFormula: string }) => ({ id: p.id, name: p.metricName, formula: p.metricFormula }))
+        const savedQ: SavedQuery[] = (saved ?? []).map((s: { id: string; name: string; sql: string }) => ({ id: s.id, name: s.name, sql: s.sql }))
+        return dtoToContext(d, pinnedM, savedQ, (convs ?? []).length)
+      })
+    )
+    setContexts(withExtras)
+    if (activeContextId && !withExtras.find((c) => c.id === activeContextId) && withExtras.length > 0) setActiveContextId(withExtras[0].id)
+  }, [activeContextId])
+
+  const handleContextSelect = useCallback((contextId: string) => {
+    setActiveContextId(contextId)
+    const first = conversations.find((c) => c.contextId === contextId)
+    if (first) setActiveConversationId(first.id)
+    else setActiveConversationId("new-" + Date.now())
+  }, [conversations])
+
+  const PROVIDER_KEY_TO_SELECTED: Record<string, "claude" | "gemini" | "chatgpt"> = {
+    anthropic: "claude",
+    openai: "chatgpt",
+    gemini: "gemini",
+  }
+  const handleModelSelect = useCallback(
+    async (providerKey: string, modelId: string) => {
+      const mapped = PROVIDER_KEY_TO_SELECTED[providerKey] ?? "claude"
+      setSelectedProvider(mapped)
+      setSelectedModelId(modelId)
+      if (!activeContextId) return
+      try {
+        await aiAssistantApi.updateContext(activeContextId, {
+          preferredProvider: mapped,
+          preferredModel: modelId,
+        })
+        setContexts((prev) =>
+          prev.map((c) =>
+            c.id === activeContextId ? { ...c, preferredProvider: mapped, preferredModel: modelId } : c
+          )
+        )
+      } catch {
+        // keep UI state on error
+      }
+    },
+    [activeContextId]
+  )
+
+  const handleConversationSelect = useCallback((convId: string) => {
+    setActiveConversationId(convId)
+  }, [])
+
   const handleNewChat = useCallback(() => {
-    const newId = "new-" + Date.now()
-    setActiveConversationId(newId)
-    setMessages([getWelcomeMessage(activeContext)])
+    setActiveConversationId("new-" + Date.now())
+    if (activeContext) setMessages([getWelcomeMessage(activeContext)])
   }, [activeContext, getWelcomeMessage])
 
-  // Delete context
-  const handleDeleteContext = useCallback((contextId: string) => {
-    setContexts((prev) => prev.filter((c) => c.id !== contextId))
-    if (activeContextId === contextId) {
-      const remaining = contexts.filter((c) => c.id !== contextId)
-      if (remaining.length > 0) handleContextSelect(remaining[0].id)
-      else setMessages([])
-    }
-  }, [activeContextId, contexts, handleContextSelect])
-
-  // Delete conversation
-  const handleDeleteConversation = useCallback((convId: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== convId))
-    if (activeConversationId === convId) {
-      const remaining = contextConversations.filter((c) => c.id !== convId)
-      if (remaining.length > 0) handleConversationSelect(remaining[0].id)
-      else handleNewChat()
-    }
-  }, [activeConversationId, contextConversations, handleConversationSelect, handleNewChat])
-
-  // Create new context
-  const handleCreateContext = (data: { name: string; appScope: string; prompt?: string; fromLibrary?: string }) => {
-    const newContext: AiContext = {
-      id: "new-" + Date.now(),
-      name: data.name,
-      icon: "📋",
-      color: "#6366F1",
-      appIds: [data.appScope],
-      appScope: data.appScope,
-      focusAreas: [],
-      preferredProvider: "claude",
-      explainDetailDefault: false,
-      isShared: false,
-      pinnedMetrics: [],
-      savedQueries: [],
-      conversationCount: 0,
-    }
-    setContexts((prev) => [...prev, newContext])
-    setActiveContextId(newContext.id)
-    setActiveConversationId("new-" + Date.now())
-    setMessages([getWelcomeMessage(newContext)])
-    setCreateContextOpen(false)
-  }
-
-  const handleSendMessage = (content: string) => {
-    const newUserMessage: AiMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content,
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, newUserMessage])
-
-    setTimeout(() => {
-      const newAiMessage: AiMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "I'm analysing your query against the active context. Here's what I found.",
-        timestamp: new Date(),
-        metadata: {
-          sql: `SELECT *\nFROM your_table\nWHERE condition = true\nLIMIT 20;`,
-          tables: ["your_table"],
-          complexity: "Low",
-          provider: selectedProvider,
-          usage: { tokens: 150, cost: 0.002 },
-          suggestedChart: "Bar Chart",
-          queryResult: {
-            columns: ["id", "value", "count"],
-            rows: [
-              { id: 1, value: "A", count: 120 },
-              { id: 2, value: "B", count: 95 },
-              { id: 3, value: "C", count: 74 },
-            ],
-            rowCount: 3,
-            executionTime: 0.18,
-            provider: selectedProvider,
-          },
-        },
+  const handleDeleteContext = useCallback(async (contextId: string) => {
+    try {
+      await aiAssistantApi.deleteContext(contextId)
+      await refreshContexts()
+      if (activeContextId === contextId) {
+        const remaining = contexts.filter((c) => c.id !== contextId)
+        if (remaining.length > 0) handleContextSelect(remaining[0].id)
+        else setActiveContextId("")
       }
-      setMessages((prev) => [...prev, newAiMessage])
-    }, 1000)
+    } catch {
+      // keep UI state on error
+    }
+  }, [activeContextId, contexts, refreshContexts, handleContextSelect])
+
+  const handleDeleteConversation = useCallback(async (convId: string) => {
+    try {
+      await aiAssistantApi.deleteConversation(convId)
+      const list = await aiAssistantApi.getConversations(activeContextId).catch(() => [])
+      setConversations((list ?? []).map(dtoToConversation))
+      if (activeConversationId === convId) {
+        const remaining = (list ?? []).filter((c: { id: string }) => c.id !== convId)
+        if (remaining.length > 0) setActiveConversationId(remaining[0].id)
+        else handleNewChat()
+      }
+    } catch {
+      // keep UI state on error
+    }
+  }, [activeContextId, activeConversationId, handleNewChat])
+
+  const handleCreateContext = useCallback(async (data: { name: string; appScope: string; prompt?: string; fromLibrary?: string }) => {
+    try {
+      if (data.fromLibrary) {
+        const cloned = await aiAssistantApi.cloneContext(data.fromLibrary)
+        await refreshContexts()
+        setActiveContextId(cloned.id)
+        setActiveConversationId("new-" + Date.now())
+        const ctx = dtoToContext(cloned, [], [], 0)
+        setMessages([getWelcomeMessage(ctx)])
+      } else {
+        const created = await aiAssistantApi.createContext({
+          name: data.name,
+          appIds: data.appScope ? [data.appScope] : [],
+          preferredProvider: "claude",
+        })
+        await refreshContexts()
+        setActiveContextId(created.id)
+        setActiveConversationId("new-" + Date.now())
+        const ctx = dtoToContext(created, [], [], 0)
+        setMessages([getWelcomeMessage(ctx)])
+      }
+      setCreateContextOpen(false)
+    } catch {
+      // keep modal open on error
+    }
+  }, [refreshContexts, getWelcomeMessage])
+
+  const [pendingAttachedTable, setPendingAttachedTable] = useState<AttachedTableDataRequest | null>(null)
+  const [pendingPrefillQuestion, setPendingPrefillQuestion] = useState<string | null>(null)
+
+  const handleSendMessage = useCallback(
+    async (
+      content: string,
+      options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }
+    ) => {
+      if (!activeContextId || sending) return
+      const userMsg: AiMessage = { id: "u-" + Date.now(), role: "user", content, timestamp: new Date() }
+      setMessages((prev) => [...prev, userMsg])
+      setSending(true)
+      const attachedTableData = options?.attachedTableData ?? pendingAttachedTable ?? undefined
+      setPendingAttachedTable(null)
+      setPendingPrefillQuestion(null)
+      try {
+        const res = await aiAssistantApi.ask({
+          question: content,
+          contextId: activeContextId,
+          conversationId: activeConversationId.startsWith("new-") ? undefined : activeConversationId,
+          provider: selectedProvider,
+          explainDetails: autoExplain,
+          images: options?.images?.length ? options.images : undefined,
+          attachedTableData: attachedTableData ?? undefined,
+        })
+        setActiveConversationId(res.conversationId)
+        setMessages((prev) => [...prev.slice(0, -1), userMsg, askResponseToMessage(res)])
+        const list = await aiAssistantApi.getConversations(activeContextId).catch(() => [])
+        setConversations((list ?? []).map(dtoToConversation))
+        const q = await aiAssistantApi.getMyUsage().catch(() => null)
+        if (q) setQuota(quotaStatusToQuota(q))
+      } catch (err) {
+        setMessages((prev) => prev.slice(0, -1))
+        const errMsg: AiMessage = {
+          id: "err-" + Date.now(),
+          role: "assistant",
+          content: "Xảy ra lỗi khi gửi câu hỏi. Vui lòng thử lại.",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, errMsg])
+      } finally {
+        setSending(false)
+      }
+    },
+    [activeContextId, activeConversationId, selectedProvider, autoExplain, sending, pendingAttachedTable]
+  )
+
+  const handleAskAboutTable = useCallback((result: QueryResult) => {
+    setPendingAttachedTable({ columns: result.columns, rows: result.rows })
+    setPendingPrefillQuestion("Phân tích giúp tôi bảng kết quả bên dưới.")
+  }, [])
+
+  if (loadingContexts && contexts.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-5rem)] text-slate-500">
+        Đang tải...
+      </div>
+    )
   }
 
   return (
@@ -436,28 +562,40 @@ export function AiAssistantContent() {
           conversations={contextConversations}
           activeConversationId={activeConversationId}
           onConversationSelect={handleConversationSelect}
-          pinnedMetrics={activeContext.pinnedMetrics}
-          savedQueries={activeContext.savedQueries}
+          pinnedMetrics={activeContext?.pinnedMetrics ?? []}
+          savedQueries={activeContext?.savedQueries ?? []}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
           onNewContext={() => setCreateContextOpen(true)}
           onNewChat={handleNewChat}
           onDeleteContext={handleDeleteContext}
           onDeleteConversation={handleDeleteConversation}
-          quota={mockQuota}
+          quota={quota}
           selectedProvider={selectedProvider}
         />
 
-        <ChatMainPanel
-          context={activeContext}
-          messages={messages}
-          selectedProvider={selectedProvider}
-          onProviderChange={setSelectedProvider}
-          autoExplain={autoExplain}
-          onAutoExplainChange={setAutoExplain}
-          onSendMessage={handleSendMessage}
-          sidebarOpen={sidebarOpen}
-        />
+        {activeContext ? (
+          <ChatMainPanel
+            context={activeContext}
+            messages={messages}
+            selectedProvider={selectedProvider}
+            selectedModelId={selectedModelId}
+            onProviderChange={setSelectedProvider}
+            onModelSelect={handleModelSelect}
+            autoExplain={autoExplain}
+            onAutoExplainChange={setAutoExplain}
+            onSendMessage={handleSendMessage}
+            sidebarOpen={sidebarOpen}
+            pendingAttachedTable={pendingAttachedTable}
+            pendingPrefillQuestion={pendingPrefillQuestion}
+            onAskAboutTable={handleAskAboutTable}
+            sending={sending}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-slate-50 text-slate-500">
+            <p>Chưa có context. Tạo context mới hoặc clone từ thư viện để bắt đầu.</p>
+          </div>
+        )}
       </div>
 
       <CreateContextModal

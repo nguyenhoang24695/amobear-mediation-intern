@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Table,
   TableBody,
@@ -36,94 +36,78 @@ import {
   Search,
   Plus,
   Edit2,
-  Download,
+  Trash2,
   Settings,
   Users,
   DollarSign,
   Zap,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { aiAssistantApi } from "@/lib/api/ai-assistant"
+import type {
+  TeamUsageResponse,
+  TeamMemberUsage,
+  QuotaConfig,
+} from "@/lib/api/ai-assistant"
 
-interface UserQuotaData {
-  id: string
-  name: string
-  avatar?: string
-  role: string
-  todayTokens: number
-  monthTokens: number
-  dailyLimit: number
-  monthlyLimit: number
+function scopeDisplayLabel(c: QuotaConfig): string {
+  if (c.scopeType === "global") return "Global"
+  if (c.scopeType === "role") return `Role: ${c.scopeValue ?? ""}`
+  if (c.scopeType === "user") return c.userEmail ? `User: ${c.userEmail}` : `User: ${c.userId ?? ""}`
+  return c.scopeValue ?? c.scopeType
 }
-
-interface QuotaConfig {
-  scope: string
-  scopeType: "global" | "role" | "user"
-  dailyTokens: number
-  monthlyTokens: number
-  dailyCost: number
-}
-
-const mockUsers: UserQuotaData[] = [
-  {
-    id: "1",
-    name: "Nguyen A",
-    role: "DA",
-    todayTokens: 78000,
-    monthTokens: 640000,
-    dailyLimit: 100000,
-    monthlyLimit: 2000000,
-  },
-  {
-    id: "2",
-    name: "Tran B",
-    role: "DA",
-    todayTokens: 45000,
-    monthTokens: 420000,
-    dailyLimit: 100000,
-    monthlyLimit: 2000000,
-  },
-  {
-    id: "3",
-    name: "Le C",
-    role: "Senior DA",
-    todayTokens: 92000,
-    monthTokens: 1100000,
-    dailyLimit: 200000,
-    monthlyLimit: 5000000,
-  },
-  {
-    id: "4",
-    name: "Admin D",
-    role: "Admin",
-    todayTokens: 120000,
-    monthTokens: 1500000,
-    dailyLimit: 500000,
-    monthlyLimit: 10000000,
-  },
-]
-
-const mockQuotaConfigs: QuotaConfig[] = [
-  { scope: "Global", scopeType: "global", dailyTokens: 100000, monthlyTokens: 2000000, dailyCost: 2.0 },
-  { scope: "Role: Admin", scopeType: "role", dailyTokens: 500000, monthlyTokens: 10000000, dailyCost: 10.0 },
-  { scope: "Role: Sr DA", scopeType: "role", dailyTokens: 200000, monthlyTokens: 5000000, dailyCost: 5.0 },
-  { scope: "Role: DA", scopeType: "role", dailyTokens: 100000, monthlyTokens: 2000000, dailyCost: 2.0 },
-  { scope: "User: Le C", scopeType: "user", dailyTokens: 200000, monthlyTokens: 5000000, dailyCost: 5.0 },
-]
 
 export function AdminQuotaContent() {
+  const [teamUsage, setTeamUsage] = useState<TeamUsageResponse | null>(null)
+  const [quotaConfigs, setQuotaConfigs] = useState<QuotaConfig[]>([])
+  const [quotaUsers, setQuotaUsers] = useState<{ id: string; email: string; fullName: string; role: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [editingConfig, setEditingConfig] = useState<QuotaConfig | null>(null)
+  const [editForm, setEditForm] = useState({ dailyTokenLimit: 0, monthlyTokenLimit: 0, dailyCostLimit: 0 })
   const [showAddOverride, setShowAddOverride] = useState(false)
+  const [addUserId, setAddUserId] = useState("")
+  const [addForm, setAddForm] = useState({ dailyTokenLimit: 100000, monthlyTokenLimit: 2000000, dailyCostLimit: 2 })
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const totalTodayTokens = mockUsers.reduce((sum, u) => sum + u.todayTokens, 0)
-  const totalTodayCost = totalTodayTokens * 0.00002 // Rough estimate
-  const totalMonthTokens = mockUsers.reduce((sum, u) => sum + u.monthTokens, 0)
-  const totalMonthCost = totalMonthTokens * 0.00002
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [teamRes, quotasRes, usersRes] = await Promise.all([
+        aiAssistantApi.getTeamUsage(),
+        aiAssistantApi.getQuotaConfigs(),
+        aiAssistantApi.getQuotaUsers(),
+      ])
+      setTeamUsage(teamRes)
+      setQuotaConfigs(quotasRes)
+      setQuotaUsers(usersRes)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không tải được dữ liệu")
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const filteredUsers = mockUsers.filter((user) =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    load()
+  }, [])
+
+  const members = teamUsage?.members ?? []
+  const filteredMembers = members.filter(
+    (m) =>
+      m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const totalTodayTokens = teamUsage?.totalTodayTokens ?? 0
+  const totalTodayCost = teamUsage?.totalTodayCost ?? 0
+  const totalMonthTokens = teamUsage?.totalMonthTokens ?? 0
+  const totalMonthCost = teamUsage?.totalMonthCost ?? 0
 
   const getStatusColor = (percentage: number) => {
     if (percentage >= 90) return "text-red-600"
@@ -137,10 +121,85 @@ export function AdminQuotaContent() {
     return "[&>div]:bg-emerald-500"
   }
 
+  const handleOpenEdit = (config: QuotaConfig) => {
+    setEditingConfig(config)
+    setEditForm({
+      dailyTokenLimit: config.dailyTokenLimit,
+      monthlyTokenLimit: config.monthlyTokenLimit,
+      dailyCostLimit: config.dailyCostLimit,
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingConfig) return
+    setSaving(true)
+    try {
+      await aiAssistantApi.updateQuota(editingConfig.id, {
+        dailyTokenLimit: editForm.dailyTokenLimit,
+        monthlyTokenLimit: editForm.monthlyTokenLimit,
+        dailyCostLimit: editForm.dailyCostLimit,
+      })
+      setEditingConfig(null)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Cập nhật thất bại")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Bạn có chắc muốn xóa cấu hình quota này?")) return
+    setDeletingId(id)
+    try {
+      await aiAssistantApi.deleteQuota(id)
+      await load()
+      if (editingConfig?.id === id) setEditingConfig(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xóa thất bại")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleAddOverride = async () => {
+    if (!addUserId) return
+    setSaving(true)
+    try {
+      await aiAssistantApi.createQuota({
+        scopeType: "user",
+        userId: addUserId,
+        dailyTokenLimit: addForm.dailyTokenLimit,
+        monthlyTokenLimit: addForm.monthlyTokenLimit,
+        dailyCostLimit: addForm.dailyCostLimit,
+      })
+      setShowAddOverride(false)
+      setAddUserId("")
+      setAddForm({ dailyTokenLimit: 100000, monthlyTokenLimit: 2000000, dailyCostLimit: 2 })
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Thêm override thất bại")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const userQuotaIds = new Set(quotaConfigs.filter((q) => q.scopeType === "user" && q.userId).map((q) => q.userId!))
+  const usersForOverride = quotaUsers.filter((u) => !userQuotaIds.has(u.id))
+
+  if (loading && !teamUsage) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 flex items-center justify-center min-h-[200px]">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
@@ -159,6 +218,15 @@ export function AdminQuotaContent() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="py-4 flex items-center gap-2 text-red-800">
+              <span>{error}</span>
+              <Button variant="outline" size="sm" onClick={() => setError(null)}>Đóng</Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Team Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -224,139 +292,129 @@ export function AdminQuotaContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead className="text-right">Today</TableHead>
-                  <TableHead className="text-right">Month</TableHead>
-                  <TableHead className="text-right">Limit</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => {
-                  const todayPct = (user.todayTokens / user.dailyLimit) * 100
-                  const monthPct = (user.monthTokens / user.monthlyLimit) * 100
-                  return (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
-                              {user.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-slate-900">{user.name}</p>
-                            <p className="text-xs text-slate-500">{user.role}</p>
+            {filteredMembers.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4">Chưa có user nào có usage trong tháng hoặc có quota override.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead className="text-right">Today</TableHead>
+                    <TableHead className="text-right">Month</TableHead>
+                    <TableHead className="text-right">Limit</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMembers.map((m: TeamMemberUsage) => {
+                    const todayPct = m.dailyTokenLimit > 0 ? (m.todayTokens / m.dailyTokenLimit) * 100 : 0
+                    return (
+                      <TableRow key={m.userId}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                                {m.fullName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("") || m.email[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-slate-900">{m.fullName || m.email}</p>
+                              <p className="text-xs text-slate-500">{m.role}</p>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(user.todayTokens / 1000).toFixed(0)}K
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(user.monthTokens / 1000).toFixed(0)}K
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(user.dailyLimit / 1000).toFixed(0)}K/d
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 min-w-[120px]">
-                          <Progress
-                            value={todayPct}
-                            className={cn("w-16 h-2", getProgressColor(todayPct))}
-                          />
-                          <span
-                            className={cn(
-                              "text-sm font-medium",
-                              getStatusColor(todayPct)
-                            )}
-                          >
-                            {todayPct.toFixed(0)}%
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell className="text-right">{(m.todayTokens / 1000).toFixed(0)}K</TableCell>
+                        <TableCell className="text-right">{(m.monthTokens / 1000).toFixed(0)}K</TableCell>
+                        <TableCell className="text-right">{(m.dailyTokenLimit / 1000).toFixed(0)}K/d</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 min-w-[120px]">
+                            <Progress
+                              value={todayPct}
+                              className={cn("w-16 h-2", getProgressColor(todayPct))}
+                            />
+                            <span className={cn("text-sm font-medium", getStatusColor(todayPct))}>
+                              {todayPct.toFixed(0)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
         {/* Quota Configuration */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-medium">
-              Quota Configuration
-            </CardTitle>
+            <CardTitle className="text-base font-medium">Quota Configuration</CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowAddOverride(true)}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add User Override
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-1" />
-                Cost Report
+              <Button variant="outline" size="sm" onClick={load}>
+                Refresh
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Scope</TableHead>
-                  <TableHead className="text-right">Daily Tokens</TableHead>
-                  <TableHead className="text-right">Monthly Tokens</TableHead>
-                  <TableHead className="text-right">$/day</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockQuotaConfigs.map((config) => (
-                  <TableRow key={config.scope}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-900">
-                          {config.scope}
-                        </span>
-                        {config.scopeType === "user" && (
-                          <Badge variant="outline" className="text-xs">
-                            Override
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {(config.dailyTokens / 1000).toFixed(0)}K
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {config.monthlyTokens >= 1000000
-                        ? `${(config.monthlyTokens / 1000000).toFixed(0)}M`
-                        : `${(config.monthlyTokens / 1000).toFixed(0)}K`}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${config.dailyCost.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingConfig(config)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {quotaConfigs.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4">Chưa có cấu hình quota. Chạy migration seed để có global default.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Scope</TableHead>
+                    <TableHead className="text-right">Daily Tokens</TableHead>
+                    <TableHead className="text-right">Monthly Tokens</TableHead>
+                    <TableHead className="text-right">$/day</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {quotaConfigs.map((config) => (
+                    <TableRow key={config.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">{scopeDisplayLabel(config)}</span>
+                          {config.scopeType === "user" && (
+                            <Badge variant="outline" className="text-xs">Override</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{(config.dailyTokenLimit / 1000).toFixed(0)}K</TableCell>
+                      <TableCell className="text-right">
+                        {config.monthlyTokenLimit >= 1000000
+                          ? `${(config.monthlyTokenLimit / 1000000).toFixed(0)}M`
+                          : `${(config.monthlyTokenLimit / 1000).toFixed(0)}K`}
+                      </TableCell>
+                      <TableCell className="text-right">${config.dailyCostLimit.toFixed(2)}</TableCell>
+                      <TableCell className="text-right flex gap-1 justify-end">
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(config)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        {config.scopeType !== "global" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletingId === config.id}
+                            onClick={() => handleDelete(config.id)}
+                          >
+                            {deletingId === config.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-red-600" />}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -365,21 +423,23 @@ export function AdminQuotaContent() {
       <Dialog open={!!editingConfig} onOpenChange={() => setEditingConfig(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Quota: {editingConfig?.scope}</DialogTitle>
+            <DialogTitle>Edit Quota: {editingConfig ? scopeDisplayLabel(editingConfig) : ""}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Daily Token Limit</Label>
               <Input
                 type="number"
-                defaultValue={editingConfig?.dailyTokens}
+                value={editingConfig ? editForm.dailyTokenLimit : 0}
+                onChange={(e) => setEditForm((f) => ({ ...f, dailyTokenLimit: parseInt(e.target.value, 10) || 0 }))}
               />
             </div>
             <div className="space-y-2">
               <Label>Monthly Token Limit</Label>
               <Input
                 type="number"
-                defaultValue={editingConfig?.monthlyTokens}
+                value={editingConfig ? editForm.monthlyTokenLimit : 0}
+                onChange={(e) => setEditForm((f) => ({ ...f, monthlyTokenLimit: parseInt(e.target.value, 10) || 0 }))}
               />
             </div>
             <div className="space-y-2">
@@ -387,15 +447,21 @@ export function AdminQuotaContent() {
               <Input
                 type="number"
                 step="0.01"
-                defaultValue={editingConfig?.dailyCost}
+                value={editingConfig ? editForm.dailyCostLimit : 0}
+                onChange={(e) => setEditForm((f) => ({ ...f, dailyCostLimit: parseFloat(e.target.value) || 0 }))}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingConfig(null)}>
-              Cancel
+            <Button variant="outline" onClick={() => setEditingConfig(null)}>Cancel</Button>
+            {editingConfig && editingConfig.scopeType !== "global" && (
+              <Button variant="outline" onClick={() => editingConfig && handleDelete(editingConfig.id)} className="text-red-600">
+                Delete
+              </Button>
+            )}
+            <Button onClick={handleSaveEdit} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
             </Button>
-            <Button>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -409,37 +475,53 @@ export function AdminQuotaContent() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>User</Label>
-              <Select>
+              <Select value={addUserId} onValueChange={setAddUserId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select user..." />
+                  <SelectValue placeholder="Chọn user..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.role})
+                  {usersForOverride.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.fullName || u.email} ({u.email})
                     </SelectItem>
                   ))}
+                  {usersForOverride.length === 0 && (
+                    <SelectItem value="_none" disabled>Tất cả user đã có override</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Daily Token Limit</Label>
-              <Input type="number" placeholder="100000" />
+              <Input
+                type="number"
+                value={addForm.dailyTokenLimit}
+                onChange={(e) => setAddForm((f) => ({ ...f, dailyTokenLimit: parseInt(e.target.value, 10) || 0 }))}
+              />
             </div>
             <div className="space-y-2">
               <Label>Monthly Token Limit</Label>
-              <Input type="number" placeholder="2000000" />
+              <Input
+                type="number"
+                value={addForm.monthlyTokenLimit}
+                onChange={(e) => setAddForm((f) => ({ ...f, monthlyTokenLimit: parseInt(e.target.value, 10) || 0 }))}
+              />
             </div>
             <div className="space-y-2">
               <Label>Daily Cost Limit ($)</Label>
-              <Input type="number" step="0.01" placeholder="2.00" />
+              <Input
+                type="number"
+                step="0.01"
+                value={addForm.dailyCostLimit}
+                onChange={(e) => setAddForm((f) => ({ ...f, dailyCostLimit: parseFloat(e.target.value) || 0 }))}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddOverride(false)}>
-              Cancel
+            <Button variant="outline" onClick={() => setShowAddOverride(false)}>Cancel</Button>
+            <Button onClick={handleAddOverride} disabled={saving || !addUserId || addUserId === "_none"}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Override"}
             </Button>
-            <Button>Add Override</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

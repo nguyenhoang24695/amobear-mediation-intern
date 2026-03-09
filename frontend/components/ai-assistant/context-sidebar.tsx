@@ -118,8 +118,9 @@ export function ContextSidebar({
     }
   }, [resize, stopResizing])
 
-  // Quota calculations
-  const dailyPercentage = (quota.dailyTokensUsed / quota.dailyTokensLimit) * 100
+  // Quota calculations (guard: limit có thể 0/undefined nếu API chưa map đúng)
+  const dailyLimit = Number(quota.dailyTokensLimit) || 0
+  const dailyPercentage = dailyLimit > 0 ? (Number(quota.dailyTokensUsed) / dailyLimit) * 100 : 0
   const isWarning = dailyPercentage >= 60
   const isCritical = dailyPercentage >= 90
 
@@ -407,10 +408,13 @@ export function ContextSidebar({
           {/* Token Info */}
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">
-              {(quota.dailyTokensUsed / 1000).toFixed(0)}K/{(quota.dailyTokensLimit / 1000).toFixed(0)}K tokens
+              {(Number(quota.dailyTokensUsed) / 1000).toFixed(0)}K/{(dailyLimit / 1000).toFixed(0)}K tokens
             </span>
             <span className="text-slate-500">
-              ${quota.dailyCostUsed.toFixed(2)}
+              ${Number(quota.dailyCostUsed).toFixed(2)}
+              {quota.dailyCostLimit != null && quota.dailyCostLimit > 0 && (
+                <span className="text-slate-400"> / ${Number(quota.dailyCostLimit).toFixed(2)}</span>
+              )}
             </span>
           </div>
 

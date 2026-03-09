@@ -3,12 +3,24 @@ import { apiClient } from './client'
 const API_PREFIX = '/api/v1/ai-assistant'
 
 // Types
+export interface ImageAttachmentRequest {
+  base64Data: string
+  mediaType: string
+}
+
+export interface AttachedTableDataRequest {
+  columns: string[]
+  rows: Record<string, unknown>[]
+}
+
 export interface AskRequest {
   question: string
   contextId?: string
   conversationId?: string
   provider?: string
   explainDetails?: boolean
+  images?: ImageAttachmentRequest[]
+  attachedTableData?: AttachedTableDataRequest
 }
 
 export interface AskResponse {
@@ -91,6 +103,49 @@ export interface AiContextDto {
   rating: number
   createdAt: string
   updatedAt: string
+  // Template-specific fields
+  isSystemTemplate?: boolean
+  systemContextKey?: string
+  isApproved?: boolean
+  includeDataContext?: boolean
+  sharedBy?: string
+  sharedByEmail?: string
+  reviewCount?: number
+}
+
+export interface TemplateStatsDto {
+  totalTemplates: number
+  systemTemplates: number
+  communityApproved: number
+  communityPending: number
+  totalClones: number
+}
+
+export interface CreateSystemTemplateRequest {
+  systemContextKey: string
+  name: string
+  description?: string
+  icon?: string
+  color?: string
+  appIds?: string[]
+  focusAreas?: string[]
+  preferredProvider?: string
+  rolePromptId?: string
+  includeDataContext?: boolean
+  pinnedMetrics?: CreatePinnedMetricRequest[]
+}
+
+export interface UpdateSystemTemplateRequest {
+  name?: string
+  description?: string
+  icon?: string
+  color?: string
+  appIds?: string[]
+  focusAreas?: string[]
+  preferredProvider?: string
+  rolePromptId?: string
+  includeDataContext?: boolean
+  pinnedMetrics?: CreatePinnedMetricRequest[]
 }
 
 export interface CreateContextRequest {
@@ -104,6 +159,7 @@ export interface CreateContextRequest {
   preferredModel?: string
   rolePromptId?: string
   isDefault?: boolean
+  pinnedMetrics?: CreatePinnedMetricRequest[]
 }
 
 export interface UpdateContextRequest {
@@ -117,6 +173,7 @@ export interface UpdateContextRequest {
   preferredModel?: string
   rolePromptId?: string
   isDefault?: boolean
+  pinnedMetrics?: CreatePinnedMetricRequest[]
 }
 
 export interface PinnedMetricDto {
@@ -264,6 +321,34 @@ export interface CreateKnowledgeBaseRequest {
   tags?: string[]
   focusAreas?: string[]
   priority?: number
+}
+
+export interface TeamMemberUsage {
+  userId: string
+  email: string
+  fullName: string
+  role: string
+  todayTokens: number
+  todayCost: number
+  monthTokens: number
+  monthCost: number
+  dailyTokenLimit: number
+  monthlyTokenLimit: number
+}
+
+export interface QuotaUser {
+  id: string
+  email: string
+  fullName: string
+  role: string
+}
+
+export interface TeamUsageResponse {
+  members: TeamMemberUsage[]
+  totalTodayTokens: number
+  totalTodayCost: number
+  totalMonthTokens: number
+  totalMonthCost: number
 }
 
 export interface QuotaConfig {
@@ -420,14 +505,20 @@ export const aiAssistantApi = {
     apiClient.delete(`${API_PREFIX}/contexts/${contextId}/saved-queries/${queryId}`),
 
   // Library
-  getSharedContexts: (search?: string, page = 1, pageSize = 20) =>
-    apiClient.get<AiContextDto[]>(`${API_PREFIX}/library`, { search, page, pageSize }),
+  getSharedContexts: (search?: string, filter?: 'system' | 'community' | 'pending', page = 1, pageSize = 20) =>
+    apiClient.get<AiContextDto[]>(`${API_PREFIX}/library`, { search, filter, page, pageSize }),
+
+  getLibraryStats: () =>
+    apiClient.get<TemplateStatsDto>(`${API_PREFIX}/library/stats`),
 
   cloneContext: (contextId: string) =>
     apiClient.post<AiContextDto>(`${API_PREFIX}/library/${contextId}/clone`),
 
   shareContext: (contextId: string) =>
     apiClient.post<AiContextDto>(`${API_PREFIX}/contexts/${contextId}/share`),
+
+  unshareContext: (contextId: string) =>
+    apiClient.post<AiContextDto>(`${API_PREFIX}/contexts/${contextId}/unshare`),
 
   // Conversations
   getConversations: (contextId?: string, includeArchived = false) =>
@@ -481,6 +572,13 @@ export const aiAssistantApi = {
 
   getDailyUsage: (startDate: string, endDate: string) =>
     apiClient.get<UsageStatistics[]>(`${API_PREFIX}/usage/daily`, { startDate, endDate }),
+
+  // Team usage (admin)
+  getTeamUsage: () =>
+    apiClient.get<TeamUsageResponse>(`${API_PREFIX}/team-usage`),
+
+  getQuotaUsers: () =>
+    apiClient.get<QuotaUser[]>(`${API_PREFIX}/admin/users`),
 
   // Admin Quotas
   getQuotaConfigs: () =>

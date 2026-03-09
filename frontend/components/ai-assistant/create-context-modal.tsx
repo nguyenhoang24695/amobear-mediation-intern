@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -24,52 +24,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Library, Pencil, Star, Users } from "lucide-react"
+import { aiAssistantApi } from "@/lib/api/ai-assistant"
 
 interface CreateContextModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (data: { name: string; appScope: string; prompt?: string; fromLibrary?: string }) => void
 }
-
-// Mock library contexts
-const libraryContexts = [
-  {
-    id: "lib-1",
-    name: "Game Level Analytics",
-    description: "Analyze player progression, drop rates, and level difficulty across your games.",
-    author: "Analytics Team",
-    usageCount: 234,
-    rating: 4.8,
-    tags: ["Games", "Level", "Retention"],
-  },
-  {
-    id: "lib-2",
-    name: "Ad Revenue Optimizer",
-    description: "Deep analysis of ad performance, eCPM trends, and revenue optimization opportunities.",
-    author: "Monetization Team",
-    usageCount: 189,
-    rating: 4.6,
-    tags: ["IAA", "Revenue", "Ads"],
-  },
-  {
-    id: "lib-3",
-    name: "IAP Purchase Analysis",
-    description: "Track in-app purchases, conversion funnels, and spending patterns.",
-    author: "Product Team",
-    usageCount: 156,
-    rating: 4.7,
-    tags: ["IAP", "Revenue", "Conversion"],
-  },
-  {
-    id: "lib-4",
-    name: "User Retention Dashboard",
-    description: "Comprehensive retention metrics including D1, D7, D30 with cohort analysis.",
-    author: "Growth Team",
-    usageCount: 298,
-    rating: 4.9,
-    tags: ["Retention", "Cohort", "Growth"],
-  },
-]
 
 const appOptions = [
   { value: "puzzle_blast", label: "Puzzle Blast" },
@@ -84,17 +45,35 @@ export function CreateContextModal({ open, onOpenChange, onSubmit }: CreateConte
   const [appScope, setAppScope] = useState("")
   const [prompt, setPrompt] = useState("")
   const [selectedLibraryId, setSelectedLibraryId] = useState<string | null>(null)
+  const [libraryContexts, setLibraryContexts] = useState<{ id: string; name: string; description?: string; cloneCount: number; rating: number; focusAreas: string[] }[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+
+  useEffect(() => {
+    if (open && activeTab === "library") {
+      setLibraryLoading(true)
+      aiAssistantApi.getSharedContexts(undefined, "system", 1, 50).then((list) => {
+        setLibraryContexts((list ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          cloneCount: c.cloneCount ?? 0,
+          rating: c.rating ?? 0,
+          focusAreas: c.focusAreas ?? [],
+        })))
+      }).catch(() => setLibraryContexts([])).finally(() => setLibraryLoading(false))
+    }
+  }, [open, activeTab])
 
   const handleSubmit = () => {
     if (activeTab === "custom") {
       if (!name || !appScope) return
       onSubmit({ name, appScope, prompt })
     } else {
-      if (!selectedLibraryId || !appScope) return
+      if (!selectedLibraryId) return
       const libContext = libraryContexts.find(c => c.id === selectedLibraryId)
       onSubmit({ 
         name: libContext?.name || "", 
-        appScope, 
+        appScope: appScope || "all_apps", 
         fromLibrary: selectedLibraryId 
       })
     }
@@ -107,7 +86,7 @@ export function CreateContextModal({ open, onOpenChange, onSubmit }: CreateConte
 
   const isValid = activeTab === "custom" 
     ? name && appScope 
-    : selectedLibraryId && appScope
+    : !!selectedLibraryId
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,43 +173,50 @@ export function CreateContextModal({ open, onOpenChange, onSubmit }: CreateConte
               <Label>Select a Template</Label>
               <ScrollArea className="h-[240px] border rounded-lg">
                 <div className="p-2 space-y-2">
-                  {libraryContexts.map((ctx) => (
-                    <button
-                      key={ctx.id}
-                      onClick={() => setSelectedLibraryId(ctx.id)}
-                      className={`w-full text-left p-3 rounded-lg border transition-all ${
-                        selectedLibraryId === ctx.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium text-slate-900">{ctx.name}</div>
-                          <div className="text-sm text-slate-500 mt-0.5">
-                            {ctx.description}
-                          </div>
-                          <div className="flex items-center gap-3 mt-2">
-                            <div className="flex items-center gap-1 text-xs text-slate-400">
-                              <Users className="h-3 w-3" />
-                              {ctx.usageCount} uses
+                  {libraryLoading ? (
+                    <p className="text-sm text-slate-500 py-4 text-center">Đang tải thư viện...</p>
+                  ) : libraryContexts.length === 0 ? (
+                    <p className="text-sm text-slate-500 py-4 text-center">Chưa có template trong thư viện.</p>
+                  ) : (
+                    libraryContexts.map((ctx) => (
+                      <button
+                        key={ctx.id}
+                        type="button"
+                        onClick={() => setSelectedLibraryId(ctx.id)}
+                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                          selectedLibraryId === ctx.id
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-slate-900">{ctx.name}</div>
+                            <div className="text-sm text-slate-500 mt-0.5">
+                              {ctx.description ?? ""}
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-amber-500">
-                              <Star className="h-3 w-3 fill-amber-500" />
-                              {ctx.rating}
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className="flex items-center gap-1 text-xs text-slate-400">
+                                <Users className="h-3 w-3" />
+                                {ctx.cloneCount} clones
+                              </span>
+                              <span className="flex items-center gap-1 text-xs text-amber-500">
+                                <Star className="h-3 w-3 fill-amber-500" />
+                                {ctx.rating}
+                              </span>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex gap-1 mt-2">
-                        {ctx.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </button>
-                  ))}
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {(ctx.focusAreas ?? []).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </div>

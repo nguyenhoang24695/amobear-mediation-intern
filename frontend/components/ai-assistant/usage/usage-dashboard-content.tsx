@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +18,7 @@ import {
   AlertTriangle,
   Lightbulb,
   TrendingUp,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -30,84 +32,96 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
+import { aiAssistantApi } from "@/lib/api/ai-assistant"
+import type { UserQuotaStatus, UsageSummary, UsageStatistics } from "@/lib/api/ai-assistant"
 
-// Mock usage data
-const todayUsage = {
-  tokensUsed: 78000,
-  tokensLimit: 100000,
-  costUsed: 1.56,
-  costLimit: 2.0,
+const PROVIDER_LABELS: Record<string, { label: string; color: string; textColor: string }> = {
+  claude: { label: "Claude", color: "bg-amber-500", textColor: "text-amber-600" },
+  chatgpt: { label: "ChatGPT", color: "bg-emerald-500", textColor: "text-emerald-600" },
+  gemini: { label: "Gemini", color: "bg-blue-500", textColor: "text-blue-600" },
 }
 
-const monthUsage = {
-  tokensUsed: 640000,
-  tokensLimit: 2000000,
-  costUsed: 9.6,
-  costLimit: 30.0,
+function formatDateKey(d: Date) {
+  return d.toISOString().slice(0, 10)
 }
-
-const providerBreakdown = [
-  {
-    provider: "claude",
-    label: "Claude",
-    color: "bg-amber-500",
-    textColor: "text-amber-600",
-    queries: 45,
-    tokens: 52000,
-    cost: 1.23,
-  },
-  {
-    provider: "chatgpt",
-    label: "ChatGPT",
-    color: "bg-emerald-500",
-    textColor: "text-emerald-600",
-    queries: 12,
-    tokens: 18000,
-    cost: 0.28,
-  },
-  {
-    provider: "gemini",
-    label: "Gemini",
-    color: "bg-blue-500",
-    textColor: "text-blue-600",
-    queries: 8,
-    tokens: 8000,
-    cost: 0.05,
-  },
-]
-
-const trendData = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date()
-  date.setDate(date.getDate() - (29 - i))
-  return {
-    date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    claude: Math.floor(Math.random() * 40000 + 20000),
-    chatgpt: Math.floor(Math.random() * 20000 + 5000),
-    gemini: Math.floor(Math.random() * 15000 + 3000),
-  }
-})
-
-const topQueries = [
-  {
-    query: "Complex retention cohort analysis for all games...",
-    cost: 0.12,
-    provider: "claude",
-  },
-  {
-    query: "Cross-app revenue breakdown with network comparison...",
-    cost: 0.08,
-    provider: "claude",
-  },
-  {
-    query: "Level progression funnel with drop rate analysis...",
-    cost: 0.05,
-    provider: "chatgpt",
-  },
-]
 
 export function UsageDashboardContent() {
-  const todayPercentage = (todayUsage.tokensUsed / todayUsage.tokensLimit) * 100
-  const monthPercentage = (monthUsage.tokensUsed / monthUsage.tokensLimit) * 100
+  const [status, setStatus] = useState<UserQuotaStatus | null>(null)
+  const [summary, setSummary] = useState<UsageSummary | null>(null)
+  const [dailyUsage, setDailyUsage] = useState<UsageStatistics[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const end = new Date()
+        const start = new Date()
+        start.setDate(start.getDate() - 29)
+        const [statusRes, summaryRes, dailyRes] = await Promise.all([
+          aiAssistantApi.getMyUsage(),
+          aiAssistantApi.getUsageSummary(),
+          aiAssistantApi.getDailyUsage(formatDateKey(start), formatDateKey(end)),
+        ])
+        if (cancelled) return
+        setStatus(statusRes)
+        setSummary(summaryRes)
+        setDailyUsage(dailyRes)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Không tải được dữ liệu")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  // Build trend data: one row per day with claude, chatgpt, gemini tokens
+  const trendData = (() => {
+    const byDate: Record<string, { date: string; claude: number; chatgpt: number; gemini: number }> = {}
+    const end = new Date()
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(end)
+      d.setDate(d.getDate() - i)
+      const key = formatDateKey(d)
+      byDate[key] = {
+        date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        claude: 0,
+        chatgpt: 0,
+        gemini: 0,
+      }
+    }
+    for (const u of dailyUsage) {
+      const key = typeof u.date === "string" ? u.date.slice(0, 10) : formatDateKey(new Date(u.date))
+      if (byDate[key] && u.provider) {
+        const p = u.provider.toLowerCase()
+        if (p in byDate[key]) (byDate[key] as Record<string, number>)[p] = u.totalTokens
+      }
+    }
+    const entries = Object.entries(byDate).sort((a, b) => a[0].localeCompare(b[0]))
+    return entries.map(([, v]) => v)
+  })()
+
+  const todayPercentage = status && status.dailyTokenLimit > 0
+    ? (status.dailyTokensUsed / status.dailyTokenLimit) * 100
+    : 0
+  const monthPercentage = status && status.monthlyTokenLimit > 0
+    ? (status.monthlyTokensUsed / status.monthlyTokenLimit) * 100
+    : 0
+
+  if (loading && !status) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 flex items-center justify-center min-h-[200px]">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>
@@ -126,6 +140,15 @@ export function UsageDashboardContent() {
             </p>
           </div>
         </div>
+
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="py-4 flex items-center gap-2 text-red-800">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              <span>{error}</span>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Progress Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -149,11 +172,11 @@ export function UsageDashboardContent() {
                           : "text-slate-900"
                       )}
                     >
-                      {todayPercentage.toFixed(0)}%
+                      {status ? `${todayPercentage.toFixed(0)}%` : "—"}
                     </span>
                   </div>
                   <Progress
-                    value={todayPercentage}
+                    value={Math.min(todayPercentage, 100)}
                     className={cn(
                       "h-3",
                       todayPercentage >= 90
@@ -164,14 +187,16 @@ export function UsageDashboardContent() {
                     )}
                   />
                   <div className="flex justify-between mt-1 text-sm text-slate-500">
-                    <span>{(todayUsage.tokensUsed / 1000).toFixed(0)}K used</span>
-                    <span>{(todayUsage.tokensLimit / 1000).toFixed(0)}K limit</span>
+                    <span>{status ? `${(status.dailyTokensUsed / 1000).toFixed(0)}K used` : "—"}</span>
+                    <span>{status ? `${(status.dailyTokenLimit / 1000).toFixed(0)}K limit` : "—"}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-sm text-slate-500">Cost</span>
                   <span className="font-medium">
-                    ${todayUsage.costUsed.toFixed(2)} / ${todayUsage.costLimit.toFixed(2)}
+                    {status
+                      ? `$${status.dailyCostUsed.toFixed(2)} / $${status.dailyCostLimit.toFixed(2)}`
+                      : "—"}
                   </span>
                 </div>
               </div>
@@ -189,19 +214,21 @@ export function UsageDashboardContent() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-slate-500">Tokens</span>
                     <span className="text-2xl font-bold text-slate-900">
-                      {monthPercentage.toFixed(0)}%
+                      {status ? `${monthPercentage.toFixed(0)}%` : "—"}
                     </span>
                   </div>
-                  <Progress value={monthPercentage} className="h-3 [&>div]:bg-blue-500" />
+                  <Progress value={Math.min(monthPercentage, 100)} className="h-3 [&>div]:bg-blue-500" />
                   <div className="flex justify-between mt-1 text-sm text-slate-500">
-                    <span>{(monthUsage.tokensUsed / 1000).toFixed(0)}K used</span>
-                    <span>{(monthUsage.tokensLimit / 1000000).toFixed(0)}M limit</span>
+                    <span>{status ? `${(status.monthlyTokensUsed / 1000).toFixed(0)}K used` : "—"}</span>
+                    <span>{status ? `${(status.monthlyTokenLimit / 1000000).toFixed(0)}M limit` : "—"}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-sm text-slate-500">Cost</span>
                   <span className="font-medium">
-                    ${monthUsage.costUsed.toFixed(2)} / ${monthUsage.costLimit.toFixed(2)}
+                    {status
+                      ? `$${status.monthlyCostUsed.toFixed(2)} / $${status.monthlyCostLimit.toFixed(2)}`
+                      : "—"}
                   </span>
                 </div>
               </div>
@@ -210,7 +237,7 @@ export function UsageDashboardContent() {
         </div>
 
         {/* Warning Banner */}
-        {todayPercentage >= 60 && (
+        {status && status.isNearLimit && !status.isOverLimit && (
           <Card className="mb-6 border-amber-200 bg-amber-50">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">
@@ -240,37 +267,42 @@ export function UsageDashboardContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Provider</TableHead>
-                  <TableHead className="text-right">Queries</TableHead>
-                  <TableHead className="text-right">Tokens</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {providerBreakdown.map((p) => (
-                  <TableRow key={p.provider}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className={cn("w-3 h-3 rounded-full", p.color)} />
-                        <span className={cn("font-medium", p.textColor)}>
-                          {p.label}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{p.queries}</TableCell>
-                    <TableCell className="text-right">
-                      {(p.tokens / 1000).toFixed(0)}K
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${p.cost.toFixed(2)}
-                    </TableCell>
+            {summary && summary.byProvider.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Provider</TableHead>
+                    <TableHead className="text-right">Queries</TableHead>
+                    <TableHead className="text-right">Tokens</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {summary.byProvider.map((p) => {
+                    const meta = PROVIDER_LABELS[p.provider.toLowerCase()] ?? {
+                      label: p.provider,
+                      color: "bg-slate-500",
+                      textColor: "text-slate-600",
+                    }
+                    return (
+                      <TableRow key={p.provider}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={cn("w-3 h-3 rounded-full", meta.color)} />
+                            <span className={cn("font-medium", meta.textColor)}>{meta.label}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{p.requestCount}</TableCell>
+                        <TableCell className="text-right">{(p.totalTokens / 1000).toFixed(0)}K</TableCell>
+                        <TableCell className="text-right font-medium">${p.cost.toFixed(2)}</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-slate-500 py-4">Chưa có usage theo provider trong tháng này.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -302,9 +334,7 @@ export function UsageDashboardContent() {
                       borderRadius: "8px",
                       border: "1px solid #e2e8f0",
                     }}
-                    formatter={(value: number) => [
-                      `${value.toLocaleString()} tokens`,
-                    ]}
+                    formatter={(value: number) => [`${value.toLocaleString()} tokens`]}
                   />
                   <Legend />
                   <Line
@@ -334,52 +364,6 @@ export function UsageDashboardContent() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Queries by Cost */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-medium">
-              Top Queries by Cost
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50%]">Query</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  <TableHead className="text-right">Provider</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topQueries.map((q, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium text-slate-700 truncate max-w-[300px]">
-                      {q.query}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${q.cost.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span
-                        className={cn(
-                          "text-sm",
-                          q.provider === "claude"
-                            ? "text-amber-600"
-                            : q.provider === "chatgpt"
-                            ? "text-emerald-600"
-                            : "text-blue-600"
-                        )}
-                      >
-                        {q.provider.charAt(0).toUpperCase() + q.provider.slice(1)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>

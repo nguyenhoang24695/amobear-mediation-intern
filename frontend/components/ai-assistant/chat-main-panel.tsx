@@ -23,6 +23,8 @@ import {
   Zap,
   Check,
   AlertCircle,
+  X,
+  Loader2,
 } from "lucide-react"
 import type { AiContext, AiMessage } from "./ai-assistant-content"
 import { AiMessageBubble } from "./ai-message-bubble"
@@ -31,6 +33,8 @@ import {
   aiAssistantApi,
   type AiProviderConfigDto,
   type DiscoveredModelDto,
+  type ImageAttachmentRequest,
+  type AttachedTableDataRequest,
 } from "@/lib/api/ai-assistant"
 import { getModelMeta, getProviderHint } from "@/lib/ai-model-metadata"
 
@@ -50,11 +54,17 @@ interface ChatMainPanelProps {
   context: AiContext
   messages: AiMessage[]
   selectedProvider: "claude" | "gemini" | "chatgpt"
+  selectedModelId: string
   onProviderChange: (provider: "claude" | "gemini" | "chatgpt") => void
+  onModelSelect: (providerKey: string, modelId: string) => void
   autoExplain: boolean
   onAutoExplainChange: (checked: boolean) => void
-  onSendMessage: (content: string) => void
+  onSendMessage: (content: string, options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }) => void
   sidebarOpen: boolean
+  pendingAttachedTable?: AttachedTableDataRequest | null
+  pendingPrefillQuestion?: string | null
+  onAskAboutTable?: (result: { columns: string[]; rows: Record<string, unknown>[] }) => void
+  sending?: boolean
 }
 
 const PROVIDER_KEY_MAP: Record<string, "claude" | "gemini" | "chatgpt"> = {
@@ -278,13 +288,44 @@ export function ChatMainPanel({
   onAutoExplainChange,
   onSendMessage,
   sidebarOpen,
+  selectedModelId,
+  onModelSelect,
+  pendingAttachedTable = null,
+  pendingPrefillQuestion = null,
+  onAskAboutTable,
+  sending = false,
 }: ChatMainPanelProps) {
   const [inputValue, setInputValue] = useState("")
-  const [selectedModelId, setSelectedModelId] = useState("")
+  const [pastedImages, setPastedImages] = useState<ImageAttachmentRequest[]>([])
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const [providerConfigs, setProviderConfigs] = useState<AiProviderConfigDto[]>([])
+  const [sendingStepIndex, setSendingStepIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (pendingPrefillQuestion) setInputValue((prev) => prev || pendingPrefillQuestion)
+  }, [pendingPrefillQuestion])
+
+  const sendingSteps = [
+    "Bước 1: Đang kiểm tra quota...",
+    "Bước 2: Đang chuẩn bị context & hội thoại...",
+    "Bước 3: Đang tải lịch sử chat...",
+    "Bước 4: Đang xây dựng prompt...",
+    `Bước 5: Đang gọi ${PROVIDER_SHORT_NAMES[REVERSE_PROVIDER_KEY_MAP[selectedProvider] ?? "anthropic"] ?? selectedProvider}...`,
+    "Bước 6: Đang nhận và xử lý phản hồi...",
+  ]
+  useEffect(() => {
+    if (!sending) {
+      setSendingStepIndex(0)
+      return
+    }
+    setSendingStepIndex(0)
+    const t = setInterval(() => {
+      setSendingStepIndex((i) => Math.min(i + 1, sendingSteps.length - 1))
+    }, 1800)
+    return () => clearInterval(t)
+  }, [sending])
 
   const selectedProviderKey = REVERSE_PROVIDER_KEY_MAP[selectedProvider] || "anthropic"
 
@@ -292,45 +333,23 @@ export function ChatMainPanel({
     try {
       const configs = await aiAssistantApi.getProviderConfigs()
       setProviderConfigs(configs)
-
-      // Chỉ auto-select nếu chưa có model nào được chọn
-      if (selectedModelId) return
-
-      // Ưu tiên defaultModel của provider hiện tại
-      const currentProviderKey = REVERSE_PROVIDER_KEY_MAP[selectedProvider] || "anthropic"
-      const currentProvider = configs.find(c => c.providerKey === currentProviderKey && c.isConnected)
-      if (currentProvider?.defaultModel) {
-        setSelectedModelId(currentProvider.defaultModel)
-        return
-      }
-
-      // Fallback: provider connected đầu tiên có defaultModel (theo priority)
-      const sorted = [...configs]
-        .filter(c => c.isConnected && c.availableModels.length > 0)
-        .sort((a, b) => a.priority - b.priority)
-      const fallback = sorted.find(c => c.defaultModel) ?? sorted[0]
-      if (fallback) {
-        setSelectedModelId(fallback.defaultModel ?? fallback.availableModels[0]?.modelId ?? "")
-        const mappedKey = PROVIDER_KEY_MAP[fallback.providerKey]
-        if (mappedKey) onProviderChange(mappedKey)
-      }
     } catch {
       // API not available, will show empty state
     }
-  }, [selectedProvider, selectedModelId, onProviderChange])
+  }, [])
 
   useEffect(() => {
     fetchProviders()
   }, [fetchProviders])
 
   const currentProviderConfig = providerConfigs.find(p => p.providerKey === selectedProviderKey)
-  const currentModelData = currentProviderConfig?.availableModels.find(m => m.modelId === selectedModelId)
-  const currentModelMeta = selectedModelId ? getModelMeta(selectedModelId) : null
+  // Khi context chưa có preferredModel thì dùng model mặc định của provider (chỉ hiển thị, không persist)
+  const effectiveModelId = selectedModelId || currentProviderConfig?.defaultModel || ""
+  const currentModelData = currentProviderConfig?.availableModels.find(m => m.modelId === effectiveModelId)
+  const currentModelMeta = effectiveModelId ? getModelMeta(effectiveModelId) : null
 
   const handleModelSelect = (providerKey: string, modelId: string) => {
-    const mappedKey = PROVIDER_KEY_MAP[providerKey]
-    if (mappedKey) onProviderChange(mappedKey)
-    setSelectedModelId(modelId)
+    onModelSelect(providerKey, modelId)
     setModelDropdownOpen(false)
   }
 
@@ -339,9 +358,43 @@ export function ChatMainPanel({
   }, [messages])
 
   const handleSend = () => {
-    if (!inputValue.trim()) return
-    onSendMessage(inputValue.trim())
+    const text = inputValue.trim() || (pastedImages.length ? "Phân tích ảnh đính kèm." : "")
+    if (!text) return
+    onSendMessage(text, {
+      images: pastedImages.length ? pastedImages : undefined,
+      attachedTableData: pendingAttachedTable ?? undefined,
+    })
     setInputValue("")
+    setPastedImages([])
+  }
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = () => {
+          const dataUrl = reader.result as string
+          const [header, base64] = dataUrl.split(",", 2)
+          const m = header?.match(/data:([^;]+)/)
+          const mediaType = m?.[1]?.trim() || file.type || "image/png"
+          setPastedImages((prev) => {
+            if (prev.length >= 4) return prev
+            return [...prev, { base64Data: base64 ?? "", mediaType }]
+          })
+        }
+        reader.readAsDataURL(file)
+        return
+      }
+    }
+  }, [])
+
+  const removePastedImage = (index: number) => {
+    setPastedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -352,7 +405,7 @@ export function ChatMainPanel({
   }
 
   const displayProviderName = PROVIDER_SHORT_NAMES[selectedProviderKey] || currentProviderConfig?.displayName || selectedProvider
-  const displayModelName = currentModelData?.displayName || selectedModelId || "Select model"
+  const displayModelName = currentModelData?.displayName || effectiveModelId || "Select model"
 
   return (
     <div className={cn("flex-1 flex flex-col bg-slate-50 transition-all overflow-hidden")}>
@@ -363,16 +416,42 @@ export function ChatMainPanel({
             message.role === "user" ? (
               <UserMessageBubble key={message.id} message={message} />
             ) : (
-              <AiMessageBubble key={message.id} message={message} />
+              <AiMessageBubble key={message.id} message={message} onAskAboutTable={onAskAboutTable} />
             )
           )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
+      {/* Sending status — từng bước giống log backend */}
+      {sending && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border-t border-blue-100 text-sm text-blue-800">
+          <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+          <span className="truncate">{sendingSteps[sendingStepIndex]}</span>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="border-t border-slate-200 bg-white p-4">
         <div className="max-w-4xl mx-auto">
+          {/* Pasted images preview */}
+          {pastedImages.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {pastedImages.map((img, i) => (
+                <div key={i} className="relative inline-block rounded border border-slate-200 overflow-hidden bg-slate-50">
+                  <img src={`data:${img.mediaType};base64,${img.base64Data}`} alt="" className="h-14 w-14 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePastedImage(i)}
+                    className="absolute top-0 right-0 p-0.5 bg-black/60 text-white rounded-bl"
+                    aria-label="Xóa ảnh"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Text Input */}
           <div className="relative border border-slate-200 rounded-lg bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
             <Textarea
@@ -380,14 +459,15 @@ export function ChatMainPanel({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything about your data..."
+              onPaste={handlePaste}
+              placeholder="Ask anything about your data... (có thể dán ảnh trực tiếp)"
               className="min-h-[80px] max-h-[200px] border-0 focus-visible:ring-0 resize-none pr-12"
             />
             <Button
               size="icon"
               className="absolute right-2 bottom-2 h-8 w-8 bg-blue-600 hover:bg-blue-700"
               onClick={handleSend}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() && pastedImages.length === 0}
             >
               <Send className="h-4 w-4" />
             </Button>
@@ -453,7 +533,7 @@ export function ChatMainPanel({
                   <ModelSelectorDropdown
                     providerConfigs={providerConfigs}
                     selectedProviderKey={selectedProviderKey}
-                    selectedModelId={selectedModelId}
+                    selectedModelId={effectiveModelId}
                     onSelect={handleModelSelect}
                   />
                 </DropdownMenuContent>
