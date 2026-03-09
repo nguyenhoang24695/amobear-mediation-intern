@@ -51,9 +51,10 @@ const colorMap: Record<string, string> = {
 
 interface AppOverviewTabProps {
   onNavigateToTab?: (tab: string) => void
+  refreshKey?: number
 }
 
-export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
+export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewTabProps) {
   const [chartMetric, setChartMetric] = useState<"revenue" | "ecpm" | "impressions">("revenue")
   const [dateRange, setDateRange] = useState("7d")
 
@@ -136,7 +137,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     },
     {
       enabled: !!app,
-      cacheKey: app ? `app_metrics_overview_${app.appId}` : undefined,
+      cacheKey: app ? `app_metrics_overview_${app.appId}_${refreshKey}` : undefined,
     },
   )
 
@@ -203,8 +204,8 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
 
   const cacheKey = useMemo(() => {
     if (!app || !chartApiParams) return undefined
-    return `app_revenue_overview_${app.appId}_${dateRange}_${chartMetric}`
-  }, [app, dateRange, chartMetric])
+    return `app_revenue_overview_${app.appId}_${dateRange}_${chartMetric}_${refreshKey}`
+  }, [app, dateRange, chartMetric, refreshKey])
 
   const { data: revenueOverviewData, loading: performanceLoading } = useApi(
     fetchChartData,
@@ -245,7 +246,7 @@ export function AppOverviewTab({ onNavigateToTab }: AppOverviewTabProps) {
     },
     {
       enabled: !!app,
-      cacheKey: app ? `app_alerts_${app.appId}` : undefined,
+      cacheKey: app ? `app_alerts_${app.appId}_${refreshKey}` : undefined,
     },
   )
 

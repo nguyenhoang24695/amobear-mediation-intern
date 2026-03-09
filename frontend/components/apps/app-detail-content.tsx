@@ -24,7 +24,7 @@ import {
   Trash2,
   Settings,
   Check,
-  Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
@@ -34,18 +34,18 @@ import type { App, MediationGroup, WaterfallAdUnit } from "@/types/api"
 
 const SCREEN_APPS = "s-apps"
 const FN_VIEW_DETAILS = "view-details"
+const FN_SYNC_FROM_ADMOB = "sync-from-admob"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
 import { AppSettingsTab } from "./app-detail/app-settings-tab"
-import { useToast } from "@/hooks/use-toast"
+import { SyncAppPerformanceModal } from "./app-detail/sync-app-performance-modal"
 
 export function AppDetailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const params = useParams()
-  const { toast } = useToast()
 
   const appIdFromParams = (params as any)?.id as string | undefined
   const hasValidAppId = !!appIdFromParams
@@ -87,6 +87,7 @@ export function AppDetailContent() {
   const initialTab = searchParams.get("tab") || "overview"
   const [activeTab, setActiveTab] = useState(initialTab)
   const [copied, setCopied] = useState(false)
+  const [syncPerformanceModalOpen, setSyncPerformanceModalOpen] = useState(false)
 
 
   const handleTabChange = (tab: string) => {
@@ -111,6 +112,7 @@ export function AppDetailContent() {
   }
 
   const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
+  const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
 
   if (!canViewDetails) {
     return <NoPermissionView />
@@ -181,6 +183,16 @@ export function AppDetailContent() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
+            {canSyncFromAdmob && (
+              <Button
+                className="h-9 gap-2 bg-blue-600 hover:bg-blue-700"
+                onClick={() => setSyncPerformanceModalOpen(true)}
+                disabled={!app?.appId || appLoading}
+              >
+                <RefreshCw className="w-4 h-4" />
+                Sync Performance
+              </Button>
+            )}
             <Button
               variant="outline"
               className="h-9 gap-2 bg-transparent text-sm"
@@ -289,6 +301,15 @@ export function AppDetailContent() {
             <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
           </TabsContent>
         </Tabs>
+
+        {app?.appId && (
+          <SyncAppPerformanceModal
+            open={syncPerformanceModalOpen}
+            onOpenChange={setSyncPerformanceModalOpen}
+            appId={app.appId}
+            appName={app.displayName || app.name}
+          />
+        )}
       </div>
     </TooltipProvider>
   )
