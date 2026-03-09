@@ -167,20 +167,20 @@ export function ContextSidebar({
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-3 space-y-4">
+        <div className="p-3 space-y-4 min-w-0">
           {/* My Contexts Section */}
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
                 My Contexts
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               {contexts.map((context) => (
                 <div
                   key={context.id}
                   className={cn(
-                    "group relative rounded-lg border transition-all",
+                    "group relative rounded-lg border transition-all min-w-0",
                     activeContextId === context.id
                       ? "border-blue-500 bg-blue-50 border-l-4"
                       : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
@@ -188,23 +188,23 @@ export function ContextSidebar({
                 >
                   <button
                     onClick={() => onContextSelect(context.id)}
-                    className="w-full text-left p-3 pr-8"
+                    className="w-full text-left p-3 pr-8 min-w-0"
                   >
-                    <div className="flex items-start gap-2">
-                      <span className="text-lg">{context.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-slate-900 text-sm truncate">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="flex-shrink-0 text-lg">{context.icon}</span>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="font-medium text-slate-900 text-sm truncate block">
                             {context.name}
                           </span>
                           {context.clonedFrom && (
-                            <span className="text-xs text-slate-400">(cloned)</span>
+                            <span className="text-xs text-slate-400 flex-shrink-0">(cloned)</span>
                           )}
                         </div>
                         <div className="text-xs text-slate-500 truncate">{context.appScope}</div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <div className="flex items-center gap-1">
-                            <div className={cn("w-2 h-2 rounded-full", providerColors[context.preferredProvider])} />
+                            <div className={cn("w-2 h-2 rounded-full flex-shrink-0", providerColors[context.preferredProvider])} />
                             <span className="text-xs text-slate-500">{providerLabels[context.preferredProvider]}</span>
                           </div>
                           <span className="text-xs text-slate-400">{context.conversationCount} chats</span>
@@ -213,7 +213,7 @@ export function ContextSidebar({
                     </div>
                   </button>
                   {/* Context action menu */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -244,34 +244,34 @@ export function ContextSidebar({
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={onNewContext}>
-                <Plus className="h-3 w-3 mr-1" />
-                New
+            <div className="flex gap-2 mt-3 min-w-0">
+              <Button variant="outline" size="sm" className="flex-1 min-w-0 h-8 text-xs overflow-hidden" onClick={onNewContext}>
+                <Plus className="h-3 w-3 mr-1 shrink-0" />
+                <span className="truncate">New</span>
               </Button>
-              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" asChild>
-                <Link href="/ai-assistant/library">
-                  <Library className="h-3 w-3 mr-1" />
-                  Library
+              <Button variant="outline" size="sm" className="flex-1 min-w-0 h-8 text-xs overflow-hidden" asChild>
+                <Link href="/ai-assistant/library" className="flex items-center justify-center min-w-0 overflow-hidden">
+                  <Library className="h-3 w-3 mr-1 shrink-0" />
+                  <span className="truncate">Library</span>
                 </Link>
               </Button>
             </div>
           </div>
 
           {/* Conversations Section */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
+          <div className="min-w-0">
+            <div className="flex items-center justify-between mb-2 min-w-0">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 truncate">
+                <MessageSquare className="h-3 w-3 shrink-0" />
                 Conversations
               </span>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               {conversations.map((conv) => (
                 <div
                   key={conv.id}
                   className={cn(
-                    "group relative flex items-start rounded-md transition-colors",
+                    "group flex items-stretch gap-1 rounded-md transition-colors min-w-0",
                     activeConversationId === conv.id
                       ? "bg-blue-50"
                       : "hover:bg-slate-50"
@@ -280,25 +280,25 @@ export function ContextSidebar({
                   <button
                     onClick={() => onConversationSelect(conv.id)}
                     className={cn(
-                      "flex-1 text-left p-2 pr-7 min-w-0",
+                      "flex-1 text-left p-2 py-1.5 min-w-0 overflow-hidden",
                       activeConversationId === conv.id ? "text-blue-700" : "text-slate-700"
                     )}
                   >
-                    <div className="text-sm font-medium truncate">{conv.title}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-sm font-medium break-words text-left">{conv.title}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
                       {conv.timestamp.toLocaleDateString() === new Date().toLocaleDateString()
                         ? `Today ${conv.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                         : conv.timestamp.toLocaleDateString()}
                     </div>
                   </button>
-                  {/* Conversation action menu */}
-                  <div className="absolute top-1.5 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Conversation action menu — luôn ở góc phải */}
+                  <div className="flex-shrink-0 flex items-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
+                          className="h-7 w-7 shrink-0"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
@@ -323,16 +323,16 @@ export function ContextSidebar({
                 </div>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="w-full h-8 mt-2 text-xs text-slate-600" onClick={onNewChat}>
-              <Plus className="h-3 w-3 mr-1" />
-              New Chat
+            <Button variant="ghost" size="sm" className="w-full min-w-0 h-8 mt-2 text-xs text-slate-600" onClick={onNewChat}>
+              <Plus className="h-3 w-3 mr-1 shrink-0" />
+              <span className="truncate">New Chat</span>
             </Button>
           </div>
 
           {/* Pinned Metrics Section */}
           {pinnedMetrics.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1 mb-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 mb-2 min-w-0">
                 <Pin className="h-3 w-3 text-slate-500" />
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Pinned Metrics
@@ -353,8 +353,8 @@ export function ContextSidebar({
 
           {/* Saved Queries Section */}
           {savedQueries.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1 mb-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 mb-2 min-w-0">
                 <Save className="h-3 w-3 text-slate-500" />
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Saved Queries
@@ -376,14 +376,14 @@ export function ContextSidebar({
       </ScrollArea>
 
       {/* Quota Status Bar at Bottom */}
-      <div className="border-t border-slate-200 p-3 bg-slate-50/50">
-        <div className="space-y-2">
+      <div className="border-t border-slate-200 p-3 bg-slate-50/50 min-w-0 overflow-hidden">
+        <div className="space-y-2 min-w-0">
           {/* Progress Bar */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <Progress
               value={dailyPercentage}
               className={cn(
-                "flex-1 h-1.5",
+                "flex-1 min-w-0 h-1.5",
                 isCritical
                   ? "[&>div]:bg-red-500"
                   : isWarning
@@ -406,11 +406,11 @@ export function ContextSidebar({
           </div>
 
           {/* Token Info */}
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between gap-2 text-xs min-w-0">
+            <span className="text-slate-500 truncate min-w-0">
               {(Number(quota.dailyTokensUsed) / 1000).toFixed(0)}K/{(dailyLimit / 1000).toFixed(0)}K tokens
             </span>
-            <span className="text-slate-500">
+            <span className="text-slate-500 shrink-0">
               ${Number(quota.dailyCostUsed).toFixed(2)}
               {quota.dailyCostLimit != null && quota.dailyCostLimit > 0 && (
                 <span className="text-slate-400"> / ${Number(quota.dailyCostLimit).toFixed(2)}</span>
