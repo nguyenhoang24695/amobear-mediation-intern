@@ -63,14 +63,14 @@ export function QueryResultTable({ result }: QueryResultTableProps) {
   }
 
   return (
-    <div className="max-h-[400px] overflow-auto">
-      <Table>
-        <TableHeader className="sticky top-0 bg-white">
-          <TableRow>
+    <div className="max-h-[400px] overflow-auto border rounded-md">
+      <Table className="w-max min-w-full">
+        <TableHeader>
+          <TableRow className="hover:bg-transparent border-b bg-slate-50 sticky top-0 z-10 shadow-sm">
             {result.columns.map((column) => (
               <TableHead
                 key={column}
-                className="cursor-pointer hover:bg-slate-50 select-none"
+                className="cursor-pointer hover:bg-slate-100 select-none whitespace-nowrap bg-slate-50 py-3"
                 onClick={() => handleSort(column)}
               >
                 <div className="flex items-center gap-1">
@@ -93,7 +93,7 @@ export function QueryResultTable({ result }: QueryResultTableProps) {
           {sortedRows.map((row, rowIndex) => (
             <TableRow key={rowIndex} className="hover:bg-slate-50">
               {result.columns.map((column) => (
-                <TableCell key={column} className="text-sm">
+                <TableCell key={column} className="text-sm whitespace-nowrap">
                   {formatValue(row[column])}
                 </TableCell>
               ))}
