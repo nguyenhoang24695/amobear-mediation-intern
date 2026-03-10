@@ -43,6 +43,7 @@ import { AddUserToOrgModal } from "../add-user-to-org-modal"
 import { AddEditUserModal } from "../modals/add-edit-user-modal"
 import { AddUserToTeamModal } from "../add-user-to-team-modal"
 import { organizationsApi, teamMembersApi, type OrgUserItem } from "@/lib/api/services"
+import { getCurrentUser } from "@/lib/auth"
 import { toast } from "sonner"
 
 interface OrgUsersTabProps {
@@ -90,6 +91,11 @@ function formatLastActive(lastLoginAt?: string): string {
 }
 
 export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps) {
+  const currentUser = getCurrentUser()
+  const canAssignAdmin = currentUser?.role?.toLowerCase() === "super_admin"
+  const availableRoles = canAssignAdmin
+    ? ["super_admin", "admin", "editor", "viewer"]
+    : ["editor", "viewer"]
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -390,6 +396,10 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                               {canManage && (
                                 <>
                                   <DropdownMenuItem onClick={() => {
+                                    if (!canAssignAdmin && (user.role === "admin" || user.role === "super_admin")) {
+                                      toast.error("Only super admin can edit admin users")
+                                      return
+                                    }
                                     setEditUser(user)
                                     setEditUserOpen(true)
                                   }}>
@@ -499,10 +509,13 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
         onOpenChange={setEditUserOpen}
         mode="edit"
         canManage={canManage}
+        availableRoles={availableRoles}
         user={editUser ? {
           id: editUser.id,
           name: editUser.fullName,
           email: editUser.email,
+          firstName: editUser.firstName,
+          lastName: editUser.lastName,
           role: editUser.role,
           status: editUser.status
         } : undefined}

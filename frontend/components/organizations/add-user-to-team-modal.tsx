@@ -36,6 +36,7 @@ interface AddUserToTeamModalProps {
   orgId: string
   userIds: string[]
   userNames: string[]
+  excludedTeamIds?: string[]
   onSuccess?: () => void
 }
 
@@ -45,6 +46,7 @@ export function AddUserToTeamModal({
   orgId,
   userIds,
   userNames,
+  excludedTeamIds = [],
   onSuccess,
 }: AddUserToTeamModalProps) {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
@@ -58,6 +60,8 @@ export function AddUserToTeamModal({
     () => organizationsApi.getTeams(orgId),
     { enabled: open, cacheKey: `org_teams_${orgId}` }
   )
+  const availableTeams = teams?.filter((team) => !excludedTeamIds.includes(team.id)) ?? []
+  const excludedTeams = teams?.filter((team) => excludedTeamIds.includes(team.id)) ?? []
 
   // Reset state when modal closes
   useEffect(() => {
@@ -82,8 +86,7 @@ export function AddUserToTeamModal({
   }
 
   const getSelectedTeams = () => {
-    if (!teams) return []
-    return teams.filter(team => selectedTeamIds.includes(team.id))
+    return availableTeams.filter(team => selectedTeamIds.includes(team.id))
   }
 
   const handleSave = async () => {
@@ -177,9 +180,21 @@ export function AddUserToTeamModal({
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
               </div>
-            ) : teams && teams.length > 0 ? (
+            ) : teams && availableTeams.length > 0 ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Teams</label>
+                {excludedTeams.length > 0 && (
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs font-medium text-slate-700">Already assigned</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {excludedTeams.map((team) => (
+                        <Badge key={team.id} variant="outline" className="text-xs">
+                          {team.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                   <PopoverTrigger asChild>
                     <div
@@ -234,7 +249,7 @@ export function AddUserToTeamModal({
                       <CommandList>
                         <CommandEmpty>No team found.</CommandEmpty>
                         <CommandGroup>
-                          {teams.map((team) => (
+                          {availableTeams.map((team) => (
                             <CommandItem
                               key={team.id}
                               value={team.name}
@@ -267,7 +282,20 @@ export function AddUserToTeamModal({
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Users className="w-12 h-12 text-slate-400 mb-2" />
-                <p className="text-sm text-slate-500">No teams available</p>
+                <p className="text-sm text-slate-500">
+                  {teams && teams.length > 0 && excludedTeamIds.length > 0
+                    ? "This user is already assigned to all available teams"
+                    : "No teams available"}
+                </p>
+                {excludedTeams.length > 0 && (
+                  <div className="mt-3 flex flex-wrap justify-center gap-1">
+                    {excludedTeams.map((team) => (
+                      <Badge key={team.id} variant="outline" className="text-xs">
+                        {team.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

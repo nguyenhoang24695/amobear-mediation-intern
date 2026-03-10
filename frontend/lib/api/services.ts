@@ -94,6 +94,12 @@ export interface ChangePasswordRequest {
     confirmPassword: string
 }
 
+export interface AdminResetUserPasswordRequest {
+    newPassword: string
+    confirmPassword: string
+    mustChangePassword?: boolean
+}
+
 export interface CurrentUser {
     id: string
     email: string
@@ -522,8 +528,18 @@ export const teamMembersApi = {
         return apiClient.post('/api/v1/team-members/invite-user', request)
     },
 
-    updateUser: async (userId: string, data: { firstName?: string; lastName?: string; role?: string; status?: string }): Promise<{ success: boolean; data?: any }> => {
+    updateUser: async (
+        userId: string,
+        data: { firstName?: string; lastName?: string; phone?: string; role?: string; status?: string }
+    ): Promise<{ success: boolean; data?: TeamMember }> => {
         return apiClient.put(`/api/v1/team-members/update-user/${userId}`, data)
+    },
+
+    resetUserPassword: async (
+        userId: string,
+        data: AdminResetUserPasswordRequest
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/reset-password/${userId}`, data)
     },
 
     removeUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {

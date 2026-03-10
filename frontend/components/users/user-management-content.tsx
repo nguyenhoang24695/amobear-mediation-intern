@@ -84,6 +84,7 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="invited">Invited</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="locked">Locked</SelectItem>
             </SelectContent>
           </Select>
         </div>
