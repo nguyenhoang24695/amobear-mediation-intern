@@ -44,7 +44,6 @@ import type { AdUnit, App, WaterfallRecommendationRuleGroupDto } from "@/types/a
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
 import { Loader2, Save, RefreshCw, Settings } from "lucide-react"
-import { RecommendationWorkflowPanel } from "@/components/waterfall-optimizer/recommendation-workflow-panel"
 
 interface WaterfallOptimizationTabProps {
   onRunABTest: () => void
@@ -260,16 +259,6 @@ export function WaterfallOptimizationTab({
     } finally {
       setRerunningRecommendation(false)
     }
-  }
-
-  const handleWorkflowAnalyzeCompleted = async () => {
-    await handleRerunRecommendation()
-  }
-
-  const handleWorkflowApplied = async () => {
-    await refetchGroupDetail()
-    await refetchRecommendations()
-    setForceRefreshKey((k) => k + 1)
   }
 
   // Recommendations: do not pass start/end/min so the server uses default 7d + 3% + 0.9% and returns cached data. Do not call SoWData separately; ecpmByAdSourceId comes from recommendations.
@@ -959,13 +948,6 @@ export function WaterfallOptimizationTab({
 
           {/* Right column: Optimization Status Banner + Rule Group */}
           <div className="flex flex-col gap-4">
-            <RecommendationWorkflowPanel
-              mediationGroupId={mediationGroupId}
-              title="Recommendation Lifecycle"
-              compact
-              onAnalyzed={handleWorkflowAnalyzeCompleted}
-              onApplied={handleWorkflowApplied}
-            />
             {/* Optimization Status Banner */}
             {!bannerDismissed && (
               <>
@@ -1034,9 +1016,9 @@ export function WaterfallOptimizationTab({
                     <div className="flex-1">
                       <h3 className="font-semibold text-slate-900">Waterfall Optimized</h3>
                       <p className="text-sm text-slate-700 mt-0.5">Current configuration is performing optimally</p>
-                      <p className="text-xs text-slate-500 mt-1">Use the lifecycle panel above to rerun analysis when needed.</p>
+                      <p className="text-xs text-slate-500 mt-1">Re-run analysis anytime to refresh the suggested setup.</p>
                     </div>
-                    <Button variant="link" className="h-auto p-0 text-green-600" onClick={() => void handleWorkflowAnalyzeCompleted()}>
+                    <Button variant="link" className="h-auto p-0 text-green-600" onClick={() => void handleRerunRecommendation()}>
                       Re-analyze Now
                     </Button>
                   </div>
