@@ -26,6 +26,11 @@ import {
   Activity,
   Shield,
   ListFilter,
+  Bot,
+  Library,
+  BookOpen,
+  PieChart,
+  Gauge,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -44,6 +49,8 @@ type NavItem = {
   href: string
   hasSubmenu?: boolean
   badge?: number
+  /** Show "New" badge for new features */
+  isNew?: boolean
   /** If false or returns false, item is hidden in sidebar. Default true. */
   isShow?: boolean | (() => boolean)
   children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean) }[]
@@ -67,6 +74,25 @@ const navItems: NavItem[] = [
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3, isShow: true },
   { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
+  {
+    icon: Bot,
+    label: "AI Assistant",
+    href: "#",
+    hasSubmenu: true,
+    isNew: true,
+    isShow: true,
+    children: [
+      { icon: Bot, label: "Chat", href: "/ai-assistant", isShow: true },
+      { icon: Library, label: "Library", href: "/ai-assistant/library", isShow: true },
+      { icon: BookOpen, label: "Knowledge Base", href: "/ai-assistant/knowledge-base", isShow: true },
+      { icon: PieChart, label: "AI Usage", href: "/ai-assistant/usage", isShow: true },
+      { icon: Gauge, label: "Quota", href: "/ai-assistant/admin/quota", isShow: () => hasScreenFunction("s-ai-assistant", "admin") },
+      { icon: Shield, label: "Role Prompts", href: "/ai-assistant/admin/role-prompts", isShow: () => hasScreenFunction("s-ai-assistant", "admin") },
+      { icon: ListChecks, label: "Metrics Catalog", href: "/ai-assistant/admin/metrics-catalog", isShow: () => hasScreenFunction("s-ai-assistant", "admin") },
+      { icon: Zap, label: "System Config", href: "/ai-assistant/admin/system-config", isShow: () => hasScreenFunction("s-ai-assistant", "admin") },
+      { icon: Settings, label: "Settings", href: "/ai-assistant/settings", isShow: true },
+    ],
+  },
   {
     icon: Settings,
     label: "Settings",
@@ -159,6 +185,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">{item.label}</span>
+                    {item.isNew && (
+                      <Badge className="h-5 px-1.5 text-xs bg-green-500 hover:bg-green-600">
+                        New
+                      </Badge>
+                    )}
                     {hasSubmenu && (
                       <ChevronRight
                         className={cn(

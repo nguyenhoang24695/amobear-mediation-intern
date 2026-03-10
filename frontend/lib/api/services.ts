@@ -198,6 +198,10 @@ export const structureApi = {
         return apiClient.get<App>(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}`)
     },
 
+    syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
+        return apiClient.post(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}/sync-performance`)
+    },
+
     getAppAdUnits: async (id: number): Promise<AdUnit[]> => {
         return apiClient.get<AdUnit[]>(`/api/Structure/apps/${id}/adunits`)
     },
