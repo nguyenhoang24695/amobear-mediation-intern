@@ -49,6 +49,30 @@ const colorMap: Record<string, string> = {
   cyan: "bg-cyan-50 text-cyan-600",
 }
 
+const compactNumberFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  compactDisplay: "short",
+  maximumFractionDigits: 1,
+})
+
+const formatCompactTick = (value: number) => compactNumberFormatter.format(value).replace("K", "k")
+
+const formatChartDateLabel = (value: string) => {
+  const isoDate = value.split("T")[0]
+  const [, month, day] = isoDate.split("-")
+
+  if (month && day) {
+    return `${Number(month)}-${Number(day)}`
+  }
+
+  const fallbackDate = new Date(value)
+  if (Number.isNaN(fallbackDate.getTime())) {
+    return value
+  }
+
+  return `${fallbackDate.getMonth() + 1}-${fallbackDate.getDate()}`
+}
+
 interface AppOverviewTabProps {
   onNavigateToTab?: (tab: string) => void
   refreshKey?: number
@@ -219,17 +243,10 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
   const performanceData = useMemo(() => {
     if (!revenueOverviewData?.data || revenueOverviewData.data.length === 0) return []
 
-    // Get day name helper
-    const getDayName = (date: Date): string => {
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-      return days[date.getDay()]
-    }
-
     // Map API data to chart format
     return revenueOverviewData.data.map(item => {
-      const dateObj = new Date(item.date)
       return {
-        day: getDayName(dateObj),
+        dateLabel: formatChartDateLabel(item.date),
         date: item.date,
         revenue: chartMetric === 'revenue' ? item.value : 0,
         ecpm: chartMetric === 'ecpm' ? item.value : 0,
@@ -251,12 +268,25 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
   )
 
   const metricConfig = {
-    revenue: { key: "revenue", label: "Revenue", format: (v: number) => `$${v.toFixed(2)}`, color: "#2563eb" },
-    ecpm: { key: "ecpm", label: "eCPM", format: (v: number) => `$${v.toFixed(2)}`, color: "#16a34a" },
+    revenue: {
+      key: "revenue",
+      label: "Revenue",
+      format: (v: number) => `$${v.toFixed(2)}`,
+      tickFormat: (v: number) => `$${formatCompactTick(v)}`,
+      color: "#2563eb",
+    },
+    ecpm: {
+      key: "ecpm",
+      label: "eCPM",
+      format: (v: number) => `$${v.toFixed(2)}`,
+      tickFormat: (v: number) => `$${formatCompactTick(v)}`,
+      color: "#16a34a",
+    },
     impressions: {
       key: "impressions",
       label: "Impressions",
       format: (v: number) => v.toLocaleString(),
+      tickFormat: formatCompactTick,
       color: "#7c3aed",
     },
   }
@@ -365,7 +395,7 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                     <XAxis
-                      dataKey="day"
+                      dataKey="dateLabel"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "#64748b" }}
@@ -375,7 +405,7 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "#64748b" }}
-                      tickFormatter={config.format}
+                      tickFormatter={config.tickFormat}
                       dx={-10}
                     />
                     <Tooltip
