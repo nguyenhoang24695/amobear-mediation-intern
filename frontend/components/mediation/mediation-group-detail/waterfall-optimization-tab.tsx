@@ -44,15 +44,16 @@ import type { AdUnit, App, WaterfallRecommendationRuleGroupDto } from "@/types/a
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
 import type { ApplyDirectChanges } from "../modals/apply-variant-modal"
 import { Loader2, Save, RefreshCw, Settings } from "lucide-react"
+import { RecommendationWorkflowPanel } from "@/components/waterfall-optimizer/recommendation-workflow-panel"
 
 interface WaterfallOptimizationTabProps {
   onRunABTest: () => void
-  /** Gọi với dữ liệu thay đổi thật + mediationGroupId để mở modal Apply Direct */
+  /** Called with real changes + mediationGroupId to open the Apply Direct modal. */
   onApplyDirect: (changes: ApplyDirectChanges, mediationGroupId: string) => void
   hasRunningTest: boolean
   testDay: number
   testDuration: number
-  /** Tăng lên sau Apply/Sync thành công để tab refetch group detail + recommendations */
+  /** Incremented after successful Apply/Sync so the tab refetches group detail + recommendations. */
   refreshKey?: number
 }
 
@@ -70,7 +71,7 @@ interface WaterfallSource {
   admobNetworkWaterfallAdUnitId?: string
   /** 8-Rule recommendation: REMOVE | TEST | REDUCE | KEEP | INCREASE | ADD LAYER | ADD HIGHER */
   recommendationAction?: string
-  /** Lý do gợi ý từ API (hiển thị tooltip cho Suggested) */
+  /** Recommendation reason returned by the API (shown as tooltip for Suggested). */
   reason?: string
 }
 
@@ -92,6 +93,10 @@ export function WaterfallOptimizationTab({
   refreshKey = 0,
 }: WaterfallOptimizationTabProps) {
   const params = useParams()
+  const manualReorderEnabled = false
+  const manualStatusToggleEnabled = false
+  const biddingEditingEnabled = false
+  const abTestingEnabled = false
   const mediationGroupIdFromParams = (params as { id?: string })?.id as string | undefined
   const hasValidId = !!mediationGroupIdFromParams
 
@@ -107,7 +112,7 @@ export function WaterfallOptimizationTab({
   const appIconUri = (groupDetail as { appIconUri?: string; AppIconUri?: string } | undefined)?.appIconUri ?? (groupDetail as { AppIconUri?: string })?.AppIconUri
   const platform = (groupDetail as { platform?: string; Platform?: string } | undefined)?.platform ?? (groupDetail as { Platform?: string })?.Platform
 
-  /** Từ adUnitMappings (key dạng ca-app-pub-xxx/unitId) lấy prefix làm app AdMob id khi API detail không trả appAdMobId. */
+  /** Extract the AdMob app id prefix from adUnitMappings keys (ca-app-pub-xxx/unitId) when detail API does not return appAdMobId. */
   const derivedAppAdMobIdFromMappings = useMemo(() => {
     const rawLines = (groupDetail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown })?.mediationGroupLines
       ?? (groupDetail as { MediationGroupLines?: unknown })?.MediationGroupLines
@@ -125,19 +130,19 @@ export function WaterfallOptimizationTab({
 
   const appAdMobId = appAdMobIdFromDetail ?? derivedAppAdMobIdFromMappings
 
-  /** Lấy app (có id nội bộ) khi có appAdMobId — từ detail hoặc từ adUnitKey — để sau đó gọi getAppAdUnits(app.id). */
+  /** Resolve the app (internal id) when appAdMobId exists, from detail or adUnitKey, so getAppAdUnits(app.id) can be called. */
   const { data: appByAdMobId } = useApi(
     () => structureApi.getAppByAppId(appAdMobId!),
     { enabled: !!appAdMobId && appIdFromDetail == null, cacheKey: appAdMobId && !appIdFromDetail ? `app_by_appid_${appAdMobId}` : undefined }
   )
   const effectiveAppId = appIdFromDetail ?? (appByAdMobId as App | undefined)?.id ?? (appByAdMobId as { Id?: number })?.Id
 
-  /** Gọi API lấy chi tiết Ad Units của app để hiển thị đúng DisplayName (tên Ad Unit). Luôn bật khi có effectiveAppId (từ detail hoặc từ app lấy bằng appAdMobId). */
+  /** Fetch app Ad Unit details to show the correct DisplayName. Always enabled when effectiveAppId is available. */
   const { data: appAdUnits, loading: loadingAppAdUnits } = useApi(
     () => structureApi.getAppAdUnits(effectiveAppId!),
     { enabled: !!effectiveAppId, cacheKey: effectiveAppId != null ? `app_ad_units_${effectiveAppId}` : undefined }
   )
-  /** Ad units trong mediation group: trích từ mediationGroupLines (list/array hoặc object) → từng line.adUnitMappings (key = ca-app-pub-xxx/unitId). */
+  /** Ad units inside the mediation group, extracted from mediationGroupLines (list/array or object) via each line.adUnitMappings entry. */
   const mediationAdUnitsFromMappings = useMemo(() => {
     const rawLines = (groupDetail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown })?.mediationGroupLines
       ?? (groupDetail as { MediationGroupLines?: unknown })?.MediationGroupLines
@@ -151,7 +156,7 @@ export function WaterfallOptimizationTab({
       adUnitMappings?: Record<string, string>
       AdUnitMappings?: Record<string, string>
     }
-    // API có thể trả list (array) hoặc object (key = line id); duyệt hết mọi line
+    // The API may return a list (array) or an object (key = line id); iterate through every line.
     const lineList: LineShape[] = Array.isArray(rawLines)
       ? (rawLines as LineShape[])
       : Object.values(rawLines as Record<string, LineShape>)
@@ -173,13 +178,13 @@ export function WaterfallOptimizationTab({
     return result
   }, [groupDetail])
 
-  /** Set adUnitKey từ mediationGroupLines (để lọc API response chỉ lấy ad unit có trong mediation group). */
+  /** Build adUnitKey values from mediationGroupLines so API responses can be filtered to only the mediation group's ad units. */
   const mediationAdUnitKeySet = useMemo(
     () => new Set(mediationAdUnitsFromMappings.map((u) => u.adUnitKey)),
     [mediationAdUnitsFromMappings]
   )
 
-  /** Chi tiết ad unit từ API getAppAdUnits: chỉ lấy các adUnitId trùng với mediationGroupLines. Map adUnitKey → displayName, adFormat, ecpm. */
+  /** Ad unit details from getAppAdUnits: keep only adUnitIds present in mediationGroupLines and map adUnitKey -> displayName, adFormat, ecpm. */
   const adUnitDetailsByKey = useMemo(() => {
     const list = (appAdUnits as (AdUnit & { DisplayName?: string; AdUnitId?: string })[] | undefined) ?? []
     const map: Record<string, { displayName: string; adFormat?: string; ecpm?: number }> = {}
@@ -197,7 +202,7 @@ export function WaterfallOptimizationTab({
   const [adUnitsPageSize, setAdUnitsPageSize] = useState(15)
   const [adUnitsPage, setAdUnitsPage] = useState(1)
 
-  // Rule Groups: fetch tất cả rule groups và mapping hiện tại của app
+  // Rule Groups: fetch all rule groups and the app's current mapping.
   const { data: ruleGroupsData } = useApi(
     () => waterfallRecommendationSettingsApi.getAllRuleGroups(),
     { cacheKey: "all_rule_groups" }
@@ -248,7 +253,7 @@ export function WaterfallOptimizationTab({
     try {
       await waterfallRecommendationSettingsApi.rerunRecommendation(mediationGroupId)
       await refetchRecommendations()
-      // Tăng forceRefreshKey để force re-init optimizedWaterfall với data mới
+      // Increment forceRefreshKey to force optimizedWaterfall re-initialization with fresh data.
       setForceRefreshKey((k) => k + 1)
     } catch (err) {
       console.error("Failed to rerun recommendation:", err)
@@ -257,7 +262,17 @@ export function WaterfallOptimizationTab({
     }
   }
 
-  // Recommendation: không truyền start/end/min → server dùng mặc định 7d + 3% + 0.9% và trả cache (không tính lại). Không gọi SoWData riêng — ecpmByAdSourceId lấy từ recommendations.
+  const handleWorkflowAnalyzeCompleted = async () => {
+    await handleRerunRecommendation()
+  }
+
+  const handleWorkflowApplied = async () => {
+    await refetchGroupDetail()
+    await refetchRecommendations()
+    setForceRefreshKey((k) => k + 1)
+  }
+
+  // Recommendations: do not pass start/end/min so the server uses default 7d + 3% + 0.9% and returns cached data. Do not call SoWData separately; ecpmByAdSourceId comes from recommendations.
   const { data: recommendationsResponse, refetch: refetchRecommendations } = useApi(
     () => structureApi.getMediationGroupRecommendationsByAdMobId(mediationGroupIdFromParams!),
     {
@@ -267,7 +282,7 @@ export function WaterfallOptimizationTab({
   )
   const recommendations = recommendationsResponse?.recommendations ?? []
 
-  // Refetch group detail + recommendations khi Apply/Sync thành công (parent tăng refreshKey).
+  // Refetch group detail + recommendations when Apply/Sync succeeds (parent increments refreshKey).
   useEffect(() => {
     if (refreshKey > 0 && hasValidId) {
       void refetchGroupDetail()
@@ -275,7 +290,7 @@ export function WaterfallOptimizationTab({
     }
   }, [refreshKey, hasValidId, refetchGroupDetail, refetchRecommendations])
 
-  /** Thời gian cập nhật lần cuối (từ group detail) — hiển thị bên Current. */
+  /** Last updated time from group detail, shown in the Current column. */
   const updatedAt = useMemo(() => {
     const d = groupDetail as { updatedAt?: string } | undefined
     return d?.updatedAt
@@ -290,7 +305,7 @@ export function WaterfallOptimizationTab({
     }
   }
 
-  // eCPM theo adSourceId: lấy từ recommendations (observedEcpm), không gọi API SoWData riêng
+  // eCPM by adSourceId comes from recommendations (observedEcpm); no separate SoWData API call.
   const ecpmByAdSourceId = useMemo(() => {
     const map: Record<string, number> = {}
     for (const r of recommendations) {
@@ -302,7 +317,7 @@ export function WaterfallOptimizationTab({
     return map
   }, [recommendations])
 
-  // Match rate (%) theo adSourceId: lấy từ recommendations (matchRatePercent) — fallback khi API không trả match rate theo line
+  // Match rate (%) by adSourceId comes from recommendations (matchRatePercent) as fallback when the API does not return match rate per line.
   const matchRateByAdSourceId = useMemo(() => {
     const map: Record<string, number> = {}
     for (const r of recommendations) {
@@ -314,7 +329,7 @@ export function WaterfallOptimizationTab({
     return map
   }, [recommendations])
 
-  // Match rate (%) từ API mediation group detail (StarRocks bronze.mediation_table) — ưu tiên dùng thay cho recommendations
+  // Match rate (%) from mediation group detail API (StarRocks bronze.mediation_table) takes priority over recommendations.
   const matchRateFromMediationLines = useMemo(() => {
     const rawLines = (groupDetail as { mediationGroupLines?: unknown; MediationGroupLines?: unknown })?.mediationGroupLines
       ?? (groupDetail as { MediationGroupLines?: unknown })?.MediationGroupLines
@@ -337,7 +352,7 @@ export function WaterfallOptimizationTab({
     return { byLineId, byAdSourceId }
   }, [groupDetail])
 
-  // Build từ mediation_group_lines_json (PostgreSQL) theo format Dolphin 2.0
+  // Build from mediation_group_lines_json (PostgreSQL) using the Dolphin 2.0 format.
   const currentSetup = useMemo(() => {
     const detail = groupDetail as {
       mediationGroupLines?: Record<
@@ -372,7 +387,7 @@ export function WaterfallOptimizationTab({
       : {}
     const entries = Object.entries(linesObj)
 
-    // Bidding: lines không có cpmMicros (giống Dolphin BiddingTable)
+    // Bidding: lines do not have cpmMicros, matching Dolphin's BiddingTable behavior.
     const biddingList: BiddingSource[] = entries
       .filter(([, line]) => !line.cpmMicros || line.cpmMicros === "")
       .map(([key, line]) => ({
@@ -383,7 +398,7 @@ export function WaterfallOptimizationTab({
         ecpm7d: ecpmByAdSourceId[line.adSourceId ?? ""] ?? 0,
       }))
 
-    // Waterfall gốc: chỉ từ mediation_group_lines_json — floor = cpmMicros/1e6; id = key AdMob (để Apply REMOVED đúng).
+    // Original waterfall: derived only from mediation_group_lines_json; floor = cpmMicros/1e6 and id = AdMob key so Apply REMOVED works correctly.
     const waterfallList: WaterfallSource[] = entries
       .filter(([, line]) => line.cpmMicros != null && line.cpmMicros !== "")
       .sort(([, a], [, b]) => parseInt(b.cpmMicros ?? "0", 10) - parseInt(a.cpmMicros ?? "0", 10))
@@ -396,7 +411,7 @@ export function WaterfallOptimizationTab({
           id: line.id ?? key ?? `w_${line.adSourceId ?? ""}`,
           name: line.displayName ?? line.adSourceId ?? "Unknown",
           floor,
-          ecpm: floor, // Current = đúng từ JSON; eCPM SoW chỉ dùng cho recommendation (cột Optimized).
+          ecpm: floor, // Current reflects the JSON source; SoW eCPM is only used for recommendations in the Optimized column.
           status: line.state === "DISABLED" || line.state === "REMOVED" ? ("inactive" as const) : ("active" as const),
           network: line.adSourceId ?? "",
           revenue30Days,
@@ -409,7 +424,7 @@ export function WaterfallOptimizationTab({
     return { bidding: biddingList, waterfall: waterfallList, estimatedMonthly }
   }, [groupDetail, ecpmByAdSourceId])
 
-  // Optimized (Suggested): chỉ lấy từ API recommendations, không merge với Current.
+  // Optimized (Suggested): derived only from API recommendations, without merging with Current.
   const recommendedWaterfall = useMemo(() => {
     if (recommendations.length === 0) return []
     const mapped = recommendations.map((r, i) => {
@@ -487,15 +502,15 @@ export function WaterfallOptimizationTab({
     return optimizedWaterfall.some((s) => s.changeType === "new" || s.changeType === "removed")
   }, [optimizedWaterfall, aiSuggestedWaterfall])
 
-  // Calculate changes summary: added/removed dựa trên recommendation vs current; modified từ optimized state
+  // Calculate change summary: added/removed based on recommendation vs current; modified from the optimized state.
   const calculateChanges = useCallback(() => {
     const modifiedFloors = optimizedWaterfall.filter((s) => s.changeType === "modified" && s.status !== "inactive")
 
-    // Thêm mới: mọi source có changeType="new" (dù là từ recommendation hay user tự thêm)
+    // Added: every source with changeType="new", whether it comes from a recommendation or was manually added by the user.
     const addedCount = optimizedWaterfall.filter((s) => s.changeType === "new").length
 
-    // Removed: mọi dòng hiện tại không còn được map sang optimized (dựa trên lineId rec_<id>_*),
-    // bất kể là do recommendation REMOVE hay user tự mark removed.
+    // Removed: every current row that is no longer mapped into optimized (based on lineId rec_<id>_*),
+    // whether caused by a recommendation REMOVE or manually marked removed by the user.
     const active = optimizedWaterfall.filter((s) => s.changeType !== "removed")
     const removedCount = currentSetup.waterfall.filter(
       (c) => !active.some((o) => o.id.startsWith(`rec_${c.id}_`)),
@@ -529,7 +544,7 @@ export function WaterfallOptimizationTab({
 
   const changes = calculateChanges()
 
-  /** Chuẩn hóa network/title sang adSourceId cho API apply (backend hiện chỉ hỗ trợ "admob"). */
+  /** Normalize network/title into adSourceId for the apply API (backend currently supports only "admob"). */
   const toAdSourceIdForApply = (network?: string): string => {
     if (!network) return "1215381445328257950"
     const n = network.toLowerCase()
@@ -537,7 +552,7 @@ export function WaterfallOptimizationTab({
     return network
   }
 
-  /** Tính bộ thay đổi thật để truyền vào popup Apply Direct (floors modified, added, removed) */
+  /** Compute the real change set to pass into the Apply Direct popup (modified floors, added, removed). */
   const getApplyDirectChanges = useCallback((): ApplyDirectChanges => {
     const active = optimizedWaterfall.filter((s) => s.changeType !== "removed")
 
@@ -586,6 +601,7 @@ export function WaterfallOptimizationTab({
 
   // Handle inline eCPM floor editing
   const startEditing = (source: WaterfallSource) => {
+    if (source.changeType === "removed") return
     setEditingFloorId(source.id)
     setEditingFloorValue(source.floor.toFixed(2))
   }
@@ -657,16 +673,22 @@ export function WaterfallOptimizationTab({
 
   // Handle drag and drop reordering
   const handleDragStart = (e: React.DragEvent, sourceId: string) => {
+    if (!manualReorderEnabled) {
+      e.preventDefault()
+      return
+    }
     setDraggedItemId(sourceId)
     e.dataTransfer.effectAllowed = "move"
   }
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
+    if (!manualReorderEnabled) return
     e.preventDefault()
     setDragOverIndex(index)
   }
 
   const handleDragEnd = () => {
+    if (!manualReorderEnabled) return
     if (draggedItemId !== null && dragOverIndex !== null) {
       const draggedIndex = optimizedWaterfall.findIndex((s) => s.id === draggedItemId)
       if (draggedIndex !== -1 && draggedIndex !== dragOverIndex) {
@@ -725,6 +747,7 @@ export function WaterfallOptimizationTab({
 
   // Toggle source status
   const toggleSourceStatus = (sourceId: string) => {
+    if (!manualStatusToggleEnabled) return
     setOptimizedWaterfall((prev) =>
       prev.map((source) => {
         if (source.id === sourceId) {
@@ -743,7 +766,7 @@ export function WaterfallOptimizationTab({
   const optimizedAvgFloor =
     activeWaterfall.length > 0 ? activeWaterfall.reduce((sum, s) => sum + s.floor, 0) / activeWaterfall.length : 0
 
-  // Ad units pagination & selection (hooks phải gọi trước mọi return)
+  // Ad units pagination & selection (hooks must run before any return).
   const paginatedAdUnits = useMemo(() => {
     const list = mediationAdUnitsFromMappings
     const start = (adUnitsPage - 1) * adUnitsPageSize
@@ -787,9 +810,9 @@ export function WaterfallOptimizationTab({
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6 pb-24">
-        {/* Section 1: Ad units + Optimization Status Banner (2 cột như Current Setup / Optimized) */}
+        {/* Section 1: Ad units + Optimization Status Banner (two columns like Current Setup / Optimized) */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Cột trái: Ad units */}
+          {/* Left column: Ad units */}
           <Card className="border-slate-200 overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -812,7 +835,7 @@ export function WaterfallOptimizationTab({
             <CardContent className="p-0">
               {mediationAdUnitsFromMappings.length === 0 ? (
                 <div className="py-12 text-center text-slate-500 text-sm">
-                  Chưa có ad unit nào trong mediation group (mediationGroupLines / adUnitMappings trống).
+                  No ad units were found in this mediation group (`mediationGroupLines` / `adUnitMappings` are empty).
                 </div>
               ) : (
                 <>
@@ -861,7 +884,7 @@ export function WaterfallOptimizationTab({
                               </td>
                               <td className="px-3 py-2.5 font-medium text-slate-900">
                                 {loadingAppAdUnits && !details
-                                  ? "Đang tải..."
+                                  ? "Loading..."
                                   : (details?.displayName ?? unit.unitId)}
                               </td>
                               <td className="px-3 py-2.5 text-slate-600">
@@ -934,8 +957,15 @@ export function WaterfallOptimizationTab({
             </CardContent>
           </Card>
 
-          {/* Cột phải: Optimization Status Banner + Rule Group */}
+          {/* Right column: Optimization Status Banner + Rule Group */}
           <div className="flex flex-col gap-4">
+            <RecommendationWorkflowPanel
+              mediationGroupId={mediationGroupId}
+              title="Recommendation Lifecycle"
+              compact
+              onAnalyzed={handleWorkflowAnalyzeCompleted}
+              onApplied={handleWorkflowApplied}
+            />
             {/* Optimization Status Banner */}
             {!bannerDismissed && (
               <>
@@ -950,16 +980,20 @@ export function WaterfallOptimizationTab({
                         {(changes.estimatedMonthly - currentSetup.estimatedMonthly).toFixed(0)})
                       </p>
                       <p className="text-xs text-slate-500 mt-1">
-                        Based on last 14 days performance data • Confidence: 87%
+                        Review recommendations in the lifecycle panel before pushing to production.
                       </p>
                       <div className="flex items-center gap-3 mt-3">
-                        <Button variant="link" className="h-auto p-0 text-blue-600">
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-blue-600"
+                          onClick={() => document.getElementById("changes-summary-card")?.scrollIntoView({ behavior: "smooth" })}
+                        >
                           View Changes
                         </Button>
                         <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                           Apply Direct
                         </Button>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!abTestingEnabled}>
                           Run A/B Test
                         </Button>
                       </div>
@@ -1000,9 +1034,9 @@ export function WaterfallOptimizationTab({
                     <div className="flex-1">
                       <h3 className="font-semibold text-slate-900">Waterfall Optimized</h3>
                       <p className="text-sm text-slate-700 mt-0.5">Current configuration is performing optimally</p>
-                      <p className="text-xs text-slate-500 mt-1">Last analyzed: 2 hours ago</p>
+                      <p className="text-xs text-slate-500 mt-1">Use the lifecycle panel above to rerun analysis when needed.</p>
                     </div>
-                    <Button variant="link" className="h-auto p-0 text-green-600">
+                    <Button variant="link" className="h-auto p-0 text-green-600" onClick={() => void handleWorkflowAnalyzeCompleted()}>
                       Re-analyze Now
                     </Button>
                   </div>
@@ -1028,7 +1062,7 @@ export function WaterfallOptimizationTab({
                         <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                           Apply Direct
                         </Button>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest}>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!abTestingEnabled}>
                           Run A/B Test
                         </Button>
                       </div>
@@ -1270,7 +1304,7 @@ export function WaterfallOptimizationTab({
                                     <p className="text-xs text-slate-500 cursor-help">MR: {matchRate.toFixed(1)}%</p>
                                   </TooltipTrigger>
                                   <TooltipContent side="left">
-                                    <p>Match rate: tỷ lệ request có ad trả về / tổng request</p>
+                                    <p>Match rate: requests with ads returned divided by total requests.</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1341,7 +1375,7 @@ export function WaterfallOptimizationTab({
                           source.changeType === "new" ? "bg-green-50" : "bg-slate-50",
                         )}
                       >
-                        <Switch checked={source.status === "active"} className="data-[state=checked]:bg-green-500" />
+                        <Switch checked={source.status === "active"} disabled className="data-[state=checked]:bg-green-500" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-slate-900">{source.name}</p>
@@ -1361,14 +1395,11 @@ export function WaterfallOptimizationTab({
                     ))}
                     {/* Add Bidding Source Button */}
                     <button
-                      onClick={() => {
-                        setAddSourceType("bidding")
-                        setAddSourceModalOpen(true)
-                      }}
-                      className="flex items-center gap-2 w-full p-3 border-2 border-dashed border-slate-200 rounded-lg text-sm text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      disabled={!biddingEditingEnabled}
+                      className="flex items-center gap-2 w-full cursor-not-allowed p-3 border-2 border-dashed border-slate-200 rounded-lg text-sm text-slate-400"
                     >
                       <Plus className="w-4 h-4" />
-                      Add Bidding Source
+                      Add Bidding Source (Coming soon)
                     </button>
                   </CollapsibleContent>
                 </Collapsible>
@@ -1396,7 +1427,7 @@ export function WaterfallOptimizationTab({
                       return (
                         <div
                           key={source.id}
-                          draggable={!isRemoved}
+                          draggable={!isRemoved && manualReorderEnabled}
                           onDragStart={(e) => handleDragStart(e, source.id)}
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragEnd={handleDragEnd}
@@ -1413,12 +1444,12 @@ export function WaterfallOptimizationTab({
                           )}
                         >
                           {/* Drag Handle */}
-                          {!isRemoved && (
+                          {!isRemoved && manualReorderEnabled && (
                             <div className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
                               <GripVertical className="w-4 h-4" />
                             </div>
                           )}
-                          {isRemoved && <div className="w-4" />}
+                          {(isRemoved || !manualReorderEnabled) && <div className="w-4" />}
 
                           {/* Position Number */}
                           <span
@@ -1529,6 +1560,7 @@ export function WaterfallOptimizationTab({
                             <Switch
                               checked={source.status === "active"}
                               onCheckedChange={() => toggleSourceStatus(source.id)}
+                              disabled={!manualStatusToggleEnabled}
                               className="data-[state=checked]:bg-green-500"
                             />
                           )}
@@ -1578,7 +1610,7 @@ export function WaterfallOptimizationTab({
         </div>
 
         {/* Section 3: Changes Summary Card */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200" id="changes-summary-card">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1635,26 +1667,26 @@ export function WaterfallOptimizationTab({
                   {/* Confidence Score */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Confidence Score</span>
+                      <span className="text-slate-600">Recommendation Workflow</span>
                       {hasManualChanges() ? (
                         <Tooltip>
                           <TooltipTrigger className="flex items-center gap-1 text-slate-400">
-                            <span>--</span>
+                            <span>Review needed</span>
                             <AlertCircle className="w-3.5 h-3.5" />
                           </TooltipTrigger>
-                          <TooltipContent>Confidence score only available for AI-generated suggestions</TooltipContent>
+                          <TooltipContent>Manual edits should be reviewed against approved recommendations before apply.</TooltipContent>
                         </Tooltip>
                       ) : (
-                        <span className="font-medium text-slate-900">87%</span>
+                        <span className="font-medium text-slate-900">Tracked</span>
                       )}
                     </div>
                     {!hasManualChanges() && (
                       <>
-                        <Progress value={87} className="h-2" />
-                        <p className="text-xs text-slate-500">AI Optimized • Based on 14 days data</p>
+                        <Progress value={100} className="h-2" />
+                        <p className="text-xs text-slate-500">Approve/apply history is tracked in the lifecycle panel.</p>
                       </>
                     )}
-                    {hasManualChanges() && <p className="text-xs text-slate-500">Manual changes applied</p>}
+                    {hasManualChanges() && <p className="text-xs text-slate-500">Manual floor/add/remove changes applied</p>}
                   </div>
 
                   {/* Mini Comparison Table */}
@@ -1749,7 +1781,7 @@ export function WaterfallOptimizationTab({
               >
                 Apply Direct
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!changes.hasChanges}>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!changes.hasChanges || !abTestingEnabled}>
                 Run A/B Test
               </Button>
             </div>

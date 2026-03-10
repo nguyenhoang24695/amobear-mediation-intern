@@ -25,6 +25,12 @@ import type {
     WaterfallRecommendationRuleGroupDto,
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
+    WaterfallOptimizerFiltersDto,
+    WaterfallAnalyzeRequestDto,
+    WaterfallAnalyzeResponseDto,
+    WaterfallRecommendationRecordDto,
+    WaterfallApplyApprovedResponseDto,
+    WaterfallApplyLogDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -196,6 +202,10 @@ export const structureApi = {
     /** App by AdMob app_id (cho URL /apps/{appId}). Cache key đồng nhất: app_detail_{appId}. */
     getAppByAppId: async (appId: string): Promise<App> => {
         return apiClient.get<App>(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}`)
+    },
+
+    syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
+        return apiClient.post(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}/sync-performance`)
     },
 
     getAppAdUnits: async (id: number): Promise<AdUnit[]> => {
@@ -1254,6 +1264,46 @@ export const waterfallRecommendationSettingsApi = {
         return apiClient.post<{ success: boolean; message?: string; error?: string }>(
             `/api/waterfall-recommendation-settings/rerun-recommendation/${encodeURIComponent(mediationGroupId)}`
         )
+    },
+}
+
+export const waterfallOptimizerApi = {
+    getFilters: async (): Promise<WaterfallOptimizerFiltersDto> => {
+        return apiClient.get<WaterfallOptimizerFiltersDto>('/api/waterfall/filters')
+    },
+
+    analyze: async (payload: WaterfallAnalyzeRequestDto): Promise<WaterfallAnalyzeResponseDto> => {
+        return apiClient.post<WaterfallAnalyzeResponseDto>('/api/waterfall/analyze', payload)
+    },
+
+    getRecommendations: async (params?: {
+        appId?: string
+        platform?: string
+        mediationGroupId?: string
+        status?: string
+        analysisDate?: string
+    }): Promise<WaterfallRecommendationRecordDto[]> => {
+        return apiClient.get<WaterfallRecommendationRecordDto[]>('/api/waterfall/recommendations', params as Record<string, string | undefined>)
+    },
+
+    approveRecommendation: async (id: number): Promise<WaterfallRecommendationRecordDto> => {
+        return apiClient.post<WaterfallRecommendationRecordDto>(`/api/waterfall/recommendations/${id}/approve`)
+    },
+
+    rejectRecommendation: async (id: number): Promise<WaterfallRecommendationRecordDto> => {
+        return apiClient.post<WaterfallRecommendationRecordDto>(`/api/waterfall/recommendations/${id}/reject`)
+    },
+
+    bulkApprove: async (recommendationIds: number[]): Promise<{ approvedCount: number }> => {
+        return apiClient.post<{ approvedCount: number }>('/api/waterfall/recommendations/bulk-approve', { recommendationIds })
+    },
+
+    applyApproved: async (recommendationIds: number[]): Promise<WaterfallApplyApprovedResponseDto> => {
+        return apiClient.post<WaterfallApplyApprovedResponseDto>('/api/waterfall/apply', { recommendationIds })
+    },
+
+    getApplyHistory: async (mediationGroupId?: string): Promise<WaterfallApplyLogDto[]> => {
+        return apiClient.get<WaterfallApplyLogDto[]>('/api/waterfall/apply-history', mediationGroupId ? { mediationGroupId } : undefined)
     },
 }
 
