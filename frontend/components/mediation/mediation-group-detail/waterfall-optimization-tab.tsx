@@ -250,7 +250,7 @@ export function WaterfallOptimizationTab({
     if (!mediationGroupId) return
     setRerunningRecommendation(true)
     try {
-      await waterfallRecommendationSettingsApi.rerunRecommendation(mediationGroupId)
+      await waterfallRecommendationSettingsApi.rerunRecommendation(mediationGroupId, selectedRuleGroupId)
       await refetchRecommendations()
       // Increment forceRefreshKey to force optimizedWaterfall re-initialization with fresh data.
       setForceRefreshKey((k) => k + 1)
