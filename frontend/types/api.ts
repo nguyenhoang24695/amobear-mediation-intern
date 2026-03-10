@@ -291,7 +291,7 @@ export interface RevenueByNetwork {
 }
 
 export interface ActivityItem {
-  id: string
+  id: number
   type: string
   severity: string
   title: string
@@ -300,7 +300,7 @@ export interface ActivityItem {
   relativeTime: string
   isRead: boolean
   resourceType?: string
-  resourceId?: string
+  resourceId?: number
   resourceUrl?: string
 }
 
