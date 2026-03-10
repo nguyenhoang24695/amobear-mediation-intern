@@ -1253,10 +1253,14 @@ export const waterfallRecommendationSettingsApi = {
         )
     },
 
-    // Rerun Recommendation
-    rerunRecommendation: async (mediationGroupId: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+    // Rerun Recommendation (ruleGroupId = rule group đã chọn trên UI; nếu có thì chạy với group đó)
+    rerunRecommendation: async (
+        mediationGroupId: string,
+        ruleGroupId?: number | null
+    ): Promise<{ success: boolean; message?: string; error?: string }> => {
+        const query = ruleGroupId != null ? `?ruleGroupId=${encodeURIComponent(ruleGroupId)}` : ""
         return apiClient.post<{ success: boolean; message?: string; error?: string }>(
-            `/api/waterfall-recommendation-settings/rerun-recommendation/${encodeURIComponent(mediationGroupId)}`
+            `/api/waterfall-recommendation-settings/rerun-recommendation/${encodeURIComponent(mediationGroupId)}${query}`
         )
     },
 }
