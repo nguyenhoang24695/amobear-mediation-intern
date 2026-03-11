@@ -72,6 +72,10 @@ interface WaterfallSource {
   recommendationAction?: string
   /** Recommendation reason returned by the API (shown as tooltip for Suggested). */
   reason?: string
+  /** SoW % (0–100) từ recommendation — hiển thị trong tooltip để debug. */
+  sowPercent?: number
+  /** Match rate % (0–100) từ recommendation — hiển thị trong tooltip để debug. */
+  matchRatePercent?: number | null
 }
 
 interface BiddingSource {
@@ -431,6 +435,8 @@ export function WaterfallOptimizationTab({
         network: r.adSourceId,
         recommendationAction: r.action,
         reason: r.reason,
+        sowPercent: r.sowPercent,
+        matchRatePercent: r.matchRatePercent,
       } satisfies WaterfallSource
     })
     return mapped.sort((a, b) => b.floor - a.floor)
@@ -1312,30 +1318,6 @@ export function WaterfallOptimizationTab({
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-lg">OPTIMIZED (Suggested)</h3>
                       <Pencil className="w-4 h-4 text-purple-200" />
-                      {recommendationsResponse?.parametersUsed != null ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button type="button" className="text-purple-200 hover:text-white focus:outline-none">
-                              <HelpCircle className="w-4 h-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="max-w-sm text-left font-mono text-xs">
-                            <p className="font-sans font-semibold mb-1">Tham số đã dùng (debug)</p>
-                            <ul className="space-y-0.5">
-                              <li>Period: {recommendationsResponse.parametersUsed.periodStart} → {recommendationsResponse.parametersUsed.periodEnd}</li>
-                              <li>Min MR: {recommendationsResponse.parametersUsed.minMatchRatePercent}% • Min SoW: {recommendationsResponse.parametersUsed.minSowPercent}%</li>
-                              <li>MinRec: {recommendationsResponse.parametersUsed.minRecommendations} • MaxRec: {recommendationsResponse.parametersUsed.maxRecommendations}</li>
-                              <li>Rules: {recommendationsResponse.parametersUsed.rulesCount}</li>
-                              {recommendationsResponse.parametersUsed.ruleGroupIdOverride != null && (
-                                <li>RuleGroup override: {recommendationsResponse.parametersUsed.ruleGroupIdOverride}</li>
-                              )}
-                              {recommendationsResponse.parametersUsed.appId != null && recommendationsResponse.parametersUsed.appId !== "" && (
-                                <li>AppId: {recommendationsResponse.parametersUsed.appId}</li>
-                              )}
-                            </ul>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : null}
                       {hasManualChanges() && (
                         <Badge className="bg-amber-400 text-amber-900 border-0 text-xs">Unsaved changes</Badge>
                       )}
@@ -1489,6 +1471,11 @@ export function WaterfallOptimizationTab({
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
                                     <p className="text-sm">{source.reason}</p>
+                                    {(source.sowPercent != null || source.matchRatePercent != null) && (
+                                      <p className="text-xs text-slate-500 mt-1 border-t border-slate-200 pt-1">
+                                        SoW: {source.sowPercent != null ? `${Number(source.sowPercent).toFixed(2)}%` : "—"} • MR: {source.matchRatePercent != null ? `${Number(source.matchRatePercent).toFixed(2)}%` : "—"}
+                                      </p>
+                                    )}
                                   </TooltipContent>
                                 </Tooltip>
                               ) : (
