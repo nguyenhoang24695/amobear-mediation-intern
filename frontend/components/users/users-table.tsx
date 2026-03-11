@@ -80,6 +80,7 @@ const statusConfig = {
   active: { color: "bg-green-500", label: "Active" },
   invited: { color: "bg-amber-500", label: "Invited" },
   inactive: { color: "bg-slate-400", label: "Inactive" },
+  locked: { color: "bg-orange-500", label: "Locked" },
   pending: { color: "bg-blue-500", label: "Pending" },
 }
 
@@ -155,9 +156,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           ? (effectiveRole as "admin" | "editor" | "viewer")
           : "viewer"
       
-      // Get status from first team member status, or fallback to user status logic
-      const teamMemberStatus = user.teams.length > 0 ? user.teams[0].status : null
-      const displayStatus = teamMemberStatus || (user.organization?.id ? "active" : "invited")
+      const displayStatus = (user.status || (user.organization?.id ? "active" : "invited")) as "active" | "invited" | "inactive" | "locked" | "pending"
       
       // Get joinedAt from team if filtering by teamId
       const teamJoinedAt = teamId ? user.teams.find((t) => t.id === teamId)?.joinedAt : undefined
@@ -172,7 +171,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         // hiển thị tên role theo effectiveRole (giữ nguyên chữ thường/hoa nếu sau này cần)
         teams: user.teams.map(t => ({ id: t.id, name: t.name })),
         appAccess: appAccessCount,
-        status: displayStatus as "active" | "invited" | "inactive" | "pending",
+        status: displayStatus,
         lastActive: "N/A", // TODO: Get lastActive from API if available
         joinedAt: teamJoinedAt, // JoinedAt from team membership
         permissions: user.permissions, // Store permissions for modal
@@ -597,8 +596,8 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${statusConfig[user.status].color}`} />
-                      <span className="text-sm">{statusConfig[user.status].label}</span>
+                      <span className={`w-2 h-2 rounded-full ${(statusConfig[user.status] || statusConfig.inactive).color}`} />
+                      <span className="text-sm">{(statusConfig[user.status] || statusConfig.inactive).label}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-slate-500">

@@ -23,40 +23,63 @@ interface AddEditUserModalProps {
     onOpenChange: (open: boolean) => void
     mode: "add" | "edit"
     canManage?: boolean
+    availableRoles?: string[]
     user?: {
         id: string
         name: string
         email: string
+        firstName?: string
+        lastName?: string
+        phone?: string
         role: string
         status: string
     }
     onSuccess?: () => void
 }
 
-export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, user, onSuccess }: AddEditUserModalProps) {
+const defaultRoleLabels: Record<string, string> = {
+    super_admin: "Super Admin",
+    admin: "Admin",
+    editor: "Editor",
+    viewer: "Viewer",
+}
+
+export function AddEditUserModal({
+    open,
+    onOpenChange,
+    mode,
+    canManage = false,
+    availableRoles,
+    user,
+    onSuccess,
+}: AddEditUserModalProps) {
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
+    const [phone, setPhone] = useState("")
     const [role, setRole] = useState("viewer")
     const [status, setStatus] = useState("active")
     const [saving, setSaving] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const roleOptions = availableRoles?.length > 0
+        ? availableRoles
+        : (canManage ? ["admin", "editor", "viewer"] : ["editor", "viewer"])
+    const selectableRoles = Array.from(new Set([...roleOptions, role]))
 
     useEffect(() => {
         if (mode === "edit" && user) {
-            // Split name if first/last not available separately (assuming user prop has full name)
-            // Ideally we would fetch the user details to get exact first/last name,
-            // but for now we'll split the display name as a starting point.
             const parts = user.name.split(" ")
-            setFirstName(parts[0] || "")
-            setLastName(parts.slice(1).join(" ") || "")
+            setFirstName(user.firstName ?? parts[0] ?? "")
+            setLastName(user.lastName ?? parts.slice(1).join(" ") ?? "")
             setEmail(user.email)
+            setPhone(user.phone ?? "")
             setRole(user.role)
             setStatus(user.status)
         } else {
             setFirstName("")
             setLastName("")
             setEmail("")
+            setPhone("")
             setRole("viewer")
             setStatus("active")
         }
@@ -86,6 +109,7 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                 await teamMembersApi.updateUser(user.id, {
                     firstName,
                     lastName,
+                    phone: phone.trim() || undefined,
                     role,
                     status
                 })
@@ -160,6 +184,17 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                         {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                     </div>
 
+                    <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="+1 234 567 890"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                        />
+                    </div>
+
                     {/* Role */}
                     <div className="space-y-2">
                         <Label>Role</Label>
@@ -168,9 +203,11 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                                 <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
-                                {canManage && <SelectItem value="admin">Admin</SelectItem>}
-                                <SelectItem value="editor">Editor</SelectItem>
-                                <SelectItem value="viewer">Viewer</SelectItem>
+                                {selectableRoles.map((roleOption) => (
+                                    <SelectItem key={roleOption} value={roleOption}>
+                                        {defaultRoleLabels[roleOption] || roleOption}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -186,6 +223,8 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                                 <SelectContent>
                                     <SelectItem value="active">Active</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="locked">Locked</SelectItem>
+                                    <SelectItem value="invited">Invited</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
