@@ -1312,6 +1312,30 @@ export function WaterfallOptimizationTab({
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-lg">OPTIMIZED (Suggested)</h3>
                       <Pencil className="w-4 h-4 text-purple-200" />
+                      {recommendationsResponse?.parametersUsed != null ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="text-purple-200 hover:text-white focus:outline-none">
+                              <HelpCircle className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-sm text-left font-mono text-xs">
+                            <p className="font-sans font-semibold mb-1">Tham số đã dùng (debug)</p>
+                            <ul className="space-y-0.5">
+                              <li>Period: {recommendationsResponse.parametersUsed.periodStart} → {recommendationsResponse.parametersUsed.periodEnd}</li>
+                              <li>Min MR: {recommendationsResponse.parametersUsed.minMatchRatePercent}% • Min SoW: {recommendationsResponse.parametersUsed.minSowPercent}%</li>
+                              <li>MinRec: {recommendationsResponse.parametersUsed.minRecommendations} • MaxRec: {recommendationsResponse.parametersUsed.maxRecommendations}</li>
+                              <li>Rules: {recommendationsResponse.parametersUsed.rulesCount}</li>
+                              {recommendationsResponse.parametersUsed.ruleGroupIdOverride != null && (
+                                <li>RuleGroup override: {recommendationsResponse.parametersUsed.ruleGroupIdOverride}</li>
+                              )}
+                              {recommendationsResponse.parametersUsed.appId != null && recommendationsResponse.parametersUsed.appId !== "" && (
+                                <li>AppId: {recommendationsResponse.parametersUsed.appId}</li>
+                              )}
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
                       {hasManualChanges() && (
                         <Badge className="bg-amber-400 text-amber-900 border-0 text-xs">Unsaved changes</Badge>
                       )}

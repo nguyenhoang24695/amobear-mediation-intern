@@ -10,8 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { teamMembersApi, structureApi } from "@/lib/api/services"
-import { Loader2 } from "lucide-react"
+import { Loader2, Filter } from "lucide-react"
 import { RoleSelector } from "./role-selector"
 import { AppPermissionsSelector } from "./app-permissions-selector"
 import { useApi } from "@/hooks/use-api"
@@ -62,17 +64,29 @@ export function ManagePermissionsModal({
     { enabled: open, cacheKey: 'apps_list_for_manage_permissions' }
   )
 
-  // Map API apps to AppPermissionsSelector format
+  // Map API apps to AppPermissionsSelector format (include type for sidebar filter)
   const apps = useMemo(
     () =>
       appsResponse?.apps?.map((app) => ({
-        id: app.appId, // Use appId (string) as id
+        id: app.appId,
         name: app.displayName || app.name,
         icon: app.iconUri,
         platform: app.platform,
+        type: app.type ?? null,
       })) || [],
     [appsResponse]
   )
+
+  const [filterType, setFilterType] = useState<string>("all")
+  const [filterPlatform, setFilterPlatform] = useState<string>("all")
+
+  const filteredApps = useMemo(() => {
+    return apps.filter((app) => {
+      const typeMatch = filterType === "all" || app.type === filterType
+      const platformMatch = filterPlatform === "all" || (app.platform?.toUpperCase() === filterPlatform)
+      return typeMatch && platformMatch
+    })
+  }, [apps, filterType, filterPlatform])
 
 
   // Load current permissions when modal opens
@@ -83,6 +97,8 @@ export function ManagePermissionsModal({
       setRole(initialRole)
       setGiveAllApps(false)
       setError(null)
+      setFilterType("all")
+      setFilterPlatform("all")
       return
     }
 
@@ -204,7 +220,10 @@ export function ManagePermissionsModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className="w-full"
+        style={{ maxWidth: "min(75vw, 800px)" }}
+      >
         <DialogHeader>
           <DialogTitle>Manage Permissions</DialogTitle>
           <DialogDescription>
@@ -225,21 +244,65 @@ export function ManagePermissionsModal({
             viewerDescription="Read-only access to apps and reports for this team."
           />
 
-          {/* App Permissions */}
-          <AppPermissionsSelector
-            apps={apps}
-            giveAllApps={giveAllApps}
-            onGiveAllAppsChange={setGiveAllApps}
-            selectedApps={selectedApps}
-            onToggleApp={toggleApp}
-            onUpdateAppPermission={updateAppPermission}
-            onRemoveApp={removeApp}
-            label="App Permissions"
-            showOwnerPermission={true}
-            mode="popover"
-            error={error}
-            hideGiveAllApps={true}
-          />
+          {/* App Permissions: sidebar filters + list */}
+          <div className="border-t pt-4">
+            <Label className="text-slate-500 text-xs uppercase tracking-wide">App Permissions</Label>
+            <div className="flex gap-4 mt-3">
+              {/* Left sidebar: filter by type & platform */}
+              <aside className="w-44 shrink-0 flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Filter className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase tracking-wide">Filters</span>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-600">Type</Label>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="h-9 bg-white">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      <SelectItem value="game">Game</SelectItem>
+                      <SelectItem value="app">App</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-600">Platform</Label>
+                  <Select value={filterPlatform} onValueChange={setFilterPlatform}>
+                    <SelectTrigger className="h-9 bg-white">
+                      <SelectValue placeholder="Platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All platforms</SelectItem>
+                      <SelectItem value="ANDROID">Android</SelectItem>
+                      <SelectItem value="IOS">iOS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {filteredApps.length} of {apps.length} apps
+                </p>
+              </aside>
+              <div className="flex-1 min-w-0">
+                <AppPermissionsSelector
+                  apps={filteredApps.map(({ id, name, icon, platform }) => ({ id, name, icon, platform }))}
+                  allAppsForDisplay={apps.map(({ id, name, icon, platform }) => ({ id, name, icon, platform }))}
+                  giveAllApps={giveAllApps}
+                  onGiveAllAppsChange={setGiveAllApps}
+                  selectedApps={selectedApps}
+                  onToggleApp={toggleApp}
+                  onUpdateAppPermission={updateAppPermission}
+                  onRemoveApp={removeApp}
+                  label=""
+                  showOwnerPermission={true}
+                  mode="popover"
+                  error={error}
+                  hideGiveAllApps={true}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>

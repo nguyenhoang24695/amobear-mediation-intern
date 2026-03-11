@@ -25,7 +25,10 @@ export interface App {
 }
 
 interface AppPermissionsSelectorProps {
+  /** Danh sách app hiển thị trong dropdown chọn (có thể đã lọc theo type/platform). */
   apps: App[]
+  /** Danh sách đầy đủ để resolve tên/icon cho app đã chọn; nếu không truyền thì dùng apps. */
+  allAppsForDisplay?: App[]
   giveAllApps: boolean
   onGiveAllAppsChange: (checked: boolean) => void
   selectedApps: Array<{ id: string; permission: string }>
@@ -41,6 +44,7 @@ interface AppPermissionsSelectorProps {
 
 export function AppPermissionsSelector({
   apps,
+  allAppsForDisplay,
   giveAllApps,
   onGiveAllAppsChange,
   selectedApps,
@@ -54,6 +58,8 @@ export function AppPermissionsSelector({
   hideGiveAllApps = false,
 }: AppPermissionsSelectorProps) {
   const [appsOpen, setAppsOpen] = useState(false)
+  /** Dùng để hiển thị tên/icon app đã chọn; không bị ảnh hưởng bởi filter. */
+  const appsForSelectedList = allAppsForDisplay ?? apps
 
   const permissionLevels = showOwnerPermission
     ? APP_PERMISSION_LEVELS_WITH_OWNER
@@ -94,27 +100,32 @@ export function AppPermissionsSelector({
 
           {!giveAllApps && (
             <>
-              <Popover open={appsOpen} onOpenChange={setAppsOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between font-normal bg-transparent"
-                  >
-                    Select apps... ({apps.length} {apps.length === 1 ? "app" : "apps"})
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search apps..." />
+              <div className="flex items-center gap-2">
+                <Popover open={appsOpen} onOpenChange={setAppsOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="flex-1 justify-between font-normal bg-transparent min-w-0"
+                    >
+                      Select apps... ({apps.length} {apps.length === 1 ? "app" : "apps"})
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                  <Command shouldFilter={true}>
+                    <CommandInput placeholder="Search by app name or app ID..." />
                     <CommandList>
                       <CommandEmpty>No app found.</CommandEmpty>
                       <CommandGroup>
                         {apps.map((app) => {
                           const isSelected = selectedApps.find((a) => a.id === app.id)
                           return (
-                            <CommandItem key={app.id} onSelect={() => onToggleApp(app.id)}>
+                            <CommandItem
+                              key={app.id}
+                              value={`${app.name} ${app.id}`}
+                              onSelect={() => onToggleApp(app.id)}
+                            >
                               <Check
                                 className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
                               />
@@ -146,14 +157,33 @@ export function AppPermissionsSelector({
                       </CommandGroup>
                     </CommandList>
                   </Command>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    apps.forEach((app) => {
+                      if (!selectedApps.some((s) => s.id === app.id)) onToggleApp(app.id)
+                    })
+                  }}
+                  disabled={apps.length === 0 || apps.every((app) => selectedApps.some((s) => s.id === app.id))}
+                >
+                  Select all
+                </Button>
+              </div>
 
-              {/* Selected Apps List (scrollable only for details) */}
+              {/* Selected Apps List (scrollable only for details) - luôn dùng allAppsForDisplay để không mất tên/icon khi đổi filter */}
               {selectedApps.length > 0 && (
-                <div className="max-h-64 overflow-y-auto pr-1 space-y-2">
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 text-right">
+                    You are selecting {selectedApps.length} {selectedApps.length === 1 ? "app" : "apps"}!
+                  </p>
+                  <div className="max-h-64 overflow-y-auto pr-1 space-y-2">
                   {selectedApps.map((selected) => {
-                    const app = apps.find((a) => a.id === selected.id)
+                    const app = appsForSelectedList.find((a) => a.id === selected.id)
                     return (
                       <div
                         key={selected.id}
@@ -213,6 +243,7 @@ export function AppPermissionsSelector({
                       </div>
                     )
                   })}
+                  </div>
                 </div>
               )}
             </>
