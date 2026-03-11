@@ -6,6 +6,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 180_000
 
 // Global flag to prevent multiple simultaneous redirects
 let isRedirecting = false
+let isRefreshPromise: Promise<string | null> | null = null
 
 export class ApiClient {
     private baseUrl: string
@@ -21,7 +22,7 @@ export class ApiClient {
         const url = `${this.baseUrl}${endpoint}`
 
         // Get access token from localStorage
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+        const token = typeof window !== 'undefined' ? (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) : null
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
@@ -37,37 +38,88 @@ export class ApiClient {
         }
 
         try {
-            const response = await fetch(url, config)
-            clearTimeout(timeoutId)
+            let response = await fetch(url, config)
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({
-                    error: `HTTP ${response.status}: ${response.statusText}`,
-                }))
-
-                // Handle 401 Unauthorized - clear auth and redirect to login
                 if (response.status === 401) {
-                    // Clear auth data
-                    if (typeof window !== 'undefined') {
-                        localStorage.removeItem('accessToken')
-                        localStorage.removeItem('refreshToken')
-                        localStorage.removeItem('user')
+                    const refreshToken = typeof window !== 'undefined' ? (localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken')) : null;
 
-                        // Only redirect once to prevent infinite loops
-                        if (!isRedirecting && !window.location.pathname.startsWith('/login')) {
-                            isRedirecting = true
-                            // Use setTimeout to allow current error handling to complete
-                            setTimeout(() => {
-                                window.location.href = '/login'
-                            }, 100)
+                    if (refreshToken) {
+                        if (!isRefreshPromise) {
+                            isRefreshPromise = (async () => {
+                                try {
+                                    const refreshRes = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ refreshToken })
+                                    });
+                                    if (refreshRes.ok) {
+                                        const refreshData = await refreshRes.json();
+                                        if (refreshData.success && refreshData.data) {
+                                            const newAccessToken = refreshData.data.accessToken;
+                                            const newRefreshToken = refreshData.data.refreshToken;
+
+                                            // Save based on rememberMe
+                                            const storage = localStorage.getItem('rememberMe') === 'true' ? localStorage : sessionStorage;
+                                            storage.setItem('accessToken', newAccessToken);
+                                            storage.setItem('refreshToken', newRefreshToken);
+
+                                            return newAccessToken;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Refresh token failed', e);
+                                }
+                                return null;
+                            })().finally(() => {
+                                isRefreshPromise = null;
+                            });
+                        }
+
+                        const newAccessToken = await isRefreshPromise;
+                        if (newAccessToken) {
+                            // Retry request with new token
+                            config.headers = {
+                                ...config.headers,
+                                Authorization: `Bearer ${newAccessToken}`
+                            };
+                            response = await fetch(url, config);
                         }
                     }
                 }
 
-                // Create error object with response data for better error handling
-                const error = new Error(errorData.error?.message || errorData.errorMessage || errorData.message || errorData.error || 'Request failed')
-                    ; (error as any).response = { data: errorData, status: response.status }
-                throw error
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({
+                        error: `HTTP ${response.status}: ${response.statusText}`,
+                    }))
+
+                    // Handle 401 Unauthorized - clear auth and redirect to login
+                    if (response.status === 401) {
+                        // Clear auth data
+                        if (typeof window !== 'undefined') {
+                            localStorage.removeItem('accessToken')
+                            localStorage.removeItem('refreshToken')
+                            localStorage.removeItem('user')
+                            sessionStorage.removeItem('accessToken')
+                            sessionStorage.removeItem('refreshToken')
+                            sessionStorage.removeItem('user')
+
+                            // Only redirect once to prevent infinite loops
+                            if (!isRedirecting && !window.location.pathname.startsWith('/login')) {
+                                isRedirecting = true
+                                // Use setTimeout to allow current error handling to complete
+                                setTimeout(() => {
+                                    window.location.href = '/login'
+                                }, 100)
+                            }
+                        }
+                    }
+
+                    // Create error object with response data for better error handling
+                    const error = new Error(errorData.error?.message || errorData.errorMessage || errorData.message || errorData.error || 'Request failed')
+                        ; (error as any).response = { data: errorData, status: response.status }
+                    throw error
+                }
             }
 
             // Handle empty responses

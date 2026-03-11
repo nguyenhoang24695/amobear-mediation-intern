@@ -96,13 +96,6 @@ export default function LoginPage() {
       })
 
       if (response.success && response.data) {
-        // Store authentication data
-        setAuthData(
-          response.data.accessToken,
-          response.data.refreshToken,
-          response.data.user
-        )
-
         if (rememberMe) {
           localStorage.setItem('rememberMe', 'true')
           setRememberedOrganization(formData.organization.trim())
@@ -110,6 +103,13 @@ export default function LoginPage() {
           localStorage.removeItem('rememberMe')
           setRememberedOrganization('')
         }
+
+        // Store authentication data
+        setAuthData(
+          response.data.accessToken,
+          response.data.refreshToken,
+          response.data.user
+        )
 
         toast({
           title: "Login successful",
