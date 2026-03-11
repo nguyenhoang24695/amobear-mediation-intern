@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Download, Plus, Users, UserCheck, Clock, Shield } from "lucide-react"
 import { UsersTable } from "./users-table"
 import { InviteUserModal } from "./invite-user-modal"
+import { useRoles } from "@/hooks/use-roles"
 
 const statsData = [
   { label: "Total Users", value: 45, icon: Users, color: "text-slate-600" },
@@ -27,6 +28,9 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
   const [statusFilter, setStatusFilter] = useState("all")
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [teamName, setTeamName] = useState<string | undefined>(undefined)
+
+  const { data: rolesData } = useRoles()
+  const roles = rolesData || []
 
   return (
     <div className="space-y-6">
@@ -68,9 +72,11 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="editor">Editor</SelectItem>
-              <SelectItem value="viewer">Viewer</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r.roleKey} value={r.roleKey}>
+                  {r.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -84,6 +90,7 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="invited">Invited</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="locked">Locked</SelectItem>
             </SelectContent>
           </Select>
         </div>

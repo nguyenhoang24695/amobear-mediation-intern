@@ -30,12 +30,36 @@ function isPublicRoute(pathname: string): boolean {
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
     // Small delay to ensure pathname is set
     setIsChecking(false)
   }, [pathname])
+
+  // Cross-tab logout synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // If access token is removed in another tab
+      if (e.key === 'accessToken' && e.newValue === null) {
+        // Clear session storage just in case it was used here
+        sessionStorage.removeItem('accessToken')
+        sessionStorage.removeItem('refreshToken')
+        sessionStorage.removeItem('user')
+
+        // Redirect to login
+        if (!isPublicRoute(pathname)) {
+          router.push('/login')
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange)
+      return () => window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [pathname, router])
 
   if (isChecking) {
     return (

@@ -29,7 +29,7 @@ export interface AuthUser {
  */
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('accessToken')
+  return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
 }
 
 /**
@@ -37,7 +37,7 @@ export function getAccessToken(): string | null {
  */
 export function getRefreshToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('refreshToken')
+  return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken')
 }
 
 /**
@@ -45,7 +45,7 @@ export function getRefreshToken(): string | null {
  */
 export function getCurrentUser(): AuthUser | null {
   if (typeof window === 'undefined') return null
-  const userStr = localStorage.getItem('user')
+  const userStr = localStorage.getItem('user') || sessionStorage.getItem('user')
   if (!userStr) return null
   try {
     return JSON.parse(userStr) as AuthUser
@@ -78,9 +78,15 @@ export function isAuthenticated(): boolean {
  */
 export function setAuthData(accessToken: string, refreshToken: string, user: AuthUser): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem('accessToken', accessToken)
-  localStorage.setItem('refreshToken', refreshToken)
-  localStorage.setItem('user', JSON.stringify(user))
+  if (isRememberMeEnabled()) {
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
+    localStorage.setItem('user', JSON.stringify(user))
+  } else {
+    sessionStorage.setItem('accessToken', accessToken)
+    sessionStorage.setItem('refreshToken', refreshToken)
+    sessionStorage.setItem('user', JSON.stringify(user))
+  }
 }
 
 /**
@@ -93,6 +99,10 @@ export function clearAuthData(): void {
   localStorage.removeItem('user')
   localStorage.removeItem('rememberMe')
   localStorage.removeItem('rememberedOrganization')
+
+  sessionStorage.removeItem('accessToken')
+  sessionStorage.removeItem('refreshToken')
+  sessionStorage.removeItem('user')
 }
 
 /**
@@ -130,7 +140,7 @@ export function setRememberedOrganization(slug: string): void {
  */
 export function getUserInitials(user: AuthUser | null): string {
   if (!user) return "U"
-  
+
   if (user.fullName) {
     const parts = user.fullName.trim().split(/\s+/)
     if (parts.length >= 2) {
@@ -138,19 +148,19 @@ export function getUserInitials(user: AuthUser | null): string {
     }
     return parts[0][0].toUpperCase()
   }
-  
+
   if (user.firstName && user.lastName) {
     return (user.firstName[0] + user.lastName[0]).toUpperCase()
   }
-  
+
   if (user.firstName) {
     return user.firstName[0].toUpperCase()
   }
-  
+
   if (user.email) {
     return user.email[0].toUpperCase()
   }
-  
+
   return "U"
 }
 
@@ -159,7 +169,7 @@ export function getUserInitials(user: AuthUser | null): string {
  */
 export function getUserDisplayName(user: AuthUser | null): string {
   if (!user) return "User"
-  
+
   if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`
   if (user.firstName) return user.firstName
   if (user.lastName) return user.lastName

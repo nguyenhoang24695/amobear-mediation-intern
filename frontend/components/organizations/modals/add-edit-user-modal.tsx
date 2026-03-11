@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react"
 import { teamMembersApi } from "@/lib/api/services"
 import { toast } from "sonner" // Assuming we have sonner or some toast
+import { RoleSelector } from "../role-selector"
 
 interface AddEditUserModalProps {
     open: boolean
@@ -27,16 +28,29 @@ interface AddEditUserModalProps {
         id: string
         name: string
         email: string
+        firstName?: string
+        lastName?: string
+        phone?: string
         role: string
         status: string
     }
     onSuccess?: () => void
 }
 
-export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, user, onSuccess }: AddEditUserModalProps) {
+
+
+export function AddEditUserModal({
+    open,
+    onOpenChange,
+    mode,
+    canManage = false,
+    user,
+    onSuccess,
+}: AddEditUserModalProps) {
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
+    const [phone, setPhone] = useState("")
     const [role, setRole] = useState("viewer")
     const [status, setStatus] = useState("active")
     const [saving, setSaving] = useState(false)
@@ -44,19 +58,18 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
 
     useEffect(() => {
         if (mode === "edit" && user) {
-            // Split name if first/last not available separately (assuming user prop has full name)
-            // Ideally we would fetch the user details to get exact first/last name,
-            // but for now we'll split the display name as a starting point.
             const parts = user.name.split(" ")
-            setFirstName(parts[0] || "")
-            setLastName(parts.slice(1).join(" ") || "")
+            setFirstName(user.firstName ?? parts[0] ?? "")
+            setLastName(user.lastName ?? parts.slice(1).join(" ") ?? "")
             setEmail(user.email)
+            setPhone(user.phone ?? "")
             setRole(user.role)
             setStatus(user.status)
         } else {
             setFirstName("")
             setLastName("")
             setEmail("")
+            setPhone("")
             setRole("viewer")
             setStatus("active")
         }
@@ -86,6 +99,7 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                 await teamMembersApi.updateUser(user.id, {
                     firstName,
                     lastName,
+                    phone: phone.trim() || undefined,
                     role,
                     status
                 })
@@ -108,7 +122,7 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg max-h-[95vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{mode === "add" ? "Add New User" : "Edit User"}</DialogTitle>
                     <DialogDescription>
@@ -118,7 +132,7 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                <form onSubmit={handleSubmit} className="space-y-4 py-2 flex-1 overflow-y-auto pr-2 min-h-0">
                     {/* First & Last Name */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -160,19 +174,25 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                         {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                     </div>
 
-                    {/* Role */}
                     <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="+1 234 567 890"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Role */}
+                    <div className="space-y-3">
                         <Label>Role</Label>
-                        <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {canManage && <SelectItem value="admin">Admin</SelectItem>}
-                                <SelectItem value="editor">Editor</SelectItem>
-                                <SelectItem value="viewer">Viewer</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <RoleSelector
+                            value={role}
+                            onChange={setRole}
+                            canManage={canManage}
+                        />
                     </div>
 
                     {/* Status (only for edit mode) */}
@@ -186,12 +206,14 @@ export function AddEditUserModal({ open, onOpenChange, mode, canManage = false, 
                                 <SelectContent>
                                     <SelectItem value="active">Active</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="locked">Locked</SelectItem>
+                                    <SelectItem value="invited">Invited</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     )}
 
-                    <DialogFooter className="pt-4">
+                    <DialogFooter className="pt-4 mt-auto">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                             Cancel
                         </Button>

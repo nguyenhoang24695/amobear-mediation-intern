@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +22,6 @@ import {
   MoreHorizontal,
   KeyRound,
   UserX,
-  Trash2,
   Copy,
   CheckCircle2,
   Plus,
@@ -41,6 +40,13 @@ import { useApi } from "@/hooks/use-api"
 import { teamMembersApi, structureApi } from "@/lib/api/services"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
+import { NoPermissionView } from "@/components/shared/no-permission-view"
+import { useRoles } from "@/hooks/use-roles"
+import { AddUserToTeamModal } from "../organizations/add-user-to-team-modal"
+import { AddEditUserModal } from "../organizations/modals/add-edit-user-modal"
+import { ResetUserPasswordModal } from "./reset-user-password-modal"
 
 // Mock data for sections not yet in API
 const activityLog = [
@@ -79,22 +85,88 @@ interface UserDetailContentProps {
   backHref?: string
 }
 
+const SCREEN_USERS = "s-users"
+const FN_VIEW = "view"
+const FN_EDIT = "edit"
+const FN_RESET_PASSWORD = "reset-password"
+const FN_ENABLE_DISABLE = "enable-disable"
+
+const userStatusConfig: Record<string, { dot: string; badge: string; label: string }> = {
+  active: {
+    dot: "bg-green-500",
+    badge: "border-green-200 text-green-700",
+    label: "Active",
+  },
+  inactive: {
+    dot: "bg-slate-400",
+    badge: "border-slate-200 text-slate-700",
+    label: "Inactive",
+  },
+  locked: {
+    dot: "bg-orange-500",
+    badge: "border-orange-200 text-orange-700",
+    label: "Locked",
+  },
+  invited: {
+    dot: "bg-amber-500",
+    badge: "border-amber-200 text-amber-700",
+    label: "Invited",
+  },
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "Never"
+
+  return new Date(value).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+function isPrivilegedRole(role?: string) {
+  return role?.toLowerCase() === "admin" || role?.toLowerCase() === "super_admin"
+}
+
 export function UserDetailContent({ userId, backHref = "/team-members" }: UserDetailContentProps) {
+  const currentUser = getCurrentUser()
+  const { toast } = useToast()
+  const canView = hasScreenFunction(SCREEN_USERS, FN_VIEW)
+  const canEdit = hasScreenFunction(SCREEN_USERS, FN_EDIT)
+  const canResetPassword = hasScreenFunction(SCREEN_USERS, FN_RESET_PASSWORD)
+  const canEnableDisable = hasScreenFunction(SCREEN_USERS, FN_ENABLE_DISABLE)
+  const isSuperAdmin = currentUser?.role?.toLowerCase() === "super_admin"
   const [activeTab, setActiveTab] = useState("overview")
   const [copiedEmail, setCopiedEmail] = useState(false)
+  const [editUserOpen, setEditUserOpen] = useState(false)
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
+  const [addToTeamOpen, setAddToTeamOpen] = useState(false)
+  const [statusUpdating, setStatusUpdating] = useState(false)
 
-  const { data: userResponse, loading, error } = useApi(
+  const { data: rolesData } = useRoles()
+  const roles = rolesData || []
+
+  const { data: userResponse, loading, error, refetch } = useApi(
     () => userId ? teamMembersApi.viewProfile(userId) : Promise.resolve({ success: false, data: undefined }),
-    { enabled: !!userId, cacheKey: `user-profile-${userId}` }
+    { enabled: !!userId && canView, cacheKey: `user-profile-${userId}` }
   )
 
   const { data: appsResponse } = useApi(
     () => structureApi.getApps(),
-    { cacheKey: 'all-apps-for-permissions' }
+    { enabled: canView, cacheKey: 'all-apps-for-permissions' }
   )
 
   const user = userResponse?.data
   const allApps = appsResponse?.apps
+  const userStatus = user?.status || "inactive"
+  const statusMeta = userStatusConfig[userStatus] || userStatusConfig.inactive
+  const canManageTargetUser = !!user && canEdit && (isSuperAdmin || !isPrivilegedRole(user.role))
+  const canResetTargetPassword = !!user && canResetPassword && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role))
+  const canToggleTargetStatus = !!user && canEnableDisable && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role))
+  const canAddToTeam = !!user?.organization?.id && canManageTargetUser
+  const canAssignPrivilegedRole = isSuperAdmin // Explicitly pass down if needed, but let's just pass this as canManage for the modal.
 
   const copyEmail = () => {
     if (user?.email) {
@@ -102,6 +174,35 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
       setCopiedEmail(true)
       setTimeout(() => setCopiedEmail(false), 2000)
     }
+  }
+
+  const handleStatusToggle = async () => {
+    if (!user || !canToggleTargetStatus) {
+      return
+    }
+
+    const nextStatus = user.status === "active" ? "inactive" : "active"
+    setStatusUpdating(true)
+    try {
+      await teamMembersApi.updateUser(user.id, { status: nextStatus })
+      toast({
+        title: nextStatus === "active" ? "User activated" : "User deactivated",
+        description: `${user.email} is now ${nextStatus}.`,
+      })
+      await refetch()
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to update user status",
+        variant: "destructive",
+      })
+    } finally {
+      setStatusUpdating(false)
+    }
+  }
+
+  if (!canView) {
+    return <NoPermissionView />
   }
 
   if (loading) {
@@ -143,7 +244,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
   // Parse permissions if they are not already an object (API might return JSON string or object)
   // The interface says Record<string, string>, assuming it's already an object.
   const permissionsList = Object.entries(user.permissions || {})
-    .filter(([appId]) => allApps?.some(a => a.appId === appId))
+    .filter(([appId]) => !allApps || allApps.some(a => a.appId === appId))
     .map(([appId, level]) => {
       const matchedApp = allApps?.find(a => a.appId === appId)
       return {
@@ -180,12 +281,12 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{user.fullName || "User"}</h1>
-              <Badge className="bg-purple-100 text-purple-700 capitalize">{user.role}</Badge>
-              {user.teams?.length > 0 && user.teams[0].status === 'active' && (
-                <Badge variant="outline" className="border-green-200 text-green-700">
-                  Active
-                </Badge>
-              )}
+              <Badge className="bg-purple-100 text-purple-700 capitalize">
+                {roles.find(r => r.roleKey === user.role)?.name || user.role}
+              </Badge>
+              <Badge variant="outline" className={statusMeta.badge}>
+                {statusMeta.label}
+              </Badge>
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm text-slate-500">{user.email}</span>
@@ -209,32 +310,36 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
               View Activity
             </Link>
           </Button>
-          <Button variant="outline">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit User
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <KeyRound className="w-4 h-4 mr-2" />
-                Reset Password
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <UserX className="w-4 h-4 mr-2" />
-                Deactivate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Remove
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canManageTargetUser && (
+            <Button variant="outline" onClick={() => setEditUserOpen(true)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit User
+            </Button>
+          )}
+          {(canResetTargetPassword || canToggleTargetStatus) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" disabled={statusUpdating}>
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canResetTargetPassword && (
+                  <DropdownMenuItem onClick={() => setResetPasswordOpen(true)}>
+                    <KeyRound className="w-4 h-4 mr-2" />
+                    Reset Password
+                  </DropdownMenuItem>
+                )}
+                {canResetTargetPassword && canToggleTargetStatus && <DropdownMenuSeparator />}
+                {canToggleTargetStatus && (
+                  <DropdownMenuItem onClick={handleStatusToggle} disabled={statusUpdating}>
+                    <UserX className="w-4 h-4 mr-2" />
+                    {user.status === "active" ? "Deactivate" : "Activate"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -256,10 +361,12 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-base font-semibold">Profile Information</CardTitle>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
+                  {canManageTargetUser && (
+                    <Button variant="ghost" size="sm" onClick={() => setEditUserOpen(true)}>
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
@@ -275,14 +382,17 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                       <p className="text-xs text-slate-500">Email</p>
                       <div className="flex items-center gap-1">
                         <p className="text-sm font-medium text-slate-900">{user.email}</p>
-                        <Badge variant="outline" className="text-xs border-green-200 text-green-700">
-                          Verified
+                        <Badge
+                          variant="outline"
+                          className={user.emailVerified ? "text-xs border-green-200 text-green-700" : "text-xs border-slate-200 text-slate-600"}
+                        >
+                          {user.emailVerified ? "Verified" : "Unverified"}
                         </Badge>
                       </div>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Phone</p>
-                      <p className="text-sm font-medium text-slate-900">-</p>
+                      <p className="text-sm font-medium text-slate-900">{user.phone || "-"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Role</p>
@@ -291,10 +401,11 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="super_admin">Super Admin</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="editor">Editor</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
+                          {roles.map((r) => (
+                            <SelectItem key={r.roleKey} value={r.roleKey}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -315,10 +426,12 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                       {user.teams?.length || 0}
                     </Badge>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add to Team
-                  </Button>
+                  {canAddToTeam && (
+                    <Button variant="ghost" size="sm" onClick={() => setAddToTeamOpen(true)}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add to Team
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -354,18 +467,27 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Status</span>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${user.teams?.[0]?.status === 'active' ? 'bg-green-500' : 'bg-amber-500'}`} />
-                      <span className="text-sm font-medium text-slate-900 capitalize">{user.teams?.[0]?.status || "Unknown"}</span>
+                      <span className={`w-2 h-2 rounded-full ${statusMeta.dot}`} />
+                      <span className="text-sm font-medium text-slate-900">{statusMeta.label}</span>
                     </div>
                   </div>
-                  {/* Mock Data for now */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Last Login</span>
-                    <span className="text-sm text-slate-900">Jan 17, 2026 at 10:30 AM</span>
+                    <span className="text-sm text-slate-900">{formatDateTime(user.lastLoginAt)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Last Login IP</span>
-                    <span className="text-sm text-slate-900">192.168.1.1</span>
+                    <span className="text-sm text-slate-900">{user.lastLoginIp || "-"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Password Policy</span>
+                    <span className="text-sm text-slate-900">
+                      {user.mustChangePassword ? "Must change on next login" : "No forced change"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Password Updated</span>
+                    <span className="text-sm text-slate-900">{formatDateTime(user.passwordChangedAt)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -591,6 +713,55 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
           </Card>
         </TabsContent>
       </Tabs>
+
+      {canManageTargetUser && (
+        <AddEditUserModal
+          open={editUserOpen}
+          onOpenChange={setEditUserOpen}
+          mode="edit"
+          canManage={canEdit && isSuperAdmin} // Using isSuperAdmin to give them ability to select ALL roles.
+          user={{
+            id: user.id,
+            name: user.fullName || user.email,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            role: user.role,
+            status: user.status || "active",
+          }}
+          onSuccess={() => {
+            void refetch()
+          }}
+        />
+      )}
+
+      {canResetTargetPassword && (
+        <ResetUserPasswordModal
+          open={resetPasswordOpen}
+          onOpenChange={setResetPasswordOpen}
+          userId={user.id}
+          userName={user.fullName || user.email}
+          userEmail={user.email}
+          onSuccess={() => {
+            void refetch()
+          }}
+        />
+      )}
+
+      {canAddToTeam && user.organization?.id && (
+        <AddUserToTeamModal
+          open={addToTeamOpen}
+          onOpenChange={setAddToTeamOpen}
+          orgId={user.organization.id}
+          userIds={[user.id]}
+          userNames={[user.fullName || user.email]}
+          excludedTeamIds={user.teams?.map((team) => team.id) || []}
+          onSuccess={() => {
+            void refetch()
+          }}
+        />
+      )}
     </div>
   )
 }

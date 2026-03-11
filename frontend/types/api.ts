@@ -354,7 +354,15 @@ export interface TeamMember {
   lastName?: string
   fullName: string
   avatarUrl?: string
+  phone?: string
   role: string
+  status?: string
+  emailVerified?: boolean
+  emailVerifiedAt?: string
+  lastLoginAt?: string
+  lastLoginIp?: string
+  passwordChangedAt?: string
+  mustChangePassword?: boolean
   organization?: {
     id: string
     name: string
