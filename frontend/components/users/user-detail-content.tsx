@@ -43,6 +43,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
+import { useRoles } from "@/hooks/use-roles"
 import { AddUserToTeamModal } from "../organizations/add-user-to-team-modal"
 import { AddEditUserModal } from "../organizations/modals/add-edit-user-modal"
 import { ResetUserPasswordModal } from "./reset-user-password-modal"
@@ -144,6 +145,9 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
   const [addToTeamOpen, setAddToTeamOpen] = useState(false)
   const [statusUpdating, setStatusUpdating] = useState(false)
 
+  const { data: rolesData } = useRoles()
+  const roles = rolesData || []
+
   const { data: userResponse, loading, error, refetch } = useApi(
     () => userId ? teamMembersApi.viewProfile(userId) : Promise.resolve({ success: false, data: undefined }),
     { enabled: !!userId && canView, cacheKey: `user-profile-${userId}` }
@@ -162,7 +166,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
   const canResetTargetPassword = !!user && canResetPassword && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role))
   const canToggleTargetStatus = !!user && canEnableDisable && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role))
   const canAddToTeam = !!user?.organization?.id && canManageTargetUser
-  const availableRoles = isSuperAdmin ? ["super_admin", "admin", "editor", "viewer"] : ["editor", "viewer"]
+  const canAssignPrivilegedRole = isSuperAdmin // Explicitly pass down if needed, but let's just pass this as canManage for the modal.
 
   const copyEmail = () => {
     if (user?.email) {
@@ -277,7 +281,9 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{user.fullName || "User"}</h1>
-              <Badge className="bg-purple-100 text-purple-700 capitalize">{user.role}</Badge>
+              <Badge className="bg-purple-100 text-purple-700 capitalize">
+                {roles.find(r => r.roleKey === user.role)?.name || user.role}
+              </Badge>
               <Badge variant="outline" className={statusMeta.badge}>
                 {statusMeta.label}
               </Badge>
@@ -395,10 +401,11 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="super_admin">Super Admin</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="editor">Editor</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
+                          {roles.map((r) => (
+                            <SelectItem key={r.roleKey} value={r.roleKey}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -712,8 +719,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
           open={editUserOpen}
           onOpenChange={setEditUserOpen}
           mode="edit"
-          canManage={canEdit}
-          availableRoles={availableRoles}
+          canManage={canEdit && isSuperAdmin} // Using isSuperAdmin to give them ability to select ALL roles.
           user={{
             id: user.id,
             name: user.fullName || user.email,

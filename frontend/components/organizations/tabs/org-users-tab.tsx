@@ -45,6 +45,7 @@ import { AddUserToTeamModal } from "../add-user-to-team-modal"
 import { organizationsApi, teamMembersApi, type OrgUserItem } from "@/lib/api/services"
 import { getCurrentUser } from "@/lib/auth"
 import { toast } from "sonner"
+import { useRoles } from "@/hooks/use-roles"
 
 interface OrgUsersTabProps {
   org: {
@@ -55,11 +56,11 @@ interface OrgUsersTabProps {
   canManage?: boolean
 }
 
-const roleConfig: Record<string, { label: string; color: string }> = {
-  super_admin: { label: "Super Admin", color: "bg-purple-100 text-purple-700" },
-  admin: { label: "Admin", color: "bg-blue-100 text-blue-700" },
-  editor: { label: "Editor", color: "bg-cyan-100 text-cyan-700" },
-  viewer: { label: "Viewer", color: "bg-slate-100 text-slate-700" },
+const roleColorConfig: Record<string, string> = {
+  super_admin: "bg-purple-100 text-purple-700",
+  admin: "bg-blue-100 text-blue-700",
+  editor: "bg-cyan-100 text-cyan-700",
+  viewer: "bg-slate-100 text-slate-700",
 }
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
@@ -93,13 +94,15 @@ function formatLastActive(lastLoginAt?: string): string {
 export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps) {
   const currentUser = getCurrentUser()
   const canAssignAdmin = currentUser?.role?.toLowerCase() === "super_admin"
-  const availableRoles = canAssignAdmin
-    ? ["super_admin", "admin", "editor", "viewer"]
-    : ["editor", "viewer"]
+  // RoleSelector will dynamically fetch the roles, we just need to pass canManage = canAssignAdmin
+  // to let it know whether to allow assigning admin/super_admin roles.
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+
+  const { data: rolesData } = useRoles()
+  const roles = rolesData || []
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -210,9 +213,9 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
           <SelectTrigger className="w-36"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="editor">Editor</SelectItem>
-            <SelectItem value="viewer">Viewer</SelectItem>
+            {roles.map(r => (
+              <SelectItem key={r.roleKey} value={r.roleKey}>{r.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -268,9 +271,9 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
             <Select>
               <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Change Role" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="editor">Editor</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
+                {roles.map(r => (
+                  <SelectItem key={r.roleKey} value={r.roleKey}>{r.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" className="h-8 text-xs bg-transparent">Deactivate</Button>
@@ -351,7 +354,10 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => {
-                    const role = roleConfig[user.role] || roleConfig.viewer
+                    const matchedRole = roles.find(r => r.roleKey === user.role)
+                    const roleLabel = matchedRole?.name || user.role
+                    const roleColor = roleColorConfig[user.role] || "bg-slate-100 text-slate-700"
+
                     const status = statusConfig[user.status] || statusConfig.active
                     return (
                       <TableRow key={user.id} className={`hover:bg-slate-50 transition-colors ${user.status === "inactive" ? "opacity-60" : ""}`}>
@@ -371,7 +377,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={role.color}>{role.label}</Badge>
+                          <Badge className={roleColor}>{roleLabel}</Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -508,8 +514,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
         open={editUserOpen}
         onOpenChange={setEditUserOpen}
         mode="edit"
-        canManage={canManage}
-        availableRoles={availableRoles}
+        canManage={canAssignAdmin} // Pass canAssignAdmin to control admin role assignment
         user={editUser ? {
           id: editUser.id,
           name: editUser.fullName,

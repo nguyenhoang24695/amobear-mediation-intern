@@ -1284,6 +1284,7 @@ export const waterfallRecommendationSettingsApi = {
 // Permission Management (RBAC) API
 export interface PermissionRoleDto {
     id: string
+    roleKey: string
     name: string
     description: string
     userCount: number
