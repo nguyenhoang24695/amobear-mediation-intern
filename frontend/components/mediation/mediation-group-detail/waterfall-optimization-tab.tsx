@@ -72,6 +72,10 @@ interface WaterfallSource {
   recommendationAction?: string
   /** Recommendation reason returned by the API (shown as tooltip for Suggested). */
   reason?: string
+  /** SoW % (0–100) từ recommendation — hiển thị trong tooltip để debug. */
+  sowPercent?: number
+  /** Match rate % (0–100) từ recommendation — hiển thị trong tooltip để debug. */
+  matchRatePercent?: number | null
 }
 
 interface BiddingSource {
@@ -431,6 +435,8 @@ export function WaterfallOptimizationTab({
         network: r.adSourceId,
         recommendationAction: r.action,
         reason: r.reason,
+        sowPercent: r.sowPercent,
+        matchRatePercent: r.matchRatePercent,
       } satisfies WaterfallSource
     })
     return mapped.sort((a, b) => b.floor - a.floor)
@@ -1465,6 +1471,11 @@ export function WaterfallOptimizationTab({
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
                                     <p className="text-sm">{source.reason}</p>
+                                    {(source.sowPercent != null || source.matchRatePercent != null) && (
+                                      <p className="text-xs text-slate-500 mt-1 border-t border-slate-200 pt-1">
+                                        SoW: {source.sowPercent != null ? `${Number(source.sowPercent).toFixed(2)}%` : "—"} • MR: {source.matchRatePercent != null ? `${Number(source.matchRatePercent).toFixed(2)}%` : "—"}
+                                      </p>
+                                    )}
                                   </TooltipContent>
                                 </Tooltip>
                               ) : (

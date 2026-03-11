@@ -15,12 +15,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, CheckCircle2, X, Eye, EyeOff, Mail, UserPlus } from "lucide-react"
-import { organizationsApi } from "@/lib/api/services"
-import { UserRole } from "@/lib/enums/user-role"
+import { organizationsApi, permissionApi, type PermissionRoleDto } from "@/lib/api/services"
+import { RoleSelector } from "./role-selector"
 
 interface AddUserToOrgModalProps {
   open: boolean
@@ -35,7 +35,7 @@ type ActiveTab = "invite" | "create"
 type Step = "form" | "success"
 
 export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManage = false, onUserCreated }: AddUserToOrgModalProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("invite")
+  const [activeTab, setActiveTab] = useState<ActiveTab>("create")
   const [step, setStep] = useState<Step>("form")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -44,7 +44,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
   const [emails, setEmails] = useState<string[]>([])
   const [emailInput, setEmailInput] = useState("")
   const [emailError, setEmailError] = useState("")
-  const [inviteRole, setInviteRole] = useState(UserRole.Viewer)
+  const [inviteRole, setInviteRole] = useState<string>("viewer")
   const [personalMessage, setPersonalMessage] = useState("")
 
   // Create user fields
@@ -53,7 +53,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
   const [showPassword, setShowPassword] = useState(false)
   const [createFirstName, setCreateFirstName] = useState("")
   const [createLastName, setCreateLastName] = useState("")
-  const [createRole, setCreateRole] = useState(UserRole.Viewer)
+  const [createRole, setCreateRole] = useState<string>("viewer")
   const [mustChangePassword, setMustChangePassword] = useState(true)
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true)
 
@@ -68,7 +68,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
       setEmails([])
       setEmailInput("")
       setEmailError("")
-      setInviteRole(UserRole.Viewer)
+      setInviteRole("viewer")
       setPersonalMessage("")
       // Reset create fields
       setCreateEmail("")
@@ -76,12 +76,15 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
       setShowPassword(false)
       setCreateFirstName("")
       setCreateLastName("")
-      setCreateRole(UserRole.Viewer)
+      setCreateRole("viewer")
       setMustChangePassword(true)
       setSendWelcomeEmail(true)
       setSaving(false)
       setAddedCount(0)
-      setSuccessMessage("")
+      // Set default initial roles, RoleSelector will manage its own fetch
+      // If we strictly need the default role from the API mapped right away, 
+      // we can leave it as "viewer" and let the backend default to "viewer" 
+      // or we can just pass the value down.
     }
   }, [open])
 
@@ -171,35 +174,6 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
 
   const canCreate = createEmail.trim().length > 0 && createPassword.length >= 8
 
-  // --- Shared role selector ---
-  const RoleSelector = ({ value, onChange }: { value: UserRole; onChange: (v: UserRole) => void }) => (
-    <RadioGroup value={value} onValueChange={(v) => onChange(v as UserRole)} className="space-y-2">
-      {canManage && (
-        <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
-          <RadioGroupItem value={UserRole.Admin} className="mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-slate-900">Admin</p>
-            <p className="text-xs text-slate-500">Full access to organization settings and user management</p>
-          </div>
-        </label>
-      )}
-      <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
-        <RadioGroupItem value={UserRole.Editor} className="mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-slate-900">Editor</p>
-          <p className="text-xs text-slate-500">Can view and edit apps, reports, and mediation settings</p>
-        </div>
-      </label>
-      <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50">
-        <RadioGroupItem value={UserRole.Viewer} className="mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-slate-900">Viewer</p>
-          <p className="text-xs text-slate-500">Read-only access to assigned apps and reports</p>
-        </div>
-      </label>
-    </RadioGroup>
-  )
-
   // --- Success screen ---
   if (step === "success") {
     return (
@@ -251,7 +225,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add User to Organization</DialogTitle>
           <DialogDescription>
@@ -260,7 +234,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as ActiveTab); setError("") }} className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="hidden w-full grid-cols-2">
             <TabsTrigger value="invite" className="gap-2">
               <Mail className="w-4 h-4" />
               Invite
@@ -272,7 +246,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
           </TabsList>
 
           {/* ===== INVITE TAB ===== */}
-          <TabsContent value="invite" className="space-y-5 mt-4">
+          <TabsContent value="invite" className="hidden">
             {/* Email Addresses */}
             <div className="space-y-2">
               <Label>Email addresses</Label>
@@ -300,7 +274,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
             {/* Role */}
             <div className="space-y-3">
               <Label>Role</Label>
-              <RoleSelector value={inviteRole} onChange={setInviteRole} />
+              <RoleSelector value={inviteRole} onChange={setInviteRole} canManage={canManage} />
             </div>
 
             {/* Personal Message */}
@@ -383,7 +357,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
             {/* Role */}
             <div className="space-y-3">
               <Label>Role</Label>
-              <RoleSelector value={createRole} onChange={setCreateRole} />
+              <RoleSelector value={createRole} onChange={setCreateRole} canManage={canManage} />
             </div>
 
             {/* Options */}

@@ -23,6 +23,7 @@ import {
   FlaskConical,
   Loader2,
 } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MediationGroupsTable } from "./mediation-groups-table"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
@@ -35,15 +36,17 @@ const FN_VIEW = "view"
 const FN_CONFIG = "config"
 const FN_EXPORT = "export"
 
-const appOptions = [
-  { value: "all", label: "All Apps" },
-  { value: "puzzle-master", label: "Puzzle Master Pro" },
-  { value: "word-connect", label: "Word Connect" },
-  { value: "racing-thunder", label: "Racing Thunder" },
-  { value: "fitness-tracker", label: "Fitness Tracker Plus" },
-  { value: "photo-editor", label: "Photo Editor Pro" },
-  { value: "bubble-pop", label: "Bubble Pop Mania" },
-]
+/** Hiển thị appId: 10 ký tự đầu + ... + 10 ký tự cuối nếu dài hơn 20. */
+function formatAppIdDisplay(appId: string): string {
+  if (!appId) return ""
+  return appId.length <= 20 ? appId : `${appId.slice(0, 5)}...${appId.slice(-12)}`
+}
+
+/** Hiển thị platform: ANDROID → AND, còn lại giữ nguyên. */
+function formatPlatformDisplay(platform: string | undefined): string {
+  if (!platform) return "—"
+  return platform.toUpperCase().slice(0, 3)
+}
 
 const formatOptions = ["All Formats", "Banner", "Interstitial", "Rewarded", "Native", "App Open"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
@@ -144,17 +147,19 @@ export function MediationGroupsPageContent() {
   
   const apps = appsResponse?.apps || []
 
-  // Update app options from API
+  // Update app options from API (label, appId, platform, iconUri for display & search)
   const appOptions = useMemo(() => {
-    const allOption = { value: "all", label: "All Apps" }
+    const allOption = { value: "all", label: "All Apps", appId: undefined as string | undefined, platform: undefined as string | undefined, iconUri: undefined as string | undefined }
     if (!apps || apps.length === 0) return [allOption]
-    
     return [
       allOption,
-      ...apps.map(app => ({
+      ...apps.map((app) => ({
         value: app.id.toString(),
         label: app.displayName || app.name,
-      }))
+        appId: app.appId,
+        platform: app.platform,
+        iconUri: app.iconUri,
+      })),
     ]
   }, [apps])
 
@@ -303,41 +308,85 @@ export function MediationGroupsPageContent() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* App Dropdown with Search */}
+            {/* App Dropdown with Search (by name or appId), display: logo, name, platform, appId */}
             <Popover open={appPopoverOpen} onOpenChange={setAppPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={appPopoverOpen}
-                  className="w-44 h-10 justify-between bg-white"
+                  className="w-52 min-w-0 h-10 justify-between bg-white"
                   disabled={!apps}
                 >
-                  <span className="truncate">
-                    {selectedApp === "all" ? "All Apps" : appOptions.find((a) => a.value === selectedApp)?.label || "All Apps"}
-                  </span>
+                  {selectedApp === "all" ? (
+                    <span className="truncate">All Apps</span>
+                  ) : (
+                    (() => {
+                      const opt = appOptions.find((a) => a.value === selectedApp)
+                      return opt ? (
+                        <span className="flex items-center gap-2 min-w-0">
+                          {opt.iconUri ? (
+                            <img src={opt.iconUri} alt="" className="h-5 w-5 rounded shrink-0" />
+                          ) : (
+                            <span className="h-5 w-5 rounded bg-slate-200 flex items-center justify-center text-xs font-medium shrink-0">
+                              {(opt.label || "?").charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                          <span className="truncate">{opt.label}</span>
+                        </span>
+                      ) : (
+                        <span className="truncate">All Apps</span>
+                      )
+                    })()
+                  )}
                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search apps..." />
+              <PopoverContent className="w-72 p-0" align="start">
+                <Command shouldFilter={true}>
+                  <CommandInput placeholder="Search by app name or app ID..." />
                   <CommandList>
                     <CommandEmpty>No app found.</CommandEmpty>
                     <CommandGroup>
-                      {appOptions.map((app) => (
+                      {appOptions.map((opt) => (
                         <CommandItem
-                          key={app.value}
-                          value={app.value}
-                          onSelect={(value) => {
-                            handleFilterChange("App", value)
+                          key={opt.value}
+                          value={opt.value === "all" ? "all" : `${opt.label} ${opt.appId ?? ""}`}
+                          onSelect={(selectedValue) => {
+                            const id =
+                              selectedValue === "all"
+                                ? "all"
+                                : appOptions.find((o) => o.value === selectedValue)?.value ??
+                                  appOptions.find((o) => o.appId && `${o.label} ${o.appId}` === selectedValue)?.value ??
+                                  selectedValue
+                            handleFilterChange("App", id)
                             setAppPopoverOpen(false)
                           }}
                         >
                           <Check
-                            className={cn("mr-2 h-4 w-4", selectedApp === app.value ? "opacity-100" : "opacity-0")}
+                            className={cn("mr-2 h-4 w-4 shrink-0", selectedApp === opt.value ? "opacity-100" : "opacity-0")}
                           />
-                          {app.label}
+                          {opt.value === "all" ? (
+                            <span className="font-medium">All Apps</span>
+                          ) : (
+                            <>
+                              {opt.iconUri ? (
+                                <img src={opt.iconUri} alt="" className="h-8 w-8 rounded shrink-0" />
+                              ) : (
+                                <Avatar className="h-8 w-8 shrink-0">
+                                  <AvatarFallback className="text-xs">
+                                    {(opt.label || "?").charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                              <div className="flex flex-col min-w-0 text-left">
+                                <span className="font-medium truncate">{opt.label}</span>
+                                <span className="text-xs text-slate-500">
+                                  {[formatPlatformDisplay(opt.platform), formatAppIdDisplay(opt.appId ?? "")].filter(Boolean).join(" · ")}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </CommandItem>
                       ))}
                     </CommandGroup>

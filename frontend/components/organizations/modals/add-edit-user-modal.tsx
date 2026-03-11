@@ -17,13 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react"
 import { teamMembersApi } from "@/lib/api/services"
 import { toast } from "sonner" // Assuming we have sonner or some toast
+import { RoleSelector } from "../role-selector"
 
 interface AddEditUserModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     mode: "add" | "edit"
     canManage?: boolean
-    availableRoles?: string[]
     user?: {
         id: string
         name: string
@@ -37,19 +37,13 @@ interface AddEditUserModalProps {
     onSuccess?: () => void
 }
 
-const defaultRoleLabels: Record<string, string> = {
-    super_admin: "Super Admin",
-    admin: "Admin",
-    editor: "Editor",
-    viewer: "Viewer",
-}
+
 
 export function AddEditUserModal({
     open,
     onOpenChange,
     mode,
     canManage = false,
-    availableRoles,
     user,
     onSuccess,
 }: AddEditUserModalProps) {
@@ -61,10 +55,6 @@ export function AddEditUserModal({
     const [status, setStatus] = useState("active")
     const [saving, setSaving] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const roleOptions = availableRoles?.length > 0
-        ? availableRoles
-        : (canManage ? ["admin", "editor", "viewer"] : ["editor", "viewer"])
-    const selectableRoles = Array.from(new Set([...roleOptions, role]))
 
     useEffect(() => {
         if (mode === "edit" && user) {
@@ -132,7 +122,7 @@ export function AddEditUserModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg max-h-[95vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{mode === "add" ? "Add New User" : "Edit User"}</DialogTitle>
                     <DialogDescription>
@@ -142,7 +132,7 @@ export function AddEditUserModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                <form onSubmit={handleSubmit} className="space-y-4 py-2 flex-1 overflow-y-auto pr-2 min-h-0">
                     {/* First & Last Name */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -196,20 +186,13 @@ export function AddEditUserModal({
                     </div>
 
                     {/* Role */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         <Label>Role</Label>
-                        <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {selectableRoles.map((roleOption) => (
-                                    <SelectItem key={roleOption} value={roleOption}>
-                                        {defaultRoleLabels[roleOption] || roleOption}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <RoleSelector
+                            value={role}
+                            onChange={setRole}
+                            canManage={canManage}
+                        />
                     </div>
 
                     {/* Status (only for edit mode) */}
@@ -230,7 +213,7 @@ export function AddEditUserModal({
                         </div>
                     )}
 
-                    <DialogFooter className="pt-4">
+                    <DialogFooter className="pt-4 mt-auto">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                             Cancel
                         </Button>

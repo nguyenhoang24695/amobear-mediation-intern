@@ -348,12 +348,27 @@ export interface SowRecommendationItem {
     observedEcpm?: number | null
 }
 
+/** Tham số đã dùng khi chạy recommendation (tooltip / debug). */
+export interface RecommendationParametersUsed {
+    periodStart: string
+    periodEnd: string
+    minMatchRatePercent: number
+    minSowPercent: number
+    ruleGroupIdOverride?: number | null
+    appId?: string | null
+    minRecommendations: number
+    maxRecommendations: number
+    rulesCount: number
+}
+
 export interface WaterfallRecommendationsResponse {
     mediationGroupId: string
     periodStart: string
     periodEnd: string
     minMatchRatePercent: number
     minSowPercent: number
+    /** Tham số đã dùng (hiển thị tooltip debug). */
+    parametersUsed?: RecommendationParametersUsed | null
     recommendations: SowRecommendationItem[]
 }
 
@@ -1284,6 +1299,7 @@ export const waterfallRecommendationSettingsApi = {
 // Permission Management (RBAC) API
 export interface PermissionRoleDto {
     id: string
+    roleKey: string
     name: string
     description: string
     userCount: number
