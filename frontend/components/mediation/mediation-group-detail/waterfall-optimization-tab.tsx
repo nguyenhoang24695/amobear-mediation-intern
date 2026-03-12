@@ -1473,7 +1473,7 @@ export function WaterfallOptimizationTab({
                                     <p className="text-sm">{source.reason}</p>
                                     {(source.sowPercent != null || source.matchRatePercent != null) && (
                                       <p className="text-xs text-slate-500 mt-1 border-t border-slate-200 pt-1">
-                                        SoW: {source.sowPercent != null ? `${Number(source.sowPercent).toFixed(2)}%` : "—"} • MR: {source.matchRatePercent != null ? `${Number(source.matchRatePercent).toFixed(2)}%` : "—"}
+                                        SoW: {source.sowPercent != null ? `${Number(source.sowPercent).toFixed(2)}%` : "—"} • MR: {source.matchRatePercent != null ? `${Number(source.matchRatePercent).toFixed(1)}%` : "—"}
                                       </p>
                                     )}
                                   </TooltipContent>
