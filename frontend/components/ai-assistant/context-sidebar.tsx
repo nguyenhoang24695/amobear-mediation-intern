@@ -26,6 +26,7 @@ import {
   MoreHorizontal,
   Trash2,
   Pencil,
+  Share2,
 } from "lucide-react"
 import type { AiContext, AiConversation, PinnedMetric, SavedQuery, UserQuota } from "./ai-assistant-content"
 import Link from "next/link"
@@ -37,6 +38,7 @@ interface ContextSidebarProps {
   conversations: AiConversation[]
   activeConversationId: string
   onConversationSelect: (id: string) => void
+  onShareConversation: (id: string) => void
   pinnedMetrics: PinnedMetric[]
   savedQueries: SavedQuery[]
   isOpen: boolean
@@ -45,6 +47,8 @@ interface ContextSidebarProps {
   onNewChat: () => void
   onDeleteContext: (id: string) => void
   onDeleteConversation: (id: string) => void
+  onOpenRenameContext: (context: AiContext) => void
+  onOpenRenameConversation: (conv: AiConversation) => void
   quota: UserQuota
   selectedProvider: "claude" | "gemini" | "chatgpt"
 }
@@ -72,6 +76,7 @@ export function ContextSidebar({
   conversations,
   activeConversationId,
   onConversationSelect,
+  onShareConversation,
   pinnedMetrics,
   savedQueries,
   isOpen,
@@ -80,6 +85,8 @@ export function ContextSidebar({
   onNewChat,
   onDeleteContext,
   onDeleteConversation,
+  onOpenRenameContext,
+  onOpenRenameConversation,
   quota,
   selectedProvider,
 }: ContextSidebarProps) {
@@ -226,7 +233,10 @@ export function ContextSidebar({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem className="gap-2 text-xs">
+                        <DropdownMenuItem
+                          className="gap-2 text-xs"
+                          onClick={() => onOpenRenameContext(context)}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                           Rename
                         </DropdownMenuItem>
@@ -305,7 +315,17 @@ export function ContextSidebar({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem className="gap-2 text-xs">
+                        <DropdownMenuItem
+                          className="gap-2 text-xs"
+                          onClick={() => onShareConversation(conv.id)}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          Share với team
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="gap-2 text-xs"
+                          onClick={() => onOpenRenameConversation(conv)}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                           Rename
                         </DropdownMenuItem>
