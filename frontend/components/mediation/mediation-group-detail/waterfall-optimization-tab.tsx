@@ -616,7 +616,6 @@ export function WaterfallOptimizationTab({
           return {
             ...source,
             floor: newFloor,
-            name: `Inter${newFloor.toFixed(2)}`,
             originalFloor: source.changeType === "new" ? undefined : originalFloor,
             changeType: source.changeType === "new" ? "new" : isModified ? "modified" : undefined,
           }
