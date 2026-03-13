@@ -59,10 +59,9 @@ export class ApiClient {
                                             const newAccessToken = refreshData.data.accessToken;
                                             const newRefreshToken = refreshData.data.refreshToken;
 
-                                            // Save based on rememberMe
-                                            const storage = localStorage.getItem('rememberMe') === 'true' ? localStorage : sessionStorage;
-                                            storage.setItem('accessToken', newAccessToken);
-                                            storage.setItem('refreshToken', newRefreshToken);
+                                            // Luôn lưu vào localStorage để tab mới (vd link share) có token
+                                            localStorage.setItem('accessToken', newAccessToken);
+                                            localStorage.setItem('refreshToken', newRefreshToken);
 
                                             return newAccessToken;
                                         }

@@ -226,6 +226,8 @@ export interface ConversationDto {
 export interface ConversationDetailDto extends ConversationDto {
   contextName: string
   messages: MessageDto[]
+  isShared?: boolean
+  isOwner?: boolean
 }
 
 export interface MessageDto {
@@ -247,6 +249,8 @@ export interface MessageDto {
   queryExecuted: boolean
   queryRowCount?: number
   queryExecutionMs?: number
+  queryResultColumns?: string[]
+  queryResultRows?: Record<string, unknown>[]
   rating?: number
   feedback?: string
   createdAt: string
@@ -526,6 +530,14 @@ export const aiAssistantApi = {
 
   getConversation: (id: string) =>
     apiClient.get<ConversationDetailDto>(`${API_PREFIX}/conversations/${id}`),
+
+  shareConversation: (id: string) =>
+    apiClient.post<ConversationDto>(`${API_PREFIX}/conversations/${id}/share`),
+
+  forkConversation: (id: string, targetContextId?: string) =>
+    apiClient.post<ConversationDetailDto>(
+      `${API_PREFIX}/conversations/${id}/fork${targetContextId ? `?targetContextId=${encodeURIComponent(targetContextId)}` : ''}`
+    ),
 
   updateConversationTitle: (id: string, title: string) =>
     apiClient.put<ConversationDto>(`${API_PREFIX}/conversations/${id}/title`, { title }),

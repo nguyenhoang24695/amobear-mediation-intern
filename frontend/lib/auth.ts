@@ -74,19 +74,15 @@ export function isAuthenticated(): boolean {
 }
 
 /**
- * Store authentication data
+ * Store authentication data.
+ * Luôn lưu vào localStorage để các tab mới (vd: mở link share trong tab mới) vẫn có token.
+ * Trước đây khi không chọn "Remember me" chỉ lưu sessionStorage → tab mới không có token → bị đẩy về login.
  */
 export function setAuthData(accessToken: string, refreshToken: string, user: AuthUser): void {
   if (typeof window === 'undefined') return
-  if (isRememberMeEnabled()) {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    localStorage.setItem('user', JSON.stringify(user))
-  } else {
-    sessionStorage.setItem('accessToken', accessToken)
-    sessionStorage.setItem('refreshToken', refreshToken)
-    sessionStorage.setItem('user', JSON.stringify(user))
-  }
+  localStorage.setItem('accessToken', accessToken)
+  localStorage.setItem('refreshToken', refreshToken)
+  localStorage.setItem('user', JSON.stringify(user))
 }
 
 /**
