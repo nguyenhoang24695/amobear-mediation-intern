@@ -15,6 +15,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Lightbulb,
   FlaskConical,
   CheckCircle2,
@@ -38,7 +48,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
-import { structureApi, waterfallRecommendationSettingsApi } from "@/lib/api/services"
+import { useToast } from "@/hooks/use-toast"
+import { structureApi, waterfallManagementApi, waterfallRecommendationSettingsApi } from "@/lib/api/services"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import type { AdUnit, App, WaterfallRecommendationRuleGroupDto } from "@/types/api"
 import { AddAdSourceModal } from "../modals/add-ad-source-modal"
@@ -96,6 +107,7 @@ export function WaterfallOptimizationTab({
   refreshKey = 0,
 }: WaterfallOptimizationTabProps) {
   const params = useParams()
+  const { toast } = useToast()
   const manualReorderEnabled = false
   const manualStatusToggleEnabled = false
   const biddingEditingEnabled = false
@@ -274,14 +286,31 @@ export function WaterfallOptimizationTab({
     }
   )
   const recommendations = recommendationsResponse?.recommendations ?? []
+  const { data: applyPolicy, loading: loadingPolicy, refetch: refetchPolicy } = useApi(
+    () => waterfallManagementApi.getPolicy(mediationGroupId),
+    {
+      enabled: !!mediationGroupId,
+      cacheKey: mediationGroupId ? `waterfall_apply_policy_${mediationGroupId}` : undefined,
+    }
+  )
+  const [policyApplyMode, setPolicyApplyMode] = useState<string>("manual")
+  const [savingPolicy, setSavingPolicy] = useState(false)
+  const [policyConfirmOpen, setPolicyConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    if (applyPolicy?.applyMode) {
+      setPolicyApplyMode(applyPolicy.applyMode)
+    }
+  }, [applyPolicy])
 
   // Refetch group detail + recommendations when Apply/Sync succeeds (parent increments refreshKey).
   useEffect(() => {
     if (refreshKey > 0 && hasValidId) {
       void refetchGroupDetail()
       void refetchRecommendations()
+      void refetchPolicy()
     }
-  }, [refreshKey, hasValidId, refetchGroupDetail, refetchRecommendations])
+  }, [refreshKey, hasValidId, refetchGroupDetail, refetchRecommendations, refetchPolicy])
 
   /** Last updated time from group detail, shown in the Current column. */
   const updatedAt = useMemo(() => {
@@ -297,6 +326,101 @@ export function WaterfallOptimizationTab({
       return iso
     }
   }
+
+  const _formatPolicyDueAtLegacy = (iso: string | undefined): string => {
+    if (!iso) return "â€”"
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "Asia/Bangkok",
+      }).format(new Date(iso))
+    } catch {
+      return iso
+    }
+  }
+
+  void _formatPolicyDueAtLegacy
+
+  const formatPolicyDueAtGmt7 = (iso: string | undefined): string => {
+    if (!iso) return "-"
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "Asia/Bangkok",
+      }).format(new Date(iso))
+    } catch {
+      return iso
+    }
+  }
+
+  const formatPolicyModeLabel = (mode: string | undefined): string => {
+    switch (mode) {
+      case "semi_auto":
+        return "semi-auto"
+      case "auto":
+        return "automatic"
+      default:
+        return "manual"
+    }
+  }
+
+  const buildPolicyConfirmContent = (fromMode: string | undefined, toMode: string) => {
+    const fromLabel = formatPolicyModeLabel(fromMode)
+
+    if (toMode === "auto") {
+      return {
+        title: "Switch to automatic mode?",
+        description: `Do you want to switch this mediation group from ${fromLabel} mode to automatic mode? The system will apply actionable waterfall changes automatically when the 7-day cycle reaches its due date.`,
+        confirmLabel: "Switch to Auto",
+      }
+    }
+
+    if (toMode === "semi_auto") {
+      return {
+        title: "Switch to semi-auto mode?",
+        description: `Do you want to switch this mediation group from ${fromLabel} mode to semi-auto mode? The system will create an alert when the 7-day cycle reaches its due date, but it will not apply waterfall changes automatically.`,
+        confirmLabel: "Switch to Semi-auto",
+      }
+    }
+
+    return {
+      title: "Switch to manual mode?",
+      description: `Do you want to switch this mediation group from ${fromLabel} mode to manual mode? Automatic apply and due alerts for this policy will stop until the mode is changed again.`,
+      confirmLabel: "Switch to Manual",
+    }
+  }
+
+  const openPolicyConfirm = () => {
+    if (!mediationGroupId || !applyPolicy || policyApplyMode === applyPolicy.applyMode || savingPolicy) return
+    setPolicyConfirmOpen(true)
+  }
+
+  const savePolicy = async () => {
+    if (!mediationGroupId || !applyPolicy || policyApplyMode === applyPolicy.applyMode) return
+    setSavingPolicy(true)
+    try {
+      await waterfallManagementApi.updatePolicy(mediationGroupId, { applyMode: policyApplyMode })
+      await refetchPolicy()
+      setPolicyConfirmOpen(false)
+      toast({
+        title: "Policy saved",
+        description: `Apply policy updated to ${policyApplyMode.replace("_", "-")}.`,
+      })
+    } catch (err) {
+      console.error("Failed to update waterfall apply policy:", err)
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to update waterfall apply policy.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingPolicy(false)
+    }
+  }
+
+  const policyConfirmContent = buildPolicyConfirmContent(applyPolicy?.applyMode, policyApplyMode)
 
   // eCPM by adSourceId comes from recommendations (observedEcpm); no separate SoWData API call.
   const ecpmByAdSourceId = useMemo(() => {
@@ -804,6 +928,60 @@ export function WaterfallOptimizationTab({
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6 pb-24">
+        <Card className="border-slate-200">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold text-slate-900">Apply Policy</CardTitle>
+                <p className="mt-1 text-sm text-slate-500">Configure how this mediation group handles the 7-day waterfall apply cycle.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={policyApplyMode} onValueChange={setPolicyApplyMode} disabled={loadingPolicy || savingPolicy}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="semi_auto">Semi-auto</SelectItem>
+                    <SelectItem value="auto">Auto</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={openPolicyConfirm}
+                  disabled={loadingPolicy || savingPolicy || !applyPolicy || policyApplyMode === applyPolicy.applyMode}
+                >
+                  {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Last observed apply</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{formatUpdatedAt(applyPolicy?.lastObservedApplyAt ?? undefined)}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Next due (GMT+7)</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{formatPolicyDueAtGmt7(applyPolicy?.dueAt ?? undefined)}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Apply source</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{applyPolicy?.lastApplySource ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Interval</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{applyPolicy?.intervalDays ?? 7} days</p>
+                {applyPolicy?.isDue && (
+                  <Badge className="mt-2 bg-amber-100 text-amber-700 border-0">Due now</Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Section 1: Ad units + Optimization Status Banner (two columns like Current Setup / Optimized) */}
         <div className="grid grid-cols-2 gap-4">
           {/* Left column: Ad units */}
@@ -1787,6 +1965,28 @@ export function WaterfallOptimizationTab({
           sourceType={addSourceType}
           onAddSource={handleAddSource}
         />
+
+        <AlertDialog open={policyConfirmOpen} onOpenChange={setPolicyConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{policyConfirmContent.title}</AlertDialogTitle>
+              <AlertDialogDescription>{policyConfirmContent.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={savingPolicy}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={savingPolicy}
+                onClick={(event) => {
+                  event.preventDefault()
+                  void savePolicy()
+                }}
+              >
+                {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {policyConfirmContent.confirmLabel}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   )

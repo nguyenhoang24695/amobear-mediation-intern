@@ -421,6 +421,21 @@ export interface SyncMediationGroupResponse {
     error?: string
 }
 
+export interface WaterfallApplyPolicyResponse {
+    mediationGroupId: string
+    applyMode: string
+    intervalDays: number
+    policyEnabledAt: string
+    lastCycleCompletedAt?: string | null
+    lastObservedApplyAt?: string | null
+    lastApplySource?: string | null
+    dueAt: string
+    isDue: boolean
+    lastAlertedAnchorAt?: string | null
+    lastAlertResultId?: number | null
+    lastEvaluatedAt?: string | null
+}
+
 export const waterfallManagementApi = {
     getConfiguration: async (mediationGroupId: string): Promise<WaterfallConfigurationResponse> => {
         return apiClient.get<WaterfallConfigurationResponse>(`/api/WaterfallManagement/configuration/${encodeURIComponent(mediationGroupId)}`)
@@ -432,6 +447,17 @@ export const waterfallManagementApi = {
 
     apply: async (body: ApplyWaterfallRequest): Promise<ApplyWaterfallResponse> => {
         return apiClient.post<ApplyWaterfallResponse>('/api/WaterfallManagement/apply', body)
+    },
+
+    getPolicy: async (mediationGroupId: string): Promise<WaterfallApplyPolicyResponse> => {
+        return apiClient.get<WaterfallApplyPolicyResponse>(`/api/WaterfallManagement/policy/${encodeURIComponent(mediationGroupId)}`)
+    },
+
+    updatePolicy: async (
+        mediationGroupId: string,
+        body: { applyMode: string }
+    ): Promise<WaterfallApplyPolicyResponse> => {
+        return apiClient.put<WaterfallApplyPolicyResponse>(`/api/WaterfallManagement/policy/${encodeURIComponent(mediationGroupId)}`, body)
     },
 }
 
@@ -939,6 +965,112 @@ export const alertsApi = {
         }>
     }> => {
         return apiClient.get('/api/Alerts/active/summary', { publisherId })
+    },
+
+    getOpenAlerts: async (params?: {
+        publisherId?: string
+        appId?: string
+        mediationGroupId?: string
+        severity?: string
+        page?: number
+        pageSize?: number
+    }): Promise<{
+        Data: Array<{
+            id: number
+            alertType: string
+            severity: string
+            message: string
+            publisherId: string
+            appId?: string
+            mediationGroupId?: string
+            adSourceId?: string
+            countryCode?: string
+            value: number
+            threshold: number
+            status: string
+            triggeredAt: string
+            sentAt?: string
+            acknowledgedAt?: string
+            acknowledgedBy?: string
+            resolvedAt?: string
+            additionalData?: string
+            alertRuleName?: string
+            alertRuleDescription?: string
+        }>
+        Page: number
+        PageSize: number
+        TotalCount: number
+        TotalPages: number
+    }> => {
+        const response = await apiClient.get<{
+            data?: Array<{
+                id: number
+                alertType: string
+                severity: string
+                message: string
+                publisherId: string
+                appId?: string
+                mediationGroupId?: string
+                adSourceId?: string
+                countryCode?: string
+                value: number
+                threshold: number
+                status: string
+                triggeredAt: string
+                sentAt?: string
+                acknowledgedAt?: string
+                acknowledgedBy?: string
+                resolvedAt?: string
+                additionalData?: string
+                alertRuleName?: string
+                alertRuleDescription?: string
+            }>
+            page?: number
+            pageSize?: number
+            totalCount?: number
+            totalPages?: number
+        }>('/api/Alerts/open', params)
+
+        return {
+            Data: response.data ?? [],
+            Page: response.page ?? 1,
+            PageSize: response.pageSize ?? (params?.pageSize ?? 50),
+            TotalCount: response.totalCount ?? 0,
+            TotalPages: response.totalPages ?? 0,
+        }
+    },
+
+    getOpenAlertsSummary: async (publisherId?: string): Promise<{
+        Total: number
+        BySeverity: Record<string, number>
+        ByType: Record<string, number>
+        Details: Array<{
+            Severity: string
+            AlertType: string
+            Count: number
+        }>
+    }> => {
+        const response = await apiClient.get<{
+            total?: number
+            bySeverity?: Record<string, number>
+            byType?: Record<string, number>
+            details?: Array<{
+                severity: string
+                alertType: string
+                count: number
+            }>
+        }>('/api/Alerts/open/summary', { publisherId })
+
+        return {
+            Total: response.total ?? 0,
+            BySeverity: response.bySeverity ?? {},
+            ByType: response.byType ?? {},
+            Details: (response.details ?? []).map((item) => ({
+                Severity: item.severity,
+                AlertType: item.alertType,
+                Count: item.count,
+            })),
+        }
     },
 }
 
