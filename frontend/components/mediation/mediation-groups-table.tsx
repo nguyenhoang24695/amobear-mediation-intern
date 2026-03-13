@@ -40,7 +40,6 @@ import {
   LayoutGrid,
   Smartphone,
   FlaskConical,
-  CheckCircle2,
   ExternalLink,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -48,6 +47,7 @@ import { Pagination } from "@/components/shared/pagination"
 import type { MediationGroup } from "@/types/api"
 import { useMemo } from "react"
 import { Loader2 } from "lucide-react"
+import { ALL_FORMATS_VALUE, formatAdFormatLabel, normalizeAdFormat } from "@/lib/ad-format"
 // Removed unused imports - data now comes from cache via API
 
 // Network logos/images - map ad source IDs to image URLs or emoji
@@ -275,7 +275,8 @@ export function MediationGroupsTable({
         appId: group.appId?.toString() || "0",
         appAdMobId: group.appAdMobId ?? undefined,
         appIcon: group.appIconUri || undefined, // From cache if available
-        format: group.adFormat || "Unknown",
+        format: formatAdFormatLabel(group.adFormat),
+        formatKey: normalizeAdFormat(group.adFormat) || "UNKNOWN",
         adSources: group.adSources || [],
         targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
         status: group.state === "ENABLED" ? "Active" : group.state || "Active",
@@ -300,7 +301,8 @@ export function MediationGroupsTable({
       appId: group.appId?.toString() || "0",
       appAdMobId: group.appAdMobId ?? undefined,
       appIcon: group.appIconUri || undefined, // From cache
-      format: group.adFormat || "Unknown",
+      format: formatAdFormatLabel(group.adFormat),
+      formatKey: normalizeAdFormat(group.adFormat) || "UNKNOWN",
       adSources: group.adSources || [], // From cache
       countries: group.countries || [], // Keep countries array for easy access
       targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
@@ -323,13 +325,10 @@ export function MediationGroupsTable({
     if (searchQuery && !group.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
-    if (appFilter !== "all") {
-      const appLabel = group.appName.toLowerCase().replace(/\s+/g, "-")
-      if (!appLabel.includes(appFilter.replace("_", "-"))) {
-        return false
-      }
+    if (appFilter !== "all" && group.appId !== appFilter) {
+      return false
     }
-    if (formatFilter !== "All Formats" && group.format !== formatFilter) {
+    if (formatFilter !== ALL_FORMATS_VALUE && group.formatKey !== formatFilter) {
       return false
     }
     if (statusFilter !== "All Status" && group.status !== statusFilter) {
@@ -398,15 +397,15 @@ export function MediationGroupsTable({
 
   const getFormatIcon = (format: string) => {
     switch (format) {
-      case "Banner":
+      case "BANNER":
         return RectangleHorizontal
-      case "Interstitial":
+      case "INTERSTITIAL":
         return Square
-      case "Rewarded":
+      case "REWARDED":
         return Gift
-      case "Native":
+      case "NATIVE":
         return LayoutGrid
-      case "App Open":
+      case "APP_OPEN":
         return Smartphone
       default:
         return Layers
@@ -505,7 +504,7 @@ export function MediationGroupsTable({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginatedGroups.map((group) => {
-                const FormatIcon = getFormatIcon(group.format)
+                const FormatIcon = getFormatIcon(group.formatKey)
                 // Get countries from group data (prefer countries array, fallback to _original)
                 const countries = (group as any).countries || (group._original as any)?.countries || []
                 const isGlobal = countries.length === 0 || countries.length > 10
