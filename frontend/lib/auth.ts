@@ -40,6 +40,57 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken')
 }
 
+const AUTH_REFRESH_AT_KEY = 'auth_refresh_at'
+/** Khoảng thời gian (ms) coi là "vừa refresh" — tab khác không gọi refresh trong khoảng này. */
+export const AUTH_REFRESH_COOLDOWN_MS = 55_000
+
+/**
+ * Đọc thời điểm hết hạn (ms, Unix) từ access token JWT (payload.exp). Trả về null nếu không có token hoặc decode lỗi.
+ */
+export function getAccessTokenExpiryMs(): number | null {
+  const token = getAccessToken()
+  if (!token) return null
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    const payload = JSON.parse(atob(padded))
+    const exp = payload?.exp
+    if (typeof exp !== 'number') return null
+    return exp * 1000
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Có nên refresh token không: token hết hạn hoặc còn dưới 5 phút thì refresh.
+ */
+export function shouldRefreshByExpiry(thresholdMinutes: number = 5): boolean {
+  const expiryMs = getAccessTokenExpiryMs()
+  if (expiryMs === null) return true
+  const now = Date.now()
+  const thresholdMs = thresholdMinutes * 60 * 1000
+  return now >= expiryMs - thresholdMs
+}
+
+/**
+ * Thời điểm (ms) tab nào đó last refresh — dùng để tránh nhiều tab refresh cùng lúc.
+ */
+export function getLastRefreshAt(): number | null {
+  if (typeof window === 'undefined') return null
+  const s = localStorage.getItem(AUTH_REFRESH_AT_KEY)
+  if (s == null) return null
+  const n = parseInt(s, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+export function setLastRefreshAt(ms: number): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(AUTH_REFRESH_AT_KEY, String(ms))
+}
+
 /**
  * Get current user from localStorage
  */
