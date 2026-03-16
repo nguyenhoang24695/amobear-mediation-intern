@@ -35,6 +35,8 @@ import {
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAlertNotifications } from "@/hooks/use-alert-notifications"
+import { formatAlertBadgeCount } from "@/lib/alert-notification-state"
 import { authApi } from "@/lib/api/services"
 import {
   clearAuthSessionData,
@@ -81,7 +83,7 @@ const navItems: NavItem[] = [
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
-  { icon: Bell, label: "Alert Center", href: "/alerts", badge: 3, isShow: true },
+  { icon: Bell, label: "Alert Center", href: "/alerts", isShow: true },
   { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
   {
     icon: Bot,
@@ -133,6 +135,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { toast } = useToast()
+  const { unseenCount: alertNotificationCount, openAlertIds, markAlertsViewed } = useAlertNotifications()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
 
@@ -193,6 +196,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             const isActive = hasSubmenu
               ? anyChildActive
               : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+            const badgeCount = item.href === "/alerts" ? alertNotificationCount : item.badge
 
             const content = (
               <div
@@ -218,16 +222,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         )}
                       />
                     )}
-                    {item.badge && !hasSubmenu && (
+                    {badgeCount && !hasSubmenu && (
                       <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
-                        {item.badge}
+                        {formatAlertBadgeCount(badgeCount)}
                       </Badge>
                     )}
                   </>
                 )}
-                {collapsed && item.badge && !hasSubmenu && (
+                {collapsed && badgeCount && !hasSubmenu && (
                   <Badge variant="destructive" className="absolute left-10 top-1 h-4 min-w-4 px-1 text-xs">
-                    {item.badge}
+                    {formatAlertBadgeCount(badgeCount)}
                   </Badge>
                 )}
               </div>
@@ -252,7 +256,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         {content}
                       </button>
                     ) : (
-                      <Link href={item.href} className="block">
+                      <Link
+                        href={item.href}
+                        onClick={item.href === "/alerts" ? () => markAlertsViewed(openAlertIds) : undefined}
+                        className="block"
+                      >
                         {content}
                       </Link>
                     )}
