@@ -36,7 +36,16 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, hasScreenFunction, type AuthUser } from "@/lib/auth"
+import {
+  clearAuthSessionData,
+  clearRememberedLoginPrefs,
+  getRefreshToken,
+  getCurrentUser,
+  getUserInitials,
+  getUserDisplayName,
+  hasScreenFunction,
+  type AuthUser,
+} from "@/lib/auth"
 
 interface SidebarProps {
   collapsed: boolean
@@ -349,8 +358,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           await authApi.logout(refreshToken)
                         }
 
-                        // Clear all authentication data
-                        clearAuthData()
+                        clearAuthSessionData()
+                        clearRememberedLoginPrefs()
 
                         // Show success message
                         toast({
@@ -362,7 +371,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         router.push("/login")
                       } catch (err) {
                         // Even if API call fails, clear local data and redirect
-                        clearAuthData()
+                        clearAuthSessionData()
+                        clearRememberedLoginPrefs()
 
                         toast({
                           title: "Logged out",

@@ -36,13 +36,14 @@ export interface LoginRequest {
     organizationSlug?: string
     deviceInfo?: string
     ipAddress?: string
+    rememberMe?: boolean
 }
 
 export interface AuthResponse {
     success: boolean
     data?: {
         accessToken: string
-        refreshToken: string
+        refreshToken?: string | null
         expiresIn: number
         tokenType: string
         user: {

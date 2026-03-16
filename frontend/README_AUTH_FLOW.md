@@ -1,115 +1,85 @@
 # Authentication Flow Documentation
 
 ## Overview
-Hệ thống authentication đã được cải thiện để:
-1. Tránh gọi API liên tục khi unauthorized
-2. Check authentication ở đầu mỗi page
-3. Tự động redirect về login khi token hết hạn
+
+The app now supports two auth session modes:
+
+1. `Remember me = false`
+   - Store `accessToken` and `user` in `localStorage`
+   - Do not keep a `refreshToken`
+   - Session is shared across tabs and browser reloads until the access token expires
+
+2. `Remember me = true`
+   - Store `accessToken`, `refreshToken`, and `user` in `localStorage`
+   - Auto-refresh continues until the refresh token expires or is revoked
+
+When a session expires because of `401/403`, only auth session data is cleared. Login preferences such as `rememberMe` and `rememberedOrganization` stay available for the next login screen.
 
 ## Components
 
-### 1. AuthGuard Component
-**Location**: `frontend/components/auth/auth-guard.tsx`
+### 1. AuthGuard
 
-Component này:
-- Check token trong localStorage
-- Verify token với API `/api/v1/auth/me`
-- Sử dụng `sessionStorage` flag để tránh multiple simultaneous checks
-- Redirect về login nếu unauthorized
-- Hiển thị loading state trong khi check
+Location: `frontend/components/auth/auth-guard.tsx`
 
-**Usage**:
-```tsx
-import { AuthGuard } from "@/components/auth/auth-guard"
+- Checks that an access token exists
+- Verifies auth state with `GET /api/v1/auth/me`
+- Redirects to `/login` on `401/403`
+- Clears session data only, not remembered login preferences
 
-export default function MyPage() {
-  return (
-    <AuthGuard>
-      {/* Your page content */}
-    </AuthGuard>
-  )
-}
-```
+### 2. PublicRoute
 
-### 2. ProtectedRoute Component
-**Location**: `frontend/components/auth/protected-route.tsx`
+Location: `frontend/components/auth/public-route.tsx`
 
-Wrapper component sử dụng `AuthGuard` internally. Được sử dụng bởi `AuthProvider` để wrap tất cả protected routes.
+- Redirects away from `/login` only when the browser can still resume a valid session
+- Avoids bounce loops when an expired access token exists without a refresh token
 
 ### 3. API Client
-**Location**: `frontend/lib/api/client.ts`
 
-Đã được cập nhật để:
-- Handle 401 responses
-- Clear auth data khi 401
-- Redirect về login (chỉ một lần) khi 401
-- Sử dụng global flag `isRedirecting` để tránh multiple redirects
+Location: `frontend/lib/api/client.ts`
 
-### 4. useAuthCheck Hook
-**Location**: `frontend/hooks/use-auth-check.ts`
+- Sends `Authorization: Bearer {accessToken}`
+- On `401`, attempts refresh only when a valid remembered `refreshToken` exists
+- Clears auth session and redirects to `/login` when refresh is not possible
 
-Hook để check authentication trong components:
-```tsx
-import { useAuthCheck } from "@/hooks/use-auth-check"
+### 4. AuthProvider
 
-export default function MyPage() {
-  const { isChecking, isValid, hasChecked } = useAuthCheck()
-  
-  if (isChecking) return <Loading />
-  if (!isValid) return null
-  
-  return <YourContent />
-}
-```
+Location: `frontend/components/auth/auth-provider.tsx`
 
-## Flow
+- Normalizes legacy auth state after deploy
+- Runs keep-alive only for remembered sessions that have a refresh token
+- Syncs logout across tabs through the `storage` event
 
-1. **Page Load**:
-   - `AuthGuard` được mount
-   - Check token trong localStorage
-   - Nếu có token, gọi `/api/v1/auth/me` để verify
-   - Nếu 401/403, clear auth và redirect về login
-   - Nếu success, render children
+## Session Rules
 
-2. **API Call với 401**:
-   - API client detect 401 response
-   - Clear auth data từ localStorage
-   - Set `isRedirecting` flag
-   - Redirect về login (chỉ một lần)
-   - Các API calls khác sẽ không trigger redirect nữa
+### Access-only session
 
-3. **Prevent Infinite Loops**:
-   - `sessionStorage` flag để prevent multiple simultaneous auth checks
-   - Global `isRedirecting` flag trong API client
-   - Check `window.location.pathname` trước khi redirect
+- Triggered by login with `rememberMe = false`
+- Multi-tab works because `accessToken` stays in `localStorage`
+- No refresh token is stored
+- User must log in again after the access token expires
 
-## Best Practices
+### Persistent session
 
-1. **Wrap protected pages với AuthGuard**:
-   ```tsx
-   export default function DashboardPage() {
-     return (
-       <AuthGuard>
-         <DashboardContent />
-       </AuthGuard>
-     )
-   }
-   ```
+- Triggered by login with `rememberMe = true`
+- Refresh token is stored and rotated through `/api/v1/auth/refresh`
+- Session stays alive until `Jwt:RefreshTokenExpiryDays` is reached or the token is revoked
 
-2. **Don't manually check auth trong components**:
-   - AuthGuard đã handle việc này
-   - Chỉ cần wrap page với AuthGuard
+## Logout Rules
 
-3. **Handle errors gracefully**:
-   - Network errors không trigger redirect
-   - Chỉ 401/403 mới redirect về login
+- Manual logout:
+  - Clears auth session data
+  - Clears remembered login preferences
+
+- Forced logout because token expired, refresh failed, or `401/403`:
+  - Clears auth session data only
+  - Keeps remembered login preferences
 
 ## Testing
 
-Để test authentication flow:
-1. Login vào app
-2. Mở DevTools → Application → Local Storage
-3. Xóa `accessToken`
-4. Refresh page hoặc navigate
-5. Should redirect về login page
-6. Không nên có infinite API calls
+1. Login with `Remember me` unchecked
+2. Confirm `localStorage` has `accessToken` and `user`, but no `refreshToken`
+3. Open a second tab on the same origin and confirm the session works
+4. Wait for the access token to expire and confirm the next request redirects to `/login`
+5. Login again with `Remember me` checked
+6. Confirm `localStorage` now includes `refreshToken`
+7. Confirm the app refreshes the access token automatically before expiry
