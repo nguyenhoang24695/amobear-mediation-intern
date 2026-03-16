@@ -2,22 +2,22 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { authApi } from "@/lib/api/services"
 import {
-  getRefreshToken,
-  setAuthData,
-  setLastRefreshAt,
-  getLastRefreshAt,
-  shouldRefreshByExpiry,
   AUTH_REFRESH_COOLDOWN_MS,
+  clearAuthSessionData,
+  getLastRefreshAt,
+  getRefreshToken,
+  normalizeAuthState,
+  setLastRefreshAt,
+  refreshAuthSession,
+  shouldRefreshByExpiry,
 } from "@/lib/auth"
-import type { AuthUser } from "@/lib/auth"
 import { ProtectedRoute } from "./protected-route"
 import { PublicRoute } from "./public-route"
 
-/** Chu kỳ kiểm tra (ms). Chỉ gọi refresh khi token còn < 5p và không trong cooldown (1 tab refresh). */
+/** Check cadence (ms). Only refresh when token has < 5m left and no other tab refreshed recently. */
 const KEEP_ALIVE_CHECK_INTERVAL_MS = 300 * 1000
-/** Chỉ refresh khi access token còn dưới số phút này. */
+/** Only refresh when access token has less than this many minutes left. */
 const REFRESH_THRESHOLD_MINUTES = 5
 
 interface AuthProviderProps {
@@ -26,21 +26,20 @@ interface AuthProviderProps {
 
 // Public routes that don't require authentication
 const publicRoutes = [
-  '/login',
-  '/forgot-password',
-  '/reset-password',
-  '/accept-invitation',
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/accept-invitation",
 ]
 
-// Check if route is public
 function isPublicRoute(pathname: string): boolean {
-  return publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
+  return publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))
 }
 
 /**
  * AuthProvider - Wraps the app and handles authentication routing
- * - Public routes: Wrapped with PublicRoute (redirects if authenticated)
- * - Protected routes: Wrapped with ProtectedRoute (redirects if not authenticated)
+ * - Public routes: Wrapped with PublicRoute
+ * - Protected routes: Wrapped with ProtectedRoute
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname()
@@ -48,40 +47,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    // Small delay to ensure pathname is set
+    normalizeAuthState()
+  }, [])
+
+  useEffect(() => {
     setIsChecking(false)
   }, [pathname])
 
-  // Cross-tab logout synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      // If access token is removed in another tab
-      if (e.key === 'accessToken' && e.newValue === null) {
-        // Clear session storage just in case it was used here
-        sessionStorage.removeItem('accessToken')
-        sessionStorage.removeItem('refreshToken')
-        sessionStorage.removeItem('user')
+      if (e.key === "accessToken" && e.newValue === null) {
+        clearAuthSessionData()
 
-        // Redirect to login
         if (!isPublicRoute(pathname)) {
-          router.push('/login')
+          router.push("/login")
         }
       }
     }
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', handleStorageChange)
-      return () => window.removeEventListener('storage', handleStorageChange)
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorageChange)
+      return () => window.removeEventListener("storage", handleStorageChange)
     }
   }, [pathname, router])
 
-  // Keep-alive: mỗi phút kiểm tra; chỉ refresh khi (1) token còn < 5p, (2) tab đang visible, (3) không trong cooldown (tránh nhiều tab refresh cùng lúc)
   useEffect(() => {
     if (isPublicRoute(pathname)) return
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
+    if (typeof window === "undefined" || typeof document === "undefined") return
 
     const refreshIfNeeded = () => {
-      if (document.visibilityState !== 'visible') return
+      if (document.visibilityState !== "visible") return
+
       const refreshToken = getRefreshToken()
       if (!refreshToken) return
       if (!shouldRefreshByExpiry(REFRESH_THRESHOLD_MINUTES)) return
@@ -91,16 +87,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (lastAt != null && now - lastAt < AUTH_REFRESH_COOLDOWN_MS) return
 
       setLastRefreshAt(now)
-      authApi
-        .refreshToken(refreshToken)
-        .then((res) => {
-          if (res?.success && res?.data?.accessToken && res?.data?.refreshToken && res?.data?.user) {
-            setAuthData(res.data.accessToken, res.data.refreshToken, res.data.user as AuthUser)
-            setLastRefreshAt(Date.now())
-          }
-        })
+      refreshAuthSession()
         .catch(() => {
-          // Lỗi mạng hoặc refresh token hết hạn: không clear auth ở đây, để request tiếp theo xử lý 401
+          // Network errors or expired refresh token are handled by the next 401 flow.
         })
     }
 
@@ -120,11 +109,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     )
   }
 
-  // Check if current route is public
   if (isPublicRoute(pathname)) {
     return <PublicRoute>{children}</PublicRoute>
   }
 
-  // All other routes are protected
   return <ProtectedRoute>{children}</ProtectedRoute>
 }

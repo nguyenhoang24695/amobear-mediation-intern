@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2 } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
 import { authApi } from "@/lib/api/services"
-import { getUserInitials } from "@/lib/auth"
+import { clearAuthSessionData, clearRememberedLoginPrefs, getUserInitials } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -49,9 +49,8 @@ export function MyProfileContent() {
   const handleLogoutAll = async () => {
     try {
       await authApi.logoutAll()
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
+      clearAuthSessionData()
+      clearRememberedLoginPrefs()
       router.push('/login')
       toast({
         title: "Logged out",

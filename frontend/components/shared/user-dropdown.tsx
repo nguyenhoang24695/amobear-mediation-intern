@@ -5,7 +5,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { clearAuthData, getRefreshToken, getCurrentUser, getUserInitials, getUserDisplayName, type AuthUser } from "@/lib/auth"
+import {
+  clearAuthSessionData,
+  clearRememberedLoginPrefs,
+  getRefreshToken,
+  getCurrentUser,
+  getUserInitials,
+  getUserDisplayName,
+  type AuthUser,
+} from "@/lib/auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -78,8 +86,8 @@ export function UserDropdown() {
         }
       }
 
-      // Clear all authentication data from localStorage
-      clearAuthData()
+      clearAuthSessionData()
+      clearRememberedLoginPrefs()
 
       // Show success message
       toast({
@@ -93,7 +101,8 @@ export function UserDropdown() {
       router.push("/login")
     } catch (err) {
       // Even if API call fails, clear local data and redirect
-      clearAuthData()
+      clearAuthSessionData()
+      clearRememberedLoginPrefs()
       
       toast({
         title: "Logged out",

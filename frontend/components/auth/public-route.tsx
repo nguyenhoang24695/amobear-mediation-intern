@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { isAuthenticated } from "@/lib/auth"
+import { isAuthenticated, normalizeAuthState } from "@/lib/auth"
 
 interface PublicRouteProps {
   children: React.ReactNode
@@ -16,6 +16,8 @@ export function PublicRoute({ children }: PublicRouteProps) {
   const router = useRouter()
 
   useEffect(() => {
+    normalizeAuthState()
+
     // If user is already authenticated, redirect to dashboard
     if (isAuthenticated()) {
       router.push("/")
