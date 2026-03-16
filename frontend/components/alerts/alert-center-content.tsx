@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Download, Settings, AlertTriangle, AlertCircle, Info, ShieldCheck, ExternalLink } from "lucide-react"
 import { alertsApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
+import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { cn } from "@/lib/utils"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"]
@@ -64,12 +65,13 @@ export function AlertCenterContent() {
     { cacheKey: "alerts_open_summary" }
   )
 
-  const { data, loading } = useApi(
-    () => alertsApi.getOpenAlerts({ page: 1, pageSize: 100 }),
-    { cacheKey: "alerts_open_list" }
-  )
+  const { alerts, loading, openAlertIds, markAlertsViewed } = useAlertNotifications()
 
-  const alerts = data?.Data ?? []
+  useEffect(() => {
+    if (openAlertIds.length === 0) return
+    markAlertsViewed(openAlertIds)
+  }, [markAlertsViewed, openAlertIds])
+
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
       if (severity !== "All" && alert.severity?.toUpperCase() !== severity) {

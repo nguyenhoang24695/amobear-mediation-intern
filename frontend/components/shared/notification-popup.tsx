@@ -7,8 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Bell, AlertTriangle, AlertCircle, Info, ArrowRight, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useApi } from "@/hooks/use-api"
-import { alertsApi } from "@/lib/api/services"
+import { formatAlertBadgeCount } from "@/lib/alert-notification-state"
+import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 
 const formatRelativeTime = (iso?: string) => {
   if (!iso) return "Unknown"
@@ -23,13 +23,8 @@ const formatRelativeTime = (iso?: string) => {
 }
 
 export function NotificationPopup() {
-  const { data } = useApi(
-    () => alertsApi.getOpenAlerts({ page: 1, pageSize: 8 }),
-    { cacheKey: "notification_open_alerts" }
-  )
-
-  const alerts = data?.Data ?? []
-  const unreadCount = data?.TotalCount ?? 0
+  const { alerts, unseenCount, totalOpenCount, markAlertsViewed, markAllAlertsViewed } = useAlertNotifications()
+  const recentAlerts = alerts.slice(0, 8)
 
   const getTypeStyles = (severity: string) => {
     switch (severity?.toUpperCase()) {
@@ -61,9 +56,9 @@ export function NotificationPopup() {
       <PopoverTrigger asChild>
         <Button variant="outline" size="icon" className="h-9 w-9 relative bg-transparent">
           <Bell className="w-4 h-4 text-slate-600" />
-          {unreadCount > 0 && (
+          {unseenCount > 0 && (
             <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-xs">
-              {unreadCount > 99 ? "99+" : unreadCount}
+              {formatAlertBadgeCount(unseenCount)}
             </Badge>
           )}
         </Button>
@@ -71,13 +66,15 @@ export function NotificationPopup() {
       <PopoverContent align="end" className="w-[380px] p-0 shadow-lg" sideOffset={8}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
           <h3 className="font-semibold text-slate-900">Notifications</h3>
-          <span className="text-sm text-slate-500">{unreadCount} open</span>
+          <span className="text-sm text-slate-500">
+            {totalOpenCount > 0 ? `${unseenCount} new / ${totalOpenCount} open` : "No open alerts"}
+          </span>
         </div>
 
-        {alerts.length > 0 ? (
+        {recentAlerts.length > 0 ? (
           <ScrollArea className="max-h-[400px]">
             <div className="divide-y divide-slate-100">
-              {alerts.map((alert) => {
+              {recentAlerts.map((alert) => {
                 const styles = getTypeStyles(alert.severity)
                 const Icon = styles.icon
                 const href = alert.mediationGroupId
@@ -88,6 +85,7 @@ export function NotificationPopup() {
                   <Link
                     key={alert.id}
                     href={href}
+                    onClick={() => markAlertsViewed([alert.id])}
                     className={cn("flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors")}
                   >
                     <div className={cn("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", styles.bg)}>
@@ -116,6 +114,7 @@ export function NotificationPopup() {
         <div className="border-t border-slate-200">
           <Link
             href="/alerts"
+            onClick={markAllAlertsViewed}
             className="flex items-center justify-center gap-1 py-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
           >
             View All Notifications
