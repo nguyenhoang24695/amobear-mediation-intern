@@ -13,9 +13,11 @@ import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
 import {
   clearRememberedLoginPrefs,
+  getRememberedEmail,
   getRememberedOrganization,
   isRememberMeEnabled,
   setAuthData,
+  setRememberedEmail,
   setRememberedOrganization,
   setRememberMeEnabled,
 } from "@/lib/auth"
@@ -37,16 +39,19 @@ export default function LoginPage() {
     password: "",
   })
 
-  // Khôi phục Remember me và Organization đã lưu (khi user từng đăng nhập với Remember me).
+  // Khôi phục Remember me, Organization và Email đã lưu (khi user từng đăng nhập với Remember me).
   useEffect(() => {
     if (typeof window === "undefined") return
     const savedRememberMe = isRememberMeEnabled()
     if (savedRememberMe) {
       setRememberMe(true)
       const savedOrg = getRememberedOrganization()
-      if (savedOrg) {
-        setFormData((prev) => ({ ...prev, organization: savedOrg }))
-      }
+      const savedEmail = getRememberedEmail()
+      setFormData((prev) => ({
+        ...prev,
+        ...(savedOrg ? { organization: savedOrg } : {}),
+        ...(savedEmail ? { email: savedEmail } : {}),
+      }))
     }
   }, [])
 
@@ -107,6 +112,7 @@ export default function LoginPage() {
         if (rememberMe) {
           setRememberMeEnabled(true)
           setRememberedOrganization(formData.organization.trim())
+          setRememberedEmail(formData.email.trim())
         } else {
           clearRememberedLoginPrefs()
         }

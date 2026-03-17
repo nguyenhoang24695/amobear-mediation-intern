@@ -379,6 +379,16 @@ export interface TeamMember {
   permissions?: Record<string, string> // AppId -> PermissionLevel
 }
 
+export interface ActiveSession {
+  id: string
+  deviceInfo?: string | null
+  ipAddress?: string | null
+  createdAt: string
+  lastUsedAt?: string | null
+  expiresAt: string
+  isCurrent: boolean
+}
+
 export interface TeamMemberFilterRequest {
   page?: number
   pageSize?: number

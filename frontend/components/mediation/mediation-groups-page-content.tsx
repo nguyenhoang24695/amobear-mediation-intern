@@ -37,6 +37,9 @@ const FN_VIEW = "view"
 const FN_CONFIG = "config"
 const FN_EXPORT = "export"
 
+/** Bật lại = true khi muốn hiện Export, Bulk Edit, Create Group. */
+const SHOW_GROUP_ACTIONS = false
+
 /** Hiển thị appId: 10 ký tự đầu + ... + 10 ký tự cuối nếu dài hơn 20. */
 function formatAppIdDisplay(appId: string): string {
   if (!appId) return ""
@@ -50,13 +53,6 @@ function formatPlatformDisplay(platform: string | undefined): string {
 }
 
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
-
-const abTestOptions = [
-  { value: "all", label: "All", count: null },
-  { value: "running", label: "Running", count: 3 },
-  { value: "completed", label: "Completed", count: 2 },
-  { value: "none", label: "No Test", count: null },
-]
 
 interface ActiveFilter {
   type: string
@@ -76,7 +72,6 @@ export function MediationGroupsPageContent() {
   const [selectedApp, setSelectedApp] = useState("all")
   const [format, setFormat] = useState(ALL_FORMATS_VALUE)
   const [status, setStatus] = useState("All Status")
-  const [abTestFilter, setAbTestFilter] = useState("all")
   const [onlyShowIssues, setOnlyShowIssues] = useState(false)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
@@ -202,7 +197,7 @@ export function MediationGroupsPageContent() {
       (type === "A/B Test" && value === "all")
 
     setActiveFilters((current) => {
-      if (isDefaultValue) {
+    if (isDefaultValue) {
         return current.filter((f) => f.type !== type)
       }
 
@@ -211,8 +206,6 @@ export function MediationGroupsPageContent() {
         displayValue = appOptions.find((a) => a.value === value)?.label || value
       } else if (type === "Format") {
         displayValue = AD_FORMAT_OPTIONS.find((option) => option.value === value)?.label || value
-      } else if (type === "A/B Test") {
-        displayValue = abTestOptions.find((a) => a.value === value)?.label || value
       }
 
       const existing = current.find((f) => f.type === type)
@@ -232,9 +225,6 @@ export function MediationGroupsPageContent() {
         break
       case "Status":
         setStatus(value)
-        break
-      case "A/B Test":
-        setAbTestFilter(value)
         break
     }
   }
@@ -263,9 +253,6 @@ export function MediationGroupsPageContent() {
       case "Status":
         setStatus("All Status")
         break
-      case "A/B Test":
-        setAbTestFilter("all")
-        break
       case "Issues":
         setOnlyShowIssues(false)
         break
@@ -277,7 +264,6 @@ export function MediationGroupsPageContent() {
     setSelectedApp("all")
     setFormat(ALL_FORMATS_VALUE)
     setStatus("All Status")
-    setAbTestFilter("all")
     setOnlyShowIssues(false)
     setSearchQuery("")
   }
@@ -423,29 +409,6 @@ export function MediationGroupsPageContent() {
               </SelectContent>
             </Select>
 
-            {/* <Select value={abTestFilter} onValueChange={(v) => handleFilterChange("A/B Test", v)}>
-              <SelectTrigger className="w-32 h-10 bg-white">
-                <div className="flex items-center gap-1.5">
-                  <FlaskConical className="w-4 h-4 text-slate-500" />
-                  <SelectValue placeholder="A/B Test" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {abTestOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <span>{opt.label}</span>
-                      {opt.count !== null && (
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-slate-100">
-                          {opt.count}
-                        </Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
-
             {/* Only show issues checkbox */}
             {/* <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-md bg-white h-10">
               <Checkbox
@@ -457,24 +420,24 @@ export function MediationGroupsPageContent() {
                 Only show issues
               </label>
             </div> */}
+            </div>
           </div>
-        </div>
 
-        {/* Right: Actions */}
+        {/* Right: Actions (ẩn khi SHOW_GROUP_ACTIONS = false) */}
         <div className="flex items-center gap-2">
-          {canExport && (
+          {SHOW_GROUP_ACTIONS && canExport && (
             <Button variant="outline" className="h-10 gap-2 bg-transparent">
               <Download className="w-4 h-4" />
               Export
             </Button>
           )}
-          {canConfig && (
+          {SHOW_GROUP_ACTIONS && canConfig && (
             <Button variant="outline" className="h-10 gap-2 bg-transparent">
               <Pencil className="w-4 h-4" />
               Bulk Edit
             </Button>
           )}
-          {canConfig && (
+          {SHOW_GROUP_ACTIONS && canConfig && (
             <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4" />
               Create Group
@@ -623,7 +586,7 @@ export function MediationGroupsPageContent() {
         </div>
       )}
 
-      {/* Mediation Groups Table - Added abTestFilter prop */}
+      {/* Mediation Groups Table */}
       <MediationGroupsTable
         mediationGroups={groupsWithMetrics || []}
         loading={groupsLoading}
@@ -632,7 +595,6 @@ export function MediationGroupsPageContent() {
         formatFilter={format}
         statusFilter={status}
         onlyShowIssues={onlyShowIssues}
-        abTestFilter={abTestFilter}
         selectedGroups={selectedGroups}
         onSelectionChange={setSelectedGroups}
         canConfig={canConfig}
