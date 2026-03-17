@@ -37,7 +37,7 @@ import {
   Smartphone,
   Check,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, copyTextToClipboard } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
@@ -97,7 +97,7 @@ export function AppAdUnitsTab() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  // Load app by AdMob app_id, rồi load ad units (backend trả metrics mặc định từ cache 7 ngày)
+  // Load app by AdMob app_id, then load ad units from cached backend metrics.
   const { data: app } = useApi(
     () => structureApi.getAppByAppId(appIdFromParams!),
     { enabled: hasValidAppId, cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
@@ -197,10 +197,16 @@ export function AppAdUnitsTab() {
     }
   }
 
-  const copyAdUnitId = (id: number, adUnitId: string) => {
-    navigator.clipboard.writeText(adUnitId)
-    setCopiedId(id.toString())
-    setTimeout(() => setCopiedId(null), 2000)
+  const copyAdUnitId = async (id: number, adUnitId: string) => {
+    try {
+      const copiedText = await copyTextToClipboard(adUnitId)
+      if (!copiedText) return
+
+      setCopiedId(id.toString())
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (error) {
+      console.error("Failed to copy ad unit ID", error)
+    }
   }
 
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -331,7 +337,7 @@ export function AppAdUnitsTab() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
-                                  onClick={() => copyAdUnitId(unit.id, unit.adUnitId)}
+                                  onClick={() => void copyAdUnitId(unit.id, unit.adUnitId)}
                                   className="p-1 hover:bg-slate-100 rounded transition-colors"
                                 >
                                   {copiedId === unitIdStr ? (
@@ -395,7 +401,7 @@ export function AppAdUnitsTab() {
                                 <Pencil className="w-4 h-4" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2" onClick={() => copyAdUnitId(unit.id, unit.adUnitId)}>
+                              <DropdownMenuItem className="gap-2" onClick={() => void copyAdUnitId(unit.id, unit.adUnitId)}>
                                 <Copy className="w-4 h-4" />
                                 Copy ID
                               </DropdownMenuItem>

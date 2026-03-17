@@ -609,6 +609,9 @@ export const aiAssistantApi = {
   getProviderConfigs: () =>
     apiClient.get<AiProviderConfigDto[]>('/api/v1/ai-providers/config'),
 
+  getChatProviderConfigs: () =>
+    apiClient.get<AiProviderConfigDto[]>(`${API_PREFIX}/settings/providers`),
+
   testProvider: (request: TestProviderRequest) =>
     apiClient.post<TestResult>('/api/v1/ai-providers/test', request),
 
