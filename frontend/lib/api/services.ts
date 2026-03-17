@@ -26,6 +26,7 @@ import type {
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
+    ActiveSession,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -598,6 +599,14 @@ export const authApi = {
 
     getCurrentUser: async (): Promise<{ success: boolean; data?: CurrentUser }> => {
         return apiClient.get('/api/v1/auth/me')
+    },
+
+    getSessions: async (): Promise<{ success: boolean; data?: ActiveSession[] }> => {
+        return apiClient.get('/api/v1/auth/sessions')
+    },
+
+    revokeSession: async (sessionId: string): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.delete(`/api/v1/auth/sessions/${encodeURIComponent(sessionId)}`)
     },
 
     forgotPassword: async (request: ForgotPasswordRequest): Promise<{ success: boolean; message?: string }> => {
