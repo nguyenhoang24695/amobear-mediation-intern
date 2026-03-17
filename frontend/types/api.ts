@@ -495,10 +495,52 @@ export interface AppRuleGroupMappingDto {
   groupName: string | null
 }
 
+export interface WaterfallBulkPolicyTargetDto {
+  mediationGroupId: string
+  mediationGroupName: string
+  appId: string
+  appName: string
+  appIconUri?: string | null
+  effectiveRuleGroupId?: number | null
+  effectiveRuleGroupName?: string | null
+  ruleGroupSource?: string | null
+  currentApplyMode: string
+  dueAt?: string | null
+  lastObservedApplyAt?: string | null
+  platform?: string | null
+  adFormat?: string | null
+  state?: string | null
+  hasPersistedPolicy: boolean
+}
+
+export interface WaterfallBulkPolicyPreviewResponseDto {
+  filterType: string
+  appId?: string | null
+  ruleGroupId?: number | null
+  totalCount: number
+  targets: WaterfallBulkPolicyTargetDto[]
+}
+
+export interface BulkUpdateWaterfallApplyPoliciesRequestDto {
+  applyMode: string
+  mediationGroupIds: string[]
+}
+
+export interface BulkUpdateWaterfallApplyPoliciesResponseDto {
+  applyMode: string
+  requestedCount: number
+  updatedCount: number
+  skippedCount: number
+  updatedAt: string
+  updatedMediationGroupIds: string[]
+  skippedMediationGroupIds: string[]
+}
+
 export interface WaterfallFilterOptionDto {
   value: string
   label: string
   secondaryLabel?: string | null
   iconUri?: string | null
 }
+
 

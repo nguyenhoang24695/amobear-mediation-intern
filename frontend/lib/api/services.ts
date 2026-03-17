@@ -26,6 +26,9 @@ import type {
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
+    WaterfallBulkPolicyPreviewResponseDto,
+    BulkUpdateWaterfallApplyPoliciesRequestDto,
+    BulkUpdateWaterfallApplyPoliciesResponseDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -500,6 +503,7 @@ export interface WaterfallApplyPolicyResponse {
     lastAlertedAnchorAt?: string | null
     lastAlertResultId?: number | null
     lastEvaluatedAt?: string | null
+
 }
 
 export const waterfallManagementApi = {
@@ -524,6 +528,19 @@ export const waterfallManagementApi = {
         body: { applyMode: string }
     ): Promise<WaterfallApplyPolicyResponse> => {
         return apiClient.put<WaterfallApplyPolicyResponse>(`/api/WaterfallManagement/policy/${encodeURIComponent(mediationGroupId)}`, body)
+    },
+
+    getBulkPolicyTargets: async (params: {
+        appId?: string
+        ruleGroupId?: number
+    }): Promise<WaterfallBulkPolicyPreviewResponseDto> => {
+        return apiClient.get<WaterfallBulkPolicyPreviewResponseDto>('/api/WaterfallManagement/bulk-policy-targets', params as Record<string, string | number | undefined>)
+    },
+
+    bulkUpdatePolicies: async (
+        body: BulkUpdateWaterfallApplyPoliciesRequestDto
+    ): Promise<BulkUpdateWaterfallApplyPoliciesResponseDto> => {
+        return apiClient.put<BulkUpdateWaterfallApplyPoliciesResponseDto>('/api/WaterfallManagement/bulk-policies', body)
     },
 }
 
@@ -1661,5 +1678,6 @@ export interface AccountAppItem {
     createdAt: string
     updatedAt: string
 }
+
 
 
