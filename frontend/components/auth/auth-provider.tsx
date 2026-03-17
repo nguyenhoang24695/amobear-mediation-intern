@@ -2,9 +2,23 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { isAuthenticated } from "@/lib/auth"
+import {
+  AUTH_REFRESH_COOLDOWN_MS,
+  clearAuthSessionData,
+  getLastRefreshAt,
+  getRefreshToken,
+  normalizeAuthState,
+  setLastRefreshAt,
+  refreshAuthSession,
+  shouldRefreshByExpiry,
+} from "@/lib/auth"
 import { ProtectedRoute } from "./protected-route"
 import { PublicRoute } from "./public-route"
+
+/** Check cadence (ms). Only refresh when token has < 5m left and no other tab refreshed recently. */
+const KEEP_ALIVE_CHECK_INTERVAL_MS = 300 * 1000
+/** Only refresh when access token has less than this many minutes left. */
+const REFRESH_THRESHOLD_MINUTES = 5
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -12,21 +26,20 @@ interface AuthProviderProps {
 
 // Public routes that don't require authentication
 const publicRoutes = [
-  '/login',
-  '/forgot-password',
-  '/reset-password',
-  '/accept-invitation',
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/accept-invitation",
 ]
 
-// Check if route is public
 function isPublicRoute(pathname: string): boolean {
-  return publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
+  return publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))
 }
 
 /**
  * AuthProvider - Wraps the app and handles authentication routing
- * - Public routes: Wrapped with PublicRoute (redirects if authenticated)
- * - Protected routes: Wrapped with ProtectedRoute (redirects if not authenticated)
+ * - Public routes: Wrapped with PublicRoute
+ * - Protected routes: Wrapped with ProtectedRoute
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname()
@@ -34,32 +47,56 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    // Small delay to ensure pathname is set
+    normalizeAuthState()
+  }, [])
+
+  useEffect(() => {
     setIsChecking(false)
   }, [pathname])
 
-  // Cross-tab logout synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      // If access token is removed in another tab
-      if (e.key === 'accessToken' && e.newValue === null) {
-        // Clear session storage just in case it was used here
-        sessionStorage.removeItem('accessToken')
-        sessionStorage.removeItem('refreshToken')
-        sessionStorage.removeItem('user')
+      if (e.key === "accessToken" && e.newValue === null) {
+        clearAuthSessionData()
 
-        // Redirect to login
         if (!isPublicRoute(pathname)) {
-          router.push('/login')
+          router.push("/login")
         }
       }
     }
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', handleStorageChange)
-      return () => window.removeEventListener('storage', handleStorageChange)
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorageChange)
+      return () => window.removeEventListener("storage", handleStorageChange)
     }
   }, [pathname, router])
+
+  useEffect(() => {
+    if (isPublicRoute(pathname)) return
+    if (typeof window === "undefined" || typeof document === "undefined") return
+
+    const refreshIfNeeded = () => {
+      if (document.visibilityState !== "visible") return
+
+      const refreshToken = getRefreshToken()
+      if (!refreshToken) return
+      if (!shouldRefreshByExpiry(REFRESH_THRESHOLD_MINUTES)) return
+
+      const now = Date.now()
+      const lastAt = getLastRefreshAt()
+      if (lastAt != null && now - lastAt < AUTH_REFRESH_COOLDOWN_MS) return
+
+      setLastRefreshAt(now)
+      refreshAuthSession()
+        .catch(() => {
+          // Network errors or expired refresh token are handled by the next 401 flow.
+        })
+    }
+
+    refreshIfNeeded()
+    const intervalId = setInterval(refreshIfNeeded, KEEP_ALIVE_CHECK_INTERVAL_MS)
+    return () => clearInterval(intervalId)
+  }, [pathname])
 
   if (isChecking) {
     return (
@@ -72,11 +109,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     )
   }
 
-  // Check if current route is public
   if (isPublicRoute(pathname)) {
     return <PublicRoute>{children}</PublicRoute>
   }
 
-  // All other routes are protected
   return <ProtectedRoute>{children}</ProtectedRoute>
 }

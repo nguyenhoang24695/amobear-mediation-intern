@@ -11,7 +11,14 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
-import { setAuthData, isRememberMeEnabled, getRememberedOrganization, setRememberedOrganization } from "@/lib/auth"
+import {
+  clearRememberedLoginPrefs,
+  getRememberedOrganization,
+  isRememberMeEnabled,
+  setAuthData,
+  setRememberedOrganization,
+  setRememberMeEnabled,
+} from "@/lib/auth"
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail, Zap } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -34,8 +41,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window === "undefined") return
     const savedRememberMe = isRememberMeEnabled()
-    setRememberMe(savedRememberMe)
     if (savedRememberMe) {
+      setRememberMe(true)
       const savedOrg = getRememberedOrganization()
       if (savedOrg) {
         setFormData((prev) => ({ ...prev, organization: savedOrg }))
@@ -93,21 +100,21 @@ export default function LoginPage() {
         password: formData.password,
         organizationSlug: formData.organization || undefined,
         deviceInfo: typeof window !== 'undefined' ? navigator.userAgent : undefined,
+        rememberMe,
       })
 
       if (response.success && response.data) {
         if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true')
+          setRememberMeEnabled(true)
           setRememberedOrganization(formData.organization.trim())
         } else {
-          localStorage.removeItem('rememberMe')
-          setRememberedOrganization('')
+          clearRememberedLoginPrefs()
         }
 
         // Store authentication data
         setAuthData(
           response.data.accessToken,
-          response.data.refreshToken,
+          response.data.refreshToken ?? null,
           response.data.user
         )
 
@@ -285,7 +292,7 @@ export default function LoginPage() {
                   <Checkbox
                     id="remember"
                     checked={rememberMe}
-                    onCheckedChange={(checked: boolean) => setRememberMe(checked)}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
                   />
                   <label htmlFor="remember" className="text-sm text-slate-600 cursor-pointer">
                     Remember me

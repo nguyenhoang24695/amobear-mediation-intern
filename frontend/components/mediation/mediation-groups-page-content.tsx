@@ -23,13 +23,14 @@ import {
   FlaskConical,
   Loader2,
 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MediationGroupsTable } from "./mediation-groups-table"
 import { cn } from "@/lib/utils"
 import { useApi } from "@/hooks/use-api"
-import { structureApi, mediationGroupMetricsApi, alertsApi } from "@/lib/api/services"
+import { structureApi, alertsApi } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
+import { AD_FORMAT_OPTIONS, ALL_FORMATS_VALUE } from "@/lib/ad-format"
 
 const SCREEN_MEDIATION_GROUPS = "s-mediation-groups"
 const FN_VIEW = "view"
@@ -51,7 +52,6 @@ function formatPlatformDisplay(platform: string | undefined): string {
   return platform.toUpperCase().slice(0, 3)
 }
 
-const formatOptions = ["All Formats", "Banner", "Interstitial", "Rewarded", "Native", "App Open"]
 const statusOptions = ["All Status", "Active", "Paused", "Error"]
 
 interface ActiveFilter {
@@ -70,7 +70,7 @@ export function MediationGroupsPageContent() {
     return <NoPermissionView />
   }
   const [selectedApp, setSelectedApp] = useState("all")
-  const [format, setFormat] = useState("All Formats")
+  const [format, setFormat] = useState(ALL_FORMATS_VALUE)
   const [status, setStatus] = useState("All Status")
   const [onlyShowIssues, setOnlyShowIssues] = useState(false)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
@@ -78,7 +78,7 @@ export function MediationGroupsPageContent() {
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
 
   // Fetch mediation groups from API (now includes metrics and ad sources from cache)
-  const { data: mediationGroupsWithData, loading: groupsLoading, refetch: refetchGroups } = useApi(
+  const { data: mediationGroupsWithData, loading: groupsLoading } = useApi(
     () => structureApi.getMediationGroups(),
     { 
       enabled: true,
@@ -180,7 +180,7 @@ export function MediationGroupsPageContent() {
     const total = groupsWithMetrics.length
     const active = groupsWithMetrics.filter((mg: any) => mg.state === "ENABLED" || !mg.state).length
     const abTests = 0 // TODO: Fetch from A/B tests API
-    const issues = alertsSummary?.total || 0
+    const issues = alertsSummary?.Total || 0
     const groupsWithEcpm = groupsWithMetrics.filter((mg: any) => mg.ecpm > 0)
     const avgEcpm = groupsWithEcpm.length > 0
       ? groupsWithEcpm.reduce((sum: number, mg: any) => sum + mg.ecpm, 0) / groupsWithEcpm.length
@@ -190,23 +190,31 @@ export function MediationGroupsPageContent() {
   }, [groupsWithMetrics, mediationGroups, alertsSummary])
 
   const handleFilterChange = (type: string, value: string) => {
-    const isDefaultValue = value === "all" || value.startsWith("All")
+    const isDefaultValue =
+      (type === "App" && value === "all") ||
+      (type === "Format" && value === ALL_FORMATS_VALUE) ||
+      (type === "Status" && value === "All Status") ||
+      (type === "A/B Test" && value === "all")
 
+    setActiveFilters((current) => {
     if (isDefaultValue) {
-      setActiveFilters(activeFilters.filter((f) => f.type !== type))
-    } else {
+        return current.filter((f) => f.type !== type)
+      }
+
       let displayValue = value
       if (type === "App") {
         displayValue = appOptions.find((a) => a.value === value)?.label || value
+      } else if (type === "Format") {
+        displayValue = AD_FORMAT_OPTIONS.find((option) => option.value === value)?.label || value
       }
 
-      const existing = activeFilters.find((f) => f.type === type)
+      const existing = current.find((f) => f.type === type)
       if (existing) {
-        setActiveFilters(activeFilters.map((f) => (f.type === type ? { ...f, value: displayValue } : f)))
-      } else {
-        setActiveFilters([...activeFilters, { type, value: displayValue }])
+        return current.map((f) => (f.type === type ? { ...f, value: displayValue } : f))
       }
-    }
+
+      return [...current, { type, value: displayValue }]
+    })
 
     switch (type) {
       case "App":
@@ -224,23 +232,23 @@ export function MediationGroupsPageContent() {
   const handleIssuesToggle = (checked: boolean) => {
     setOnlyShowIssues(checked)
     if (checked) {
-      const existing = activeFilters.find((f) => f.type === "Issues")
-      if (!existing) {
-        setActiveFilters([...activeFilters, { type: "Issues", value: "Only issues" }])
-      }
+      setActiveFilters((current) => {
+        const existing = current.find((f) => f.type === "Issues")
+        return existing ? current : [...current, { type: "Issues", value: "Only issues" }]
+      })
     } else {
-      setActiveFilters(activeFilters.filter((f) => f.type !== "Issues"))
+      setActiveFilters((current) => current.filter((f) => f.type !== "Issues"))
     }
   }
 
   const removeFilter = (type: string) => {
-    setActiveFilters(activeFilters.filter((f) => f.type !== type))
+    setActiveFilters((current) => current.filter((f) => f.type !== type))
     switch (type) {
       case "App":
         setSelectedApp("all")
         break
       case "Format":
-        setFormat("All Formats")
+        setFormat(ALL_FORMATS_VALUE)
         break
       case "Status":
         setStatus("All Status")
@@ -254,7 +262,7 @@ export function MediationGroupsPageContent() {
   const clearAllFilters = () => {
     setActiveFilters([])
     setSelectedApp("all")
-    setFormat("All Formats")
+    setFormat(ALL_FORMATS_VALUE)
     setStatus("All Status")
     setOnlyShowIssues(false)
     setSearchQuery("")
@@ -302,7 +310,7 @@ export function MediationGroupsPageContent() {
                   role="combobox"
                   aria-expanded={appPopoverOpen}
                   className="w-52 min-w-0 h-10 justify-between bg-white"
-                  disabled={!apps}
+                  disabled={apps.length === 0}
                 >
                   {selectedApp === "all" ? (
                     <span className="truncate">All Apps</span>
@@ -337,15 +345,9 @@ export function MediationGroupsPageContent() {
                       {appOptions.map((opt) => (
                         <CommandItem
                           key={opt.value}
-                          value={opt.value === "all" ? "all" : `${opt.label} ${opt.appId ?? ""}`}
-                          onSelect={(selectedValue) => {
-                            const id =
-                              selectedValue === "all"
-                                ? "all"
-                                : appOptions.find((o) => o.value === selectedValue)?.value ??
-                                  appOptions.find((o) => o.appId && `${o.label} ${o.appId}` === selectedValue)?.value ??
-                                  selectedValue
-                            handleFilterChange("App", id)
+                          value={opt.value === "all" ? "all" : `${opt.label} ${opt.appId ?? ""} ${opt.value}`}
+                          onSelect={() => {
+                            handleFilterChange("App", opt.value)
                             setAppPopoverOpen(false)
                           }}
                         >
@@ -386,9 +388,9 @@ export function MediationGroupsPageContent() {
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
-                {formatOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
+                {AD_FORMAT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -408,7 +410,7 @@ export function MediationGroupsPageContent() {
             </Select>
 
             {/* Only show issues checkbox */}
-            <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-md bg-white h-10">
+            {/* <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-md bg-white h-10">
               <Checkbox
                 id="issues"
                 checked={onlyShowIssues}
@@ -417,9 +419,9 @@ export function MediationGroupsPageContent() {
               <label htmlFor="issues" className="text-sm text-slate-600 cursor-pointer whitespace-nowrap">
                 Only show issues
               </label>
+            </div> */}
             </div>
           </div>
-        </div>
 
         {/* Right: Actions (ẩn khi SHOW_GROUP_ACTIONS = false) */}
         <div className="flex items-center gap-2">

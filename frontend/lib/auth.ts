@@ -20,32 +20,179 @@ export interface AuthUser {
     name: string
     role: string
   }>
-  /** Quyền màn hình/chức năng theo role: screenKey -> danh sách functionKey */
+  /** Quyen man hinh/chuc nang theo role: screenKey -> danh sach functionKey */
   rolePermissions?: Record<string, string[]>
 }
 
+const ACCESS_TOKEN_KEY = "accessToken"
+const REFRESH_TOKEN_KEY = "refreshToken"
+const USER_KEY = "user"
+const REMEMBER_ME_KEY = "rememberMe"
+const REMEMBERED_ORGANIZATION_KEY = "rememberedOrganization"
+const AUTH_REFRESH_AT_KEY = "auth_refresh_at"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+let refreshSessionPromise: Promise<string | null> | null = null
+
+/** Khoang thoi gian (ms) coi la "vua refresh" de tab khac khong goi cung luc. */
+export const AUTH_REFRESH_COOLDOWN_MS = 55_000
+
+function getStoredValue(key: string): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem(key) || sessionStorage.getItem(key)
+}
+
+function normalizeRefreshTokenStorage(): void {
+  if (typeof window === "undefined") return
+  if (localStorage.getItem(REMEMBER_ME_KEY) === "true") return
+
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+}
+
 /**
- * Get access token from localStorage
+ * Normalize legacy auth state after deploy.
+ * Old sessions without rememberMe=true are downgraded to access-token-only mode.
+ */
+export function normalizeAuthState(): void {
+  if (typeof window === "undefined") return
+
+  normalizeRefreshTokenStorage()
+
+  if (!getStoredValue(ACCESS_TOKEN_KEY)) {
+    localStorage.removeItem(AUTH_REFRESH_AT_KEY)
+  }
+}
+
+/**
+ * Get access token from storage.
+ * LocalStorage is the source of truth; sessionStorage is kept as a legacy fallback.
  */
 export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+  return getStoredValue(ACCESS_TOKEN_KEY)
 }
 
 /**
- * Get refresh token from localStorage
+ * Get refresh token for remembered sessions only.
  */
 export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken')
+  normalizeRefreshTokenStorage()
+  return getStoredValue(REFRESH_TOKEN_KEY)
 }
 
 /**
- * Get current user from localStorage
+ * Read access token expiry (ms, Unix) from JWT payload.exp.
+ * Return null when token is missing or cannot be decoded.
+ */
+export function getAccessTokenExpiryMs(): number | null {
+  const token = getAccessToken()
+  if (!token) return null
+  try {
+    const parts = token.split(".")
+    if (parts.length !== 3) return null
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")
+    const payload = JSON.parse(atob(padded))
+    const exp = payload?.exp
+    if (typeof exp !== "number") return null
+    return exp * 1000
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Refresh only when token is expired or will expire within threshold minutes.
+ */
+export function shouldRefreshByExpiry(thresholdMinutes: number = 5): boolean {
+  const expiryMs = getAccessTokenExpiryMs()
+  if (expiryMs === null) return true
+  const now = Date.now()
+  const thresholdMs = thresholdMinutes * 60 * 1000
+  return now >= expiryMs - thresholdMs
+}
+
+/**
+ * Whether the current browser state can resume an authenticated session.
+ * Used by PublicRoute to avoid redirecting away from /login when only
+ * an expired access token exists without a refresh token.
+ */
+export function isAuthenticated(): boolean {
+  const accessToken = getAccessToken()
+  if (!accessToken) return false
+
+  const expiryMs = getAccessTokenExpiryMs()
+  if (expiryMs !== null && Date.now() >= expiryMs) {
+    return !!getRefreshToken()
+  }
+
+  return true
+}
+
+/**
+ * Last refresh timestamp to avoid multiple tabs refreshing simultaneously.
+ */
+export function getLastRefreshAt(): number | null {
+  if (typeof window === "undefined") return null
+  const s = localStorage.getItem(AUTH_REFRESH_AT_KEY)
+  if (s == null) return null
+  const n = parseInt(s, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+export function setLastRefreshAt(ms: number): void {
+  if (typeof window === "undefined") return
+  localStorage.setItem(AUTH_REFRESH_AT_KEY, String(ms))
+}
+
+/**
+ * Refresh the current auth session once across all concurrent callers.
+ */
+export async function refreshAuthSession(baseUrl: string = API_BASE_URL): Promise<string | null> {
+  if (typeof window === "undefined") return null
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return null
+
+  if (!refreshSessionPromise) {
+    refreshSessionPromise = (async () => {
+      try {
+        const refreshRes = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        })
+
+        if (!refreshRes.ok) {
+          return null
+        }
+
+        const refreshData = await refreshRes.json()
+        if (refreshData.success && refreshData.data?.accessToken && refreshData.data?.user) {
+          setAuthData(
+            refreshData.data.accessToken,
+            refreshData.data.refreshToken ?? null,
+            refreshData.data.user as AuthUser
+          )
+          setLastRefreshAt(Date.now())
+          return refreshData.data.accessToken as string
+        }
+      } catch (e) {
+        console.error("Refresh token failed", e)
+      }
+
+      return null
+    })().finally(() => {
+      refreshSessionPromise = null
+    })
+  }
+
+  return refreshSessionPromise
+}
+
+/**
+ * Get current user from storage.
  */
 export function getCurrentUser(): AuthUser | null {
-  if (typeof window === 'undefined') return null
-  const userStr = localStorage.getItem('user') || sessionStorage.getItem('user')
+  const userStr = getStoredValue(USER_KEY)
   if (!userStr) return null
   try {
     return JSON.parse(userStr) as AuthUser
@@ -55,8 +202,8 @@ export function getCurrentUser(): AuthUser | null {
 }
 
 /**
- * Kiểm tra user có quyền function trên screen không (theo rolePermissions).
- * super_admin luôn có toàn quyền.
+ * Kiem tra user co quyen function tren screen khong (theo rolePermissions).
+ * super_admin luon co toan quyen.
  */
 export function hasScreenFunction(screenKey: string, functionKey: string): boolean {
   const user = getCurrentUser()
@@ -67,67 +214,85 @@ export function hasScreenFunction(screenKey: string, functionKey: string): boole
 }
 
 /**
- * Check if user is authenticated
+ * Store auth session data.
+ * Access token and user are always kept in localStorage for cross-tab access.
+ * Refresh token is stored only when remember-me mode is enabled.
  */
-export function isAuthenticated(): boolean {
-  return !!getAccessToken()
-}
+export function setAuthData(accessToken: string, refreshToken: string | null | undefined, user: AuthUser): void {
+  if (typeof window === "undefined") return
 
-/**
- * Store authentication data
- */
-export function setAuthData(accessToken: string, refreshToken: string, user: AuthUser): void {
-  if (typeof window === 'undefined') return
-  if (isRememberMeEnabled()) {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    localStorage.setItem('user', JSON.stringify(user))
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
   } else {
-    sessionStorage.setItem('accessToken', accessToken)
-    sessionStorage.setItem('refreshToken', refreshToken)
-    sessionStorage.setItem('user', JSON.stringify(user))
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
   }
+
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+  sessionStorage.removeItem(USER_KEY)
 }
 
 /**
- * Clear authentication data
+ * Clear only the active auth session.
+ * Login preferences remain available for the next login screen.
  */
-export function clearAuthData(): void {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
-  localStorage.removeItem('user')
-  localStorage.removeItem('rememberMe')
-  localStorage.removeItem('rememberedOrganization')
+export function clearAuthSessionData(): void {
+  if (typeof window === "undefined") return
 
-  sessionStorage.removeItem('accessToken')
-  sessionStorage.removeItem('refreshToken')
-  sessionStorage.removeItem('user')
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+  localStorage.removeItem(AUTH_REFRESH_AT_KEY)
+
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+  sessionStorage.removeItem(USER_KEY)
 }
 
 /**
- * Check if "Remember Me" is enabled
+ * Clear remembered login preferences such as Remember Me and organization prefill.
+ */
+export function clearRememberedLoginPrefs(): void {
+  if (typeof window === "undefined") return
+
+  localStorage.removeItem(REMEMBER_ME_KEY)
+  localStorage.removeItem(REMEMBERED_ORGANIZATION_KEY)
+}
+
+/**
+ * Check if "Remember Me" is enabled.
  */
 export function isRememberMeEnabled(): boolean {
-  if (typeof window === 'undefined') return false
-  return localStorage.getItem('rememberMe') === 'true'
+  if (typeof window === "undefined") return false
+  return localStorage.getItem(REMEMBER_ME_KEY) === "true"
 }
 
-const REMEMBERED_ORGANIZATION_KEY = 'rememberedOrganization'
+export function setRememberMeEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return
+
+  if (enabled) {
+    localStorage.setItem(REMEMBER_ME_KEY, "true")
+  } else {
+    localStorage.removeItem(REMEMBER_ME_KEY)
+  }
+}
 
 /**
  * Get organization slug saved when "Remember me" was used (for login form pre-fill).
  */
 export function getRememberedOrganization(): string {
-  if (typeof window === 'undefined') return ''
-  return localStorage.getItem(REMEMBERED_ORGANIZATION_KEY) ?? ''
+  if (typeof window === "undefined") return ""
+  return localStorage.getItem(REMEMBERED_ORGANIZATION_KEY) ?? ""
 }
 
 /**
  * Save organization slug when login succeeds with "Remember me".
  */
 export function setRememberedOrganization(slug: string): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === "undefined") return
   if (slug) {
     localStorage.setItem(REMEMBERED_ORGANIZATION_KEY, slug)
   } else {
@@ -136,7 +301,7 @@ export function setRememberedOrganization(slug: string): void {
 }
 
 /**
- * Get user initials from user data
+ * Get user initials from user data.
  */
 export function getUserInitials(user: AuthUser | null): string {
   if (!user) return "U"
@@ -165,7 +330,7 @@ export function getUserInitials(user: AuthUser | null): string {
 }
 
 /**
- * Get user display name from user data
+ * Get user display name from user data.
  */
 export function getUserDisplayName(user: AuthUser | null): string {
   if (!user) return "User"

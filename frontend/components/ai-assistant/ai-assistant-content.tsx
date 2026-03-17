@@ -1,9 +1,13 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { ContextSidebar } from "./context-sidebar"
 import { ChatMainPanel } from "./chat-main-panel"
 import { CreateContextModal } from "./create-context-modal"
+import { ShareConversationModal } from "./share-conversation-modal"
+import { ChooseContextForForkModal } from "./choose-context-for-fork-modal"
+import { RenameModal } from "./rename-modal"
 import { aiAssistantApi } from "@/lib/api/ai-assistant"
 import type {
   AskResponse,
@@ -106,6 +110,9 @@ export interface UserQuota {
   warning?: string
 }
 
+const AI_ASSISTANT_LAST_CONTEXT_ID = "ai-assistant-last-context-id"
+const AI_ASSISTANT_LAST_CONVERSATION_ID = "ai-assistant-last-conversation-id"
+
 const PROVIDER_MAP = ["claude", "gemini", "chatgpt"] as const
 function toProvider(s: string): "claude" | "gemini" | "chatgpt" {
   const p = s?.toLowerCase()
@@ -172,13 +179,23 @@ function dtoToMessage(m: MessageDto): AiMessage {
       complexity: m.estimatedComplexity as "Low" | "Medium" | "High" | undefined,
       provider: m.provider,
       usage: m.inputTokens != null ? { tokens: m.inputTokens + m.outputTokens, cost: m.cost } : undefined,
-      queryResult: m.queryRowCount != null && m.queryExecutionMs != null ? {
-        columns: [],
-        rows: [],
-        rowCount: m.queryRowCount,
-        executionTime: m.queryExecutionMs / 1000,
-        provider: m.provider ?? "",
-      } : undefined,
+      queryResult: m.queryRowCount != null && m.queryExecutionMs != null && (m.queryResultColumns != null || m.queryResultRows != null)
+        ? {
+            columns: m.queryResultColumns ?? (m.queryResultRows?.[0] ? Object.keys(m.queryResultRows[0]) : []),
+            rows: m.queryResultRows ?? [],
+            rowCount: m.queryRowCount,
+            executionTime: (m.queryExecutionMs ?? 0) / 1000,
+            provider: m.provider ?? "",
+          }
+        : m.queryRowCount != null && m.queryExecutionMs != null
+        ? {
+            columns: [],
+            rows: [],
+            rowCount: m.queryRowCount,
+            executionTime: m.queryExecutionMs / 1000,
+            provider: m.provider ?? "",
+          }
+        : undefined,
     },
   }
 }
@@ -261,8 +278,45 @@ export function AiAssistantContent() {
   const [createContextOpen, setCreateContextOpen] = useState(false)
   const [loadingContexts, setLoadingContexts] = useState(true)
   const [sending, setSending] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [shareModalConversationId, setShareModalConversationId] = useState<string>("")
+  const [chooseContextModalOpen, setChooseContextModalOpen] = useState(false)
+  const [pendingAskAfterFork, setPendingAskAfterFork] = useState<{
+    content: string
+    options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }
+  } | null>(null)
+  const [conversationDetail, setConversationDetail] = useState<{ isOwner: boolean; isShared: boolean } | null>(null)
+  const [sharedLinkContextFallback, setSharedLinkContextFallback] = useState<{ id: string; name: string } | null>(null)
+  const [renameModal, setRenameModal] = useState<{
+    type: "context" | "conversation"
+    id: string
+    currentName: string
+  } | null>(null)
+  const searchParams = useSearchParams()
+  const conversationIdFromUrl = searchParams.get("conversationId")
 
-  const activeContext = contexts.find((c) => c.id === activeContextId) ?? contexts[0] ?? null
+  const activeContext =
+    contexts.find((c) => c.id === activeContextId) ??
+    (sharedLinkContextFallback?.id === activeContextId && sharedLinkContextFallback
+      ? {
+          id: sharedLinkContextFallback.id,
+          name: sharedLinkContextFallback.name,
+          icon: "📊",
+          color: "#3B82F6",
+          appIds: [],
+          appScope: "",
+          focusAreas: [],
+          preferredProvider: "claude" as const,
+          preferredModel: undefined,
+          explainDetailDefault: false,
+          isShared: true,
+          pinnedMetrics: [],
+          savedQueries: [],
+          conversationCount: 0,
+        }
+      : null) ??
+    contexts[0] ??
+    null
   const contextConversations = conversations.filter((c) => c.contextId === activeContextId)
 
   // Đồng bộ provider + model từ context khi đổi context
@@ -319,17 +373,24 @@ export function AiAssistantContent() {
           })
         )
         setContexts(withExtras)
-        if (withExtras.length > 0 && !activeContextId) setActiveContextId(withExtras[0].id)
+        if (conversationIdFromUrl) return
+        if (withExtras.length > 0 && !activeContextId) {
+          const lastContextId = typeof window !== "undefined" ? localStorage.getItem(AI_ASSISTANT_LAST_CONTEXT_ID) : null
+          const resolved = lastContextId && withExtras.some((c) => c.id === lastContextId) ? lastContextId : withExtras[0].id
+          setActiveContextId(resolved)
+        }
       } finally {
         if (!cancelled) setLoadingContexts(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [conversationIdFromUrl])
 
-  // Load conversations when active context changes
+  // Load conversations when active context changes (chỉ skip khi đang xem đúng context của share link)
   useEffect(() => {
+    const viewingSharedContext = conversationIdFromUrl && sharedLinkContextFallback?.id === activeContextId
+    if (viewingSharedContext) return
     if (!activeContextId) {
       setConversations([])
       setActiveConversationId("")
@@ -340,31 +401,58 @@ export function AiAssistantContent() {
       if (cancelled) return
       const convs = (list ?? []).map(dtoToConversation)
       setConversations(convs)
-      const first = convs[0]
-      if (first) setActiveConversationId(first.id)
+      const lastConvId = typeof window !== "undefined" ? localStorage.getItem(AI_ASSISTANT_LAST_CONVERSATION_ID) : null
+      const inList = lastConvId && convs.some((c) => c.id === lastConvId)
+      if (inList && lastConvId) setActiveConversationId(lastConvId)
+      else if (convs[0]) setActiveConversationId(convs[0].id)
       else setActiveConversationId("new-" + Date.now())
     }).catch(() => {
       if (!cancelled) setConversations([])
     })
     return () => { cancelled = true }
-  }, [activeContextId])
+  }, [activeContextId, conversationIdFromUrl, sharedLinkContextFallback?.id])
 
-  // Load messages when active conversation changes
+  // Load messages when active conversation changes (skip nếu đã load từ share link)
   useEffect(() => {
     if (!activeConversationId) return
     if (activeConversationId.startsWith("new-")) {
       if (activeContext) setMessages([getWelcomeMessage(activeContext)])
+      setConversationDetail(null)
       return
     }
+    if (conversationIdFromUrl === activeConversationId) return
     let cancelled = false
     aiAssistantApi.getConversation(activeConversationId).then((detail) => {
       if (cancelled || !detail?.messages) return
       setMessages(detail.messages.map(dtoToMessage))
+      setConversationDetail({
+        isOwner: detail.isOwner ?? true,
+        isShared: detail.isShared ?? false,
+      })
     }).catch(() => {
       if (!cancelled) setMessages([])
+      setConversationDetail(null)
     })
     return () => { cancelled = true }
-  }, [activeConversationId, activeContext, getWelcomeMessage])
+  }, [activeConversationId, activeContext, getWelcomeMessage, conversationIdFromUrl])
+
+  // Deep link: mở conversation từ link ?conversationId=... (dependency theo giá trị string để chỉ chạy 1 lần)
+  useEffect(() => {
+    if (!conversationIdFromUrl) return
+    let cancelled = false
+    aiAssistantApi.getConversation(conversationIdFromUrl).then((detail) => {
+      if (cancelled || !detail) return
+      setActiveContextId(detail.contextId)
+      setActiveConversationId(detail.id)
+      setMessages(detail.messages.map(dtoToMessage))
+      setConversationDetail({
+        isOwner: detail.isOwner ?? true,
+        isShared: detail.isShared ?? false,
+      })
+      setSharedLinkContextFallback({ id: detail.contextId, name: detail.contextName })
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [conversationIdFromUrl])
 
   // Refresh quota periodically — luôn map API (dailyTokenLimit) sang UserQuota (dailyTokensLimit)
   useEffect(() => {
@@ -393,10 +481,17 @@ export function AiAssistantContent() {
   }, [activeContextId])
 
   const handleContextSelect = useCallback((contextId: string) => {
+    if (typeof window !== "undefined") localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, contextId)
     setActiveContextId(contextId)
     const first = conversations.find((c) => c.contextId === contextId)
-    if (first) setActiveConversationId(first.id)
-    else setActiveConversationId("new-" + Date.now())
+    if (first) {
+      setActiveConversationId(first.id)
+      if (typeof window !== "undefined") localStorage.setItem(AI_ASSISTANT_LAST_CONVERSATION_ID, first.id)
+    } else {
+      const newId = "new-" + Date.now()
+      setActiveConversationId(newId)
+      if (typeof window !== "undefined") localStorage.removeItem(AI_ASSISTANT_LAST_CONVERSATION_ID)
+    }
   }, [conversations])
 
   const PROVIDER_KEY_TO_SELECTED: Record<string, "claude" | "gemini" | "chatgpt"> = {
@@ -429,12 +524,21 @@ export function AiAssistantContent() {
 
   const handleConversationSelect = useCallback((convId: string) => {
     setActiveConversationId(convId)
-  }, [])
+    if (typeof window !== "undefined") {
+      localStorage.setItem(AI_ASSISTANT_LAST_CONVERSATION_ID, convId)
+      if (activeContextId) localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, activeContextId)
+    }
+  }, [activeContextId])
 
   const handleNewChat = useCallback(() => {
-    setActiveConversationId("new-" + Date.now())
+    const newId = "new-" + Date.now()
+    setActiveConversationId(newId)
     if (activeContext) setMessages([getWelcomeMessage(activeContext)])
-  }, [activeContext, getWelcomeMessage])
+    if (typeof window !== "undefined") {
+      if (activeContextId) localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, activeContextId)
+      localStorage.removeItem(AI_ASSISTANT_LAST_CONVERSATION_ID)
+    }
+  }, [activeContext, activeContextId, getWelcomeMessage])
 
   const handleDeleteContext = useCallback(async (contextId: string) => {
     try {
@@ -464,6 +568,43 @@ export function AiAssistantContent() {
       // keep UI state on error
     }
   }, [activeContextId, activeConversationId, handleNewChat])
+
+  const handleOpenRenameContext = useCallback((context: AiContext) => {
+    setRenameModal({ type: "context", id: context.id, currentName: context.name })
+  }, [])
+
+  const handleOpenRenameConversation = useCallback((conv: AiConversation) => {
+    setRenameModal({ type: "conversation", id: conv.id, currentName: conv.title })
+  }, [])
+
+  const handleRenameApply = useCallback(
+    async (newName: string) => {
+      if (!renameModal) return
+      if (renameModal.type === "context") {
+        await aiAssistantApi.updateContext(renameModal.id, { name: newName })
+        setContexts((prev) =>
+          prev.map((c) => (c.id === renameModal.id ? { ...c, name: newName } : c))
+        )
+      } else {
+        await aiAssistantApi.updateConversationTitle(renameModal.id, newName)
+        setConversations((prev) =>
+          prev.map((c) => (c.id === renameModal.id ? { ...c, title: newName } : c))
+        )
+      }
+      setRenameModal(null)
+    },
+    [renameModal]
+  )
+
+  const handleShareConversation = useCallback(async (convId: string) => {
+    try {
+      await aiAssistantApi.shareConversation(convId)
+      setShareModalConversationId(convId)
+      setShareModalOpen(true)
+    } catch {
+      // keep UI state on error
+    }
+  }, [])
 
   const handleCreateContext = useCallback(async (data: { name: string; appScope: string; prompt?: string; fromLibrary?: string }) => {
     try {
@@ -495,12 +636,77 @@ export function AiAssistantContent() {
   const [pendingAttachedTable, setPendingAttachedTable] = useState<AttachedTableDataRequest | null>(null)
   const [pendingPrefillQuestion, setPendingPrefillQuestion] = useState<string | null>(null)
 
+  const handleChooseContextForFork = useCallback(
+    async (targetContextId: string) => {
+      const pending = pendingAskAfterFork
+      setPendingAskAfterFork(null)
+      if (!pending || !activeConversationId || activeConversationId.startsWith("new-")) return
+      setSending(true)
+      try {
+        const forked = await aiAssistantApi.forkConversation(activeConversationId, targetContextId)
+        if (!forked?.id || !forked?.messages) return
+        setActiveContextId(targetContextId)
+        const listForContext = await aiAssistantApi.getConversations(targetContextId).catch(() => [])
+        setConversations((listForContext ?? []).map(dtoToConversation))
+        setActiveConversationId(forked.id)
+        setMessages(forked.messages.map(dtoToMessage))
+        setConversationDetail({ isOwner: true, isShared: false })
+        const userMsg: AiMessage = { id: "u-" + Date.now(), role: "user", content: pending.content, timestamp: new Date() }
+        setMessages((prev) => [...prev, userMsg])
+        const attachedTableData = pending.options?.attachedTableData ?? pendingAttachedTable ?? undefined
+        setPendingAttachedTable(null)
+        setPendingPrefillQuestion(null)
+        const res = await aiAssistantApi.ask({
+          question: pending.content,
+          contextId: targetContextId,
+          conversationId: forked.id,
+          provider: selectedProvider,
+          explainDetails: autoExplain,
+          images: pending.options?.images?.length ? pending.options.images : undefined,
+          attachedTableData: attachedTableData ?? undefined,
+        })
+        setActiveConversationId(res.conversationId)
+        setMessages((prev) => [...prev.slice(0, -1), userMsg, askResponseToMessage(res)])
+        const list = await aiAssistantApi.getConversations(targetContextId).catch(() => [])
+        setConversations((list ?? []).map(dtoToConversation))
+        const q = await aiAssistantApi.getMyUsage().catch(() => null)
+        if (q) setQuota(quotaStatusToQuota(q))
+        if (typeof window !== "undefined") {
+          localStorage.setItem(AI_ASSISTANT_LAST_CONVERSATION_ID, res.conversationId)
+          localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, targetContextId)
+        }
+      } catch {
+        setMessages((prev) => prev.slice(0, -1))
+        const errMsg: AiMessage = {
+          id: "err-" + Date.now(),
+          role: "assistant",
+          content: "Xảy ra lỗi khi tạo bản sao hoặc gửi câu hỏi. Vui lòng thử lại.",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, errMsg])
+      } finally {
+        setSending(false)
+      }
+    },
+    [activeConversationId, pendingAskAfterFork, selectedProvider, autoExplain, pendingAttachedTable]
+  )
+
   const handleSendMessage = useCallback(
     async (
       content: string,
       options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }
     ) => {
       if (!activeContextId || sending) return
+      const viewingSharedNotOwner =
+        conversationDetail && !conversationDetail.isOwner && conversationDetail.isShared
+      const conversationIdToUse = activeConversationId.startsWith("new-") ? undefined : activeConversationId
+
+      if (viewingSharedNotOwner && conversationIdToUse) {
+        setPendingAskAfterFork({ content, options })
+        setChooseContextModalOpen(true)
+        return
+      }
+
       const userMsg: AiMessage = { id: "u-" + Date.now(), role: "user", content, timestamp: new Date() }
       setMessages((prev) => [...prev, userMsg])
       setSending(true)
@@ -511,7 +717,7 @@ export function AiAssistantContent() {
         const res = await aiAssistantApi.ask({
           question: content,
           contextId: activeContextId,
-          conversationId: activeConversationId.startsWith("new-") ? undefined : activeConversationId,
+          conversationId: conversationIdToUse,
           provider: selectedProvider,
           explainDetails: autoExplain,
           images: options?.images?.length ? options.images : undefined,
@@ -523,6 +729,10 @@ export function AiAssistantContent() {
         setConversations((list ?? []).map(dtoToConversation))
         const q = await aiAssistantApi.getMyUsage().catch(() => null)
         if (q) setQuota(quotaStatusToQuota(q))
+        if (typeof window !== "undefined") {
+          localStorage.setItem(AI_ASSISTANT_LAST_CONVERSATION_ID, res.conversationId)
+          localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, activeContextId)
+        }
       } catch (err) {
         setMessages((prev) => prev.slice(0, -1))
         const errMsg: AiMessage = {
@@ -536,7 +746,7 @@ export function AiAssistantContent() {
         setSending(false)
       }
     },
-    [activeContextId, activeConversationId, selectedProvider, autoExplain, sending, pendingAttachedTable]
+    [activeContextId, activeConversationId, conversationDetail, selectedProvider, autoExplain, sending, pendingAttachedTable]
   )
 
   const handleAskAboutTable = useCallback((result: QueryResult) => {
@@ -562,6 +772,7 @@ export function AiAssistantContent() {
           conversations={contextConversations}
           activeConversationId={activeConversationId}
           onConversationSelect={handleConversationSelect}
+          onShareConversation={handleShareConversation}
           pinnedMetrics={activeContext?.pinnedMetrics ?? []}
           savedQueries={activeContext?.savedQueries ?? []}
           isOpen={sidebarOpen}
@@ -570,6 +781,8 @@ export function AiAssistantContent() {
           onNewChat={handleNewChat}
           onDeleteContext={handleDeleteContext}
           onDeleteConversation={handleDeleteConversation}
+          onOpenRenameContext={handleOpenRenameContext}
+          onOpenRenameConversation={handleOpenRenameConversation}
           quota={quota}
           selectedProvider={selectedProvider}
         />
@@ -602,6 +815,30 @@ export function AiAssistantContent() {
         open={createContextOpen}
         onOpenChange={setCreateContextOpen}
         onSubmit={handleCreateContext}
+      />
+
+      <ShareConversationModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        conversationId={shareModalConversationId}
+      />
+
+      <ChooseContextForForkModal
+        open={chooseContextModalOpen}
+        onOpenChange={(open) => {
+          setChooseContextModalOpen(open)
+          if (!open) setPendingAskAfterFork(null)
+        }}
+        contexts={contexts}
+        onSelect={handleChooseContextForFork}
+      />
+
+      <RenameModal
+        open={renameModal !== null}
+        onOpenChange={(open) => !open && setRenameModal(null)}
+        title={renameModal?.type === "context" ? "Đổi tên context" : "Đổi tên cuộc hội thoại"}
+        currentName={renameModal?.currentName ?? ""}
+        onApply={handleRenameApply}
       />
     </>
   )
