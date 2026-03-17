@@ -209,7 +209,6 @@ interface MediationGroupsTableProps {
   formatFilter: string
   statusFilter: string
   onlyShowIssues: boolean
-  abTestFilter?: string
   selectedGroups: string[]
   onSelectionChange: (groups: string[]) => void
   canConfig?: boolean
@@ -231,7 +230,6 @@ export function MediationGroupsTable({
   formatFilter,
   statusFilter,
   onlyShowIssues,
-  abTestFilter = "all",
   selectedGroups,
   onSelectionChange,
   canConfig = true,
@@ -318,31 +316,34 @@ export function MediationGroupsTable({
     }))
   }, [groupsWithData, mediationGroups])
 
+  // Chuẩn hóa format để so sánh: API/AdMob có thể trả "BANNER", "APP_OPEN"; dropdown dùng "Banner", "App Open"
+  const normalizeFormatForFilter = (s: string) =>
+    (s || "").toLowerCase().replace(/\s+/g, "_").trim()
+
   // Filter groups
   const filteredGroups = transformedGroups.filter((group) => {
     if (searchQuery && !group.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
     if (appFilter !== "all") {
-      const appLabel = group.appName.toLowerCase().replace(/\s+/g, "-")
-      if (!appLabel.includes(appFilter.replace("_", "-"))) {
+      // appFilter là app.id (internal id) từ dropdown; so khớp với group.appId
+      const groupAppId = group.appId?.toString() ?? ""
+      if (groupAppId !== appFilter) {
         return false
       }
     }
-    if (formatFilter !== "All Formats" && group.format !== formatFilter) {
-      return false
+    if (formatFilter !== "All Formats") {
+      const groupFormatNorm = normalizeFormatForFilter(group.format ?? "")
+      const filterNorm = normalizeFormatForFilter(formatFilter)
+      if (groupFormatNorm !== filterNorm) {
+        return false
+      }
     }
     if (statusFilter !== "All Status" && group.status !== statusFilter) {
       return false
     }
     if (onlyShowIssues && !group.hasWarning && !group.hasError) {
       return false
-    }
-    if (abTestFilter !== "all") {
-      const abTest = (group as any).abTest
-      if (abTestFilter === "running" && abTest?.status !== "running") return false
-      if (abTestFilter === "completed" && abTest?.status !== "completed") return false
-      if (abTestFilter === "none" && abTest !== null) return false
     }
     return true
   })
