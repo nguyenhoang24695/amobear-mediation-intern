@@ -25,6 +25,7 @@ import type {
     WaterfallRecommendationRuleGroupDto,
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
+    WaterfallFilterOptionDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -230,9 +231,11 @@ export const structureApi = {
         return apiClient.get('/api/Structure/orphan-waterfall/count', { publisherId })
     },
 
-    /** List waterfall ad units with optional filter: Unused only or No revenue. Supports pagination and publisherId. */
+    /** List waterfall ad units with optional filter: Unused only or No revenue. Supports pagination and waterfall filters. */
     getWaterfallList: async (params?: {
         publisherId?: string
+        appAdMobId?: string
+        admobId?: string
         unusedOnly?: boolean
         noRevenue?: boolean
         startDate?: string
@@ -249,6 +252,8 @@ export const structureApi = {
     }> => {
         const query: Record<string, string | number | undefined> = {}
         if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.appAdMobId != null) query.appAdMobId = params.appAdMobId
+        if (params?.admobId != null) query.admobId = params.admobId
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
         if (params?.startDate != null) query.startDate = params.startDate
@@ -258,6 +263,66 @@ export const structureApi = {
         if (params?.page != null) query.page = params.page
         if (params?.pageSize != null) query.pageSize = params.pageSize
         return apiClient.get('/api/Structure/waterfall', query)
+    },
+
+    getWaterfallPublisherFilterOptions: async (params?: {
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        search?: string
+        limit?: number
+    }): Promise<WaterfallFilterOptionDto[]> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.search != null) query.search = params.search
+        if (params?.limit != null) query.limit = params.limit
+        return apiClient.get<WaterfallFilterOptionDto[]>('/api/Structure/waterfall/filters/publishers', query)
+    },
+
+    getWaterfallAppFilterOptions: async (params?: {
+        publisherId?: string
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        search?: string
+        limit?: number
+    }): Promise<WaterfallFilterOptionDto[]> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.search != null) query.search = params.search
+        if (params?.limit != null) query.limit = params.limit
+        return apiClient.get<WaterfallFilterOptionDto[]>('/api/Structure/waterfall/filters/apps', query)
+    },
+
+    getWaterfallAdMobFilterOptions: async (params?: {
+        publisherId?: string
+        appAdMobId?: string
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        search?: string
+        limit?: number
+    }): Promise<WaterfallFilterOptionDto[]> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.appAdMobId != null) query.appAdMobId = params.appAdMobId
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.search != null) query.search = params.search
+        if (params?.limit != null) query.limit = params.limit
+        return apiClient.get<WaterfallFilterOptionDto[]>('/api/Structure/waterfall/filters/admob', query)
     },
 
     /** Bulk update app type (game/app) for selected apps by AppId (AdMob app_id) */
@@ -1596,4 +1661,5 @@ export interface AccountAppItem {
     createdAt: string
     updatedAt: string
 }
+
 

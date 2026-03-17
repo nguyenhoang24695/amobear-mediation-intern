@@ -498,4 +498,7 @@ export interface AppRuleGroupMappingDto {
 export interface WaterfallFilterOptionDto {
   value: string
   label: string
+  secondaryLabel?: string | null
+  iconUri?: string | null
 }
+
