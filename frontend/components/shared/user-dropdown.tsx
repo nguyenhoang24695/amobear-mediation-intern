@@ -4,16 +4,13 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { authApi } from "@/lib/api/services"
 import {
-  clearAuthSessionData,
-  clearRememberedLoginPrefs,
-  getRefreshToken,
   getCurrentUser,
   getUserInitials,
   getUserDisplayName,
   type AuthUser,
 } from "@/lib/auth"
+import { logoutUser } from "@/lib/logout"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,7 +39,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   ChevronDown,
   User,
-  Settings,
   Users,
   UsersRound,
   Moon,
@@ -73,43 +69,26 @@ export function UserDropdown() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
+    const { apiFailed } = await logoutUser(logoutAllDevices)
+
     try {
-      // Call logout API
-      if (logoutAllDevices) {
-        // Logout from all devices
-        await authApi.logoutAll()
+      // Show success message
+      if (apiFailed) {
+        toast({
+          title: "Logged out",
+          description: "Your local session has been cleared.",
+          variant: "default",
+        })
       } else {
-        // Logout from current device only
-        const refreshToken = getRefreshToken()
-        if (refreshToken) {
-          await authApi.logout(refreshToken)
-        }
+        toast({
+          title: logoutAllDevices ? "Logged out from all devices" : "Logged out",
+          description: logoutAllDevices
+            ? "You have been logged out from all devices."
+            : "You have been logged out successfully.",
+        })
       }
 
-      clearAuthSessionData()
-      clearRememberedLoginPrefs()
-
-      // Show success message
-      toast({
-        title: logoutAllDevices ? "Logged out from all devices" : "Logged out",
-        description: logoutAllDevices 
-          ? "You have been logged out from all devices." 
-          : "You have been logged out successfully.",
-      })
-
       // Redirect to login
-      router.push("/login")
-    } catch (err) {
-      // Even if API call fails, clear local data and redirect
-      clearAuthSessionData()
-      clearRememberedLoginPrefs()
-      
-      toast({
-        title: "Logged out",
-        description: "Your local session has been cleared.",
-        variant: "default",
-      })
-
       router.push("/login")
     } finally {
       setIsLoggingOut(false)
@@ -158,12 +137,6 @@ export function UserDropdown() {
             <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
               <User className="w-4 h-4" />
               My Profile
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/settings" className="flex items-center gap-2 cursor-pointer">
-              <Settings className="w-4 h-4" />
-              Account Settings
             </Link>
           </DropdownMenuItem>
 
