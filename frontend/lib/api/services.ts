@@ -25,6 +25,11 @@ import type {
     WaterfallRecommendationRuleGroupDto,
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
+    WaterfallFilterOptionDto,
+    WaterfallBulkPolicyPreviewResponseDto,
+    BulkUpdateWaterfallApplyPoliciesRequestDto,
+    BulkUpdateWaterfallApplyPoliciesResponseDto,
+    ActiveSession,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -230,9 +235,11 @@ export const structureApi = {
         return apiClient.get('/api/Structure/orphan-waterfall/count', { publisherId })
     },
 
-    /** List waterfall ad units with optional filter: Unused only or No revenue. Supports pagination and publisherId. */
+    /** List waterfall ad units with optional filter: Unused only or No revenue. Supports pagination and waterfall filters. */
     getWaterfallList: async (params?: {
         publisherId?: string
+        appAdMobId?: string
+        admobId?: string
         unusedOnly?: boolean
         noRevenue?: boolean
         startDate?: string
@@ -249,6 +256,8 @@ export const structureApi = {
     }> => {
         const query: Record<string, string | number | undefined> = {}
         if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.appAdMobId != null) query.appAdMobId = params.appAdMobId
+        if (params?.admobId != null) query.admobId = params.admobId
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
         if (params?.startDate != null) query.startDate = params.startDate
@@ -258,6 +267,66 @@ export const structureApi = {
         if (params?.page != null) query.page = params.page
         if (params?.pageSize != null) query.pageSize = params.pageSize
         return apiClient.get('/api/Structure/waterfall', query)
+    },
+
+    getWaterfallPublisherFilterOptions: async (params?: {
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        search?: string
+        limit?: number
+    }): Promise<WaterfallFilterOptionDto[]> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.search != null) query.search = params.search
+        if (params?.limit != null) query.limit = params.limit
+        return apiClient.get<WaterfallFilterOptionDto[]>('/api/Structure/waterfall/filters/publishers', query)
+    },
+
+    getWaterfallAppFilterOptions: async (params?: {
+        publisherId?: string
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        search?: string
+        limit?: number
+    }): Promise<WaterfallFilterOptionDto[]> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.search != null) query.search = params.search
+        if (params?.limit != null) query.limit = params.limit
+        return apiClient.get<WaterfallFilterOptionDto[]>('/api/Structure/waterfall/filters/apps', query)
+    },
+
+    getWaterfallAdMobFilterOptions: async (params?: {
+        publisherId?: string
+        appAdMobId?: string
+        unusedOnly?: boolean
+        noRevenue?: boolean
+        startDate?: string
+        endDate?: string
+        search?: string
+        limit?: number
+    }): Promise<WaterfallFilterOptionDto[]> => {
+        const query: Record<string, string | number | undefined> = {}
+        if (params?.publisherId != null) query.publisherId = params.publisherId
+        if (params?.appAdMobId != null) query.appAdMobId = params.appAdMobId
+        if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
+        if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.startDate != null) query.startDate = params.startDate
+        if (params?.endDate != null) query.endDate = params.endDate
+        if (params?.search != null) query.search = params.search
+        if (params?.limit != null) query.limit = params.limit
+        return apiClient.get<WaterfallFilterOptionDto[]>('/api/Structure/waterfall/filters/admob', query)
     },
 
     /** Bulk update app type (game/app) for selected apps by AppId (AdMob app_id) */
@@ -435,6 +504,7 @@ export interface WaterfallApplyPolicyResponse {
     lastAlertedAnchorAt?: string | null
     lastAlertResultId?: number | null
     lastEvaluatedAt?: string | null
+
 }
 
 export const waterfallManagementApi = {
@@ -459,6 +529,19 @@ export const waterfallManagementApi = {
         body: { applyMode: string }
     ): Promise<WaterfallApplyPolicyResponse> => {
         return apiClient.put<WaterfallApplyPolicyResponse>(`/api/WaterfallManagement/policy/${encodeURIComponent(mediationGroupId)}`, body)
+    },
+
+    getBulkPolicyTargets: async (params: {
+        appId?: string
+        ruleGroupId?: number
+    }): Promise<WaterfallBulkPolicyPreviewResponseDto> => {
+        return apiClient.get<WaterfallBulkPolicyPreviewResponseDto>('/api/WaterfallManagement/bulk-policy-targets', params as Record<string, string | number | undefined>)
+    },
+
+    bulkUpdatePolicies: async (
+        body: BulkUpdateWaterfallApplyPoliciesRequestDto
+    ): Promise<BulkUpdateWaterfallApplyPoliciesResponseDto> => {
+        return apiClient.put<BulkUpdateWaterfallApplyPoliciesResponseDto>('/api/WaterfallManagement/bulk-policies', body)
     },
 }
 
@@ -533,6 +616,14 @@ export const authApi = {
 
     getCurrentUser: async (): Promise<{ success: boolean; data?: CurrentUser }> => {
         return apiClient.get('/api/v1/auth/me')
+    },
+
+    getSessions: async (): Promise<{ success: boolean; data?: ActiveSession[] }> => {
+        return apiClient.get('/api/v1/auth/sessions')
+    },
+
+    revokeSession: async (sessionId: string): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.delete(`/api/v1/auth/sessions/${encodeURIComponent(sessionId)}`)
     },
 
     forgotPassword: async (request: ForgotPasswordRequest): Promise<{ success: boolean; message?: string }> => {
@@ -1596,4 +1687,6 @@ export interface AccountAppItem {
     createdAt: string
     updatedAt: string
 }
+
+
 

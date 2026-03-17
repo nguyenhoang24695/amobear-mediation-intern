@@ -7,6 +7,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
   LayoutDashboard,
   Smartphone,
   Layers,
@@ -31,23 +40,21 @@ import {
   BookOpen,
   PieChart,
   Gauge,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { formatAlertBadgeCount } from "@/lib/alert-notification-state"
-import { authApi } from "@/lib/api/services"
 import {
-  clearAuthSessionData,
-  clearRememberedLoginPrefs,
-  getRefreshToken,
   getCurrentUser,
   getUserInitials,
   getUserDisplayName,
   hasScreenFunction,
   type AuthUser,
 } from "@/lib/auth"
+import { logoutUser } from "@/lib/logout"
 
 interface SidebarProps {
   collapsed: boolean
@@ -64,7 +71,7 @@ type NavItem = {
   isNew?: boolean
   /** If false or returns false, item is hidden in sidebar. Default true. */
   isShow?: boolean | (() => boolean)
-  children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean) }[]
+  children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean); isNew?: boolean }[]
 }
 
 const navItems: NavItem[] = [
@@ -125,6 +132,7 @@ const navItems: NavItem[] = [
       { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
       { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
       { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
+      { icon: Layers, label: "Waterfall Apply", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
       { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
       { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") }
     ],
@@ -138,6 +146,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { unseenCount: alertNotificationCount, openAlertIds, markAlertsViewed } = useAlertNotifications()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [logoutAllDevices, setLogoutAllDevices] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     setOpenMenus({})
@@ -148,6 +159,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     const currentUser = getCurrentUser()
     setUser(currentUser)
   }, [])
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    const { apiFailed } = await logoutUser(logoutAllDevices)
+    if (apiFailed) {
+      toast({
+        title: "Logged out",
+        description: "Your local session has been cleared.",
+        variant: "default",
+      })
+    } else {
+      toast({
+        title: logoutAllDevices ? "Logged out from all devices" : "Logged out",
+        description: logoutAllDevices
+          ? "You have been logged out from all devices."
+          : "You have been logged out successfully.",
+      })
+    }
+    setIsLoggingOut(false)
+    setShowLogoutModal(false)
+    router.push("/login")
+  }
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -300,6 +333,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         >
                           {child.icon && <child.icon className="w-3.5 h-3.5 flex-shrink-0" />}
                           <span className="flex-1 text-left">{child.label}</span>
+                          {child.isNew && (
+                            <Badge className="h-4 px-1.5 text-[10px] bg-green-500 hover:bg-green-600">
+                              New
+                            </Badge>
+                          )}
                         </Link>
                       )
                     })}
@@ -358,39 +396,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-slate-400 hover:text-slate-600"
-                    onClick={async () => {
-                      try {
-                        // Call logout API
-                        const refreshToken = getRefreshToken()
-                        if (refreshToken) {
-                          await authApi.logout(refreshToken)
-                        }
-
-                        clearAuthSessionData()
-                        clearRememberedLoginPrefs()
-
-                        // Show success message
-                        toast({
-                          title: "Logged out",
-                          description: "You have been logged out successfully.",
-                        })
-
-                        // Redirect to login
-                        router.push("/login")
-                      } catch (err) {
-                        // Even if API call fails, clear local data and redirect
-                        clearAuthSessionData()
-                        clearRememberedLoginPrefs()
-
-                        toast({
-                          title: "Logged out",
-                          description: "Your local session has been cleared.",
-                          variant: "default",
-                        })
-
-                        router.push("/login")
-                      }
-                    }}
+                    onClick={() => setShowLogoutModal(true)}
                   >
                     <LogOut className="w-4 h-4" />
                   </Button>
@@ -405,6 +411,55 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </div>
         </div>
       </aside>
+
+      <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader className="text-center sm:text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+              <LogOut className="w-6 h-6 text-red-600" />
+            </div>
+            <DialogTitle>Log out of Mediation Pro?</DialogTitle>
+            <DialogDescription>You will need to sign in again to access your account.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-start gap-2 py-4">
+            <Checkbox
+              id="sidebar-logout-all"
+              checked={logoutAllDevices}
+              onCheckedChange={(checked: boolean) => setLogoutAllDevices(checked)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <label htmlFor="sidebar-logout-all" className="text-sm font-medium cursor-pointer">
+                Log out from all devices
+              </label>
+              <p className="text-xs text-slate-500">This will end all your active sessions</p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              className="flex-1 bg-transparent"
+              onClick={() => setShowLogoutModal(false)}
+              disabled={isLoggingOut}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" className="flex-1" onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Logging out...
+                </>
+              ) : (
+                "Log out"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }
+
+

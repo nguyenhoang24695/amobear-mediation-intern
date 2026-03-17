@@ -29,6 +29,7 @@ const REFRESH_TOKEN_KEY = "refreshToken"
 const USER_KEY = "user"
 const REMEMBER_ME_KEY = "rememberMe"
 const REMEMBERED_ORGANIZATION_KEY = "rememberedOrganization"
+const REMEMBERED_EMAIL_KEY = "rememberedEmail"
 const AUTH_REFRESH_AT_KEY = "auth_refresh_at"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 let refreshSessionPromise: Promise<string | null> | null = null
@@ -253,13 +254,14 @@ export function clearAuthSessionData(): void {
 }
 
 /**
- * Clear remembered login preferences such as Remember Me and organization prefill.
+ * Clear remembered login preferences such as Remember Me, organization and email prefill.
  */
 export function clearRememberedLoginPrefs(): void {
   if (typeof window === "undefined") return
 
   localStorage.removeItem(REMEMBER_ME_KEY)
   localStorage.removeItem(REMEMBERED_ORGANIZATION_KEY)
+  localStorage.removeItem(REMEMBERED_EMAIL_KEY)
 }
 
 /**
@@ -297,6 +299,26 @@ export function setRememberedOrganization(slug: string): void {
     localStorage.setItem(REMEMBERED_ORGANIZATION_KEY, slug)
   } else {
     localStorage.removeItem(REMEMBERED_ORGANIZATION_KEY)
+  }
+}
+
+/**
+ * Get email saved when "Remember me" was used (for login form pre-fill).
+ */
+export function getRememberedEmail(): string {
+  if (typeof window === "undefined") return ""
+  return localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ""
+}
+
+/**
+ * Save email when login succeeds with "Remember me".
+ */
+export function setRememberedEmail(email: string): void {
+  if (typeof window === "undefined") return
+  if (email) {
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
+  } else {
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY)
   }
 }
 

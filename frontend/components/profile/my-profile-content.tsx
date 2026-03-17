@@ -11,10 +11,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2 } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
 import { authApi } from "@/lib/api/services"
-import { clearAuthSessionData, clearRememberedLoginPrefs, getUserInitials } from "@/lib/auth"
+import { clearAuthSessionData, getUserInitials } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import type { ActiveSession } from "@/types/api"
 
 export function MyProfileContent() {
   const router = useRouter()
@@ -28,6 +29,11 @@ export function MyProfileContent() {
     weeklyReport: true,
     teamActivity: false,
   })
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([])
+  const [sessionsLoading, setSessionsLoading] = useState(false)
+  const [sessionsError, setSessionsError] = useState<string | null>(null)
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
+  const [showAllSessions, setShowAllSessions] = useState(false)
 
   // Load current user
   const { data: userResponse, loading: userLoading } = useApi(
@@ -46,11 +52,55 @@ export function MyProfileContent() {
   const myApps = displayUser?.permissions ? Object.keys(displayUser.permissions) : []
   const myTeams = displayUser?.teams || []
 
+  const getSessionSubtitle = (session: ActiveSession) => {
+    if (session.isCurrent) return "Current session"
+    const lastSeen = session.lastUsedAt || session.createdAt
+    const formatted = new Date(lastSeen).toLocaleString()
+    return `Last active ${formatted}`
+  }
+
+  const loadActiveSessions = async () => {
+    try {
+      setSessionsLoading(true)
+      setSessionsError(null)
+      const response = await authApi.getSessions()
+      setActiveSessions(response.data ?? [])
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Failed to load active sessions")
+    } finally {
+      setSessionsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !localStorage.getItem("accessToken")) return
+    loadActiveSessions()
+  }, [])
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      setRevokingSessionId(sessionId)
+      await authApi.revokeSession(sessionId)
+      await loadActiveSessions()
+      toast({
+        title: "Session revoked",
+        description: "Selected device has been signed out.",
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to revoke session",
+        variant: "destructive",
+      })
+    } finally {
+      setRevokingSessionId(null)
+    }
+  }
+
   const handleLogoutAll = async () => {
     try {
       await authApi.logoutAll()
       clearAuthSessionData()
-      clearRememberedLoginPrefs()
       router.push('/login')
       toast({
         title: "Logged out",
@@ -215,20 +265,55 @@ export function MyProfileContent() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-semibold">Active Sessions</CardTitle>
-              <Button variant="link" size="sm" className="text-blue-600 p-0 h-auto">
-                View All
-              </Button>
+              {activeSessions.length > 3 && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-blue-600 p-0 h-auto"
+                  onClick={() => setShowAllSessions((prev) => !prev)}
+                >
+                  {showAllSessions ? "View Less" : "View All"}
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <Monitor className="w-5 h-5 text-green-600" />
+              {sessionsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading active sessions...
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">Chrome on Windows</p>
-                  <p className="text-xs text-slate-500">Current session • Ho Chi Minh City</p>
-                </div>
-              </div>
+              ) : sessionsError ? (
+                <p className="text-sm text-red-600">{sessionsError}</p>
+              ) : activeSessions.length === 0 ? (
+                <p className="text-sm text-slate-500">No active remembered sessions found.</p>
+              ) : (
+                (showAllSessions ? activeSessions : activeSessions.slice(0, 3)).map((session) => (
+                  <div key={session.id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${session.isCurrent ? "bg-green-100" : "bg-slate-100"}`}>
+                        <Monitor className={`w-5 h-5 ${session.isCurrent ? "text-green-600" : "text-slate-600"}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{session.deviceInfo || "Unknown device"}</p>
+                        <p className="text-xs text-slate-500">
+                          {getSessionSubtitle(session)}
+                          {session.ipAddress ? ` • IP ${session.ipAddress}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {!session.isCurrent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevokeSession(session.id)}
+                        disabled={revokingSessionId === session.id}
+                      >
+                        {revokingSessionId === session.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign out"}
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
               <Button 
                 variant="link" 
                 className="text-red-600 p-0 h-auto text-sm"
