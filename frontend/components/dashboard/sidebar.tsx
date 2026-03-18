@@ -71,7 +71,7 @@ type NavItem = {
   isNew?: boolean
   /** If false or returns false, item is hidden in sidebar. Default true. */
   isShow?: boolean | (() => boolean)
-  children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean) }[]
+  children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean); isNew?: boolean }[]
 }
 
 const navItems: NavItem[] = [
@@ -132,6 +132,7 @@ const navItems: NavItem[] = [
       { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
       { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
       { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
+      { icon: Layers, label: "Waterfall Apply", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
       { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
       { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") }
     ],
@@ -332,6 +333,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         >
                           {child.icon && <child.icon className="w-3.5 h-3.5 flex-shrink-0" />}
                           <span className="flex-1 text-left">{child.label}</span>
+                          {child.isNew && (
+                            <Badge className="h-4 px-1.5 text-[10px] bg-green-500 hover:bg-green-600">
+                              New
+                            </Badge>
+                          )}
                         </Link>
                       )
                     })}
@@ -455,3 +461,5 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     </TooltipProvider>
   )
 }
+
+
