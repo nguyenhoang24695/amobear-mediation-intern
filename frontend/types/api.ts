@@ -500,7 +500,8 @@ export interface CreateUpdateRuleGroupDto {
 }
 
 export interface AppRuleGroupMappingDto {
-  appId: string
+  granteeType: "app" | "mediation_group"
+  granteeId: string
   groupId: number | null
   groupName: string | null
 }

@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,7 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Smartphone, Globe } from "lucide-react"
+import { Loader2, Smartphone, Globe, Search } from "lucide-react"
+import { waterfallRecommendationSettingsApi } from "@/lib/api/services"
 import type { AppConfig } from "./waterfall-rules-content"
 
 interface CreateEditConfigDialogProps {
@@ -53,6 +61,12 @@ export function CreateEditConfigDialog({
     }))
   }, [apps])
 
+  // Create mode: only show apps that do not have config yet.
+  const selectableApps = useMemo(() => {
+    if (isEditing) return availableApps
+    return availableApps.filter((app) => !appsWithConfig.includes(app.id))
+  }, [isEditing, availableApps, appsWithConfig])
+
   // Create mode: cho phép multi-select app; Edit mode: chỉ hiển thị app hiện tại (không đổi).
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([])
   const [isGlobal, setIsGlobal] = useState(false)
@@ -60,6 +74,9 @@ export function CreateEditConfigDialog({
   const [maxRec, setMaxRec] = useState("20")
   const [minMatchRate, setMinMatchRate] = useState("3.0")
   const [minSoW, setMinSoW] = useState("0.9")
+  const [ruleGroupId, setRuleGroupId] = useState<string>("none")
+  const [ruleGroups, setRuleGroups] = useState<Array<{ id: number; name: string; isActive: boolean; color?: string | null }>>([])
+  const [appSearch, setAppSearch] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -72,6 +89,7 @@ export function CreateEditConfigDialog({
         setMaxRec(String(config.maxRecommendations))
         setMinMatchRate(String(config.minMatchRate))
         setMinSoW(String(config.minSoW))
+        setRuleGroupId(config.ruleGroupId != null ? String(config.ruleGroupId) : "none")
       } else {
         setSelectedAppIds([])
         setIsGlobal(false)
@@ -79,10 +97,38 @@ export function CreateEditConfigDialog({
         setMaxRec("20")
         setMinMatchRate("3.0")
         setMinSoW("0.9")
+        setRuleGroupId("none")
       }
+      setAppSearch("")
       setErrors({})
     }
   }, [open, config])
+
+  useEffect(() => {
+    if (!open) return
+    const loadRuleGroups = async () => {
+      try {
+        const groups = await waterfallRecommendationSettingsApi.getAllRuleGroups()
+        setRuleGroups(groups.map((g) => ({ id: g.id, name: g.name, isActive: g.isActive, color: g.color })))
+      } catch {
+        setRuleGroups([])
+      }
+    }
+    void loadRuleGroups()
+  }, [open])
+
+  const selectedRuleGroup = useMemo(() => {
+    if (ruleGroupId === "none") return null
+    return ruleGroups.find((group) => String(group.id) === ruleGroupId) ?? null
+  }, [ruleGroupId, ruleGroups])
+
+  const displayedApps = useMemo(() => {
+    const q = appSearch.trim().toLowerCase()
+    if (!q) return selectableApps
+    return availableApps.filter(
+      (app) => app.name.toLowerCase().includes(q) || app.id.toLowerCase().includes(q)
+    )
+  }, [selectableApps, availableApps, appSearch])
 
   const selectedApps = availableApps.filter((a) => selectedAppIds.includes(a.id))
 
@@ -94,7 +140,7 @@ export function CreateEditConfigDialog({
     if (!isEditing && !isGlobal && selectedAppIds.length > 0) {
       const conflicted = selectedAppIds.filter((id) => appsWithConfig.includes(id))
       if (conflicted.length > 0) {
-        errs.app = "Some selected apps already have a configuration. Each app can only have one config."
+        errs.app = "Some selected apps are no longer available for configuration."
       }
     }
     const min = Number(minRec)
@@ -125,6 +171,8 @@ export function CreateEditConfigDialog({
             maxRecommendations: Number(maxRec),
             minMatchRate: Number(minMatchRate),
             minSoW: Number(minSoW),
+            ruleGroupId: config.isGlobal ? null : (ruleGroupId === "none" ? null : Number(ruleGroupId)),
+            ruleGroupName: null,
           },
         ])
       } else {
@@ -139,6 +187,8 @@ export function CreateEditConfigDialog({
               maxRecommendations: Number(maxRec),
               minMatchRate: Number(minMatchRate),
               minSoW: Number(minSoW),
+              ruleGroupId: null,
+              ruleGroupName: null,
             },
           ])
         } else {
@@ -150,6 +200,8 @@ export function CreateEditConfigDialog({
             maxRecommendations: Number(maxRec),
             minMatchRate: Number(minMatchRate),
             minSoW: Number(minSoW),
+            ruleGroupId: ruleGroupId === "none" ? null : Number(ruleGroupId),
+            ruleGroupName: null,
           }))
           await onSave(payloads)
         }
@@ -239,10 +291,19 @@ export function CreateEditConfigDialog({
 
                 {!isGlobal && (
                   <>
+                    <div className="relative mb-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search app name or App ID..."
+                        className="pl-9"
+                        value={appSearch}
+                        onChange={(e) => setAppSearch(e.target.value)}
+                      />
+                    </div>
                     <div className="border rounded-md border-slate-200 max-h-52 overflow-y-auto p-2 space-y-1">
-                      {availableApps.map((app) => {
-                        const disabled =
-                          appsWithConfig.includes(app.id)
+                      {displayedApps.map((app) => {
+                        const hasConfig = appsWithConfig.includes(app.id)
+                        const disabled = !isEditing && hasConfig
                         const checked = selectedAppIds.includes(app.id)
                         return (
                           <div
@@ -285,7 +346,7 @@ export function CreateEditConfigDialog({
                             >
                               <span className="block">
                                 {app.name}
-                                {disabled ? " (already has config)" : ""}
+                                {hasConfig ? " (already has config)" : ""}
                               </span>
                               <span className="block text-xs text-slate-400">
                                 {app.id}
@@ -299,6 +360,16 @@ export function CreateEditConfigDialog({
                           </div>
                         )
                       })}
+                      {displayedApps.length === 0 &&
+                        (selectableApps.length === 0 ? (
+                          <p className="text-xs text-slate-500 px-1 py-2">
+                            All apps already have a configuration.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-500 px-1 py-2">
+                            No apps match your search.
+                          </p>
+                        ))}
                     </div>
                     <p className="text-xs text-slate-500">
                       Select one or more apps this configuration applies to.
@@ -345,44 +416,83 @@ export function CreateEditConfigDialog({
             </div>
           </div>
 
-          {/* Min Match Rate */}
-          <div className="space-y-2">
-            <Label htmlFor="min-mr">Min Match Rate %</Label>
-            <Input
-              id="min-mr"
-              type="number"
-              step={0.1}
-              min={0}
-              max={100}
-              value={minMatchRate}
-              onChange={(e) => setMinMatchRate(e.target.value)}
-            />
-            <p className="text-xs text-slate-500">
-              Minimum match rate percentage threshold
-            </p>
-            {errors.minMatchRate && (
-              <p className="text-xs text-red-600">{errors.minMatchRate}</p>
-            )}
+          {/* Min Match Rate + Min SoW */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="min-mr">Min Match Rate %</Label>
+              <Input
+                id="min-mr"
+                type="number"
+                step={0.1}
+                min={0}
+                max={100}
+                value={minMatchRate}
+                onChange={(e) => setMinMatchRate(e.target.value)}
+              />
+              {errors.minMatchRate && (
+                <p className="text-xs text-red-600">{errors.minMatchRate}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="min-sow">Min SoW %</Label>
+              <Input
+                id="min-sow"
+                type="number"
+                step={0.01}
+                min={0}
+                max={100}
+                value={minSoW}
+                onChange={(e) => setMinSoW(e.target.value)}
+              />
+              {errors.minSoW && (
+                <p className="text-xs text-red-600">{errors.minSoW}</p>
+              )}
+            </div>
           </div>
 
-          {/* Min SoW */}
+          {/* Rule Group Selection */}
           <div className="space-y-2">
-            <Label htmlFor="min-sow">Min SoW %</Label>
-            <Input
-              id="min-sow"
-              type="number"
-              step={0.01}
-              min={0}
-              max={100}
-              value={minSoW}
-              onChange={(e) => setMinSoW(e.target.value)}
-            />
+            <Label htmlFor="rule-group">Rule Group</Label>
+            <Select
+              value={ruleGroupId}
+              onValueChange={setRuleGroupId}
+              disabled={(!isEditing && isGlobal) || (isEditing && !!config?.isGlobal)}
+            >
+              <SelectTrigger id="rule-group">
+                {selectedRuleGroup ? (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
+                      style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
+                    />
+                    <span>{selectedRuleGroup.name}</span>
+                  </div>
+                ) : (
+                  <SelectValue placeholder="No specific group" />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No specific group</SelectItem>
+                {ruleGroups
+                  .filter((group) => group.isActive)
+                  .map((group) => (
+                    <SelectItem key={group.id} value={String(group.id)}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
+                          style={{ backgroundColor: group.color || "#94a3b8" }}
+                        />
+                        <span>{group.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-slate-500">
-              Minimum Share of Wallet percentage threshold
+              {(!isEditing && isGlobal) || (isEditing && !!config?.isGlobal)
+                ? "Global config does not use app-level rule group mapping."
+                : "Assign a rule group for selected app(s)."}
             </p>
-            {errors.minSoW && (
-              <p className="text-xs text-red-600">{errors.minSoW}</p>
-            )}
           </div>
         </div>
 

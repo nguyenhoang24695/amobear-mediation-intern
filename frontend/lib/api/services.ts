@@ -1480,13 +1480,22 @@ export const waterfallRecommendationSettingsApi = {
     },
 
     // App-RuleGroup Mapping
-    getAppRuleGroupMapping: async (appId: string): Promise<AppRuleGroupMappingDto> => {
-        return apiClient.get<AppRuleGroupMappingDto>(`/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(appId)}`)
+    getAppRuleGroupMapping: async (
+        granteeId: string,
+        granteeType: "app" | "mediation_group" = "app"
+    ): Promise<AppRuleGroupMappingDto> => {
+        return apiClient.get<AppRuleGroupMappingDto>(
+            `/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(granteeId)}?granteeType=${encodeURIComponent(granteeType)}`
+        )
     },
 
-    updateAppRuleGroupMapping: async (appId: string, groupId: number | null): Promise<AppRuleGroupMappingDto> => {
+    updateAppRuleGroupMapping: async (
+        granteeId: string,
+        groupId: number | null,
+        granteeType: "app" | "mediation_group" = "app"
+    ): Promise<AppRuleGroupMappingDto> => {
         return apiClient.put<AppRuleGroupMappingDto>(
-            `/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(appId)}`,
+            `/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(granteeId)}?granteeType=${encodeURIComponent(granteeType)}`,
             { groupId }
         )
     },

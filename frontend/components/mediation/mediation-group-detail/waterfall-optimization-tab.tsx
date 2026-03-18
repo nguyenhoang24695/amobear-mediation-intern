@@ -225,8 +225,8 @@ export function WaterfallOptimizationTab({
   const ruleGroups = (ruleGroupsData ?? []) as WaterfallRecommendationRuleGroupDto[]
 
   const { data: appRuleGroupMapping, refetch: refetchAppRuleGroupMapping } = useApi(
-    () => waterfallRecommendationSettingsApi.getAppRuleGroupMapping(appAdMobId!),
-    { enabled: !!appAdMobId, cacheKey: appAdMobId ? `app_rule_group_${appAdMobId}` : undefined }
+    () => waterfallRecommendationSettingsApi.getAppRuleGroupMapping(mediationGroupId, "mediation_group"),
+    { enabled: !!mediationGroupId, cacheKey: mediationGroupId ? `mg_rule_group_${mediationGroupId}` : undefined }
   )
 
   const [selectedRuleGroupId, setSelectedRuleGroupId] = useState<number | null>(null)
@@ -249,10 +249,14 @@ export function WaterfallOptimizationTab({
   }
 
   const handleSaveRuleGroup = async () => {
-    if (!appAdMobId) return
+    if (!mediationGroupId) return
     setSavingRuleGroup(true)
     try {
-      await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(appAdMobId, selectedRuleGroupId)
+      await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(
+        mediationGroupId,
+        selectedRuleGroupId,
+        "mediation_group"
+      )
       await refetchAppRuleGroupMapping()
       setRuleGroupChanged(false)
     } catch (err) {

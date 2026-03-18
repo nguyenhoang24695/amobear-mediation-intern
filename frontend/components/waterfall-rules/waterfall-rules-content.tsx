@@ -55,6 +55,8 @@ export interface AppConfig {
   maxRecommendations: number
   minMatchRate: number
   minSoW: number
+  ruleGroupId?: number | null
+  ruleGroupName?: string | null
   updatedAt: string
 }
 
@@ -156,12 +158,50 @@ export function WaterfallRulesContent() {
     () => waterfallRecommendationSettingsApi.getAllConfigs(),
     { enabled: true, cacheKey: 'waterfall_recommendation_configs' }
   )
+  const [appRuleGroupMap, setAppRuleGroupMap] = useState<Record<string, { groupId: number | null; groupName: string | null }>>({})
 
   // Fetch apps for app selection
   const { data: appsResponse } = useApi(
     () => structureApi.getApps(),
     { enabled: true, cacheKey: 'apps_list_for_waterfall_configs' }
   )
+
+  useEffect(() => {
+    const loadAppRuleGroupMappings = async () => {
+      const appIds = Array.from(
+        new Set(
+          (configsData ?? [])
+            .map((dto) => dto.appId)
+            .filter((appId): appId is string => !!appId)
+        )
+      )
+
+      if (appIds.length === 0) {
+        setAppRuleGroupMap({})
+        return
+      }
+
+      const results = await Promise.allSettled(
+        appIds.map(async (appId) => {
+          const mapping = await waterfallRecommendationSettingsApi.getAppRuleGroupMapping(appId)
+          return { appId, mapping }
+        })
+      )
+
+      const nextMap: Record<string, { groupId: number | null; groupName: string | null }> = {}
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          nextMap[result.value.appId] = {
+            groupId: result.value.mapping.groupId,
+            groupName: result.value.mapping.groupName,
+          }
+        }
+      }
+      setAppRuleGroupMap(nextMap)
+    }
+
+    void loadAppRuleGroupMappings()
+  }, [configsData])
 
   // Map backend DTOs to frontend AppConfig type
   const configs = useMemo<AppConfig[]>(() => {
@@ -181,10 +221,12 @@ export function WaterfallRulesContent() {
         maxRecommendations: dto.maxRecommendations,
         minMatchRate: Number(dto.minMatchRatePercent),
         minSoW: Number(dto.minSowPercent),
+        ruleGroupId: dto.appId ? (appRuleGroupMap[dto.appId]?.groupId ?? null) : null,
+        ruleGroupName: dto.appId ? (appRuleGroupMap[dto.appId]?.groupName ?? null) : null,
         updatedAt: dto.updatedAt,
       }
     })
-  }, [configsData, appsResponse])
+  }, [configsData, appsResponse, appRuleGroupMap])
 
   // Config state
   const [configSearch, setConfigSearch] = useState("")
@@ -361,6 +403,13 @@ export function WaterfallRulesContent() {
           }
           // Update existing config
           await waterfallRecommendationSettingsApi.updateConfig(Number(editConfig.id), payload)
+          if (!data.isGlobal) {
+            await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(
+              data.appId,
+              data.ruleGroupId ?? null,
+              "app"
+            )
+          }
           toast({
             title: "Success",
             description: "Configuration updated successfully",
@@ -377,6 +426,13 @@ export function WaterfallRulesContent() {
               minSowPercent: data.minSoW,
             }
             await waterfallRecommendationSettingsApi.createConfig(payload)
+            if (!data.isGlobal) {
+              await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(
+                data.appId,
+                data.ruleGroupId ?? null,
+                "app"
+              )
+            }
           }
           toast({
             title: "Success",

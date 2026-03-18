@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,12 +35,8 @@ import {
   Smartphone,
   Globe,
   Pencil,
-  Copy,
   Trash2,
   Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   ChevronDown,
   ChevronRight,
 } from "lucide-react"
@@ -58,8 +54,20 @@ interface ConfigsTableProps {
   canManage?: boolean
 }
 
-type SortField = "appName"
-type SortDir = "asc" | "desc"
+interface ConfigCluster {
+  key: string
+  isGlobalCluster: boolean
+  minRecommendations: number
+  maxRecommendations: number
+  minMatchRate: number
+  minSoW: number
+  updatedAt: string
+  apps: AppConfigGroup[]
+}
+
+function toClusterKey(config: AppConfig): string {
+  return `${config.minRecommendations}|${config.maxRecommendations}|${config.minMatchRate}|${config.minSoW}`
+}
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr)
@@ -76,51 +84,55 @@ export function ConfigsTable({
   groups,
   onEditConfig,
   onDeleteConfig,
-  onDeleteApp,
+  onDeleteApp: _onDeleteApp,
   hasFilters,
   onClearFilters,
   onCreateNew,
   canManage = true,
 }: ConfigsTableProps) {
-  const [sortField, setSortField] = useState<SortField>("appName")
-  const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [deleteConfigId, setDeleteConfigId] = useState<string | null>(null)
-  const [deleteAppId, setDeleteAppId] = useState<string | null>(null)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
 
-  const sorted = useMemo(() => {
-    const arr = [...groups]
-    arr.sort((a, b) => {
-      const cmp = a.appName.localeCompare(b.appName)
-      return sortDir === "asc" ? cmp : -cmp
-    })
-    return arr
-  }, [groups, sortField, sortDir])
+  const clustered = useMemo<ConfigCluster[]>(() => {
+    const map = new Map<string, ConfigCluster>()
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  const paginated = sorted.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  )
+    for (const appGroup of groups) {
+      const config = appGroup.configs[0]
+      if (!config) continue
+      const key = appGroup.isGlobal ? `__global__${config.id}` : toClusterKey(config)
 
-  const toggleSort = () => {
-    setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    setCurrentPage(1)
-  }
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          isGlobalCluster: appGroup.isGlobal,
+          minRecommendations: config.minRecommendations,
+          maxRecommendations: config.maxRecommendations,
+          minMatchRate: config.minMatchRate,
+          minSoW: config.minSoW,
+          updatedAt: config.updatedAt,
+          apps: [],
+        })
+      }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+      const cluster = map.get(key)!
+      cluster.apps.push(appGroup)
+      if (new Date(config.updatedAt).getTime() > new Date(cluster.updatedAt).getTime()) {
+        cluster.updatedAt = config.updatedAt
+      }
     }
-    return sortDir === "asc" ? (
-      <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
-    ) : (
-      <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
-    )
-  }
 
-  // Empty state
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.isGlobalCluster && !b.isGlobalCluster) return -1
+      if (!a.isGlobalCluster && b.isGlobalCluster) return 1
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    })
+  }, [groups])
+
+  const totalPages = Math.max(1, Math.ceil(clustered.length / pageSize))
+  const paginated = clustered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   if (groups.length === 0) {
     return (
       <Card className="border-slate-200">
@@ -130,17 +142,9 @@ export function ConfigsTable({
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                No apps found
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                Try adjusting your search or filters
-              </p>
-              <Button
-                variant="link"
-                className="text-blue-600"
-                onClick={onClearFilters}
-              >
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">No apps found</h3>
+              <p className="text-sm text-slate-500 mb-4">Try adjusting your search or filters</p>
+              <Button variant="link" className="text-blue-600" onClick={onClearFilters}>
                 Clear filters
               </Button>
             </>
@@ -149,16 +153,9 @@ export function ConfigsTable({
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Settings className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                No configurations yet
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                Create your first configuration to get started
-              </p>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={onCreateNew}
-              >
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">No configurations yet</h3>
+              <p className="text-sm text-slate-500 mb-4">Create your first configuration to get started</p>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={onCreateNew}>
                 Create Config
               </Button>
             </>
@@ -170,173 +167,188 @@ export function ConfigsTable({
 
   return (
     <>
-      {/* Desktop Table */}
       <Card className="border-slate-200 hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 hover:bg-slate-50">
-                  <TableHead>
-                    <button
-                      type="button"
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
-                      onClick={() => toggleSort()}
-                    >
-                      App
-                      <SortIcon field="appName" />
-                    </button>
-                  </TableHead>
+                  <TableHead>Config</TableHead>
                   <TableHead className="w-40">Recommendations</TableHead>
                   <TableHead className="w-32">Min Match Rate</TableHead>
                   <TableHead className="w-28">Min SoW</TableHead>
+                  <TableHead className="w-24">Apps</TableHead>
                   <TableHead className="w-40">Updated</TableHead>
-                  <TableHead className="w-16">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((group) => (
-                  <AppRow
-                    key={group.appId}
-                    group={group}
-                    onEditConfig={onEditConfig}
-                    onDeleteConfig={(id) => setDeleteConfigId(id)}
-                    canManage={canManage}
-                  />
-                ))}
+                {paginated.map((cluster) => {
+                  const isExpanded = !!expandedRows[cluster.key]
+                  return (
+                    <Fragment key={cluster.key}>
+                      <TableRow
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          if (cluster.isGlobalCluster) return
+                          setExpandedRows((prev) => ({ ...prev, [cluster.key]: !prev[cluster.key] }))
+                        }}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {cluster.isGlobalCluster ? (
+                              <Globe className="w-4 h-4 text-slate-500" />
+                            ) : isExpanded ? (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-slate-500" />
+                            )}
+                            <span className="text-sm font-medium text-slate-800">
+                              {cluster.isGlobalCluster ? "Global Config" : "Config Group"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-slate-700">
+                          {cluster.minRecommendations} - {cluster.maxRecommendations}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-slate-700">
+                          {cluster.minMatchRate}%
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-slate-700">
+                          {cluster.minSoW}%
+                        </TableCell>
+                        <TableCell>
+                          {cluster.isGlobalCluster ? (
+                            <Badge variant="outline">Global</Badge>
+                          ) : (
+                            <Badge variant="secondary">{cluster.apps.length}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">{formatDate(cluster.updatedAt)}</TableCell>
+                      </TableRow>
+
+                      {!cluster.isGlobalCluster && isExpanded && (
+                        <TableRow className="bg-slate-50/40">
+                          <TableCell colSpan={6}>
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 py-2">
+                              {cluster.apps.map((appGroup) => {
+                                const config = appGroup.configs[0]
+                                if (!config) return null
+
+                                return (
+                                  <Card key={appGroup.appId} className="border-slate-200">
+                                    <CardContent className="p-4 space-y-3">
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                          <div className="h-9 w-9 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
+                                            {appGroup.isGlobal ? (
+                                              <Globe className="w-4 h-4 text-slate-500" />
+                                            ) : config.iconUrl ? (
+                                              // eslint-disable-next-line @next/next/no-img-element
+                                              <img
+                                                src={config.iconUrl}
+                                                alt={appGroup.appName}
+                                                className="h-full w-full object-cover"
+                                              />
+                                            ) : (
+                                              <Smartphone className="w-4 h-4 text-blue-600" />
+                                            )}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="font-medium text-slate-900 truncate">
+                                              {appGroup.isGlobal ? "Global" : appGroup.appName}
+                                            </p>
+                                            <p className="text-xs text-slate-500 truncate">
+                                              {appGroup.isGlobal
+                                                ? "Default config for all apps"
+                                                : appGroup.appId}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                              <MoreHorizontal className="w-4 h-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="w-40">
+                                            {canManage && (
+                                              <DropdownMenuItem onClick={() => onEditConfig(config)}>
+                                                <Pencil className="w-4 h-4 mr-2" />
+                                                Edit
+                                              </DropdownMenuItem>
+                                            )}
+                                            {canManage && <DropdownMenuSeparator />}
+                                            {canManage && (
+                                              <DropdownMenuItem
+                                                className="text-red-600"
+                                                onClick={() => setDeleteConfigId(config.id)}
+                                              >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Delete
+                                              </DropdownMenuItem>
+                                            )}
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+
+                                      <p className="text-xs text-slate-500">Updated {formatDate(config.updatedAt)}</p>
+                                    </CardContent>
+                                  </Card>
+                                )
+                              })}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
 
-          {sorted.length > pageSize && (
+          {clustered.length > pageSize && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={sorted.length}
+              totalItems={clustered.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               onPageSizeChange={(size) => {
                 setPageSize(size)
                 setCurrentPage(1)
               }}
-              itemName="apps"
+              itemName="config groups"
             />
           )}
         </CardContent>
       </Card>
 
-      {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
-        {paginated.map((group) => {
-          const config = group.configs[0]
-          if (!config) return null
-          return (
-            <Card key={group.appId} className="border-slate-200">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
-                      {group.isGlobal ? (
-                        <Globe className="w-4 h-4 text-slate-500" />
-                      ) : config.iconUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={config.iconUrl}
-                          alt={group.appName}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Smartphone className="w-4 h-4 text-blue-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {group.isGlobal ? "Global" : group.appName}
-                      </p>
-                      {group.isGlobal ? (
-                        <p className="text-xs text-slate-500">
-                          Default config for all apps
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-xs text-slate-500">
-                            {group.appId}
-                          </p>
-                          {config.platform && (
-                            <p className="text-[11px] text-slate-400">
-                              {config.platform}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      {canManage && (
-                        <DropdownMenuItem onClick={() => onEditConfig(config)}>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                      )}
-                      {canManage && <DropdownMenuSeparator />}
-                      {canManage && (
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => setDeleteConfigId(config.id)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+        {paginated.map((cluster) => (
+          <Card key={cluster.key} className="border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {cluster.isGlobalCluster ? "Global Config" : "Config Group"}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {cluster.minRecommendations}-{cluster.maxRecommendations} | {cluster.minMatchRate}% | {cluster.minSoW}%
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-slate-500 text-xs">Recommendations</p>
-                    <p className="text-slate-700 font-medium">
-                      {config.minRecommendations} - {config.maxRecommendations}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs">Min Match Rate</p>
-                    <p className="text-slate-700 font-medium">
-                      {config.minMatchRate}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs">Min SoW</p>
-                    <p className="text-slate-700 font-medium">
-                      {config.minSoW}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs">Updated</p>
-                    <p className="text-slate-500 text-xs">
-                      {formatDate(config.updatedAt)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+                {cluster.isGlobalCluster ? (
+                  <Badge variant="outline">Global</Badge>
+                ) : (
+                  <Badge variant="secondary">{cluster.apps.length} apps</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Delete Single Config Confirmation */}
       <AlertDialog
         open={!!deleteConfigId}
         onOpenChange={(open) => {
@@ -347,8 +359,7 @@ export function ConfigsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Configuration</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this configuration? This action
-              cannot be undone.
+              Are you sure you want to delete this configuration? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -365,132 +376,7 @@ export function ConfigsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Delete All Configs of an App Confirmation (legacy - not used in 1-config-per-app view) */}
     </>
-  )
-}
-
-// --- App Row: 1 app = 1 row with config details ---
-function AppRow({
-  group,
-  onEditConfig,
-  onDeleteConfig,
-  canManage = true,
-}: {
-  group: AppConfigGroup
-  onEditConfig: (config: AppConfig) => void
-  onDeleteConfig: (id: string) => void
-  canManage?: boolean
-}) {
-  const config = group.configs[0]
-  if (!config) return null
-
-  return (
-    <TableRow className="hover:bg-slate-50 transition-colors">
-      {/* App */}
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
-            {group.isGlobal ? (
-              <Globe className="w-4 h-4 text-slate-500" />
-            ) : config.iconUrl ? (
-              // App logo
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={config.iconUrl}
-                alt={group.appName}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <Smartphone className="w-4 h-4 text-blue-600" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="font-medium text-slate-900">
-              {group.isGlobal ? "Global" : group.appName}
-            </p>
-            {group.isGlobal ? (
-              <p className="text-xs text-slate-500">
-                Default config for all apps
-              </p>
-            ) : (
-              <>
-                <p className="text-xs text-slate-500">
-                  {group.appId}
-                </p>
-                {config.platform && (
-                  <p className="text-[11px] text-slate-400">
-                    {config.platform}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </TableCell>
-
-      {/* Recommendations */}
-      <TableCell>
-        <p className="text-sm font-medium text-slate-700">
-          {config.minRecommendations} - {config.maxRecommendations}
-        </p>
-      </TableCell>
-
-      {/* Min Match Rate */}
-      <TableCell>
-        <p className="text-sm font-medium text-slate-700">
-          {config.minMatchRate}%
-        </p>
-      </TableCell>
-
-      {/* Min SoW */}
-      <TableCell>
-        <p className="text-sm font-medium text-slate-700">
-          {config.minSoW}%
-        </p>
-      </TableCell>
-
-      {/* Updated */}
-      <TableCell>
-        <p className="text-sm text-slate-500">
-          {formatDate(config.updatedAt)}
-        </p>
-      </TableCell>
-
-      {/* Actions */}
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            {canManage && (
-              <DropdownMenuItem onClick={() => onEditConfig(config)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-            )}
-            {canManage && <DropdownMenuSeparator />}
-            {canManage && (
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={() => onDeleteConfig(config.id)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
   )
 }
 
