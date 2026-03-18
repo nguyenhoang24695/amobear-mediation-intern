@@ -434,6 +434,7 @@ export interface JobScheduleUpdateRequest {
 export interface WaterfallRecommendationConfigDto {
   id: number
   configName?: string
+  configGroupName?: string | null
   appId?: string | null
   isActive?: boolean
   minRecommendations: number

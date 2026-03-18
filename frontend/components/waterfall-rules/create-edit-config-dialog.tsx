@@ -24,10 +24,22 @@ import { Loader2, Smartphone, Globe, Search } from "lucide-react"
 import { waterfallRecommendationSettingsApi } from "@/lib/api/services"
 import type { AppConfig } from "./waterfall-rules-content"
 
+interface CreateConfigInitialValues {
+  minRecommendations: number
+  maxRecommendations: number
+  minMatchRate: number
+  minSoW: number
+  ruleGroupId: number | null
+  configGroupName?: string | null
+}
+
 interface CreateEditConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   config: AppConfig | null
+  initialValues?: CreateConfigInitialValues | null
+  mode?: "default" | "add-to-group" | "edit-group"
+  groupEditConfigs?: AppConfig[]
   /**
    * onSave nhận danh sách target configs:
    * - Edit: 1 phần tử (app hiện tại)
@@ -44,12 +56,17 @@ export function CreateEditConfigDialog({
   open,
   onOpenChange,
   config,
+  initialValues = null,
+  mode = "default",
+  groupEditConfigs = [],
   onSave,
   saving = false,
   apps = [],
   appsWithConfig = [],
 }: CreateEditConfigDialogProps) {
   const isEditing = !!config
+  const isAddToGroupMode = !isEditing && mode === "add-to-group"
+  const isEditGroupMode = !isEditing && mode === "edit-group"
 
   // Map apps to dropdown format
   const availableApps = useMemo(() => {
@@ -93,16 +110,22 @@ export function CreateEditConfigDialog({
       } else {
         setSelectedAppIds([])
         setIsGlobal(false)
-        setMinRec("5")
-        setMaxRec("20")
-        setMinMatchRate("3.0")
-        setMinSoW("0.9")
-        setRuleGroupId("none")
+        setMinRec(String(initialValues?.minRecommendations ?? 5))
+        setMaxRec(String(initialValues?.maxRecommendations ?? 20))
+        setMinMatchRate(String(initialValues?.minMatchRate ?? 3.0))
+        setMinSoW(String(initialValues?.minSoW ?? 0.9))
+        setRuleGroupId(initialValues?.ruleGroupId != null ? String(initialValues.ruleGroupId) : "none")
       }
       setAppSearch("")
       setErrors({})
     }
-  }, [open, config])
+  }, [open, config, initialValues])
+
+  useEffect(() => {
+    if (isAddToGroupMode) {
+      setIsGlobal(false)
+    }
+  }, [isAddToGroupMode])
 
   useEffect(() => {
     if (!open) return
@@ -134,10 +157,10 @@ export function CreateEditConfigDialog({
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!isGlobal && !isEditing && selectedAppIds.length === 0)
+    if (!isGlobal && !isEditing && !isEditGroupMode && selectedAppIds.length === 0)
       errs.app = "Select at least one app or mark as global"
     // Nếu đang tạo mới (không phải edit) và chọn app đã có config thì chặn.
-    if (!isEditing && !isGlobal && selectedAppIds.length > 0) {
+    if (!isEditing && !isGlobal && !isEditGroupMode && selectedAppIds.length > 0) {
       const conflicted = selectedAppIds.filter((id) => appsWithConfig.includes(id))
       if (conflicted.length > 0) {
         errs.app = "Some selected apps are no longer available for configuration."
@@ -171,7 +194,25 @@ export function CreateEditConfigDialog({
             maxRecommendations: Number(maxRec),
             minMatchRate: Number(minMatchRate),
             minSoW: Number(minSoW),
+            configGroupName: config.configGroupName ?? null,
             ruleGroupId: config.isGlobal ? null : (ruleGroupId === "none" ? null : Number(ruleGroupId)),
+            ruleGroupName: null,
+          },
+        ])
+      } else if (isEditGroupMode) {
+        const sample = groupEditConfigs[0]
+        if (!sample) return
+        await onSave([
+          {
+            appId: sample.appId,
+            appName: sample.appName,
+            isGlobal: false,
+            minRecommendations: Number(minRec),
+            maxRecommendations: Number(maxRec),
+            minMatchRate: Number(minMatchRate),
+            minSoW: Number(minSoW),
+            configGroupName: sample.configGroupName ?? null,
+            ruleGroupId: ruleGroupId === "none" ? null : Number(ruleGroupId),
             ruleGroupName: null,
           },
         ])
@@ -187,6 +228,7 @@ export function CreateEditConfigDialog({
               maxRecommendations: Number(maxRec),
               minMatchRate: Number(minMatchRate),
               minSoW: Number(minSoW),
+              configGroupName: initialValues?.configGroupName ?? null,
               ruleGroupId: null,
               ruleGroupName: null,
             },
@@ -200,6 +242,7 @@ export function CreateEditConfigDialog({
             maxRecommendations: Number(maxRec),
             minMatchRate: Number(minMatchRate),
             minSoW: Number(minSoW),
+            configGroupName: initialValues?.configGroupName ?? null,
             ruleGroupId: ruleGroupId === "none" ? null : Number(ruleGroupId),
             ruleGroupName: null,
           }))
@@ -216,18 +259,28 @@ export function CreateEditConfigDialog({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edit Configuration" : "Create Configuration"}
+            {isEditing
+              ? "Edit Configuration"
+              : isAddToGroupMode
+                ? "Add App to Group"
+                : isEditGroupMode
+                  ? "Edit Config Group"
+                  : "Create Configuration"}
           </DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Update the recommendation configuration settings."
-              : "Set up a new recommendation configuration for an app."}
+              : (isAddToGroupMode
+                ? "Select app(s) to apply this Config Group."
+                : isEditGroupMode
+                  ? "Update settings for all apps in this Config Group."
+                  : "Set up a new recommendation configuration for an app.")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-4">
           {/* App Selection */}
-          <div className="space-y-2">
+          {!isEditGroupMode && <div className="space-y-2">
             <Label>App</Label>
 
             {isEditing && config ? (
@@ -272,22 +325,24 @@ export function CreateEditConfigDialog({
               </div>
             ) : (
               <>
-                <div className="flex items-center gap-2 mb-2">
-                  <Checkbox
-                    id="global-check"
-                    checked={isGlobal}
-                    onCheckedChange={(checked) => {
-                      setIsGlobal(!!checked)
-                      if (checked) setSelectedAppIds([])
-                    }}
-                  />
-                  <label
-                    htmlFor="global-check"
-                    className="text-sm text-slate-700 cursor-pointer"
-                  >
-                    Global (All Apps)
-                  </label>
-                </div>
+                {!isAddToGroupMode && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <Checkbox
+                      id="global-check"
+                      checked={isGlobal}
+                      onCheckedChange={(checked) => {
+                        setIsGlobal(!!checked)
+                        if (checked) setSelectedAppIds([])
+                      }}
+                    />
+                    <label
+                      htmlFor="global-check"
+                      className="text-sm text-slate-700 cursor-pointer"
+                    >
+                      Global (All Apps)
+                    </label>
+                  </div>
+                )}
 
                 {!isGlobal && (
                   <>
@@ -372,7 +427,9 @@ export function CreateEditConfigDialog({
                         ))}
                     </div>
                     <p className="text-xs text-slate-500">
-                      Select one or more apps this configuration applies to.
+                      {isAddToGroupMode
+                        ? "Select one or more apps to add into this Config Group."
+                        : "Select one or more apps this configuration applies to."}
                     </p>
                   </>
                 )}
@@ -382,118 +439,156 @@ export function CreateEditConfigDialog({
                 )}
               </>
             )}
-          </div>
+          </div>}
 
-          {/* Min/Max Recommendations */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="min-rec">Min Recommendations</Label>
-              <Input
-                id="min-rec"
-                type="number"
-                min={1}
-                max={100}
-                value={minRec}
-                onChange={(e) => setMinRec(e.target.value)}
-              />
-              {errors.minRec && (
-                <p className="text-xs text-red-600">{errors.minRec}</p>
-              )}
+          {isEditGroupMode && (
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-sm text-slate-700">
+                This change will apply to <span className="font-semibold">{groupEditConfigs.length}</span> app(s) in this Config Group.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="max-rec">Max Recommendations</Label>
-              <Input
-                id="max-rec"
-                type="number"
-                min={1}
-                max={100}
-                value={maxRec}
-                onChange={(e) => setMaxRec(e.target.value)}
-              />
-              {errors.maxRec && (
-                <p className="text-xs text-red-600">{errors.maxRec}</p>
-              )}
-            </div>
-          </div>
+          )}
 
-          {/* Min Match Rate + Min SoW */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="min-mr">Min Match Rate %</Label>
-              <Input
-                id="min-mr"
-                type="number"
-                step={0.1}
-                min={0}
-                max={100}
-                value={minMatchRate}
-                onChange={(e) => setMinMatchRate(e.target.value)}
-              />
-              {errors.minMatchRate && (
-                <p className="text-xs text-red-600">{errors.minMatchRate}</p>
-              )}
+          {isAddToGroupMode ? (
+            <div className="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
+                Group Configuration
+              </p>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500">Recommendations</p>
+                  <p className="font-medium text-slate-900">{minRec} - {maxRec}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Rule Group</p>
+                  <p className="font-medium text-slate-900">
+                    {selectedRuleGroup ? selectedRuleGroup.name : "No specific group"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Min Match Rate</p>
+                  <p className="font-medium text-slate-900">{minMatchRate}%</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Min SoW</p>
+                  <p className="font-medium text-slate-900">{minSoW}%</p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="min-sow">Min SoW %</Label>
-              <Input
-                id="min-sow"
-                type="number"
-                step={0.01}
-                min={0}
-                max={100}
-                value={minSoW}
-                onChange={(e) => setMinSoW(e.target.value)}
-              />
-              {errors.minSoW && (
-                <p className="text-xs text-red-600">{errors.minSoW}</p>
-              )}
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Min/Max Recommendations */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="min-rec">Min Recommendations</Label>
+                  <Input
+                    id="min-rec"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={minRec}
+                    onChange={(e) => setMinRec(e.target.value)}
+                  />
+                  {errors.minRec && (
+                    <p className="text-xs text-red-600">{errors.minRec}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max-rec">Max Recommendations</Label>
+                  <Input
+                    id="max-rec"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={maxRec}
+                    onChange={(e) => setMaxRec(e.target.value)}
+                  />
+                  {errors.maxRec && (
+                    <p className="text-xs text-red-600">{errors.maxRec}</p>
+                  )}
+                </div>
+              </div>
 
-          {/* Rule Group Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="rule-group">Rule Group</Label>
-            <Select
-              value={ruleGroupId}
-              onValueChange={setRuleGroupId}
-              disabled={(!isEditing && isGlobal) || (isEditing && !!config?.isGlobal)}
-            >
-              <SelectTrigger id="rule-group">
-                {selectedRuleGroup ? (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
-                      style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
-                    />
-                    <span>{selectedRuleGroup.name}</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder="No specific group" />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No specific group</SelectItem>
-                {ruleGroups
-                  .filter((group) => group.isActive)
-                  .map((group) => (
-                    <SelectItem key={group.id} value={String(group.id)}>
+              {/* Min Match Rate + Min SoW */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="min-mr">Min Match Rate %</Label>
+                  <Input
+                    id="min-mr"
+                    type="number"
+                    step={0.1}
+                    min={0}
+                    max={100}
+                    value={minMatchRate}
+                    onChange={(e) => setMinMatchRate(e.target.value)}
+                  />
+                  {errors.minMatchRate && (
+                    <p className="text-xs text-red-600">{errors.minMatchRate}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="min-sow">Min SoW %</Label>
+                  <Input
+                    id="min-sow"
+                    type="number"
+                    step={0.01}
+                    min={0}
+                    max={100}
+                    value={minSoW}
+                    onChange={(e) => setMinSoW(e.target.value)}
+                  />
+                  {errors.minSoW && (
+                    <p className="text-xs text-red-600">{errors.minSoW}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Rule Group Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="rule-group">Rule Group</Label>
+                <Select
+                  value={ruleGroupId}
+                  onValueChange={setRuleGroupId}
+                  disabled={(!isEditing && isGlobal) || (isEditing && !!config?.isGlobal)}
+                >
+                  <SelectTrigger id="rule-group">
+                    {selectedRuleGroup ? (
                       <div className="flex items-center gap-2">
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
-                          style={{ backgroundColor: group.color || "#94a3b8" }}
+                          style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
                         />
-                        <span>{group.name}</span>
+                        <span>{selectedRuleGroup.name}</span>
                       </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500">
-              {(!isEditing && isGlobal) || (isEditing && !!config?.isGlobal)
-                ? "Global config does not use app-level rule group mapping."
-                : "Assign a rule group for selected app(s)."}
-            </p>
-          </div>
+                    ) : (
+                      <SelectValue placeholder="No specific group" />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No specific group</SelectItem>
+                    {ruleGroups
+                      .filter((group) => group.isActive)
+                      .map((group) => (
+                        <SelectItem key={group.id} value={String(group.id)}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
+                              style={{ backgroundColor: group.color || "#94a3b8" }}
+                            />
+                            <span>{group.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  {(!isEditing && isGlobal) || (isEditing && !!config?.isGlobal)
+                    ? "Global config does not use app-level rule group mapping."
+                    : "Assign a rule group for selected app(s)."}
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <DialogFooter>
@@ -516,7 +611,7 @@ export function CreateEditConfigDialog({
                 Saving...
               </>
             ) : (
-              "Save"
+              (isAddToGroupMode ? "Add App to Group" : isEditGroupMode ? "Save Group Config" : "Save")
             )}
           </Button>
         </DialogFooter>

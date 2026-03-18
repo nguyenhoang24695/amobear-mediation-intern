@@ -25,6 +25,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { ConfigsTable } from "./configs-table"
+import type { AddAppToGroupPreset } from "./configs-table"
 import { RulesTable } from "./rules-table"
 import { RulesGroupedView } from "./rules-grouped-view"
 import { CreateEditConfigDialog } from "./create-edit-config-dialog"
@@ -48,6 +49,7 @@ export interface AppConfig {
   id: string
   appId: string
   appName: string
+  configGroupName?: string | null
   isGlobal: boolean
   platform?: string
   iconUrl?: string
@@ -214,6 +216,7 @@ export function WaterfallRulesContent() {
         id: dto.id.toString(),
         appId: dto.appId || "global",
         appName: isGlobal ? "Global" : (app?.displayName || app?.name || dto.appId || "Unknown"),
+        configGroupName: dto.configGroupName ?? null,
         isGlobal,
         platform: app?.platform,
         iconUrl: app?.iconUri,
@@ -233,6 +236,9 @@ export function WaterfallRulesContent() {
   const [configTypeFilter, setConfigTypeFilter] = useState("all")
   const [editConfig, setEditConfig] = useState<AppConfig | null>(null)
   const [createConfigOpen, setCreateConfigOpen] = useState(false)
+  const [createConfigPreset, setCreateConfigPreset] = useState<AddAppToGroupPreset | null>(null)
+  const [createConfigMode, setCreateConfigMode] = useState<"default" | "add-to-group" | "edit-group">("default")
+  const [editConfigGroupItems, setEditConfigGroupItems] = useState<AppConfig[] | null>(null)
   const [savingConfig, setSavingConfig] = useState(false)
 
   // Fetch rules from API
@@ -392,10 +398,39 @@ export function WaterfallRulesContent() {
     async (targets: Array<Omit<AppConfig, "id" | "updatedAt">>) => {
       setSavingConfig(true)
       try {
-        if (editConfig) {
+        if (createConfigMode === "edit-group" && editConfigGroupItems && editConfigGroupItems.length > 0) {
+          const data = targets[0]
+          for (const item of editConfigGroupItems) {
+            const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+              appId: item.isGlobal ? null : (item.appId === "global" ? null : item.appId),
+              configGroupName: data.configGroupName ?? item.configGroupName ?? null,
+              minRecommendations: data.minRecommendations,
+              maxRecommendations: data.maxRecommendations,
+              minMatchRatePercent: data.minMatchRate,
+              minSowPercent: data.minSoW,
+            }
+            await waterfallRecommendationSettingsApi.updateConfig(Number(item.id), payload)
+            if (!item.isGlobal) {
+              await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(
+                item.appId,
+                data.ruleGroupId ?? null,
+                "app"
+              )
+            }
+          }
+          toast({
+            title: "Success",
+            description: `Updated ${editConfigGroupItems.length} configurations in this group`,
+          })
+          setCreateConfigOpen(false)
+          setCreateConfigPreset(null)
+          setCreateConfigMode("default")
+          setEditConfigGroupItems(null)
+        } else if (editConfig) {
           const data = targets[0]
           const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
             appId: data.isGlobal ? null : (data.appId === "global" ? null : data.appId),
+            configGroupName: data.configGroupName ?? editConfig.configGroupName ?? null,
             minRecommendations: data.minRecommendations,
             maxRecommendations: data.maxRecommendations,
             minMatchRatePercent: data.minMatchRate,
@@ -420,6 +455,7 @@ export function WaterfallRulesContent() {
           for (const data of targets) {
             const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
               appId: data.isGlobal ? null : (data.appId === "global" ? null : data.appId),
+              configGroupName: data.configGroupName ?? null,
               minRecommendations: data.minRecommendations,
               maxRecommendations: data.maxRecommendations,
               minMatchRatePercent: data.minMatchRate,
@@ -441,6 +477,9 @@ export function WaterfallRulesContent() {
               : "Configuration created successfully",
           })
           setCreateConfigOpen(false)
+          setCreateConfigPreset(null)
+          setCreateConfigMode("default")
+          setEditConfigGroupItems(null)
         }
         // Refetch configs from API
         await refetchConfigs()
@@ -454,7 +493,7 @@ export function WaterfallRulesContent() {
         setSavingConfig(false)
       }
     },
-    [editConfig, toast, refetchConfigs]
+    [createConfigMode, editConfigGroupItems, editConfig, toast, refetchConfigs]
   )
 
   const handleDeleteConfig = useCallback(async (id: string) => {
@@ -492,6 +531,68 @@ export function WaterfallRulesContent() {
       })
     }
   }, [configs, toast, refetchConfigs])
+
+  const handleMoveAppToGroup = useCallback(async (config: AppConfig, preset: AddAppToGroupPreset) => {
+    try {
+      const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+        appId: config.isGlobal ? null : (config.appId === "global" ? null : config.appId),
+        configGroupName: preset.configGroupName ?? config.configGroupName ?? null,
+        minRecommendations: preset.minRecommendations,
+        maxRecommendations: preset.maxRecommendations,
+        minMatchRatePercent: preset.minMatchRate,
+        minSowPercent: preset.minSoW,
+      }
+      await waterfallRecommendationSettingsApi.updateConfig(Number(config.id), payload)
+      if (!config.isGlobal) {
+        await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(
+          config.appId,
+          preset.ruleGroupId ?? null,
+          "app"
+        )
+      }
+      toast({
+        title: "Success",
+        description: `${config.appName} moved to selected config group`,
+      })
+      await refetchConfigs()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to move app to selected config group",
+        variant: "destructive",
+      })
+    }
+  }, [toast, refetchConfigs])
+
+  const handleRenameConfigGroup = useCallback(async (configsInGroup: AppConfig[], groupName: string | null) => {
+    if (configsInGroup.length === 0) return
+    try {
+      await Promise.all(
+        configsInGroup.map((config) => {
+          const payload: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'> = {
+            appId: config.isGlobal ? null : (config.appId === "global" ? null : config.appId),
+            configGroupName: groupName,
+            minRecommendations: config.minRecommendations,
+            maxRecommendations: config.maxRecommendations,
+            minMatchRatePercent: config.minMatchRate,
+            minSowPercent: config.minSoW,
+          }
+          return waterfallRecommendationSettingsApi.updateConfig(Number(config.id), payload)
+        })
+      )
+      toast({
+        title: "Success",
+        description: "Config Group name updated",
+      })
+      await refetchConfigs()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update Config Group name",
+        variant: "destructive",
+      })
+    }
+  }, [toast, refetchConfigs])
 
   // Rule CRUD
   const handleSaveRule = useCallback(
@@ -930,7 +1031,11 @@ export function WaterfallRulesContent() {
           {activeTab === "configs" && canManageConfigs && (
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => setCreateConfigOpen(true)}
+              onClick={() => {
+                setCreateConfigPreset(null)
+                setCreateConfigMode("default")
+                setCreateConfigOpen(true)
+              }}
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Config
@@ -1136,14 +1241,36 @@ export function WaterfallRulesContent() {
           <ConfigsTable
             groups={filteredGroups}
             onEditConfig={setEditConfig}
+            onEditConfigGroup={(configs, preset) => {
+              if (configs.length === 0) return
+              setEditConfigGroupItems(configs)
+              setCreateConfigPreset(preset)
+              setCreateConfigMode("edit-group")
+              setCreateConfigOpen(true)
+              setEditConfig(null)
+            }}
+            onRenameConfigGroup={handleRenameConfigGroup}
             onDeleteConfig={handleDeleteConfig}
             onDeleteApp={handleDeleteApp}
+            onMoveAppToGroup={handleMoveAppToGroup}
+            onAddAppToGroup={(preset) => {
+              setCreateConfigPreset(preset)
+              setCreateConfigMode("add-to-group")
+              setEditConfigGroupItems(null)
+              setCreateConfigOpen(true)
+              setEditConfig(null)
+            }}
             hasFilters={configSearch !== "" || configTypeFilter !== "all"}
             onClearFilters={() => {
               setConfigSearch("")
               setConfigTypeFilter("all")
             }}
-            onCreateNew={() => setCreateConfigOpen(true)}
+            onCreateNew={() => {
+              setCreateConfigPreset(null)
+              setCreateConfigMode("default")
+              setEditConfigGroupItems(null)
+              setCreateConfigOpen(true)
+            }}
             canManage={canManageConfigs}
           />
         </div>
@@ -1311,9 +1438,15 @@ export function WaterfallRulesContent() {
           if (!open) {
             setCreateConfigOpen(false)
             setEditConfig(null)
+            setCreateConfigPreset(null)
+            setCreateConfigMode("default")
+            setEditConfigGroupItems(null)
           }
         }}
         config={editConfig}
+        initialValues={createConfigPreset}
+        mode={createConfigMode}
+        groupEditConfigs={editConfigGroupItems ?? []}
         onSave={handleSaveConfig}
         saving={savingConfig}
         apps={appsResponse?.apps || []}
