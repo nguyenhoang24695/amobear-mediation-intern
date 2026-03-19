@@ -36,7 +36,8 @@ import {
   type ImageAttachmentRequest,
   type AttachedTableDataRequest,
 } from "@/lib/api/ai-assistant"
-import { getModelMeta, getProviderHint } from "@/lib/ai-model-metadata"
+import { getModelMeta } from "@/lib/ai-model-metadata"
+import { useToast } from "@/hooks/use-toast"
 
 const PROVIDER_COLORS: Record<string, string> = {
   anthropic: "bg-amber-500",
@@ -67,16 +68,27 @@ interface ChatMainPanelProps {
   sending?: boolean
 }
 
-const PROVIDER_KEY_MAP: Record<string, "claude" | "gemini" | "chatgpt"> = {
-  anthropic: "claude",
-  openai: "chatgpt",
-  gemini: "gemini",
-}
-
 const REVERSE_PROVIDER_KEY_MAP: Record<string, string> = {
   claude: "anthropic",
   chatgpt: "openai",
   gemini: "gemini",
+}
+
+function providerHasModel(provider: AiProviderConfigDto | undefined, modelId?: string | null) {
+  if (!provider || !modelId) return false
+  return provider.availableModels.some((model) => model.modelId === modelId)
+}
+
+function getFallbackModelId(provider: AiProviderConfigDto | undefined) {
+  if (!provider || provider.availableModels.length === 0) return ""
+  if (providerHasModel(provider, provider.defaultModel)) return provider.defaultModel ?? ""
+  return provider.availableModels.find((model) => model.isRecommended)?.modelId ?? provider.availableModels[0]?.modelId ?? ""
+}
+
+function resolveEffectiveModelId(provider: AiProviderConfigDto | undefined, selectedModelId: string) {
+  if (!provider) return selectedModelId
+  if (providerHasModel(provider, selectedModelId)) return selectedModelId
+  return getFallbackModelId(provider)
 }
 
 function StarRow({ count, filled, color }: { count: number; filled: number; color: string }) {
@@ -149,7 +161,6 @@ function ModelSelectorDropdown({
           Provider
         </div>
         {connectedProviders.map((provider) => {
-          const providerHint = getProviderHint(provider.providerKey)
           const isSelected = selectedProviderKey === provider.providerKey
           return (
             <div
@@ -280,10 +291,10 @@ function ModelSelectorDropdown({
 }
 
 export function ChatMainPanel({
-  context,
+  context: _context,
   messages,
   selectedProvider,
-  onProviderChange,
+  onProviderChange: _onProviderChange,
   autoExplain,
   onAutoExplainChange,
   onSendMessage,
@@ -295,6 +306,7 @@ export function ChatMainPanel({
   onAskAboutTable,
   sending = false,
 }: ChatMainPanelProps) {
+  const { toast } = useToast()
   const [inputValue, setInputValue] = useState("")
   const [pastedImages, setPastedImages] = useState<ImageAttachmentRequest[]>([])
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
@@ -331,7 +343,7 @@ export function ChatMainPanel({
 
   const fetchProviders = useCallback(async () => {
     try {
-      const configs = await aiAssistantApi.getProviderConfigs()
+      const configs = await aiAssistantApi.getChatProviderConfigs()
       setProviderConfigs(configs)
     } catch {
       // API not available, will show empty state
@@ -343,10 +355,10 @@ export function ChatMainPanel({
   }, [fetchProviders])
 
   const currentProviderConfig = providerConfigs.find(p => p.providerKey === selectedProviderKey)
+  const providerHasUsableModels = currentProviderConfig ? currentProviderConfig.availableModels.length > 0 : true
   // Khi context chưa có preferredModel thì dùng model mặc định của provider (chỉ hiển thị, không persist)
-  const effectiveModelId = selectedModelId || currentProviderConfig?.defaultModel || ""
+  const effectiveModelId = resolveEffectiveModelId(currentProviderConfig, selectedModelId)
   const currentModelData = currentProviderConfig?.availableModels.find(m => m.modelId === effectiveModelId)
-  const currentModelMeta = effectiveModelId ? getModelMeta(effectiveModelId) : null
 
   const handleModelSelect = (providerKey: string, modelId: string) => {
     onModelSelect(providerKey, modelId)
@@ -354,10 +366,27 @@ export function ChatMainPanel({
   }
 
   useEffect(() => {
+    if (!currentProviderConfig || !selectedModelId) return
+    if (providerHasModel(currentProviderConfig, selectedModelId)) return
+
+    const fallbackModelId = getFallbackModelId(currentProviderConfig)
+    if (!fallbackModelId || fallbackModelId === selectedModelId) return
+
+    onModelSelect(currentProviderConfig.providerKey, fallbackModelId)
+    const fallbackModel = currentProviderConfig.availableModels.find((model) => model.modelId === fallbackModelId)
+    toast({
+      title: "AI model updated",
+      description: `Model "${selectedModelId}" is no longer available. Switched to "${fallbackModel?.displayName ?? fallbackModelId}".`,
+    })
+  }, [currentProviderConfig, onModelSelect, selectedModelId, toast])
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
   const handleSend = () => {
+    if (currentProviderConfig && !providerHasUsableModels) return
+
     const text = inputValue.trim() || (pastedImages.length ? "Phân tích ảnh đính kèm." : "")
     if (!text) return
     onSendMessage(text, {
@@ -452,6 +481,12 @@ export function ChatMainPanel({
               ))}
             </div>
           )}
+          {currentProviderConfig && !providerHasUsableModels && (
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>This provider currently has no usable models. Open AI Settings to refresh models or choose a new default model.</span>
+            </div>
+          )}
           {/* Text Input */}
           <div className="relative border border-slate-200 rounded-lg bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
             <Textarea
@@ -460,6 +495,7 @@ export function ChatMainPanel({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
+              disabled={currentProviderConfig ? !providerHasUsableModels : false}
               placeholder="Ask anything about your data... (có thể dán ảnh trực tiếp)"
               className="min-h-[80px] max-h-[200px] border-0 focus-visible:ring-0 resize-none pr-12"
             />
@@ -467,7 +503,7 @@ export function ChatMainPanel({
               size="icon"
               className="absolute right-2 bottom-2 h-8 w-8 bg-blue-600 hover:bg-blue-700"
               onClick={handleSend}
-              disabled={!inputValue.trim() && pastedImages.length === 0}
+              disabled={(!inputValue.trim() && pastedImages.length === 0) || (currentProviderConfig ? !providerHasUsableModels : false)}
             >
               <Send className="h-4 w-4" />
             </Button>

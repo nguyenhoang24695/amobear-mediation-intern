@@ -16,6 +16,7 @@ import type {
   ImageAttachmentRequest,
   AttachedTableDataRequest,
 } from "@/lib/api/ai-assistant"
+import { useToast } from "@/hooks/use-toast"
 
 export interface AiContext {
   id: string
@@ -200,6 +201,17 @@ function dtoToMessage(m: MessageDto): AiMessage {
   }
 }
 
+const PROVIDER_KEY_TO_SELECTED: Record<string, "claude" | "gemini" | "chatgpt"> = {
+  anthropic: "claude",
+  openai: "chatgpt",
+  gemini: "gemini",
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message
+  return fallback
+}
+
 function askResponseToMessage(res: AskResponse): AiMessage {
   const det = res.detailedExplanation as { breakdown?: { clause: string; explanation: string }[]; performance?: { partitionUsage?: string }; businessContext?: string; tips?: string[] } | undefined
   return {
@@ -265,6 +277,7 @@ const defaultQuota: UserQuota = {
 }
 
 export function AiAssistantContent() {
+  const { toast } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [contexts, setContexts] = useState<AiContext[]>([])
   const [conversations, setConversations] = useState<AiConversation[]>([])
@@ -494,25 +507,19 @@ export function AiAssistantContent() {
     }
   }, [conversations])
 
-  const PROVIDER_KEY_TO_SELECTED: Record<string, "claude" | "gemini" | "chatgpt"> = {
-    anthropic: "claude",
-    openai: "chatgpt",
-    gemini: "gemini",
-  }
-  const handleModelSelect = useCallback(
-    async (providerKey: string, modelId: string) => {
-      const mapped = PROVIDER_KEY_TO_SELECTED[providerKey] ?? "claude"
-      setSelectedProvider(mapped)
+  const persistModelSelection = useCallback(
+    async (provider: "claude" | "gemini" | "chatgpt", modelId: string) => {
+      setSelectedProvider(provider)
       setSelectedModelId(modelId)
       if (!activeContextId) return
       try {
         await aiAssistantApi.updateContext(activeContextId, {
-          preferredProvider: mapped,
+          preferredProvider: provider,
           preferredModel: modelId,
         })
         setContexts((prev) =>
           prev.map((c) =>
-            c.id === activeContextId ? { ...c, preferredProvider: mapped, preferredModel: modelId } : c
+            c.id === activeContextId ? { ...c, preferredProvider: provider, preferredModel: modelId } : c
           )
         )
       } catch {
@@ -520,6 +527,14 @@ export function AiAssistantContent() {
       }
     },
     [activeContextId]
+  )
+
+  const handleModelSelect = useCallback(
+    async (providerKey: string, modelId: string) => {
+      const mapped = PROVIDER_KEY_TO_SELECTED[providerKey] ?? "claude"
+      await persistModelSelection(mapped, modelId)
+    },
+    [persistModelSelection]
   )
 
   const handleConversationSelect = useCallback((convId: string) => {
@@ -667,6 +682,21 @@ export function AiAssistantContent() {
         })
         setActiveConversationId(res.conversationId)
         setMessages((prev) => [...prev.slice(0, -1), userMsg, askResponseToMessage(res)])
+        const responseProvider = toProvider(res.provider)
+        if (res.model && (responseProvider !== selectedProvider || res.model !== selectedModelId)) {
+          setSelectedProvider(responseProvider)
+          setSelectedModelId(res.model)
+          void aiAssistantApi.updateContext(targetContextId, {
+            preferredProvider: responseProvider,
+            preferredModel: res.model,
+          }).then(() => {
+            setContexts((prev) =>
+              prev.map((c) =>
+                c.id === targetContextId ? { ...c, preferredProvider: responseProvider, preferredModel: res.model } : c
+              )
+            )
+          }).catch(() => {})
+        }
         const list = await aiAssistantApi.getConversations(targetContextId).catch(() => [])
         setConversations((list ?? []).map(dtoToConversation))
         const q = await aiAssistantApi.getMyUsage().catch(() => null)
@@ -675,12 +705,14 @@ export function AiAssistantContent() {
           localStorage.setItem(AI_ASSISTANT_LAST_CONVERSATION_ID, res.conversationId)
           localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, targetContextId)
         }
-      } catch {
+      } catch (err) {
         setMessages((prev) => prev.slice(0, -1))
+        const message = getErrorMessage(err, "Unable to fork the conversation or send the request. Please try again.")
+        toast({ title: "AI request failed", description: message, variant: "destructive" })
         const errMsg: AiMessage = {
           id: "err-" + Date.now(),
           role: "assistant",
-          content: "Xảy ra lỗi khi tạo bản sao hoặc gửi câu hỏi. Vui lòng thử lại.",
+          content: message,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, errMsg])
@@ -688,7 +720,7 @@ export function AiAssistantContent() {
         setSending(false)
       }
     },
-    [activeConversationId, pendingAskAfterFork, selectedProvider, autoExplain, pendingAttachedTable]
+    [activeConversationId, pendingAskAfterFork, selectedProvider, selectedModelId, autoExplain, pendingAttachedTable, toast]
   )
 
   const handleSendMessage = useCallback(
@@ -725,6 +757,21 @@ export function AiAssistantContent() {
         })
         setActiveConversationId(res.conversationId)
         setMessages((prev) => [...prev.slice(0, -1), userMsg, askResponseToMessage(res)])
+        const responseProvider = toProvider(res.provider)
+        if (res.model && (responseProvider !== selectedProvider || res.model !== selectedModelId)) {
+          setSelectedProvider(responseProvider)
+          setSelectedModelId(res.model)
+          void aiAssistantApi.updateContext(activeContextId, {
+            preferredProvider: responseProvider,
+            preferredModel: res.model,
+          }).then(() => {
+            setContexts((prev) =>
+              prev.map((c) =>
+                c.id === activeContextId ? { ...c, preferredProvider: responseProvider, preferredModel: res.model } : c
+              )
+            )
+          }).catch(() => {})
+        }
         const list = await aiAssistantApi.getConversations(activeContextId).catch(() => [])
         setConversations((list ?? []).map(dtoToConversation))
         const q = await aiAssistantApi.getMyUsage().catch(() => null)
@@ -735,10 +782,12 @@ export function AiAssistantContent() {
         }
       } catch (err) {
         setMessages((prev) => prev.slice(0, -1))
+        const message = getErrorMessage(err, "Unable to send the AI request. Please try again.")
+        toast({ title: "AI request failed", description: message, variant: "destructive" })
         const errMsg: AiMessage = {
           id: "err-" + Date.now(),
           role: "assistant",
-          content: "Xảy ra lỗi khi gửi câu hỏi. Vui lòng thử lại.",
+          content: message,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, errMsg])
@@ -746,7 +795,7 @@ export function AiAssistantContent() {
         setSending(false)
       }
     },
-    [activeContextId, activeConversationId, conversationDetail, selectedProvider, autoExplain, sending, pendingAttachedTable]
+    [activeContextId, activeConversationId, conversationDetail, selectedProvider, selectedModelId, autoExplain, sending, pendingAttachedTable, toast]
   )
 
   const handleAskAboutTable = useCallback((result: QueryResult) => {

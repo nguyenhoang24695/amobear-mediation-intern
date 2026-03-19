@@ -225,8 +225,8 @@ export function WaterfallOptimizationTab({
   const ruleGroups = (ruleGroupsData ?? []) as WaterfallRecommendationRuleGroupDto[]
 
   const { data: appRuleGroupMapping, refetch: refetchAppRuleGroupMapping } = useApi(
-    () => waterfallRecommendationSettingsApi.getAppRuleGroupMapping(appAdMobId!),
-    { enabled: !!appAdMobId, cacheKey: appAdMobId ? `app_rule_group_${appAdMobId}` : undefined }
+    () => waterfallRecommendationSettingsApi.getAppRuleGroupMapping(mediationGroupId, "mediation_group"),
+    { enabled: !!mediationGroupId, cacheKey: mediationGroupId ? `mg_rule_group_${mediationGroupId}` : undefined }
   )
 
   const [selectedRuleGroupId, setSelectedRuleGroupId] = useState<number | null>(null)
@@ -249,10 +249,14 @@ export function WaterfallOptimizationTab({
   }
 
   const handleSaveRuleGroup = async () => {
-    if (!appAdMobId) return
+    if (!mediationGroupId) return
     setSavingRuleGroup(true)
     try {
-      await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(appAdMobId, selectedRuleGroupId)
+      await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(
+        mediationGroupId,
+        selectedRuleGroupId,
+        "mediation_group"
+      )
       await refetchAppRuleGroupMapping()
       setRuleGroupChanged(false)
     } catch (err) {
@@ -1586,6 +1590,9 @@ export function WaterfallOptimizationTab({
                       const isRemoved = source.changeType === "removed"
                       const isModified = source.changeType === "modified"
                       const isNew = source.changeType === "new"
+                      const hasReason = typeof source.reason === "string" && source.reason.trim() !== ""
+                      const hasRecommendationMetrics = source.sowPercent != null || source.matchRatePercent != null
+                      const hasRecommendationTooltip = hasReason || hasRecommendationMetrics
                       const displayIndex =
                         optimizedWaterfall.filter((s, i) => i < index && s.changeType !== "removed").length + 1
 
@@ -1629,7 +1636,7 @@ export function WaterfallOptimizationTab({
                           {/* Source Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              {source.reason != null && source.reason !== "" && !isRemoved ? (
+                              {hasRecommendationTooltip ? (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <span className="inline-flex items-center gap-2 cursor-help">
@@ -1647,9 +1654,9 @@ export function WaterfallOptimizationTab({
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
-                                    <p className="text-sm">{source.reason}</p>
-                                    {(source.sowPercent != null || source.matchRatePercent != null) && (
-                                      <p className="text-xs text-slate-500 mt-1 border-t border-slate-200 pt-1">
+                                    {hasReason && <p className="text-sm">{source.reason}</p>}
+                                    {hasRecommendationMetrics && (
+                                      <p className={cn("text-xs text-slate-500", hasReason && "mt-1 border-t border-slate-200 pt-1")}>
                                         SoW: {source.sowPercent != null ? `${Number(source.sowPercent).toFixed(2)}%` : "—"} • MR: {source.matchRatePercent != null ? `${Number(source.matchRatePercent).toFixed(1)}%` : "—"}
                                       </p>
                                     )}

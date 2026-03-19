@@ -1,24 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Fragment, useMemo, useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,40 +16,45 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  MoreHorizontal,
-  Settings,
-  Smartphone,
-  Globe,
-  Pencil,
-  Copy,
-  Trash2,
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
   ChevronDown,
   ChevronRight,
+  Globe,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Settings,
+  Trash2,
 } from "lucide-react"
-import { Pagination } from "@/components/shared/pagination"
-import type { AppConfig, AppConfigGroup } from "./waterfall-rules-content"
+import type { WaterfallConfigItem } from "./waterfall-config-types"
 
 interface ConfigsTableProps {
-  groups: AppConfigGroup[]
-  onEditConfig: (config: AppConfig) => void
-  onDeleteConfig: (id: string) => void
-  onDeleteApp: (appId: string) => void
+  configs: WaterfallConfigItem[]
+  onEditConfig: (config: WaterfallConfigItem) => void
+  onDeleteConfig: (config: WaterfallConfigItem) => void
   hasFilters: boolean
   onClearFilters: () => void
   onCreateNew: () => void
   canManage?: boolean
 }
 
-type SortField = "appName"
-type SortDir = "asc" | "desc"
-
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("en-US", {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -72,97 +63,68 @@ function formatDate(dateStr: string) {
   })
 }
 
+function formatThresholds(config: WaterfallConfigItem) {
+  return `${config.minRecommendations}-${config.maxRecommendations} recs | MR ${Number(config.minMatchRatePercent).toFixed(2)}% | SoW ${Number(config.minSowPercent).toFixed(2)}%`
+}
+
 export function ConfigsTable({
-  groups,
+  configs,
   onEditConfig,
   onDeleteConfig,
-  onDeleteApp,
   hasFilters,
   onClearFilters,
   onCreateNew,
   canManage = true,
 }: ConfigsTableProps) {
-  const [sortField, setSortField] = useState<SortField>("appName")
-  const [sortDir, setSortDir] = useState<SortDir>("asc")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [deleteConfigId, setDeleteConfigId] = useState<string | null>(null)
-  const [deleteAppId, setDeleteAppId] = useState<string | null>(null)
+  const [expandedConfigIds, setExpandedConfigIds] = useState<number[]>([])
+  const [deleteTarget, setDeleteTarget] = useState<WaterfallConfigItem | null>(null)
 
-  const sorted = useMemo(() => {
-    const arr = [...groups]
-    arr.sort((a, b) => {
-      const cmp = a.appName.localeCompare(b.appName)
-      return sortDir === "asc" ? cmp : -cmp
+  const sortedConfigs = useMemo(() => {
+    return [...configs].sort((left, right) => {
+      if (left.isGlobalDefault && !right.isGlobalDefault) return -1
+      if (!left.isGlobalDefault && right.isGlobalDefault) return 1
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
     })
-    return arr
-  }, [groups, sortField, sortDir])
+  }, [configs])
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  const paginated = sorted.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  )
-
-  const toggleSort = () => {
-    setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    setCurrentPage(1)
-  }
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
-    }
-    return sortDir === "asc" ? (
-      <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
-    ) : (
-      <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
+  const toggleExpanded = (configId: number) => {
+    setExpandedConfigIds((current) =>
+      current.includes(configId)
+        ? current.filter((id) => id !== configId)
+        : [...current, configId]
     )
   }
 
-  // Empty state
-  if (groups.length === 0) {
+  const isExpanded = (configId: number) => expandedConfigIds.includes(configId)
+
+  if (sortedConfigs.length === 0) {
     return (
       <Card className="border-slate-200">
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          {hasFilters ? (
-            <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                No apps found
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                Try adjusting your search or filters
-              </p>
-              <Button
-                variant="link"
-                className="text-blue-600"
-                onClick={onClearFilters}
-              >
-                Clear filters
+        <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+          <div className="rounded-full border border-slate-200 bg-slate-50 p-4">
+            <Settings className="h-6 w-6 text-slate-500" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-slate-900">No configs found</h3>
+            <p className="max-w-md text-sm text-slate-500">
+              {hasFilters
+                ? "No rule config matches the current filters."
+                : "Create a standalone rule config, then assign apps when needed."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {hasFilters && (
+              <Button variant="outline" className="bg-transparent" onClick={onClearFilters}>
+                Clear Filters
               </Button>
-            </>
-          ) : (
-            <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Settings className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                No configurations yet
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                Create your first configuration to get started
-              </p>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={onCreateNew}
-              >
+            )}
+            {canManage && (
+              <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={onCreateNew}>
+                <Plus className="mr-2 h-4 w-4" />
                 Create Config
               </Button>
-            </>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
     )
@@ -170,194 +132,193 @@ export function ConfigsTable({
 
   return (
     <>
-      {/* Desktop Table */}
-      <Card className="border-slate-200 hidden md:block">
+      <Card className="border-slate-200">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50">
-                  <TableHead>
-                    <button
-                      type="button"
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
-                      onClick={() => toggleSort()}
-                    >
-                      App
-                      <SortIcon field="appName" />
-                    </button>
-                  </TableHead>
-                  <TableHead className="w-40">Recommendations</TableHead>
-                  <TableHead className="w-32">Min Match Rate</TableHead>
-                  <TableHead className="w-28">Min SoW</TableHead>
-                  <TableHead className="w-40">Updated</TableHead>
-                  <TableHead className="w-16">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
+                <TableRow>
+                  <TableHead className="w-[320px]">Config</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Thresholds</TableHead>
+                  <TableHead>Rule Group</TableHead>
+                  <TableHead className="w-[240px]">Apps Using Config</TableHead>
+                  <TableHead>Updated</TableHead>
+                  {canManage && <TableHead className="w-[64px] text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((group) => (
-                  <AppRow
-                    key={group.appId}
-                    group={group}
-                    onEditConfig={onEditConfig}
-                    onDeleteConfig={(id) => setDeleteConfigId(id)}
-                    canManage={canManage}
-                  />
-                ))}
+                {sortedConfigs.map((config) => {
+                  const expanded = isExpanded(config.id)
+                  const hasApps = config.displayApps.length > 0
+
+                  return (
+                    <Fragment key={config.id}>
+                      <TableRow>
+                        <TableCell>
+                          <div className="flex items-start gap-3">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="mt-0.5 h-7 w-7 shrink-0"
+                              onClick={() => toggleExpanded(config.id)}
+                              disabled={!hasApps}
+                            >
+                              {hasApps ? (
+                                expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+                              ) : (
+                                <span className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium text-slate-900">{config.configName}</span>
+                                {config.isGlobalDefault && (
+                                  <Badge variant="outline" className="border-emerald-200 text-emerald-700">
+                                    <Globe className="mr-1 h-3 w-3" />
+                                    Global Default
+                                  </Badge>
+                                )}
+                                {!config.isActive && (
+                                  <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                                    Inactive
+                                  </Badge>
+                                )}
+                                {!config.isGlobalDefault && config.appCount === 0 && (
+                                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                                    Draft
+                                  </Badge>
+                                )}
+                              </div>
+                              {config.notes && (
+                                <p className="line-clamp-2 max-w-xl text-sm text-slate-500">{config.notes}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {config.isGlobalDefault ? (
+                            <span className="text-sm text-slate-600">Fallback for unassigned apps</span>
+                          ) : config.appCount > 0 ? (
+                            <span className="text-sm text-slate-600">Direct assignment</span>
+                          ) : (
+                            <span className="text-sm text-slate-400">No apps assigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-slate-700">{formatThresholds(config)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-slate-700">{config.ruleGroupName || "Default rule group"}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium text-slate-900">{config.displayAppCount} app{config.displayAppCount === 1 ? "" : "s"}</span>
+                            {hasApps && (
+                              <div className="flex flex-wrap gap-1">
+                                {config.displayApps.slice(0, 3).map((app) => (
+                                  <Badge key={app.appId} variant="secondary" className="gap-1.5 bg-slate-100 text-slate-700">
+                                    <Avatar className="h-4 w-4 rounded-sm">
+                                      <AvatarImage src={app.iconUrl || "/placeholder.svg"} alt={app.appName} className="rounded-sm object-cover" />
+                                      <AvatarFallback className="rounded-sm bg-slate-200 text-[9px] font-medium text-slate-600">
+                                        {app.appName.slice(0, 1).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="max-w-[110px] truncate">{app.appName}</span>
+                                  </Badge>
+                                ))}
+                                {config.displayApps.length > 3 && (
+                                  <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                                    +{config.displayApps.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-slate-600">{formatDate(config.updatedAt)}</span>
+                        </TableCell>
+                        {canManage && (
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => onEditConfig(config)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit Config
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => setDeleteTarget(config)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Config
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                      {expanded && hasApps && (
+                        <TableRow key={`${config.id}-apps`}>
+                          <TableCell colSpan={canManage ? 7 : 6} className="bg-slate-50">
+                            <div className="space-y-3 py-2">
+                              <div className="text-sm font-medium text-slate-700">{config.isGlobalDefault ? "Apps using this config as fallback" : "Assigned apps"}</div>
+                              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                {config.displayApps.map((app) => (
+                                  <div
+                                    key={app.appId}
+                                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <Avatar className="h-9 w-9 shrink-0 rounded-lg">
+                                      <AvatarImage src={app.iconUrl || "/placeholder.svg"} alt={app.appName} className="rounded-lg object-cover" />
+                                      <AvatarFallback className="rounded-lg bg-slate-100 text-xs font-medium text-slate-600">
+                                        {app.appName.slice(0, 1).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-medium text-slate-900">{app.appName}</div>
+                                      <div className="mt-1 text-xs text-slate-500">{app.appId}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
-
-          {sorted.length > pageSize && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={sorted.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size)
-                setCurrentPage(1)
-              }}
-              itemName="apps"
-            />
-          )}
         </CardContent>
       </Card>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
-        {paginated.map((group) => {
-          const config = group.configs[0]
-          if (!config) return null
-          return (
-            <Card key={group.appId} className="border-slate-200">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
-                      {group.isGlobal ? (
-                        <Globe className="w-4 h-4 text-slate-500" />
-                      ) : config.iconUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={config.iconUrl}
-                          alt={group.appName}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Smartphone className="w-4 h-4 text-blue-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {group.isGlobal ? "Global" : group.appName}
-                      </p>
-                      {group.isGlobal ? (
-                        <p className="text-xs text-slate-500">
-                          Default config for all apps
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-xs text-slate-500">
-                            {group.appId}
-                          </p>
-                          {config.platform && (
-                            <p className="text-[11px] text-slate-400">
-                              {config.platform}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      {canManage && (
-                        <DropdownMenuItem onClick={() => onEditConfig(config)}>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                      )}
-                      {canManage && <DropdownMenuSeparator />}
-                      {canManage && (
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => setDeleteConfigId(config.id)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-slate-500 text-xs">Recommendations</p>
-                    <p className="text-slate-700 font-medium">
-                      {config.minRecommendations} - {config.maxRecommendations}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs">Min Match Rate</p>
-                    <p className="text-slate-700 font-medium">
-                      {config.minMatchRate}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs">Min SoW</p>
-                    <p className="text-slate-700 font-medium">
-                      {config.minSoW}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs">Updated</p>
-                    <p className="text-slate-500 text-xs">
-                      {formatDate(config.updatedAt)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Delete Single Config Confirmation */}
-      <AlertDialog
-        open={!!deleteConfigId}
-        onOpenChange={(open) => {
-          if (!open) setDeleteConfigId(null)
-        }}
-      >
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Configuration</AlertDialogTitle>
+            <AlertDialogTitle>Delete rule config</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this configuration? This action
-              cannot be undone.
+              Delete <span className="font-medium text-slate-900">{deleteTarget?.configName}</span> and remove all of its explicit app assignments. Apps without another config will fall back to the global default or appsettings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 text-white hover:bg-red-700"
               onClick={() => {
-                if (deleteConfigId) onDeleteConfig(deleteConfigId)
-                setDeleteConfigId(null)
+                if (deleteTarget) {
+                  onDeleteConfig(deleteTarget)
+                  setDeleteTarget(null)
+                }
               }}
             >
               Delete
@@ -365,133 +326,10 @@ export function ConfigsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Delete All Configs of an App Confirmation (legacy - not used in 1-config-per-app view) */}
     </>
   )
 }
 
-// --- App Row: 1 app = 1 row with config details ---
-function AppRow({
-  group,
-  onEditConfig,
-  onDeleteConfig,
-  canManage = true,
-}: {
-  group: AppConfigGroup
-  onEditConfig: (config: AppConfig) => void
-  onDeleteConfig: (id: string) => void
-  canManage?: boolean
-}) {
-  const config = group.configs[0]
-  if (!config) return null
 
-  return (
-    <TableRow className="hover:bg-slate-50 transition-colors">
-      {/* App */}
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md bg-slate-100 flex items-center justify-center overflow-hidden">
-            {group.isGlobal ? (
-              <Globe className="w-4 h-4 text-slate-500" />
-            ) : config.iconUrl ? (
-              // App logo
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={config.iconUrl}
-                alt={group.appName}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <Smartphone className="w-4 h-4 text-blue-600" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="font-medium text-slate-900">
-              {group.isGlobal ? "Global" : group.appName}
-            </p>
-            {group.isGlobal ? (
-              <p className="text-xs text-slate-500">
-                Default config for all apps
-              </p>
-            ) : (
-              <>
-                <p className="text-xs text-slate-500">
-                  {group.appId}
-                </p>
-                {config.platform && (
-                  <p className="text-[11px] text-slate-400">
-                    {config.platform}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </TableCell>
-
-      {/* Recommendations */}
-      <TableCell>
-        <p className="text-sm font-medium text-slate-700">
-          {config.minRecommendations} - {config.maxRecommendations}
-        </p>
-      </TableCell>
-
-      {/* Min Match Rate */}
-      <TableCell>
-        <p className="text-sm font-medium text-slate-700">
-          {config.minMatchRate}%
-        </p>
-      </TableCell>
-
-      {/* Min SoW */}
-      <TableCell>
-        <p className="text-sm font-medium text-slate-700">
-          {config.minSoW}%
-        </p>
-      </TableCell>
-
-      {/* Updated */}
-      <TableCell>
-        <p className="text-sm text-slate-500">
-          {formatDate(config.updatedAt)}
-        </p>
-      </TableCell>
-
-      {/* Actions */}
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            {canManage && (
-              <DropdownMenuItem onClick={() => onEditConfig(config)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-            )}
-            {canManage && <DropdownMenuSeparator />}
-            {canManage && (
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={() => onDeleteConfig(config.id)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
-  )
-}
 
 

@@ -131,8 +131,8 @@ const navItems: NavItem[] = [
     children: [
       { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
       { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
-      { icon: ListChecks, label: "Waterfall Rules", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
-      { icon: Layers, label: "Waterfall Apply", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
+      { icon: ListChecks, label: "Waterfall Config", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
+      { icon: Layers, label: "Waterfall Automation", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
       { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
       { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") }
     ],

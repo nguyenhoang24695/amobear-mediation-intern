@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
-import type { RuleGroup } from "./waterfall-rules-content"
+import type { RuleGroup } from "./waterfall-rule-types"
 
 const PRESET_COLORS = [
   "#3b82f6", // blue
@@ -229,3 +229,4 @@ export function CreateEditGroupDialog({
     </Dialog>
   )
 }
+

@@ -29,6 +29,7 @@ import {
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
+import { copyTextToClipboard } from "@/lib/utils"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { App, MediationGroup, WaterfallAdUnit } from "@/types/api"
 
@@ -105,10 +106,16 @@ export function AppDetailContent() {
     }
   }, [searchParams])
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const copyToClipboard = async (text: string) => {
+    try {
+      const copiedText = await copyTextToClipboard(text)
+      if (!copiedText) return
+
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error("Failed to copy app ID", error)
+    }
   }
 
   const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
@@ -151,7 +158,7 @@ export function AppDetailContent() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => app?.appId && copyToClipboard(app.appId)}
+                        onClick={() => { if (app?.appId) { void copyToClipboard(app.appId) } }}
                         className="p-1 hover:bg-slate-100 rounded transition-colors"
                       >
                         {copied ? (
@@ -161,7 +168,7 @@ export function AppDetailContent() {
                         )}
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>{copied ? "Copied!" : "Copy package name"}</TooltipContent>
+                    <TooltipContent>{copied ? "Copied!" : "Copy App ID"}</TooltipContent>
                   </Tooltip>
                 </div>
               </div>
@@ -223,7 +230,7 @@ export function AppDetailContent() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2"
-                  onClick={() => app?.appId && copyToClipboard(app.appId)}
+                  onClick={() => { if (app?.appId) { void copyToClipboard(app.appId) } }}
                   disabled={!app?.appId}
                 >
                   <Copy className="w-4 h-4" />
@@ -257,13 +264,13 @@ export function AppDetailContent() {
             <TabsTrigger value="waterfall-ad-units" className="px-4 data-[state=active]:bg-white">
               Waterfall Ad Units
               <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {waterfallAdUnitsLoading ? "…" : waterfallAdUnitsCount}
+                {waterfallAdUnitsLoading ? "..." : waterfallAdUnitsCount}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
               Mediation Groups
               <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {mediationGroupsLoading ? "…" : mediationGroupsCount}
+                {mediationGroupsLoading ? "..." : mediationGroupsCount}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">

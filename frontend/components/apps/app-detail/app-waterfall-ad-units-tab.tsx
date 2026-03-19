@@ -16,24 +16,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Search, MoreHorizontal, Eye, Copy, Pencil, Check } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
+import { copyTextToClipboard } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import type { WaterfallAdUnit } from "@/types/api"
 
 type SortField = "displayName" | "format" | "revenue"
 type SortDirection = "asc" | "desc"
 
-const formatDisplay = (format?: string) => (format ? format.replace(/_/g, " ") : "—")
+const formatDisplay = (format?: string) => (format ? format.replace(/_/g, " ") : "-")
 
-// Country flags (giống cột Targeting trong mediation-groups-table)
+// Country flags for the Targeting column
 const countryFlags: Record<string, string> = {
-  US: "🇺🇸", UK: "🇬🇧", GB: "🇬🇧", DE: "🇩🇪", FR: "🇫🇷", JP: "🇯🇵", CA: "🇨🇦", AU: "🇦🇺",
-  IN: "🇮🇳", CN: "🇨🇳", KR: "🇰🇷", BR: "🇧🇷", MX: "🇲🇽", ES: "🇪🇸", IT: "🇮🇹", NL: "🇳🇱",
-  SE: "🇸🇪", NO: "🇳🇴", DK: "🇩🇰", FI: "🇫🇮", PL: "🇵🇱", RU: "🇷🇺", TR: "🇹🇷", SA: "🇸🇦",
-  AE: "🇦🇪", SG: "🇸🇬", MY: "🇲🇾", TH: "🇹🇭", ID: "🇮🇩", PH: "🇵🇭", VN: "🇻🇳",
+  US: "\uD83C\uDDFA\uD83C\uDDF8", UK: "\uD83C\uDDEC\uD83C\uDDE7", GB: "\uD83C\uDDEC\uD83C\uDDE7", DE: "\uD83C\uDDE9\uD83C\uDDEA", FR: "\uD83C\uDDEB\uD83C\uDDF7", JP: "\uD83C\uDDEF\uD83C\uDDF5", CA: "\uD83C\uDDE8\uD83C\uDDE6", AU: "\uD83C\uDDE6\uD83C\uDDFA",
+  IN: "\uD83C\uDDEE\uD83C\uDDF3", CN: "\uD83C\uDDE8\uD83C\uDDF3", KR: "\uD83C\uDDF0\uD83C\uDDF7", BR: "\uD83C\uDDE7\uD83C\uDDF7", MX: "\uD83C\uDDF2\uD83C\uDDFD", ES: "\uD83C\uDDEA\uD83C\uDDF8", IT: "\uD83C\uDDEE\uD83C\uDDF9", NL: "\uD83C\uDDF3\uD83C\uDDF1",
+  SE: "\uD83C\uDDF8\uD83C\uDDEA", NO: "\uD83C\uDDF3\uD83C\uDDF4", DK: "\uD83C\uDDE9\uD83C\uDDF0", FI: "\uD83C\uDDEB\uD83C\uDDEE", PL: "\uD83C\uDDF5\uD83C\uDDF1", RU: "\uD83C\uDDF7\uD83C\uDDFA", TR: "\uD83C\uDDF9\uD83C\uDDF7", SA: "\uD83C\uDDF8\uD83C\uDDE6",
+  AE: "\uD83C\uDDE6\uD83C\uDDEA", SG: "\uD83C\uDDF8\uD83C\uDDEC", MY: "\uD83C\uDDF2\uD83C\uDDFE", TH: "\uD83C\uDDF9\uD83C\uDDED", ID: "\uD83C\uDDEE\uD83C\uDDE9", PH: "\uD83C\uDDF5\uD83C\uDDED", VN: "\uD83C\uDDFB\uD83C\uDDF3",
 }
 
 export interface AppWaterfallAdUnitsTabProps {
-  /** Khi parent đã load, truyền vào để tránh gọi API trùng. */
+  /** Parent-loaded data to avoid duplicate API fetches. */
   waterfallAdUnits?: WaterfallAdUnit[] | null
   loadingWaterfallAdUnits?: boolean
 }
@@ -113,10 +114,16 @@ export function AppWaterfallAdUnitsTab({
     }
   }
 
-  const copyId = (id: string) => {
-    navigator.clipboard.writeText(id)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+  const copyId = async (id: string) => {
+    try {
+      const copiedText = await copyTextToClipboard(id)
+      if (!copiedText) return
+
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (error) {
+      console.error("Failed to copy waterfall ad unit ID", error)
+    }
   }
 
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -126,12 +133,12 @@ export function AppWaterfallAdUnitsTab({
       className="flex items-center gap-1 hover:text-slate-900 transition-colors text-left"
     >
       {children}
-      <span className="text-slate-400">{sortField === field ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}</span>
+      <span className="text-slate-400">{sortField === field ? (sortDirection === "asc" ? "\u2191" : "\u2193") : "\u2195"}</span>
     </button>
   )
 
   const floorDisplay = (micros: number | null | undefined) => {
-    if (micros == null) return "—"
+    if (micros == null) return "-"
     return `$${(micros / 1_000_000).toFixed(2)}`
   }
 
@@ -189,7 +196,7 @@ export function AppWaterfallAdUnitsTab({
                     return (
                     <tr key={w.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 text-sm text-slate-700">
-                        {w.displayName || "—"}
+                        {w.displayName || "-"}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -200,7 +207,7 @@ export function AppWaterfallAdUnitsTab({
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                onClick={() => copyId(w.admobNetworkWaterfallAdUnitId)}
+                                onClick={() => void copyId(w.admobNetworkWaterfallAdUnitId)}
                                 className="p-1 hover:bg-slate-100 rounded transition-colors shrink-0"
                               >
                                 {copiedId === w.admobNetworkWaterfallAdUnitId ? (
@@ -218,7 +225,7 @@ export function AppWaterfallAdUnitsTab({
                         {formatDisplay(w.format)}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
-                        {w.revenue != null && w.revenue > 0 ? `$${Number(w.revenue).toFixed(2)}` : "—"}
+                        {w.revenue != null && w.revenue > 0 ? "$" + Number(w.revenue).toFixed(2) : "-"}
                       </td>
                       <td className="px-4 py-3">
                         {countries.length > 0 ? (
@@ -233,7 +240,7 @@ export function AppWaterfallAdUnitsTab({
                             )}
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">—</span>
+                          <span className="text-sm text-slate-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
@@ -255,7 +262,7 @@ export function AppWaterfallAdUnitsTab({
                               <Pencil className="w-4 h-4" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => copyId(w.admobNetworkWaterfallAdUnitId)}>
+                            <DropdownMenuItem className="gap-2" onClick={() => void copyId(w.admobNetworkWaterfallAdUnitId)}>
                               <Copy className="w-4 h-4" />
                               Copy ID
                             </DropdownMenuItem>

@@ -433,16 +433,42 @@ export interface JobScheduleUpdateRequest {
 // Waterfall Recommendation Types
 export interface WaterfallRecommendationConfigDto {
   id: number
-  configName?: string
-  appId?: string | null
-  isActive?: boolean
+  configName: string
+  isGlobalDefault: boolean
+  isActive: boolean
   minRecommendations: number
   maxRecommendations: number
   minMatchRatePercent: number
   minSowPercent: number
   notes?: string | null
+  ruleGroupId?: number | null
+  ruleGroupName?: string | null
+  appCount: number
+  appIds: string[]
   createdAt: string
   updatedAt: string
+}
+
+export interface UpsertWaterfallRecommendationConfigDto {
+  configName: string
+  isGlobalDefault: boolean
+  isActive: boolean
+  minRecommendations: number
+  maxRecommendations: number
+  minMatchRatePercent: number
+  minSowPercent: number
+  notes?: string | null
+  ruleGroupId?: number | null
+}
+
+export interface ReplaceWaterfallConfigAppsDto {
+  appIds: string[]
+}
+
+export interface EffectiveWaterfallConfigDto {
+  config: WaterfallRecommendationConfigDto
+  source: "direct" | "global" | "appsettings"
+  directlyAssignedConfigId?: number | null
 }
 
 export interface WaterfallRecommendationRuleDto {
@@ -500,7 +526,8 @@ export interface CreateUpdateRuleGroupDto {
 }
 
 export interface AppRuleGroupMappingDto {
-  appId: string
+  granteeType: "mediation_group"
+  granteeId: string
   groupId: number | null
   groupName: string | null
 }
@@ -552,5 +579,6 @@ export interface WaterfallFilterOptionDto {
   secondaryLabel?: string | null
   iconUri?: string | null
 }
+
 
 

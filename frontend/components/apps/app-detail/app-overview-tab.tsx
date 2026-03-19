@@ -6,6 +6,7 @@ import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -39,6 +40,9 @@ import {
 import { useApi } from "@/hooks/use-api"
 import { structureApi, appMetricsApi, dashboardApi, alertsApi } from "@/lib/api/services"
 import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
+import { useToast } from "@/hooks/use-toast"
+import { hasScreenFunction } from "@/lib/auth"
+import { AppWaterfallConfigCard } from "./app-waterfall-config-card"
 import type { App, DateRangeType } from "@/types/api"
 
 const colorMap: Record<string, string> = {
@@ -79,12 +83,14 @@ interface AppOverviewTabProps {
 }
 
 export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewTabProps) {
+  const { toast } = useToast()
   const [chartMetric, setChartMetric] = useState<"revenue" | "ecpm" | "impressions">("revenue")
   const [dateRange, setDateRange] = useState("7d")
 
   const params = useParams()
   const appIdFromParams = (params as any)?.id as string | undefined
   const hasValidAppId = !!appIdFromParams
+  const canManageWaterfallConfigs = hasScreenFunction("s-waterfall-rules", "manage-configs")
 
   // Load app by AdMob app_id (URL dùng /apps/{appId})
   const { data: app } = useApi<App>(
@@ -506,6 +512,13 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
             </CardContent>
           </Card>
 
+          {/* Waterfall Config Card */}
+          <AppWaterfallConfigCard
+            app={app}
+            canManage={canManageWaterfallConfigs}
+            refreshKey={refreshKey}
+          />
+
           {/* Top Networks Card */}
           <Card className="border-slate-200">
             <CardHeader className="pb-3">
@@ -621,3 +634,9 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
     </div>
   )
 }
+
+
+
+
+
+

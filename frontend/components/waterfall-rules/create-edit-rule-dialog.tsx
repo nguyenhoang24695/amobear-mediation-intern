@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
-import type { WaterfallRule, RuleGroup } from "./waterfall-rules-content"
+import type { WaterfallRule, RuleGroup } from "./waterfall-rule-types"
 
 interface CreateEditRuleDialogProps {
   open: boolean
@@ -503,5 +503,6 @@ export function CreateEditRuleDialog({
     </Dialog>
   )
 }
+
 
 

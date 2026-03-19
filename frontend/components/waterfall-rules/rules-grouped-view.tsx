@@ -61,7 +61,7 @@ import {
   FolderPlus,
   Settings,
 } from "lucide-react"
-import type { WaterfallRule, RuleGroup } from "./waterfall-rules-content"
+import type { WaterfallRule, RuleGroup } from "./waterfall-rule-types"
 
 interface RulesGroupedViewProps {
   rules: WaterfallRule[]
@@ -534,3 +534,4 @@ export function RulesGroupedView({
     </TooltipProvider>
   )
 }
+
