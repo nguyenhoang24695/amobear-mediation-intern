@@ -31,7 +31,7 @@ export function WaterfallRulesContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl text-balance">Waterfall Rules</h1>
+        <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl text-balance">Waterfall Config</h1>
         <p className="mt-1 text-sm text-slate-500">
           Manage reusable rule configs, rule groups, and recommendation rules for waterfall optimization.
         </p>

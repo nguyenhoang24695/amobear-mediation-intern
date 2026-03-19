@@ -359,7 +359,7 @@ export function WaterfallApplyContent() {
         <CardHeader className="gap-3 border-b">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-2xl">Waterfall Apply</CardTitle>
+              <CardTitle className="text-2xl">Waterfall Automation</CardTitle>
               <CardDescription>
                 Bulk update apply mode for mediation groups. This screen only changes policy mode and does not apply waterfall changes directly.
               </CardDescription>
