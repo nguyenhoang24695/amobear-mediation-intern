@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -144,12 +145,17 @@ export function AppPermissionsSelector({
                                 </div>
                               )}
                               <div className="flex flex-col">
-                                <span className="text-sm">{app.name}</span>
-                                {app.platform && (
-                                  <span className="text-[11px] text-slate-400">
-                                    {app.platform}
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">{app.name}</span>
+                                  {app.platform && (
+                                    <Badge variant="outline" className="text-[10px] uppercase font-semibold! h-[18px] px-1 py-0 leading-none text-slate-500">
+                                      {app.platform}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="text-[11px] font-mono text-slate-500">
+                                  {app.id}
+                                </span>
                               </div>
                             </CommandItem>
                           )
@@ -205,12 +211,17 @@ export function AppPermissionsSelector({
                             </div>
                           )}
                           <div className="flex flex-col">
-                            <span className="text-sm">{app?.name}</span>
-                            {app?.platform && (
-                              <span className="text-[11px] text-slate-400">
-                                {app.platform}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{app?.name}</span>
+                              {app?.platform && (
+                                <Badge variant="outline" className="text-[10px] uppercase font-semibold! h-[18px] px-1 py-0 leading-none text-slate-500">
+                                  {app.platform}
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-mono text-slate-500">
+                              {app?.id}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -290,14 +301,19 @@ export function AppPermissionsSelector({
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-900">
-                          {app.name}
-                        </span>
-                        {app.platform && (
-                          <span className="text-[11px] text-slate-400">
-                            {app.platform}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-900">
+                            {app.name}
                           </span>
-                        )}
+                          {app.platform && (
+                            <Badge variant="outline" className="text-[10px] uppercase font-semibold! h-[18px] px-1 py-0 leading-none text-slate-500">
+                              {app.platform}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-mono text-slate-500">
+                          {app.id}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
