@@ -21,6 +21,9 @@ import type {
     HangfireJobSchedule,
     JobScheduleUpdateRequest,
     WaterfallRecommendationConfigDto,
+    UpsertWaterfallRecommendationConfigDto,
+    ReplaceWaterfallConfigAppsDto,
+    EffectiveWaterfallConfigDto,
     WaterfallRecommendationRuleDto,
     WaterfallRecommendationRuleGroupDto,
     CreateUpdateRuleGroupDto,
@@ -1433,21 +1436,25 @@ export const waterfallRecommendationSettingsApi = {
         return apiClient.get<WaterfallRecommendationConfigDto[]>('/api/waterfall-recommendation-settings/configs')
     },
 
-    getConfig: async (appId?: string | null): Promise<WaterfallRecommendationConfigDto> => {
+    getConfig: async (appId?: string | null): Promise<EffectiveWaterfallConfigDto> => {
         const params = appId ? `?appId=${encodeURIComponent(appId)}` : ''
-        return apiClient.get<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/config${params}`)
+        return apiClient.get<EffectiveWaterfallConfigDto>(`/api/waterfall-recommendation-settings/config${params}`)
     },
 
     getConfigById: async (id: number): Promise<WaterfallRecommendationConfigDto> => {
         return apiClient.get<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/configs/${id}`)
     },
 
-    createConfig: async (config: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<WaterfallRecommendationConfigDto> => {
+    createConfig: async (config: UpsertWaterfallRecommendationConfigDto): Promise<WaterfallRecommendationConfigDto> => {
         return apiClient.post<WaterfallRecommendationConfigDto>('/api/waterfall-recommendation-settings/configs', config)
     },
 
-    updateConfig: async (id: number, config: Omit<WaterfallRecommendationConfigDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<WaterfallRecommendationConfigDto> => {
+    updateConfig: async (id: number, config: UpsertWaterfallRecommendationConfigDto): Promise<WaterfallRecommendationConfigDto> => {
         return apiClient.put<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/configs/${id}`, config)
+    },
+
+    replaceConfigApps: async (id: number, body: ReplaceWaterfallConfigAppsDto): Promise<WaterfallRecommendationConfigDto> => {
+        return apiClient.put<WaterfallRecommendationConfigDto>(`/api/waterfall-recommendation-settings/configs/${id}/apps`, body)
     },
 
     deleteConfig: async (id: number): Promise<void> => {
@@ -1496,10 +1503,10 @@ export const waterfallRecommendationSettingsApi = {
         return apiClient.delete(`/api/waterfall-recommendation-settings/rule-groups/${id}`)
     },
 
-    // App-RuleGroup Mapping
+    // Mediation-group RuleGroup Mapping
     getAppRuleGroupMapping: async (
         granteeId: string,
-        granteeType: "app" | "mediation_group" = "app"
+        granteeType: 'mediation_group' = 'mediation_group'
     ): Promise<AppRuleGroupMappingDto> => {
         return apiClient.get<AppRuleGroupMappingDto>(
             `/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(granteeId)}?granteeType=${encodeURIComponent(granteeType)}`
@@ -1509,7 +1516,7 @@ export const waterfallRecommendationSettingsApi = {
     updateAppRuleGroupMapping: async (
         granteeId: string,
         groupId: number | null,
-        granteeType: "app" | "mediation_group" = "app"
+        granteeType: 'mediation_group' = 'mediation_group'
     ): Promise<AppRuleGroupMappingDto> => {
         return apiClient.put<AppRuleGroupMappingDto>(
             `/api/waterfall-recommendation-settings/app-rule-group/${encodeURIComponent(granteeId)}?granteeType=${encodeURIComponent(granteeType)}`,
@@ -1517,7 +1524,7 @@ export const waterfallRecommendationSettingsApi = {
         )
     },
 
-    // Rerun Recommendation (ruleGroupId = rule group đã chọn trên UI; nếu có thì chạy với group đó)
+    // Rerun Recommendation (ruleGroupId = rule group da chon tren UI; neu co thi chay voi group do)
     rerunRecommendation: async (
         mediationGroupId: string,
         ruleGroupId?: number | null
@@ -1696,6 +1703,11 @@ export interface AccountAppItem {
     createdAt: string
     updatedAt: string
 }
+
+
+
+
+
 
 
 

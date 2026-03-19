@@ -54,7 +54,7 @@ import {
   Folder,
 } from "lucide-react"
 import { Pagination } from "@/components/shared/pagination"
-import type { WaterfallRule, RuleGroup } from "./waterfall-rules-content"
+import type { WaterfallRule, RuleGroup } from "./waterfall-rule-types"
 
 interface RulesTableProps {
   rules: WaterfallRule[]
@@ -792,5 +792,6 @@ export function RulesTable({
     </TooltipProvider>
   )
 }
+
 
 

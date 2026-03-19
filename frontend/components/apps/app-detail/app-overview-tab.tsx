@@ -7,17 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   DollarSign,
   TrendingUp,
@@ -31,8 +22,6 @@ import {
   Calendar,
   Clock,
   Hash,
-  Pencil,
-  Loader2,
 } from "lucide-react"
 import {
   Area,
@@ -49,11 +38,12 @@ import {
   Bar,
 } from "recharts"
 import { useApi } from "@/hooks/use-api"
-import { structureApi, appMetricsApi, dashboardApi, alertsApi, waterfallRecommendationSettingsApi } from "@/lib/api/services"
+import { structureApi, appMetricsApi, dashboardApi, alertsApi } from "@/lib/api/services"
 import { mapPresetToDateRangeType, formatDateForAPI } from "@/lib/utils/dashboard"
 import { useToast } from "@/hooks/use-toast"
 import { hasScreenFunction } from "@/lib/auth"
-import type { App, DateRangeType, WaterfallRecommendationConfigDto } from "@/types/api"
+import { AppWaterfallConfigCard } from "./app-waterfall-config-card"
+import type { App, DateRangeType } from "@/types/api"
 
 const colorMap: Record<string, string> = {
   blue: "bg-blue-50 text-blue-600",
@@ -96,13 +86,6 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
   const { toast } = useToast()
   const [chartMetric, setChartMetric] = useState<"revenue" | "ecpm" | "impressions">("revenue")
   const [dateRange, setDateRange] = useState("7d")
-  const [configDialogOpen, setConfigDialogOpen] = useState(false)
-  const [savingConfig, setSavingConfig] = useState(false)
-  const [editMinRecommendations, setEditMinRecommendations] = useState("5")
-  const [editMaxRecommendations, setEditMaxRecommendations] = useState("20")
-  const [editMinMatchRate, setEditMinMatchRate] = useState("3")
-  const [editMinSow, setEditMinSow] = useState("0.9")
-  const [editRuleGroupId, setEditRuleGroupId] = useState("none")
 
   const params = useParams()
   const appIdFromParams = (params as any)?.id as string | undefined
@@ -289,114 +272,6 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
       cacheKey: app ? `app_alerts_${app.appId}_${refreshKey}` : undefined,
     },
   )
-
-  const {
-    data: waterfallConfigData,
-    refetch: refetchWaterfallConfigData,
-  } = useApi(
-    async () => {
-      if (!app?.appId) return null
-      const [config, mapping] = await Promise.all([
-        waterfallRecommendationSettingsApi.getConfig(app.appId),
-        waterfallRecommendationSettingsApi.getAppRuleGroupMapping(app.appId, "app"),
-      ])
-      return { config, mapping }
-    },
-    {
-      enabled: !!app?.appId,
-      cacheKey: app?.appId ? `app_overview_waterfall_config_${app.appId}_${refreshKey}` : undefined,
-    }
-  )
-
-  const { data: ruleGroupsData } = useApi(
-    () => waterfallRecommendationSettingsApi.getAllRuleGroups(),
-    { enabled: configDialogOpen, cacheKey: "all_rule_groups_for_app_overview_edit" }
-  )
-
-  const activeRuleGroups = useMemo(
-    () => (ruleGroupsData ?? []).filter((group) => group.isActive),
-    [ruleGroupsData]
-  )
-
-  const selectedRuleGroup = useMemo(() => {
-    if (editRuleGroupId === "none") return null
-    return activeRuleGroups.find((group) => String(group.id) === editRuleGroupId) ?? null
-  }, [activeRuleGroups, editRuleGroupId])
-
-  const openEditWaterfallConfigDialog = () => {
-    if (!waterfallConfigData?.config) return
-    setEditMinRecommendations(String(waterfallConfigData.config.minRecommendations))
-    setEditMaxRecommendations(String(waterfallConfigData.config.maxRecommendations))
-    setEditMinMatchRate(String(waterfallConfigData.config.minMatchRatePercent))
-    setEditMinSow(String(waterfallConfigData.config.minSowPercent))
-    setEditRuleGroupId(
-      waterfallConfigData.mapping?.groupId != null ? String(waterfallConfigData.mapping.groupId) : "none"
-    )
-    setConfigDialogOpen(true)
-  }
-
-  const handleSaveWaterfallConfig = async () => {
-    if (!app?.appId) return
-    const minRecommendations = Number(editMinRecommendations)
-    const maxRecommendations = Number(editMaxRecommendations)
-    const minMatchRatePercent = Number(editMinMatchRate)
-    const minSowPercent = Number(editMinSow)
-    const ruleGroupId = editRuleGroupId === "none" ? null : Number(editRuleGroupId)
-
-    if (
-      Number.isNaN(minRecommendations) ||
-      Number.isNaN(maxRecommendations) ||
-      Number.isNaN(minMatchRatePercent) ||
-      Number.isNaN(minSowPercent)
-    ) {
-      toast({
-        title: "Invalid values",
-        description: "Please enter valid numeric values.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (minRecommendations < 1 || maxRecommendations < minRecommendations) {
-      toast({
-        title: "Invalid recommendations",
-        description: "Max Recommendations must be greater than or equal to Min Recommendations.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setSavingConfig(true)
-    try {
-      const payload: Omit<WaterfallRecommendationConfigDto, "id" | "createdAt" | "updatedAt"> = {
-        appId: app.appId,
-        configGroupName: waterfallConfigData?.config?.configGroupName ?? null,
-        minRecommendations,
-        maxRecommendations,
-        minMatchRatePercent,
-        minSowPercent,
-      }
-
-      if (waterfallConfigData?.config?.appId === app.appId) {
-        await waterfallRecommendationSettingsApi.updateConfig(waterfallConfigData.config.id, payload)
-      } else {
-        await waterfallRecommendationSettingsApi.createConfig(payload)
-      }
-
-      await waterfallRecommendationSettingsApi.updateAppRuleGroupMapping(app.appId, ruleGroupId, "app")
-      await refetchWaterfallConfigData()
-      setConfigDialogOpen(false)
-      toast({ title: "Saved", description: "Waterfall config updated for this app." })
-    } catch (error: any) {
-      toast({
-        title: "Failed to save",
-        description: error?.message || "Could not update app waterfall config.",
-        variant: "destructive",
-      })
-    } finally {
-      setSavingConfig(false)
-    }
-  }
 
   const metricConfig = {
     revenue: {
@@ -638,67 +513,11 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
           </Card>
 
           {/* Waterfall Config Card */}
-          <Card className="border-slate-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-semibold text-slate-900">Waterfall Config</CardTitle>
-                  <CardDescription className="text-sm text-slate-500">
-                    App recommendation thresholds and rule group
-                  </CardDescription>
-                </div>
-                {canManageWaterfallConfigs && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 bg-transparent"
-                    onClick={openEditWaterfallConfigDialog}
-                    disabled={!waterfallConfigData?.config}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {waterfallConfigData?.config ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500">Scope</span>
-                    <Badge variant={waterfallConfigData.config.appId ? "secondary" : "outline"}>
-                      {waterfallConfigData.config.appId ? "App-specific" : "Global fallback"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500">Recommendations</span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {waterfallConfigData.config.minRecommendations} - {waterfallConfigData.config.maxRecommendations}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500">Min Match Rate</span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {Number(waterfallConfigData.config.minMatchRatePercent).toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500">Min SoW</span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {Number(waterfallConfigData.config.minSowPercent).toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500">Rule Group</span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {waterfallConfigData.mapping?.groupName || "No specific group"}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">No waterfall config data available for this app.</p>
-              )}
-            </CardContent>
-          </Card>
+          <AppWaterfallConfigCard
+            app={app}
+            canManage={canManageWaterfallConfigs}
+            refreshKey={refreshKey}
+          />
 
           {/* Top Networks Card */}
           <Card className="border-slate-200">
@@ -812,113 +631,12 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
           </Card>
         </div>
       </div>
-      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit App Waterfall Config</DialogTitle>
-            <DialogDescription>
-              Update recommendation thresholds and rule group for this app.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="overview-min-rec">Min Recommendations</Label>
-                <Input
-                  id="overview-min-rec"
-                  type="number"
-                  min={1}
-                  value={editMinRecommendations}
-                  onChange={(e) => setEditMinRecommendations(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="overview-max-rec">Max Recommendations</Label>
-                <Input
-                  id="overview-max-rec"
-                  type="number"
-                  min={1}
-                  value={editMaxRecommendations}
-                  onChange={(e) => setEditMaxRecommendations(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="overview-min-mr">Min Match Rate %</Label>
-                <Input
-                  id="overview-min-mr"
-                  type="number"
-                  step={0.1}
-                  min={0}
-                  max={100}
-                  value={editMinMatchRate}
-                  onChange={(e) => setEditMinMatchRate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="overview-min-sow">Min SoW %</Label>
-                <Input
-                  id="overview-min-sow"
-                  type="number"
-                  step={0.01}
-                  min={0}
-                  max={100}
-                  value={editMinSow}
-                  onChange={(e) => setEditMinSow(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="overview-rule-group">Rule Group</Label>
-              <Select value={editRuleGroupId} onValueChange={setEditRuleGroupId}>
-                <SelectTrigger id="overview-rule-group">
-                  {selectedRuleGroup ? (
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
-                        style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
-                      />
-                      <span>{selectedRuleGroup.name}</span>
-                    </div>
-                  ) : (
-                    <SelectValue placeholder="No specific group" />
-                  )}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No specific group</SelectItem>
-                  {activeRuleGroups.map((group) => (
-                    <SelectItem key={group.id} value={String(group.id)}>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
-                          style={{ backgroundColor: group.color || "#94a3b8" }}
-                        />
-                        <span>{group.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" className="bg-transparent" onClick={() => setConfigDialogOpen(false)} disabled={savingConfig}>
-              Cancel
-            </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSaveWaterfallConfig} disabled={savingConfig}>
-              {savingConfig ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
+
+
+
+
+
+
