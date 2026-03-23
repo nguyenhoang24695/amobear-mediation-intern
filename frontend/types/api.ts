@@ -597,6 +597,7 @@ export interface AlertRule {
   notificationChannels: string
   telegramTopics?: string | null
   emailRecipients?: string | null
+  slackChannels?: string | null
   priority: number
   createdAt: string
   updatedAt: string
@@ -619,6 +620,7 @@ export interface UpsertAlertRuleRequest {
   notificationChannels: string
   telegramTopics?: string | null
   emailRecipients?: string | null
+  slackChannels?: string | null
   priority: number
 }
 

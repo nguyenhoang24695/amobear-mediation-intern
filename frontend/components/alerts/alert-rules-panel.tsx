@@ -167,6 +167,7 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
                 const channels = parseJsonArray(rule.notificationChannels)
                 const telegramTopics = parseJsonArray(rule.telegramTopics)
                 const emailRecipients = parseJsonArray(rule.emailRecipients)
+                const slackChannels = parseJsonArray(rule.slackChannels)
 
                 return (
                   <Card key={rule.id} className="border-slate-200">
@@ -204,6 +205,9 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
                           ) : null}
                           {emailRecipients.length > 0 ? (
                             <p className="text-xs text-slate-500">Email: {emailRecipients.join(", ")}</p>
+                          ) : null}
+                          {slackChannels.length > 0 ? (
+                            <p className="text-xs text-slate-500">Slack: {slackChannels.join(", ")}</p>
                           ) : null}
                         </div>
                         <div className="flex items-center gap-1">

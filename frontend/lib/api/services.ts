@@ -1198,9 +1198,10 @@ export const alertsApi = {
     },
 
     validateTelegramChat: async (params: {
-        chatId: string
+        chatId?: string
         messageThreadId?: number
-        topicName?: string
+        /** Key khớp section Telegram:Topics:{topic} */
+        topic?: string
     }): Promise<{
         chatId: string
         messageThreadId?: number | null
@@ -1211,9 +1212,27 @@ export const alertsApi = {
         errorMessage?: string | null
     }> => {
         return apiClient.get('/api/Alerts/telegram/chat', {
-            chatId: params.chatId,
+            chatId: params.chatId?.trim() ? params.chatId.trim() : undefined,
             messageThreadId: params.messageThreadId,
-            topicName: params.topicName?.trim() ? params.topicName.trim() : undefined,
+            topic: params.topic?.trim() ? params.topic.trim() : undefined,
+        })
+    },
+
+    sendTelegramTest: async (body: {
+        chatId: string
+        messageThreadId?: number
+    }): Promise<{ success: boolean; message?: string; error?: string }> => {
+        return apiClient.post('/api/Alerts/telegram/test', {
+            chatId: body.chatId.trim(),
+            messageThreadId: body.messageThreadId,
+        })
+    },
+
+    sendSlackTest: async (body: {
+        channelId: string
+    }): Promise<{ success: boolean; message?: string; error?: string }> => {
+        return apiClient.post('/api/Alerts/slack/test', {
+            channelId: body.channelId.trim(),
         })
     },
 }
