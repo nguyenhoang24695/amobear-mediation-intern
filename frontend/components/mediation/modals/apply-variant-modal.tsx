@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { AlertTriangle, Check, Loader2, CheckCircle2, XCircle, ArrowRight } from "lucide-react"
 import { waterfallManagementApi } from "@/lib/api/services"
 
@@ -12,6 +13,10 @@ export interface ApplyDirectChanges {
   /** adSourceId bắt buộc để backend tạo waterfall unit + mapping (ví dụ "admob" cho AdMob Network). */
   sourcesAdded: Array<{ name: string; floor: number; adSourceId: string }>
   sourcesRemoved: Array<{ name: string; lineId: string }>
+  /** Ad units thuộc mediation group để user chọn phạm vi apply. */
+  adUnits: Array<{ adUnitKey: string; displayName: string }>
+  /** Danh sách ad units được chọn mặc định khi mở modal. */
+  selectedAdUnitKeys: string[]
 }
 
 interface ApplyVariantModalProps {
@@ -36,6 +41,8 @@ const emptyChanges: ApplyDirectChanges = {
   floorsModified: [],
   sourcesAdded: [],
   sourcesRemoved: [],
+  adUnits: [],
+  selectedAdUnitKeys: [],
 }
 
 export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, changes, onSuccess }: ApplyVariantModalProps) {
@@ -43,13 +50,41 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
   const [modalState, setModalState] = useState<ModalState>("confirm")
   const [processStep, setProcessStep] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string>("")
+  const [selectedAdUnitKeys, setSelectedAdUnitKeys] = useState<string[]>([])
 
   const totalChangeCount =
     effectiveChanges.floorsModified.length +
     effectiveChanges.sourcesAdded.length +
     effectiveChanges.sourcesRemoved.length
+  const availableAdUnits = effectiveChanges.adUnits ?? []
+  const selectedAdUnitKeySet = new Set(selectedAdUnitKeys)
 
-  const canApplyDirect = mode === "direct" ? !!mediationGroupId && totalChangeCount > 0 : totalChangeCount > 0
+  useEffect(() => {
+    if (!open) return
+    const fallbackSelected = effectiveChanges.selectedAdUnitKeys?.length
+      ? effectiveChanges.selectedAdUnitKeys
+      : availableAdUnits.map((unit) => unit.adUnitKey)
+    setSelectedAdUnitKeys(Array.from(new Set(fallbackSelected)))
+  }, [open, effectiveChanges.selectedAdUnitKeys, availableAdUnits])
+
+  const canApplyDirect = mode === "direct"
+    ? !!mediationGroupId && totalChangeCount > 0 && selectedAdUnitKeys.length > 0
+    : totalChangeCount > 0
+
+  const toggleAdUnit = (adUnitKey: string) => {
+    setSelectedAdUnitKeys((prev) =>
+      prev.includes(adUnitKey)
+        ? prev.filter((key) => key !== adUnitKey)
+        : [...prev, adUnitKey])
+  }
+
+  const toggleSelectAllAdUnits = () => {
+    if (selectedAdUnitKeys.length === availableAdUnits.length) {
+      setSelectedAdUnitKeys([])
+      return
+    }
+    setSelectedAdUnitKeys(availableAdUnits.map((unit) => unit.adUnitKey))
+  }
 
   const handleApply = async () => {
     if (mode === "direct" && !mediationGroupId) return
@@ -63,6 +98,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
         setProcessStep(0)
         const res = await waterfallManagementApi.apply({
           mediationGroupId: mediationGroupId!,
+          selectedAdUnitKeys,
           floorsModified: effectiveChanges.floorsModified,
           sourcesAdded: effectiveChanges.sourcesAdded,
           sourcesRemoved: effectiveChanges.sourcesRemoved,
@@ -185,6 +221,36 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
                     <p className="text-sm text-slate-500 italic">No changes to apply</p>
                   )}
               </div>
+
+              {mode === "direct" && (
+                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-slate-900">Apply for ad units</h4>
+                    <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={toggleSelectAllAdUnits}>
+                      {selectedAdUnitKeys.length === availableAdUnits.length ? "Clear all" : "Select all"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Only selected ad units will be affected by this apply.
+                  </p>
+                  <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                    {availableAdUnits.map((unit) => (
+                      <label key={unit.adUnitKey} className="flex items-start gap-2 rounded-md border border-slate-100 px-2 py-1.5">
+                        <Checkbox
+                          checked={selectedAdUnitKeySet.has(unit.adUnitKey)}
+                          onCheckedChange={() => toggleAdUnit(unit.adUnitKey)}
+                        />
+                        <span className="text-sm text-slate-700">
+                          {unit.displayName}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Selected: {selectedAdUnitKeys.length}/{availableAdUnits.length}
+                  </p>
+                </div>
+              )}
 
               {/* Warning Section */}
               <div className="flex gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">

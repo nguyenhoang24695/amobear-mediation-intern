@@ -466,6 +466,7 @@ export interface SoWDataItem {
 // Waterfall Management API - Apply Direct lên AdMob (flow đầy đủ theo Dolphin)
 export interface ApplyWaterfallRequest {
     mediationGroupId: string
+    selectedAdUnitKeys?: string[]
     floorsModified: Array<{ name: string; lineId: string; oldValue: number; newValue: number }>
     sourcesAdded: Array<{ name: string; floor: number; adSourceId: string }>
     sourcesRemoved: Array<{ name: string; lineId: string }>

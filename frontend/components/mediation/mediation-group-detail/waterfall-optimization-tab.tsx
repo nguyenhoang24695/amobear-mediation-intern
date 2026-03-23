@@ -705,8 +705,17 @@ export function WaterfallOptimizationTab({
       .filter((c) => !active.some((o) => o.id.startsWith(`rec_${c.id}_`)))
       .map((c) => ({ name: c.name, lineId: c.id }))
 
-    return { floorsModified, sourcesAdded, sourcesRemoved }
-  }, [optimizedWaterfall, currentSetup.waterfall])
+    const adUnits = mediationAdUnitsFromMappings.map((unit) => ({
+      adUnitKey: unit.adUnitKey,
+      displayName: adUnitDetailsByKey[unit.adUnitKey]?.displayName ?? unit.unitId,
+    }))
+
+    const selectedKeys = selectedAdUnitIds.length > 0
+      ? selectedAdUnitIds
+      : adUnits.map((unit) => unit.adUnitKey)
+
+    return { floorsModified, sourcesAdded, sourcesRemoved, adUnits, selectedAdUnitKeys: selectedKeys }
+  }, [optimizedWaterfall, currentSetup.waterfall, mediationAdUnitsFromMappings, adUnitDetailsByKey, selectedAdUnitIds])
 
   const handleApplyDirectClick = () => {
     onApplyDirect(getApplyDirectChanges(), mediationGroupId)
