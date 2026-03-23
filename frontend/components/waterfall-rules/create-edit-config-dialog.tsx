@@ -35,7 +35,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Search } from "lucide-react"
 import { waterfallRecommendationSettingsApi } from "@/lib/api/services"
-import type { App, UpsertWaterfallRecommendationConfigDto } from "@/types/api"
+import type { App } from "@/types/api"
 import type { ConfigApplyMode, ConfigSaveRequest, WaterfallConfigItem } from "./waterfall-config-types"
 
 interface CreateEditConfigDialogProps {
@@ -62,15 +62,32 @@ const APPLY_MODE_OPTIONS: Array<{
   {
     value: "semi_auto",
     label: "Semi-auto",
-    description: "Create due alerts at the 7-day cycle without auto-applying waterfall changes.",
+    description: "Create due alerts at the selected interval without auto-applying waterfall changes.",
   },
   {
     value: "auto",
     label: "Auto",
-    description: "Automatically apply actionable waterfall changes when the 7-day cycle is due.",
+    description: "Automatically apply actionable waterfall changes when the selected interval is due.",
   },
 ]
 
+const DEFAULT_INTERVAL_DAYS = 7
+const MIN_INTERVAL_DAYS = 1
+const MAX_INTERVAL_DAYS = 30
+
+function parseIntervalDays(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  if (!Number.isInteger(parsed) || parsed < MIN_INTERVAL_DAYS || parsed > MAX_INTERVAL_DAYS) {
+    return null
+  }
+  return parsed
+}
+
+function formatIntervalLabel(intervalDays: number): string {
+  return `${intervalDays}-day${intervalDays === 1 ? "" : "s"}`
+}
 function normalizeConfigName(configName: string) {
   return configName.trim().toLowerCase()
 }
@@ -124,6 +141,7 @@ function buildConfirmContent(params: {
   isGlobalDefault: boolean
   appCount: number
   applyMode: ConfigApplyMode
+  intervalDays: number | null
   replacesExistingGlobalDefault: boolean
   reassignedAppCount: number
 }) {
@@ -139,11 +157,12 @@ function buildConfirmContent(params: {
     : ""
   const defaultConfirmLabel = params.reassignedAppCount > 0 ? "Save and Reassign Apps" : "Confirm Save"
   const defaultTitle = params.reassignedAppCount > 0 ? "Confirm app reassignment" : "Confirm config save"
+  const intervalLabel = formatIntervalLabel(params.intervalDays ?? DEFAULT_INTERVAL_DAYS)
 
   if (!params.isGlobalDefault && params.appCount > 0 && params.applyMode === "semi_auto") {
     return {
       title: params.reassignedAppCount > 0 ? "Save, reassign apps, and switch to semi-auto?" : "Save config and switch to semi-auto?",
-      description: `${baseDescription}${reassignmentDescription} Their mediation groups will switch to semi-auto mode, which creates due alerts at the 7-day cycle but does not auto-apply waterfall changes. This does not apply waterfall immediately at save time.`,
+      description: `${baseDescription}${reassignmentDescription} Their mediation groups will switch to semi-auto mode, which creates due alerts on a ${intervalLabel} cycle but does not auto-apply waterfall changes. This does not apply waterfall immediately at save time.`,
       confirmLabel: params.reassignedAppCount > 0 ? "Save, Reassign, and Switch to Semi-auto" : "Save and Switch to Semi-auto",
     }
   }
@@ -151,7 +170,7 @@ function buildConfirmContent(params: {
   if (!params.isGlobalDefault && params.appCount > 0 && params.applyMode === "auto") {
     return {
       title: params.reassignedAppCount > 0 ? "Save, reassign apps, and switch to auto?" : "Save config and switch to auto?",
-      description: `${baseDescription}${reassignmentDescription} Their mediation groups will switch to auto mode, which applies actionable waterfall changes automatically when the 7-day cycle is due. This does not apply waterfall immediately at save time.`,
+      description: `${baseDescription}${reassignmentDescription} Their mediation groups will switch to auto mode, which applies actionable waterfall changes automatically when the ${intervalLabel} cycle is due. This does not apply waterfall immediately at save time.`,
       confirmLabel: params.reassignedAppCount > 0 ? "Save, Reassign, and Switch to Auto" : "Save and Switch to Auto",
     }
   }
@@ -184,6 +203,7 @@ export function CreateEditConfigDialog({
   const [notes, setNotes] = useState("")
   const [appSearch, setAppSearch] = useState("")
   const [applyMode, setApplyMode] = useState<ConfigApplyMode>("keep_current")
+  const [intervalDays, setIntervalDays] = useState(String(DEFAULT_INTERVAL_DAYS))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRequest, setPendingRequest] = useState<ConfigSaveRequest | null>(null)
@@ -223,6 +243,7 @@ export function CreateEditConfigDialog({
     setNotes(config?.notes ?? "")
     setAppSearch("")
     setApplyMode("keep_current")
+    setIntervalDays(String(DEFAULT_INTERVAL_DAYS))
     setErrors({})
     setConfirmOpen(false)
     setPendingRequest(null)
@@ -291,6 +312,7 @@ export function CreateEditConfigDialog({
   }, [ruleGroupId, ruleGroups])
 
   const currentNameKey = config ? normalizeConfigName(config.configName) : null
+  const parsedIntervalDays = useMemo(() => parseIntervalDays(intervalDays), [intervalDays])
   const shouldShowApplyMode = canManageApplyPolicies && !isGlobalDefault && selectedAppIds.length > 0
   const willReplaceExistingGlobalDefault = isGlobalDefault && existingGlobalDefaultId != null && existingGlobalDefaultId !== config?.id
 
@@ -329,7 +351,6 @@ export function CreateEditConfigDialog({
       }
     }
 
-
     if (
       Number.isNaN(minRecommendationsValue) ||
       Number.isNaN(maxRecommendationsValue) ||
@@ -350,6 +371,10 @@ export function CreateEditConfigDialog({
       if (minSowValue < 0) {
         nextErrors.minSowPercent = "Min SoW must be 0 or greater."
       }
+    }
+
+    if (shouldShowApplyMode && applyMode !== "keep_current" && parsedIntervalDays == null) {
+      nextErrors.intervalDays = `Interval must be a whole number between ${MIN_INTERVAL_DAYS} and ${MAX_INTERVAL_DAYS}.`
     }
 
     setErrors(nextErrors)
@@ -375,6 +400,7 @@ export function CreateEditConfigDialog({
       },
       appIds: isGlobalDefault ? [] : Array.from(new Set(selectedAppIds)),
       applyMode: shouldShowApplyMode ? applyMode : "keep_current",
+      intervalDays: shouldShowApplyMode && applyMode !== "keep_current" ? parsedIntervalDays : null,
     }
 
     setPendingRequest(request)
@@ -386,6 +412,7 @@ export function CreateEditConfigDialog({
     isGlobalDefault,
     appCount: isGlobalDefault ? 0 : selectedAppIds.length,
     applyMode: shouldShowApplyMode ? applyMode : "keep_current",
+    intervalDays: shouldShowApplyMode && applyMode !== "keep_current" ? parsedIntervalDays : null,
     replacesExistingGlobalDefault: willReplaceExistingGlobalDefault,
     reassignedAppCount: selectedAppsAssignedElsewhere.length,
   })
@@ -403,7 +430,8 @@ export function CreateEditConfigDialog({
 
           <div className="min-h-0 flex-1 overflow-hidden">
             <div className="grid h-full gap-3 lg:grid-cols-10">
-              <div className="min-h-0 space-y-2 overflow-y-auto pr-2 pb-6 lg:col-span-4">                <div className="space-y-2 rounded-xl border-2 border-blue-200 bg-blue-50/70 p-3">
+              <div className="min-h-0 space-y-2 overflow-y-auto pb-6 pr-2 lg:col-span-4">
+                <div className="space-y-2 rounded-xl border-2 border-blue-200 bg-blue-50/70 p-3">
                   <div className="space-y-1">
                     <Label htmlFor="config-name" className="text-slate-900">Config Name</Label>
                     <p className="text-xs text-slate-600">Choose a unique name so operators can identify this config quickly.</p>
@@ -429,6 +457,7 @@ export function CreateEditConfigDialog({
                         if (nextValue) {
                           setSelectedAppIds([])
                           setApplyMode("keep_current")
+                          setIntervalDays(String(DEFAULT_INTERVAL_DAYS))
                         }
                       }}
                     />
@@ -493,49 +522,68 @@ export function CreateEditConfigDialog({
                 </div>
                 {errors.thresholds && <p className="text-sm text-red-600">{errors.thresholds}</p>}
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="rule-group">Rule Group</Label>
-                  <Select value={ruleGroupId} onValueChange={setRuleGroupId}>
-                    <SelectTrigger id="rule-group">
-                      {selectedRuleGroup ? (
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
-                            style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
-                          />
-                          <span>{selectedRuleGroup.name}</span>
-                        </div>
-                      ) : (
-                        <SelectValue placeholder="Default rule group" />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Default rule group</SelectItem>
-                      {ruleGroups
-                        .filter((group) => group.isActive)
-                        .map((group) => (
-                          <SelectItem key={group.id} value={String(group.id)}>
-                            {group.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rule-group">Rule Group</Label>
+                    <Select value={ruleGroupId} onValueChange={setRuleGroupId}>
+                      <SelectTrigger id="rule-group">
+                        {selectedRuleGroup ? (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
+                              style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
+                            />
+                            <span>{selectedRuleGroup.name}</span>
+                          </div>
+                        ) : (
+                          <SelectValue placeholder="Default rule group" />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Default rule group</SelectItem>
+                        {ruleGroups
+                          .filter((group) => group.isActive)
+                          .map((group) => (
+                            <SelectItem key={group.id} value={String(group.id)}>
+                              {group.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Optional notes for operators or reviewers"
-                    rows={1}
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="apply-mode-interval">Interval (days)</Label>
+                    <Input
+                      id="apply-mode-interval"
+                      type="number"
+                      min={MIN_INTERVAL_DAYS}
+                      max={MAX_INTERVAL_DAYS}
+                      step={1}
+                      value={intervalDays}
+                      onChange={(event) => setIntervalDays(event.target.value)}
+                      disabled={!shouldShowApplyMode || applyMode === "keep_current"}
+                      className="bg-white disabled:bg-slate-50"
+                    />
+                    <p className="text-xs text-slate-500">
+                      {!canManageApplyPolicies
+                        ? "You do not have permission to bulk update apply mode policies."
+                        : isGlobalDefault
+                          ? "Global default configs do not bulk-sync apply mode."
+                          : selectedAppIds.length === 0
+                            ? "Select at least one app to enable interval sync."
+                            : applyMode === "keep_current"
+                              ? "Choose Semi-auto or Auto to edit the interval."
+                              : `Valid range: ${MIN_INTERVAL_DAYS}-${MAX_INTERVAL_DAYS} days. Current selection: ${parsedIntervalDays != null ? formatIntervalLabel(parsedIntervalDays) : "Invalid interval"}`}
+                    </p>
+                    {errors.intervalDays && <p className="text-sm text-red-600">{errors.intervalDays}</p>}
+                  </div>
                 </div>
+                
                 <div className="rounded-xl border border-slate-200 p-2.5">
                   <h3 className="font-medium text-slate-900">Apply Mode Sync</h3>
                   {shouldShowApplyMode ? (
-                    <div className="mt-1.5 space-y-1.5">
+                    <div className="mt-1.5 space-y-2">
                       {APPLY_MODE_OPTIONS.map((option) => (
                         <button
                           key={option.value}
@@ -551,6 +599,7 @@ export function CreateEditConfigDialog({
                           <div className="mt-0.5 text-xs leading-5 text-slate-500">{option.description}</div>
                         </button>
                       ))}
+
                     </div>
                   ) : (
                     <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
@@ -561,6 +610,16 @@ export function CreateEditConfigDialog({
                           : "Select at least one app to bulk-sync apply mode after save."}
                     </div>
                   )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Optional notes for operators or reviewers"
+                    rows={1}
+                  />
                 </div>
               </div>
 

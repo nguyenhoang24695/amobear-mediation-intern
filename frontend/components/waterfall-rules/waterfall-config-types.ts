@@ -34,4 +34,5 @@ export interface ConfigSaveRequest {
   config: UpsertWaterfallRecommendationConfigDto
   appIds: string[]
   applyMode: ConfigApplyMode
+  intervalDays: number | null
 }

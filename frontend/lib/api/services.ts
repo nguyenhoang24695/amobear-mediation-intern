@@ -29,6 +29,8 @@ import type {
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
+    AlertRule,
+    UpsertAlertRuleRequest,
     WaterfallBulkPolicyPreviewResponseDto,
     BulkUpdateWaterfallApplyPoliciesRequestDto,
     BulkUpdateWaterfallApplyPoliciesResponseDto,
@@ -530,7 +532,7 @@ export const waterfallManagementApi = {
 
     updatePolicy: async (
         mediationGroupId: string,
-        body: { applyMode: string }
+        body: { applyMode: string; intervalDays?: number | null }
     ): Promise<WaterfallApplyPolicyResponse> => {
         return apiClient.put<WaterfallApplyPolicyResponse>(`/api/WaterfallManagement/policy/${encodeURIComponent(mediationGroupId)}`, body)
     },
@@ -538,6 +540,8 @@ export const waterfallManagementApi = {
     getBulkPolicyTargets: async (params: {
         appId?: string
         ruleGroupId?: number
+        targetApplyMode?: string
+        intervalDays?: number
     }): Promise<WaterfallBulkPolicyPreviewResponseDto> => {
         return apiClient.get<WaterfallBulkPolicyPreviewResponseDto>('/api/WaterfallManagement/bulk-policy-targets', params as Record<string, string | number | undefined>)
     },
@@ -1167,6 +1171,71 @@ export const alertsApi = {
                 Count: item.count,
             })),
         }
+    },
+
+    getAlertRules: async (isEnabled?: boolean): Promise<AlertRule[]> => {
+        return apiClient.get<AlertRule[]>('/api/Alerts/rules', {
+            isEnabled: isEnabled == null ? undefined : (isEnabled ? "true" : "false"),
+        })
+    },
+
+    getAlertRule: async (id: number): Promise<AlertRule> => {
+        return apiClient.get<AlertRule>(`/api/Alerts/rules/${id}`)
+    },
+
+    createAlertRule: async (body: UpsertAlertRuleRequest): Promise<AlertRule> => {
+        return apiClient.post<AlertRule>('/api/Alerts/rules', body)
+    },
+
+    updateAlertRule: async (id: number, body: UpsertAlertRuleRequest): Promise<AlertRule> => {
+        return apiClient.put<AlertRule>(`/api/Alerts/rules/${id}`, body)
+    },
+
+    deleteAlertRule: async (id: number): Promise<void> => {
+        return apiClient.delete(`/api/Alerts/rules/${id}`)
+    },
+
+    toggleAlertRule: async (id: number): Promise<{ id: number; isEnabled: boolean }> => {
+        return apiClient.patch<{ id: number; isEnabled: boolean }>(`/api/Alerts/rules/${id}/toggle`, {})
+    },
+
+    validateTelegramChat: async (params: {
+        chatId?: string
+        messageThreadId?: number
+        /** Key khớp section Telegram:Topics:{topic} */
+        topic?: string
+    }): Promise<{
+        chatId: string
+        messageThreadId?: number | null
+        isValid: boolean
+        chatTitle?: string | null
+        chatType?: string | null
+        threadTitle?: string | null
+        errorMessage?: string | null
+    }> => {
+        return apiClient.get('/api/Alerts/telegram/chat', {
+            chatId: params.chatId?.trim() ? params.chatId.trim() : undefined,
+            messageThreadId: params.messageThreadId,
+            topic: params.topic?.trim() ? params.topic.trim() : undefined,
+        })
+    },
+
+    sendTelegramTest: async (body: {
+        chatId: string
+        messageThreadId?: number
+    }): Promise<{ success: boolean; message?: string; error?: string }> => {
+        return apiClient.post('/api/Alerts/telegram/test', {
+            chatId: body.chatId.trim(),
+            messageThreadId: body.messageThreadId,
+        })
+    },
+
+    sendSlackTest: async (body: {
+        channelId: string
+    }): Promise<{ success: boolean; message?: string; error?: string }> => {
+        return apiClient.post('/api/Alerts/slack/test', {
+            channelId: body.channelId.trim(),
+        })
     },
 }
 

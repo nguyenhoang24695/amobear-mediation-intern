@@ -297,15 +297,44 @@ export function WaterfallOptimizationTab({
       cacheKey: mediationGroupId ? `waterfall_apply_policy_${mediationGroupId}` : undefined,
     }
   )
+  const DEFAULT_POLICY_INTERVAL_DAYS = 7
+  const MIN_POLICY_INTERVAL_DAYS = 1
+  const MAX_POLICY_INTERVAL_DAYS = 30
+
+  const parsePolicyIntervalDays = (value: string): number | null => {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    const parsed = Number(trimmed)
+    if (!Number.isInteger(parsed) || parsed < MIN_POLICY_INTERVAL_DAYS || parsed > MAX_POLICY_INTERVAL_DAYS) {
+      return null
+    }
+    return parsed
+  }
+
+  const formatPolicyIntervalLabel = (intervalDays: number): string => {
+    return `${intervalDays}-day${intervalDays === 1 ? "" : "s"}`
+  }
+
   const [policyApplyMode, setPolicyApplyMode] = useState<string>("manual")
+  const [policyIntervalDays, setPolicyIntervalDays] = useState(String(DEFAULT_POLICY_INTERVAL_DAYS))
   const [savingPolicy, setSavingPolicy] = useState(false)
   const [policyConfirmOpen, setPolicyConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (applyPolicy?.applyMode) {
       setPolicyApplyMode(applyPolicy.applyMode)
+      setPolicyIntervalDays(String(applyPolicy.intervalDays ?? DEFAULT_POLICY_INTERVAL_DAYS))
     }
   }, [applyPolicy])
+
+  const parsedPolicyIntervalDays = useMemo(() => parsePolicyIntervalDays(policyIntervalDays), [policyIntervalDays])
+  const currentPolicyIntervalDays = applyPolicy?.intervalDays ?? DEFAULT_POLICY_INTERVAL_DAYS
+  const hasPolicyChanges = !!applyPolicy && (
+    policyApplyMode !== applyPolicy.applyMode
+    || (policyApplyMode !== "manual"
+      && parsedPolicyIntervalDays != null
+      && parsedPolicyIntervalDays !== currentPolicyIntervalDays)
+  )
 
   // Refetch group detail + recommendations when Apply/Sync succeeds (parent increments refreshKey).
   useEffect(() => {
@@ -323,7 +352,7 @@ export function WaterfallOptimizationTab({
   }, [groupDetail])
 
   const formatUpdatedAt = (iso: string | undefined): string => {
-    if (!iso) return "—"
+    if (!iso) return "â€”"
     try {
       return new Date(iso).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
     } catch {
@@ -332,7 +361,7 @@ export function WaterfallOptimizationTab({
   }
 
   const _formatPolicyDueAtLegacy = (iso: string | undefined): string => {
-    if (!iso) return "â€”"
+    if (!iso) return "Ã¢â‚¬â€"
     try {
       return new Intl.DateTimeFormat(undefined, {
         dateStyle: "short",
@@ -370,47 +399,86 @@ export function WaterfallOptimizationTab({
     }
   }
 
-  const buildPolicyConfirmContent = (fromMode: string | undefined, toMode: string) => {
+  const buildPolicyConfirmContent = (
+    fromMode: string | undefined,
+    toMode: string,
+    intervalDays: number | null,
+    currentIntervalDaysValue: number,
+  ) => {
     const fromLabel = formatPolicyModeLabel(fromMode)
+    const intervalLabel = formatPolicyIntervalLabel(intervalDays ?? currentIntervalDaysValue)
 
     if (toMode === "auto") {
+      if (fromMode === "auto") {
+        return {
+          title: "Update automatic interval?",
+          description: `Do you want to update the automatic apply interval for this mediation group to ${intervalLabel}? The system will use the new interval for the next due cycle and still apply actionable waterfall changes automatically when due.`,
+          confirmLabel: "Update Auto Interval",
+        }
+      }
+
       return {
         title: "Switch to automatic mode?",
-        description: `Do you want to switch this mediation group from ${fromLabel} mode to automatic mode? The system will apply actionable waterfall changes automatically when the 7-day cycle reaches its due date.`,
+        description: `Do you want to switch this mediation group from ${fromLabel} mode to automatic mode with a ${intervalLabel} interval? The system will apply actionable waterfall changes automatically when that cycle reaches its due date.`,
         confirmLabel: "Switch to Auto",
       }
     }
 
     if (toMode === "semi_auto") {
+      if (fromMode === "semi_auto") {
+        return {
+          title: "Update semi-auto interval?",
+          description: `Do you want to update the semi-auto interval for this mediation group to ${intervalLabel}? The system will use the new interval for the next due cycle and create alerts without auto-applying waterfall changes.`,
+          confirmLabel: "Update Semi-auto Interval",
+        }
+      }
+
       return {
         title: "Switch to semi-auto mode?",
-        description: `Do you want to switch this mediation group from ${fromLabel} mode to semi-auto mode? The system will create an alert when the 7-day cycle reaches its due date, but it will not apply waterfall changes automatically.`,
+        description: `Do you want to switch this mediation group from ${fromLabel} mode to semi-auto mode with a ${intervalLabel} interval? The system will create an alert when that cycle reaches its due date, but it will not apply waterfall changes automatically.`,
         confirmLabel: "Switch to Semi-auto",
       }
     }
 
     return {
       title: "Switch to manual mode?",
-      description: `Do you want to switch this mediation group from ${fromLabel} mode to manual mode? Automatic apply and due alerts for this policy will stop until the mode is changed again.`,
+      description: `Do you want to switch this mediation group from ${fromLabel} mode to manual mode? Automatic apply and due alerts for this policy will stop until the mode is changed again. The current interval setting will be kept for future re-enable.` ,
       confirmLabel: "Switch to Manual",
     }
   }
 
   const openPolicyConfirm = () => {
-    if (!mediationGroupId || !applyPolicy || policyApplyMode === applyPolicy.applyMode || savingPolicy) return
+    if (!mediationGroupId || !applyPolicy || !hasPolicyChanges || savingPolicy) return
+
+    if (policyApplyMode !== "manual" && parsedPolicyIntervalDays == null) {
+      toast({
+        title: "Invalid interval",
+        description: `Interval must be a whole number between ${MIN_POLICY_INTERVAL_DAYS} and ${MAX_POLICY_INTERVAL_DAYS}.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     setPolicyConfirmOpen(true)
   }
 
   const savePolicy = async () => {
-    if (!mediationGroupId || !applyPolicy || policyApplyMode === applyPolicy.applyMode) return
+    if (!mediationGroupId || !applyPolicy || !hasPolicyChanges) return
+    if (policyApplyMode !== "manual" && parsedPolicyIntervalDays == null) return
+
     setSavingPolicy(true)
     try {
-      await waterfallManagementApi.updatePolicy(mediationGroupId, { applyMode: policyApplyMode })
+      await waterfallManagementApi.updatePolicy(mediationGroupId, {
+        applyMode: policyApplyMode,
+        intervalDays: policyApplyMode === "manual" ? null : parsedPolicyIntervalDays,
+      })
       await refetchPolicy()
       setPolicyConfirmOpen(false)
       toast({
         title: "Policy saved",
-        description: `Apply policy updated to ${policyApplyMode.replace("_", "-")}.`,
+        description: policyApplyMode === "manual"
+          ? `Apply policy updated to ${policyApplyMode.replace("_", "-")}.`
+          : `Apply policy updated to ${policyApplyMode.replace("_", "-")} with a ${formatPolicyIntervalLabel(parsedPolicyIntervalDays ?? currentPolicyIntervalDays)} interval.`,
       })
     } catch (err) {
       console.error("Failed to update waterfall apply policy:", err)
@@ -424,7 +492,12 @@ export function WaterfallOptimizationTab({
     }
   }
 
-  const policyConfirmContent = buildPolicyConfirmContent(applyPolicy?.applyMode, policyApplyMode)
+  const policyConfirmContent = buildPolicyConfirmContent(
+    applyPolicy?.applyMode,
+    policyApplyMode,
+    parsedPolicyIntervalDays,
+    currentPolicyIntervalDays,
+  )
 
   // eCPM by adSourceId comes from recommendations (observedEcpm); no separate SoWData API call.
   const ecpmByAdSourceId = useMemo(() => {
@@ -943,30 +1016,52 @@ export function WaterfallOptimizationTab({
       <div className="flex flex-col gap-6 pb-24">
         <Card className="border-slate-200">
           <CardHeader className="pb-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <CardTitle className="text-base font-semibold text-slate-900">Apply Policy</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">Configure how this mediation group handles the 7-day waterfall apply cycle.</p>
+                <p className="mt-1 text-sm text-slate-500">Configure how this mediation group handles the waterfall apply cycle and interval.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Select value={policyApplyMode} onValueChange={setPolicyApplyMode} disabled={loadingPolicy || savingPolicy}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">Manual</SelectItem>
-                    <SelectItem value="semi_auto">Semi-auto</SelectItem>
-                    <SelectItem value="auto">Auto</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={openPolicyConfirm}
-                  disabled={loadingPolicy || savingPolicy || !applyPolicy || policyApplyMode === applyPolicy.applyMode}
-                >
-                  {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Save
-                </Button>
+              <div className="flex flex-col gap-1 lg:items-end">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Select value={policyApplyMode} onValueChange={setPolicyApplyMode} disabled={loadingPolicy || savingPolicy}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="semi_auto">Semi-auto</SelectItem>
+                      <SelectItem value="auto">Auto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-600">Interval (days)</p>
+                    <Input
+                      type="number"
+                      min={MIN_POLICY_INTERVAL_DAYS}
+                      max={MAX_POLICY_INTERVAL_DAYS}
+                      step={1}
+                      value={policyIntervalDays}
+                      onChange={(event) => setPolicyIntervalDays(event.target.value)}
+                      disabled={loadingPolicy || savingPolicy || policyApplyMode === "manual"}
+                      className="w-[140px] bg-white disabled:bg-slate-50"
+                    />
+                  </div>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={openPolicyConfirm}
+                    disabled={loadingPolicy || savingPolicy || !applyPolicy || !hasPolicyChanges || (policyApplyMode !== "manual" && parsedPolicyIntervalDays == null)}
+                  >
+                    {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {policyApplyMode === "manual"
+                    ? "Manual mode keeps the saved interval unchanged until semi-auto or auto is enabled again."
+                    : parsedPolicyIntervalDays == null
+                      ? `Interval must be between ${MIN_POLICY_INTERVAL_DAYS} and ${MAX_POLICY_INTERVAL_DAYS} days.`
+                      : `Current edit: ${formatPolicyIntervalLabel(parsedPolicyIntervalDays)}.`}
+                </p>
               </div>
             </div>
           </CardHeader>

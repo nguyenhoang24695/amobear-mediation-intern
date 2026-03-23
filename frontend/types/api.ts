@@ -542,7 +542,9 @@ export interface WaterfallBulkPolicyTargetDto {
   effectiveRuleGroupName?: string | null
   ruleGroupSource?: string | null
   currentApplyMode: string
+  currentIntervalDays: number
   dueAt?: string | null
+  previewDueAt?: string | null
   lastObservedApplyAt?: string | null
   platform?: string | null
   adFormat?: string | null
@@ -560,6 +562,7 @@ export interface WaterfallBulkPolicyPreviewResponseDto {
 
 export interface BulkUpdateWaterfallApplyPoliciesRequestDto {
   applyMode: string
+  intervalDays: number
   mediationGroupIds: string[]
 }
 
@@ -578,6 +581,50 @@ export interface WaterfallFilterOptionDto {
   label: string
   secondaryLabel?: string | null
   iconUri?: string | null
+}
+
+export interface AlertRule {
+  id: number
+  name: string
+  description?: string | null
+  ruleType: string
+  severity: string
+  ruleExpression: string
+  thresholdValue?: number | null
+  timeWindowHours: number
+  comparisonPeriodHours?: number | null
+  filterConditions?: string | null
+  messageTemplate: string
+  isEnabled: boolean
+  cooldownMinutes: number
+  notificationChannels: string
+  telegramTopics?: string | null
+  emailRecipients?: string | null
+  slackChannels?: string | null
+  priority: number
+  createdAt: string
+  updatedAt: string
+  lastTriggeredAt?: string | null
+}
+
+export interface UpsertAlertRuleRequest {
+  name: string
+  description?: string | null
+  ruleType: string
+  severity: string
+  ruleExpression: string
+  thresholdValue?: number | null
+  timeWindowHours: number
+  comparisonPeriodHours?: number | null
+  filterConditions?: string | null
+  messageTemplate: string
+  isEnabled: boolean
+  cooldownMinutes: number
+  notificationChannels: string
+  telegramTopics?: string | null
+  emailRecipients?: string | null
+  slackChannels?: string | null
+  priority: number
 }
 
 
