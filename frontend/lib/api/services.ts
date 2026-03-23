@@ -1197,17 +1197,23 @@ export const alertsApi = {
         return apiClient.patch<{ id: number; isEnabled: boolean }>(`/api/Alerts/rules/${id}/toggle`, {})
     },
 
-    validateTelegramChat: async (params: { chatId: string; messageThreadId?: number }): Promise<{
+    validateTelegramChat: async (params: {
+        chatId: string
+        messageThreadId?: number
+        topicName?: string
+    }): Promise<{
         chatId: string
         messageThreadId?: number | null
         isValid: boolean
         chatTitle?: string | null
         chatType?: string | null
+        threadTitle?: string | null
         errorMessage?: string | null
     }> => {
         return apiClient.get('/api/Alerts/telegram/chat', {
             chatId: params.chatId,
             messageThreadId: params.messageThreadId,
+            topicName: params.topicName?.trim() ? params.topicName.trim() : undefined,
         })
     },
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -40,13 +40,21 @@ function splitCsv(input: string): string[] {
     .filter((item) => item.length > 0)
 }
 
+type ThreadInputMode = "thread_id" | "topic_name"
+
 type TelegramDestinationRow = {
   id: string
   chatId: string
+  threadInputMode: ThreadInputMode
   messageThreadId: string
+  topicName: string
+  /** Chỉ dùng khi threadInputMode === topic_name; lưu DB vẫn là chat_id|messageThreadId */
+  resolvedMessageThreadId?: string | null
   status: "idle" | "checking" | "valid" | "invalid"
   resolvedTitle?: string | null
   resolvedType?: string | null
+  /** Tên forum topic từ getForumTopic */
+  resolvedThreadTitle?: string | null
   errorMessage?: string | null
 }
 
@@ -55,9 +63,28 @@ function newRowId(): string {
   return `tg_${Math.random().toString(16).slice(2)}`
 }
 
+function emptyTelegramRow(): TelegramDestinationRow {
+  return {
+    id: newRowId(),
+    chatId: "",
+    threadInputMode: "thread_id",
+    messageThreadId: "",
+    topicName: "",
+    resolvedMessageThreadId: null,
+    status: "idle",
+  }
+}
+
 function telegramTopicTokenFromRow(row: TelegramDestinationRow): string | null {
   const chatId = row.chatId.trim()
   if (!chatId) return null
+  if (row.threadInputMode === "topic_name") {
+    const tn = row.topicName.trim()
+    if (!tn) return chatId
+    const tid = row.resolvedMessageThreadId?.trim()
+    if (!tid) return null
+    return `${chatId}|${tid}`
+  }
   const threadRaw = row.messageThreadId.trim()
   if (!threadRaw) return chatId
   return `${chatId}|${threadRaw}`
@@ -65,23 +92,39 @@ function telegramTopicTokenFromRow(row: TelegramDestinationRow): string | null {
 
 function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
   if (topics.length === 0) {
-    return [{ id: newRowId(), chatId: "", messageThreadId: "", status: "idle" }]
+    return [emptyTelegramRow()]
   }
 
   return topics.map((topic) => {
     const trimmed = topic.trim()
     if (!trimmed) {
-      return { id: newRowId(), chatId: "", messageThreadId: "", status: "idle" }
+      return emptyTelegramRow()
     }
 
     const pipeIdx = trimmed.indexOf("|")
     if (pipeIdx === -1) {
-      return { id: newRowId(), chatId: trimmed, messageThreadId: "", status: "idle" }
+      return {
+        id: newRowId(),
+        chatId: trimmed,
+        threadInputMode: "thread_id" as const,
+        messageThreadId: "",
+        topicName: "",
+        resolvedMessageThreadId: null,
+        status: "idle" as const,
+      }
     }
 
     const chatId = trimmed.slice(0, pipeIdx).trim()
     const thread = trimmed.slice(pipeIdx + 1).trim()
-    return { id: newRowId(), chatId, messageThreadId: thread, status: "idle" }
+    return {
+      id: newRowId(),
+      chatId,
+      threadInputMode: "thread_id" as const,
+      messageThreadId: thread,
+      topicName: "",
+      resolvedMessageThreadId: null,
+      status: "idle" as const,
+    }
   })
 }
 
@@ -107,9 +150,7 @@ export function AlertRuleFormDialog({
   const [isEnabled, setIsEnabled] = useState(true)
   const [cooldownMinutes, setCooldownMinutes] = useState("60")
   const [selectedChannels, setSelectedChannels] = useState<string[]>(["TELEGRAM"])
-  const [telegramRows, setTelegramRows] = useState<TelegramDestinationRow[]>([
-    { id: newRowId(), chatId: "", messageThreadId: "", status: "idle" },
-  ])
+  const [telegramRows, setTelegramRows] = useState<TelegramDestinationRow[]>([emptyTelegramRow()])
   const [emailRecipientsCsv, setEmailRecipientsCsv] = useState("")
   const [priority, setPriority] = useState("50")
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -148,7 +189,7 @@ export function AlertRuleFormDialog({
       setIsEnabled(true)
       setCooldownMinutes("60")
       setSelectedChannels(["TELEGRAM"])
-      setTelegramRows([{ id: newRowId(), chatId: "", messageThreadId: "", status: "idle" }])
+      setTelegramRows([emptyTelegramRow()])
       setEmailRecipientsCsv("")
       setPriority("50")
     }
@@ -189,13 +230,21 @@ export function AlertRuleFormDialog({
       telegramRows.forEach((row, idx) => {
         const chatId = row.chatId.trim()
         const threadRaw = row.messageThreadId.trim()
-        if (!chatId && !threadRaw) return
-        if (!chatId && threadRaw) {
-          nextErrors[`telegramRows.${idx}.chatId`] = "chat_id là bắt buộc nếu có messageThreadId."
+        const topicNm = row.topicName.trim()
+        if (!chatId && !threadRaw && !topicNm) return
+        if (!chatId && (threadRaw || topicNm)) {
+          nextErrors[`telegramRows.${idx}.chatId`] = "chat_id là bắt buộc."
         }
-        if (threadRaw) {
-          if (Number.isNaN(Number(threadRaw)) || !Number.isFinite(Number(threadRaw)) || Number(threadRaw) <= 0) {
-            nextErrors[`telegramRows.${idx}.messageThreadId`] = "messageThreadId phải là số > 0."
+        if (row.threadInputMode === "thread_id") {
+          if (threadRaw) {
+            if (Number.isNaN(Number(threadRaw)) || !Number.isFinite(Number(threadRaw)) || Number(threadRaw) <= 0) {
+              nextErrors[`telegramRows.${idx}.messageThreadId`] = "messageThreadId phải là số > 0."
+            }
+          }
+        } else if (topicNm) {
+          if (!row.resolvedMessageThreadId?.trim()) {
+            nextErrors[`telegramRows.${idx}.topicName`] =
+              "Chưa resolve được messageThreadId từ tên topic — đợi kiểm tra tự động hoặc bấm Retry."
           }
         }
       })
@@ -243,11 +292,18 @@ export function AlertRuleFormDialog({
   const updateTelegramRow = (id: string, patch: Partial<TelegramDestinationRow>) => {
     setTelegramRows((prev) => {
       const idx = prev.findIndex((r) => r.id === id)
-      if (idx >= 0 && (patch.chatId !== undefined || patch.messageThreadId !== undefined)) {
+      if (
+        idx >= 0 &&
+        (patch.chatId !== undefined ||
+          patch.messageThreadId !== undefined ||
+          patch.topicName !== undefined ||
+          patch.threadInputMode !== undefined)
+      ) {
         setErrors((ePrev) => {
           const next = { ...ePrev }
           delete next[`telegramRows.${idx}.chatId`]
           delete next[`telegramRows.${idx}.messageThreadId`]
+          delete next[`telegramRows.${idx}.topicName`]
           return next
         })
       }
@@ -257,11 +313,17 @@ export function AlertRuleFormDialog({
         const next: TelegramDestinationRow = { ...row, ...patch }
 
         // Nếu user sửa input (không phải flow verify), reset kết quả cũ.
-        const isUserInputChange = patch.chatId !== undefined || patch.messageThreadId !== undefined
+        const isUserInputChange =
+          patch.chatId !== undefined ||
+          patch.messageThreadId !== undefined ||
+          patch.topicName !== undefined ||
+          patch.threadInputMode !== undefined
         if (isUserInputChange && patch.status === undefined) {
           next.status = "idle"
           next.resolvedTitle = null
           next.resolvedType = null
+          next.resolvedThreadTitle = null
+          next.resolvedMessageThreadId = null
           next.errorMessage = null
         }
 
@@ -270,55 +332,113 @@ export function AlertRuleFormDialog({
     })
   }
 
-  const verifyTelegramRow = async (row: TelegramDestinationRow) => {
-    const chatId = row.chatId.trim()
-    if (!chatId) return
+  const telegramRowsRef = useRef(telegramRows)
+  telegramRowsRef.current = telegramRows
 
-    const rowIndex = telegramRows.findIndex((r) => r.id === row.id)
+  const verifyTelegramRowById = useCallback(async (rowId: string) => {
+    const row = telegramRowsRef.current.find((r) => r.id === rowId)
+    if (!row || !row.chatId.trim()) return
 
-    const threadRaw = row.messageThreadId.trim()
+    const rowIndex = telegramRowsRef.current.findIndex((r) => r.id === rowId)
+
     let messageThreadId: number | undefined
-    if (threadRaw) {
-      const n = Number(threadRaw)
-      if (Number.isNaN(n) || !Number.isFinite(n) || n <= 0) {
-        if (rowIndex >= 0) {
-          setErrors((prev) => ({
-            ...prev,
-            [`telegramRows.${rowIndex}.messageThreadId`]: "messageThreadId phải là số > 0.",
-          }))
+    let topicName: string | undefined
+
+    if (row.threadInputMode === "thread_id") {
+      const threadRaw = row.messageThreadId.trim()
+      if (threadRaw) {
+        const n = Number(threadRaw)
+        if (Number.isNaN(n) || !Number.isFinite(n) || n <= 0) {
+          if (rowIndex >= 0) {
+            setErrors((prev) => ({
+              ...prev,
+              [`telegramRows.${rowIndex}.messageThreadId`]: "messageThreadId phải là số > 0.",
+            }))
+          }
+          return
         }
-        return
+        messageThreadId = n
       }
-      messageThreadId = n
+    } else {
+      const tn = row.topicName.trim()
+      if (tn) topicName = tn
     }
 
-    updateTelegramRow(row.id, { status: "checking", resolvedTitle: null, resolvedType: null, errorMessage: null })
+    updateTelegramRow(rowId, {
+      status: "checking",
+      resolvedTitle: null,
+      resolvedType: null,
+      resolvedThreadTitle: null,
+      resolvedMessageThreadId: null,
+      errorMessage: null,
+    })
     try {
-      const result = await alertsApi.validateTelegramChat({ chatId, messageThreadId })
+      const result = await alertsApi.validateTelegramChat({
+        chatId: row.chatId.trim(),
+        messageThreadId: row.threadInputMode === "thread_id" ? messageThreadId : undefined,
+        topicName,
+      })
       if (result.isValid) {
-        updateTelegramRow(row.id, {
+        const resolvedId =
+          result.messageThreadId != null && Number.isFinite(Number(result.messageThreadId))
+            ? String(result.messageThreadId)
+            : null
+        updateTelegramRow(rowId, {
           status: "valid",
           resolvedTitle: result.chatTitle ?? null,
           resolvedType: result.chatType ?? null,
+          resolvedThreadTitle: result.threadTitle?.trim() ? result.threadTitle.trim() : null,
+          resolvedMessageThreadId:
+            row.threadInputMode === "topic_name" && row.topicName.trim() ? resolvedId : null,
           errorMessage: null,
         })
       } else {
-        updateTelegramRow(row.id, {
+        const msg =
+          result.errorMessage?.trim() ||
+          (row.threadInputMode === "topic_name" && row.topicName.trim() ? "Topic not found" : "Chat not found")
+        updateTelegramRow(rowId, {
           status: "invalid",
           resolvedTitle: null,
           resolvedType: null,
-          errorMessage: "Chat not found",
+          resolvedThreadTitle: null,
+          resolvedMessageThreadId: null,
+          errorMessage: msg,
         })
       }
     } catch {
-      updateTelegramRow(row.id, {
+      updateTelegramRow(rowId, {
         status: "invalid",
         resolvedTitle: null,
         resolvedType: null,
+        resolvedThreadTitle: null,
+        resolvedMessageThreadId: null,
         errorMessage: "Chat not found",
       })
     }
-  }
+  }, [])
+
+  const telegramAutoCheckKey = useMemo(() => {
+    if (!isTelegramEnabled) return ""
+    return telegramRows
+      .map((r) => [r.id, r.chatId, r.threadInputMode, r.messageThreadId, r.topicName].join(":"))
+      .join("|")
+  }, [isTelegramEnabled, telegramRows])
+
+  useEffect(() => {
+    if (!open || !isTelegramEnabled) return
+    const t = window.setTimeout(() => {
+      const rows = telegramRowsRef.current
+      for (const r of rows) {
+        if (!r.chatId.trim()) continue
+        if (r.threadInputMode === "thread_id") {
+          const tr = r.messageThreadId.trim()
+          if (tr && (Number.isNaN(Number(tr)) || !Number.isFinite(Number(tr)) || Number(tr) <= 0)) continue
+        }
+        void verifyTelegramRowById(r.id)
+      }
+    }, 450)
+    return () => window.clearTimeout(t)
+  }, [open, isTelegramEnabled, telegramAutoCheckKey, verifyTelegramRowById])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -428,9 +548,12 @@ export function AlertRuleFormDialog({
                 <div className="mt-2 space-y-1.5">
                   <Label className="text-xs text-slate-600">Telegram destinations</Label>
                   <p className="text-[11px] text-slate-500">
-                    Level 1: <span className="font-mono">chat_id</span>. Sub-level (optional):{" "}
-                    <span className="font-mono">messageThreadId</span> cho topic trong group/forum. Sau khi nhập xong, bấm{" "}
-                    <span className="font-medium">Check</span> để server gọi Telegram <span className="font-mono">getChat</span>.
+                    Level 1: <span className="font-mono">chat_id</span>. Sub-level (optional): chọn nhập{" "}
+                    <span className="font-mono">messageThreadId</span> hoặc <span className="font-medium">tên topic</span> — lưu DB luôn dạng{" "}
+                    <span className="font-mono">chat_id|messageThreadId</span>. Sau khi nhập hoặc mở modal, hệ thống{" "}
+                    <span className="font-medium">tự kiểm tra</span> (debounce); nút <span className="font-medium">Retry</span> để gọi lại.{" "}
+                    Tên topic được map sang <span className="font-mono">messageThreadId</span> bằng cách quét{" "}
+                    <span className="font-mono">getForumTopic</span> (cấu hình <span className="font-mono">Telegram:ForumTopicResolve:*</span>).
                   </p>
                   {errors.telegramTopics ? <p className="text-xs text-red-600">{errors.telegramTopics}</p> : null}
 
@@ -438,6 +561,7 @@ export function AlertRuleFormDialog({
                     {telegramRows.map((row, idx) => {
                       const chatErr = errors[`telegramRows.${idx}.chatId`]
                       const threadErr = errors[`telegramRows.${idx}.messageThreadId`]
+                      const topicErr = errors[`telegramRows.${idx}.topicName`]
                       return (
                         <div key={row.id} className="rounded-md border bg-white p-2">
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-end">
@@ -453,15 +577,35 @@ export function AlertRuleFormDialog({
                             </div>
 
                             <div className="space-y-1 sm:col-span-4">
-                              <Label className="text-[11px] text-slate-600">messageThreadId (optional)</Label>
-                              <Input
-                                value={row.messageThreadId}
-                                onChange={(e) => updateTelegramRow(row.id, { messageThreadId: e.target.value })}
-                                placeholder="12345"
+                              <Label className="text-[11px] text-slate-600">Sub-level (optional)</Label>
+                              <Select
+                                value={row.threadInputMode}
+                                onValueChange={(v) => {
+                                  const mode = v as ThreadInputMode
+                                  if (mode === "topic_name") {
+                                    updateTelegramRow(row.id, {
+                                      threadInputMode: mode,
+                                      messageThreadId: "",
+                                      resolvedMessageThreadId: null,
+                                    })
+                                  } else {
+                                    updateTelegramRow(row.id, {
+                                      threadInputMode: mode,
+                                      topicName: "",
+                                      resolvedMessageThreadId: null,
+                                    })
+                                  }
+                                }}
                                 disabled={!isTelegramEnabled}
-                                inputMode="numeric"
-                              />
-                              {threadErr ? <p className="text-xs text-red-600">{threadErr}</p> : null}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="thread_id">messageThreadId</SelectItem>
+                                  <SelectItem value="topic_name">Tên topic</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
 
                             <div className="flex gap-2 sm:col-span-3 sm:justify-end">
@@ -470,9 +614,9 @@ export function AlertRuleFormDialog({
                                 variant="outline"
                                 className="bg-transparent"
                                 disabled={!isTelegramEnabled || saving || row.status === "checking" || !row.chatId.trim()}
-                                onClick={() => void verifyTelegramRow(row)}
+                                onClick={() => void verifyTelegramRowById(row.id)}
                               >
-                                {row.status === "checking" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check"}
+                                {row.status === "checking" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Retry"}
                               </Button>
                               <Button
                                 type="button"
@@ -487,13 +631,58 @@ export function AlertRuleFormDialog({
                             </div>
                           </div>
 
+                          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-12">
+                            {row.threadInputMode === "thread_id" ? (
+                              <div className="space-y-1 sm:col-span-12">
+                                <Label className="text-[11px] text-slate-600">messageThreadId</Label>
+                                <Input
+                                  value={row.messageThreadId}
+                                  onChange={(e) => updateTelegramRow(row.id, { messageThreadId: e.target.value })}
+                                  placeholder="Để trống nếu chỉ gửi vào chat"
+                                  disabled={!isTelegramEnabled}
+                                  inputMode="numeric"
+                                />
+                                {threadErr ? <p className="text-xs text-red-600">{threadErr}</p> : null}
+                              </div>
+                            ) : (
+                              <div className="space-y-1 sm:col-span-12">
+                                <Label className="text-[11px] text-slate-600">Tên topic (khớp chính xác, không bắt buộc)</Label>
+                                <Input
+                                  value={row.topicName}
+                                  onChange={(e) => updateTelegramRow(row.id, { topicName: e.target.value })}
+                                  placeholder="VD: Alerts / General"
+                                  disabled={!isTelegramEnabled}
+                                />
+                                {topicErr ? <p className="text-xs text-red-600">{topicErr}</p> : null}
+                              </div>
+                            )}
+                          </div>
+
                           <div className="mt-2 text-xs">
                             {row.status === "valid" ? (
                               <p className="text-green-700">
                                 {row.resolvedTitle ? <span className="font-medium">{row.resolvedTitle}</span> : <span className="font-medium">OK</span>}
                                 {row.resolvedType ? <span className="text-slate-600"> ({row.resolvedType})</span> : null}
-                                {row.messageThreadId.trim() ? (
-                                  <span className="text-slate-600"> • thread {row.messageThreadId.trim()}</span>
+                                {row.threadInputMode === "thread_id" && row.messageThreadId.trim() ? (
+                                  <span className="text-slate-600">
+                                    {" "}
+                                    •{" "}
+                                    {row.resolvedThreadTitle ? (
+                                      <span className="font-medium text-green-800">{row.resolvedThreadTitle}</span>
+                                    ) : (
+                                      <span className="text-slate-500">Không lấy được tên topic (getForumTopic)</span>
+                                    )}
+                                  </span>
+                                ) : null}
+                                {row.threadInputMode === "topic_name" && row.topicName.trim() ? (
+                                  <span className="text-slate-600">
+                                    {" "}
+                                    •{" "}
+                                    <span className="font-medium text-green-800">{row.resolvedThreadTitle ?? row.topicName}</span>
+                                    {row.resolvedMessageThreadId ? (
+                                      <span className="text-slate-600"> (messageThreadId {row.resolvedMessageThreadId})</span>
+                                    ) : null}
+                                  </span>
                                 ) : null}
                               </p>
                             ) : null}
@@ -510,7 +699,7 @@ export function AlertRuleFormDialog({
                       variant="outline"
                       className="bg-transparent"
                       disabled={!isTelegramEnabled || saving}
-                      onClick={() => setTelegramRows((prev) => [...prev, { id: newRowId(), chatId: "", messageThreadId: "", status: "idle" }])}
+                      onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}
                     >
                       Add destination
                     </Button>
