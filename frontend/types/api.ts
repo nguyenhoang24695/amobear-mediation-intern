@@ -542,7 +542,9 @@ export interface WaterfallBulkPolicyTargetDto {
   effectiveRuleGroupName?: string | null
   ruleGroupSource?: string | null
   currentApplyMode: string
+  currentIntervalDays: number
   dueAt?: string | null
+  previewDueAt?: string | null
   lastObservedApplyAt?: string | null
   platform?: string | null
   adFormat?: string | null
@@ -560,6 +562,7 @@ export interface WaterfallBulkPolicyPreviewResponseDto {
 
 export interface BulkUpdateWaterfallApplyPoliciesRequestDto {
   applyMode: string
+  intervalDays: number
   mediationGroupIds: string[]
 }
 

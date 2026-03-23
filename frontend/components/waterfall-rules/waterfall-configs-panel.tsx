@@ -30,8 +30,14 @@ function getAppName(app: App) {
   return app.displayName || app.name || app.appId
 }
 
-function getConfigApplyModeLabel(applyMode: Exclude<ConfigApplyMode, "keep_current">) {
-  return applyMode === "semi_auto" ? "semi-auto" : "auto"
+function getConfigApplyModeLabel(applyMode: ConfigApplyMode) {
+  if (applyMode === "semi_auto") return "semi-auto"
+  if (applyMode === "auto") return "auto"
+  return "current mode"
+}
+
+function formatIntervalLabel(intervalDays: number) {
+  return `${intervalDays}-day${intervalDays === 1 ? "" : "s"}`
 }
 
 export function WaterfallConfigsPanel({
@@ -212,9 +218,17 @@ export function WaterfallConfigsPanel({
       let applyModeSyncError: string | null = null
 
       if (request.applyMode !== "keep_current" && uniqueAppIds.length > 0) {
+        const targetIntervalDays = request.intervalDays ?? 7
+
         try {
           const previewResponses = await Promise.all(
-            uniqueAppIds.map((appId) => waterfallManagementApi.getBulkPolicyTargets({ appId }))
+            uniqueAppIds.map((appId) =>
+              waterfallManagementApi.getBulkPolicyTargets({
+                appId,
+                targetApplyMode: request.applyMode,
+                intervalDays: targetIntervalDays,
+              })
+            )
           )
           const mediationGroupIds = Array.from(
             new Set(
@@ -226,6 +240,7 @@ export function WaterfallConfigsPanel({
           if (mediationGroupIds.length > 0) {
             const response = await waterfallManagementApi.bulkUpdatePolicies({
               applyMode: request.applyMode,
+              intervalDays: targetIntervalDays,
               mediationGroupIds,
             })
             updatedMediationGroupCount = response.updatedCount
@@ -237,14 +252,13 @@ export function WaterfallConfigsPanel({
             : "Failed to update apply mode for the matched mediation groups."
         }
       }
-
       await refetchConfigs().catch(() => undefined)
       closeConfigEditor()
 
       if (applyModeSyncError) {
         toast({
           title: "Partial success",
-          description: `${baseSuccessMessage} Apply mode sync failed: ${applyModeSyncError}`,
+          description: `${baseSuccessMessage} Apply mode sync failed for ${getConfigApplyModeLabel(request.applyMode)} with a ${formatIntervalLabel(request.intervalDays ?? 7)} interval: ${applyModeSyncError}`,
           variant: "destructive",
         })
         setSavingConfig(false)
@@ -267,9 +281,10 @@ export function WaterfallConfigsPanel({
       }
 
       const modeLabel = getConfigApplyModeLabel(request.applyMode)
+      const intervalLabel = formatIntervalLabel(request.intervalDays ?? 7)
       toast({
         title: "Success",
-        description: `${baseSuccessMessage} Updated ${updatedMediationGroupCount} mediation groups to ${modeLabel}${skippedMediationGroupCount > 0 ? `, skipped ${skippedMediationGroupCount}` : ""}.`,
+        description: `${baseSuccessMessage} Updated ${updatedMediationGroupCount} mediation groups to ${modeLabel} with a ${intervalLabel} interval${skippedMediationGroupCount > 0 ? `, skipped ${skippedMediationGroupCount}` : ""}.`,
       })
       setSavingConfig(false)
     },

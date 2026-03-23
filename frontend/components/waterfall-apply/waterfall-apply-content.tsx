@@ -18,6 +18,7 @@ import { Pagination } from "@/components/shared/pagination"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
@@ -54,6 +55,10 @@ const APPLY_MODE_OPTIONS: Array<{ value: ApplyMode; label: string }> = [
 
 const MODE_ORDER: ApplyMode[] = ["manual", "semi_auto", "auto"]
 
+const DEFAULT_INTERVAL_DAYS = 7
+const MIN_INTERVAL_DAYS = 1
+const MAX_INTERVAL_DAYS = 30
+
 function getAppLabel(app: App): string {
   return app.displayName?.trim() || app.name?.trim() || app.appId
 }
@@ -89,6 +94,20 @@ function getRuleSourceLabel(source: string | null | undefined): string {
     default:
       return "-"
   }
+}
+
+function formatIntervalLabel(intervalDays: number): string {
+  return `${intervalDays}-day${intervalDays === 1 ? "" : "s"}`
+}
+
+function parseIntervalDays(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  if (!Number.isInteger(parsed) || parsed < MIN_INTERVAL_DAYS || parsed > MAX_INTERVAL_DAYS) {
+    return null
+  }
+  return parsed
 }
 
 function formatDateTime(value: string | null | undefined): string {
@@ -133,6 +152,7 @@ export function WaterfallApplyContent() {
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>()
   const [selectedRuleGroupId, setSelectedRuleGroupId] = useState<string>("")
   const [targetApplyMode, setTargetApplyMode] = useState<ApplyMode>("manual")
+  const [intervalDays, setIntervalDays] = useState(String(DEFAULT_INTERVAL_DAYS))
   const [previewData, setPreviewData] = useState<WaterfallBulkPolicyPreviewResponseDto | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [applyLoading, setApplyLoading] = useState(false)
@@ -182,6 +202,9 @@ export function WaterfallApplyContent() {
     const startIndex = (page - 1) * pageSize
     return targets.slice(startIndex, startIndex + pageSize)
   }, [page, pageSize, previewData])
+
+  const parsedIntervalDays = useMemo(() => parseIntervalDays(intervalDays), [intervalDays])
+  const dueColumnLabel = targetApplyMode === "manual" ? "Current due" : "Due after update"
 
   const selectionSummary = useMemo(() => {
     const counters: Record<ApplyMode, number> = {
@@ -239,18 +262,46 @@ export function WaterfallApplyContent() {
     resetPreview()
   }
 
-  const buildPreviewParams = (): { appId?: string; ruleGroupId?: number } | null => {
+  const handleTargetApplyModeChange = (value: string) => {
+    setTargetApplyMode(value as ApplyMode)
+    resetPreview()
+  }
+
+  const handleIntervalDaysChange = (value: string) => {
+    setIntervalDays(value)
+    resetPreview()
+  }
+
+  const buildPreviewParams = (validatedIntervalDays: number): { appId?: string; ruleGroupId?: number; targetApplyMode: ApplyMode; intervalDays: number } | null => {
     if (filterType === "app") {
       if (!selectedAppId) return null
-      return { appId: selectedAppId }
+      return {
+        appId: selectedAppId,
+        targetApplyMode,
+        intervalDays: validatedIntervalDays,
+      }
     }
 
     if (!selectedRuleGroupId) return null
-    return { ruleGroupId: Number(selectedRuleGroupId) }
+    return {
+      ruleGroupId: Number(selectedRuleGroupId),
+      targetApplyMode,
+      intervalDays: validatedIntervalDays,
+    }
   }
 
   const loadPreview = async () => {
-    const params = buildPreviewParams()
+    const validatedIntervalDays = parsedIntervalDays
+    if (validatedIntervalDays == null) {
+      toast({
+        title: "Invalid interval",
+        description: `Interval must be a whole number between ${MIN_INTERVAL_DAYS} and ${MAX_INTERVAL_DAYS}.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const params = buildPreviewParams(validatedIntervalDays)
     if (!params) {
       toast({
         title: "Missing filter",
@@ -327,17 +378,30 @@ export function WaterfallApplyContent() {
       return
     }
 
+    const validatedIntervalDays = parsedIntervalDays
+    if (validatedIntervalDays == null) {
+      toast({
+        title: "Invalid interval",
+        description: `Interval must be a whole number between ${MIN_INTERVAL_DAYS} and ${MAX_INTERVAL_DAYS}.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     setApplyLoading(true)
     try {
       const response = await waterfallManagementApi.bulkUpdatePolicies({
         applyMode: targetApplyMode,
+        intervalDays: validatedIntervalDays,
         mediationGroupIds: selectedIds,
       })
 
       setConfirmOpen(false)
       toast({
         title: "Policies updated",
-        description: `Updated ${response.updatedCount} mediation groups${response.skippedCount > 0 ? `, skipped ${response.skippedCount}` : ""}.`,
+        description: targetApplyMode === "manual"
+          ? `Updated ${response.updatedCount} mediation groups to ${getApplyModeLabel(targetApplyMode)}${response.skippedCount > 0 ? `, skipped ${response.skippedCount}` : ""}.`
+          : `Updated ${response.updatedCount} mediation groups to ${getApplyModeLabel(targetApplyMode)} with a ${formatIntervalLabel(validatedIntervalDays)} interval${response.skippedCount > 0 ? `, skipped ${response.skippedCount}` : ""}.`,
       })
 
       await loadPreview()
@@ -370,7 +434,7 @@ export function WaterfallApplyContent() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5 pt-6">
-          <div className="grid gap-4 xl:grid-cols-[180px_minmax(0,1fr)_200px_auto]">
+          <div className="grid gap-4 xl:grid-cols-[180px_minmax(0,1fr)_200px_180px_auto]">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Filter type</label>
               <Select value={filterType} onValueChange={handleFilterTypeChange}>
@@ -419,7 +483,7 @@ export function WaterfallApplyContent() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Target apply mode</label>
-              <Select value={targetApplyMode} onValueChange={(value) => setTargetApplyMode(value as ApplyMode)}>
+              <Select value={targetApplyMode} onValueChange={handleTargetApplyModeChange}>
                 <SelectTrigger className="h-10 bg-white">
                   <SelectValue placeholder="Select apply mode" />
                 </SelectTrigger>
@@ -431,6 +495,25 @@ export function WaterfallApplyContent() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Interval (days)</label>
+              <Input
+                type="number"
+                min={MIN_INTERVAL_DAYS}
+                max={MAX_INTERVAL_DAYS}
+                step={1}
+                value={intervalDays}
+                onChange={(event) => handleIntervalDaysChange(event.target.value)}
+                disabled={targetApplyMode === "manual"}
+                className="h-10 bg-white disabled:bg-slate-50"
+              />
+              <p className="text-xs text-slate-500">
+                {targetApplyMode === "manual"
+                  ? "Manual mode keeps each mediation group's existing interval."
+                  : `Valid range: ${MIN_INTERVAL_DAYS}-${MAX_INTERVAL_DAYS} days.`}
+              </p>
             </div>
 
             <div className="flex items-end gap-2">
@@ -529,7 +612,7 @@ export function WaterfallApplyContent() {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Effective rule group</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Rule source</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Current mode</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Due date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{dueColumnLabel}</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Last observed apply</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Platform / format</th>
                     </tr>
@@ -539,6 +622,7 @@ export function WaterfallApplyContent() {
                       <PreviewRow
                         key={target.mediationGroupId}
                         target={target}
+                        targetApplyMode={targetApplyMode}
                         checked={selectedIdSet.has(target.mediationGroupId)}
                         onCheckedChange={(checked) => handleToggleTarget(target.mediationGroupId, checked)}
                       />
@@ -568,7 +652,9 @@ export function WaterfallApplyContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm bulk apply mode update</AlertDialogTitle>
             <AlertDialogDescription>
-              Update {selectedIds.length} mediation groups to {getApplyModeLabel(targetApplyMode)}. This only changes the stored apply mode policy.
+              {targetApplyMode === "manual"
+                ? `Update ${selectedIds.length} mediation groups to ${getApplyModeLabel(targetApplyMode)}. This only changes the stored apply mode policy.`
+                : `Update ${selectedIds.length} mediation groups to ${getApplyModeLabel(targetApplyMode)} with a ${formatIntervalLabel(parsedIntervalDays ?? DEFAULT_INTERVAL_DAYS)} interval. This only changes the stored apply mode policy and does not apply waterfall directly.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -592,11 +678,16 @@ export function WaterfallApplyContent() {
 
 interface PreviewRowProps {
   target: WaterfallBulkPolicyTargetDto
+  targetApplyMode: ApplyMode
   checked: boolean
   onCheckedChange: (checked: boolean) => void
 }
 
-function PreviewRow({ target, checked, onCheckedChange }: PreviewRowProps) {
+function PreviewRow({ target, targetApplyMode, checked, onCheckedChange }: PreviewRowProps) {
+  const displayedDueAt = targetApplyMode === "manual"
+    ? target.dueAt
+    : (target.previewDueAt ?? target.dueAt)
+
   return (
     <tr className="align-top hover:bg-slate-50/60">
       <td className="px-4 py-4">
@@ -640,11 +731,14 @@ function PreviewRow({ target, checked, onCheckedChange }: PreviewRowProps) {
         <Badge variant="outline" className={getApplyModeBadgeClass(target.currentApplyMode)}>
           {getApplyModeLabel(target.currentApplyMode)}
         </Badge>
+        <div className="mt-1 text-xs text-slate-500">
+          Current interval: {formatIntervalLabel(target.currentIntervalDays)}
+        </div>
         {!target.hasPersistedPolicy ? (
           <div className="mt-1 text-xs text-slate-500">Virtual manual</div>
         ) : null}
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(target.dueAt)}</td>
+      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(displayedDueAt)}</td>
       <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(target.lastObservedApplyAt)}</td>
       <td className="px-4 py-4 text-sm text-slate-700">
         <div>{target.platform || "-"}</div>
