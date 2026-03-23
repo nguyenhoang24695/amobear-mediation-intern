@@ -516,7 +516,7 @@ export function WaterfallApplyContent() {
               </p>
             </div>
 
-            <div className="flex items-end gap-2">
+            <div className="flex items-center gap-2">
               <Button className="min-w-36" onClick={loadPreview} disabled={previewLoading || (filterType === "app" ? !selectedAppId : !selectedRuleGroupId)}>
                 {previewLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 Preview matches
