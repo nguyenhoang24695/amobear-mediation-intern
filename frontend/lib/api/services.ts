@@ -29,6 +29,8 @@ import type {
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
+    AlertRule,
+    UpsertAlertRuleRequest,
     WaterfallBulkPolicyPreviewResponseDto,
     BulkUpdateWaterfallApplyPoliciesRequestDto,
     BulkUpdateWaterfallApplyPoliciesResponseDto,
@@ -1167,6 +1169,46 @@ export const alertsApi = {
                 Count: item.count,
             })),
         }
+    },
+
+    getAlertRules: async (isEnabled?: boolean): Promise<AlertRule[]> => {
+        return apiClient.get<AlertRule[]>('/api/Alerts/rules', {
+            isEnabled: isEnabled == null ? undefined : (isEnabled ? "true" : "false"),
+        })
+    },
+
+    getAlertRule: async (id: number): Promise<AlertRule> => {
+        return apiClient.get<AlertRule>(`/api/Alerts/rules/${id}`)
+    },
+
+    createAlertRule: async (body: UpsertAlertRuleRequest): Promise<AlertRule> => {
+        return apiClient.post<AlertRule>('/api/Alerts/rules', body)
+    },
+
+    updateAlertRule: async (id: number, body: UpsertAlertRuleRequest): Promise<AlertRule> => {
+        return apiClient.put<AlertRule>(`/api/Alerts/rules/${id}`, body)
+    },
+
+    deleteAlertRule: async (id: number): Promise<void> => {
+        return apiClient.delete(`/api/Alerts/rules/${id}`)
+    },
+
+    toggleAlertRule: async (id: number): Promise<{ id: number; isEnabled: boolean }> => {
+        return apiClient.patch<{ id: number; isEnabled: boolean }>(`/api/Alerts/rules/${id}/toggle`, {})
+    },
+
+    validateTelegramChat: async (params: { chatId: string; messageThreadId?: number }): Promise<{
+        chatId: string
+        messageThreadId?: number | null
+        isValid: boolean
+        chatTitle?: string | null
+        chatType?: string | null
+        errorMessage?: string | null
+    }> => {
+        return apiClient.get('/api/Alerts/telegram/chat', {
+            chatId: params.chatId,
+            messageThreadId: params.messageThreadId,
+        })
     },
 }
 

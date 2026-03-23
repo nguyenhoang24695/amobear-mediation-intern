@@ -580,5 +580,47 @@ export interface WaterfallFilterOptionDto {
   iconUri?: string | null
 }
 
+export interface AlertRule {
+  id: number
+  name: string
+  description?: string | null
+  ruleType: string
+  severity: string
+  ruleExpression: string
+  thresholdValue?: number | null
+  timeWindowHours: number
+  comparisonPeriodHours?: number | null
+  filterConditions?: string | null
+  messageTemplate: string
+  isEnabled: boolean
+  cooldownMinutes: number
+  notificationChannels: string
+  telegramTopics?: string | null
+  emailRecipients?: string | null
+  priority: number
+  createdAt: string
+  updatedAt: string
+  lastTriggeredAt?: string | null
+}
+
+export interface UpsertAlertRuleRequest {
+  name: string
+  description?: string | null
+  ruleType: string
+  severity: string
+  ruleExpression: string
+  thresholdValue?: number | null
+  timeWindowHours: number
+  comparisonPeriodHours?: number | null
+  filterConditions?: string | null
+  messageTemplate: string
+  isEnabled: boolean
+  cooldownMinutes: number
+  notificationChannels: string
+  telegramTopics?: string | null
+  emailRecipients?: string | null
+  priority: number
+}
+
 
 

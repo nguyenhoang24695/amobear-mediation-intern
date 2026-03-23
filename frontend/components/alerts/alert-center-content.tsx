@@ -13,6 +13,7 @@ import { alertsApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { cn } from "@/lib/utils"
+import { AlertRulesPanel } from "./alert-rules-panel"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"]
 
@@ -50,6 +51,7 @@ export function AlertCenterContent() {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
   const [severity, setSeverity] = useState("All")
+  const [alertRulesPanelOpen, setAlertRulesPanelOpen] = useState(false)
 
   useEffect(() => {
     const severityParam = searchParams.get("severity")
@@ -104,7 +106,7 @@ export function AlertCenterContent() {
             <Download className="w-4 h-4" />
             Export
           </Button>
-          <Button variant="outline" className="h-9 gap-2 bg-transparent" disabled>
+          <Button variant="outline" className="h-9 gap-2 bg-transparent" onClick={() => setAlertRulesPanelOpen(true)}>
             <Settings className="w-4 h-4" />
             Alert Rules
           </Button>
@@ -231,6 +233,8 @@ export function AlertCenterContent() {
           </div>
         </Card>
       )}
+
+      <AlertRulesPanel open={alertRulesPanelOpen} onOpenChange={setAlertRulesPanelOpen} />
     </div>
   )
 }
