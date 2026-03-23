@@ -532,7 +532,7 @@ export const waterfallManagementApi = {
 
     updatePolicy: async (
         mediationGroupId: string,
-        body: { applyMode: string }
+        body: { applyMode: string; intervalDays?: number | null }
     ): Promise<WaterfallApplyPolicyResponse> => {
         return apiClient.put<WaterfallApplyPolicyResponse>(`/api/WaterfallManagement/policy/${encodeURIComponent(mediationGroupId)}`, body)
     },
@@ -540,6 +540,8 @@ export const waterfallManagementApi = {
     getBulkPolicyTargets: async (params: {
         appId?: string
         ruleGroupId?: number
+        targetApplyMode?: string
+        intervalDays?: number
     }): Promise<WaterfallBulkPolicyPreviewResponseDto> => {
         return apiClient.get<WaterfallBulkPolicyPreviewResponseDto>('/api/WaterfallManagement/bulk-policy-targets', params as Record<string, string | number | undefined>)
     },
