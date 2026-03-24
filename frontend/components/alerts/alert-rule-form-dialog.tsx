@@ -55,7 +55,7 @@ type TelegramDestinationRow = {
 
 type SlackDestinationRow = {
   id: string
-  channelId: string
+  webhookUrl: string
 }
 
 function newRowId(): string {
@@ -115,7 +115,7 @@ function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
 function emptySlackRow(): SlackDestinationRow {
   return {
     id: `sl_${newRowId()}`,
-    channelId: "",
+    webhookUrl: "",
   }
 }
 
@@ -125,7 +125,7 @@ function rowsFromSlackChannels(channels: string[]): SlackDestinationRow[] {
     const trimmed = channel.trim()
     return {
       id: `sl_${newRowId()}`,
-      channelId: trimmed,
+      webhookUrl: trimmed,
     }
   })
 }
@@ -254,15 +254,21 @@ export function AlertRuleFormDialog({
     }
 
     if (isSlackEnabled) {
-      const channels = slackRows.map((row) => row.channelId.trim()).filter((item) => item.length > 0)
-      if (channels.length === 0) {
-        nextErrors.slackChannels = "Thêm ít nhất 1 Slack channelId."
+      const webhooks = slackRows.map((row) => row.webhookUrl.trim()).filter((item) => item.length > 0)
+      if (webhooks.length === 0) {
+        nextErrors.slackChannels = "Thêm ít nhất 1 Slack webhook URL."
       }
 
       slackRows.forEach((row, idx) => {
-        if (!row.channelId.trim()) return
-        if (row.channelId.trim().length < 5) {
-          nextErrors[`slackRows.${idx}.channelId`] = "channelId không hợp lệ."
+        const value = row.webhookUrl.trim()
+        if (!value) return
+        try {
+          const url = new URL(value)
+          if (!["http:", "https:"].includes(url.protocol)) {
+            nextErrors[`slackRows.${idx}.webhookUrl`] = "Webhook URL phải bắt đầu bằng http/https."
+          }
+        } catch {
+          nextErrors[`slackRows.${idx}.webhookUrl`] = "Webhook URL không hợp lệ."
         }
       })
     }
@@ -303,7 +309,7 @@ export function AlertRuleFormDialog({
       emailRecipients: JSON.stringify(isEmailEnabled ? splitCsv(emailRecipientsCsv) : []),
       slackChannels: JSON.stringify(
         isSlackEnabled
-          ? slackRows.map((row) => row.channelId.trim()).filter((item) => item.length > 0)
+          ? slackRows.map((row) => row.webhookUrl.trim()).filter((item) => item.length > 0)
           : [],
       ),
       priority: Number(priority),
@@ -349,10 +355,10 @@ export function AlertRuleFormDialog({
   const updateSlackRow = (id: string, patch: Partial<SlackDestinationRow>) => {
     setSlackRows((prev) => {
       const idx = prev.findIndex((r) => r.id === id)
-      if (idx >= 0 && patch.channelId !== undefined) {
+      if (idx >= 0 && patch.webhookUrl !== undefined) {
         setErrors((ePrev) => {
           const next = { ...ePrev }
-          delete next[`slackRows.${idx}.channelId`]
+          delete next[`slackRows.${idx}.webhookUrl`]
           return next
         })
       }
@@ -488,16 +494,27 @@ export function AlertRuleFormDialog({
       const row = slackRows.find((r) => r.id === rowId)
       if (!row) return
 
-      const channelId = row.channelId.trim()
-      if (!channelId) {
-        toast({ title: "Lỗi", description: "Vui lòng nhập Slack channelId.", variant: "destructive" })
+      const webhookUrl = row.webhookUrl.trim()
+      if (!webhookUrl) {
+        toast({ title: "Lỗi", description: "Vui lòng nhập Slack webhook URL.", variant: "destructive" })
+        return
+      }
+
+      try {
+        const parsed = new URL(webhookUrl)
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+          toast({ title: "Lỗi", description: "Webhook URL phải bắt đầu bằng http/https.", variant: "destructive" })
+          return
+        }
+      } catch {
+        toast({ title: "Lỗi", description: "Webhook URL không hợp lệ.", variant: "destructive" })
         return
       }
 
       setSlackTestRowId(rowId)
       try {
-        await alertsApi.sendSlackTest({ channelId })
-        toast({ title: "Đã gửi", description: "Kiểm tra Slack channel để xem tin test." })
+        await alertsApi.sendSlackTest({ webhookUrl })
+        toast({ title: "Đã gửi", description: "Kiểm tra Slack destination để xem tin test." })
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Không gửi được tin test Slack."
         toast({ title: "Lỗi", description: msg, variant: "destructive" })
@@ -754,24 +771,24 @@ export function AlertRuleFormDialog({
                   <span className="text-sm font-medium text-slate-800">SLACK</span>
                 </div>
                 <div className="mt-2 space-y-1.5">
-                  <Label className="text-xs text-slate-600">Slack channel IDs</Label>
+                  <Label className="text-xs text-slate-600">Slack Webhook URLs</Label>
                   {errors.slackChannels ? <p className="text-xs text-red-600">{errors.slackChannels}</p> : null}
 
                   <div className="space-y-2">
                     {slackRows.map((row, idx) => {
-                      const channelErr = errors[`slackRows.${idx}.channelId`]
+                      const webhookErr = errors[`slackRows.${idx}.webhookUrl`]
                       return (
                         <div key={row.id} className="rounded-md border bg-white p-2">
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-end">
                             <div className="space-y-1 sm:col-span-8">
-                              <Label className="text-[11px] text-slate-600">channelId *</Label>
+                              <Label className="text-[11px] text-slate-600">webhookUrl *</Label>
                               <Input
-                                value={row.channelId}
-                                onChange={(e) => updateSlackRow(row.id, { channelId: e.target.value })}
-                                placeholder="VD: C0123456789"
+                                value={row.webhookUrl}
+                                onChange={(e) => updateSlackRow(row.id, { webhookUrl: e.target.value })}
+                                placeholder="https://hooks.slack.com/services/..."
                                 disabled={!isSlackEnabled}
                               />
-                              {channelErr ? <p className="text-xs text-red-600">{channelErr}</p> : null}
+                              {webhookErr ? <p className="text-xs text-red-600">{webhookErr}</p> : null}
                             </div>
 
                             <div className="flex gap-2 sm:col-span-4 sm:justify-end">
@@ -779,7 +796,7 @@ export function AlertRuleFormDialog({
                                 type="button"
                                 variant="outline"
                                 className="flex items-center gap-1.5 bg-transparent"
-                                disabled={!isSlackEnabled || saving || slackTestRowId === row.id || !row.channelId.trim()}
+                                disabled={!isSlackEnabled || saving || slackTestRowId === row.id || !row.webhookUrl.trim()}
                                 onClick={() => void sendSlackTestForRow(row.id)}
                                 title="Gửi tin test qua Slack"
                               >

@@ -38,6 +38,7 @@ import {
   UserPlus,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Pagination } from "@/components/shared/pagination"
 import { AddUserToOrgModal } from "../add-user-to-org-modal"
 import { AddEditUserModal } from "../modals/add-edit-user-modal"
@@ -92,6 +93,7 @@ function formatLastActive(lastLoginAt?: string): string {
 }
 
 export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps) {
+  const router = useRouter()
   const currentUser = getCurrentUser()
   const canAssignAdmin = currentUser?.role?.toLowerCase() === "super_admin"
   // RoleSelector will dynamically fetch the roles, we just need to pass canManage = canAssignAdmin
@@ -360,8 +362,12 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
 
                     const status = statusConfig[user.status] || statusConfig.active
                     return (
-                      <TableRow key={user.id} className={`hover:bg-slate-50 transition-colors ${user.status === "inactive" ? "opacity-60" : ""}`}>
-                        <TableCell>
+                      <TableRow 
+                        key={user.id} 
+                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${user.status === "inactive" ? "opacity-60" : ""}`}
+                        onClick={() => router.push(`/organizations/${orgId}/users/${user.id}`)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox checked={selectedUsers.includes(user.id)} onCheckedChange={() => setSelectedUsers((prev) => prev.includes(user.id) ? prev.filter((id) => id !== user.id) : [...prev, user.id])} />
                         </TableCell>
                         <TableCell>
@@ -387,7 +393,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                         </TableCell>
                         <TableCell className="text-sm text-slate-500">{formatDate(user.createdAt)}</TableCell>
                         <TableCell className="text-sm text-slate-500">{formatLastActive(user.lastLoginAt)}</TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
