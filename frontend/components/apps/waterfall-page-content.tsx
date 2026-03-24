@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState, useTransition } from "react"
 import Link from "next/link"
@@ -23,6 +23,7 @@ const FN_VIEW = "view"
 
 const FILTER_UNUSED = "unused"
 const FILTER_NO_REVENUE = "noRevenue"
+const FILTER_NO_REQUESTS = "noRequests"
 
 const FILTER_PUBLISHER = "publisherId"
 const FILTER_APP = "appAdMobId"
@@ -142,6 +143,7 @@ export function WaterfallPageContent() {
       admobId: filters.admobId,
       unusedOnly: filterMode === FILTER_UNUSED,
       noRevenue: filterMode === FILTER_NO_REVENUE,
+      noRequests: filterMode === FILTER_NO_REQUESTS,
       startDate: apiDateRange.startDate,
       endDate: apiDateRange.endDate,
       sortField,
@@ -328,7 +330,9 @@ export function WaterfallPageContent() {
           <p className="mt-1 text-sm text-slate-500">
             {filterMode === FILTER_UNUSED
               ? "Waterfall ad units not linked to any ad unit in a mediation group."
-              : `Waterfall ad units with no revenue in the selected range (${selectedRangeLabel}).`}
+              : filterMode === FILTER_NO_REVENUE
+                ? `Waterfall ad units with no revenue in the selected range (${selectedRangeLabel}).`
+                : `Waterfall ad units with no ad requests in the selected range (${selectedRangeLabel}).`}
           </p>
           {activeFilterSummary ? (
             <p className="mt-1 text-xs text-slate-500">{activeFilterSummary}</p>
@@ -350,6 +354,12 @@ export function WaterfallPageContent() {
               Show waterfalls without revenue in selected range
             </Label>
           </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value={FILTER_NO_REQUESTS} id="filter-no-requests" />
+            <Label htmlFor="filter-no-requests" className="cursor-pointer text-sm font-normal">
+              Show waterfalls without ad requests in selected range
+            </Label>
+          </div>
         </RadioGroup>
 
         <div className="grid gap-3 lg:grid-cols-3">
@@ -366,6 +376,7 @@ export function WaterfallPageContent() {
               loadOptions={(search) => structureApi.getWaterfallPublisherFilterOptions({
                 unusedOnly: filterMode === FILTER_UNUSED,
                 noRevenue: filterMode === FILTER_NO_REVENUE,
+                noRequests: filterMode === FILTER_NO_REQUESTS,
                 startDate: apiDateRange.startDate,
                 endDate: apiDateRange.endDate,
                 search,
@@ -389,6 +400,7 @@ export function WaterfallPageContent() {
                 publisherId: filters.publisherId,
                 unusedOnly: filterMode === FILTER_UNUSED,
                 noRevenue: filterMode === FILTER_NO_REVENUE,
+                noRequests: filterMode === FILTER_NO_REQUESTS,
                 startDate: apiDateRange.startDate,
                 endDate: apiDateRange.endDate,
                 search,
@@ -413,6 +425,7 @@ export function WaterfallPageContent() {
                 appAdMobId: filters.appAdMobId,
                 unusedOnly: filterMode === FILTER_UNUSED,
                 noRevenue: filterMode === FILTER_NO_REVENUE,
+                noRequests: filterMode === FILTER_NO_REQUESTS,
                 startDate: apiDateRange.startDate,
                 endDate: apiDateRange.endDate,
                 search,
@@ -435,7 +448,9 @@ export function WaterfallPageContent() {
           <div className="py-16 text-center text-slate-500">
             {filterMode === FILTER_UNUSED
               ? "No unused waterfalls."
-              : `No waterfalls without revenue in the selected range (${selectedRangeLabel}).`}
+              : filterMode === FILTER_NO_REVENUE
+                ? `No waterfalls without revenue in the selected range (${selectedRangeLabel}).`
+                : `No waterfalls without ad requests in the selected range (${selectedRangeLabel}).`}
           </div>
         ) : (
           <>

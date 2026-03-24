@@ -247,6 +247,7 @@ export const structureApi = {
         admobId?: string
         unusedOnly?: boolean
         noRevenue?: boolean
+        noRequests?: boolean
         startDate?: string
         endDate?: string
         sortField?: string
@@ -265,6 +266,7 @@ export const structureApi = {
         if (params?.admobId != null) query.admobId = params.admobId
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.noRequests != null) query.noRequests = params.noRequests ? "true" : "false"
         if (params?.startDate != null) query.startDate = params.startDate
         if (params?.endDate != null) query.endDate = params.endDate
         if (params?.sortField != null) query.sortField = params.sortField
@@ -277,6 +279,7 @@ export const structureApi = {
     getWaterfallPublisherFilterOptions: async (params?: {
         unusedOnly?: boolean
         noRevenue?: boolean
+        noRequests?: boolean
         startDate?: string
         endDate?: string
         search?: string
@@ -285,6 +288,7 @@ export const structureApi = {
         const query: Record<string, string | number | undefined> = {}
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.noRequests != null) query.noRequests = params.noRequests ? "true" : "false"
         if (params?.startDate != null) query.startDate = params.startDate
         if (params?.endDate != null) query.endDate = params.endDate
         if (params?.search != null) query.search = params.search
@@ -296,6 +300,7 @@ export const structureApi = {
         publisherId?: string
         unusedOnly?: boolean
         noRevenue?: boolean
+        noRequests?: boolean
         startDate?: string
         endDate?: string
         search?: string
@@ -305,6 +310,7 @@ export const structureApi = {
         if (params?.publisherId != null) query.publisherId = params.publisherId
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.noRequests != null) query.noRequests = params.noRequests ? "true" : "false"
         if (params?.startDate != null) query.startDate = params.startDate
         if (params?.endDate != null) query.endDate = params.endDate
         if (params?.search != null) query.search = params.search
@@ -317,6 +323,7 @@ export const structureApi = {
         appAdMobId?: string
         unusedOnly?: boolean
         noRevenue?: boolean
+        noRequests?: boolean
         startDate?: string
         endDate?: string
         search?: string
@@ -327,6 +334,7 @@ export const structureApi = {
         if (params?.appAdMobId != null) query.appAdMobId = params.appAdMobId
         if (params?.unusedOnly != null) query.unusedOnly = params.unusedOnly ? "true" : "false"
         if (params?.noRevenue != null) query.noRevenue = params.noRevenue ? "true" : "false"
+        if (params?.noRequests != null) query.noRequests = params.noRequests ? "true" : "false"
         if (params?.startDate != null) query.startDate = params.startDate
         if (params?.endDate != null) query.endDate = params.endDate
         if (params?.search != null) query.search = params.search
