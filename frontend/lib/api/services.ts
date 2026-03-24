@@ -1231,10 +1231,10 @@ export const alertsApi = {
     },
 
     sendSlackTest: async (body: {
-        channelId: string
+        webhookUrl: string
     }): Promise<{ success: boolean; message?: string; error?: string }> => {
         return apiClient.post('/api/Alerts/slack/test', {
-            channelId: body.channelId.trim(),
+            webhookUrl: body.webhookUrl.trim(),
         })
     },
 }

@@ -116,7 +116,6 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   const orgTabData = {
     name: org.name,
     slug: org.slug,
-    settings: org.settings,
     status: status as "active" | "inactive",
     createdAt: org.createdAt,
     updatedAt: org.updatedAt,
