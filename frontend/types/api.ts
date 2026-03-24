@@ -530,6 +530,9 @@ export interface AppRuleGroupMappingDto {
   granteeId: string
   groupId: number | null
   groupName: string | null
+  effectiveGroupId?: number | null
+  effectiveGroupName?: string | null
+  effectiveSource?: string | null
 }
 
 export interface WaterfallBulkPolicyTargetDto {
