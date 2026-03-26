@@ -237,7 +237,9 @@ export function WaterfallOptimizationTab({
   // Sync selectedRuleGroupId khi appRuleGroupMapping load xong
   useEffect(() => {
     if (appRuleGroupMapping) {
-      setSelectedRuleGroupId(appRuleGroupMapping.groupId ?? null)
+      setSelectedRuleGroupId(
+        appRuleGroupMapping.effectiveGroupId ?? appRuleGroupMapping.groupId ?? null
+      )
       setRuleGroupChanged(false)
     }
   }, [appRuleGroupMapping])
@@ -1385,6 +1387,12 @@ export function WaterfallOptimizationTab({
                       ))}
                   </SelectContent>
                 </Select>
+                {appRuleGroupMapping?.effectiveGroupName ? (
+                  <p className="text-xs text-slate-500">
+                    Effective group: <span className="font-medium text-slate-700">{appRuleGroupMapping.effectiveGroupName}</span>
+                    {appRuleGroupMapping.effectiveSource ? ` (${appRuleGroupMapping.effectiveSource})` : ""}
+                  </p>
+                ) : null}
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
