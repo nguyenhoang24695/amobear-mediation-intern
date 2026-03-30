@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { memo, useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -290,6 +290,26 @@ function ModelSelectorDropdown({
   )
 }
 
+const ChatMessagesList = memo(function ChatMessagesList({
+  messages,
+  onAskAboutTable,
+}: {
+  messages: AiMessage[]
+  onAskAboutTable?: (result: { columns: string[]; rows: Record<string, unknown>[] }) => void
+}) {
+  return (
+    <>
+      {messages.map((message) =>
+        message.role === "user" ? (
+          <UserMessageBubble key={message.id} message={message} />
+        ) : (
+          <AiMessageBubble key={message.id} message={message} onAskAboutTable={onAskAboutTable} />
+        )
+      )}
+    </>
+  )
+})
+
 export function ChatMainPanel({
   context: _context,
   messages,
@@ -441,13 +461,7 @@ export function ChatMainPanel({
       {/* Messages Area */}
       <ScrollArea className="flex-1 min-h-0 p-6">
         <div className="max-w-4xl mx-auto space-y-6">
-          {messages.map((message) =>
-            message.role === "user" ? (
-              <UserMessageBubble key={message.id} message={message} />
-            ) : (
-              <AiMessageBubble key={message.id} message={message} onAskAboutTable={onAskAboutTable} />
-            )
-          )}
+          <ChatMessagesList messages={messages} onAskAboutTable={onAskAboutTable} />
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
