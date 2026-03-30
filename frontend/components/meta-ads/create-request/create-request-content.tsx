@@ -182,8 +182,22 @@ export function CreateRequestContent() {
     }
   )
 
+  const {
+    data: accountScopedAppMappings,
+    loading: accountScopedAppMappingsLoading,
+    error: accountScopedAppMappingsError,
+  } = useApi(
+    () => metaReferenceApi.getAdAccountAppMappings(Number(form.adAccountId)),
+    {
+      enabled: !!form.adAccountId,
+      cacheKey: form.adAccountId ? `meta-reference:ad-account:${form.adAccountId}:app-mappings` : "meta-reference:ad-account:none:app-mappings",
+    }
+  )
+
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
-  const selectedAppMapping = referenceData?.appMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
+  const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
+  const selectedAppMapping = availableAppMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
+    ?? referenceData?.appMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
   const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
   const tokenState = deriveTokenState({
@@ -381,7 +395,10 @@ export function CreateRequestContent() {
             onChange={updateForm}
             tokenState={tokenState}
             adAccounts={referenceData.adAccounts}
-            appMappings={referenceData.appMappings}
+            appMappings={availableAppMappings}
+            selectedAppMapping={selectedAppMapping}
+            appMappingsLoading={accountScopedAppMappingsLoading}
+            appMappingsMessage={accountScopedAppMappingsError?.message ?? null}
             objectives={referenceData.objectives}
             integrationName={selectedIntegration?.displayName}
           />
@@ -455,3 +472,7 @@ export function CreateRequestContent() {
     </div>
   )
 }
+
+
+
+

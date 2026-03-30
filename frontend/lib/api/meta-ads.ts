@@ -80,6 +80,10 @@ export const metaReferenceApi = {
   getCreateCampaignReference: async () => {
     return apiClient.get<MetaCreateCampaignReferenceDto>(`${REFERENCE_PREFIX}/create-campaign`)
   },
+
+  getAdAccountAppMappings: async (adAccountId: number) => {
+    return apiClient.get<MetaAppMappingDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/app-mappings`)
+  },
 }
 
 export const metaIntegrationsApi = {
@@ -189,3 +193,5 @@ export const metaAppMappingsApi = {
     return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`, {})
   },
 }
+
+

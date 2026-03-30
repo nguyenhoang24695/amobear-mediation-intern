@@ -33,7 +33,7 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
 import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
-import { Plus, MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2 } from "lucide-react"
+import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2 } from "lucide-react"
 
 const SCREEN_META_ACCOUNTS = "s-meta-accounts"
 
@@ -57,9 +57,35 @@ function formatDateTime(value?: string | null) {
   return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
 }
 
+function formatAdAccountStatus(value?: string | null) {
+  switch ((value ?? "").trim()) {
+    case "1":
+      return "Active"
+    case "2":
+      return "Disabled"
+    case "3":
+      return "Unsettled"
+    case "7":
+      return "Pending Risk Review"
+    case "8":
+      return "Pending Settlement"
+    case "9":
+      return "In Grace Period"
+    case "100":
+      return "Pending Closure"
+    case "101":
+      return "Closed"
+    case "201":
+      return "Any Active"
+    default:
+      if (!value) return "—"
+      return value
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+}
 export function AdAccountsContent() {
   const { toast } = useToast()
-  const canCreate = hasScreenFunction(SCREEN_META_ACCOUNTS, "create")
   const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
   const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
 
@@ -84,6 +110,8 @@ export function AdAccountsContent() {
   const [form, setForm] = useState<UpsertMetaAdAccountRequestDto>(emptyForm)
   const [syncIntegrationId, setSyncIntegrationId] = useState("")
   const [search, setSearch] = useState("")
+  const [metaIdFilter, setMetaIdFilter] = useState("")
+  const [businessIdFilter, setBusinessIdFilter] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
 
@@ -93,15 +121,24 @@ export function AdAccountsContent() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
+    const metaIdQuery = metaIdFilter.trim().toLowerCase()
+    const businessIdQuery = businessIdFilter.trim().toLowerCase()
+
     return (accounts ?? []).filter((account) => {
-      if (!query) return true
-      return [
+      const matchesSearch = !query || [
         account.name.toLowerCase(),
         account.metaAdAccountId.toLowerCase(),
+        account.businessId?.toLowerCase() ?? "",
+        account.businessName?.toLowerCase() ?? "",
         integrationById.get(account.metaIntegrationId)?.toLowerCase() ?? "",
       ].some((value) => value.includes(query))
+
+      const matchesMetaId = !metaIdQuery || account.metaAdAccountId.toLowerCase().includes(metaIdQuery)
+      const matchesBusinessId = !businessIdQuery || (account.businessId?.toLowerCase() ?? "").includes(businessIdQuery)
+
+      return matchesSearch && matchesMetaId && matchesBusinessId
     })
-  }, [accounts, integrationById, search])
+  }, [accounts, businessIdFilter, integrationById, metaIdFilter, search])
 
   const openEdit = (account: MetaAdAccountDto) => {
     setEditTarget(account)
@@ -120,28 +157,20 @@ export function AdAccountsContent() {
     setDrawerOpen(true)
   }
 
-  const openCreate = () => {
-    setEditTarget(null)
-    setForm({
-      ...emptyForm,
-      metaIntegrationId: integrations?.[0]?.id ?? 0,
-    })
-    setDrawerOpen(true)
-  }
 
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
-      if (editTarget) {
-        await metaAdAccountsApi.update(editTarget.id, form)
-      } else {
-        await metaAdAccountsApi.create(form)
+      if (!editTarget) {
+        throw new Error("Manual ad account creation has been removed. Sync from integration instead.")
       }
+
+      await metaAdAccountsApi.update(editTarget.id, form)
 
       invalidateCache("meta-ad-accounts:list")
       await refetch()
       setDrawerOpen(false)
-      toast({ title: editTarget ? "Account updated" : "Account added" })
+      toast({ title: "Account updated" })
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to save ad account."
       toast({ title: "Save failed", description: message, variant: "destructive" })
@@ -227,21 +256,28 @@ export function AdAccountsContent() {
               Sync from Integration
             </Button>
           ) : null}
-          {canCreate ? (
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Account
-            </Button>
-          ) : null}
+
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Input
-          placeholder="Search by name or account ID..."
+          placeholder="Search by name, integration, Meta ID, or business..."
           className="h-9 text-sm w-72"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+        />
+        <Input
+          placeholder="Filter by Meta Ad Account ID..."
+          className="h-9 text-sm w-64 font-mono"
+          value={metaIdFilter}
+          onChange={(event) => setMetaIdFilter(event.target.value)}
+        />
+        <Input
+          placeholder="Filter by Business ID..."
+          className="h-9 text-sm w-56 font-mono"
+          value={businessIdFilter}
+          onChange={(event) => setBusinessIdFilter(event.target.value)}
         />
       </div>
 
@@ -249,11 +285,12 @@ export function AdAccountsContent() {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
-              <TableHead className="text-xs text-slate-500 font-medium">Ad Account ID</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Meta Ad Account ID</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Name</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Integration</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-20">Currency</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Timezone</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business Name</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-24">Status</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-20">Active</TableHead>
@@ -264,7 +301,7 @@ export function AdAccountsContent() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-12">
+                <TableCell colSpan={11} className="py-12">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading ad accounts...
@@ -273,13 +310,13 @@ export function AdAccountsContent() {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={11} className="text-center py-12 text-sm text-red-600">
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={11} className="text-center py-12 text-sm text-slate-400">
                   No ad accounts found.
                 </TableCell>
               </TableRow>
@@ -293,10 +330,11 @@ export function AdAccountsContent() {
                     <TableCell className="text-xs text-slate-600">{integrationById.get(account.metaIntegrationId) ?? `Integration ${account.metaIntegrationId}`}</TableCell>
                     <TableCell className="text-xs text-slate-600">{account.currency ?? "—"}</TableCell>
                     <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "—"}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-600">{account.businessId ?? "—"}</TableCell>
                     <TableCell className="text-xs text-slate-600">{account.businessName ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge className={account.status.toLowerCase() === "active" ? "bg-green-100 text-green-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
-                        {account.status}
+                      <Badge className={formatAdAccountStatus(account.status) === "Active" ? "bg-green-100 text-green-700 text-[11px]" : formatAdAccountStatus(account.status) === "Disabled" || formatAdAccountStatus(account.status) === "Closed" ? "bg-red-100 text-red-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
+                        {formatAdAccountStatus(account.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -338,7 +376,7 @@ export function AdAccountsContent() {
         <DialogContent className="w-full max-w-[560px] p-0 gap-0 rounded-xl overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
             <DialogTitle className="text-base font-semibold text-slate-900">
-              {editTarget ? "Edit Ad Account" : "Add Ad Account"}
+              Edit Ad Account
             </DialogTitle>
           </DialogHeader>
           <div className="px-6 py-5 space-y-4">
@@ -417,7 +455,7 @@ export function AdAccountsContent() {
               onClick={() => void handleSubmit()}
               disabled={submitting || !form.metaIntegrationId || !form.metaAdAccountId.trim() || !form.name.trim()}
             >
-              {submitting ? "Saving..." : editTarget ? "Save Changes" : "Add Account"}
+              {submitting ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -460,3 +498,6 @@ export function AdAccountsContent() {
     </div>
   )
 }
+
+
+

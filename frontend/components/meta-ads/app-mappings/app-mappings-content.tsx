@@ -35,6 +35,7 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaAppMappingsApi } from "@/lib/api/meta-ads"
 import { structureApi } from "@/lib/api/services"
+import Link from "next/link"
 import type { App } from "@/types/api"
 import type {
   CreateMetaAppMappingRequestDto,
@@ -124,6 +125,10 @@ function getAppLabel(app?: App | null, mapping?: MetaAppMappingDto | null) {
 
 function getAppKey(app?: App | null, mapping?: MetaAppMappingDto | null) {
   return mapping?.appId ?? app?.appId ?? (mapping ? `row:${mapping.appRowId}` : "-")
+}
+
+function getAppRouteId(app?: App | null, mapping?: MetaAppMappingDto | null) {
+  return app?.appId ?? mapping?.appId ?? null
 }
 
 function getPrimaryStoreUrl(mapping: MetaAppMappingDto) {
@@ -629,9 +634,24 @@ export function AppMappingsContent() {
                 return (
                   <TableRow key={mapping.id} className="text-sm hover:bg-slate-50">
                     <TableCell>
-                      <div className="space-y-0.5">
-                        <p className="font-medium text-slate-900">{getAppLabel(app, mapping)}</p>
-                        <p className="text-[11px] text-slate-400 font-mono">{getAppKey(app, mapping)}</p>
+                      <div className="flex items-center gap-3">
+                        {app?.iconUri ? (
+                          <img src={app.iconUri} alt="" className="h-10 w-10 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0" />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                            {getAppLabel(app, mapping).charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 space-y-0.5">
+                          {getAppRouteId(app, mapping) ? (
+                            <Link href={`/apps/${encodeURIComponent(getAppRouteId(app, mapping)!)}`} className="block font-medium text-slate-900 transition-colors hover:text-blue-600 hover:underline">
+                              {getAppLabel(app, mapping)}
+                            </Link>
+                          ) : (
+                            <p className="font-medium text-slate-900">{getAppLabel(app, mapping)}</p>
+                          )}
+                          <p className="text-[11px] text-slate-400 font-mono">{getAppKey(app, mapping)}</p>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -923,13 +943,51 @@ export function AppMappingsContent() {
                   App <span className="text-red-500">*</span>
                 </Label>
                 <Select value={form.appRowId} onValueChange={(value) => setForm((current) => ({ ...current, appRowId: value }))}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Select app..." />
+                  <SelectTrigger className="h-auto min-h-14 py-2 text-sm">
+                    {selectedFormApp ? (
+                      <div className="flex w-full items-center gap-3 pr-2 text-left">
+                        {selectedFormApp.iconUri ? (
+                          <img src={selectedFormApp.iconUri} alt="" className="h-10 w-10 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0" />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                            {(selectedFormApp.displayName ?? selectedFormApp.name ?? "?").charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate font-medium text-slate-900">{selectedFormApp.displayName ?? selectedFormApp.name}</span>
+                            <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedFormApp.platform)}`}>
+                              {normalizePlatform(selectedFormApp.platform) || "APP"}
+                            </Badge>
+                          </div>
+                          <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedFormApp.appId}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <SelectValue placeholder="Select app..." />
+                    )}
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[340px]">
                     {selectableApps.map((app) => (
                       <SelectItem key={app.id} value={app.id.toString()}>
-                        {app.displayName ?? app.name} ({app.appId})
+                        <div className="flex items-center gap-3 py-0.5">
+                          {app.iconUri ? (
+                            <img src={app.iconUri} alt="" className="h-9 w-9 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0" />
+                          ) : (
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                              {(app.displayName ?? app.name ?? "?").charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium text-slate-900">{app.displayName ?? app.name}</span>
+                              <Badge className={`text-[10px] ${getPlatformBadgeClass(app.platform)}`}>
+                                {normalizePlatform(app.platform) || "APP"}
+                              </Badge>
+                            </div>
+                            <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {app.appId}</p>
+                          </div>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -941,13 +999,25 @@ export function AppMappingsContent() {
             )}
 
             {selectedFormApp ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">Selected App</p>
-                <div className="flex items-center gap-2 text-sm text-slate-700">
-                  <Badge className={`text-[11px] ${getPlatformBadgeClass(selectedFormApp.platform)}`}>
-                    {normalizePlatform(selectedFormApp.platform) || "APP"}
-                  </Badge>
-                  <span>{selectedFormApp.displayName ?? selectedFormApp.name}</span>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Selected App</p>
+                <div className="flex items-center gap-3">
+                  {selectedFormApp.iconUri ? (
+                    <img src={selectedFormApp.iconUri} alt="" className="h-11 w-11 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0" />
+                  ) : (
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                      {(selectedFormApp.displayName ?? selectedFormApp.name ?? "?").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-900">{selectedFormApp.displayName ?? selectedFormApp.name}</span>
+                      <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedFormApp.platform)}`}>
+                        {normalizePlatform(selectedFormApp.platform) || "APP"}
+                      </Badge>
+                    </div>
+                    <p className="font-mono text-xs text-slate-500">AdMob App ID - {selectedFormApp.appId}</p>
+                  </div>
                 </div>
               </div>
             ) : null}

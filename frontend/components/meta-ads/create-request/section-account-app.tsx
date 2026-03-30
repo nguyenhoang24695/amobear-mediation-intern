@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck, Loader2 } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 import type { MetaAdAccountDto, MetaAppMappingDto, MetaObjectivePresetDto } from "@/types/meta-ads"
 
@@ -16,6 +16,9 @@ interface Props {
   tokenState: TokenState
   adAccounts: MetaAdAccountDto[]
   appMappings: MetaAppMappingDto[]
+  selectedAppMapping?: MetaAppMappingDto | null
+  appMappingsLoading?: boolean
+  appMappingsMessage?: string | null
   objectives: MetaObjectivePresetDto[]
   integrationName?: string | null
 }
@@ -62,12 +65,22 @@ function TokenStatusBadge({ state }: { state: TokenState }) {
   )
 }
 
-export function AccountAppSection({ form, onChange, tokenState, adAccounts, appMappings, objectives, integrationName }: Props) {
-  const selectedAccount = adAccounts.find((account) => account.id.toString() === form.adAccountId)
-  const selectedAppMapping = appMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
+export function AccountAppSection({
+  form,
+  onChange,
+  tokenState,
+  adAccounts,
+  appMappings,
+  selectedAppMapping,
+  appMappingsLoading = false,
+  appMappingsMessage,
+  objectives,
+  integrationName,
+}: Props) {
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride || ""
   const hasMappingIssue = !selectedAppMapping?.metaApplicationId || !mappingUrl
   const isTokenBlocking = tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
+  const appSelectDisabled = !form.adAccountId || appMappingsLoading
 
   return (
     <Card className="border-slate-200">
@@ -82,7 +95,7 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
           <Label className="text-xs font-medium text-slate-700">
             Meta Ad Account <span className="text-red-500">*</span>
           </Label>
-          <Select value={form.adAccountId} onValueChange={(value) => onChange({ adAccountId: value })}>
+          <Select value={form.adAccountId} onValueChange={(value) => onChange({ adAccountId: value, appRowId: "" })}>
             <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="Select ad account..." />
             </SelectTrigger>
@@ -98,7 +111,7 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
                         </Badge>
                       </div>
                       <div className="text-sm font-medium">
-                        {account.name} · {account.currency ?? "—"} · {account.timeZoneName ?? "—"}
+                        {account.name} - {account.currency ?? "-"} - {account.timeZoneName ?? "-"}
                       </div>
                     </div>
                   </div>
@@ -112,7 +125,7 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-600">
-                Integration Status{integrationName ? ` · ${integrationName}` : ""}
+                Integration Status{integrationName ? ` - ${integrationName}` : ""}
               </span>
               <TokenStatusBadge state={tokenState} />
             </div>
@@ -142,9 +155,9 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
           <Label className="text-xs font-medium text-slate-700">
             App <span className="text-red-500">*</span>
           </Label>
-          <Select value={form.appRowId} onValueChange={(value) => onChange({ appRowId: value })}>
+          <Select value={form.appRowId} onValueChange={(value) => onChange({ appRowId: value })} disabled={appSelectDisabled}>
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Select app..." />
+              <SelectValue placeholder={form.adAccountId ? (appMappingsLoading ? "Loading apps for this ad account..." : "Select app...") : "Select ad account first..."} />
             </SelectTrigger>
             <SelectContent>
               {appMappings.map((mapping) => (
@@ -170,6 +183,27 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
               ))}
             </SelectContent>
           </Select>
+
+          {!form.adAccountId ? (
+            <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account's advertisable applications.</p>
+          ) : appMappingsLoading ? (
+            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Loading apps available for this ad account...
+            </div>
+          ) : appMappingsMessage ? (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-red-700">{appMappingsMessage}</p>
+            </div>
+          ) : appMappings.length === 0 ? (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-amber-800">No active app mappings are currently advertisable for the selected Meta ad account.</p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
+          )}
         </div>
 
         {selectedAppMapping ? (
@@ -194,7 +228,7 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
                 {selectedAppMapping.metaApplicationId || "Not configured"}
               </span>
               <span className="text-slate-500">Platform</span>
-              <span className="text-slate-900">{selectedAppMapping.platform ?? "—"}</span>
+              <span className="text-slate-900">{selectedAppMapping.platform ?? "-"}</span>
               <span className="text-slate-500">Store URL</span>
               <span className={`truncate ${mappingUrl ? "text-slate-900" : "text-amber-700 italic"}`}>
                 {mappingUrl || "Not configured"}
@@ -203,7 +237,7 @@ export function AccountAppSection({ form, onChange, tokenState, adAccounts, appM
             {hasMappingIssue ? (
               <p className="text-[11px] text-amber-800">
                 App campaigns require a valid <code className="bg-amber-100 px-1 rounded">promoted_object</code> with application_id + store URL.
-                Configure the mapping in <strong>Meta Ads → App Mappings</strong>.
+                Configure the mapping in <strong>Meta Ads &gt; App Mappings</strong>.
               </p>
             ) : null}
           </div>
