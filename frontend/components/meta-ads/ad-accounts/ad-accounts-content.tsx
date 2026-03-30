@@ -1,61 +1,208 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Plus, MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download } from "lucide-react"
+import { invalidateCache, useApi } from "@/hooks/use-api"
+import { hasScreenFunction } from "@/lib/auth"
+import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
+import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
+import { Plus, MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2 } from "lucide-react"
 
-interface AdAccount {
-  id: string
-  adAccountId: string
-  name: string
-  integration: string
-  currency: string
-  timezone: string
-  businessName: string
-  status: "ACTIVE" | "DISABLED"
-  active: boolean
-  lastSyncedAt: string
+const SCREEN_META_ACCOUNTS = "s-meta-accounts"
+
+const emptyForm: UpsertMetaAdAccountRequestDto = {
+  metaIntegrationId: 0,
+  metaAdAccountId: "",
+  name: "",
+  currency: "",
+  timeZoneName: "",
+  timezoneOffsetMinutes: null,
+  businessId: "",
+  businessName: "",
+  status: "active",
+  isActive: true,
 }
 
-const mockAccounts: AdAccount[] = [
-  { id: "1", adAccountId: "act_111222333", name: "MediationPro Main", integration: "Main Production Token", currency: "USD", timezone: "America/New_York", businessName: "Mediation Pro Inc.", status: "ACTIVE", active: true, lastSyncedAt: "2026-03-24 06:00" },
-  { id: "2", adAccountId: "act_444555666", name: "MediationPro APAC", integration: "APAC Region Token", currency: "SGD", timezone: "Asia/Singapore", businessName: "Mediation Pro APAC Pte Ltd", status: "ACTIVE", active: true, lastSyncedAt: "2026-03-24 06:00" },
-  { id: "3", adAccountId: "act_777888999", name: "MediationPro EU", integration: "Main Production Token", currency: "EUR", timezone: "Europe/Berlin", businessName: "Mediation Pro EU GmbH", status: "DISABLED", active: false, lastSyncedAt: "2026-03-01 06:00" },
-  { id: "4", adAccountId: "act_000111222", name: "Dev / Test Account", integration: "Dev / Sandbox", currency: "USD", timezone: "UTC", businessName: "Mediation Pro Inc.", status: "ACTIVE", active: false, lastSyncedAt: "—" },
-]
+function formatDateTime(value?: string | null) {
+  if (!value) return "—"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+  return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
+}
 
 export function AdAccountsContent() {
   const { toast } = useToast()
-  const [accounts, setAccounts] = useState(mockAccounts)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<AdAccount | null>(null)
-  const [search, setSearch] = useState("")
+  const canCreate = hasScreenFunction(SCREEN_META_ACCOUNTS, "create")
+  const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
+  const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
 
-  const filtered = accounts.filter(a =>
-    !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.adAccountId.includes(search)
+  const {
+    data: accounts,
+    loading,
+    error,
+    refetch,
+  } = useApi(
+    () => metaAdAccountsApi.list(),
+    { cacheKey: "meta-ad-accounts:list" }
   )
 
-  const openEdit = (a: AdAccount) => { setEditTarget(a); setDrawerOpen(true) }
-  const openCreate = () => { setEditTarget(null); setDrawerOpen(true) }
+  const { data: integrations } = useApi(
+    () => metaIntegrationsApi.list(),
+    { cacheKey: "meta-integrations:list" }
+  )
+
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<MetaAdAccountDto | null>(null)
+  const [form, setForm] = useState<UpsertMetaAdAccountRequestDto>(emptyForm)
+  const [syncIntegrationId, setSyncIntegrationId] = useState("")
+  const [search, setSearch] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
+
+  const integrationById = useMemo(() => {
+    return new Map((integrations ?? []).map((integration) => [integration.id, integration.displayName]))
+  }, [integrations])
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return (accounts ?? []).filter((account) => {
+      if (!query) return true
+      return [
+        account.name.toLowerCase(),
+        account.metaAdAccountId.toLowerCase(),
+        integrationById.get(account.metaIntegrationId)?.toLowerCase() ?? "",
+      ].some((value) => value.includes(query))
+    })
+  }, [accounts, integrationById, search])
+
+  const openEdit = (account: MetaAdAccountDto) => {
+    setEditTarget(account)
+    setForm({
+      metaIntegrationId: account.metaIntegrationId,
+      metaAdAccountId: account.metaAdAccountId,
+      name: account.name,
+      currency: account.currency ?? "",
+      timeZoneName: account.timeZoneName ?? "",
+      timezoneOffsetMinutes: account.timezoneOffsetMinutes ?? null,
+      businessId: account.businessId ?? "",
+      businessName: account.businessName ?? "",
+      status: account.status,
+      isActive: account.isActive,
+    })
+    setDrawerOpen(true)
+  }
+
+  const openCreate = () => {
+    setEditTarget(null)
+    setForm({
+      ...emptyForm,
+      metaIntegrationId: integrations?.[0]?.id ?? 0,
+    })
+    setDrawerOpen(true)
+  }
+
+  const handleSubmit = async () => {
+    try {
+      setSubmitting(true)
+      if (editTarget) {
+        await metaAdAccountsApi.update(editTarget.id, form)
+      } else {
+        await metaAdAccountsApi.create(form)
+      }
+
+      invalidateCache("meta-ad-accounts:list")
+      await refetch()
+      setDrawerOpen(false)
+      toast({ title: editTarget ? "Account updated" : "Account added" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to save ad account."
+      toast({ title: "Save failed", description: message, variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleToggleActive = async (account: MetaAdAccountDto) => {
+    try {
+      setRowActionLoadingId(account.id)
+      if (account.isActive) {
+        await metaAdAccountsApi.disable(account.id)
+      } else {
+        await metaAdAccountsApi.enable(account.id)
+      }
+
+      invalidateCache("meta-ad-accounts:list")
+      await refetch()
+      toast({ title: account.isActive ? "Account disabled" : "Account enabled" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to update account."
+      toast({ title: "Update failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
+  const handleSyncSingleAccount = async (account: MetaAdAccountDto) => {
+    try {
+      setRowActionLoadingId(account.id)
+      await metaIntegrationsApi.syncAdAccounts(account.metaIntegrationId)
+      invalidateCache("meta-ad-accounts:list")
+      await refetch()
+      toast({ title: "Account sync completed" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to sync account."
+      toast({ title: "Sync failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
+  const handleSyncIntegration = async () => {
+    try {
+      setSubmitting(true)
+      await metaIntegrationsApi.syncAdAccounts(Number(syncIntegrationId))
+      invalidateCache("meta-ad-accounts:list")
+      await refetch()
+      setSyncDialogOpen(false)
+      toast({ title: "Ad accounts synced" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to sync integration."
+      toast({ title: "Sync failed", description: message, variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
@@ -74,26 +221,30 @@ export function AdAccountsContent() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => toast({ title: "Syncing from integration..." })}>
-            <Download className="w-4 h-4 mr-2" />Sync from Integration
-          </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-2" />Add Account
-          </Button>
+          {canEdit ? (
+            <Button variant="outline" size="sm" onClick={() => setSyncDialogOpen(true)} disabled={(integrations?.length ?? 0) === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Sync from Integration
+            </Button>
+          ) : null}
+          {canCreate ? (
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Account
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      {/* Search */}
       <div className="flex gap-3">
         <Input
           placeholder="Search by name or account ID..."
           className="h-9 text-sm w-72"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
         />
       </div>
 
-      {/* Table */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -111,51 +262,78 @@ export function AdAccountsContent() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map(account => (
-              <TableRow key={account.id} className="text-sm">
-                <TableCell className="font-mono text-xs text-blue-700">{account.adAccountId}</TableCell>
-                <TableCell className="font-medium text-slate-900">{account.name}</TableCell>
-                <TableCell className="text-xs text-slate-600">{account.integration}</TableCell>
-                <TableCell className="text-xs text-slate-600">{account.currency}</TableCell>
-                <TableCell className="text-xs text-slate-600">{account.timezone}</TableCell>
-                <TableCell className="text-xs text-slate-600">{account.businessName}</TableCell>
-                <TableCell>
-                  <Badge className={account.status === "ACTIVE" ? "bg-green-100 text-green-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
-                    {account.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={account.active}
-                    onCheckedChange={() => {
-                      setAccounts(prev => prev.map(a => a.id === account.id ? { ...a, active: !a.active } : a))
-                      toast({ title: "Account updated" })
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="text-xs text-slate-500">{account.lastSyncedAt}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="w-4 h-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEdit(account)}>
-                        <Edit className="w-4 h-4 mr-2" />Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast({ title: "Account synced" })}>
-                        <RefreshCw className="w-4 h-4 mr-2" />Sync
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={10} className="py-12">
+                  <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading ad accounts...
+                  </div>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-12 text-sm text-red-600">
+                  {error.message}
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-12 text-sm text-slate-400">
+                  No ad accounts found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((account) => {
+                const isBusy = rowActionLoadingId === account.id
+                return (
+                  <TableRow key={account.id} className="text-sm">
+                    <TableCell className="font-mono text-xs text-blue-700">{account.metaAdAccountId}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{account.name}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{integrationById.get(account.metaIntegrationId) ?? `Integration ${account.metaIntegrationId}`}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{account.currency ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{account.businessName ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge className={account.status.toLowerCase() === "active" ? "bg-green-100 text-green-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
+                        {account.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch checked={account.isActive} onCheckedChange={() => canDisableEnable && void handleToggleActive(account)} disabled={!canDisableEnable || isBusy} />
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">{formatDateTime(account.lastSyncedAt)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={isBusy}>
+                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canEdit ? (
+                            <DropdownMenuItem onClick={() => openEdit(account)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canEdit ? (
+                            <DropdownMenuItem onClick={() => void handleSyncSingleAccount(account)}>
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Sync
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Modal */}
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DialogContent className="w-full max-w-[560px] p-0 gap-0 rounded-xl overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
@@ -165,43 +343,116 @@ export function AdAccountsContent() {
           </DialogHeader>
           <div className="px-6 py-5 space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Ad Account ID <span className="text-red-500">*</span></Label>
-              <Input className="h-9 text-sm font-mono" defaultValue={editTarget?.adAccountId || ""} placeholder="act_xxxxxxxxx" />
+              <Label className="text-xs font-medium">
+                Ad Account ID <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                className="h-9 text-sm font-mono"
+                value={form.metaAdAccountId}
+                onChange={(event) => setForm((current) => ({ ...current, metaAdAccountId: event.target.value }))}
+                placeholder="act_xxxxxxxxx"
+                disabled={!!editTarget}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Name <span className="text-red-500">*</span></Label>
-              <Input className="h-9 text-sm" defaultValue={editTarget?.name || ""} />
+              <Label className="text-xs font-medium">
+                Name <span className="text-red-500">*</span>
+              </Label>
+              <Input className="h-9 text-sm" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Integration</Label>
-              <Select defaultValue={editTarget?.integration || ""}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select integration..." /></SelectTrigger>
+              <Select value={form.metaIntegrationId.toString()} onValueChange={(value) => setForm((current) => ({ ...current, metaIntegrationId: Number(value) }))}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select integration..." />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Main Production Token">Main Production Token</SelectItem>
-                  <SelectItem value="APAC Region Token">APAC Region Token</SelectItem>
-                  <SelectItem value="Dev / Sandbox">Dev / Sandbox</SelectItem>
+                  {(integrations ?? []).map((integration) => (
+                    <SelectItem key={integration.id} value={integration.id.toString()}>
+                      {integration.displayName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Currency</Label>
-                <Input className="h-9 text-sm" defaultValue={editTarget?.currency || ""} placeholder="USD" />
+                <Input className="h-9 text-sm" value={form.currency ?? ""} onChange={(event) => setForm((current) => ({ ...current, currency: event.target.value }))} placeholder="USD" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Timezone</Label>
-                <Input className="h-9 text-sm" defaultValue={editTarget?.timezone || ""} placeholder="America/New_York" />
+                <Input className="h-9 text-sm" value={form.timeZoneName ?? ""} onChange={(event) => setForm((current) => ({ ...current, timeZoneName: event.target.value }))} placeholder="America/New_York" />
               </div>
             </div>
             <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Timezone Offset Minutes</Label>
+              <Input
+                type="number"
+                className="h-9 text-sm"
+                value={form.timezoneOffsetMinutes ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, timezoneOffsetMinutes: event.target.value ? Number(event.target.value) : null }))}
+                placeholder="e.g. -300"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Business ID</Label>
+              <Input className="h-9 text-sm" value={form.businessId ?? ""} onChange={(event) => setForm((current) => ({ ...current, businessId: event.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
               <Label className="text-xs font-medium">Business Name</Label>
-              <Input className="h-9 text-sm" defaultValue={editTarget?.businessName || ""} />
+              <Input className="h-9 text-sm" value={form.businessName ?? ""} onChange={(event) => setForm((current) => ({ ...current, businessName: event.target.value }))} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.isActive} onCheckedChange={(value) => setForm((current) => ({ ...current, isActive: value }))} />
+              <Label className="text-sm text-slate-700 cursor-pointer">Active</Label>
             </div>
           </div>
           <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)}>Cancel</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { setDrawerOpen(false); toast({ title: editTarget ? "Account updated" : "Account added" }) }}>
-              {editTarget ? "Save Changes" : "Add Account"}
+            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => void handleSubmit()}
+              disabled={submitting || !form.metaIntegrationId || !form.metaAdAccountId.trim() || !form.name.trim()}
+            >
+              {submitting ? "Saving..." : editTarget ? "Save Changes" : "Add Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="w-full max-w-[460px] p-0 gap-0 rounded-xl overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
+            <DialogTitle className="text-base font-semibold text-slate-900">Sync Ad Accounts</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">
+                Integration <span className="text-red-500">*</span>
+              </Label>
+              <Select value={syncIntegrationId} onValueChange={setSyncIntegrationId}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select integration..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(integrations ?? []).map((integration) => (
+                    <SelectItem key={integration.id} value={integration.id.toString()}>
+                      {integration.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
+            <Button variant="ghost" className="text-slate-600" onClick={() => setSyncDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => void handleSyncIntegration()} disabled={submitting || !syncIntegrationId}>
+              {submitting ? "Syncing..." : "Sync"}
             </Button>
           </DialogFooter>
         </DialogContent>
