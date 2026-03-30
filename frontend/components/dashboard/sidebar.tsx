@@ -41,6 +41,11 @@ import {
   PieChart,
   Gauge,
   Loader2,
+  Megaphone,
+  FileText,
+  Link2,
+  CreditCard,
+  GitMerge,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -92,6 +97,53 @@ const navItems: NavItem[] = [
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
   { icon: Bell, label: "Alert Center", href: "/alerts", isShow: true },
   { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
+  {
+    icon: Megaphone,
+    label: "Meta Ads",
+    href: "#",
+    hasSubmenu: true,
+    isNew: true,
+    isShow: () =>
+      [
+        ["s-meta-requests", "view"],
+        ["s-meta-requests", "create"],
+        ["s-meta-accounts", "view"],
+        ["s-meta-campaigns", "view"],
+        ["s-meta-automation", "view"],
+      ].some(([screen, fn]) => hasScreenFunction(screen, fn)),
+    children: [
+      {
+        icon: FileText,
+        label: "Requests",
+        href: "/meta-ads/requests",
+        isShow: () => ["view", "create", "approve", "execute", "retry"].some((fn) => hasScreenFunction("s-meta-requests", fn)),
+      },
+      {
+        icon: FileText,
+        label: "Campaigns",
+        href: "/meta-ads/campaigns",
+        isShow: () => ["view", "edit"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
+      },
+      {
+        icon: Link2,
+        label: "Integrations",
+        href: "/meta-ads/integrations",
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-meta-accounts", fn)),
+      },
+      {
+        icon: CreditCard,
+        label: "Ad Accounts",
+        href: "/meta-ads/ad-accounts",
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-meta-accounts", fn)),
+      },
+      {
+        icon: GitMerge,
+        label: "App Mappings",
+        href: "/meta-ads/app-mappings",
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-meta-accounts", fn)),
+      },
+    ],
+  },
   {
     icon: Bot,
     label: "AI Assistant",
@@ -275,7 +327,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     {hasSubmenu ? (
-                      // hasSubmenu: kh�ng di?u hu?ng, ch? toggle collapse/expand
+                      // hasSubmenu: kh?ng di?u hu?ng, ch? toggle collapse/expand
                       <button
                         type="button"
                         onClick={() =>

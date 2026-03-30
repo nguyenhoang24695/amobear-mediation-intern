@@ -1,0 +1,781 @@
+"use client"
+
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { invalidateCache, useApi } from "@/hooks/use-api"
+import { hasScreenFunction } from "@/lib/auth"
+import { metaIntegrationsApi } from "@/lib/api/meta-ads"
+import type {
+  CreateMetaIntegrationRequestDto,
+  MetaIntegrationDto,
+  MetaIntegrationTestResultDto,
+  UpdateMetaIntegrationRequestDto,
+} from "@/types/meta-ads"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import {
+  Plus,
+  MoreHorizontal,
+  Edit,
+  Power,
+  Link2,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  XCircle,
+  Download,
+  Loader2,
+  ExternalLink,
+  AlertTriangle,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+} from "lucide-react"
+
+const SCREEN_META_ACCOUNTS = "s-meta-accounts"
+
+const AUTH_MODE_OPTIONS = [
+  { value: "system_user_token", label: "SYSTEM_USER", helper: "Recommended for production" },
+  { value: "oauth_user", label: "USER_TOKEN", helper: "Dev/test only" },
+] as const
+
+const REQUIRED_SCOPES = ["ads_management", "ads_read"] as const
+
+const emptyForm: CreateMetaIntegrationRequestDto = {
+  displayName: "",
+  authMode: "system_user_token",
+  metaBusinessId: "",
+  metaAppId: "",
+  appSecret: "",
+  accessToken: "",
+  tokenType: "Bearer",
+  tokenExpiresAt: "",
+  scopes: [...REQUIRED_SCOPES],
+  isDefault: false,
+  isEnabled: true,
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "-"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "-"
+  return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
+}
+
+function scopesToString(scopes: string[] | undefined) {
+  return (scopes ?? []).join(", ")
+}
+
+function formatAuthMode(value: string) {
+  return AUTH_MODE_OPTIONS.find((option) => option.value === value)?.label ?? value
+}
+
+function getAuthModeHelper(value: string) {
+  return AUTH_MODE_OPTIONS.find((option) => option.value === value)?.helper ?? ""
+}
+
+function formatTokenStatus(value?: string | null) {
+  const normalized = value?.toUpperCase() ?? "NOT_TESTED"
+  return normalized.replaceAll("_", " ")
+}
+
+function getTokenStatusMessageClass(value?: string | null) {
+  switch (value?.toUpperCase() ?? "NOT_TESTED") {
+    case "VALID":
+      return "text-green-700"
+    case "EXPIRED":
+    case "NOT_TESTED":
+      return "text-amber-700"
+    case "MISSING_SCOPES":
+    case "ACCESS_DENIED":
+    case "INVALID":
+      return "text-red-700"
+    default:
+      return "text-slate-700"
+  }
+}
+
+function deriveTokenBadge(integration: MetaIntegrationDto) {
+  if (!integration.isEnabled) {
+    return { label: "Disabled", className: "bg-slate-100 text-slate-600", icon: <Power className="w-3 h-3" /> }
+  }
+
+  switch (integration.tokenStatus) {
+    case "VALID":
+      return { label: "Valid", className: "bg-green-100 text-green-700", icon: <ShieldCheck className="w-3 h-3" /> }
+    case "EXPIRED":
+      return { label: "Expired", className: "bg-amber-100 text-amber-700", icon: <ShieldAlert className="w-3 h-3" /> }
+    case "MISSING_SCOPES":
+      return { label: "Missing Scopes", className: "bg-red-100 text-red-700", icon: <ShieldX className="w-3 h-3" /> }
+    case "ACCESS_DENIED":
+      return { label: "Access Denied", className: "bg-red-100 text-red-700", icon: <ShieldX className="w-3 h-3" /> }
+    case "INVALID":
+      return { label: "Invalid", className: "bg-red-100 text-red-700", icon: <XCircle className="w-3 h-3" /> }
+    default:
+      return { label: "Not Tested", className: "bg-amber-100 text-amber-700", icon: <AlertTriangle className="w-3 h-3" /> }
+  }
+}
+
+function MaskedInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  hint,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  hint?: string | null
+}) {
+  const [show, setShow] = useState(false)
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-slate-700">{label}</Label>
+      <div className="relative">
+        <Input
+          type={show ? "text" : "password"}
+          className="h-9 text-sm pr-9 font-mono"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+        <button type="button" onClick={() => setShow((current) => !current)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+      {hint ? <p className="text-[11px] text-slate-400">Current hint: {hint}</p> : null}
+    </div>
+  )
+}
+
+export function IntegrationsContent() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  const canCreate = hasScreenFunction(SCREEN_META_ACCOUNTS, "create")
+  const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
+  const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
+
+  const { data: integrations, loading, error, refetch } = useApi(
+    () => metaIntegrationsApi.list(),
+    { cacheKey: "meta-integrations:list" }
+  )
+
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<MetaIntegrationDto | null>(null)
+  const [form, setForm] = useState<CreateMetaIntegrationRequestDto>(emptyForm)
+  const [submitting, setSubmitting] = useState(false)
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [testResult, setTestResult] = useState<MetaIntegrationTestResultDto | null>(null)
+  const [connectionStateDirty, setConnectionStateDirty] = useState(true)
+  const [oauthLoadingId, setOauthLoadingId] = useState<number | null>(null)
+  const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
+  const oauthNoticeRef = useRef<string | null>(null)
+
+  const defaultIntegration = useMemo(
+    () => integrations?.find((integration) => integration.isDefault) ?? integrations?.[0] ?? null,
+    [integrations]
+  )
+
+  useEffect(() => {
+    const oauthStatus = searchParams.get("oauth")
+    if (!oauthStatus) return
+
+    const marker = searchParams.toString()
+    if (oauthNoticeRef.current === marker) return
+    oauthNoticeRef.current = marker
+
+    const message = searchParams.get("message")
+    if (oauthStatus === "success") {
+      toast({
+        title: "Dev OAuth completed",
+        description: message ?? "Meta user token exchange completed successfully.",
+      })
+    } else {
+      toast({
+        title: "Dev OAuth failed",
+        description: message ?? "Meta user token flow did not complete.",
+        variant: "destructive",
+      })
+    }
+
+    router.replace(pathname)
+  }, [pathname, router, searchParams, toast])
+
+  const openCreate = () => {
+    setEditTarget(null)
+    setForm(emptyForm)
+    setTestResult(null)
+    setConnectionStateDirty(true)
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (integration: MetaIntegrationDto) => {
+    setEditTarget(integration)
+    setForm({
+      displayName: integration.displayName,
+      authMode: integration.authMode,
+      metaBusinessId: integration.metaBusinessId ?? "",
+      metaAppId: integration.metaAppId ?? "",
+      appSecret: "",
+      accessToken: "",
+      tokenType: integration.tokenType ?? "Bearer",
+      tokenExpiresAt: integration.tokenExpiresAt ? integration.tokenExpiresAt.slice(0, 16) : "",
+      scopes: integration.scopes.length > 0 ? integration.scopes : [...REQUIRED_SCOPES],
+      isDefault: integration.isDefault,
+      isEnabled: integration.isEnabled,
+    })
+    setTestResult(null)
+    setConnectionStateDirty(false)
+    setDrawerOpen(true)
+  }
+
+  const redirectToOAuth = async (integration: MetaIntegrationDto) => {
+    try {
+      setOauthLoadingId(integration.id)
+      const redirectUri = `${window.location.origin}/meta-ads/integrations/callback/${integration.id}`
+      const response = await metaIntegrationsApi.getAuthorizeUrl(integration.id, redirectUri)
+      window.location.href = response.authorizationUrl
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to start Meta user token OAuth."
+      toast({ title: "Dev OAuth failed", description: message, variant: "destructive" })
+    } finally {
+      setOauthLoadingId(null)
+    }
+  }
+
+  const updateConnectionForm = (patch: Partial<CreateMetaIntegrationRequestDto>) => {
+    setForm((current) => ({ ...current, ...patch }))
+    setTestResult(null)
+    setConnectionStateDirty(true)
+  }
+
+  const validateForm = () => {
+    const errors: string[] = []
+
+    if (!form.displayName.trim()) errors.push("Display Name is required.")
+    if (!form.metaBusinessId?.trim()) errors.push("Meta Business ID is required.")
+    if (!form.metaAppId?.trim()) errors.push("Meta App ID is required.")
+    if (!form.appSecret?.trim() && !editTarget?.hasAppSecret) errors.push("App Secret is required.")
+    if (!form.accessToken?.trim() && !editTarget?.hasAccessToken) errors.push("Access Token is required.")
+
+    const scopes = new Set((form.scopes ?? []).map((scope) => scope.toLowerCase()))
+    for (const scope of REQUIRED_SCOPES) {
+      if (!scopes.has(scope)) {
+        errors.push(`Scopes must include ${REQUIRED_SCOPES.join(", ")}.`)
+        break
+      }
+    }
+
+    return errors
+  }
+
+  const buildTestRequest = () => ({
+    integrationId: editTarget?.id ?? null,
+    authMode: form.authMode,
+    metaBusinessId: form.metaBusinessId || null,
+    metaAppId: form.metaAppId || null,
+    appSecret: form.appSecret || null,
+    accessToken: form.accessToken || null,
+    tokenType: form.tokenType || null,
+    tokenExpiresAt: form.tokenExpiresAt ? new Date(form.tokenExpiresAt).toISOString() : null,
+    scopes: form.scopes ?? [],
+  })
+
+  const handleTestConnection = async () => {
+    try {
+      setTestingConnection(true)
+      const result = await metaIntegrationsApi.test(buildTestRequest())
+      setTestResult(result)
+      setConnectionStateDirty(false)
+      setForm((current) => ({
+        ...current,
+        tokenType: result.tokenType ?? current.tokenType,
+        tokenExpiresAt: result.tokenExpiresAt ? result.tokenExpiresAt.slice(0, 16) : current.tokenExpiresAt,
+        scopes: result.scopes.length > 0 ? result.scopes : current.scopes,
+      }))
+      toast({
+        title: result.success ? "Connection valid" : "Connection failed",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to test the Meta integration."
+      toast({ title: "Test failed", description: message, variant: "destructive" })
+    } finally {
+      setTestingConnection(false)
+    }
+  }
+
+  const handleSubmit = async () => {
+    try {
+      setSubmitting(true)
+      const validationErrors = validateForm()
+      if (validationErrors.length > 0) {
+        toast({ title: "Validation failed", description: validationErrors[0], variant: "destructive" })
+        return
+      }
+
+      let saved: MetaIntegrationDto
+      const requestPayload = {
+        ...form,
+        metaBusinessId: form.metaBusinessId || null,
+        metaAppId: form.metaAppId || null,
+        appSecret: form.appSecret || null,
+        accessToken: form.accessToken || null,
+        tokenType: form.tokenType || null,
+        tokenExpiresAt: form.tokenExpiresAt ? new Date(form.tokenExpiresAt).toISOString() : null,
+        scopes: form.scopes ?? [],
+      }
+
+      if (editTarget) {
+        const request: UpdateMetaIntegrationRequestDto = {
+          ...requestPayload,
+        }
+        saved = await metaIntegrationsApi.update(editTarget.id, request)
+      } else {
+        saved = await metaIntegrationsApi.create(requestPayload)
+      }
+
+      if (testResult) {
+        try {
+          await metaIntegrationsApi.testSaved(saved.id)
+        } catch (apiError) {
+          const message = apiError instanceof Error ? apiError.message : "Saved, but unable to persist the latest connection test."
+          toast({ title: "Saved with warning", description: message, variant: "destructive" })
+        }
+      }
+
+      invalidateCache("meta-integrations:list")
+      await refetch()
+      setDrawerOpen(false)
+      toast({ title: editTarget ? "Integration updated" : "Integration created" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to save integration."
+      toast({ title: "Save failed", description: message, variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const toggleEnabled = async (integration: MetaIntegrationDto) => {
+    try {
+      setRowActionLoadingId(integration.id)
+      if (integration.isEnabled) {
+        await metaIntegrationsApi.disable(integration.id)
+      } else {
+        await metaIntegrationsApi.enable(integration.id)
+      }
+
+      invalidateCache("meta-integrations:list")
+      await refetch()
+      toast({ title: integration.isEnabled ? "Integration disabled" : "Integration enabled" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to update integration."
+      toast({ title: "Update failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
+  const handleTestSavedConnection = async (integration: MetaIntegrationDto) => {
+    try {
+      setRowActionLoadingId(integration.id)
+      const result = await metaIntegrationsApi.testSaved(integration.id)
+      invalidateCache("meta-integrations:list")
+      await refetch()
+      toast({
+        title: result.success ? "Connection valid" : "Connection failed",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to test the integration."
+      toast({ title: "Test failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
+  const handleSyncAdAccounts = async (integration: MetaIntegrationDto) => {
+    try {
+      setRowActionLoadingId(integration.id)
+      await metaIntegrationsApi.syncAdAccounts(integration.id)
+      invalidateCache("meta-integrations:list")
+      invalidateCache("meta-ad-accounts:list")
+      await refetch()
+      toast({ title: "Ad accounts synced" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to sync ad accounts."
+      toast({ title: "Sync failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
+  const displayedTokenStatus = testResult?.tokenStatus ?? (connectionStateDirty ? "NOT_TESTED" : editTarget?.tokenStatus ?? "NOT_TESTED")
+  const displayedLastCheckedAt = testResult?.checkedAt ?? (connectionStateDirty ? null : editTarget?.lastCheckedAt ?? null)
+  const displayedMessage =
+    testResult?.message ??
+    (connectionStateDirty ? (editTarget ? "Connection test needs to be rerun after recent credential or permission changes." : null) : editTarget?.lastCheckMessage ?? null)
+  const displayedScopes = testResult?.scopes.length ? testResult.scopes : form.scopes ?? []
+  const showUserTokenWarning = form.authMode === "oauth_user"
+  const canOpenDefaultDevOAuth = defaultIntegration?.authMode === "oauth_user"
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
+            <span>Meta Ads</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-slate-900 font-medium">Integrations</span>
+          </nav>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-50">
+              <Link2 className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Meta Integrations</h1>
+              <p className="text-sm text-slate-500">Manage Meta Marketing API credentials and business account connections</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {canEdit ? (
+            <Button variant="outline" size="sm" onClick={() => defaultIntegration && void redirectToOAuth(defaultIntegration)} disabled={!defaultIntegration || !canOpenDefaultDevOAuth || oauthLoadingId !== null}>
+              {oauthLoadingId !== null ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ExternalLink className="w-4 h-4 mr-2" />}
+              Open Dev OAuth
+            </Button>
+          ) : null}
+          {canCreate ? (
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Integration
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50">
+              <TableHead className="text-xs text-slate-500 font-medium">Name</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium w-32">Auth Mode</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Meta App ID</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium w-36">Token Status</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Scopes</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium w-20">Default</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium w-20">Enabled</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium w-32">Last Checked</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={10} className="py-12">
+                  <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading integrations...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-12 text-sm text-red-600">
+                  {error.message}
+                </TableCell>
+              </TableRow>
+            ) : (integrations ?? []).length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-12 text-sm text-slate-400">
+                  No integrations configured yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              (integrations ?? []).map((integration) => {
+                const badge = deriveTokenBadge(integration)
+                const isBusy = rowActionLoadingId === integration.id
+
+                return (
+                  <TableRow key={integration.id} className="text-sm">
+                    <TableCell className="font-medium text-slate-900">
+                      <div className="space-y-1">
+                        <div>{integration.displayName}</div>
+                        {!integration.isProductionSafe ? (
+                          <Badge className="bg-amber-100 text-amber-700 text-[10px] w-fit">Dev/Test Only</Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      <div className="font-mono">{formatAuthMode(integration.authMode)}</div>
+                      <div className="text-[11px] text-slate-400">{getAuthModeHelper(integration.authMode)}</div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaBusinessId || "-"}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaAppId || "-"}</TableCell>
+                    <TableCell>
+                      <Badge className={`text-[11px] flex items-center gap-1 w-fit ${badge.className}`}>
+                        {badge.icon}
+                        {badge.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      {integration.scopes.length > 0 ? scopesToString(integration.scopes.slice(0, 2)) : "-"}
+                      {integration.scopes.length > 2 ? ` +${integration.scopes.length - 2}` : ""}
+                    </TableCell>
+                    <TableCell>{integration.isDefault ? <Badge className="bg-blue-100 text-blue-700 text-[11px]">Default</Badge> : null}</TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={integration.isEnabled}
+                        onCheckedChange={() => canDisableEnable && void toggleEnabled(integration)}
+                        disabled={!canDisableEnable || isBusy}
+                      />
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">{formatDateTime(integration.lastCheckedAt)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={isBusy}>
+                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          {canEdit ? (
+                            <DropdownMenuItem onClick={() => openEdit(integration)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canDisableEnable ? (
+                            <DropdownMenuItem onClick={() => void toggleEnabled(integration)}>
+                              <Power className="w-4 h-4 mr-2" />
+                              {integration.isEnabled ? "Disable" : "Enable"}
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canEdit ? <DropdownMenuSeparator /> : null}
+                          {canEdit ? (
+                            <DropdownMenuItem onClick={() => void handleTestSavedConnection(integration)}>
+                              <ShieldCheck className="w-4 h-4 mr-2" />
+                              Test Connection
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canEdit ? (
+                            <DropdownMenuItem onClick={() => void handleSyncAdAccounts(integration)}>
+                              <Download className="w-4 h-4 mr-2" />
+                              Sync Ad Accounts
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canEdit && integration.authMode === "oauth_user" ? (
+                            <DropdownMenuItem onClick={() => void redirectToOAuth(integration)}>
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Open Dev OAuth
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:w-[min(1160px,calc(100vw-3rem))] sm:!max-w-[1160px] p-0 gap-0 rounded-xl overflow-hidden max-h-[90vh] flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+            <DialogTitle className="text-base font-semibold text-slate-900">
+              {editTarget ? "Edit Integration" : "Create Integration"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm text-blue-800">
+              This integration is used by backend services to call Meta Marketing API for request execution and data sync.
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_400px] xl:grid-cols-[minmax(0,1.25fr)_430px]">
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Integration Setup</h3>
+                  <p className="mt-1 text-[11px] text-slate-500">Configure the business and application context used for Meta Marketing API access.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">
+                    Display Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input className="h-9 text-sm" value={form.displayName} onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Auth Mode</Label>
+                  <Select value={form.authMode} onValueChange={(value) => updateConnectionForm({ authMode: value })}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AUTH_MODE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex flex-col">
+                            <span>{option.label}</span>
+                            <span className="text-[11px] text-slate-400">{option.helper}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-slate-500">For production Meta Ads integrations, use a System User token from Meta Business Manager.</p>
+                </div>
+                {showUserTokenWarning ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                    USER_TOKEN should only be used for development or testing. It is not recommended for production request execution.
+                  </div>
+                ) : null}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Meta Business ID</Label>
+                    <Input className="h-9 text-sm font-mono" value={form.metaBusinessId ?? ""} onChange={(event) => updateConnectionForm({ metaBusinessId: event.target.value })} />
+                    <p className="text-[11px] text-slate-400">Business ID from Meta Business Manager.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Meta App ID</Label>
+                    <Input className="h-9 text-sm font-mono" value={form.metaAppId ?? ""} onChange={(event) => updateConnectionForm({ metaAppId: event.target.value })} />
+                    <p className="text-[11px] text-slate-400">App ID from Meta for Developers.</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <MaskedInput
+                    label="App Secret"
+                    value={form.appSecret ?? ""}
+                    onChange={(value) => updateConnectionForm({ appSecret: value })}
+                    placeholder="Leave blank to keep current value"
+                    hint={editTarget?.appSecretHint ?? null}
+                  />
+                  <p className="text-[11px] text-slate-400">App Secret from Meta for Developers.</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 space-y-4 h-fit">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Access &amp; Permissions</h3>
+                  <p className="mt-1 text-[11px] text-slate-500">Meta Marketing API does not use a standard refresh token flow like Google OAuth.</p>
+                </div>
+                <MaskedInput
+                  label="Access Token"
+                  value={form.accessToken ?? ""}
+                  onChange={(value) => updateConnectionForm({ accessToken: value })}
+                  placeholder="Leave blank to keep current value"
+                  hint={editTarget?.accessTokenHint ?? null}
+                />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Token Type</Label>
+                    <Input className="h-9 text-sm" value={form.tokenType ?? ""} onChange={(event) => updateConnectionForm({ tokenType: event.target.value })} placeholder="Bearer" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Token Expires At</Label>
+                    <Input type="datetime-local" className="h-9 text-sm" value={form.tokenExpiresAt ?? ""} onChange={(event) => updateConnectionForm({ tokenExpiresAt: event.target.value })} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Scopes (comma-separated)</Label>
+                  <Input
+                    className="h-9 text-sm"
+                    value={scopesToString(form.scopes ?? [])}
+                    onChange={(event) => updateConnectionForm({
+                      scopes: event.target.value
+                        .split(",")
+                        .map((value) => value.trim())
+                        .filter(Boolean),
+                    })}
+                    placeholder="ads_management, ads_read"
+                  />
+                  <p className="text-[11px] text-slate-400">Typical required scopes: ads_management, ads_read</p>
+                </div>
+                <div className="grid gap-3 rounded-md border border-slate-200 bg-white px-3 py-3 text-xs md:grid-cols-2">
+                <div>
+                  <p className="text-slate-500 mb-1">Token Status</p>
+                  <p className="font-medium text-slate-900">{formatTokenStatus(displayedTokenStatus)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-1">Last Checked At</p>
+                  <p className="font-medium text-slate-900">{formatDateTime(displayedLastCheckedAt)}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-slate-500 mb-1">Resolved Scopes</p>
+                  <p className="font-mono text-slate-700 break-all">{displayedScopes.length > 0 ? scopesToString(displayedScopes) : "-"}</p>
+                </div>
+                {displayedMessage ? (
+                  <div className="md:col-span-2">
+                    <p className="text-slate-500 mb-1">Last Check Message</p>
+                    <p className={`text-sm ${getTokenStatusMessageClass(displayedTokenStatus)}`}>{displayedMessage}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                  <Switch checked={form.isDefault} onCheckedChange={(value) => setForm((current) => ({ ...current, isDefault: value }))} />
+                  Set as Default
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                  <Switch checked={form.isEnabled} onCheckedChange={(value) => setForm((current) => ({ ...current, isEnabled: value }))} />
+                  Enabled
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => void handleTestConnection()} disabled={submitting || testingConnection}>
+                {testingConnection ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+                Test Connection
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
+                {submitting ? "Saving..." : editTarget ? "Save Changes" : "Create Integration"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
