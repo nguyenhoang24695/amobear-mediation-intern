@@ -90,7 +90,7 @@ const navItems: NavItem[] = [
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
-  { icon: Bell, label: "Alert Center", href: "/alerts", isShow: true },
+  { icon: Bell, label: "Alert Center", href: "/alert-center", isShow: true },
   { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
   {
     icon: Bot,
@@ -229,7 +229,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             const isActive = hasSubmenu
               ? anyChildActive
               : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
-            const badgeCount = item.href === "/alerts" ? alertNotificationCount : item.badge
+            const badgeCount = item.href === "/alert-center" ? alertNotificationCount : item.badge
 
             const content = (
               <div
@@ -291,7 +291,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     ) : (
                       <Link
                         href={item.href}
-                        onClick={item.href === "/alerts" ? () => markAlertsViewed(openAlertIds) : undefined}
+                        onClick={item.href === "/alert-center" ? () => markAlertsViewed(openAlertIds) : undefined}
                         className="block"
                       >
                         {content}

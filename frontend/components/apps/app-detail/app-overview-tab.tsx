@@ -555,7 +555,7 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
                     return (
                       <Link
                         key={alert.id}
-                        href={`/alerts/${alert.id}`}
+                        href={`/alert-center/${alert.id}`}
                         className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
                           isError ? "bg-red-50 hover:bg-red-100" : "bg-amber-50 hover:bg-amber-100"
                         }`}
@@ -574,7 +574,7 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
                   })
                 )}
               </div>
-              <Link href={app ? `/alerts?appId=${encodeURIComponent(app.appId)}` : "/alerts"}>
+              <Link href={app ? `/alert-center?appId=${encodeURIComponent(app.appId)}` : "/alert-center"}>
                 <Button variant="link" className="p-0 h-auto mt-4 text-blue-600 gap-1">
                   View All Alerts
                   <ArrowRight className="w-3 h-3" />

@@ -92,7 +92,7 @@ export function AlertSummary() {
               ) : (
                 <>
                   {severityCounts.critical > 0 && (
-                    <Link href="/alerts?severity=CRITICAL">
+                    <Link href="/alert-center?severity=CRITICAL">
                       <Badge
                         variant="destructive"
                         className="gap-1 px-2.5 py-1 cursor-pointer hover:bg-red-600 transition-colors"
@@ -103,7 +103,7 @@ export function AlertSummary() {
                     </Link>
                   )}
                   {severityCounts.high > 0 && (
-                    <Link href="/alerts?severity=HIGH">
+                    <Link href="/alert-center?severity=HIGH">
                       <Badge className="gap-1 px-2.5 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer transition-colors">
                         <AlertOctagon className="w-3.5 h-3.5" />
                         {severityCounts.high} High
@@ -111,7 +111,7 @@ export function AlertSummary() {
                     </Link>
                   )}
                   {severityCounts.medium > 0 && (
-                    <Link href="/alerts?severity=MEDIUM">
+                    <Link href="/alert-center?severity=MEDIUM">
                       <Badge className="gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer transition-colors">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {severityCounts.medium} Medium
@@ -119,7 +119,7 @@ export function AlertSummary() {
                     </Link>
                   )}
                   {severityCounts.low > 0 && (
-                    <Link href="/alerts?severity=LOW">
+                    <Link href="/alert-center?severity=LOW">
                       <Badge className="gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors">
                         <Info className="w-3.5 h-3.5" />
                         {severityCounts.low} Low
@@ -131,7 +131,7 @@ export function AlertSummary() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/alerts">
+            <Link href="/alert-center">
               <Button variant="link" className="text-sm text-blue-600 hover:text-blue-700 p-0 h-auto">
                 View All Alerts
                 <ArrowRight className="w-4 h-4 ml-1" />
@@ -156,7 +156,7 @@ export function AlertSummary() {
                 <Tooltip key={alert.id}>
                   <TooltipTrigger asChild>
                     <Link
-                      href={`/alerts/${alert.id}`}
+                      href={`/alert-center/${alert.id}`}
                       className="flex items-start gap-3 p-3 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block"
                     >
                       {getSeverityIcon(alert.severity)}

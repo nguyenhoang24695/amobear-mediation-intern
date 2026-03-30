@@ -1026,6 +1026,83 @@ export const mediationGroupMetricsApi = {
 
 // Alerts API Service
 export const alertsApi = {
+    getAlertResult: async (id: number): Promise<{
+        alert: {
+            id: number
+            alertRuleId: number
+            alertType: string
+            severity: string
+            message: string
+            publisherId: string
+            appId?: string
+            mediationGroupId?: string
+            adSourceId?: string
+            countryCode?: string
+            value: number
+            threshold: number
+            additionalData?: string
+            status: string
+            resolvedAt?: string
+            resolvedBy?: string
+            acknowledgedAt?: string
+            acknowledgedBy?: string
+            resolutionComment?: string
+            triggeredAt: string
+            sentAt?: string
+            createdAt: string
+            updatedAt: string
+        }
+        history: Array<{
+            id: number
+            actionType: string
+            actionBy?: string
+            actionAt: string
+            details?: string
+            comment?: string
+        }>
+        notificationLogs: Array<{
+            id: number
+            channel: string
+            recipient: string
+            status: string
+            sentAt: string
+            errorMessage?: string
+        }>
+    }> => {
+        const response = await apiClient.get<{
+            alert?: any
+            history?: any[]
+            notificationLogs?: any[]
+        }>(`/api/Alerts/results/${id}`)
+
+        return {
+            alert: response.alert ?? response.Alert,
+            history: response.history ?? response.History ?? [],
+            notificationLogs: response.notificationLogs ?? response.NotificationLogs ?? [],
+        }
+    },
+
+    acknowledgeAlert: async (id: number, body?: { acknowledgedBy?: string; comment?: string }): Promise<{ message: string }> => {
+        return apiClient.post(`/api/Alerts/results/${id}/acknowledge`, {
+            acknowledgedBy: body?.acknowledgedBy,
+            comment: body?.comment,
+        })
+    },
+
+    resolveAlert: async (id: number, body?: { resolvedBy?: string; comment?: string }): Promise<{ message: string }> => {
+        return apiClient.post(`/api/Alerts/results/${id}/resolve`, {
+            resolvedBy: body?.resolvedBy,
+            comment: body?.comment,
+        })
+    },
+
+    snoozeAlert: async (
+        id: number,
+        body: { snoozedMinutes: number; snoozedBy?: string; comment?: string }
+    ): Promise<{ message: string; snoozedUntil: string }> => {
+        return apiClient.post(`/api/Alerts/results/${id}/snooze`, body)
+    },
+
     getActiveAlerts: async (params?: {
         publisherId?: string
         appId?: string
