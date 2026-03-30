@@ -77,9 +77,9 @@ const rowColorClass: Record<MetaRequestStatus, string> = {
 type ConfirmAction = "approve" | "reject" | "execute" | "retry"
 
 function formatDateTime(value?: string | null): string {
-  if (!value) return "—"
+  if (!value) return "-"
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "-"
   return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
 }
 
@@ -343,10 +343,10 @@ export function RequestListContent() {
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-[11px] text-slate-500">{request.objective.replace("OUTCOME_", "")}</TableCell>
-                  <TableCell className="text-xs text-slate-600">{request.appDisplayName ?? request.appId ?? "—"}</TableCell>
+                  <TableCell className="text-xs text-slate-600">{request.appDisplayName ?? request.appId ?? "-"}</TableCell>
                   <TableCell className="text-[11px] text-slate-500">
                     <div className="space-y-0.5">
-                      <p className="text-slate-700">{request.metaAdAccountName ?? "—"}</p>
+                      <p className="text-slate-700">{request.metaAdAccountName ?? "-"}</p>
                       <p className="font-mono">{request.metaAdAccountId}</p>
                     </div>
                   </TableCell>
@@ -455,3 +455,4 @@ export function RequestListContent() {
     </div>
   )
 }
+

@@ -2,18 +2,22 @@ import { apiClient } from "./client"
 import type {
   ApproveMetaCampaignRequestDto,
   CreateMetaAppMappingRequestDto,
-  MetaAppMappingCandidateDto,
-  MetaAppMappingCandidateQueryDto,
-  MetaAppMappingDiscoveryRequestDto,
-  MetaAppMappingDiscoveryResultDto,
   CreateMetaCampaignRequestDto,
   CreateMetaIntegrationRequestDto,
   ExecuteMetaCampaignRequestDto,
   MetaAdAccountDto,
+  MetaAppMappingCandidateDto,
+  MetaAppMappingCandidateQueryDto,
+  MetaAppMappingDiscoveryRequestDto,
+  MetaAppMappingDiscoveryResultDto,
   MetaAppMappingDto,
   MetaAuthorizeUrlResponseDto,
+  MetaCampaignDetailDto,
+  MetaCampaignPreviewDto,
+  MetaCampaignListResponseDto,
   MetaCampaignRequestDetailDto,
   MetaCampaignRequestListItemDto,
+  MetaRequestAssetDto,
   MetaCreateCampaignReferenceDto,
   MetaExecuteResponseDto,
   MetaIntegrationDto,
@@ -23,6 +27,8 @@ import type {
   MetaValidationResultDto,
   RejectMetaCampaignRequestDto,
   ResolveMetaAppMappingCandidateRequestDto,
+  SyncMetaCampaignsRequestDto,
+  SyncMetaCampaignsResultDto,
   UpdateMetaAppMappingRequestDto,
   UpdateMetaCampaignRequestDto,
   UpdateMetaIntegrationRequestDto,
@@ -33,6 +39,7 @@ const AUTH_PREFIX = "/api/v1/meta-auth"
 const ACCOUNTS_PREFIX = "/api/v1/meta-accounts"
 const REFERENCE_PREFIX = "/api/v1/meta-reference"
 const REQUESTS_PREFIX = "/api/v1/meta-campaign-requests"
+const CAMPAIGNS_PREFIX = "/api/v1/meta-campaigns"
 
 export const metaRequestsApi = {
   list: async (params?: { status?: string; appRowId?: number; metaAdAccountId?: number }) => {
@@ -73,6 +80,50 @@ export const metaRequestsApi = {
 
   retry: async (id: number, request: ExecuteMetaCampaignRequestDto) => {
     return apiClient.post<MetaExecuteResponseDto>(`${REQUESTS_PREFIX}/${id}/retry`, request)
+  },
+
+  uploadAsset: async (file: File, kind: "image" | "video") => {
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("kind", kind)
+    return apiClient.post<MetaRequestAssetDto>(`${REQUESTS_PREFIX}/assets`, formData)
+  },
+
+  getAsset: async (id: number) => {
+    return apiClient.get<MetaRequestAssetDto>(`${REQUESTS_PREFIX}/assets/${id}`)
+  },
+}
+
+
+export const metaCampaignsApi = {
+  list: async (params?: {
+    search?: string
+    metaAdAccountId?: number
+    appRowId?: number
+    objective?: string
+    effectiveStatus?: string
+    quickFilter?: string
+    syncFreshness?: string
+    page?: number
+    pageSize?: number
+  }) => {
+    return apiClient.get<MetaCampaignListResponseDto>(CAMPAIGNS_PREFIX, params)
+  },
+
+  getById: async (id: number) => {
+    return apiClient.get<MetaCampaignDetailDto>(`${CAMPAIGNS_PREFIX}/${id}`)
+  },
+
+  sync: async (request?: SyncMetaCampaignsRequestDto) => {
+    return apiClient.post<SyncMetaCampaignsResultDto>(`${CAMPAIGNS_PREFIX}/sync`, request ?? {})
+  },
+
+  syncOne: async (id: number) => {
+    return apiClient.post<SyncMetaCampaignsResultDto>(`${CAMPAIGNS_PREFIX}/${id}/sync`, {})
+  },
+
+  previewAd: async (campaignId: number, adId: number) => {
+    return apiClient.get<MetaCampaignPreviewDto>(`${CAMPAIGNS_PREFIX}/${campaignId}/ads/${adId}/preview`)
   },
 }
 
@@ -166,7 +217,14 @@ export const metaAppMappingsApi = {
   },
 
   listCandidates: async (query?: MetaAppMappingCandidateQueryDto) => {
-    return apiClient.get<MetaAppMappingCandidateDto[]>(`${ACCOUNTS_PREFIX}/app-mappings/candidates`, query)
+    return apiClient.get<MetaAppMappingCandidateDto[]>(`${ACCOUNTS_PREFIX}/app-mappings/candidates`, query
+      ? {
+          search: query.search,
+          platform: query.platform,
+          reviewStatus: query.reviewStatus,
+          matchQuality: query.matchQuality,
+        }
+      : undefined)
   },
 
   discover: async (request?: MetaAppMappingDiscoveryRequestDto) => {

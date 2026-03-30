@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -117,6 +117,12 @@ const navItems: NavItem[] = [
         label: "Requests",
         href: "/meta-ads/requests",
         isShow: () => ["view", "create", "approve", "execute", "retry"].some((fn) => hasScreenFunction("s-meta-requests", fn)),
+      },
+      {
+        icon: FileText,
+        label: "Campaigns",
+        href: "/meta-ads/campaigns",
+        isShow: () => ["view", "edit"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
       },
       {
         icon: Link2,
@@ -321,7 +327,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     {hasSubmenu ? (
-                      // hasSubmenu: kh�ng di?u hu?ng, ch? toggle collapse/expand
+                      // hasSubmenu: kh?ng di?u hu?ng, ch? toggle collapse/expand
                       <button
                         type="button"
                         onClick={() =>

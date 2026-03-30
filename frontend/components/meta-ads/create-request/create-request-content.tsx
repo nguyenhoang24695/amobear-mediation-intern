@@ -18,6 +18,8 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaIntegrationsApi, metaReferenceApi, metaRequestsApi } from "@/lib/api/meta-ads"
 import {
+  createEmptyCarouselCard,
+  createEmptyMediaSelection,
   formStateToCreateDto,
   formStateToUpdateDto,
   groupValidationErrors,
@@ -69,16 +71,27 @@ const defaultFormState: RequestFormState = {
   bidAmount: "",
   startTime: "",
   endTime: "",
+  creativeType: "SINGLE_IMAGE",
   creativeName: "",
   facebookPageId: "",
   instagramActorId: "",
-  primaryText: "",
-  headline: "",
-  description: "",
-  callToAction: "LEARN_MORE",
-  imageHash: "",
-  imageUrl: "",
-  linkUrl: "",
+  singleImagePrimaryText: "",
+  singleImageHeadline: "",
+  singleImageDescription: "",
+  singleImageCallToAction: "LEARN_MORE",
+  singleImageLinkUrl: "",
+  singleImageImage: createEmptyMediaSelection("meta_ref"),
+  singleVideoPrimaryText: "",
+  singleVideoHeadline: "",
+  singleVideoDescription: "",
+  singleVideoCallToAction: "LEARN_MORE",
+  singleVideoLinkUrl: "",
+  singleVideoVideo: createEmptyMediaSelection("meta_ref"),
+  singleVideoThumbnail: createEmptyMediaSelection("meta_ref"),
+  carouselPrimaryText: "",
+  carouselCallToAction: "LEARN_MORE",
+  carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
+  existingPostId: "",
   adName: "",
   trackingSpecs: "",
 }
@@ -472,6 +485,7 @@ export function CreateRequestContent() {
     </div>
   )
 }
+
 
 
 

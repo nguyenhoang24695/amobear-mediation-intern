@@ -37,11 +37,11 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
           <CalendarClock className="w-4 h-4 text-slate-500" />
-          Ad Set — Budget, Bidding &amp; Schedule
+          Ad Set - Budget, Bidding &amp; Schedule
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Ad Set Budgets — only active in ABO mode */}
+        {/* Ad Set Budgets - only active in ABO mode */}
         <div className={`space-y-2 transition-opacity ${isABO ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
           <div className="flex items-center gap-2">
             <Label className="text-xs font-medium text-slate-700">Ad Set Budget</Label>
@@ -97,7 +97,7 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
             </Select>
           </div>
 
-          {/* Optimization Goal — filtered by objective */}
+          {/* Optimization Goal - filtered by objective */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-slate-700">Optimization Goal</Label>
             <Select value={form.optimizationGoal} onValueChange={v => onChange({ optimizationGoal: v })}>
@@ -158,3 +158,4 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
     </Card>
   )
 }
+

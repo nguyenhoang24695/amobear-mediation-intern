@@ -1,4 +1,4 @@
-// Standalone constants — no imports from other create-request modules
+// Standalone constants - no imports from other create-request modules
 // (avoids circular dependency between create-request-content and section-adset-budget)
 
 export const OBJECTIVE_OPTIMIZATION_MAP: Record<string, string[]> = {
@@ -9,3 +9,4 @@ export const OBJECTIVE_OPTIMIZATION_MAP: Record<string, string[]> = {
   OUTCOME_LEADS: ["LEAD_GENERATION", "LINK_CLICKS", "CONVERSIONS"],
   OUTCOME_SALES: ["CONVERSIONS", "VALUE", "LINK_CLICKS"],
 }
+

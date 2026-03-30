@@ -83,9 +83,9 @@ const emptyForm: CreateMetaIntegrationRequestDto = {
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return "—"
+  if (!value) return "-"
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "-"
   return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
 }
 
@@ -545,8 +545,8 @@ export function IntegrationsContent() {
                       <div className="font-mono">{formatAuthMode(integration.authMode)}</div>
                       <div className="text-[11px] text-slate-400">{getAuthModeHelper(integration.authMode)}</div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaBusinessId || "—"}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaAppId || "—"}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaBusinessId || "-"}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaAppId || "-"}</TableCell>
                     <TableCell>
                       <Badge className={`text-[11px] flex items-center gap-1 w-fit ${badge.className}`}>
                         {badge.icon}
@@ -554,7 +554,7 @@ export function IntegrationsContent() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-slate-500">
-                      {integration.scopes.length > 0 ? scopesToString(integration.scopes.slice(0, 2)) : "—"}
+                      {integration.scopes.length > 0 ? scopesToString(integration.scopes.slice(0, 2)) : "-"}
                       {integration.scopes.length > 2 ? ` +${integration.scopes.length - 2}` : ""}
                     </TableCell>
                     <TableCell>{integration.isDefault ? <Badge className="bg-blue-100 text-blue-700 text-[11px]">Default</Badge> : null}</TableCell>
@@ -735,7 +735,7 @@ export function IntegrationsContent() {
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-slate-500 mb-1">Resolved Scopes</p>
-                  <p className="font-mono text-slate-700 break-all">{displayedScopes.length > 0 ? scopesToString(displayedScopes) : "—"}</p>
+                  <p className="font-mono text-slate-700 break-all">{displayedScopes.length > 0 ? scopesToString(displayedScopes) : "-"}</p>
                 </div>
                 {displayedMessage ? (
                   <div className="md:col-span-2">
@@ -778,3 +778,4 @@ export function IntegrationsContent() {
     </div>
   )
 }
+

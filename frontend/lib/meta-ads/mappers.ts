@@ -2,9 +2,45 @@ import type {
   CreateMetaCampaignRequestDto,
   GroupedValidationErrors,
   MetaCampaignRequestDetailDto,
+  MetaCarouselCardDraftDto,
+  MetaCarouselCardFormState,
+  MetaCreativeDraftDto,
+  MetaCreativeMediaMode,
+  MetaCreativeMediaSourceDto,
+  MetaRequestAssetSelectionState,
   MetaRequestFormState,
   UpdateMetaCampaignRequestDto,
 } from "@/types/meta-ads"
+
+function createId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+export function createEmptyMediaSelection(mode: MetaCreativeMediaMode = "meta_ref"): MetaRequestAssetSelectionState {
+  return {
+    mode,
+    imageHash: "",
+    imageUrl: "",
+    videoId: "",
+    uploadedAssetId: null,
+    uploadedAssetName: "",
+    uploadedAssetPreviewUrl: "",
+  }
+}
+
+export function createEmptyCarouselCard(): MetaCarouselCardFormState {
+  return {
+    id: createId(),
+    headline: "",
+    description: "",
+    linkUrl: "",
+    image: createEmptyMediaSelection("meta_ref"),
+  }
+}
 
 function parseOptionalLong(value: string): number | null {
   const trimmed = value.trim()
@@ -34,8 +70,143 @@ function parseBudgetStrategy(form: MetaRequestFormState) {
   }
 }
 
+function buildMediaSource(selection: MetaRequestAssetSelectionState, kind: "image" | "video"): MetaCreativeMediaSourceDto | null {
+  if (selection.uploadedAssetId) {
+    return {
+      mode: "uploaded_asset",
+      uploadedAssetId: selection.uploadedAssetId,
+    }
+  }
+
+  if (selection.mode === "external_url") {
+    if (!selection.imageUrl.trim()) return null
+    return {
+      mode: "external_url",
+      imageUrl: selection.imageUrl.trim(),
+    }
+  }
+
+  if (kind === "video") {
+    if (!selection.videoId.trim()) return null
+    return {
+      mode: "meta_ref",
+      videoId: selection.videoId.trim(),
+    }
+  }
+
+  if (!selection.imageHash.trim() && !selection.imageUrl.trim()) return null
+  return {
+    mode: selection.imageHash.trim() ? "meta_ref" : "external_url",
+    imageHash: selection.imageHash.trim() || null,
+    imageUrl: selection.imageUrl.trim() || null,
+  }
+}
+
+function mediaSourceToSelection(source: MetaCreativeMediaSourceDto | null | undefined, kind: "image" | "video"): MetaRequestAssetSelectionState {
+  const mode = source?.mode ?? (source?.uploadedAssetId ? "uploaded_asset" : source?.videoId ? "meta_ref" : source?.imageHash ? "meta_ref" : source?.imageUrl ? "external_url" : kind === "video" ? "meta_ref" : "meta_ref")
+  return {
+    mode,
+    imageHash: source?.imageHash ?? "",
+    imageUrl: source?.imageUrl ?? "",
+    videoId: source?.videoId ?? "",
+    uploadedAssetId: source?.uploadedAssetId ?? null,
+    uploadedAssetName: source?.uploadedAssetId ? `Asset #${source.uploadedAssetId}` : "",
+    uploadedAssetPreviewUrl: source?.uploadedAssetId ? `/api/v1/meta-campaign-requests/assets/${source.uploadedAssetId}/content` : "",
+  }
+}
+
+function getCreativeCommon(creative: MetaCreativeDraftDto) {
+  return {
+    name: creative.common?.name ?? creative.name ?? "",
+    pageId: creative.common?.pageId ?? creative.pageId ?? "",
+    instagramActorId: creative.common?.instagramActorId ?? creative.instagramActorId ?? "",
+  }
+}
+
+function getSingleImageCreative(creative: MetaCreativeDraftDto) {
+  return creative.singleImage ?? {
+    message: creative.message,
+    headline: creative.headline,
+    description: creative.description,
+    callToActionType: creative.callToActionType,
+    linkUrl: creative.linkUrl,
+    image: {
+      mode: creative.imageHash ? "meta_ref" : creative.imageUrl ? "external_url" : "meta_ref",
+      imageHash: creative.imageHash,
+      imageUrl: creative.imageUrl,
+    },
+  }
+}
+
+function getSingleVideoCreative(creative: MetaCreativeDraftDto) {
+  return creative.singleVideo ?? {
+    message: creative.message,
+    headline: creative.headline,
+    description: creative.description,
+    callToActionType: creative.callToActionType,
+    linkUrl: creative.linkUrl,
+    video: null,
+    thumbnail: null,
+  }
+}
+
+function getCarouselCreative(creative: MetaCreativeDraftDto) {
+  return creative.carousel ?? {
+    message: creative.message,
+    callToActionType: creative.callToActionType,
+    cards: [] as MetaCarouselCardDraftDto[],
+  }
+}
+
 export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?: string): CreateMetaCampaignRequestDto {
   const budgets = parseBudgetStrategy(form)
+  const creativeCommon = {
+    name: form.creativeName.trim(),
+    pageId: form.facebookPageId.trim() || null,
+    instagramActorId: form.instagramActorId.trim() || null,
+  }
+
+  const creative: MetaCreativeDraftDto = {
+    type: form.creativeType,
+    common: creativeCommon,
+  }
+
+  if (form.creativeType === "SINGLE_VIDEO") {
+    creative.singleVideo = {
+      message: form.singleVideoPrimaryText.trim() || null,
+      headline: form.singleVideoHeadline.trim() || null,
+      description: form.singleVideoDescription.trim() || null,
+      callToActionType: form.singleVideoCallToAction.trim() || null,
+      linkUrl: form.singleVideoLinkUrl.trim() || null,
+      video: buildMediaSource(form.singleVideoVideo, "video"),
+      thumbnail: buildMediaSource(form.singleVideoThumbnail, "image"),
+    }
+  } else if (form.creativeType === "CAROUSEL_IMAGE") {
+    creative.carousel = {
+      message: form.carouselPrimaryText.trim() || null,
+      callToActionType: form.carouselCallToAction.trim() || null,
+      cards: form.carouselCards.map((card) => ({
+        headline: card.headline.trim() || null,
+        description: card.description.trim() || null,
+        linkUrl: card.linkUrl.trim() || null,
+        image: buildMediaSource(card.image, "image"),
+      })),
+    }
+  } else if (form.creativeType === "EXISTING_POST") {
+    creative.existingPost = {
+      sourcePostId: form.existingPostId.trim() || null,
+    }
+  } else {
+    creative.singleImage = {
+      message: form.singleImagePrimaryText.trim() || null,
+      headline: form.singleImageHeadline.trim() || null,
+      description: form.singleImageDescription.trim() || null,
+      callToActionType: form.singleImageCallToAction.trim() || null,
+      linkUrl: form.singleImageLinkUrl.trim() || null,
+      image: buildMediaSource(form.singleImageImage, "image"),
+    }
+  }
+
   return {
     metaAdAccountId: Number(form.adAccountId),
     appRowId: Number(form.appRowId),
@@ -68,18 +239,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       facebookPositions: form.placementMode === "MANUAL" ? form.facebookPositions : [],
       instagramPositions: form.placementMode === "MANUAL" ? form.instagramPositions : [],
     },
-    creative: {
-      name: form.creativeName.trim(),
-      pageId: form.facebookPageId.trim() || null,
-      instagramActorId: form.instagramActorId.trim() || null,
-      message: form.primaryText.trim() || null,
-      headline: form.headline.trim() || null,
-      description: form.description.trim() || null,
-      callToActionType: form.callToAction.trim() || null,
-      imageHash: form.imageHash.trim() || null,
-      imageUrl: form.imageUrl.trim() || null,
-      linkUrl: form.linkUrl.trim() || null,
-    },
+    creative,
     ad: {
       name: form.adName.trim(),
       status: "PAUSED",
@@ -110,6 +270,12 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
         ? "FEMALE"
         : "MALE"
 
+  const creativeType = payload.creative.type ?? "SINGLE_IMAGE"
+  const common = getCreativeCommon(payload.creative)
+  const singleImage = getSingleImageCreative(payload.creative)
+  const singleVideo = getSingleVideoCreative(payload.creative)
+  const carousel = getCarouselCreative(payload.creative)
+
   return {
     adAccountId: detail.metaAdAccountId.toString(),
     appRowId: detail.appRowId.toString(),
@@ -138,16 +304,33 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     bidAmount: payload.adSet.bidAmount?.toString() ?? "",
     startTime: payload.adSet.startTime ? payload.adSet.startTime.slice(0, 16) : "",
     endTime: payload.adSet.endTime ? payload.adSet.endTime.slice(0, 16) : "",
-    creativeName: payload.creative.name ?? "",
-    facebookPageId: payload.creative.pageId ?? "",
-    instagramActorId: payload.creative.instagramActorId ?? "",
-    primaryText: payload.creative.message ?? "",
-    headline: payload.creative.headline ?? "",
-    description: payload.creative.description ?? "",
-    callToAction: payload.creative.callToActionType ?? "LEARN_MORE",
-    imageHash: payload.creative.imageHash ?? "",
-    imageUrl: payload.creative.imageUrl ?? "",
-    linkUrl: payload.creative.linkUrl ?? "",
+    creativeType,
+    creativeName: common.name,
+    facebookPageId: common.pageId,
+    instagramActorId: common.instagramActorId,
+    singleImagePrimaryText: singleImage.message ?? "",
+    singleImageHeadline: singleImage.headline ?? "",
+    singleImageDescription: singleImage.description ?? "",
+    singleImageCallToAction: singleImage.callToActionType ?? "LEARN_MORE",
+    singleImageLinkUrl: singleImage.linkUrl ?? "",
+    singleImageImage: mediaSourceToSelection(singleImage.image, "image"),
+    singleVideoPrimaryText: singleVideo.message ?? "",
+    singleVideoHeadline: singleVideo.headline ?? "",
+    singleVideoDescription: singleVideo.description ?? "",
+    singleVideoCallToAction: singleVideo.callToActionType ?? "LEARN_MORE",
+    singleVideoLinkUrl: singleVideo.linkUrl ?? "",
+    singleVideoVideo: mediaSourceToSelection(singleVideo.video, "video"),
+    singleVideoThumbnail: mediaSourceToSelection(singleVideo.thumbnail, "image"),
+    carouselPrimaryText: carousel.message ?? "",
+    carouselCallToAction: carousel.callToActionType ?? "LEARN_MORE",
+    carouselCards: (carousel.cards ?? []).map((card) => ({
+      id: createId(),
+      headline: card.headline ?? "",
+      description: card.description ?? "",
+      linkUrl: card.linkUrl ?? "",
+      image: mediaSourceToSelection(card.image, "image"),
+    })),
+    existingPostId: payload.creative.existingPost?.sourcePostId ?? "",
     adName: payload.ad.name ?? "",
     trackingSpecs: payload.ad.trackingSpecsJson ?? "",
   }
@@ -161,7 +344,7 @@ export function groupValidationErrors(errors: string[]): GroupedValidationErrors
     else if (normalized.includes("mapping") || normalized.includes("app ")) key = "App Mapping"
     else if (normalized.includes("campaign")) key = "Campaign"
     else if (normalized.includes("ad set") || normalized.includes("targeting") || normalized.includes("country") || normalized.includes("age_")) key = "Ad Set"
-    else if (normalized.includes("creative") || normalized.includes("page_id") || normalized.includes("image_") || normalized.includes("link_url")) key = "Creative"
+    else if (normalized.includes("creative") || normalized.includes("page_id") || normalized.includes("image") || normalized.includes("video") || normalized.includes("post") || normalized.includes("link_url")) key = "Creative"
     else if (normalized.startsWith("ad ")) key = "Ad"
 
     if (!groups[key]) groups[key] = []
@@ -176,7 +359,7 @@ export function formatMetaRequestId(id: number | string): string {
 }
 
 export function formatUserGuidShort(value?: string | null): string {
-  if (!value) return "—"
+  if (!value) return "-"
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }

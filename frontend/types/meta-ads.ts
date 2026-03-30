@@ -7,6 +7,10 @@ export type MetaRequestStatus =
   | "completed"
   | "failed"
 
+export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "CAROUSEL_IMAGE" | "EXISTING_POST"
+export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
+
+
 export interface MetaIntegrationDto {
   id: number
   displayName: string
@@ -244,6 +248,178 @@ export interface ResolveMetaAppMappingCandidateRequestDto {
   resolutionNote?: string | null
 }
 
+export interface MetaCampaignListSummaryDto {
+  total: number
+  active: number
+  paused: number
+  issues: number
+  staleSync: number
+  lastSyncedAt?: string | null
+}
+
+export interface MetaCampaignListItemDto {
+  id: number
+  externalCampaignId: string
+  name: string
+  objective: string
+  status: string
+  effectiveStatus?: string | null
+  metaAdAccountRowId: number
+  metaAdAccountId: string
+  metaAdAccountName?: string | null
+  businessId?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  appIconUri?: string | null
+  platform?: string | null
+  isUnmapped: boolean
+  isSyncStale: boolean
+  source: string
+  createdFromRequestId?: number | null
+  adSetCount: number
+  adCount: number
+  lastSyncedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MetaCampaignListResponseDto {
+  items: MetaCampaignListItemDto[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+  summary: MetaCampaignListSummaryDto
+}
+
+export interface MetaCampaignAdSetSummaryDto {
+  id: number
+  externalAdSetId: string
+  name: string
+  status: string
+  effectiveStatus?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  metaApplicationId?: string | null
+  objectStoreUrl?: string | null
+  lastSyncedAt?: string | null
+  updatedAt: string
+}
+
+export interface MetaCampaignAdSummaryDto {
+  id: number
+  externalAdId: string
+  name: string
+  status: string
+  effectiveStatus?: string | null
+  metaAdSetRowId: number
+  externalAdSetId?: string | null
+  adSetName?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  metaCreativeRowId?: number | null
+  externalCreativeId?: string | null
+  creativeName?: string | null
+  lastSyncedAt?: string | null
+  updatedAt: string
+}
+
+export interface MetaCampaignCreativeUsageAdDto {
+  id: number
+  externalAdId: string
+  adName: string
+}
+
+export interface MetaCampaignCreativeSummaryDto {
+  id: number
+  externalCreativeId: string
+  name: string
+  status: string
+  objectType?: string | null
+  pageId?: string | null
+  instagramActorId?: string | null
+  headline?: string | null
+  message?: string | null
+  description?: string | null
+  callToActionType?: string | null
+  imageUrl?: string | null
+  thumbnailUrl?: string | null
+  linkUrl?: string | null
+  effectiveObjectStoryId?: string | null
+  usedByAdCount: number
+  usedByAds: MetaCampaignCreativeUsageAdDto[]
+  lastSyncedAt?: string | null
+  configJson?: string | null
+}
+
+export interface MetaCampaignPreviewDto {
+  campaignId: number
+  adId: number
+  externalAdId: string
+  adName: string
+  previewUrl: string
+  message: string
+}
+
+export interface MetaCampaignDetailDto {
+  id: number
+  externalCampaignId: string
+  name: string
+  objective: string
+  status: string
+  effectiveStatus?: string | null
+  metaAdAccountRowId: number
+  metaAdAccountId: string
+  metaAdAccountName?: string | null
+  businessId?: string | null
+  businessName?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  appIconUri?: string | null
+  platform?: string | null
+  isUnmapped: boolean
+  isSyncStale: boolean
+  source: string
+  createdFromRequestId?: number | null
+  lastSyncedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  adSets: MetaCampaignAdSetSummaryDto[]
+  ads: MetaCampaignAdSummaryDto[]
+  creatives: MetaCampaignCreativeSummaryDto[]
+}
+
+export interface SyncMetaCampaignsRequestDto {
+  metaAdAccountIds?: number[] | null
+}
+
+export interface MetaCampaignSyncAccountResultDto {
+  metaAdAccountRowId: number
+  metaAdAccountId: string
+  metaAdAccountName: string
+  success: boolean
+  message: string
+  campaignsSynced: number
+  adSetsSynced: number
+  adsSynced: number
+  creativesSynced: number
+}
+
+export interface SyncMetaCampaignsResultDto {
+  accountsScanned: number
+  campaignsSynced: number
+  adSetsSynced: number
+  adsSynced: number
+  creativesSynced: number
+  failedAccounts: number
+  syncedAt: string
+  messages: string[]
+  accountResults: MetaCampaignSyncAccountResultDto[]
+}
 export interface MetaObjectivePresetDto {
   key: string
   label: string
@@ -286,8 +462,64 @@ export interface MetaAdSetDraftDto {
   instagramPositions: string[]
 }
 
-export interface MetaCreativeDraftDto {
+export interface MetaCreativeMediaSourceDto {
+  mode?: MetaCreativeMediaMode | null
+  imageHash?: string | null
+  imageUrl?: string | null
+  videoId?: string | null
+  uploadedAssetId?: number | null
+}
+
+export interface MetaCreativeCommonDraftDto {
   name: string
+  pageId?: string | null
+  instagramActorId?: string | null
+}
+
+export interface MetaSingleImageCreativeDraftDto {
+  message?: string | null
+  headline?: string | null
+  description?: string | null
+  callToActionType?: string | null
+  linkUrl?: string | null
+  image?: MetaCreativeMediaSourceDto | null
+}
+
+export interface MetaSingleVideoCreativeDraftDto {
+  message?: string | null
+  headline?: string | null
+  description?: string | null
+  callToActionType?: string | null
+  linkUrl?: string | null
+  video?: MetaCreativeMediaSourceDto | null
+  thumbnail?: MetaCreativeMediaSourceDto | null
+}
+
+export interface MetaCarouselCardDraftDto {
+  headline?: string | null
+  description?: string | null
+  linkUrl?: string | null
+  image?: MetaCreativeMediaSourceDto | null
+}
+
+export interface MetaCarouselCreativeDraftDto {
+  message?: string | null
+  callToActionType?: string | null
+  cards: MetaCarouselCardDraftDto[]
+}
+
+export interface MetaExistingPostCreativeDraftDto {
+  sourcePostId?: string | null
+}
+
+export interface MetaCreativeDraftDto {
+  type?: MetaCreativeType | null
+  common?: MetaCreativeCommonDraftDto | null
+  singleImage?: MetaSingleImageCreativeDraftDto | null
+  singleVideo?: MetaSingleVideoCreativeDraftDto | null
+  carousel?: MetaCarouselCreativeDraftDto | null
+  existingPost?: MetaExistingPostCreativeDraftDto | null
+  name?: string | null
   pageId?: string | null
   instagramActorId?: string | null
   message?: string | null
@@ -297,6 +529,16 @@ export interface MetaCreativeDraftDto {
   imageHash?: string | null
   imageUrl?: string | null
   linkUrl?: string | null
+}
+
+export interface MetaRequestAssetDto {
+  id: number
+  kind: "image" | "video" | string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  previewUrl: string
+  createdAt: string
 }
 
 export interface MetaAdDraftDto {
@@ -428,6 +670,24 @@ export interface MetaExecuteResponseDto {
   detail: MetaCampaignRequestDetailDto
 }
 
+export interface MetaRequestAssetSelectionState {
+  mode: MetaCreativeMediaMode
+  imageHash: string
+  imageUrl: string
+  videoId: string
+  uploadedAssetId: number | null
+  uploadedAssetName: string
+  uploadedAssetPreviewUrl: string
+}
+
+export interface MetaCarouselCardFormState {
+  id: string
+  headline: string
+  description: string
+  linkUrl: string
+  image: MetaRequestAssetSelectionState
+}
+
 export interface MetaRequestFormState {
   adAccountId: string
   appRowId: string
@@ -456,16 +716,27 @@ export interface MetaRequestFormState {
   bidAmount: string
   startTime: string
   endTime: string
+  creativeType: MetaCreativeType
   creativeName: string
   facebookPageId: string
   instagramActorId: string
-  primaryText: string
-  headline: string
-  description: string
-  callToAction: string
-  imageHash: string
-  imageUrl: string
-  linkUrl: string
+  singleImagePrimaryText: string
+  singleImageHeadline: string
+  singleImageDescription: string
+  singleImageCallToAction: string
+  singleImageLinkUrl: string
+  singleImageImage: MetaRequestAssetSelectionState
+  singleVideoPrimaryText: string
+  singleVideoHeadline: string
+  singleVideoDescription: string
+  singleVideoCallToAction: string
+  singleVideoLinkUrl: string
+  singleVideoVideo: MetaRequestAssetSelectionState
+  singleVideoThumbnail: MetaRequestAssetSelectionState
+  carouselPrimaryText: string
+  carouselCallToAction: string
+  carouselCards: MetaCarouselCardFormState[]
+  existingPostId: string
   adName: string
   trackingSpecs: string
 }
@@ -478,3 +749,5 @@ export interface MetaRequestFilters {
 }
 
 export type GroupedValidationErrors = Record<string, string[]>
+
+

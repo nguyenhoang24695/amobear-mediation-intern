@@ -51,9 +51,9 @@ const emptyForm: UpsertMetaAdAccountRequestDto = {
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return "—"
+  if (!value) return "-"
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "-"
   return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
 }
 
@@ -78,7 +78,7 @@ function formatAdAccountStatus(value?: string | null) {
     case "201":
       return "Any Active"
     default:
-      if (!value) return "—"
+      if (!value) return "-"
       return value
         .replaceAll("_", " ")
         .replace(/\b\w/g, (char) => char.toUpperCase())
@@ -328,10 +328,10 @@ export function AdAccountsContent() {
                     <TableCell className="font-mono text-xs text-blue-700">{account.metaAdAccountId}</TableCell>
                     <TableCell className="font-medium text-slate-900">{account.name}</TableCell>
                     <TableCell className="text-xs text-slate-600">{integrationById.get(account.metaIntegrationId) ?? `Integration ${account.metaIntegrationId}`}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{account.currency ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "—"}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-600">{account.businessId ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{account.businessName ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{account.currency ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "-"}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-600">{account.businessId ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{account.businessName ?? "-"}</TableCell>
                     <TableCell>
                       <Badge className={formatAdAccountStatus(account.status) === "Active" ? "bg-green-100 text-green-700 text-[11px]" : formatAdAccountStatus(account.status) === "Disabled" || formatAdAccountStatus(account.status) === "Closed" ? "bg-red-100 text-red-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
                         {formatAdAccountStatus(account.status)}
@@ -498,6 +498,7 @@ export function AdAccountsContent() {
     </div>
   )
 }
+
 
 
 

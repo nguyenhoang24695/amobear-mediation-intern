@@ -1,12 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ImageIcon, Smartphone, Info, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { metaRequestsApi } from "@/lib/api/meta-ads"
+import { createEmptyCarouselCard } from "@/lib/meta-ads/mappers"
+import type { MetaRequestAssetSelectionState } from "@/types/meta-ads"
+import { ImageIcon, Smartphone, Video, GalleryHorizontal, FileText, AlertTriangle, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 
 const ctaOptions = [
@@ -20,184 +27,270 @@ interface Props {
 }
 
 export function CreativeSection({ form, onChange }: Props) {
-  // Track required creative fields for inline validation
-  const hasPageId = !!form.facebookPageId
-  const hasPrimaryText = !!form.primaryText
-  const hasHeadline = !!form.headline
-  const hasCTA = !!form.callToAction
-  const hasImage = !!(form.imageHash || form.imageUrl)
-  const allRequired = hasPageId && hasPrimaryText && hasHeadline && hasCTA && hasImage
+  const { toast } = useToast()
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null)
+  const completion = getCreativeCompletion(form)
+  const previewImage = getPreviewImage(form)
+
+  const handleMediaPatch = (field: keyof RequestFormState, patch: Partial<MetaRequestAssetSelectionState>) => {
+    const current = form[field] as MetaRequestAssetSelectionState
+    onChange({ [field]: { ...current, ...patch } } as Partial<RequestFormState>)
+  }
+
+  const handleMediaModeChange = (field: keyof RequestFormState, mode: MetaRequestAssetSelectionState["mode"]) => {
+    const current = form[field] as MetaRequestAssetSelectionState
+    onChange({ [field]: { ...current, mode } } as Partial<RequestFormState>)
+  }
+
+  const handleUpload = async (field: keyof RequestFormState, kind: "image" | "video", file: File | null) => {
+    if (!file) return
+    try {
+      setUploadingKey(`${String(field)}:${file.name}`)
+      const asset = await metaRequestsApi.uploadAsset(file, kind)
+      handleMediaPatch(field, {
+        mode: "uploaded_asset",
+        uploadedAssetId: asset.id,
+        uploadedAssetName: asset.fileName,
+        uploadedAssetPreviewUrl: kind === "image" ? URL.createObjectURL(file) : "",
+        imageHash: "",
+        imageUrl: "",
+        videoId: "",
+      })
+      toast({ title: `${kind === "image" ? "Image" : "Video"} uploaded`, description: asset.fileName })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed."
+      toast({ title: "Upload failed", description: message, variant: "destructive" })
+    } finally {
+      setUploadingKey(null)
+    }
+  }
+
+  const updateCarouselCard = (index: number, patch: Partial<RequestFormState["carouselCards"][number]>) => {
+    onChange({ carouselCards: form.carouselCards.map((card, cardIndex) => (cardIndex === index ? { ...card, ...patch } : card)) })
+  }
+
+  const updateCarouselCardImage = (index: number, patch: Partial<MetaRequestAssetSelectionState>) => {
+    onChange({ carouselCards: form.carouselCards.map((card, cardIndex) => (cardIndex === index ? { ...card, image: { ...card.image, ...patch } } : card)) })
+  }
+
+  const handleCarouselUpload = async (index: number, file: File | null) => {
+    if (!file) return
+    try {
+      setUploadingKey(`carousel:${index}:${file.name}`)
+      const asset = await metaRequestsApi.uploadAsset(file, "image")
+      updateCarouselCardImage(index, {
+        mode: "uploaded_asset",
+        uploadedAssetId: asset.id,
+        uploadedAssetName: asset.fileName,
+        uploadedAssetPreviewUrl: URL.createObjectURL(file),
+        imageHash: "",
+        imageUrl: "",
+      })
+      toast({ title: "Image uploaded", description: asset.fileName })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed."
+      toast({ title: "Upload failed", description: message, variant: "destructive" })
+    } finally {
+      setUploadingKey(null)
+    }
+  }
 
   return (
     <Card className="border-slate-200">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
             <ImageIcon className="w-4 h-4 text-slate-500" />
-            Creative — Single Creative
+            Creative
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">
-              → object_story_spec
+            <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">{form.creativeType}</Badge>
+            <Badge className={completion.complete ? "bg-green-100 text-green-700 text-[10px] px-2 py-0.5 gap-1" : "bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 gap-1"}>
+              {completion.complete ? <CheckCircle2 className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+              {completion.complete ? "Complete" : "Incomplete"}
             </Badge>
-            {allRequired ? (
-              <Badge className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 gap-1">
-                <CheckCircle2 className="w-2.5 h-2.5" />
-                Complete
-              </Badge>
-            ) : (
-              <Badge className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 gap-1">
-                <AlertTriangle className="w-2.5 h-2.5" />
-                Incomplete
-              </Badge>
-            )}
           </div>
         </div>
-        <p className="text-[11px] text-slate-400 mt-1">
-          This will be transformed into a Meta <code className="bg-slate-100 px-1 rounded">object_story_spec</code>. Incomplete fields may cause Meta API rejection during execution.
-        </p>
+        <p className="text-[11px] text-slate-400 mt-1">Draft the Meta creative here. Uploaded media stays in Mediation Pro until execute time.</p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-[1fr_200px] gap-6">
-          {/* Left: fields */}
+        <div className="grid grid-cols-[1fr_220px] gap-6">
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5 col-span-2">
                 <Label className="text-xs font-medium text-slate-700">Creative Name <span className="text-red-500">*</span></Label>
-                <Input placeholder="e.g. WeatherApp_US_IMG_v1" className="h-9 text-sm" value={form.creativeName} onChange={e => onChange({ creativeName: e.target.value })} />
+                <Input value={form.creativeName} onChange={(event) => onChange({ creativeName: event.target.value })} placeholder="e.g. WeatherApp_US_Creative_v1" className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">
-                  Facebook Page ID <span className="text-red-500">*</span>
-                  {!hasPageId && <span className="ml-1 text-amber-600 font-normal text-[10px]">Required</span>}
-                </Label>
-                <Input
-                  placeholder="e.g. 123456789012345"
-                  className={`h-9 text-sm ${!hasPageId && form.creativeName ? "border-amber-400" : ""}`}
-                  value={form.facebookPageId}
-                  onChange={e => onChange({ facebookPageId: e.target.value })}
-                />
+                <Label className="text-xs font-medium text-slate-700">Creative Type</Label>
+                <Select value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SINGLE_IMAGE">Single Image</SelectItem>
+                    <SelectItem value="SINGLE_VIDEO">Single Video</SelectItem>
+                    <SelectItem value="CAROUSEL_IMAGE">Carousel</SelectItem>
+                    <SelectItem value="EXISTING_POST">Existing Post</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Instagram Actor ID <span className="text-slate-400 font-normal">(optional)</span></Label>
-              <Input placeholder="e.g. 987654321" className="h-9 text-sm" value={form.instagramActorId} onChange={e => onChange({ instagramActorId: e.target.value })} />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">
-                Primary Text <span className="text-red-500">*</span>
-                {!hasPrimaryText && <span className="ml-1 text-amber-600 font-normal text-[10px]">Required</span>}
-              </Label>
-              <Textarea
-                placeholder="Write your ad copy here..."
-                className={`text-sm resize-none ${!hasPrimaryText && form.creativeName ? "border-amber-400" : ""}`}
-                rows={2}
-                value={form.primaryText}
-                onChange={e => onChange({ primaryText: e.target.value })}
-              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">
-                  Headline <span className="text-red-500">*</span>
-                  {!hasHeadline && <span className="ml-1 text-amber-600 font-normal text-[10px]">Required</span>}
-                </Label>
-                <Input
-                  placeholder="e.g. Download Free Today"
-                  className={`h-9 text-sm ${!hasHeadline && form.creativeName ? "border-amber-400" : ""}`}
-                  value={form.headline}
-                  onChange={e => onChange({ headline: e.target.value })}
-                />
+                <Label className="text-xs font-medium text-slate-700">Facebook Page ID <span className="text-red-500">*</span></Label>
+                <Input value={form.facebookPageId} onChange={(event) => onChange({ facebookPageId: event.target.value })} placeholder="e.g. 123456789012345" className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Description <span className="text-slate-400 font-normal">(optional)</span></Label>
-                <Input placeholder="Short description..." className="h-9 text-sm" value={form.description} onChange={e => onChange({ description: e.target.value })} />
+                <Label className="text-xs font-medium text-slate-700">Instagram Actor ID</Label>
+                <Input value={form.instagramActorId} onChange={(event) => onChange({ instagramActorId: event.target.value })} placeholder="Optional" className="h-9 text-sm" />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
-              <Select value={form.callToAction} onValueChange={v => onChange({ callToAction: v })}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ctaOptions.map(c => (
-                    <SelectItem key={c} value={c}><span className="font-mono text-xs">{c}</span></SelectItem>
+            <Tabs value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
+              <TabsList className="h-10 bg-slate-100 p-1 w-fit">
+                <TabsTrigger value="SINGLE_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single Image</TabsTrigger>
+                <TabsTrigger value="SINGLE_VIDEO" className="text-xs px-3 data-[state=active]:bg-white"><Video className="w-3.5 h-3.5 mr-1.5" />Single Video</TabsTrigger>
+                <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
+                <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="SINGLE_IMAGE" className="mt-4 space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Primary Text <span className="text-red-500">*</span></Label>
+                  <Textarea rows={3} value={form.singleImagePrimaryText} onChange={(event) => onChange({ singleImagePrimaryText: event.target.value })} className="text-sm resize-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
+                    <Input value={form.singleImageHeadline} onChange={(event) => onChange({ singleImageHeadline: event.target.value })} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Description</Label>
+                    <Input value={form.singleImageDescription} onChange={(event) => onChange({ singleImageDescription: event.target.value })} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Select value={form.singleImageCallToAction} onValueChange={(value) => onChange({ singleImageCallToAction: value })}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                    <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <MediaSourceEditor title="Image" kind="image" selection={form.singleImageImage} uploading={uploadingKey?.startsWith("singleImageImage") ?? false} allowExternalUrl onModeChange={(mode) => handleMediaModeChange("singleImageImage", mode)} onPatch={(patch) => handleMediaPatch("singleImageImage", patch)} onUpload={(file) => handleUpload("singleImageImage", "image", file)} />
+              </TabsContent>
+
+              <TabsContent value="SINGLE_VIDEO" className="mt-4 space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Primary Text <span className="text-red-500">*</span></Label>
+                  <Textarea rows={3} value={form.singleVideoPrimaryText} onChange={(event) => onChange({ singleVideoPrimaryText: event.target.value })} className="text-sm resize-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
+                    <Input value={form.singleVideoHeadline} onChange={(event) => onChange({ singleVideoHeadline: event.target.value })} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Description</Label>
+                    <Input value={form.singleVideoDescription} onChange={(event) => onChange({ singleVideoDescription: event.target.value })} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Select value={form.singleVideoCallToAction} onValueChange={(value) => onChange({ singleVideoCallToAction: value })}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                    <Input value={form.singleVideoLinkUrl} onChange={(event) => onChange({ singleVideoLinkUrl: event.target.value })} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <MediaSourceEditor title="Video" kind="video" selection={form.singleVideoVideo} uploading={uploadingKey?.startsWith("singleVideoVideo") ?? false} onModeChange={(mode) => handleMediaModeChange("singleVideoVideo", mode)} onPatch={(patch) => handleMediaPatch("singleVideoVideo", patch)} onUpload={(file) => handleUpload("singleVideoVideo", "video", file)} />
+                <MediaSourceEditor title="Thumbnail" kind="image" selection={form.singleVideoThumbnail} uploading={uploadingKey?.startsWith("singleVideoThumbnail") ?? false} allowExternalUrl optional onModeChange={(mode) => handleMediaModeChange("singleVideoThumbnail", mode)} onPatch={(patch) => handleMediaPatch("singleVideoThumbnail", patch)} onUpload={(file) => handleUpload("singleVideoThumbnail", "image", file)} />
+              </TabsContent>
+
+              <TabsContent value="CAROUSEL_IMAGE" className="mt-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Primary Text</Label>
+                    <Textarea rows={3} value={form.carouselPrimaryText} onChange={(event) => onChange({ carouselPrimaryText: event.target.value })} className="text-sm resize-none" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Select value={form.carouselCallToAction} onValueChange={(value) => onChange({ carouselCallToAction: value })}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-slate-700">Carousel Cards</p>
+                      <p className="text-[11px] text-slate-400">Use 2-10 image cards.</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onChange({ carouselCards: [...form.carouselCards, createEmptyCarouselCard()] })} disabled={form.carouselCards.length >= 10}>
+                      <Plus className="w-3.5 h-3.5 mr-1" />Add Card
+                    </Button>
+                  </div>
+                  {form.carouselCards.map((card, index) => (
+                    <div key={card.id} className="rounded-lg border border-slate-200 p-3 space-y-3 bg-slate-50">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-700">Card {index + 1}</p>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-red-600" onClick={() => onChange({ carouselCards: form.carouselCards.filter((_, cardIndex) => cardIndex !== index) })} disabled={form.carouselCards.length <= 2}>
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />Remove
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
+                          <Input value={card.headline} onChange={(event) => updateCarouselCard(index, { headline: event.target.value })} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                          <Input value={card.linkUrl} onChange={(event) => updateCarouselCard(index, { linkUrl: event.target.value })} className="h-9 text-sm" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-slate-700">Description</Label>
+                        <Input value={card.description} onChange={(event) => updateCarouselCard(index, { description: event.target.value })} className="h-9 text-sm" />
+                      </div>
+                      <InlineMediaSourceEditor selection={card.image} uploading={uploadingKey?.startsWith(`carousel:${index}:`) ?? false} onModeChange={(mode) => updateCarouselCardImage(index, { mode })} onPatch={(patch) => updateCarouselCardImage(index, patch)} onUpload={(file) => handleCarouselUpload(index, file)} />
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Image — required */}
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-slate-700">
-                Image <span className="text-red-500">*</span>
-                {!hasImage && <span className="ml-1 text-amber-600 font-normal text-[10px]">At least one required</span>}
-              </Label>
-              <div className={`grid grid-cols-2 gap-4 ${!hasImage && form.creativeName ? "ring-1 ring-amber-300 rounded-lg p-2" : ""}`}>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-slate-500">Image Hash (Meta)</Label>
-                  <Input
-                    placeholder="Meta image hash"
-                    className="h-9 text-sm font-mono"
-                    value={form.imageHash}
-                    onChange={e => onChange({ imageHash: e.target.value })}
-                  />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-slate-500">Image URL</Label>
-                  <Input
-                    placeholder="https://..."
-                    className="h-9 text-sm"
-                    value={form.imageUrl}
-                    onChange={e => onChange({ imageUrl: e.target.value })}
-                  />
+              </TabsContent>
+
+              <TabsContent value="EXISTING_POST" className="mt-4 space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Source Post ID <span className="text-red-500">*</span></Label>
+                  <Input value={form.existingPostId} onChange={(event) => onChange({ existingPostId: event.target.value })} className="h-9 text-sm font-mono" />
+                  <p className="text-[11px] text-slate-400">Facebook Page post ID used as object_story_id.</p>
                 </div>
-              </div>
-              {hasImage ? (
-                <p className="flex items-center gap-1.5 text-[11px] text-green-700">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Image provided
-                </p>
-              ) : (
-                <p className="flex items-start gap-1.5 text-[11px] text-amber-700">
-                  <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  Image Hash or Image URL is required. Missing image will cause Meta API rejection.
-                </p>
-              )}
-            </div>
+              </TabsContent>
+            </Tabs>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-              <Input placeholder="https://..." className="h-9 text-sm" value={form.linkUrl} onChange={e => onChange({ linkUrl: e.target.value })} />
-              <p className="text-[11px] text-slate-400">If empty, backend may fall back to app mapping store URL.</p>
-            </div>
-
-            {/* Required fields summary */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-2">Required Fields (object_story_spec)</p>
-              <div className="grid grid-cols-2 gap-1">
-                {[
-                  { label: "Page ID", ok: hasPageId },
-                  { label: "Primary Text", ok: hasPrimaryText },
-                  { label: "Headline", ok: hasHeadline },
-                  { label: "CTA", ok: hasCTA },
-                  { label: "Image", ok: hasImage },
-                ].map(({ label, ok }) => (
-                  <div key={label} className={`flex items-center gap-1.5 text-[11px] ${ok ? "text-green-700" : "text-slate-400"}`}>
-                    <CheckCircle2 className={`w-3 h-3 ${ok ? "text-green-600" : "text-slate-300"}`} />
-                    {label}
+              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-2">Creative Checklist</p>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {completion.items.map((item) => (
+                  <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
+                    {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                    <span>{item.label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Right: phone preview */}
           <div className="flex flex-col items-center">
             <p className="text-[11px] text-slate-400 mb-2 font-medium uppercase tracking-wide">Preview</p>
             <div className="w-44 rounded-2xl border-2 border-slate-300 bg-white shadow-sm overflow-hidden">
@@ -207,32 +300,160 @@ export function CreativeSection({ form, onChange }: Props) {
                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               </div>
               <div className="p-2 space-y-1.5">
-                <div className="w-full h-20 bg-slate-100 rounded flex items-center justify-center border border-slate-200">
-                  {form.imageUrl ? (
-                    <img src={form.imageUrl} alt="Ad preview" className="w-full h-full object-cover rounded" crossOrigin="anonymous" />
-                  ) : (
-                    <ImageIcon className="w-6 h-6 text-slate-300" />
-                  )}
+                <div className="w-full h-20 bg-slate-100 rounded flex items-center justify-center border border-slate-200 overflow-hidden">
+                  {previewImage ? <img src={previewImage} alt="Creative preview" className="w-full h-full object-cover rounded" /> : form.creativeType === "SINGLE_VIDEO" ? <Video className="w-6 h-6 text-slate-300" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-slate-300" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
                 </div>
                 <div className="space-y-0.5">
-                  {form.headline && <p className="text-[10px] font-semibold text-slate-900 leading-tight line-clamp-2">{form.headline}</p>}
-                  {form.primaryText && <p className="text-[9px] text-slate-500 leading-tight line-clamp-2">{form.primaryText}</p>}
+                  <p className="text-[10px] font-semibold text-slate-900 leading-tight line-clamp-2">{getPreviewHeadline(form) || "Creative headline"}</p>
+                  <p className="text-[9px] text-slate-500 leading-tight line-clamp-2">{getPreviewMessage(form) || "Creative preview will update as you fill the form."}</p>
                 </div>
-                <div className="pt-0.5">
-                  <div className="bg-blue-600 rounded text-center py-1">
-                    <span className="text-[9px] text-white font-semibold">{form.callToAction.replace(/_/g, " ")}</span>
-                  </div>
-                </div>
+                <div className="pt-0.5"><div className="bg-blue-600 rounded text-center py-1"><span className="text-[9px] text-white font-semibold">{getPreviewCta(form)}</span></div></div>
                 <p className="text-[8px] text-slate-400">Sponsored</p>
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400">
-              <Smartphone className="w-3 h-3" />
-              <span>Preview only</span>
-            </div>
+            <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400"><Smartphone className="w-3 h-3" /><span>Preview only</span></div>
           </div>
         </div>
       </CardContent>
     </Card>
   )
+}
+
+function MediaSourceEditor({ title, kind, selection, uploading, allowExternalUrl, optional, onModeChange, onPatch, onUpload }: { title: string; kind: "image" | "video"; selection: MetaRequestAssetSelectionState; uploading?: boolean; allowExternalUrl?: boolean; optional?: boolean; onModeChange: (mode: MetaRequestAssetSelectionState["mode"]) => void; onPatch: (patch: Partial<MetaRequestAssetSelectionState>) => void; onUpload: (file: File | null) => void }) {
+  const options = kind === "video"
+    ? [
+        { value: "meta_ref", label: "Meta Video ID" },
+        { value: "uploaded_asset", label: "Upload Video" },
+      ]
+    : [
+        { value: "meta_ref", label: "Meta Hash" },
+        ...(allowExternalUrl ? [{ value: "external_url", label: "External URL" }] : []),
+        { value: "uploaded_asset", label: "Upload Asset" },
+      ]
+
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-xs font-medium text-slate-700">{title} {optional ? <span className="text-slate-400 font-normal">(optional)</span> : <span className="text-red-500">*</span>}</Label>
+        <Select value={selection.mode} onValueChange={(value) => onModeChange(value as MetaRequestAssetSelectionState["mode"])}>
+          <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      {selection.mode === "uploaded_asset" ? (
+        <div className="space-y-2">
+          <Input type="file" accept={kind === "image" ? "image/*" : "video/*"} className="h-9 text-sm" onChange={(event) => onUpload(event.target.files?.[0] ?? null)} />
+          {uploading ? <p className="text-[11px] text-slate-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</p> : null}
+          {selection.uploadedAssetId ? <p className="text-[11px] text-green-700">Stored asset: {selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p> : null}
+        </div>
+      ) : kind === "video" ? (
+        <div className="space-y-1.5"><Label className="text-[11px] text-slate-500">Meta Video ID</Label><Input value={selection.videoId} onChange={(event) => onPatch({ videoId: event.target.value })} className="h-9 text-sm font-mono" /></div>
+      ) : selection.mode === "external_url" ? (
+        <div className="space-y-1.5"><Label className="text-[11px] text-slate-500">Image URL</Label><Input value={selection.imageUrl} onChange={(event) => onPatch({ imageUrl: event.target.value })} className="h-9 text-sm" /></div>
+      ) : (
+        <div className="space-y-1.5"><Label className="text-[11px] text-slate-500">Meta Image Hash</Label><Input value={selection.imageHash} onChange={(event) => onPatch({ imageHash: event.target.value })} className="h-9 text-sm font-mono" /></div>
+      )}
+    </div>
+  )
+}
+
+function InlineMediaSourceEditor({ selection, uploading, onModeChange, onPatch, onUpload }: { selection: MetaRequestAssetSelectionState; uploading?: boolean; onModeChange: (mode: MetaRequestAssetSelectionState["mode"]) => void; onPatch: (patch: Partial<MetaRequestAssetSelectionState>) => void; onUpload: (file: File | null) => void }) {
+  return (
+    <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-xs font-medium text-slate-700">Card Image <span className="text-red-500">*</span></Label>
+        <Select value={selection.mode} onValueChange={(value) => onModeChange(value as MetaRequestAssetSelectionState["mode"])}>
+          <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="meta_ref">Meta Hash</SelectItem>
+            <SelectItem value="external_url">External URL</SelectItem>
+            <SelectItem value="uploaded_asset">Upload Asset</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {selection.mode === "uploaded_asset" ? (
+        <div className="space-y-2">
+          <Input type="file" accept="image/*" className="h-9 text-sm" onChange={(event) => onUpload(event.target.files?.[0] ?? null)} />
+          {uploading ? <p className="text-[11px] text-slate-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</p> : null}
+          {selection.uploadedAssetId ? <p className="text-[11px] text-green-700">Stored asset: {selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p> : null}
+        </div>
+      ) : selection.mode === "external_url" ? (
+        <Input value={selection.imageUrl} onChange={(event) => onPatch({ imageUrl: event.target.value })} className="h-9 text-sm" />
+      ) : (
+        <Input value={selection.imageHash} onChange={(event) => onPatch({ imageHash: event.target.value })} className="h-9 text-sm font-mono" />
+      )}
+    </div>
+  )
+}
+
+function getCreativeCompletion(form: RequestFormState) {
+  if (form.creativeType === "SINGLE_VIDEO") {
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "Message", ok: !!form.singleVideoPrimaryText },
+      { label: "Headline", ok: !!form.singleVideoHeadline },
+      { label: "CTA", ok: !!form.singleVideoCallToAction },
+      { label: "Video source", ok: !!(form.singleVideoVideo.uploadedAssetId || form.singleVideoVideo.videoId) },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
+  if (form.creativeType === "CAROUSEL_IMAGE") {
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "CTA", ok: !!form.carouselCallToAction },
+      { label: "At least 2 cards", ok: form.carouselCards.length >= 2 },
+      { label: "Cards complete", ok: form.carouselCards.every((card) => !!card.headline && !!(card.image.uploadedAssetId || card.image.imageHash || card.image.imageUrl)) },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
+  if (form.creativeType === "EXISTING_POST") {
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "Source Post ID", ok: !!form.existingPostId },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
+  const items = [
+    { label: "Creative name", ok: !!form.creativeName },
+    { label: "Facebook Page ID", ok: !!form.facebookPageId },
+    { label: "Message", ok: !!form.singleImagePrimaryText },
+    { label: "Headline", ok: !!form.singleImageHeadline },
+    { label: "CTA", ok: !!form.singleImageCallToAction },
+    { label: "Image source", ok: !!(form.singleImageImage.uploadedAssetId || form.singleImageImage.imageHash || form.singleImageImage.imageUrl) },
+  ]
+  return { complete: items.every((item) => item.ok), items }
+}
+
+function getPreviewImage(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoThumbnail.uploadedAssetPreviewUrl || form.singleVideoThumbnail.imageUrl
+  if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.image.uploadedAssetPreviewUrl || form.carouselCards[0]?.image.imageUrl || ""
+  return form.singleImageImage.uploadedAssetPreviewUrl || form.singleImageImage.imageUrl
+}
+
+function getPreviewHeadline(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoHeadline
+  if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
+  if (form.creativeType === "EXISTING_POST") return form.existingPostId ? `Existing Post ${form.existingPostId}` : "Existing post preview"
+  return form.singleImageHeadline
+}
+
+function getPreviewMessage(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoPrimaryText
+  if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
+  if (form.creativeType === "EXISTING_POST") return "Existing post preview will be resolved from Meta post at execution time."
+  return form.singleImagePrimaryText
+}
+
+function getPreviewCta(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_VIDEO") return formatCta(form.singleVideoCallToAction)
+  if (form.creativeType === "CAROUSEL_IMAGE") return formatCta(form.carouselCallToAction)
+  if (form.creativeType === "EXISTING_POST") return "OPEN POST"
+  return formatCta(form.singleImageCallToAction)
+}
+
+function formatCta(value: string): string {
+  return value ? value.replaceAll("_", " ") : "LEARN MORE"
 }

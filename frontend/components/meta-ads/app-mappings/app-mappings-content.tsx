@@ -1180,7 +1180,7 @@ export function AppMappingsContent() {
                     </Select>
                     {selectedResolveApp ? (
                       <p className="text-[11px] text-slate-400">
-                        Platform {normalizePlatform(selectedResolveApp.platform) || "APP"} · App Store ID {selectedResolveApp.appStoreId || "-"}
+                        Platform {normalizePlatform(selectedResolveApp.platform) || "APP"} | App Store ID {selectedResolveApp.appStoreId || "-"}
                       </p>
                     ) : null}
                   </div>
@@ -1228,3 +1228,4 @@ export function AppMappingsContent() {
     </div>
   )
 }
+
