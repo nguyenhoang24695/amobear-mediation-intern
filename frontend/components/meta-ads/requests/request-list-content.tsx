@@ -48,6 +48,7 @@ import {
   RefreshCw,
   ChevronRight,
   Loader2,
+  Pencil,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -370,6 +371,12 @@ export function RequestListContent() {
                           <Eye className="w-4 h-4 mr-2" />
                           View Detail
                         </DropdownMenuItem>
+                        {canCreate && request.status !== "executing" ? (
+                          <DropdownMenuItem onClick={() => router.push(`/meta-ads/requests/${request.id}/edit`)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit Request
+                          </DropdownMenuItem>
+                        ) : null}
                         {request.status === "pending_approval" && canApprove ? (
                           <>
                             <DropdownMenuSeparator />
@@ -455,4 +462,5 @@ export function RequestListContent() {
     </div>
   )
 }
+
 

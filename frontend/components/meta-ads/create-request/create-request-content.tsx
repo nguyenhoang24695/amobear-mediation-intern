@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +20,7 @@ import { metaIntegrationsApi, metaReferenceApi, metaRequestsApi } from "@/lib/ap
 import {
   createEmptyCarouselCard,
   createEmptyMediaSelection,
+  detailDtoToFormState,
   formStateToCreateDto,
   formStateToUpdateDto,
   groupValidationErrors,
@@ -161,9 +162,15 @@ function deriveTokenState(input: {
   }
 }
 
-export function CreateRequestContent() {
+interface Props {
+  requestId?: number
+}
+
+export function CreateRequestContent({ requestId }: Props) {
   const router = useRouter()
   const { toast } = useToast()
+  const isEditMode = requestId != null && Number.isFinite(requestId)
+  const numericRequestId = isEditMode ? Number(requestId) : null
   const canViewMetaAccounts = hasScreenFunction("s-meta-accounts", "view")
 
   const [form, setForm] = useState<RequestFormState>(defaultFormState)
@@ -177,6 +184,7 @@ export function CreateRequestContent() {
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<GroupedValidationErrors>({})
   const [isDirty, setIsDirty] = useState(false)
+  const [loadedRequestId, setLoadedRequestId] = useState<number | null>(null)
 
   const {
     data: referenceData,
@@ -185,6 +193,18 @@ export function CreateRequestContent() {
   } = useApi(
     () => metaReferenceApi.getCreateCampaignReference(),
     { cacheKey: "meta-reference:create-campaign" }
+  )
+
+  const {
+    data: editDetail,
+    loading: editLoading,
+    error: editError,
+  } = useApi<MetaCampaignRequestDetailDto>(
+    () => metaRequestsApi.getById(numericRequestId as number),
+    {
+      enabled: numericRequestId != null,
+      cacheKey: numericRequestId != null ? `meta-request:${numericRequestId}` : "meta-request:new",
+    }
   )
 
   const { data: integrations } = useApi(
@@ -253,7 +273,15 @@ export function CreateRequestContent() {
     setIsDirty(false)
   }
 
+  useEffect(() => {
+    if (!editDetail || loadedRequestId === editDetail.id) return
+    setForm(detailDtoToFormState(editDetail))
+    syncFromDetail(editDetail)
+    setLoadedRequestId(editDetail.id)
+  }, [editDetail, loadedRequestId])
+
   const persistDraft = async ({ silent }: { silent?: boolean } = {}) => {
+    const previousStatus = serverStatus
     const response = draftId
       ? await metaRequestsApi.update(draftId, formStateToUpdateDto(form))
       : await metaRequestsApi.create(formStateToCreateDto(form, idempotencyKey))
@@ -264,9 +292,12 @@ export function CreateRequestContent() {
     invalidateCache(`meta-request:${response.id}`)
 
     if (!silent) {
+      const sentBackForApproval = !!previousStatus && previousStatus !== "draft" && response.status === "pending_approval"
       toast({
-        title: draftId ? "Draft updated" : "Draft saved",
-        description: "Your Meta campaign request draft has been saved.",
+        title: sentBackForApproval ? "Changes saved" : draftId ? "Draft updated" : "Draft saved",
+        description: sentBackForApproval
+          ? "Request was returned for approval."
+          : "Your Meta campaign request draft has been saved.",
       })
     }
 
@@ -276,7 +307,10 @@ export function CreateRequestContent() {
   const handleSaveDraft = async () => {
     try {
       setSaving(true)
-      await persistDraft()
+      const saved = await persistDraft()
+      if (isEditMode && saved.status === "pending_approval") {
+        router.push(`/meta-ads/requests/${saved.id}`)
+      }
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Failed to save draft."
       toast({ title: "Save failed", description: message, variant: "destructive" })
@@ -335,19 +369,22 @@ export function CreateRequestContent() {
     }
   }
 
-  if (referenceLoading) {
+  const discardHref = isEditMode && draftId ? `/meta-ads/requests/${draftId}` : "/meta-ads/requests"
+  const showSubmitButton = !isEditMode || serverStatus === null || serverStatus === "draft"
+
+  if (referenceLoading || (isEditMode && editLoading && loadedRequestId == null)) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading create form...
+        Loading request form...
       </div>
     )
   }
 
-  if (referenceError || !referenceData) {
+  if (referenceError || !referenceData || (isEditMode && editError)) {
     return (
       <div className="py-24 text-center text-sm text-red-600">
-        {referenceError?.message ?? "Unable to load Meta Ads reference data."}
+        {editError?.message ?? referenceError?.message ?? "Unable to load Meta Ads reference data."}
       </div>
     )
   }
@@ -365,39 +402,51 @@ export function CreateRequestContent() {
               Requests
             </Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">Create</span>
+            <span className="text-slate-900 font-medium">{isEditMode ? "Edit" : "Create"}</span>
           </nav>
-          <h1 className="text-xl font-bold text-slate-900">Create Meta Campaign Request</h1>
+          <h1 className="text-xl font-bold text-slate-900">{isEditMode ? "Edit Meta Campaign Request" : "Create Meta Campaign Request"}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Internal request only. Meta objects are created after approval and execution, and all objects start in PAUSED state.
+            {isEditMode
+              ? "Update the request payload. Saving changes for a non-draft request sends it back for approval."
+              : "Internal request only. Meta objects are created after approval and execution, and all objects start in PAUSED state."}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="ghost" size="sm" className="text-slate-600" onClick={() => (isDirty ? setDiscardOpen(true) : router.push("/meta-ads/requests"))}>
+          <Button variant="ghost" size="sm" className="text-slate-600" onClick={() => (isDirty ? setDiscardOpen(true) : router.push(discardHref))}>
             Discard
           </Button>
-          <Button variant="outline" size="sm" onClick={() => void handleSaveDraft()} disabled={saving || referenceLoading}>
-            {saving ? "Saving..." : draftId ? "Update Draft" : "Save Draft"}
+          <Button variant="outline" size="sm" onClick={() => void handleSaveDraft()} disabled={saving || referenceLoading || editLoading}>
+            {saving ? "Saving..." : isEditMode ? "Save Changes" : draftId ? "Update Draft" : "Save Draft"}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => void handleValidate()} disabled={validating || referenceLoading}>
+          <Button variant="outline" size="sm" onClick={() => void handleValidate()} disabled={validating || referenceLoading || editLoading}>
             {validating ? "Validating..." : "Validate"}
           </Button>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-            disabled={isSubmitBlocked}
-            onClick={() => setSubmitOpen(true)}
-            title={tokenState !== "ready" && tokenState !== "none" ? "Integration readiness issue" : ""}
-          >
-            Submit for Approval
-          </Button>
+          {showSubmitButton ? (
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              disabled={isSubmitBlocked}
+              onClick={() => setSubmitOpen(true)}
+              title={tokenState !== "ready" && tokenState !== "none" ? "Integration readiness issue" : ""}
+            >
+              Submit for Approval
+            </Button>
+          ) : null}
         </div>
       </div>
 
       <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5">
         <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
         <div className="text-xs text-amber-900">
-          <strong>This request will NOT create a live campaign.</strong> Meta objects (Campaign, Ad Set, Ad) are created only after internal approval and execution, all starting in <strong>PAUSED</strong> state.
+          {isEditMode ? (
+            <>
+              <strong>Editing an approved, rejected, completed, or failed request will require approval again.</strong> Existing execution history stays visible in activity logs, but the request itself returns to the approval flow after changes are saved.
+            </>
+          ) : (
+            <>
+              <strong>This request will NOT create a live campaign.</strong> Meta objects (Campaign, Ad Set, Ad) are created only after internal approval and execution, all starting in <strong>PAUSED</strong> state.
+            </>
+          )}
         </div>
       </div>
 
@@ -422,7 +471,7 @@ export function CreateRequestContent() {
             bidStrategies={referenceData.bidStrategies}
           />
           <AdSetAudienceSection form={form} onChange={updateForm} />
-          <AdSetBudgetSection form={form} onChange={updateForm} />
+          <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} />
           <CreativeSection form={form} onChange={updateForm} />
           <AdSection form={form} onChange={updateForm} />
         </div>
@@ -439,29 +488,31 @@ export function CreateRequestContent() {
         </div>
       </div>
 
-      <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Submit for Approval?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will submit your campaign request for internal review. No Meta objects will be created at this stage. After approval, Campaign, Ad Set, Creative, and Ad will be created in <strong>PAUSED</strong> state.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={submitting}
-              onClick={(event) => {
-                event.preventDefault()
-                void handleSubmit()
-              }}
-            >
-              {submitting ? "Submitting..." : "Submit for Approval"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showSubmitButton ? (
+        <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Submit for Approval?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will submit your campaign request for internal review. No Meta objects will be created at this stage. After approval, Campaign, Ad Set, Creative, and Ad will be created in <strong>PAUSED</strong> state.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={submitting}
+                onClick={(event) => {
+                  event.preventDefault()
+                  void handleSubmit()
+                }}
+              >
+                {submitting ? "Submitting..." : "Submit for Approval"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <AlertDialogContent>
@@ -475,7 +526,7 @@ export function CreateRequestContent() {
             <AlertDialogCancel>Stay</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => router.push("/meta-ads/requests")}
+              onClick={() => router.push(discardHref)}
             >
               Discard
             </AlertDialogAction>
@@ -485,6 +536,8 @@ export function CreateRequestContent() {
     </div>
   )
 }
+
+
 
 
 

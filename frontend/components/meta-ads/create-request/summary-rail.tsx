@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, AlertCircle, Pause } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
-import { OBJECTIVE_OPTIMIZATION_MAP } from "./constants"
+import { OBJECTIVE_OPTIMIZATION_MAP, bidStrategyRequiresBidAmount } from "./constants"
 import type { GroupedValidationErrors, MetaAppMappingDto, MetaRequestStatus } from "@/types/meta-ads"
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
@@ -25,6 +25,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const allowedGoals = form.campaignObjective ? (OBJECTIVE_OPTIMIZATION_MAP[form.campaignObjective] ?? []) : []
   const isGoalCompatible = allowedGoals.length === 0 || allowedGoals.includes(form.optimizationGoal)
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride
+  const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
   const tokenOk = tokenState === "ready"
   const creativeStatus = getCreativeStatus(form)
 
@@ -48,6 +49,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
           <CheckRow state={hasBudget ? "ok" : "error"} label="Budget provided" />
           <CheckRow state={form.campaignObjective ? "ok" : "neutral"} label="Objective set" />
           <CheckRow state={form.campaignObjective ? (isGoalCompatible ? "ok" : "error") : "neutral"} label="Optimization goal compatible" />
+          <CheckRow state={bidAmountRequired ? (form.bidAmount ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={bidAmountRequired ? "Bid amount provided for strategy" : "Bid amount optional"} />
           <CheckRow state={form.countries.length > 0 ? "ok" : "error"} label="Countries selected" />
           <CheckRow state={creativeStatus.ok ? "ok" : "error"} label={`Creative ready (${creativeStatus.label})`} />
           <CheckRow state={form.adName ? "ok" : "error"} label="Ad name complete" />
@@ -151,4 +153,5 @@ function CheckRow({ state, label }: { state: CheckState; label: string }) {
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
+
 

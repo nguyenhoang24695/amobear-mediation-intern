@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Megaphone, X, Info } from "lucide-react"
+import { Megaphone, X, Info, AlertTriangle } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 import type { MetaBidStrategyPresetDto, MetaObjectivePresetDto } from "@/types/meta-ads"
+import { bidStrategyRequiresBidAmount } from "./constants"
 
 const specialAdCategoryOptions = ["CREDIT", "EMPLOYMENT", "HOUSING", "ISSUES_ELECTIONS_POLITICS"]
 
@@ -16,10 +17,13 @@ interface Props {
   onChange: (patch: Partial<RequestFormState>) => void
   objectives: MetaObjectivePresetDto[]
   bidStrategies: MetaBidStrategyPresetDto[]
+  currencyCode?: string | null
 }
 
-export function CampaignSettingsSection({ form, onChange, objectives, bidStrategies }: Props) {
+export function CampaignSettingsSection({ form, onChange, objectives, bidStrategies, currencyCode }: Props) {
+  const currency = (currencyCode ?? "USD").trim() || "USD"
   const isCBO = form.budgetStrategy === "CBO"
+  const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
 
   const toggleCategory = (category: string) => {
     const current = form.specialAdCategories
@@ -132,10 +136,10 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
                 Daily Budget <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
                 <Input
-                  placeholder="0"
-                  className="pl-6 h-9 text-sm"
+                  placeholder="0.00"
+                  className="pl-12 h-9 text-sm"
                   value={form.campaignDailyBudget}
                   onChange={(event) => onChange({ campaignDailyBudget: event.target.value })}
                   disabled={!isCBO}
@@ -145,10 +149,10 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             <div className="space-y-1">
               <Label className="text-[11px] text-slate-500">Lifetime Budget</Label>
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
                 <Input
-                  placeholder="0"
-                  className="pl-6 h-9 text-sm"
+                  placeholder="0.00"
+                  className="pl-12 h-9 text-sm"
                   value={form.campaignLifetimeBudget}
                   onChange={(event) => onChange({ campaignLifetimeBudget: event.target.value })}
                   disabled={!isCBO}
@@ -157,6 +161,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             </div>
           </div>
         </div>
+        <p className="text-[11px] text-slate-400">{`Enter budget in normal ${currency} units. Mediation Pro converts it to Meta minor units during execution.`}</p>
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-slate-700">
@@ -180,13 +185,14 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             ))}
           </div>
         </div>
+        <p className="text-[11px] text-slate-400">{`Enter budget in normal ${currency} units. Mediation Pro converts it to Meta minor units during execution.`}</p>
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-slate-700">
             Bid Strategy <span className="text-slate-400 font-normal">(optional)</span>
           </Label>
           <Select value={form.bidStrategy} onValueChange={(value) => onChange({ bidStrategy: value })}>
-            <SelectTrigger className="h-9 text-sm w-72">
+            <SelectTrigger className={`h-9 text-sm w-72 ${bidAmountRequired && !form.bidAmount.trim() ? "border-amber-400 ring-1 ring-amber-300" : ""}`}>
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
@@ -200,8 +206,20 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
               ))}
             </SelectContent>
           </Select>
+          {bidAmountRequired ? (
+            <p className="text-[11px] text-amber-700 flex items-start gap-1">
+              <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              This bid strategy requires a Bid Amount in the ad set section.
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400">Lowest cost without cap can run without a bid amount.</p>
+          )}
         </div>
       </CardContent>
     </Card>
   )
 }
+
+
+
+
