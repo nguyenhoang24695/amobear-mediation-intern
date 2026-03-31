@@ -597,6 +597,8 @@ export interface AlertRule {
   timeWindowHours: number
   comparisonPeriodHours?: number | null
   filterConditions?: string | null
+  configVersion: number
+  ruleConfig?: string | null
   messageTemplate: string
   isEnabled: boolean
   cooldownMinutes: number
@@ -620,6 +622,8 @@ export interface UpsertAlertRuleRequest {
   timeWindowHours: number
   comparisonPeriodHours?: number | null
   filterConditions?: string | null
+  configVersion: number
+  ruleConfig?: string | null
   messageTemplate: string
   isEnabled: boolean
   cooldownMinutes: number
@@ -628,6 +632,113 @@ export interface UpsertAlertRuleRequest {
   emailRecipients?: string | null
   slackChannels?: string | null
   priority: number
+}
+
+export interface AlertRuleScopeConfig {
+  allApps: boolean
+  appIds: string[]
+}
+
+export interface AlertRuleConfigPayload {
+  version: number
+  source?: string | null
+  metricKey?: string | null
+  metricUnit?: string | null
+  conditionType?: string | null
+  operator?: string | null
+  thresholdValue?: number | null
+  percentChange?: number | null
+  consecutiveDays?: number | null
+  frequency?: string | null
+  autoResolve?: boolean | null
+  prompt?: string | null
+  scope: AlertRuleScopeConfig
+}
+
+export interface AlertCenterListItem {
+  id: number
+  alertRuleId: number
+  alertType: string
+  severity: string
+  message: string
+  publisherId: string
+  appId?: string
+  appDisplayName?: string
+  appPlatform?: string
+  appIconUri?: string
+  mediationGroupId?: string
+  mediationGroupDisplayName?: string
+  adSourceId?: string
+  adSourceDisplayName?: string
+  countryCode?: string
+  value: number
+  threshold: number
+  baselineValue?: number | null
+  deltaValue?: number | null
+  deltaPercent?: number | null
+  metricKey?: string | null
+  metricUnit?: string | null
+  status: string
+  triggeredAt: string
+  sentAt?: string
+  acknowledgedAt?: string
+  acknowledgedBy?: string
+  resolvedAt?: string
+  resolvedBy?: string
+  snoozedUntil?: string
+  resolutionComment?: string | null
+  correlationKey?: string | null
+  additionalData?: string
+  alertRuleName?: string | null
+  alertRuleDescription?: string | null
+}
+
+export interface AlertDetailTimelineItem {
+  id: number
+  type: string
+  title: string
+  description?: string | null
+  occurredAt: string
+}
+
+export interface AlertNotificationLogItem {
+  id: number
+  channel: string
+  recipient: string
+  status: string
+  sentAt: string
+  errorMessage?: string | null
+}
+
+export interface AlertTrendPoint {
+  label: string
+  date: string
+  value: number
+  threshold?: number | null
+}
+
+export interface AlertMetricSummary {
+  label: string
+  value: string
+  changePercent?: number | null
+  status: string
+}
+
+export interface AlertSuggestedAction {
+  id: string
+  action: string
+  impact: string
+}
+
+export interface AlertDetailResponse {
+  alert: AlertCenterListItem
+  timeline: AlertDetailTimelineItem[]
+  notificationLogs: AlertNotificationLogItem[]
+  relatedAlerts: AlertCenterListItem[]
+  trend: AlertTrendPoint[]
+  relatedMetrics: AlertMetricSummary[]
+  suggestedActions: AlertSuggestedAction[]
+  aiInsight?: string | null
 }
 
 
