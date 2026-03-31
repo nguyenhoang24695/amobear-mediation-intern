@@ -1,0 +1,297 @@
+"use client"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck, Loader2 } from "lucide-react"
+import type { RequestFormState } from "./create-request-content"
+import type { MetaAdAccountDto, MetaAppMappingDto, MetaObjectivePresetDto } from "@/types/meta-ads"
+
+type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
+
+interface Props {
+  form: RequestFormState
+  onChange: (patch: Partial<RequestFormState>) => void
+  tokenState: TokenState
+  adAccounts: MetaAdAccountDto[]
+  appMappings: MetaAppMappingDto[]
+  selectedAppMapping?: MetaAppMappingDto | null
+  appMappingsLoading?: boolean
+  appMappingsMessage?: string | null
+  objectives: MetaObjectivePresetDto[]
+  integrationName?: string | null
+}
+
+function StatusRow({ ok, label }: { ok: boolean | null; label: string }) {
+  if (ok === null) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-slate-400">
+        <AlertCircle className="w-3.5 h-3.5" />
+        <span>{label}</span>
+      </div>
+    )
+  }
+
+  return ok ? (
+    <div className="flex items-center gap-2 text-xs text-green-700">
+      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+      <span>{label}</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2 text-xs text-red-600">
+      <XCircle className="w-3.5 h-3.5" />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function TokenStatusBadge({ state }: { state: TokenState }) {
+  if (state === "none") return null
+  const configs = {
+    ready: { icon: ShieldCheck, label: "Token Ready", cls: "bg-green-50 border-green-200 text-green-800" },
+    not_tested: { icon: AlertTriangle, label: "Not Tested", cls: "bg-amber-50 border-amber-200 text-amber-800" },
+    expired: { icon: ShieldAlert, label: "Token Expired", cls: "bg-red-50 border-red-200 text-red-800" },
+    missing_permissions: { icon: ShieldAlert, label: "Missing Permissions", cls: "bg-red-50 border-red-200 text-red-800" },
+    invalid: { icon: ShieldAlert, label: "Invalid Connection", cls: "bg-red-50 border-red-200 text-red-800" },
+    disabled: { icon: ShieldOff, label: "Integration Disabled", cls: "bg-slate-100 border-slate-200 text-slate-600" },
+  }
+  const { icon: Icon, label, cls } = configs[state]
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs font-medium ${cls}`}>
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </div>
+  )
+}
+
+export function AccountAppSection({
+  form,
+  onChange,
+  tokenState,
+  adAccounts,
+  appMappings,
+  selectedAppMapping,
+  appMappingsLoading = false,
+  appMappingsMessage,
+  objectives,
+  integrationName,
+}: Props) {
+  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride || ""
+  const hasMappingIssue = !selectedAppMapping?.metaApplicationId || !mappingUrl
+  const isTokenBlocking = tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
+  const appSelectDisabled = !form.adAccountId || appMappingsLoading
+
+  return (
+    <Card className="border-slate-200">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-slate-500" />
+          Account &amp; App Readiness
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-slate-700">
+            Meta Ad Account <span className="text-red-500">*</span>
+          </Label>
+          <Select value={form.adAccountId} onValueChange={(value) => onChange({ adAccountId: value, appRowId: "" })}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Select ad account..." />
+            </SelectTrigger>
+            <SelectContent>
+              {adAccounts.map((account) => (
+                <SelectItem key={account.id} value={account.id.toString()}>
+                  <div className="flex items-center gap-3 py-0.5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-slate-500">{account.metaAdAccountId}</span>
+                        <Badge className={account.isActive ? "bg-green-100 text-green-700 text-[10px] px-1.5 py-0" : "bg-red-100 text-red-600 text-[10px] px-1.5 py-0"}>
+                          {account.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div className="text-sm font-medium">
+                        {account.name} - {account.currency ?? "-"} - {account.timeZoneName ?? "-"}
+                      </div>
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {form.adAccountId ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-600">
+                Integration Status{integrationName ? ` - ${integrationName}` : ""}
+              </span>
+              <TokenStatusBadge state={tokenState} />
+            </div>
+            {isTokenBlocking ? (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-red-700">
+                  {tokenState === "expired" && "The selected integration token is missing or expired. Update the access token and test the integration again before submitting."}
+                  {tokenState === "missing_permissions" && "The selected integration is missing required permissions (ads_management, ads_read)."}
+                  {tokenState === "invalid" && "The selected integration failed its last connection test. Review the access token, app credentials, and business permissions."}
+                  {tokenState === "disabled" && "The selected integration or ad account is disabled. Re-enable it from Meta Ads setup screens."}{" "}
+                  <strong>Submit for Approval is blocked until resolved.</strong>
+                </p>
+              </div>
+            ) : tokenState === "not_tested" ? (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-800">
+                  This integration has not been tested recently. Request execution may still work, but operators should validate the Meta connection from the integration screen.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-slate-700">
+            App <span className="text-red-500">*</span>
+          </Label>
+          <Select value={form.appRowId} onValueChange={(value) => onChange({ appRowId: value })} disabled={appSelectDisabled}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder={form.adAccountId ? (appMappingsLoading ? "Loading apps for this ad account..." : "Select app...") : "Select ad account first..."} />
+            </SelectTrigger>
+            <SelectContent>
+              {appMappings.map((mapping) => (
+                <SelectItem key={mapping.id} value={mapping.appRowId.toString()}>
+                  <div className="flex items-center gap-2 py-0.5">
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 ${mapping.platform === "IOS" ? "border-blue-200 text-blue-700" : "border-green-200 text-green-700"}`}
+                    >
+                      {mapping.platform ?? "APP"}
+                    </Badge>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}</span>
+                        {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.deepLinkUrlOverride)) ? (
+                          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Missing Mapping</Badge>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono">{mapping.appId ?? `row:${mapping.appRowId}`}</div>
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {!form.adAccountId ? (
+            <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account's advertisable applications.</p>
+          ) : appMappingsLoading ? (
+            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Loading apps available for this ad account...
+            </div>
+          ) : appMappingsMessage ? (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-red-700">{appMappingsMessage}</p>
+            </div>
+          ) : appMappings.length === 0 ? (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-amber-800">No active app mappings are currently advertisable for the selected Meta ad account.</p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
+          )}
+        </div>
+
+        {selectedAppMapping ? (
+          <div className={`rounded-lg border p-3 space-y-2 ${hasMappingIssue ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Promoted Object</p>
+              {hasMappingIssue ? (
+                <Badge className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 gap-1">
+                  <AlertTriangle className="w-2.5 h-2.5" />
+                  Missing Meta App Mapping
+                </Badge>
+              ) : (
+                <Badge className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 gap-1">
+                  <CheckCircle2 className="w-2.5 h-2.5" />
+                  Valid
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+              <span className="text-slate-500">Application ID</span>
+              <span className={`font-mono ${selectedAppMapping.metaApplicationId ? "text-slate-900" : "text-amber-700 italic"}`}>
+                {selectedAppMapping.metaApplicationId || "Not configured"}
+              </span>
+              <span className="text-slate-500">Platform</span>
+              <span className="text-slate-900">{selectedAppMapping.platform ?? "-"}</span>
+              <span className="text-slate-500">Store URL</span>
+              <span className={`truncate ${mappingUrl ? "text-slate-900" : "text-amber-700 italic"}`}>
+                {mappingUrl || "Not configured"}
+              </span>
+            </div>
+            {hasMappingIssue ? (
+              <p className="text-[11px] text-amber-800">
+                App campaigns require a valid <code className="bg-amber-100 px-1 rounded">promoted_object</code> with application_id + store URL.
+                Configure the mapping in <strong>Meta Ads &gt; App Mappings</strong>.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-50 rounded-md border border-slate-200 p-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">App Mapping</p>
+            <StatusRow
+              ok={form.appRowId ? (selectedAppMapping?.metaApplicationId ? true : false) : null}
+              label={!form.appRowId ? "Select an app" : selectedAppMapping?.metaApplicationId ? "Meta App ID set" : "Meta App ID missing"}
+            />
+            <StatusRow
+              ok={form.appRowId ? (!!mappingUrl) : null}
+              label={!form.appRowId ? "Store URL" : mappingUrl ? "Store URL set" : "Store URL missing"}
+            />
+          </div>
+          <div className="bg-slate-50 rounded-md border border-slate-200 p-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Integration</p>
+            <StatusRow
+              ok={form.adAccountId ? (tokenState === "ready" ? true : tokenState === "not_tested" ? null : false) : null}
+              label={!form.adAccountId ? "Select an account" : tokenState === "ready" ? "Integration enabled" : tokenState === "not_tested" ? "Integration not tested" : "Integration issue"}
+            />
+            <StatusRow
+              ok={form.adAccountId ? (tokenState === "ready" ? true : tokenState === "not_tested" ? null : false) : null}
+              label={!form.adAccountId ? "Token status" : tokenState === "ready" ? "Token ready" : tokenState === "not_tested" ? "Token not tested" : tokenState === "expired" ? "Token expired" : tokenState === "missing_permissions" ? "Missing permissions" : tokenState === "invalid" ? "Connection invalid" : "Integration disabled"}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-slate-700">Business Objective</Label>
+          <div className="flex flex-wrap gap-2">
+            {objectives.map((objective) => (
+              <button
+                key={objective.key}
+                type="button"
+                onClick={() => onChange({
+                  objective: form.objective === objective.key ? "" : objective.key,
+                  campaignObjective: form.campaignObjective === objective.key ? "" : objective.key,
+                })}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  form.campaignObjective === objective.key
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600"
+                }`}
+                title={objective.description}
+              >
+                {objective.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

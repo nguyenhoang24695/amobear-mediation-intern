@@ -1,0 +1,365 @@
+import type {
+  CreateMetaCampaignRequestDto,
+  GroupedValidationErrors,
+  MetaCampaignRequestDetailDto,
+  MetaCarouselCardDraftDto,
+  MetaCarouselCardFormState,
+  MetaCreativeDraftDto,
+  MetaCreativeMediaMode,
+  MetaCreativeMediaSourceDto,
+  MetaRequestAssetSelectionState,
+  MetaRequestFormState,
+  UpdateMetaCampaignRequestDto,
+} from "@/types/meta-ads"
+
+function createId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+export function createEmptyMediaSelection(mode: MetaCreativeMediaMode = "meta_ref"): MetaRequestAssetSelectionState {
+  return {
+    mode,
+    imageHash: "",
+    imageUrl: "",
+    videoId: "",
+    uploadedAssetId: null,
+    uploadedAssetName: "",
+    uploadedAssetPreviewUrl: "",
+  }
+}
+
+export function createEmptyCarouselCard(): MetaCarouselCardFormState {
+  return {
+    id: createId(),
+    headline: "",
+    description: "",
+    linkUrl: "",
+    image: createEmptyMediaSelection("meta_ref"),
+  }
+}
+
+function parseOptionalLong(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? Math.round(parsed) : null
+}
+
+function parseOptionalDate(value: string): string | null {
+  const trimmed = value.trim()
+  return trimmed ? new Date(trimmed).toISOString() : null
+}
+
+function parseGender(value: string): string[] {
+  if (value === "ALL") return []
+  if (value === "MALE") return ["male"]
+  if (value === "FEMALE") return ["female"]
+  return []
+}
+
+function parseBudgetStrategy(form: MetaRequestFormState) {
+  return {
+    campaignDailyBudget: form.budgetStrategy === "CBO" ? parseOptionalLong(form.campaignDailyBudget) : null,
+    campaignLifetimeBudget: form.budgetStrategy === "CBO" ? parseOptionalLong(form.campaignLifetimeBudget) : null,
+    adSetDailyBudget: form.budgetStrategy === "ABO" ? parseOptionalLong(form.adSetDailyBudget) : null,
+    adSetLifetimeBudget: form.budgetStrategy === "ABO" ? parseOptionalLong(form.adSetLifetimeBudget) : null,
+  }
+}
+
+function buildMediaSource(selection: MetaRequestAssetSelectionState, kind: "image" | "video"): MetaCreativeMediaSourceDto | null {
+  if (selection.uploadedAssetId) {
+    return {
+      mode: "uploaded_asset",
+      uploadedAssetId: selection.uploadedAssetId,
+    }
+  }
+
+  if (selection.mode === "external_url") {
+    if (!selection.imageUrl.trim()) return null
+    return {
+      mode: "external_url",
+      imageUrl: selection.imageUrl.trim(),
+    }
+  }
+
+  if (kind === "video") {
+    if (!selection.videoId.trim()) return null
+    return {
+      mode: "meta_ref",
+      videoId: selection.videoId.trim(),
+    }
+  }
+
+  if (!selection.imageHash.trim() && !selection.imageUrl.trim()) return null
+  return {
+    mode: selection.imageHash.trim() ? "meta_ref" : "external_url",
+    imageHash: selection.imageHash.trim() || null,
+    imageUrl: selection.imageUrl.trim() || null,
+  }
+}
+
+function mediaSourceToSelection(source: MetaCreativeMediaSourceDto | null | undefined, kind: "image" | "video"): MetaRequestAssetSelectionState {
+  const mode = source?.mode ?? (source?.uploadedAssetId ? "uploaded_asset" : source?.videoId ? "meta_ref" : source?.imageHash ? "meta_ref" : source?.imageUrl ? "external_url" : kind === "video" ? "meta_ref" : "meta_ref")
+  return {
+    mode,
+    imageHash: source?.imageHash ?? "",
+    imageUrl: source?.imageUrl ?? "",
+    videoId: source?.videoId ?? "",
+    uploadedAssetId: source?.uploadedAssetId ?? null,
+    uploadedAssetName: source?.uploadedAssetId ? `Asset #${source.uploadedAssetId}` : "",
+    uploadedAssetPreviewUrl: source?.uploadedAssetId ? `/api/v1/meta-campaign-requests/assets/${source.uploadedAssetId}/content` : "",
+  }
+}
+
+function getCreativeCommon(creative: MetaCreativeDraftDto) {
+  return {
+    name: creative.common?.name ?? creative.name ?? "",
+    pageId: creative.common?.pageId ?? creative.pageId ?? "",
+    instagramActorId: creative.common?.instagramActorId ?? creative.instagramActorId ?? "",
+  }
+}
+
+function getSingleImageCreative(creative: MetaCreativeDraftDto) {
+  return creative.singleImage ?? {
+    message: creative.message,
+    headline: creative.headline,
+    description: creative.description,
+    callToActionType: creative.callToActionType,
+    linkUrl: creative.linkUrl,
+    image: {
+      mode: creative.imageHash ? "meta_ref" : creative.imageUrl ? "external_url" : "meta_ref",
+      imageHash: creative.imageHash,
+      imageUrl: creative.imageUrl,
+    },
+  }
+}
+
+function getSingleVideoCreative(creative: MetaCreativeDraftDto) {
+  return creative.singleVideo ?? {
+    message: creative.message,
+    headline: creative.headline,
+    description: creative.description,
+    callToActionType: creative.callToActionType,
+    linkUrl: creative.linkUrl,
+    video: null,
+    thumbnail: null,
+  }
+}
+
+function getCarouselCreative(creative: MetaCreativeDraftDto) {
+  return creative.carousel ?? {
+    message: creative.message,
+    callToActionType: creative.callToActionType,
+    cards: [] as MetaCarouselCardDraftDto[],
+  }
+}
+
+export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?: string): CreateMetaCampaignRequestDto {
+  const budgets = parseBudgetStrategy(form)
+  const creativeCommon = {
+    name: form.creativeName.trim(),
+    pageId: form.facebookPageId.trim() || null,
+    instagramActorId: form.instagramActorId.trim() || null,
+  }
+
+  const creative: MetaCreativeDraftDto = {
+    type: form.creativeType,
+    common: creativeCommon,
+  }
+
+  if (form.creativeType === "SINGLE_VIDEO") {
+    creative.singleVideo = {
+      message: form.singleVideoPrimaryText.trim() || null,
+      headline: form.singleVideoHeadline.trim() || null,
+      description: form.singleVideoDescription.trim() || null,
+      callToActionType: form.singleVideoCallToAction.trim() || null,
+      linkUrl: form.singleVideoLinkUrl.trim() || null,
+      video: buildMediaSource(form.singleVideoVideo, "video"),
+      thumbnail: buildMediaSource(form.singleVideoThumbnail, "image"),
+    }
+  } else if (form.creativeType === "CAROUSEL_IMAGE") {
+    creative.carousel = {
+      message: form.carouselPrimaryText.trim() || null,
+      callToActionType: form.carouselCallToAction.trim() || null,
+      cards: form.carouselCards.map((card) => ({
+        headline: card.headline.trim() || null,
+        description: card.description.trim() || null,
+        linkUrl: card.linkUrl.trim() || null,
+        image: buildMediaSource(card.image, "image"),
+      })),
+    }
+  } else if (form.creativeType === "EXISTING_POST") {
+    creative.existingPost = {
+      sourcePostId: form.existingPostId.trim() || null,
+    }
+  } else {
+    creative.singleImage = {
+      message: form.singleImagePrimaryText.trim() || null,
+      headline: form.singleImageHeadline.trim() || null,
+      description: form.singleImageDescription.trim() || null,
+      callToActionType: form.singleImageCallToAction.trim() || null,
+      linkUrl: form.singleImageLinkUrl.trim() || null,
+      image: buildMediaSource(form.singleImageImage, "image"),
+    }
+  }
+
+  return {
+    metaAdAccountId: Number(form.adAccountId),
+    appRowId: Number(form.appRowId),
+    idempotencyKey,
+    campaign: {
+      name: form.campaignName.trim(),
+      objective: form.campaignObjective.trim(),
+      buyingType: form.buyingType.trim() || null,
+      dailyBudget: budgets.campaignDailyBudget,
+      lifetimeBudget: budgets.campaignLifetimeBudget,
+      bidStrategy: form.bidStrategy.trim() || null,
+      specialAdCategories: form.specialAdCategories,
+    },
+    adSet: {
+      name: form.adSetName.trim(),
+      dailyBudget: budgets.adSetDailyBudget,
+      lifetimeBudget: budgets.adSetLifetimeBudget,
+      billingEvent: form.billingEvent.trim(),
+      optimizationGoal: form.optimizationGoal.trim(),
+      bidAmount: parseOptionalLong(form.bidAmount),
+      startTime: parseOptionalDate(form.startTime),
+      endTime: parseOptionalDate(form.endTime),
+      countries: form.countries,
+      ageMin: Number.isFinite(form.ageMin) ? form.ageMin : null,
+      ageMax: Number.isFinite(form.ageMax) ? form.ageMax : null,
+      genders: parseGender(form.gender),
+      devicePlatforms: [],
+      userOs: [],
+      publisherPlatforms: form.placementMode === "MANUAL" ? form.publisherPlatforms : [],
+      facebookPositions: form.placementMode === "MANUAL" ? form.facebookPositions : [],
+      instagramPositions: form.placementMode === "MANUAL" ? form.instagramPositions : [],
+    },
+    creative,
+    ad: {
+      name: form.adName.trim(),
+      status: "PAUSED",
+      trackingSpecsJson: form.trackingSpecs.trim() || null,
+    },
+  }
+}
+
+export function formStateToUpdateDto(form: MetaRequestFormState): UpdateMetaCampaignRequestDto {
+  const createDto = formStateToCreateDto(form)
+  return {
+    metaAdAccountId: createDto.metaAdAccountId,
+    appRowId: createDto.appRowId,
+    campaign: createDto.campaign,
+    adSet: createDto.adSet,
+    creative: createDto.creative,
+    ad: createDto.ad,
+  }
+}
+
+export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): MetaRequestFormState {
+  const payload = detail.payload
+  const genders = payload.adSet.genders
+  const gender =
+    genders.length === 0
+      ? "ALL"
+      : genders.some((value) => value.toLowerCase() === "female")
+        ? "FEMALE"
+        : "MALE"
+
+  const creativeType = payload.creative.type ?? "SINGLE_IMAGE"
+  const common = getCreativeCommon(payload.creative)
+  const singleImage = getSingleImageCreative(payload.creative)
+  const singleVideo = getSingleVideoCreative(payload.creative)
+  const carousel = getCarouselCreative(payload.creative)
+
+  return {
+    adAccountId: detail.metaAdAccountId.toString(),
+    appRowId: detail.appRowId.toString(),
+    objective: payload.campaign.objective,
+    budgetStrategy: payload.campaign.dailyBudget || payload.campaign.lifetimeBudget ? "CBO" : "ABO",
+    campaignName: payload.campaign.name ?? "",
+    buyingType: payload.campaign.buyingType ?? "AUCTION",
+    campaignObjective: payload.campaign.objective ?? "",
+    specialAdCategories: payload.campaign.specialAdCategories ?? [],
+    bidStrategy: payload.campaign.bidStrategy ?? "",
+    campaignDailyBudget: payload.campaign.dailyBudget?.toString() ?? "",
+    campaignLifetimeBudget: payload.campaign.lifetimeBudget?.toString() ?? "",
+    adSetName: payload.adSet.name ?? "",
+    countries: payload.adSet.countries ?? [],
+    ageMin: payload.adSet.ageMin ?? 18,
+    ageMax: payload.adSet.ageMax ?? 65,
+    gender,
+    placementMode: payload.adSet.publisherPlatforms.length > 0 || payload.adSet.facebookPositions.length > 0 || payload.adSet.instagramPositions.length > 0 ? "MANUAL" : "AUTOMATIC",
+    publisherPlatforms: payload.adSet.publisherPlatforms ?? [],
+    facebookPositions: payload.adSet.facebookPositions ?? [],
+    instagramPositions: payload.adSet.instagramPositions ?? [],
+    adSetDailyBudget: payload.adSet.dailyBudget?.toString() ?? "",
+    adSetLifetimeBudget: payload.adSet.lifetimeBudget?.toString() ?? "",
+    billingEvent: payload.adSet.billingEvent ?? "IMPRESSIONS",
+    optimizationGoal: payload.adSet.optimizationGoal ?? "APP_INSTALLS",
+    bidAmount: payload.adSet.bidAmount?.toString() ?? "",
+    startTime: payload.adSet.startTime ? payload.adSet.startTime.slice(0, 16) : "",
+    endTime: payload.adSet.endTime ? payload.adSet.endTime.slice(0, 16) : "",
+    creativeType,
+    creativeName: common.name,
+    facebookPageId: common.pageId,
+    instagramActorId: common.instagramActorId,
+    singleImagePrimaryText: singleImage.message ?? "",
+    singleImageHeadline: singleImage.headline ?? "",
+    singleImageDescription: singleImage.description ?? "",
+    singleImageCallToAction: singleImage.callToActionType ?? "LEARN_MORE",
+    singleImageLinkUrl: singleImage.linkUrl ?? "",
+    singleImageImage: mediaSourceToSelection(singleImage.image, "image"),
+    singleVideoPrimaryText: singleVideo.message ?? "",
+    singleVideoHeadline: singleVideo.headline ?? "",
+    singleVideoDescription: singleVideo.description ?? "",
+    singleVideoCallToAction: singleVideo.callToActionType ?? "LEARN_MORE",
+    singleVideoLinkUrl: singleVideo.linkUrl ?? "",
+    singleVideoVideo: mediaSourceToSelection(singleVideo.video, "video"),
+    singleVideoThumbnail: mediaSourceToSelection(singleVideo.thumbnail, "image"),
+    carouselPrimaryText: carousel.message ?? "",
+    carouselCallToAction: carousel.callToActionType ?? "LEARN_MORE",
+    carouselCards: (carousel.cards ?? []).map((card) => ({
+      id: createId(),
+      headline: card.headline ?? "",
+      description: card.description ?? "",
+      linkUrl: card.linkUrl ?? "",
+      image: mediaSourceToSelection(card.image, "image"),
+    })),
+    existingPostId: payload.creative.existingPost?.sourcePostId ?? "",
+    adName: payload.ad.name ?? "",
+    trackingSpecs: payload.ad.trackingSpecsJson ?? "",
+  }
+}
+
+export function groupValidationErrors(errors: string[]): GroupedValidationErrors {
+  return errors.reduce<GroupedValidationErrors>((groups, error) => {
+    const normalized = error.toLowerCase()
+    let key = "General"
+    if (normalized.includes("account") || normalized.includes("integration")) key = "Account & Integration"
+    else if (normalized.includes("mapping") || normalized.includes("app ")) key = "App Mapping"
+    else if (normalized.includes("campaign")) key = "Campaign"
+    else if (normalized.includes("ad set") || normalized.includes("targeting") || normalized.includes("country") || normalized.includes("age_")) key = "Ad Set"
+    else if (normalized.includes("creative") || normalized.includes("page_id") || normalized.includes("image") || normalized.includes("video") || normalized.includes("post") || normalized.includes("link_url")) key = "Creative"
+    else if (normalized.startsWith("ad ")) key = "Ad"
+
+    if (!groups[key]) groups[key] = []
+    groups[key].push(error)
+    return groups
+  }, {})
+}
+
+export function formatMetaRequestId(id: number | string): string {
+  const raw = typeof id === "number" ? id.toString() : id
+  return `REQ-${raw.padStart(6, "0")}`
+}
+
+export function formatUserGuidShort(value?: string | null): string {
+  if (!value) return "-"
+  if (value.length <= 12) return value
+  return `${value.slice(0, 8)}...${value.slice(-4)}`
+}
