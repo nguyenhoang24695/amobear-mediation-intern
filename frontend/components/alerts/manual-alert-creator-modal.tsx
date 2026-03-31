@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -13,13 +13,26 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Zap } from "lucide-react"
-import { alertsApi } from "@/lib/api/services"
+import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Zap, Search, Loader2 } from "lucide-react"
+import { alertsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useApi } from "@/hooks/use-api"
+import type { AlertRuleConfigPayload } from "@/types/api"
 
 interface ManualAlertCreatorModalProps {
   open: boolean
@@ -37,23 +50,28 @@ const metrics = [
   { value: "d7_retention", label: "D7 Retention" },
 ]
 
-const apps = [
-  { id: "all", name: "All Apps" },
-  { id: "puzzle-blast", name: "Puzzle Blast" },
-  { id: "word-hero", name: "Word Hero" },
-  { id: "color-match", name: "Color Match" },
-  { id: "ai-mail", name: "AI Mail" },
-]
-
 const conditionTypes = [
   { value: "threshold", label: "Threshold", description: "Alert when metric crosses a fixed value" },
   { value: "percent_change", label: "% Change", description: "Alert when metric changes by percentage vs baseline" },
   { value: "consecutive", label: "Consecutive Days", description: "Alert after N consecutive days below/above value" },
 ]
 
+function toMetricKey(value: string) {
+  return value
+}
+
+function toMetricUnit(metricKey: string) {
+  if (metricKey === "revenue" || metricKey === "ecpm") return "usd"
+  if (metricKey === "fill_rate") return "percent"
+  return "count"
+}
+
 export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: ManualAlertCreatorModalProps) {
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
+  const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
+  const [pendingDuplicateName, setPendingDuplicateName] = useState("")
+  const [appSearch, setAppSearch] = useState("")
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     metric: "",
@@ -70,6 +88,42 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     autoResolve: true,
   })
 
+  const { data: appsData, loading: appsLoading } = useApi(
+    () => structureApi.getApps(),
+    { enabled: open, cacheKey: "manual_alert_create_apps" }
+  )
+
+  const apps = useMemo(
+    () =>
+      (appsData?.apps ?? []).map((app) => ({
+        id: app.appId,
+        name: app.displayName || app.name || app.appId,
+        platform: app.platform || null,
+        iconUri: app.iconUri || null,
+      })),
+    [appsData]
+  )
+
+  const filteredApps = useMemo(() => {
+    const keyword = appSearch.trim().toLowerCase()
+    if (!keyword) return apps
+    return apps.filter(
+      (app) => app.name.toLowerCase().includes(keyword) || app.id.toLowerCase().includes(keyword)
+    )
+  }, [apps, appSearch])
+
+  const isAllApps = formData.selectedApps.includes("all")
+
+  const toggleSpecificApp = (appId: string, checked: boolean) => {
+    setFormData((current) => {
+      const withoutAll = current.selectedApps.filter((id) => id !== "all")
+      if (checked) {
+        return { ...current, selectedApps: Array.from(new Set([...withoutAll, appId])) }
+      }
+      return { ...current, selectedApps: withoutAll.filter((id) => id !== appId) }
+    })
+  }
+
   const handleNext = () => {
     if (step < 3) setStep(step + 1)
   }
@@ -78,16 +132,44 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     if (step > 1) setStep(step - 1)
   }
 
-  const handleCreate = async () => {
+  const formatTimestampYmdHisSSS = (date: Date) => {
+    const yyyy = date.getFullYear().toString()
+    const MM = String(date.getMonth() + 1).padStart(2, "0")
+    const dd = String(date.getDate()).padStart(2, "0")
+    const HH = String(date.getHours()).padStart(2, "0")
+    const mm = String(date.getMinutes()).padStart(2, "0")
+    const ss = String(date.getSeconds()).padStart(2, "0")
+    const SSS = String(date.getMilliseconds()).padStart(3, "0")
+    return `${yyyy}${MM}${dd}${HH}${mm}${ss}${SSS}`
+  }
+
+  const createRuleWithName = async (name: string) => {
     try {
       setCreating(true)
-      const name = (formData.alertName || generateAlertName()).trim()
       const channels = Object.entries(formData.channels)
         .filter(([, enabled]) => enabled)
         .map(([channel]) => {
           if (channel === "inApp") return "IN_APP"
           return channel.toUpperCase()
         })
+      const metricKey = toMetricKey(formData.metric)
+      const ruleConfig: AlertRuleConfigPayload = {
+        version: 1,
+        source: "manual",
+        metricKey,
+        metricUnit: toMetricUnit(metricKey),
+        conditionType: formData.conditionType,
+        operator: formData.operator,
+        thresholdValue: formData.thresholdValue ? Number(formData.thresholdValue) : null,
+        percentChange: formData.percentChange ? Number(formData.percentChange) : null,
+        consecutiveDays: formData.consecutiveDays ? Number(formData.consecutiveDays) : null,
+        frequency: formData.frequency,
+        autoResolve: formData.autoResolve,
+        scope: {
+          allApps: isAllApps,
+          appIds: isAllApps ? [] : formData.selectedApps,
+        },
+      }
 
       const ruleExpression =
         formData.conditionType === "threshold"
@@ -105,19 +187,13 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
         thresholdValue: formData.conditionType === "threshold" ? Number(formData.thresholdValue || 0) : null,
         timeWindowHours: formData.frequency === "daily" ? 24 : 1,
         comparisonPeriodHours: formData.conditionType === "percent_change" ? 24 : null,
-        filterConditions: JSON.stringify({
-          selectedApps: formData.selectedApps,
-          metric: formData.metric,
-          conditionType: formData.conditionType,
-          operator: formData.operator,
-          percentChange: formData.percentChange,
-          consecutiveDays: formData.consecutiveDays,
-          autoResolve: formData.autoResolve,
-        }),
+        filterConditions: JSON.stringify(ruleConfig),
+        configVersion: 1,
+        ruleConfig: JSON.stringify(ruleConfig),
         messageTemplate: `${name} triggered`,
         isEnabled: true,
         cooldownMinutes: 60,
-        notificationChannels: channels.length > 0 ? channels.join(",") : "IN_APP",
+        notificationChannels: JSON.stringify(channels.length > 0 ? channels : ["IN_APP"]),
         telegramTopics: null,
         emailRecipients: null,
         slackChannels: null,
@@ -128,6 +204,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
       onCreated?.()
       onOpenChange(false)
       setStep(1)
+      setPendingDuplicateName("")
     } catch (error: any) {
       toast({
         title: "Không thể tạo alert",
@@ -137,6 +214,36 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     } finally {
       setCreating(false)
     }
+  }
+
+  const handleCreate = async () => {
+    const name = (formData.alertName || generateAlertName()).trim()
+    if (!name) {
+      toast({ title: "Thiếu Alert name", description: "Vui lòng nhập tên alert.", variant: "destructive" })
+      return
+    }
+    try {
+      const existingRules = await alertsApi.getAlertRules()
+      const isDuplicate = existingRules.some((rule) => rule.name.trim().toLowerCase() === name.toLowerCase())
+      if (isDuplicate) {
+        setPendingDuplicateName(name)
+        setDuplicateConfirmOpen(true)
+        return
+      }
+      await createRuleWithName(name)
+    } catch (error: any) {
+      toast({
+        title: "Không thể kiểm tra tên trùng",
+        description: error?.message || "Unknown error",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleConfirmCreateWithTimestamp = async () => {
+    const finalName = `${pendingDuplicateName}_${formatTimestampYmdHisSSS(new Date())}`
+    setDuplicateConfirmOpen(false)
+    await createRuleWithName(finalName)
   }
 
   const generateAlertName = () => {
@@ -152,7 +259,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="h-[88vh] w-[95vw] max-w-[95vw] md:h-[85vh] md:w-[75vw] md:!max-w-[75vw] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Create Alert Rule</DialogTitle>
           <DialogDescription>Step {step} of 3</DialogDescription>
@@ -180,8 +287,53 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 space-y-6">
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
+            <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+              <div>
+                <span className="text-slate-500">Name:</span>
+                <p className="font-medium break-words">{formData.alertName || generateAlertName() || "-"}</p>
+              </div>
+              <div>
+                <span className="text-slate-500">Metric:</span>
+                <p className="font-medium">{metrics.find((m) => m.value === formData.metric)?.label || "-"}</p>
+              </div>
+              <div>
+                <span className="text-slate-500">Apps:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {formData.selectedApps.map((appId) => (
+                    <Badge key={appId} variant="secondary" className="text-xs max-w-full">
+                      {appId === "all" ? "All Apps" : apps.find((a) => a.id === appId)?.name || appId}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-slate-500">Severity:</span>
+                <Badge
+                  className={`ml-2 ${
+                    formData.severity === "critical"
+                      ? "bg-red-100 text-red-700"
+                      : formData.severity === "warning"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  {formData.severity}
+                </Badge>
+              </div>
+            </div>
+
+            <Button variant="outline" className="w-full mt-4 gap-2 bg-white">
+              <Zap className="w-4 h-4" />
+              Test Rule
+            </Button>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <div className="space-y-6">
             {step === 1 && (
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -202,37 +354,79 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
 
                 <div className="space-y-2">
                   <Label>Select App(s) *</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {apps.map((app) => (
-                      <label
-                        key={app.id}
-                        className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 ${
-                          formData.selectedApps.includes(app.id) ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={formData.selectedApps.includes(app.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              if (app.id === "all") {
-                                setFormData({ ...formData, selectedApps: ["all"] })
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  selectedApps: [...formData.selectedApps.filter((a) => a !== "all"), app.id],
-                                })
-                              }
-                            } else {
-                              setFormData({
-                                ...formData,
-                                selectedApps: formData.selectedApps.filter((a) => a !== app.id),
-                              })
-                            }
-                          }}
-                        />
-                        <span className="text-sm">{app.name}</span>
-                      </label>
-                    ))}
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 border-slate-200">
+                      <Checkbox
+                        checked={isAllApps}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData((current) => ({ ...current, selectedApps: ["all"] }))
+                          } else {
+                            setFormData((current) => ({ ...current, selectedApps: [] }))
+                          }
+                        }}
+                      />
+                      <span className="text-sm font-medium">All Apps</span>
+                    </label>
+
+                    {!isAllApps && (
+                      <>
+                        <div className="relative">
+                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <Input
+                            className="pl-9"
+                            placeholder="Search by app name or appId"
+                            value={appSearch}
+                            onChange={(e) => setAppSearch(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-2">
+                          {appsLoading ? (
+                            <div className="text-sm text-slate-500 py-6 flex items-center justify-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Loading apps...
+                            </div>
+                          ) : filteredApps.length === 0 ? (
+                            <div className="text-sm text-slate-500 py-6 text-center">No app found.</div>
+                          ) : (
+                            filteredApps.map((app) => {
+                              const checked = formData.selectedApps.includes(app.id)
+                              return (
+                                <label
+                                  key={app.id}
+                                  className={`flex items-start gap-2 p-2 border rounded-md cursor-pointer hover:bg-slate-50 ${
+                                    checked ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                                  }`}
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(next) => toggleSpecificApp(app.id, next === true)}
+                                  />
+                                  <Avatar className="h-8 w-8 shrink-0 rounded-md">
+                                    <AvatarImage src={app.iconUri || "/placeholder.svg"} alt={app.name} className="object-cover" />
+                                    <AvatarFallback className="rounded-md text-[10px] bg-slate-100 text-slate-600">
+                                      {app.name.slice(0, 1).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <p className="text-sm font-medium text-slate-900 truncate">{app.name}</p>
+                                      {app.platform && (
+                                        <Badge variant="outline" className="text-[10px] h-5 shrink-0 text-slate-600">
+                                          {app.platform}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-mono truncate">{app.id}</p>
+                                  </div>
+                                </label>
+                              )
+                            })
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -455,52 +649,6 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
             )}
           </div>
 
-          <div className="col-span-1">
-            <Card className="border-amber-300 bg-amber-50 sticky top-0">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <span className="text-slate-500">Name:</span>
-                    <p className="font-medium">{formData.alertName || generateAlertName() || "-"}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Metric:</span>
-                    <p className="font-medium">{metrics.find((m) => m.value === formData.metric)?.label || "-"}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Apps:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {formData.selectedApps.map((appId) => (
-                        <Badge key={appId} variant="secondary" className="text-xs">
-                          {apps.find((a) => a.id === appId)?.name || appId}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Severity:</span>
-                    <Badge
-                      className={`ml-2 ${
-                        formData.severity === "critical"
-                          ? "bg-red-100 text-red-700"
-                          : formData.severity === "warning"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {formData.severity}
-                    </Badge>
-                  </div>
-                </div>
-
-                <Button variant="outline" className="w-full mt-4 gap-2 bg-white">
-                  <Zap className="w-4 h-4" />
-                  Test Rule
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t border-slate-200 mt-6">
@@ -528,6 +676,20 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
           </div>
         </div>
       </DialogContent>
+      <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tên Alert đã tồn tại</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alert name `"{pendingDuplicateName}"` đã tồn tại. Bạn có muốn tiếp tục tạo mới không? Nếu tiếp tục, hệ thống sẽ thêm timestamp hiện tại vào cuối tên.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Không</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCreateWithTimestamp}>Tiếp tục</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

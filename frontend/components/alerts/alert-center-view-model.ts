@@ -3,25 +3,40 @@ export type UiStatus = "active" | "acknowledged" | "resolved" | "snoozed"
 
 export interface AlertApiItem {
   id: number
+  alertRuleId?: number
   alertType: string
   severity: string
   message: string
   publisherId: string
   appId?: string
+  appDisplayName?: string
+  appPlatform?: string
+  appIconUri?: string
   mediationGroupId?: string
+  mediationGroupDisplayName?: string
   adSourceId?: string
+  adSourceDisplayName?: string
   countryCode?: string
   value: number
   threshold: number
+  baselineValue?: number | null
+  deltaValue?: number | null
+  deltaPercent?: number | null
+  metricKey?: string | null
+  metricUnit?: string | null
   status: string
   triggeredAt: string
   sentAt?: string
   acknowledgedAt?: string
   acknowledgedBy?: string
   resolvedAt?: string
-  additionalData?: string
-  alertRuleName?: string
-  alertRuleDescription?: string
+  resolvedBy?: string
+  snoozedUntil?: string
+  resolutionComment?: string | null
+  correlationKey?: string | null
+  additionalData?: string | null
+  alertRuleName?: string | null
+  alertRuleDescription?: string | null
 }
 
 export interface AlertUiItem {
@@ -32,7 +47,11 @@ export interface AlertUiItem {
   title: string
   description: string
   timestamp: Date
+  appId?: string
   appLabel?: string
+  appPlatform?: string
+  appIconUri?: string
+  adSourceId?: string
   networkLabel?: string
   entityLabel?: string
   value: number
@@ -52,7 +71,7 @@ function safeDate(value?: string): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d
 }
 
-function parseAdditionalData(raw?: string): Record<string, unknown> | null {
+function parseAdditionalData(raw?: string | null): Record<string, unknown> | null {
   if (!raw) return null
   try {
     const data = JSON.parse(raw)
@@ -95,6 +114,7 @@ export function toUiStatus(status?: string): UiStatus {
 
 function detectMetricLabel(alertType?: string): string {
   const type = (alertType || "").toLowerCase()
+  if (type.includes("change_pct")) return "Change %"
   if (type.includes("ecpm")) return "eCPM"
   if (type.includes("fill")) return "Fill Rate"
   if (type.includes("revenue")) return "Revenue"
@@ -107,10 +127,10 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
   const triggeredAt = safeDate(alert.triggeredAt) ?? new Date()
   const acknowledgedAt = safeDate(alert.acknowledgedAt)
   const resolvedAt = safeDate(alert.resolvedAt)
-  const snoozedUntil = safeDate(getAdditionalString(additional, "snoozedUntil"))
-  const metricLabel = detectMetricLabel(alert.alertType)
-  const baseline = getAdditionalNumber(additional, "baselineValue")
-  const percentDelta = baseline && baseline !== 0 ? ((alert.value - baseline) / baseline) * 100 : undefined
+  const snoozedUntil = safeDate(alert.snoozedUntil || getAdditionalString(additional, "snoozedUntil"))
+  const metricLabel = alert.metricKey?.trim() || detectMetricLabel(alert.alertType)
+  const baseline = alert.baselineValue ?? getAdditionalNumber(additional, "baselineValue")
+  const percentDelta = alert.deltaPercent ?? (baseline && baseline !== 0 ? ((alert.value - baseline) / baseline) * 100 : undefined)
 
   return {
     id: String(alert.id),
@@ -120,9 +140,13 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
     title: alert.alertRuleName?.trim() || alert.alertType || `Alert #${alert.id}`,
     description: alert.message || "No message",
     timestamp: triggeredAt,
-    appLabel: alert.appId || undefined,
-    networkLabel: alert.adSourceId || undefined,
-    entityLabel: alert.mediationGroupId || undefined,
+    appId: alert.appId || undefined,
+    appLabel: alert.appDisplayName || alert.appId || undefined,
+    appPlatform: alert.appPlatform || undefined,
+    appIconUri: alert.appIconUri || undefined,
+    adSourceId: alert.adSourceId || undefined,
+    networkLabel: alert.adSourceDisplayName || alert.adSourceId || undefined,
+    entityLabel: alert.mediationGroupDisplayName || alert.mediationGroupId || undefined,
     value: alert.value,
     threshold: alert.threshold,
     percentDelta,

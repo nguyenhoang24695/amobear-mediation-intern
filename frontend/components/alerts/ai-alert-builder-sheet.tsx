@@ -6,10 +6,21 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Bot, Send, User, Sparkles, Check, Edit2 } from "lucide-react"
-import { alertsApi } from "@/lib/api/services"
+import { alertsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useApi } from "@/hooks/use-api"
+import type { AlertRuleConfigPayload } from "@/types/api"
 
 interface AIAlertBuilderSheetProps {
   open: boolean
@@ -53,7 +64,13 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
+  const [pendingPreview, setPendingPreview] = useState<AlertPreview | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const { data: appsData } = useApi(() => structureApi.getApps(), {
+    enabled: open,
+    cacheKey: "ai_alert_builder_apps",
+  })
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -97,11 +114,69 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
     setInput(suggestion)
   }
 
-  const handleCreateAlert = async (preview: AlertPreview) => {
+  const formatTimestampYmdHisSSS = (date: Date) => {
+    const yyyy = date.getFullYear().toString()
+    const MM = String(date.getMonth() + 1).padStart(2, "0")
+    const dd = String(date.getDate()).padStart(2, "0")
+    const HH = String(date.getHours()).padStart(2, "0")
+    const mm = String(date.getMinutes()).padStart(2, "0")
+    const ss = String(date.getSeconds()).padStart(2, "0")
+    const SSS = String(date.getMilliseconds()).padStart(3, "0")
+    return `${yyyy}${MM}${dd}${HH}${mm}${ss}${SSS}`
+  }
+
+  const createRuleFromPreview = async (preview: AlertPreview, nameOverride?: string) => {
     try {
       setCreating(true)
+      const finalName = (nameOverride || preview.name).trim()
+      const availableApps = appsData?.apps ?? []
+      const normalizeMetricKey = (value: string) => {
+        const normalized = value.trim().toLowerCase()
+        if (normalized.includes("fill")) return "fill_rate"
+        if (normalized.includes("impression")) return "impressions"
+        if (normalized.includes("ecpm")) return "ecpm"
+        return "revenue"
+      }
+      const parsePreviewConfig = (): AlertRuleConfigPayload => {
+        const metricKey = normalizeMetricKey(preview.metric)
+        const rawCondition = preview.condition.toLowerCase()
+        const matchedAppIds = preview.apps
+          .map((label) => {
+            const target = label.trim().toLowerCase()
+            const matched = availableApps.find((app) => {
+              const appName = (app.displayName || app.name || app.appId).trim().toLowerCase()
+              return appName === target || app.appId.trim().toLowerCase() === target
+            })
+            return matched?.appId ?? null
+          })
+          .filter((value): value is string => value != null)
+
+        const numberMatch = rawCondition.match(/(\d+(?:\.\d+)?)/)
+        const numericValue = numberMatch ? Number(numberMatch[1]) : null
+        const isPercentChange = rawCondition.includes("%") || rawCondition.includes("drop") || rawCondition.includes("increase")
+        const operator = rawCondition.includes(">") || rawCondition.includes("increase") ? "greater_than" : "less_than"
+
+        return {
+          version: 1,
+          source: "ai",
+          metricKey,
+          metricUnit: metricKey === "revenue" || metricKey === "ecpm" ? "usd" : metricKey === "fill_rate" ? "percent" : "count",
+          conditionType: isPercentChange ? "percent_change" : "threshold",
+          operator,
+          thresholdValue: !isPercentChange ? numericValue : null,
+          percentChange: isPercentChange ? numericValue : null,
+          frequency: "daily",
+          autoResolve: true,
+          prompt: preview.condition,
+          scope: {
+            allApps: preview.apps.some((item) => item.toLowerCase() === "all apps") || matchedAppIds.length === 0,
+            appIds: matchedAppIds,
+          },
+        }
+      }
+      const ruleConfig = parsePreviewConfig()
       await alertsApi.createAlertRule({
-        name: preview.name,
+        name: finalName,
         description: "Created from AI alert builder",
         ruleType: "AI_BUILDER",
         severity: preview.severity.toUpperCase(),
@@ -109,11 +184,13 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         thresholdValue: null,
         timeWindowHours: 1,
         comparisonPeriodHours: 24,
-        filterConditions: JSON.stringify({ apps: preview.apps, metric: preview.metric }),
-        messageTemplate: `${preview.name} triggered`,
+        filterConditions: JSON.stringify(ruleConfig),
+        configVersion: 1,
+        ruleConfig: JSON.stringify(ruleConfig),
+        messageTemplate: `${finalName} triggered`,
         isEnabled: true,
         cooldownMinutes: 60,
-        notificationChannels: "IN_APP",
+        notificationChannels: JSON.stringify(["IN_APP"]),
         telegramTopics: null,
         emailRecipients: null,
         slackChannels: null,
@@ -125,7 +202,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: `Alert "${preview.name}" da duoc tao thanh cong! Ban co the xem va quan ly alert nay trong trang My Alerts.`,
+          content: `Alert "${finalName}" da duoc tao thanh cong! Ban co the xem va quan ly alert nay trong trang My Alerts.`,
         },
       ])
       toast({ title: "Đã tạo alert rule từ AI" })
@@ -141,6 +218,34 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
     }
   }
 
+  const handleCreateAlert = async (preview: AlertPreview) => {
+    try {
+      const existingRules = await alertsApi.getAlertRules()
+      const isDuplicate = existingRules.some((rule) => rule.name.trim().toLowerCase() === preview.name.trim().toLowerCase())
+      if (isDuplicate) {
+        setPendingPreview(preview)
+        setDuplicateConfirmOpen(true)
+        return
+      }
+      await createRuleFromPreview(preview)
+    } catch (error: any) {
+      toast({
+        title: "Không thể kiểm tra tên trùng",
+        description: error?.message || "Unknown error",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleConfirmCreateWithTimestamp = async () => {
+    if (!pendingPreview) return
+    const finalName = `${pendingPreview.name}_${formatTimestampYmdHisSSS(new Date())}`
+    setDuplicateConfirmOpen(false)
+    const preview = pendingPreview
+    setPendingPreview(null)
+    await createRuleFromPreview(preview, finalName)
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[480px] sm:max-w-[480px] p-0 flex flex-col">
@@ -151,7 +256,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
           </SheetTitle>
         </SheetHeader>
 
-        <ScrollArea ref={scrollRef} className="flex-1 p-4">
+        <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-4">
             {messages.map((message) => (
               <div key={message.id} className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
@@ -266,7 +371,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-4 border-t border-slate-200">
           <form
@@ -290,6 +395,20 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
           <p className="text-xs text-slate-500 mt-2 text-center">Tip: Mo ta bang tieng Viet hoac tieng Anh deu duoc</p>
         </div>
       </SheetContent>
+      <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tên Alert đã tồn tại</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alert name `"{pendingPreview?.name || ""}"` đã tồn tại. Bạn có muốn tiếp tục tạo mới không? Nếu tiếp tục, hệ thống sẽ thêm timestamp hiện tại vào cuối tên.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Không</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCreateWithTimestamp}>Tiếp tục</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   )
 }

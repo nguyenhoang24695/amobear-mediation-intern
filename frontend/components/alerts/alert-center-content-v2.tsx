@@ -26,6 +26,7 @@ import { alertsApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./alert-center-view-model"
+import type { AlertApiItem } from "./alert-center-view-model"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache } from "@/hooks/use-api"
 
@@ -79,7 +80,7 @@ export function AlertCenterContentV2() {
     cacheKey: "alert_rules_v2_overview",
   })
   const { alerts, loading, refetch } = useAlertNotifications()
-  const uiAlerts = useMemo(() => toUiAlertList(alerts), [alerts])
+  const uiAlerts = useMemo(() => toUiAlertList(alerts as AlertApiItem[]), [alerts])
 
   const filteredAlerts = useMemo(() => {
     return uiAlerts.filter((alert) => {
@@ -90,13 +91,14 @@ export function AlertCenterContentV2() {
         (severity === "LOW" && alert.severity === "info")
 
       if (!severityMatch) return false
-      if (appFilter && (alert.appLabel || "").toLowerCase() !== appFilter.toLowerCase()) return false
+      if (appFilter && (alert.appId || "").toLowerCase() !== appFilter.toLowerCase()) return false
 
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
       return (
         alert.title.toLowerCase().includes(q) ||
         alert.description.toLowerCase().includes(q) ||
+        (alert.appId || "").toLowerCase().includes(q) ||
         (alert.appLabel || "").toLowerCase().includes(q) ||
         (alert.entityLabel || "").toLowerCase().includes(q)
       )

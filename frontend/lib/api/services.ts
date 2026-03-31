@@ -30,6 +30,8 @@ import type {
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
     AlertRule,
+    AlertCenterListItem,
+    AlertDetailResponse,
     UpsertAlertRuleRequest,
     WaterfallBulkPolicyPreviewResponseDto,
     BulkUpdateWaterfallApplyPoliciesRequestDto,
@@ -1026,59 +1028,17 @@ export const mediationGroupMetricsApi = {
 
 // Alerts API Service
 export const alertsApi = {
-    getAlertResult: async (id: number): Promise<{
-        alert: {
-            id: number
-            alertRuleId: number
-            alertType: string
-            severity: string
-            message: string
-            publisherId: string
-            appId?: string
-            mediationGroupId?: string
-            adSourceId?: string
-            countryCode?: string
-            value: number
-            threshold: number
-            additionalData?: string
-            status: string
-            resolvedAt?: string
-            resolvedBy?: string
-            acknowledgedAt?: string
-            acknowledgedBy?: string
-            resolutionComment?: string
-            triggeredAt: string
-            sentAt?: string
-            createdAt: string
-            updatedAt: string
-        }
-        history: Array<{
-            id: number
-            actionType: string
-            actionBy?: string
-            actionAt: string
-            details?: string
-            comment?: string
-        }>
-        notificationLogs: Array<{
-            id: number
-            channel: string
-            recipient: string
-            status: string
-            sentAt: string
-            errorMessage?: string
-        }>
-    }> => {
-        const response = await apiClient.get<{
-            alert?: any
-            history?: any[]
-            notificationLogs?: any[]
-        }>(`/api/Alerts/results/${id}`)
-
+    getAlertResult: async (id: number): Promise<AlertDetailResponse> => {
+        const response = await apiClient.get<AlertDetailResponse>(`/api/Alerts/results/${id}`)
         return {
-            alert: response.alert ?? response.Alert,
-            history: response.history ?? response.History ?? [],
-            notificationLogs: response.notificationLogs ?? response.NotificationLogs ?? [],
+            alert: response.alert,
+            timeline: response.timeline ?? [],
+            notificationLogs: response.notificationLogs ?? [],
+            relatedAlerts: response.relatedAlerts ?? [],
+            trend: response.trend ?? [],
+            relatedMetrics: response.relatedMetrics ?? [],
+            suggestedActions: response.suggestedActions ?? [],
+            aiInsight: response.aiInsight ?? null,
         }
     },
 
@@ -1160,56 +1120,14 @@ export const alertsApi = {
         page?: number
         pageSize?: number
     }): Promise<{
-        Data: Array<{
-            id: number
-            alertType: string
-            severity: string
-            message: string
-            publisherId: string
-            appId?: string
-            mediationGroupId?: string
-            adSourceId?: string
-            countryCode?: string
-            value: number
-            threshold: number
-            status: string
-            triggeredAt: string
-            sentAt?: string
-            acknowledgedAt?: string
-            acknowledgedBy?: string
-            resolvedAt?: string
-            additionalData?: string
-            alertRuleName?: string
-            alertRuleDescription?: string
-        }>
+        Data: AlertCenterListItem[]
         Page: number
         PageSize: number
         TotalCount: number
         TotalPages: number
     }> => {
         const response = await apiClient.get<{
-            data?: Array<{
-                id: number
-                alertType: string
-                severity: string
-                message: string
-                publisherId: string
-                appId?: string
-                mediationGroupId?: string
-                adSourceId?: string
-                countryCode?: string
-                value: number
-                threshold: number
-                status: string
-                triggeredAt: string
-                sentAt?: string
-                acknowledgedAt?: string
-                acknowledgedBy?: string
-                resolvedAt?: string
-                additionalData?: string
-                alertRuleName?: string
-                alertRuleDescription?: string
-            }>
+            data?: AlertCenterListItem[]
             page?: number
             pageSize?: number
             totalCount?: number

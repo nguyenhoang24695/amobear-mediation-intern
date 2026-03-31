@@ -28,6 +28,7 @@ import { alertsApi } from "@/lib/api/services"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { toAlertUiItem, toUiSeverity } from "./alert-center-view-model"
+import type { AlertApiItem } from "./alert-center-view-model"
 
 interface AlertDetailPageContentProps {
   alertId: string
@@ -127,73 +128,64 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
   const alert = useMemo(() => {
     const raw = detailData?.alert
     if (!raw) return null
-    return toAlertUiItem({
-      id: raw.id,
-      alertType: raw.alertType,
-      severity: raw.severity,
-      message: raw.message,
-      publisherId: raw.publisherId,
-      appId: raw.appId,
-      mediationGroupId: raw.mediationGroupId,
-      adSourceId: raw.adSourceId,
-      countryCode: raw.countryCode,
-      value: raw.value,
-      threshold: raw.threshold,
-      status: raw.status,
-      triggeredAt: raw.triggeredAt,
-      sentAt: raw.sentAt,
-      acknowledgedAt: raw.acknowledgedAt,
-      acknowledgedBy: raw.acknowledgedBy,
-      resolvedAt: raw.resolvedAt,
-      additionalData: raw.additionalData,
-      alertRuleName: undefined,
-      alertRuleDescription: undefined,
-    })
+    return toAlertUiItem(raw as AlertApiItem)
   }, [detailData])
 
   const SeverityIcon = severityConfig[alert ? toUiSeverity(alert.severity) : "info"].icon
 
   const timelineData = useMemo(() => {
     if (!detailData) return timelineEvents
-    const history = (detailData.history ?? []).map((item) => ({
-      type: "history",
-      title: item.actionType || "Action",
-      description: item.comment || item.details || "No details",
-      time: new Date(item.actionAt),
+    const items = (detailData.timeline ?? []).map((item) => ({
+      type: item.type === "notification" ? "notification" : "history",
+      title: item.title || "Action",
+      description: item.description || "No details",
+      time: new Date(item.occurredAt),
     }))
-    const logs = (detailData.notificationLogs ?? []).map((item) => ({
-      type: "notification",
-      title: `${item.channel} notification`,
-      description: `${item.status}${item.errorMessage ? ` - ${item.errorMessage}` : ""}`,
-      time: new Date(item.sentAt),
-    }))
-    return [...history, ...logs]
+    return items
       .filter((item) => !Number.isNaN(item.time.getTime()))
       .sort((a, b) => b.time.getTime() - a.time.getTime())
       .slice(0, 8)
   }, [detailData])
 
-  const { data: relatedOpenAlerts } = useApi(
-    () => alertsApi.getOpenAlerts({ appId: detailData?.alert?.appId, page: 1, pageSize: 6 }),
-    {
-      enabled: !!detailData?.alert?.appId,
-      cacheKey: detailData?.alert?.appId ? `related_open_alerts_${detailData.alert.appId}` : undefined,
-    }
-  )
-
   const relatedAlertItems = useMemo(() => {
-    const rows = relatedOpenAlerts?.Data ?? []
+    const rows = detailData?.relatedAlerts ?? []
     if (rows.length === 0) return relatedAlerts
     return rows
-      .filter((item) => item.id !== id)
-      .slice(0, 5)
       .map((item) => ({
         id: String(item.id),
-        title: item.alertType || item.message,
-        severity: toUiSeverity(item.severity) === "warning" ? "warning" : "info",
+        title: item.alertRuleName || item.alertType || item.message,
+        severity: toUiSeverity(item.severity),
         time: formatDistanceToNow(new Date(item.triggeredAt), { addSuffix: true }),
       }))
-  }, [relatedOpenAlerts, id])
+  }, [detailData])
+
+  const trendData = useMemo(() => {
+    const rows = detailData?.trend ?? []
+    if (rows.length === 0) return revenueHistoricalData
+    return rows.map((item) => ({
+      day: item.label,
+      value: item.value,
+      threshold: item.threshold ?? alert?.threshold ?? null,
+    }))
+  }, [detailData, alert])
+
+  const relatedMetricItems = useMemo(() => {
+    const rows = detailData?.relatedMetrics ?? []
+    if (rows.length === 0) return correlatedMetrics
+    return rows.map((item) => ({
+      label: item.label,
+      value: item.value,
+      change: item.changePercent ?? 0,
+      trend: (item.changePercent ?? 0) < 0 ? "down" : (item.changePercent ?? 0) > 0 ? "up" : "stable",
+      status: item.status === "warning" ? "warning" : "healthy",
+    }))
+  }, [detailData])
+
+  const suggestedActionItems = useMemo(() => {
+    return detailData?.suggestedActions?.length ? detailData.suggestedActions : suggestedActions
+  }, [detailData])
+
+  const aiInsightText = detailData?.aiInsight || aiInsights
 
   const invalidateAlertCaches = () => {
     invalidateCache("notification_open_alerts_all")
@@ -319,9 +311,9 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
           </div>
 
           <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-slate-100">
-            <Link href={alert.appLabel ? `/apps/${encodeURIComponent(alert.appLabel)}` : "/apps"}>
+            <Link href={alert.appId ? `/apps/${encodeURIComponent(alert.appId)}` : "/apps"}>
               <Button variant="outline" className="gap-2 bg-slate-50 hover:bg-slate-100">
-                <Image src="/placeholder.svg?height=24&width=24" alt="app" width={24} height={24} className="rounded" />
+                <Image src={alert.appIconUri || "/placeholder.svg?height=24&width=24"} alt="app" width={24} height={24} className="rounded" />
                 <span className="font-medium">{alert.appLabel || "Unknown app"}</span>
                 <ExternalLink className="w-3 h-3 text-slate-400" />
               </Button>
@@ -363,7 +355,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
               <CardContent className="pt-0">
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={revenueHistoricalData}>
+                    <ComposedChart data={trendData}>
                       <defs>
                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -372,7 +364,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#64748b" }} />
-                      <YAxis tick={{ fontSize: 12, fill: "#64748b" }} domain={[800, 1400]} />
+                      <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "white",
@@ -383,10 +375,10 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                         formatter={(value: number) => [`$${value}`, "Revenue"]}
                       />
                       <ReferenceLine
-                        y={916}
+                        y={alert.threshold}
                         stroke="#ef4444"
                         strokeDasharray="5 5"
-                        label={{ value: "Threshold ($916)", position: "insideTopRight", fill: "#ef4444", fontSize: 11 }}
+                        label={{ value: `Threshold (${alert.threshold.toFixed(2)})`, position: "insideTopRight", fill: "#ef4444", fontSize: 11 }}
                       />
                       <Area type="monotone" dataKey="value" fill="url(#colorValue)" stroke="#3b82f6" strokeWidth={2} />
                       <Line
@@ -396,8 +388,8 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                         strokeWidth={2}
                         dot={(props: { cx: number; cy: number; index: number; payload: { value: number } }) => {
                           const { cx, cy, index, payload } = props
-                          const isLastDay = index === revenueHistoricalData.length - 1
-                          const isBelowThreshold = payload.value < 916
+                          const isLastDay = index === trendData.length - 1
+                          const isBelowThreshold = payload.value < alert.threshold
                           return (
                             <circle
                               key={index}
@@ -422,7 +414,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                 <CardTitle className="text-sm font-semibold text-slate-900">AI Analysis</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{aiInsights}</p>
+                <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{aiInsightText}</p>
               </CardContent>
             </Card>
 
@@ -461,14 +453,14 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                 <CardTitle className="text-sm font-semibold text-slate-900">Related Metrics</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                {correlatedMetrics.map((metric, idx) => (
+                {relatedMetricItems.map((metric, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                     <div>
                       <p className="text-xs text-slate-500">{metric.label}</p>
                       <p className="text-lg font-semibold text-slate-900">{metric.value}</p>
                     </div>
                     <div className={`text-sm font-medium ${metric.status === "warning" ? "text-amber-600" : "text-green-600"}`}>
-                      {metric.trend === "down" ? "↓" : "↔"}{Math.abs(metric.change)}%
+                      {metric.trend === "down" ? "↓" : metric.trend === "up" ? "↑" : "↔"}{Math.abs(metric.change)}%
                     </div>
                   </div>
                 ))}
@@ -484,12 +476,15 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
                 {relatedAlertItems.map((related) => (
-                  <button
+                  <Link
                     key={related.id}
+                    href={`/alert-center/${related.id}`}
                     className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors text-left"
                   >
                     {related.severity === "warning" ? (
                       <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    ) : related.severity === "critical" ? (
+                      <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
                     ) : (
                       <Info className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     )}
@@ -497,7 +492,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                       <span className="text-sm text-slate-700 block truncate">{related.title}</span>
                       <span className="text-xs text-slate-400">{related.time}</span>
                     </div>
-                  </button>
+                  </Link>
                 ))}
               </CardContent>
             </Card>
@@ -510,7 +505,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
-                {suggestedActions.map((suggestion) => (
+                {suggestedActionItems.map((suggestion) => (
                   <div key={suggestion.id} className="p-3 bg-white/70 rounded-lg border border-white">
                     <p className="text-sm font-medium text-slate-700">{suggestion.action}</p>
                     <p className="text-xs text-slate-500 mt-1">{suggestion.impact}</p>
