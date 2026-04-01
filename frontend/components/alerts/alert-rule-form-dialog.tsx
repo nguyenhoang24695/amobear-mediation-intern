@@ -297,6 +297,8 @@ export function AlertRuleFormDialog({
       timeWindowHours: Number(timeWindowHours),
       comparisonPeriodHours: comparisonPeriodHours.trim() === "" ? null : Number(comparisonPeriodHours),
       filterConditions: filterConditions.trim() || null,
+      configVersion: rule?.configVersion ?? 1,
+      ruleConfig: rule?.ruleConfig ?? null,
       messageTemplate: messageTemplate.trim(),
       isEnabled,
       cooldownMinutes: Number(cooldownMinutes),

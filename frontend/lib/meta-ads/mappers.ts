@@ -42,11 +42,12 @@ export function createEmptyCarouselCard(): MetaCarouselCardFormState {
   }
 }
 
-function parseOptionalLong(value: string): number | null {
+function parseOptionalAmount(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null
-  const parsed = Number(trimmed)
-  return Number.isFinite(parsed) ? Math.round(parsed) : null
+  const normalized = trimmed.replaceAll(",", "")
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function parseOptionalDate(value: string): string | null {
@@ -54,6 +55,18 @@ function parseOptionalDate(value: string): string | null {
   return trimmed ? new Date(trimmed).toISOString() : null
 }
 
+
+function inferGeoModeFromDraft(adSet: CreateMetaCampaignRequestDto["adSet"]): MetaRequestFormState["geoMode"] {
+  const normalized = (adSet.geoMode ?? "").trim().toUpperCase()
+  if (normalized === "GLOBAL" || normalized === "REGION" || normalized === "CITY" || normalized === "COUNTRY") {
+    return normalized as MetaRequestFormState["geoMode"]
+  }
+
+  if ((adSet.cityTargets?.length ?? 0) > 0) return "CITY"
+  if ((adSet.regionKeys?.length ?? 0) > 0) return "REGION"
+  if ((adSet.countries?.length ?? 0) > 0) return "COUNTRY"
+  return "GLOBAL"
+}
 function parseGender(value: string): string[] {
   if (value === "ALL") return []
   if (value === "MALE") return ["male"]
@@ -63,10 +76,10 @@ function parseGender(value: string): string[] {
 
 function parseBudgetStrategy(form: MetaRequestFormState) {
   return {
-    campaignDailyBudget: form.budgetStrategy === "CBO" ? parseOptionalLong(form.campaignDailyBudget) : null,
-    campaignLifetimeBudget: form.budgetStrategy === "CBO" ? parseOptionalLong(form.campaignLifetimeBudget) : null,
-    adSetDailyBudget: form.budgetStrategy === "ABO" ? parseOptionalLong(form.adSetDailyBudget) : null,
-    adSetLifetimeBudget: form.budgetStrategy === "ABO" ? parseOptionalLong(form.adSetLifetimeBudget) : null,
+    campaignDailyBudget: form.budgetStrategy === "CBO" ? parseOptionalAmount(form.campaignDailyBudget) : null,
+    campaignLifetimeBudget: form.budgetStrategy === "CBO" ? parseOptionalAmount(form.campaignLifetimeBudget) : null,
+    adSetDailyBudget: form.budgetStrategy === "ABO" ? parseOptionalAmount(form.adSetDailyBudget) : null,
+    adSetLifetimeBudget: form.budgetStrategy === "ABO" ? parseOptionalAmount(form.adSetLifetimeBudget) : null,
   }
 }
 
@@ -226,10 +239,23 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       lifetimeBudget: budgets.adSetLifetimeBudget,
       billingEvent: form.billingEvent.trim(),
       optimizationGoal: form.optimizationGoal.trim(),
-      bidAmount: parseOptionalLong(form.bidAmount),
+      bidAmount: parseOptionalAmount(form.bidAmount),
       startTime: parseOptionalDate(form.startTime),
       endTime: parseOptionalDate(form.endTime),
-      countries: form.countries,
+      geoMode: form.geoMode,
+      countries: form.geoMode === "COUNTRY" ? form.countries : [],
+      regionKeys: form.geoMode === "REGION" ? form.regionKeys : [],
+      cityTargets: form.geoMode === "CITY"
+        ? form.cityTargets.map((city) => ({
+            key: city.key,
+            name: city.name,
+            region: city.region ?? null,
+            regionId: city.regionId ?? null,
+            countryCode: city.countryCode ?? null,
+            countryName: city.countryName ?? null,
+            type: city.type ?? null,
+          }))
+        : [],
       ageMin: Number.isFinite(form.ageMin) ? form.ageMin : null,
       ageMax: Number.isFinite(form.ageMax) ? form.ageMax : null,
       genders: parseGender(form.gender),
@@ -271,6 +297,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
         : "MALE"
 
   const creativeType = payload.creative.type ?? "SINGLE_IMAGE"
+  const geoMode = inferGeoModeFromDraft(payload.adSet)
   const common = getCreativeCommon(payload.creative)
   const singleImage = getSingleImageCreative(payload.creative)
   const singleVideo = getSingleVideoCreative(payload.creative)
@@ -289,7 +316,18 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     campaignDailyBudget: payload.campaign.dailyBudget?.toString() ?? "",
     campaignLifetimeBudget: payload.campaign.lifetimeBudget?.toString() ?? "",
     adSetName: payload.adSet.name ?? "",
+    geoMode,
     countries: payload.adSet.countries ?? [],
+    regionKeys: payload.adSet.regionKeys ?? [],
+    cityTargets: (payload.adSet.cityTargets ?? []).map((city) => ({
+      key: city.key ?? "",
+      name: city.name ?? "",
+      region: city.region ?? null,
+      regionId: city.regionId ?? null,
+      countryCode: city.countryCode ?? null,
+      countryName: city.countryName ?? null,
+      type: city.type ?? null,
+    })),
     ageMin: payload.adSet.ageMin ?? 18,
     ageMax: payload.adSet.ageMax ?? 65,
     gender,
@@ -363,3 +401,9 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
+
+
+
+
+
+

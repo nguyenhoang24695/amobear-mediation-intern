@@ -30,6 +30,8 @@ import type {
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
     AlertRule,
+    AlertCenterListItem,
+    AlertDetailResponse,
     UpsertAlertRuleRequest,
     WaterfallBulkPolicyPreviewResponseDto,
     BulkUpdateWaterfallApplyPoliciesRequestDto,
@@ -1026,6 +1028,41 @@ export const mediationGroupMetricsApi = {
 
 // Alerts API Service
 export const alertsApi = {
+    getAlertResult: async (id: number): Promise<AlertDetailResponse> => {
+        const response = await apiClient.get<AlertDetailResponse>(`/api/Alerts/results/${id}`)
+        return {
+            alert: response.alert,
+            timeline: response.timeline ?? [],
+            notificationLogs: response.notificationLogs ?? [],
+            relatedAlerts: response.relatedAlerts ?? [],
+            trend: response.trend ?? [],
+            relatedMetrics: response.relatedMetrics ?? [],
+            suggestedActions: response.suggestedActions ?? [],
+            aiInsight: response.aiInsight ?? null,
+        }
+    },
+
+    acknowledgeAlert: async (id: number, body?: { acknowledgedBy?: string; comment?: string }): Promise<{ message: string }> => {
+        return apiClient.post(`/api/Alerts/results/${id}/acknowledge`, {
+            acknowledgedBy: body?.acknowledgedBy,
+            comment: body?.comment,
+        })
+    },
+
+    resolveAlert: async (id: number, body?: { resolvedBy?: string; comment?: string }): Promise<{ message: string }> => {
+        return apiClient.post(`/api/Alerts/results/${id}/resolve`, {
+            resolvedBy: body?.resolvedBy,
+            comment: body?.comment,
+        })
+    },
+
+    snoozeAlert: async (
+        id: number,
+        body: { snoozedMinutes: number; snoozedBy?: string; comment?: string }
+    ): Promise<{ message: string; snoozedUntil: string }> => {
+        return apiClient.post(`/api/Alerts/results/${id}/snooze`, body)
+    },
+
     getActiveAlerts: async (params?: {
         publisherId?: string
         appId?: string
@@ -1083,56 +1120,14 @@ export const alertsApi = {
         page?: number
         pageSize?: number
     }): Promise<{
-        Data: Array<{
-            id: number
-            alertType: string
-            severity: string
-            message: string
-            publisherId: string
-            appId?: string
-            mediationGroupId?: string
-            adSourceId?: string
-            countryCode?: string
-            value: number
-            threshold: number
-            status: string
-            triggeredAt: string
-            sentAt?: string
-            acknowledgedAt?: string
-            acknowledgedBy?: string
-            resolvedAt?: string
-            additionalData?: string
-            alertRuleName?: string
-            alertRuleDescription?: string
-        }>
+        Data: AlertCenterListItem[]
         Page: number
         PageSize: number
         TotalCount: number
         TotalPages: number
     }> => {
         const response = await apiClient.get<{
-            data?: Array<{
-                id: number
-                alertType: string
-                severity: string
-                message: string
-                publisherId: string
-                appId?: string
-                mediationGroupId?: string
-                adSourceId?: string
-                countryCode?: string
-                value: number
-                threshold: number
-                status: string
-                triggeredAt: string
-                sentAt?: string
-                acknowledgedAt?: string
-                acknowledgedBy?: string
-                resolvedAt?: string
-                additionalData?: string
-                alertRuleName?: string
-                alertRuleDescription?: string
-            }>
+            data?: AlertCenterListItem[]
             page?: number
             pageSize?: number
             totalCount?: number
@@ -1197,6 +1192,23 @@ export const alertsApi = {
 
     updateAlertRule: async (id: number, body: UpsertAlertRuleRequest): Promise<AlertRule> => {
         return apiClient.put<AlertRule>(`/api/Alerts/rules/${id}`, body)
+    },
+
+    testAlertRule: async (body: UpsertAlertRuleRequest): Promise<{
+        triggered: boolean
+        matchCount: number
+        matches: Array<{
+            publisherId?: string | null
+            appId?: string | null
+            mediationGroupId?: string | null
+            alertType?: string | null
+            severity?: string | null
+            message?: string | null
+            value: number
+            threshold: number
+        }>
+    }> => {
+        return apiClient.post('/api/Alerts/rules/test', body)
     },
 
     deleteAlertRule: async (id: number): Promise<void> => {

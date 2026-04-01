@@ -79,7 +79,7 @@ export function NotificationPopup() {
                 const Icon = styles.icon
                 const href = alert.mediationGroupId
                   ? `/mediation/${encodeURIComponent(alert.mediationGroupId)}?tab=waterfall-optimization`
-                  : "/alerts"
+                  : "/alert-center"
 
                 return (
                   <Link
@@ -113,7 +113,7 @@ export function NotificationPopup() {
 
         <div className="border-t border-slate-200">
           <Link
-            href="/alerts"
+            href="/alert-center"
             onClick={markAllAlertsViewed}
             className="flex items-center justify-center gap-1 py-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
           >

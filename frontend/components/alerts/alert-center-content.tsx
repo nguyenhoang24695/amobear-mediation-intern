@@ -67,7 +67,7 @@ export function AlertCenterContent() {
     { cacheKey: "alerts_open_summary" }
   )
 
-  const { alerts, loading, openAlertIds, markAlertsViewed } = useAlertNotifications()
+  const { alerts, loading, openAlertIds, markAlertsViewed } = useAlertNotifications({ inAppOnly: false })
 
   useEffect(() => {
     if (openAlertIds.length === 0) return
@@ -172,7 +172,7 @@ export function AlertCenterContent() {
             const Icon = styles.icon
             const href = alert.mediationGroupId
               ? `/mediation/${encodeURIComponent(alert.mediationGroupId)}?tab=waterfall-optimization`
-              : "/alerts"
+              : "/alert-center"
 
             return (
               <Card key={alert.id} className={cn("border-slate-200 border-l-4", styles.card)}>

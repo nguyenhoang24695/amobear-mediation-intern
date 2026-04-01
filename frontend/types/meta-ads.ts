@@ -8,6 +8,7 @@ export type MetaRequestStatus =
   | "failed"
 
 export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "CAROUSEL_IMAGE" | "EXISTING_POST"
+export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
 
@@ -283,7 +284,6 @@ export interface MetaCampaignListItemDto {
   createdAt: string
   updatedAt: string
 }
-
 export interface MetaCampaignListResponseDto {
   items: MetaCampaignListItemDto[]
   total: number
@@ -299,6 +299,19 @@ export interface MetaCampaignAdSetSummaryDto {
   name: string
   status: string
   effectiveStatus?: string | null
+  dailyBudget?: string | null
+  lifetimeBudget?: string | null
+  budgetRemaining?: string | null
+  bidAmount?: string | null
+  bidStrategy?: string | null
+  billingEvent?: string | null
+  optimizationGoal?: string | null
+  pacingType?: string | null
+  learningStageInfoSummary?: string | null
+  startTime?: string | null
+  endTime?: string | null
+  targetingSummary?: string | null
+  issuesInfoSummary?: string | null
   appRowId?: number | null
   appId?: string | null
   appDisplayName?: string | null
@@ -371,6 +384,16 @@ export interface MetaCampaignDetailDto {
   objective: string
   status: string
   effectiveStatus?: string | null
+  buyingType?: string | null
+  bidStrategy?: string | null
+  dailyBudget?: string | null
+  lifetimeBudget?: string | null
+  spendCap?: string | null
+  specialAdCategories: string[]
+  startTime?: string | null
+  stopTime?: string | null
+  issuesInfoSummary?: string | null
+  recommendationsSummary?: string | null
   metaAdAccountRowId: number
   metaAdAccountId: string
   metaAdAccountName?: string | null
@@ -392,7 +415,6 @@ export interface MetaCampaignDetailDto {
   ads: MetaCampaignAdSummaryDto[]
   creatives: MetaCampaignCreativeSummaryDto[]
 }
-
 export interface SyncMetaCampaignsRequestDto {
   metaAdAccountIds?: number[] | null
 }
@@ -431,7 +453,6 @@ export interface MetaBidStrategyPresetDto {
   label: string
   description: string
 }
-
 export interface MetaCampaignDraftDto {
   name: string
   objective: string
@@ -440,6 +461,25 @@ export interface MetaCampaignDraftDto {
   lifetimeBudget?: number | null
   bidStrategy?: string | null
   specialAdCategories: string[]
+}
+
+export interface MetaCreateCampaignReferenceDto {
+  adAccounts: MetaAdAccountDto[]
+  appMappings: MetaAppMappingDto[]
+  objectives: MetaObjectivePresetDto[]
+  bidStrategies: MetaBidStrategyPresetDto[]
+}
+
+
+
+export interface MetaGeoCityTargetDto {
+  key: string
+  name: string
+  region?: string | null
+  regionId?: string | null
+  countryCode?: string | null
+  countryName?: string | null
+  type?: string | null
 }
 
 export interface MetaAdSetDraftDto {
@@ -451,7 +491,10 @@ export interface MetaAdSetDraftDto {
   bidAmount?: number | null
   startTime?: string | null
   endTime?: string | null
+  geoMode?: MetaGeoMode | null
   countries: string[]
+  regionKeys: string[]
+  cityTargets: MetaGeoCityTargetDto[]
   ageMin?: number | null
   ageMax?: number | null
   genders: string[]
@@ -588,6 +631,14 @@ export interface MetaOperationLogDto {
   step: string
   status: string
   attemptNumber: number
+  action?: string | null
+  resourcePath?: string | null
+  httpStatusCode?: number | null
+  metaErrorCode?: string | null
+  metaErrorSubcode?: string | null
+  metaErrorType?: string | null
+  metaTraceId?: string | null
+  summaryMessage?: string | null
   requestJson?: string | null
   responseJson?: string | null
   errorMessage?: string | null
@@ -656,12 +707,22 @@ export interface MetaCampaignRequestDetailDto {
   createdObjects: MetaCreatedObjectDto[]
 }
 
-export interface MetaCreateCampaignReferenceDto {
-  adAccounts: MetaAdAccountDto[]
-  appMappings: MetaAppMappingDto[]
-  objectives: MetaObjectivePresetDto[]
-  bidStrategies: MetaBidStrategyPresetDto[]
+
+
+export interface MetaFacebookPageReferenceDto {
+  id: string
+  name: string
+  category?: string | null
+  accessStatus?: string | null
 }
+
+export interface MetaGeoRegionDto {
+  key: string
+  label: string
+  countryCount: number
+}
+
+export interface MetaGeoCityReferenceDto extends MetaGeoCityTargetDto {}
 
 export interface MetaExecuteResponseDto {
   success: boolean
@@ -701,7 +762,10 @@ export interface MetaRequestFormState {
   campaignDailyBudget: string
   campaignLifetimeBudget: string
   adSetName: string
+  geoMode: MetaGeoMode
   countries: string[]
+  regionKeys: string[]
+  cityTargets: MetaGeoCityTargetDto[]
   ageMin: number
   ageMax: number
   gender: string
@@ -749,5 +813,3 @@ export interface MetaRequestFilters {
 }
 
 export type GroupedValidationErrors = Record<string, string[]>
-
-

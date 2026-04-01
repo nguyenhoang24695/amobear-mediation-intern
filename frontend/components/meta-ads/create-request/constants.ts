@@ -10,3 +10,9 @@ export const OBJECTIVE_OPTIMIZATION_MAP: Record<string, string[]> = {
   OUTCOME_SALES: ["CONVERSIONS", "VALUE", "LINK_CLICKS"],
 }
 
+export const BID_STRATEGIES_REQUIRING_BID_AMOUNT = ["COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST"] as const
+
+export function bidStrategyRequiresBidAmount(value?: string | null): boolean {
+  const normalized = (value ?? "").trim().toUpperCase()
+  return BID_STRATEGIES_REQUIRING_BID_AMOUNT.includes(normalized as (typeof BID_STRATEGIES_REQUIRING_BID_AMOUNT)[number])
+}

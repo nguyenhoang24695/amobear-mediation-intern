@@ -1,4 +1,4 @@
-import { apiClient } from "./client"
+﻿import { apiClient } from "./client"
 import type {
   ApproveMetaCampaignRequestDto,
   CreateMetaAppMappingRequestDto,
@@ -20,6 +20,9 @@ import type {
   MetaRequestAssetDto,
   MetaCreateCampaignReferenceDto,
   MetaExecuteResponseDto,
+  MetaFacebookPageReferenceDto,
+  MetaGeoCityReferenceDto,
+  MetaGeoRegionDto,
   MetaIntegrationDto,
   MetaIntegrationTestRequestDto,
   MetaIntegrationTestResultDto,
@@ -134,6 +137,18 @@ export const metaReferenceApi = {
 
   getAdAccountAppMappings: async (adAccountId: number) => {
     return apiClient.get<MetaAppMappingDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/app-mappings`)
+  },
+
+  getAdAccountFacebookPages: async (adAccountId: number, source: "promote_pages" | "access_token_all" = "promote_pages") => {
+    return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source })
+  },
+
+  getGeoRegions: async () => {
+    return apiClient.get<MetaGeoRegionDto[]>(`${REFERENCE_PREFIX}/geo/regions`)
+  },
+
+  searchGeoCities: async (metaAdAccountId: number, q: string) => {
+    return apiClient.get<MetaGeoCityReferenceDto[]>(`${REFERENCE_PREFIX}/geo/cities`, { metaAdAccountId, q })
   },
 }
 
@@ -251,5 +266,9 @@ export const metaAppMappingsApi = {
     return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`, {})
   },
 }
+
+
+
+
 
 
