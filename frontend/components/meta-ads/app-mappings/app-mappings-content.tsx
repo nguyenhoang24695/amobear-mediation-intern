@@ -29,12 +29,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaAppMappingsApi } from "@/lib/api/meta-ads"
 import { structureApi } from "@/lib/api/services"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import type { App } from "@/types/api"
 import type {
@@ -59,6 +62,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   Eye,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react"
 
 const SCREEN_META_ACCOUNTS = "s-meta-accounts"
@@ -195,6 +200,21 @@ function getDefaultResolutionType(candidate: MetaAppMappingCandidateDto, mappedA
   return mappedAppRowIds.has(appRowId) ? "update_mapping" : "create_mapping"
 }
 
+function getDisplayAppName(app?: App | null) {
+  return app?.displayName ?? app?.name ?? "-"
+}
+
+function getResolveSelectableApps(apps: App[], mappedAppRowIds: Set<number>, resolutionType: string) {
+  switch (resolutionType) {
+    case "update_mapping":
+      return apps.filter((app) => mappedAppRowIds.has(app.id))
+    case "create_mapping":
+      return apps.filter((app) => !mappedAppRowIds.has(app.id))
+    default:
+      return apps
+  }
+}
+
 export function AppMappingsContent() {
   const { toast } = useToast()
   const canCreate = hasScreenFunction(SCREEN_META_ACCOUNTS, "create")
@@ -232,6 +252,7 @@ export function AppMappingsContent() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<MetaAppMappingDto | null>(null)
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false)
+  const [resolveAppSelectOpen, setResolveAppSelectOpen] = useState(false)
   const [resolveTarget, setResolveTarget] = useState<MetaAppMappingCandidateDto | null>(null)
   const [form, setForm] = useState<MappingFormState>(emptyForm)
   const [resolveForm, setResolveForm] = useState<ResolveCandidateFormState>(emptyResolveForm)
@@ -258,6 +279,10 @@ export function AppMappingsContent() {
 
     return apps.filter((app) => !mappedAppRowIds.has(app.id))
   }, [apps, editTarget, mappedAppRowIds])
+
+  const resolveSelectableApps = useMemo(() => {
+    return getResolveSelectableApps(apps, mappedAppRowIds, resolveForm.resolutionType)
+  }, [apps, mappedAppRowIds, resolveForm.resolutionType])
 
   const filteredCandidates = useMemo(() => {
     const query = candidateSearch.trim().toLowerCase()
@@ -348,6 +373,7 @@ export function AppMappingsContent() {
       appRowId: defaultAppRowId,
       resolutionNote: "",
     })
+    setResolveAppSelectOpen(false)
     setResolveDialogOpen(true)
   }
 
@@ -429,6 +455,26 @@ export function AppMappingsContent() {
     }
   }
 
+  const handleResolveResolutionTypeChange = (value: string) => {
+    setResolveAppSelectOpen(false)
+    setResolveForm((current) => {
+      const nextSelectableApps = getResolveSelectableApps(apps, mappedAppRowIds, value)
+      const hasCurrentSelection = current.appRowId
+        ? nextSelectableApps.some((app) => app.id === Number(current.appRowId))
+        : false
+
+      return {
+        ...current,
+        resolutionType: value,
+        appRowId: value === "dismiss"
+          ? current.appRowId
+          : hasCurrentSelection
+            ? current.appRowId
+            : nextSelectableApps[0]?.id.toString() ?? "",
+      }
+    })
+  }
+
   const handleDiscover = async () => {
     try {
       setDiscovering(true)
@@ -476,6 +522,7 @@ export function AppMappingsContent() {
       invalidateCache("meta-reference:create-campaign")
       await Promise.all([refetch(), refetchCandidates()])
       setResolveDialogOpen(false)
+      setResolveAppSelectOpen(false)
       setResolveTarget(null)
       setResolveForm(emptyResolveForm)
       toast({ title: "Candidate resolved" })
@@ -1112,6 +1159,7 @@ export function AppMappingsContent() {
         onOpenChange={(open) => {
           setResolveDialogOpen(open)
           if (!open) {
+            setResolveAppSelectOpen(false)
             setResolveTarget(null)
             setResolveForm(emptyResolveForm)
           }
@@ -1145,7 +1193,7 @@ export function AppMappingsContent() {
                   <Label className="text-xs font-medium text-slate-700">Resolution</Label>
                   <Select
                     value={resolveForm.resolutionType}
-                    onValueChange={(value) => setResolveForm((current) => ({ ...current, resolutionType: value }))}
+                    onValueChange={handleResolveResolutionTypeChange}
                   >
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Select resolution..." />
@@ -1163,25 +1211,130 @@ export function AppMappingsContent() {
                     <Label className="text-xs font-medium text-slate-700">
                       App <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={resolveForm.appRowId}
-                      onValueChange={(value) => setResolveForm((current) => ({ ...current, appRowId: value }))}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue placeholder="Select app..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {apps.map((app) => (
-                          <SelectItem key={app.id} value={app.id.toString()}>
-                            {app.displayName ?? app.name} ({app.appId})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedResolveApp ? (
-                      <p className="text-[11px] text-slate-400">
-                        Platform {normalizePlatform(selectedResolveApp.platform) || "APP"} | App Store ID {selectedResolveApp.appStoreId || "-"}
+                    <Popover open={resolveAppSelectOpen} onOpenChange={setResolveAppSelectOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={resolveAppSelectOpen}
+                          className="h-auto min-h-14 w-full justify-between px-3 py-2 font-normal"
+                        >
+                          {selectedResolveApp ? (
+                            <div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
+                              {selectedResolveApp.iconUri ? (
+                                <img
+                                  src={selectedResolveApp.iconUri}
+                                  alt={getDisplayAppName(selectedResolveApp)}
+                                  className="h-10 w-10 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                                  {getDisplayAppName(selectedResolveApp).charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate font-medium text-slate-900">{getDisplayAppName(selectedResolveApp)}</span>
+                                  <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedResolveApp.platform)}`}>
+                                    {normalizePlatform(selectedResolveApp.platform) || "APP"}
+                                  </Badge>
+                                </div>
+                                <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedResolveApp.appId}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-slate-500">Search and select app...</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" onWheel={(event) => event.stopPropagation()}>
+                        <Command shouldFilter className="flex max-h-[360px] flex-col">
+                          <CommandInput placeholder="Search by app name, AdMob App ID, store ID..." />
+                          <CommandList className="min-h-0 max-h-[320px] overscroll-contain">
+                            <CommandEmpty>
+                              {resolveForm.resolutionType === "update_mapping"
+                                ? "No mapped app found."
+                                : "No unmapped app found."}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {resolveSelectableApps.map((app) => {
+                                const isSelected = resolveForm.appRowId === app.id.toString()
+                                return (
+                                  <CommandItem
+                                    key={app.id}
+                                    value={`${getDisplayAppName(app)} ${app.appId} ${app.appStoreId ?? ""} ${normalizePlatform(app.platform)}`}
+                                    onSelect={() => {
+                                      setResolveForm((current) => ({ ...current, appRowId: app.id.toString() }))
+                                      setResolveAppSelectOpen(false)
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex min-w-0 items-center gap-3 py-0.5">
+                                      {app.iconUri ? (
+                                        <img
+                                          src={app.iconUri}
+                                          alt={getDisplayAppName(app)}
+                                          className="h-9 w-9 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                                          {getDisplayAppName(app).charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(app)}</span>
+                                          <Badge className={`text-[10px] ${getPlatformBadgeClass(app.platform)}`}>
+                                            {normalizePlatform(app.platform) || "APP"}
+                                          </Badge>
+                                        </div>
+                                        <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {app.appId}</p>
+                                        <p className="truncate text-[11px] text-slate-400">Store ID - {app.appStoreId || "-"}</p>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                )
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {resolveSelectableApps.length === 0 ? (
+                      <p className="text-[11px] text-amber-700">
+                        {resolveForm.resolutionType === "update_mapping"
+                          ? "No accessible app with an existing Meta mapping is available for update."
+                          : "All accessible apps already have a Meta app mapping."}
                       </p>
+                    ) : null}
+                    {selectedResolveApp ? (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Selected App</p>
+                        <div className="flex items-center gap-3">
+                          {selectedResolveApp.iconUri ? (
+                            <img
+                              src={selectedResolveApp.iconUri}
+                              alt={getDisplayAppName(selectedResolveApp)}
+                              className="h-11 w-11 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                              {getDisplayAppName(selectedResolveApp).charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(selectedResolveApp)}</span>
+                              <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedResolveApp.platform)}`}>
+                                {normalizePlatform(selectedResolveApp.platform) || "APP"}
+                              </Badge>
+                            </div>
+                            <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedResolveApp.appId}</p>
+                            <p className="truncate text-xs text-slate-500">App Store ID - {selectedResolveApp.appStoreId || "-"}</p>
+                          </div>
+                        </div>
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
@@ -1204,6 +1357,7 @@ export function AppMappingsContent() {
               className="text-slate-600"
               onClick={() => {
                 setResolveDialogOpen(false)
+                setResolveAppSelectOpen(false)
                 setResolveTarget(null)
                 setResolveForm(emptyResolveForm)
               }}

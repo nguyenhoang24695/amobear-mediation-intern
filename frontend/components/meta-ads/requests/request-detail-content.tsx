@@ -20,6 +20,7 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaRequestsApi } from "@/lib/api/meta-ads"
 import { formatMetaRequestId, formatUserGuidShort, groupValidationErrors } from "@/lib/meta-ads/mappers"
+import { getMediaPreviewSource } from "@/lib/meta-ads/media-preview"
 import { copyTextToClipboard } from "@/lib/utils"
 import type {
   MetaCampaignRequestDetailDto,
@@ -54,6 +55,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ProtectedMediaImage } from "../shared/protected-media-image"
 const SCREEN_META_REQUESTS = "s-meta-requests"
 
 type ConfirmAction = "approve" | "reject" | "execute" | "retry"
@@ -174,11 +176,6 @@ function getExistingPostCreative(creative: MetaCreativeDraftDto) {
   return creative.existingPost ?? { sourcePostId: null }
 }
 
-function getMediaPreviewUrl(source?: MetaCreativeMediaSourceDto | null): string {
-  if (!source) return ""
-  if (source.uploadedAssetId) return `/api/v1/meta-campaign-requests/assets/${source.uploadedAssetId}/content`
-  return source.imageUrl ?? ""
-}
 
 function getMediaSourceValue(source?: MetaCreativeMediaSourceDto | null, kind: "image" | "video" = "image"): string {
   if (!source) return "-"
@@ -271,17 +268,17 @@ function isCreativeComplete(detail: MetaCampaignRequestDetailDto): boolean {
   return getCreativeChecklist(detail).every((item) => item.ok)
 }
 
-function getCreativePreviewImage(detail: MetaCampaignRequestDetailDto): string {
+function getCreativePreviewImage(detail: MetaCampaignRequestDetailDto): { url: string; requiresAuth: boolean } {
   const creative = detail.payload.creative
   switch (getCreativeType(detail)) {
     case "SINGLE_VIDEO":
-      return getMediaPreviewUrl(getSingleVideoCreative(creative).thumbnail)
+      return getMediaPreviewSource(getSingleVideoCreative(creative).thumbnail)
     case "CAROUSEL_IMAGE":
-      return getMediaPreviewUrl(getCarouselCreative(creative).cards[0]?.image)
+      return getMediaPreviewSource(getCarouselCreative(creative).cards[0]?.image)
     case "EXISTING_POST":
-      return ""
+      return { url: "", requiresAuth: false }
     default:
-      return getMediaPreviewUrl(getSingleImageCreative(creative).image)
+      return getMediaPreviewSource(getSingleImageCreative(creative).image)
   }
 }
 
@@ -804,8 +801,14 @@ export function RequestDetailContent({ requestId }: Props) {
                     </div>
                     <div className="space-y-1.5 p-2">
                       <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100">
-                        {previewImage ? (
-                          <img src={previewImage} alt="Creative preview" className="h-full w-full object-cover" crossOrigin="anonymous" />
+                        {previewImage.url ? (
+                          <ProtectedMediaImage
+                            src={previewImage.url}
+                            requiresAuth={previewImage.requiresAuth}
+                            alt="Creative preview"
+                            className="h-full w-full object-cover"
+                            fallback={getCreativePreviewIcon(detail)}
+                          />
                         ) : (
                           getCreativePreviewIcon(detail)
                         )}
@@ -1045,11 +1048,20 @@ function CreativeTypeSnapshot({ detail }: { detail: MetaCampaignRequestDetailDto
               <div key={`${index}-${card.headline ?? "card"}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="grid gap-3 md:grid-cols-[96px_minmax(0,1fr)]">
                   <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
-                    {getMediaPreviewUrl(card.image) ? (
-                      <img src={getMediaPreviewUrl(card.image)} alt={`Carousel card ${index + 1}`} className="h-full w-full object-cover" crossOrigin="anonymous" />
-                    ) : (
-                      <GalleryHorizontal className="w-5 h-5 text-slate-300" />
-                    )}
+                    {(() => {
+                      const preview = getMediaPreviewSource(card.image)
+                      return preview.url ? (
+                        <ProtectedMediaImage
+                          src={preview.url}
+                          requiresAuth={preview.requiresAuth}
+                          alt={`Carousel card ${index + 1}`}
+                          className="h-full w-full object-cover"
+                          fallback={<GalleryHorizontal className="w-5 h-5 text-slate-300" />}
+                        />
+                      ) : (
+                        <GalleryHorizontal className="w-5 h-5 text-slate-300" />
+                      )
+                    })()}
                   </div>
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -1184,13 +1196,4 @@ function ObjectRow({ label, metaId, localId }: { label: string; metaId: string; 
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
 
