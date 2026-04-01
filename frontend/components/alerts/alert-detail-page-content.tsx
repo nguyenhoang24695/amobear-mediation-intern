@@ -201,9 +201,11 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
 
   const timelineData = useMemo(() => {
     if (persistedTimeline.length > 0) {
-      return persistedTimeline.slice(0, 8)
+      return [...persistedTimeline]
+        .sort((a, b) => b.time.getTime() - a.time.getTime())
+        .slice(0, 8)
     }
-    return timelineEvents
+    return [...timelineEvents].sort((a, b) => b.time.getTime() - a.time.getTime())
   }, [persistedTimeline])
 
   const relatedAlertItems = useMemo(() => {

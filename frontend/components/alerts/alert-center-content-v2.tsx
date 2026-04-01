@@ -129,6 +129,16 @@ export function AlertCenterContentV2() {
   const triggeredTodayAlerts = useMemo(() => uiAlerts.filter((a) => isToday(a.timestamp)), [uiAlerts])
   const averageResponseMinutes = useMemo(() => computeAverageResponseMinutes(uiAlerts), [uiAlerts])
 
+  /** Newest first (occurredAt desc, then history id desc for stable ties). */
+  const sortedTimelineItems = useMemo(() => {
+    return [...timelineItems].sort((a, b) => {
+      const ta = new Date(a.occurredAt).getTime()
+      const tb = new Date(b.occurredAt).getTime()
+      if (tb !== ta) return tb - ta
+      return b.id - a.id
+    })
+  }, [timelineItems])
+
   const enabledRules = useMemo(() => (rules ?? []).filter((r) => r.isEnabled), [rules])
   const disabledRules = useMemo(() => (rules ?? []).filter((r) => !r.isEnabled), [rules])
 
@@ -470,7 +480,7 @@ export function AlertCenterContentV2() {
                 <p className="text-sm text-slate-500 text-center py-10">No timeline events yet.</p>
               ) : (
                 <>
-                  {timelineItems.map((entry) => (
+                  {sortedTimelineItems.map((entry) => (
                     <div
                       key={entry.id}
                       className="flex gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0"
