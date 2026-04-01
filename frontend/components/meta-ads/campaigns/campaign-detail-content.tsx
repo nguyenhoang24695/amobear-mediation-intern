@@ -90,6 +90,21 @@ function formatRelativeTime(value?: string | null): string {
   return `${months}mo ago`
 }
 
+function formatRawValue(value?: string | null): string {
+  const trimmed = (value ?? "").trim()
+  return trimmed || "-"
+}
+
+function formatDateRange(start?: string | null, end?: string | null): string {
+  if (!start && !end) return "-"
+  return `${formatDateTime(start)} -> ${formatDateTime(end)}`
+}
+
+function formatList(values?: string[] | null): string {
+  if (!values || values.length === 0) return "-"
+  return values.map((value) => toTitleCase(value)).join(", ")
+}
+
 function getInitials(value?: string | null): string {
   const input = (value ?? "App").trim()
   const parts = input.split(/\s+/).filter(Boolean)
@@ -215,6 +230,73 @@ function AdSetTable({ items }: { items: MetaCampaignAdSetSummaryDto[] }) {
               <TableCell>
                 <div className="text-sm text-slate-700">{formatRelativeTime(item.lastSyncedAt)}</div>
                 <div className="text-xs text-slate-500">{formatDateTime(item.lastSyncedAt)}</div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function AdSetConfigurationTable({ items }: { items: MetaCampaignAdSetSummaryDto[] }) {
+  if (items.length === 0) {
+    return <EmptyState title="No ad set configuration synced" description="Sync this campaign again to load ad set configuration details from Meta." />
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-slate-50">
+            <TableHead className="text-xs font-medium text-slate-500">Ad Set</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Budget</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Budget Remaining</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Bid / Strategy</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Billing / Optimization</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Schedule</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Targeting</TableHead>
+            <TableHead className="text-xs font-medium text-slate-500">Learning / Issues</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className="font-medium text-slate-900">{item.name}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span className="font-mono">{item.externalAdSetId}</span>
+                    <Badge className={cn("border", getStatusBadgeClass(item.effectiveStatus))}>{toTitleCase(item.effectiveStatus)}</Badge>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1 text-sm text-slate-700">
+                  <div>Daily: {formatRawValue(item.dailyBudget)}</div>
+                  <div>Lifetime: {formatRawValue(item.lifetimeBudget)}</div>
+                </div>
+              </TableCell>
+              <TableCell className="text-sm text-slate-700">{formatRawValue(item.budgetRemaining)}</TableCell>
+              <TableCell>
+                <div className="space-y-1 text-sm text-slate-700">
+                  <div>Bid: {formatRawValue(item.bidAmount)}</div>
+                  <div>Strategy: {item.bidStrategy ? toTitleCase(item.bidStrategy) : "-"}</div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1 text-sm text-slate-700">
+                  <div>Billing: {item.billingEvent ? toTitleCase(item.billingEvent) : "-"}</div>
+                  <div>Optimization: {item.optimizationGoal ? toTitleCase(item.optimizationGoal) : "-"}</div>
+                </div>
+              </TableCell>
+              <TableCell className="text-sm text-slate-700">{formatDateRange(item.startTime, item.endTime)}</TableCell>
+              <TableCell className="text-sm text-slate-700">{item.targetingSummary ?? "-"}</TableCell>
+              <TableCell>
+                <div className="space-y-1 text-sm text-slate-700">
+                  <div>{item.learningStageInfoSummary ?? "-"}</div>
+                  {item.issuesInfoSummary ? <div className="text-amber-700">{item.issuesInfoSummary}</div> : null}
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -683,6 +765,58 @@ export function CampaignDetailContent({ campaignId }: Props) {
 
           <Card className="border-slate-200">
             <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">Campaign Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
+                <DetailField label="Objective" value={toTitleCase(detail.objective)} />
+                <DetailField label="Buying Type" value={toTitleCase(detail.buyingType)} />
+                <DetailField label="Bid Strategy" value={toTitleCase(detail.bidStrategy)} />
+                <DetailField label="Daily Budget" value={formatRawValue(detail.dailyBudget)} mono />
+                <DetailField label="Lifetime Budget" value={formatRawValue(detail.lifetimeBudget)} mono />
+                <DetailField label="Spend Cap" value={formatRawValue(detail.spendCap)} mono />
+                <DetailField label="Start Time" value={formatDateTime(detail.startTime)} />
+                <DetailField label="Stop Time" value={formatDateTime(detail.stopTime)} />
+                <DetailField label="Special Ad Categories" value={formatList(detail.specialAdCategories)} />
+                <DetailField label="Status" value={toTitleCase(detail.status)} />
+                <DetailField label="Effective Status" value={toTitleCase(detail.effectiveStatus)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {detail.issuesInfoSummary || detail.recommendationsSummary ? (
+            <Card className="border-amber-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-slate-900">Configuration Warnings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {detail.issuesInfoSummary ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <div className="text-xs uppercase tracking-wide text-amber-700">Issues Info</div>
+                    <div className="mt-2 text-sm text-amber-900">{detail.issuesInfoSummary}</div>
+                  </div>
+                ) : null}
+                {detail.recommendationsSummary ? (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <div className="text-xs uppercase tracking-wide text-blue-700">Recommendations</div>
+                    <div className="mt-2 text-sm text-blue-900">{detail.recommendationsSummary}</div>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card className="border-slate-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">Ad Set Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AdSetConfigurationTable items={detail.adSets} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200">
+            <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-slate-900">App and Account Context</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -807,4 +941,3 @@ export function CampaignDetailContent({ campaignId }: Props) {
     </div>
   )
 }
-

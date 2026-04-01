@@ -27,7 +27,12 @@ import {
 } from "@/lib/meta-ads/mappers"
 import type {
   GroupedValidationErrors,
+  MetaAppMappingDto,
   MetaCampaignRequestDetailDto,
+  MetaCreateCampaignReferenceDto,
+  MetaFacebookPageReferenceDto,
+  MetaGeoRegionDto,
+  MetaIntegrationDto,
   MetaRequestFormState,
   MetaRequestStatus,
 } from "@/types/meta-ads"
@@ -44,57 +49,71 @@ import { RequestSummaryRail } from "./summary-rail"
 
 export type RequestFormState = MetaRequestFormState
 
-const defaultFormState: RequestFormState = {
-  adAccountId: "",
-  appRowId: "",
-  objective: "",
-  budgetStrategy: "CBO",
-  campaignName: "",
-  buyingType: "AUCTION",
-  campaignObjective: "",
-  specialAdCategories: [],
-  bidStrategy: "",
-  campaignDailyBudget: "",
-  campaignLifetimeBudget: "",
-  adSetName: "",
-  countries: [],
-  ageMin: 18,
-  ageMax: 65,
-  gender: "ALL",
-  placementMode: "AUTOMATIC",
-  publisherPlatforms: [],
-  facebookPositions: [],
-  instagramPositions: [],
-  adSetDailyBudget: "",
-  adSetLifetimeBudget: "",
-  billingEvent: "IMPRESSIONS",
-  optimizationGoal: "APP_INSTALLS",
-  bidAmount: "",
-  startTime: "",
-  endTime: "",
-  creativeType: "SINGLE_IMAGE",
-  creativeName: "",
-  facebookPageId: "",
-  instagramActorId: "",
-  singleImagePrimaryText: "",
-  singleImageHeadline: "",
-  singleImageDescription: "",
-  singleImageCallToAction: "LEARN_MORE",
-  singleImageLinkUrl: "",
-  singleImageImage: createEmptyMediaSelection("meta_ref"),
-  singleVideoPrimaryText: "",
-  singleVideoHeadline: "",
-  singleVideoDescription: "",
-  singleVideoCallToAction: "LEARN_MORE",
-  singleVideoLinkUrl: "",
-  singleVideoVideo: createEmptyMediaSelection("meta_ref"),
-  singleVideoThumbnail: createEmptyMediaSelection("meta_ref"),
-  carouselPrimaryText: "",
-  carouselCallToAction: "LEARN_MORE",
-  carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
-  existingPostId: "",
-  adName: "",
-  trackingSpecs: "",
+function formatDateTimeLocal(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  const hours = `${date.getHours()}`.padStart(2, "0")
+  const minutes = `${date.getMinutes()}`.padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function createDefaultFormState(): RequestFormState {
+  return {
+    adAccountId: "",
+    appRowId: "",
+    objective: "OUTCOME_APP_PROMOTION",
+    budgetStrategy: "CBO",
+    campaignName: "",
+    buyingType: "AUCTION",
+    campaignObjective: "OUTCOME_APP_PROMOTION",
+    specialAdCategories: [],
+    bidStrategy: "",
+    campaignDailyBudget: "",
+    campaignLifetimeBudget: "",
+    adSetName: "",
+    geoMode: "GLOBAL",
+    countries: [],
+    regionKeys: [],
+    cityTargets: [],
+    ageMin: 18,
+    ageMax: 65,
+    gender: "ALL",
+    placementMode: "AUTOMATIC",
+    publisherPlatforms: [],
+    facebookPositions: [],
+    instagramPositions: [],
+    adSetDailyBudget: "",
+    adSetLifetimeBudget: "",
+    billingEvent: "IMPRESSIONS",
+    optimizationGoal: "APP_INSTALLS",
+    bidAmount: "",
+    startTime: formatDateTimeLocal(new Date()),
+    endTime: "",
+    creativeType: "SINGLE_IMAGE",
+    creativeName: "",
+    facebookPageId: "",
+    instagramActorId: "",
+    singleImagePrimaryText: "",
+    singleImageHeadline: "",
+    singleImageDescription: "",
+    singleImageCallToAction: "LEARN_MORE",
+    singleImageLinkUrl: "",
+    singleImageImage: createEmptyMediaSelection("meta_ref"),
+    singleVideoPrimaryText: "",
+    singleVideoHeadline: "",
+    singleVideoDescription: "",
+    singleVideoCallToAction: "LEARN_MORE",
+    singleVideoLinkUrl: "",
+    singleVideoVideo: createEmptyMediaSelection("meta_ref"),
+    singleVideoThumbnail: createEmptyMediaSelection("meta_ref"),
+    carouselPrimaryText: "",
+    carouselCallToAction: "LEARN_MORE",
+    carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
+    existingPostId: "",
+    adName: "",
+    trackingSpecs: "",
+  }
 }
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
@@ -173,7 +192,7 @@ export function CreateRequestContent({ requestId }: Props) {
   const numericRequestId = isEditMode ? Number(requestId) : null
   const canViewMetaAccounts = hasScreenFunction("s-meta-accounts", "view")
 
-  const [form, setForm] = useState<RequestFormState>(defaultFormState)
+  const [form, setForm] = useState<RequestFormState>(() => createDefaultFormState())
   const [draftId, setDraftId] = useState<number | null>(null)
   const [serverStatus, setServerStatus] = useState<MetaRequestStatus | null>(null)
   const [idempotencyKey, setIdempotencyKey] = useState(buildIdempotencyKey)
@@ -185,12 +204,13 @@ export function CreateRequestContent({ requestId }: Props) {
   const [validationErrors, setValidationErrors] = useState<GroupedValidationErrors>({})
   const [isDirty, setIsDirty] = useState(false)
   const [loadedRequestId, setLoadedRequestId] = useState<number | null>(null)
+  const [facebookPageSource, setFacebookPageSource] = useState<"promote_pages" | "access_token_all">("promote_pages")
 
   const {
     data: referenceData,
     loading: referenceLoading,
     error: referenceError,
-  } = useApi(
+  } = useApi<MetaCreateCampaignReferenceDto>(
     () => metaReferenceApi.getCreateCampaignReference(),
     { cacheKey: "meta-reference:create-campaign" }
   )
@@ -207,7 +227,7 @@ export function CreateRequestContent({ requestId }: Props) {
     }
   )
 
-  const { data: integrations } = useApi(
+  const { data: integrations } = useApi<MetaIntegrationDto[]>(
     () => metaIntegrationsApi.list(),
     {
       enabled: canViewMetaAccounts,
@@ -219,7 +239,7 @@ export function CreateRequestContent({ requestId }: Props) {
     data: accountScopedAppMappings,
     loading: accountScopedAppMappingsLoading,
     error: accountScopedAppMappingsError,
-  } = useApi(
+  } = useApi<MetaAppMappingDto[]>(
     () => metaReferenceApi.getAdAccountAppMappings(Number(form.adAccountId)),
     {
       enabled: !!form.adAccountId,
@@ -227,6 +247,27 @@ export function CreateRequestContent({ requestId }: Props) {
     }
   )
 
+
+  const {
+    data: facebookPages,
+    loading: facebookPagesLoading,
+    error: facebookPagesError,
+  } = useApi<MetaFacebookPageReferenceDto[]>(
+    () => metaReferenceApi.getAdAccountFacebookPages(Number(form.adAccountId), facebookPageSource),
+    {
+      enabled: !!form.adAccountId,
+      cacheKey: form.adAccountId ? `meta-reference:ad-account:${form.adAccountId}:facebook-pages:${facebookPageSource}` : "meta-reference:ad-account:none:facebook-pages",
+    }
+  )
+
+  const {
+    data: geoRegions,
+    loading: geoRegionsLoading,
+    error: geoRegionsError,
+  } = useApi<MetaGeoRegionDto[]>(
+    () => metaReferenceApi.getGeoRegions(),
+    { cacheKey: "meta-reference:geo:regions" }
+  )
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
@@ -279,6 +320,12 @@ export function CreateRequestContent({ requestId }: Props) {
     syncFromDetail(editDetail)
     setLoadedRequestId(editDetail.id)
   }, [editDetail, loadedRequestId])
+  useEffect(() => {
+    if (!form.adAccountId) {
+      setFacebookPageSource("promote_pages")
+    }
+  }, [form.adAccountId])
+
 
   const persistDraft = async ({ silent }: { silent?: boolean } = {}) => {
     const previousStatus = serverStatus
@@ -469,10 +516,28 @@ export function CreateRequestContent({ requestId }: Props) {
             onChange={updateForm}
             objectives={referenceData.objectives}
             bidStrategies={referenceData.bidStrategies}
+            currencyCode={selectedAdAccount?.currency}
+            selectedAppMapping={selectedAppMapping}
           />
-          <AdSetAudienceSection form={form} onChange={updateForm} />
+          <AdSetAudienceSection
+            form={form}
+            onChange={updateForm}
+            regions={geoRegions ?? []}
+            regionsLoading={geoRegionsLoading}
+            regionsMessage={geoRegionsError?.message ?? null}
+            metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+          />
           <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} />
-          <CreativeSection form={form} onChange={updateForm} />
+          <CreativeSection
+            form={form}
+            onChange={updateForm}
+            facebookPages={facebookPages ?? []}
+            facebookPagesLoading={facebookPagesLoading}
+            selectedAppMapping={selectedAppMapping}
+            facebookPagesMessage={facebookPagesError?.message ?? null}
+            facebookPageSource={facebookPageSource}
+            onFacebookPageSourceChange={setFacebookPageSource}
+          />
           <AdSection form={form} onChange={updateForm} />
         </div>
 
@@ -536,10 +601,5 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
-
-
-
-
 
 
