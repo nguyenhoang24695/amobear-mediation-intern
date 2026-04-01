@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +28,8 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
   const tokenOk = tokenState === "ready"
   const creativeStatus = getCreativeStatus(form)
+  const geoStatus = getGeoStatus(form)
+  const geoSummary = getGeoSummary(form)
 
   return (
     <div className="space-y-3">
@@ -50,7 +52,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
           <CheckRow state={form.campaignObjective ? "ok" : "neutral"} label="Objective set" />
           <CheckRow state={form.campaignObjective ? (isGoalCompatible ? "ok" : "error") : "neutral"} label="Optimization goal compatible" />
           <CheckRow state={bidAmountRequired ? (form.bidAmount ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={bidAmountRequired ? "Bid amount provided for strategy" : "Bid amount optional"} />
-          <CheckRow state={form.countries.length > 0 ? "ok" : "error"} label="Countries selected" />
+          <CheckRow state={geoStatus} label={`Geo targeting (${form.geoMode.toLowerCase()})`} />
           <CheckRow state={creativeStatus.ok ? "ok" : "error"} label={`Creative ready (${creativeStatus.label})`} />
           <CheckRow state={form.adName ? "ok" : "error"} label="Ad name complete" />
         </CardContent>
@@ -83,7 +85,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
           </div>
           <div className="pt-2 border-t border-slate-200">
             <p className="font-semibold text-slate-900 mb-1">Ad Set</p>
-            <SummaryLine label="Countries" value={form.countries.length > 0 ? `${form.countries.length} (${form.countries.slice(0, 3).join(", ")}${form.countries.length > 3 ? "..." : ""})` : "-"} />
+            <SummaryLine label="Geo" value={geoSummary} />
             <SummaryLine label="Age" value={`${form.ageMin}-${form.ageMax}`} />
             <SummaryLine label="Optimization" value={form.optimizationGoal || "-"} />
           </div>
@@ -112,6 +114,26 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
       ) : null}
     </div>
   )
+}
+
+function getGeoStatus(form: RequestFormState): CheckState {
+  if (form.geoMode === "GLOBAL") return "ok"
+  if (form.geoMode === "REGION") return form.regionKeys.length > 0 ? "ok" : "error"
+  if (form.geoMode === "CITY") return form.cityTargets.length > 0 ? "ok" : "error"
+  return form.countries.length > 0 ? "ok" : "error"
+}
+
+function getGeoSummary(form: RequestFormState): string {
+  if (form.geoMode === "GLOBAL") return "Global"
+  if (form.geoMode === "REGION") {
+    if (form.regionKeys.length === 0) return "-"
+    return `${form.regionKeys.length} region(s): ${form.regionKeys.slice(0, 3).join(", ")}${form.regionKeys.length > 3 ? "..." : ""}`
+  }
+  if (form.geoMode === "CITY") {
+    if (form.cityTargets.length === 0) return "-"
+    return `${form.cityTargets.length} city(s): ${form.cityTargets.slice(0, 2).map((city) => city.name).join(", ")}${form.cityTargets.length > 2 ? "..." : ""}`
+  }
+  return form.countries.length > 0 ? `${form.countries.length} (${form.countries.slice(0, 3).join(", ")}${form.countries.length > 3 ? "..." : ""})` : "-"
 }
 
 function getCreativeStatus(form: RequestFormState) {
@@ -153,5 +175,3 @@ function CheckRow({ state, label }: { state: CheckState; label: string }) {
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-
-
