@@ -307,14 +307,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         )}
                       />
                     )}
-                    {badgeCount && !hasSubmenu && (
+                    {typeof badgeCount === "number" && badgeCount > 0 && !hasSubmenu && (
                       <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
                         {formatAlertBadgeCount(badgeCount)}
                       </Badge>
                     )}
                   </>
                 )}
-                {collapsed && badgeCount && !hasSubmenu && (
+                {collapsed && typeof badgeCount === "number" && badgeCount > 0 && !hasSubmenu && (
                   <Badge variant="destructive" className="absolute left-10 top-1 h-4 min-w-4 px-1 text-xs">
                     {formatAlertBadgeCount(badgeCount)}
                   </Badge>

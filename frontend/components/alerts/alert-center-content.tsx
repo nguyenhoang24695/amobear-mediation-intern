@@ -67,7 +67,7 @@ export function AlertCenterContent() {
     { cacheKey: "alerts_open_summary" }
   )
 
-  const { alerts, loading, openAlertIds, markAlertsViewed } = useAlertNotifications()
+  const { alerts, loading, openAlertIds, markAlertsViewed } = useAlertNotifications({ inAppOnly: false })
 
   useEffect(() => {
     if (openAlertIds.length === 0) return

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Zap, Search, Loader2 } from "lucide-react"
+import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Zap, Search, Loader2, Plus, Trash2 } from "lucide-react"
 import { alertsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -32,12 +32,29 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useApi } from "@/hooks/use-api"
-import type { AlertRuleConfigPayload } from "@/types/api"
+import type { AlertRule, AlertRuleConfigPayload } from "@/types/api"
 
 interface ManualAlertCreatorModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated?: () => void
+  rule?: AlertRule | null
+}
+
+type TelegramDestinationRow = {
+  id: string
+  chatId: string
+  messageThreadId: string
+}
+
+type SlackDestinationRow = {
+  id: string
+  webhookUrl: string
+}
+
+type EmailRecipientRow = {
+  id: string
+  email: string
 }
 
 const metrics = [
@@ -66,12 +83,94 @@ function toMetricUnit(metricKey: string) {
   return "count"
 }
 
-export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: ManualAlertCreatorModalProps) {
+function newRowId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID()
+  return `row_${Math.random().toString(16).slice(2)}`
+}
+
+function emptyTelegramRow(): TelegramDestinationRow {
+  return { id: newRowId(), chatId: "", messageThreadId: "" }
+}
+
+function emptySlackRow(): SlackDestinationRow {
+  return { id: newRowId(), webhookUrl: "" }
+}
+
+function emptyEmailRow(): EmailRecipientRow {
+  return { id: newRowId(), email: "" }
+}
+
+function telegramTopicTokenFromRow(row: TelegramDestinationRow): string | null {
+  const chatId = row.chatId.trim()
+  if (!chatId) return null
+  const threadId = row.messageThreadId.trim()
+  return threadId ? `${chatId}|${threadId}` : chatId
+}
+
+function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
+  if (topics.length === 0) return [emptyTelegramRow()]
+  return topics.map((topic) => {
+    const [chatId, messageThreadId] = topic.split("|")
+    return {
+      id: newRowId(),
+      chatId: chatId?.trim() || "",
+      messageThreadId: messageThreadId?.trim() || "",
+    }
+  })
+}
+
+function rowsFromSlackChannels(channels: string[]): SlackDestinationRow[] {
+  if (channels.length === 0) return [emptySlackRow()]
+  return channels.map((channel) => ({
+    id: newRowId(),
+    webhookUrl: channel.trim(),
+  }))
+}
+
+function rowsFromEmailRecipients(emails: string[]): EmailRecipientRow[] {
+  if (emails.length === 0) return [emptyEmailRow()]
+  return emails.map((email) => ({
+    id: newRowId(),
+    email: email.trim(),
+  }))
+}
+
+function parseJsonArray(input?: string | null): string[] {
+  if (!input) return []
+  try {
+    const parsed = JSON.parse(input)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []
+  } catch {
+    return []
+  }
+}
+
+function parseRuleConfig(raw?: string | null): AlertRuleConfigPayload | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as AlertRuleConfigPayload
+  } catch {
+    return null
+  }
+}
+
+function toSeverityValue(value?: string | null): "critical" | "warning" | "info" {
+  const normalized = (value || "").trim().toUpperCase()
+  if (normalized === "CRITICAL" || normalized === "HIGH") return "critical"
+  if (normalized === "WARNING" || normalized === "MEDIUM") return "warning"
+  return "info"
+}
+
+export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }: ManualAlertCreatorModalProps) {
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
+  const [testing, setTesting] = useState(false)
   const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
   const [pendingDuplicateName, setPendingDuplicateName] = useState("")
   const [appSearch, setAppSearch] = useState("")
+  const [telegramRows, setTelegramRows] = useState<TelegramDestinationRow[]>([emptyTelegramRow()])
+  const [slackRows, setSlackRows] = useState<SlackDestinationRow[]>([emptySlackRow()])
+  const [emailRows, setEmailRows] = useState<EmailRecipientRow[]>([emptyEmailRow()])
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     metric: "",
@@ -83,7 +182,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     percentChange: "",
     consecutiveDays: "3",
     severity: "warning",
-    channels: { inApp: true, telegram: false, lark: false, email: false },
+    channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
     frequency: "daily",
     autoResolve: true,
   })
@@ -113,6 +212,77 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
   }, [apps, appSearch])
 
   const isAllApps = formData.selectedApps.includes("all")
+  const isEdit = !!rule
+
+  useEffect(() => {
+    if (!open) return
+
+    const parsedConfig = parseRuleConfig(rule?.ruleConfig || rule?.filterConditions)
+    const notificationChannels = parseJsonArray(rule?.notificationChannels).map((item) => item.toUpperCase())
+
+    setStep(1)
+    setAppSearch("")
+    setDuplicateConfirmOpen(false)
+    setPendingDuplicateName("")
+    setTelegramRows(rowsFromTelegramTopics(parseJsonArray(rule?.telegramTopics)))
+    setSlackRows(rowsFromSlackChannels(parseJsonArray(rule?.slackChannels)))
+    setEmailRows(rowsFromEmailRecipients(parseJsonArray(rule?.emailRecipients)))
+
+    if (!rule) {
+      setFormData({
+        metric: "",
+        selectedApps: ["all"],
+        alertName: "",
+        conditionType: "threshold",
+        operator: "less_than",
+        thresholdValue: "",
+        percentChange: "",
+        consecutiveDays: "3",
+        severity: "warning",
+        channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
+        frequency: "daily",
+        autoResolve: true,
+      })
+      setTelegramRows([emptyTelegramRow()])
+      setSlackRows([emptySlackRow()])
+      setEmailRows([emptyEmailRow()])
+      return
+    }
+
+    const scope = parsedConfig?.scope
+    const selectedApps =
+      scope?.allApps !== false
+        ? ["all"]
+        : scope?.appIds && scope.appIds.length > 0
+          ? scope.appIds
+          : ["all"]
+
+    setFormData({
+      metric: parsedConfig?.metricKey || "",
+      selectedApps,
+      alertName: rule.name || "",
+      conditionType: parsedConfig?.conditionType || "threshold",
+      operator: parsedConfig?.operator || "less_than",
+      thresholdValue:
+        parsedConfig?.thresholdValue != null
+          ? String(parsedConfig.thresholdValue)
+          : rule.thresholdValue != null
+            ? String(rule.thresholdValue)
+            : "",
+      percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
+      consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
+      severity: toSeverityValue(rule.severity),
+      channels: {
+        inApp: notificationChannels.includes("IN_APP"),
+        telegram: notificationChannels.includes("TELEGRAM"),
+        slack: notificationChannels.includes("SLACK"),
+        lark: notificationChannels.includes("LARK"),
+        email: notificationChannels.includes("EMAIL"),
+      },
+      frequency: parsedConfig?.frequency || (rule.timeWindowHours === 24 ? "daily" : rule.timeWindowHours === 1 ? "hourly" : "realtime"),
+      autoResolve: parsedConfig?.autoResolve ?? true,
+    })
+  }, [open, rule])
 
   const toggleSpecificApp = (appId: string, checked: boolean) => {
     setFormData((current) => {
@@ -143,64 +313,18 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     return `${yyyy}${MM}${dd}${HH}${mm}${ss}${SSS}`
   }
 
-  const createRuleWithName = async (name: string) => {
+  const saveRuleWithName = async (name: string) => {
     try {
       setCreating(true)
-      const channels = Object.entries(formData.channels)
-        .filter(([, enabled]) => enabled)
-        .map(([channel]) => {
-          if (channel === "inApp") return "IN_APP"
-          return channel.toUpperCase()
-        })
-      const metricKey = toMetricKey(formData.metric)
-      const ruleConfig: AlertRuleConfigPayload = {
-        version: 1,
-        source: "manual",
-        metricKey,
-        metricUnit: toMetricUnit(metricKey),
-        conditionType: formData.conditionType,
-        operator: formData.operator,
-        thresholdValue: formData.thresholdValue ? Number(formData.thresholdValue) : null,
-        percentChange: formData.percentChange ? Number(formData.percentChange) : null,
-        consecutiveDays: formData.consecutiveDays ? Number(formData.consecutiveDays) : null,
-        frequency: formData.frequency,
-        autoResolve: formData.autoResolve,
-        scope: {
-          allApps: isAllApps,
-          appIds: isAllApps ? [] : formData.selectedApps,
-        },
+      const payload = buildRulePayload(name)
+
+      if (rule) {
+        await alertsApi.updateAlertRule(rule.id, payload)
+      } else {
+        await alertsApi.createAlertRule(payload)
       }
 
-      const ruleExpression =
-        formData.conditionType === "threshold"
-          ? `${formData.metric} ${formData.operator === "less_than" ? "<" : ">"} ${formData.thresholdValue || "0"}`
-          : formData.conditionType === "percent_change"
-            ? `${formData.metric} ${formData.operator === "less_than" ? "drop" : "increase"} ${formData.percentChange || "0"}%`
-            : `${formData.metric} consecutive ${formData.consecutiveDays} days`
-
-      await alertsApi.createAlertRule({
-        name,
-        description: "Created from manual alert wizard",
-        ruleType: "MANUAL",
-        severity: formData.severity.toUpperCase(),
-        ruleExpression,
-        thresholdValue: formData.conditionType === "threshold" ? Number(formData.thresholdValue || 0) : null,
-        timeWindowHours: formData.frequency === "daily" ? 24 : 1,
-        comparisonPeriodHours: formData.conditionType === "percent_change" ? 24 : null,
-        filterConditions: JSON.stringify(ruleConfig),
-        configVersion: 1,
-        ruleConfig: JSON.stringify(ruleConfig),
-        messageTemplate: `${name} triggered`,
-        isEnabled: true,
-        cooldownMinutes: 60,
-        notificationChannels: JSON.stringify(channels.length > 0 ? channels : ["IN_APP"]),
-        telegramTopics: null,
-        emailRecipients: null,
-        slackChannels: null,
-        priority: formData.severity === "critical" ? 10 : formData.severity === "warning" ? 5 : 1,
-      })
-
-      toast({ title: "Đã tạo alert rule" })
+      toast({ title: rule ? "Đã cập nhật alert rule" : "Đã tạo alert rule" })
       onCreated?.()
       onOpenChange(false)
       setStep(1)
@@ -224,13 +348,16 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     }
     try {
       const existingRules = await alertsApi.getAlertRules()
-      const isDuplicate = existingRules.some((rule) => rule.name.trim().toLowerCase() === name.toLowerCase())
+      const isDuplicate = existingRules.some((item) => {
+        if (rule && item.id === rule.id) return false
+        return item.name.trim().toLowerCase() === name.toLowerCase()
+      })
       if (isDuplicate) {
         setPendingDuplicateName(name)
         setDuplicateConfirmOpen(true)
         return
       }
-      await createRuleWithName(name)
+      await saveRuleWithName(name)
     } catch (error: any) {
       toast({
         title: "Không thể kiểm tra tên trùng",
@@ -243,7 +370,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
   const handleConfirmCreateWithTimestamp = async () => {
     const finalName = `${pendingDuplicateName}_${formatTimestampYmdHisSSS(new Date())}`
     setDuplicateConfirmOpen(false)
-    await createRuleWithName(finalName)
+    await saveRuleWithName(finalName)
   }
 
   const generateAlertName = () => {
@@ -257,11 +384,136 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
     return `${metricLabel} below threshold for ${formData.consecutiveDays} days`
   }
 
+  const buildRulePayload = (name: string) => {
+    const channels = Object.entries(formData.channels)
+      .filter(([, enabled]) => enabled)
+      .map(([channel]) => {
+        if (channel === "inApp") return "IN_APP"
+        return channel.toUpperCase()
+      })
+    const metricKey = toMetricKey(formData.metric)
+    const telegramTopics = telegramRows
+      .map((row) => telegramTopicTokenFromRow(row))
+      .filter((value): value is string => !!value)
+    const slackChannels = slackRows
+      .map((row) => row.webhookUrl.trim())
+      .filter((value) => value.length > 0)
+    const emailRecipients = emailRows
+      .map((row) => row.email.trim())
+      .filter((value) => value.length > 0)
+
+    const ruleConfig: AlertRuleConfigPayload = {
+      version: 1,
+      source: "manual",
+      metricKey,
+      metricUnit: toMetricUnit(metricKey),
+      conditionType: formData.conditionType,
+      operator: formData.operator,
+      thresholdValue: formData.thresholdValue ? Number(formData.thresholdValue) : null,
+      percentChange: formData.percentChange ? Number(formData.percentChange) : null,
+      consecutiveDays: formData.consecutiveDays ? Number(formData.consecutiveDays) : null,
+      frequency: formData.frequency,
+      autoResolve: formData.autoResolve,
+      scope: {
+        allApps: isAllApps,
+        appIds: isAllApps ? [] : formData.selectedApps,
+      },
+    }
+
+    const ruleExpression =
+      formData.conditionType === "threshold"
+        ? `${formData.metric} ${formData.operator === "less_than" ? "<" : ">"} ${formData.thresholdValue || "0"}`
+        : formData.conditionType === "percent_change"
+          ? `${formData.metric} ${formData.operator === "less_than" ? "drop" : "increase"} ${formData.percentChange || "0"}%`
+          : `${formData.metric} consecutive ${formData.consecutiveDays} days`
+
+    return {
+      name,
+      description: rule?.description || "Created from manual alert wizard",
+      ruleType: rule?.ruleType?.trim() || "MANUAL",
+      severity: formData.severity.toUpperCase(),
+      ruleExpression,
+      thresholdValue: formData.conditionType === "threshold" ? Number(formData.thresholdValue || 0) : null,
+      timeWindowHours: formData.frequency === "daily" ? 24 : 1,
+      comparisonPeriodHours: formData.conditionType === "percent_change" ? 24 : null,
+      filterConditions: JSON.stringify(ruleConfig),
+      configVersion: rule?.configVersion ?? 1,
+      ruleConfig: JSON.stringify(ruleConfig),
+      messageTemplate: `${name} triggered`,
+      isEnabled: rule?.isEnabled ?? true,
+      cooldownMinutes: rule?.cooldownMinutes ?? 60,
+      notificationChannels: JSON.stringify(channels.length > 0 ? channels : ["IN_APP"]),
+      telegramTopics: JSON.stringify(formData.channels.telegram ? telegramTopics : []),
+      emailRecipients: JSON.stringify(formData.channels.email ? emailRecipients : []),
+      slackChannels: JSON.stringify(formData.channels.slack ? slackChannels : []),
+      priority: formData.severity === "critical" ? 10 : formData.severity === "warning" ? 5 : 1,
+    }
+  }
+
+  const handleTestRule = async () => {
+    const name = (formData.alertName || generateAlertName()).trim() || "Manual Alert Test"
+    try {
+      setTesting(true)
+      const payload = buildRulePayload(name)
+      const result = await alertsApi.testAlertRule(payload)
+      if (result.triggered) {
+        const previewApps = result.matches
+          .map((match) => match.appId)
+          .filter((value): value is string => !!value)
+          .slice(0, 3)
+        toast({
+          title: "Rule matched current data",
+          description:
+            previewApps.length > 0
+              ? `${result.matchCount} match(es). Apps: ${previewApps.join(", ")}${result.matchCount > previewApps.length ? "..." : ""}`
+              : `${result.matchCount} match(es) found.`,
+        })
+      } else {
+        toast({
+          title: "No current matches",
+          description: "This rule does not match any current data right now.",
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: "Unable to test rule",
+        description: error?.message || "Unknown error",
+        variant: "destructive",
+      })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const updateTelegramRow = (id: string, patch: Partial<TelegramDestinationRow>) => {
+    setTelegramRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  const updateSlackRow = (id: string, patch: Partial<SlackDestinationRow>) => {
+    setSlackRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  const updateEmailRow = (id: string, patch: Partial<EmailRecipientRow>) => {
+    setEmailRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  const removeTelegramRow = (id: string) => {
+    setTelegramRows((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : [emptyTelegramRow()]))
+  }
+
+  const removeSlackRow = (id: string) => {
+    setSlackRows((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : [emptySlackRow()]))
+  }
+
+  const removeEmailRow = (id: string) => {
+    setEmailRows((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : [emptyEmailRow()]))
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[88vh] w-[95vw] max-w-[95vw] md:h-[85vh] md:w-[75vw] md:!max-w-[75vw] overflow-y-auto">
+      <DialogContent className="h-[80vh] w-[90vw] max-w-[90vw] md:h-[80vh] md:w-[60vw] md:!max-w-[60vw] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Create Alert Rule</DialogTitle>
+          <DialogTitle className="text-xl">{isEdit ? "Edit Alert Rule" : "Create Alert Rule"}</DialogTitle>
           <DialogDescription>Step {step} of 3</DialogDescription>
         </DialogHeader>
 
@@ -325,9 +577,9 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
               </div>
             </div>
 
-            <Button variant="outline" className="w-full mt-4 gap-2 bg-white">
+            <Button variant="outline" className="w-full mt-4 gap-2 bg-white" type="button" onClick={() => void handleTestRule()} disabled={testing}>
               <Zap className="w-4 h-4" />
-              Test Rule
+              {testing ? "Testing..." : "Test Rule"}
             </Button>
           </CardContent>
         </Card>
@@ -600,6 +852,68 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
                         }
                       />
                     </div>
+                    {formData.channels.telegram && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-900">Telegram destinations</p>
+                          <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}>
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {telegramRows.map((row) => (
+                            <div key={row.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+                              <Input
+                                placeholder="Chat ID"
+                                value={row.chatId}
+                                onChange={(e) => updateTelegramRow(row.id, { chatId: e.target.value })}
+                              />
+                              <Input
+                                placeholder="messageThreadId (optional)"
+                                value={row.messageThreadId}
+                                onChange={(e) => updateTelegramRow(row.id, { messageThreadId: e.target.value })}
+                              />
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeTelegramRow(row.id)}>
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                      <span className="text-sm">Slack</span>
+                      <Switch
+                        checked={formData.channels.slack}
+                        onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, slack: c } })}
+                      />
+                    </div>
+                    {formData.channels.slack && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-900">Slack webhook URLs</p>
+                          <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setSlackRows((prev) => [...prev, emptySlackRow()])}>
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {slackRows.map((row) => (
+                            <div key={row.id} className="grid grid-cols-[1fr_auto] gap-2">
+                              <Input
+                                placeholder="https://hooks.slack.com/services/..."
+                                value={row.webhookUrl}
+                                onChange={(e) => updateSlackRow(row.id, { webhookUrl: e.target.value })}
+                              />
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeSlackRow(row.id)}>
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                       <span className="text-sm">Lark</span>
                       <Switch
@@ -614,6 +928,32 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
                         onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, email: c } })}
                       />
                     </div>
+                    {formData.channels.email && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-900">Email recipients</p>
+                          <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setEmailRows((prev) => [...prev, emptyEmailRow()])}>
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {emailRows.map((row) => (
+                            <div key={row.id} className="grid grid-cols-[1fr_auto] gap-2">
+                              <Input
+                                type="email"
+                                placeholder="name@example.com"
+                                value={row.email}
+                                onChange={(e) => updateEmailRow(row.id, { email: e.target.value })}
+                              />
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeEmailRow(row.id)}>
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -670,7 +1010,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated }: Manua
             ) : (
               <Button onClick={handleCreate} className="bg-green-600 hover:bg-green-700" disabled={creating}>
                 <Check className="w-4 h-4 mr-1" />
-                {creating ? "Creating..." : "Create Alert"}
+                {creating ? (isEdit ? "Saving..." : "Creating...") : isEdit ? "Save Alert" : "Create Alert"}
               </Button>
             )}
           </div>
