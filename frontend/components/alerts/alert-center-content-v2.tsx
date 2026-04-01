@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -29,8 +29,10 @@ import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./al
 import type { AlertApiItem } from "./alert-center-view-model"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache } from "@/hooks/use-api"
+import type { AlertCenterTimelineItem } from "@/types/api"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"] as const
+const TIMELINE_PAGE_SIZE = 25
 
 const formatRelativeTime = (date: Date) => {
   const diffMs = Date.now() - date.getTime()
@@ -62,6 +64,16 @@ export function AlertCenterContentV2() {
   const [showManualCreator, setShowManualCreator] = useState(false)
   const [alertRulesPanelOpen, setAlertRulesPanelOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState<{ id: number; type: "ack" | "resolve" } | null>(null)
+
+  const [timelineItems, setTimelineItems] = useState<AlertCenterTimelineItem[]>([])
+  const [timelinePage, setTimelinePage] = useState(1)
+  const [timelineHasMore, setTimelineHasMore] = useState(false)
+  const [timelineTotalCount, setTimelineTotalCount] = useState(0)
+  const [timelineLoading, setTimelineLoading] = useState(true)
+  const [timelineLoadingMore, setTimelineLoadingMore] = useState(false)
+  const [timelineNonce, setTimelineNonce] = useState(0)
+  const timelineScrollRef = useRef<HTMLDivElement>(null)
+  const timelineFetchLock = useRef(false)
 
   useEffect(() => {
     const severityParam = searchParams.get("severity")
@@ -126,6 +138,83 @@ export function AlertCenterContentV2() {
     invalidateCache("alerts_open_summary_v2")
   }
 
+  const bumpTimeline = useCallback(() => setTimelineNonce((n) => n + 1), [])
+
+  useEffect(() => {
+    let cancelled = false
+    const appId = appFilter.trim() || undefined
+
+    async function loadFirstPage() {
+      setTimelineLoading(true)
+      timelineFetchLock.current = true
+      try {
+        const res = await alertsApi.getAlertCenterTimeline({
+          page: 1,
+          pageSize: TIMELINE_PAGE_SIZE,
+          appId,
+        })
+        if (cancelled) return
+        setTimelineItems(res.data)
+        setTimelinePage(1)
+        setTimelineHasMore(res.hasNextPage)
+        setTimelineTotalCount(res.totalCount)
+      } catch (error: unknown) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "Unknown error"
+          toast({ title: "Could not load timeline", description: message, variant: "destructive" })
+          setTimelineItems([])
+          setTimelineHasMore(false)
+          setTimelineTotalCount(0)
+        }
+      } finally {
+        timelineFetchLock.current = false
+        if (!cancelled) setTimelineLoading(false)
+      }
+    }
+
+    void loadFirstPage()
+    return () => {
+      cancelled = true
+    }
+  }, [appFilter, timelineNonce])
+
+  const loadMoreTimeline = useCallback(async () => {
+    if (!timelineHasMore || timelineLoading || timelineLoadingMore || timelineFetchLock.current) return
+    const nextPage = timelinePage + 1
+    const appId = appFilter.trim() || undefined
+    timelineFetchLock.current = true
+    setTimelineLoadingMore(true)
+    try {
+      const res = await alertsApi.getAlertCenterTimeline({
+        page: nextPage,
+        pageSize: TIMELINE_PAGE_SIZE,
+        appId,
+      })
+      setTimelineItems((prev) => {
+        const seen = new Set(prev.map((r) => r.id))
+        const extra = res.data.filter((r) => !seen.has(r.id))
+        return [...prev, ...extra]
+      })
+      setTimelinePage(nextPage)
+      setTimelineHasMore(res.hasNextPage)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error"
+      toast({ title: "Could not load more timeline", description: message, variant: "destructive" })
+    } finally {
+      timelineFetchLock.current = false
+      setTimelineLoadingMore(false)
+    }
+  }, [appFilter, timelineHasMore, timelineLoading, timelineLoadingMore, timelinePage])
+
+  const onTimelineScroll = useCallback(() => {
+    const el = timelineScrollRef.current
+    if (!el) return
+    const { scrollTop, scrollHeight, clientHeight } = el
+    if (scrollHeight - scrollTop - clientHeight < 80) {
+      void loadMoreTimeline()
+    }
+  }, [loadMoreTimeline])
+
   const handleRuleCreated = async () => {
     invalidateAlertCaches()
     invalidateCache("alert_rules_v2_overview")
@@ -138,6 +227,7 @@ export function AlertCenterContentV2() {
       await alertsApi.acknowledgeAlert(id, { acknowledgedBy: "UI_USER" })
       invalidateAlertCaches()
       await refetch()
+      bumpTimeline()
       toast({ title: "Đã acknowledge alert" })
     } catch (error: any) {
       toast({ title: "Không thể acknowledge", description: error?.message || "Unknown error", variant: "destructive" })
@@ -152,6 +242,7 @@ export function AlertCenterContentV2() {
       await alertsApi.resolveAlert(id, { resolvedBy: "UI_USER" })
       invalidateAlertCaches()
       await refetch()
+      bumpTimeline()
       toast({ title: "Đã resolve alert" })
     } catch (error: any) {
       toast({ title: "Không thể resolve", description: error?.message || "Unknown error", variant: "destructive" })
@@ -359,19 +450,66 @@ export function AlertCenterContentV2() {
         <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5" />
           Timeline
+          {timelineTotalCount > 0 ? (
+            <span className="text-sm font-normal text-slate-500">({timelineTotalCount} events)</span>
+          ) : null}
         </h2>
         <Card className="border-slate-200">
-          <CardContent className="p-6 space-y-4">
-            {uiAlerts.slice(0, 5).map((entry, idx) => (
-              <div key={idx} className="flex gap-3">
-                <div className="w-2 h-2 rounded-full bg-slate-400 mt-2" />
-                <div>
-                  <p className="text-xs text-slate-500">{entry.timestamp.toLocaleString()}</p>
-                  <p className="text-sm font-medium text-slate-900">{entry.title}</p>
-                  <p className="text-xs text-slate-500 uppercase">{entry.status}</p>
+          <CardContent className="p-0">
+            <div
+              ref={timelineScrollRef}
+              onScroll={onTimelineScroll}
+              className="max-h-[min(480px,55vh)] overflow-y-auto p-6 space-y-4"
+            >
+              {timelineLoading ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading timeline…
                 </div>
-              </div>
-            ))}
+              ) : timelineItems.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-10">No timeline events yet.</p>
+              ) : (
+                <>
+                  {timelineItems.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0"
+                    >
+                      <div className="w-2 h-2 shrink-0 rounded-full bg-slate-400 mt-2" />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-xs text-slate-500">
+                          {new Date(entry.occurredAt).toLocaleString()}
+                        </p>
+                        <p className="text-sm font-medium text-slate-900">{entry.title}</p>
+                        {entry.subtitle ? (
+                          <p className="text-xs text-slate-600 break-words">{entry.subtitle}</p>
+                        ) : null}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 uppercase">
+                          <span>{entry.action}</span>
+                          {entry.actionBy ? <span>· {entry.actionBy}</span> : null}
+                          {entry.newStatus ? <span>· {entry.newStatus}</span> : null}
+                        </div>
+                        <Link
+                          href={`/alert-center/${entry.alertResultId}`}
+                          className="inline-block text-xs font-medium text-indigo-600 hover:underline"
+                        >
+                          View alert
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {timelineLoadingMore ? (
+                    <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-xs">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Loading more…
+                    </div>
+                  ) : null}
+                  {!timelineHasMore && timelineItems.length > 0 ? (
+                    <p className="text-center text-xs text-slate-400 pt-1">End of timeline</p>
+                  ) : null}
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

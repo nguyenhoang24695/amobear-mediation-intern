@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,6 +34,13 @@ import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
 
 interface AlertDetailPageContentProps {
   alertId: string
+}
+
+type TimelineEntry = {
+  type: "history" | "notification"
+  title: string
+  description: string
+  time: Date
 }
 
 const severityConfig = {
@@ -114,12 +121,47 @@ const suggestedActions = [
   { id: "3", action: "Review waterfall configuration", impact: "Optimize ad source priorities" },
 ]
 
+const formatNumber2 = (value: number) => value.toFixed(2)
+
+function AlertTrendTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ dataKey?: string | number; value?: number }>
+  label?: string
+}) {
+  if (!active || !payload || payload.length === 0) return null
+
+  const uniqueEntries = payload.filter((entry, index, items) => {
+    const key = String(entry.dataKey ?? "")
+    return items.findIndex((item) => String(item.dataKey ?? "") === key) === index
+  })
+
+  const currentValue = uniqueEntries.find((entry) => entry.dataKey === "value")?.value
+  const thresholdValue = uniqueEntries.find((entry) => entry.dataKey === "threshold")?.value
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+      <div className="text-sm font-medium text-slate-900">{label}</div>
+      {typeof currentValue === "number" && (
+        <div className="mt-1 text-sm text-blue-500">Current Value : ${formatNumber2(currentValue)}</div>
+      )}
+      {typeof thresholdValue === "number" && (
+        <div className="mt-1 text-sm text-red-400">Configured Threshold : ${formatNumber2(thresholdValue)}</div>
+      )}
+    </div>
+  )
+}
+
 export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps) {
   const { toast } = useToast()
   const [actionLoading, setActionLoading] = useState<"ack" | "resolve" | "snooze" | null>(null)
   const [editRuleOpen, setEditRuleOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
   const [editRuleLoading, setEditRuleLoading] = useState(false)
+  const [persistedTimeline, setPersistedTimeline] = useState<TimelineEntry[]>([])
   const id = Number(alertId)
 
   const { data: detailData, loading, refetch } = useApi(
@@ -138,19 +180,31 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
 
   const SeverityIcon = severityConfig[alert ? toUiSeverity(alert.severity) : "info"].icon
 
-  const timelineData = useMemo(() => {
-    if (!detailData) return timelineEvents
-    const items = (detailData.timeline ?? []).map((item) => ({
+  const serverTimeline = useMemo(() => {
+    if (!detailData) return []
+    return (detailData.timeline ?? []).map((item) => ({
       type: item.type === "notification" ? "notification" : "history",
       title: item.title || "Action",
       description: item.description || "No details",
       time: new Date(item.occurredAt),
-    }))
-    return items
+    })) as TimelineEntry[]
+  }, [detailData])
+
+  useEffect(() => {
+    const validItems = serverTimeline
       .filter((item) => !Number.isNaN(item.time.getTime()))
       .sort((a, b) => b.time.getTime() - a.time.getTime())
-      .slice(0, 8)
-  }, [detailData])
+    if (validItems.length > 0) {
+      setPersistedTimeline(validItems)
+    }
+  }, [serverTimeline])
+
+  const timelineData = useMemo(() => {
+    if (persistedTimeline.length > 0) {
+      return persistedTimeline.slice(0, 8)
+    }
+    return timelineEvents
+  }, [persistedTimeline])
 
   const relatedAlertItems = useMemo(() => {
     const rows = detailData?.relatedAlerts ?? []
@@ -203,6 +257,15 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
     try {
       setActionLoading("ack")
       await alertsApi.acknowledgeAlert(alert.numericId, { acknowledgedBy: "UI_USER" })
+      setPersistedTimeline((prev) => [
+        {
+          type: "history",
+          title: "ACKNOWLEDGED",
+          description: "Alert acknowledged by UI_USER",
+          time: new Date(),
+        },
+        ...prev,
+      ])
       toast({ title: "Đã acknowledge alert" })
       invalidateAlertCaches()
       await refetch()
@@ -218,6 +281,15 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
     try {
       setActionLoading("resolve")
       await alertsApi.resolveAlert(alert.numericId, { resolvedBy: "UI_USER" })
+      setPersistedTimeline((prev) => [
+        {
+          type: "history",
+          title: "RESOLVED",
+          description: "Alert resolved by UI_USER",
+          time: new Date(),
+        },
+        ...prev,
+      ])
       toast({ title: "Đã resolve alert" })
       invalidateAlertCaches()
       await refetch()
@@ -233,6 +305,15 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
     try {
       setActionLoading("snooze")
       await alertsApi.snoozeAlert(alert.numericId, { snoozedMinutes: 240, snoozedBy: "UI_USER" })
+      setPersistedTimeline((prev) => [
+        {
+          type: "history",
+          title: "SNOOZED",
+          description: "Alert snoozed for 4 hours by UI_USER",
+          time: new Date(),
+        },
+        ...prev,
+      ])
       toast({ title: "Đã snooze alert 4 giờ" })
       invalidateAlertCaches()
       await refetch()
@@ -402,21 +483,24 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                       <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#64748b" }} />
                       <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: "8px",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                        }}
-                        formatter={(value: number) => [`$${value}`, "Revenue"]}
+                        content={<AlertTrendTooltip />}
                       />
                       <ReferenceLine
                         y={alert.threshold}
                         stroke="#ef4444"
                         strokeDasharray="5 5"
-                        label={{ value: `Threshold (${alert.threshold.toFixed(2)})`, position: "insideTopRight", fill: "#ef4444", fontSize: 11 }}
+                        label={{ value: `Threshold (${formatNumber2(alert.threshold)})`, position: "insideTopRight", fill: "#ef4444", fontSize: 11 }}
                       />
                       <Area type="monotone" dataKey="value" fill="url(#colorValue)" stroke="#3b82f6" strokeWidth={2} />
+                      <Line
+                        type="monotone"
+                        dataKey="threshold"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        strokeDasharray="6 6"
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                      />
                       <Line
                         type="monotone"
                         dataKey="value"
@@ -496,7 +580,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                       <p className="text-lg font-semibold text-slate-900">{metric.value}</p>
                     </div>
                     <div className={`text-sm font-medium ${metric.status === "warning" ? "text-amber-600" : "text-green-600"}`}>
-                      {metric.trend === "down" ? "↓" : metric.trend === "up" ? "↑" : "↔"}{Math.abs(metric.change)}%
+                      {metric.trend === "down" ? "↓" : metric.trend === "up" ? "↑" : "↔"}{formatNumber2(Math.abs(metric.change))}%
                     </div>
                   </div>
                 ))}

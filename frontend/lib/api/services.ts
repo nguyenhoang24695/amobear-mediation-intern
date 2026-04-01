@@ -31,6 +31,8 @@ import type {
     WaterfallFilterOptionDto,
     AlertRule,
     AlertCenterListItem,
+    AlertCenterTimelineItem,
+    PagedAlertCenterTimelineResponse,
     AlertDetailResponse,
     UpsertAlertRuleRequest,
     WaterfallBulkPolicyPreviewResponseDto,
@@ -1110,6 +1112,33 @@ export const alertsApi = {
         }>
     }> => {
         return apiClient.get('/api/Alerts/active/summary', { publisherId })
+    },
+
+    getAlertCenterTimeline: async (params?: {
+        publisherId?: string
+        appId?: string
+        page?: number
+        pageSize?: number
+    }): Promise<PagedAlertCenterTimelineResponse> => {
+        const response = await apiClient.get<{
+            data?: AlertCenterTimelineItem[]
+            page?: number
+            pageSize?: number
+            totalCount?: number
+            totalPages?: number
+            hasNextPage?: boolean
+            hasPreviousPage?: boolean
+        }>("/api/Alerts/center/timeline", params)
+
+        return {
+            data: response.data ?? [],
+            page: response.page ?? 1,
+            pageSize: response.pageSize ?? params?.pageSize ?? 20,
+            totalCount: response.totalCount ?? 0,
+            totalPages: response.totalPages ?? 0,
+            hasNextPage: response.hasNextPage ?? false,
+            hasPreviousPage: response.hasPreviousPage ?? false,
+        }
     },
 
     getOpenAlerts: async (params?: {

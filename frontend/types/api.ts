@@ -702,6 +702,33 @@ export interface AlertDetailTimelineItem {
   occurredAt: string
 }
 
+/** Global Alert Center timeline row (paginated API, sourced from alert_history). */
+export interface AlertCenterTimelineItem {
+  id: number
+  alertResultId: number
+  action: string
+  previousStatus?: string | null
+  newStatus?: string | null
+  actionBy?: string | null
+  comment?: string | null
+  occurredAt: string
+  title: string
+  subtitle?: string | null
+  alertRuleName?: string | null
+  appId?: string | null
+  appDisplayName?: string | null
+}
+
+export interface PagedAlertCenterTimelineResponse {
+  data: AlertCenterTimelineItem[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
+
 export interface AlertNotificationLogItem {
   id: number
   channel: string
