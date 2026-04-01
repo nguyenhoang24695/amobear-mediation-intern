@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarClock, Info } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
-import { OBJECTIVE_OPTIMIZATION_MAP as OPT_MAP } from "./constants"
+import { OBJECTIVE_OPTIMIZATION_MAP as OPT_MAP, bidStrategyRequiresBidAmount } from "./constants"
 
 const ALL_OPTIMIZATION_GOALS = [
   "APP_INSTALLS", "CLICKS", "CONVERSIONS", "IMPRESSIONS", "LANDING_PAGE_VIEWS",
@@ -20,10 +20,11 @@ const billingEvents = ["IMPRESSIONS", "LINK_CLICKS", "APP_INSTALLS", "PAGE_LIKES
 interface Props {
   form: RequestFormState
   onChange: (patch: Partial<RequestFormState>) => void
+  currencyCode?: string | null
 }
 
-export function AdSetBudgetSection({ form, onChange }: Props) {
-  const currency = "USD"
+export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
+  const currency = (currencyCode ?? "USD").trim() || "USD"
   const isABO = form.budgetStrategy === "ABO"
 
   const allowedGoals: string[] = form.campaignObjective
@@ -31,6 +32,7 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
     : ALL_OPTIMIZATION_GOALS
 
   const isGoalCompatible = allowedGoals.includes(form.optimizationGoal)
+  const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
 
   return (
     <Card className="border-slate-200">
@@ -55,7 +57,7 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
                 <Input
                   placeholder="0.00"
-                  className="pl-10 h-9 text-sm"
+                  className="pl-12 h-9 text-sm"
                   value={form.adSetDailyBudget}
                   onChange={e => onChange({ adSetDailyBudget: e.target.value })}
                   disabled={!isABO}
@@ -68,7 +70,7 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
                 <Input
                   placeholder="0.00"
-                  className="pl-10 h-9 text-sm"
+                  className="pl-12 h-9 text-sm"
                   value={form.adSetLifetimeBudget}
                   onChange={e => onChange({ adSetLifetimeBudget: e.target.value })}
                   disabled={!isABO}
@@ -79,6 +81,7 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
           {isABO && (
             <p className="text-[11px] text-slate-400">At least one ad set budget field is required for ABO campaigns.</p>
           )}
+          <p className="text-[11px] text-slate-400">{`Enter budget and bid amounts in normal ${currency} units. Mediation Pro converts them to Meta minor units during execution.`}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -136,11 +139,17 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
 
         {/* Bid Amount */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-slate-700">Bid Amount <span className="text-slate-400 font-normal">(optional)</span></Label>
+          <Label className="text-xs font-medium text-slate-700">Bid Amount {bidAmountRequired ? <span className="text-red-500">*</span> : <span className="text-slate-400 font-normal">(optional)</span>}</Label>
           <div className="relative w-48">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
-            <Input placeholder="0.00" className="pl-10 h-9 text-sm" value={form.bidAmount} onChange={e => onChange({ bidAmount: e.target.value })} />
+            <Input placeholder="0.00" className={`pl-12 h-9 text-sm ${bidAmountRequired && !form.bidAmount.trim() ? "border-amber-400 ring-1 ring-amber-300" : ""}`} value={form.bidAmount} onChange={e => onChange({ bidAmount: e.target.value })} />
           </div>
+          {bidAmountRequired ? (
+            <p className="text-[11px] text-amber-700 flex items-start gap-1">
+              <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              Required for {form.bidStrategy}.
+            </p>
+          ) : null}
         </div>
 
         {/* Schedule */}
@@ -158,4 +167,8 @@ export function AdSetBudgetSection({ form, onChange }: Props) {
     </Card>
   )
 }
+
+
+
+
 

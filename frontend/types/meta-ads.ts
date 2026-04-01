@@ -588,6 +588,14 @@ export interface MetaOperationLogDto {
   step: string
   status: string
   attemptNumber: number
+  action?: string | null
+  resourcePath?: string | null
+  httpStatusCode?: number | null
+  metaErrorCode?: string | null
+  metaErrorSubcode?: string | null
+  metaErrorType?: string | null
+  metaTraceId?: string | null
+  summaryMessage?: string | null
   requestJson?: string | null
   responseJson?: string | null
   errorMessage?: string | null
@@ -749,5 +757,6 @@ export interface MetaRequestFilters {
 }
 
 export type GroupedValidationErrors = Record<string, string[]>
+
 
 

@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,12 +20,14 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaRequestsApi } from "@/lib/api/meta-ads"
 import { formatMetaRequestId, formatUserGuidShort, groupValidationErrors } from "@/lib/meta-ads/mappers"
+import { copyTextToClipboard } from "@/lib/utils"
 import type {
   MetaCampaignRequestDetailDto,
   MetaCreatedObjectDto,
   MetaCreativeDraftDto,
   MetaCreativeMediaSourceDto,
   MetaCreativeType,
+  MetaOperationLogDto,
   MetaRequestStatus,
 } from "@/types/meta-ads"
 import {
@@ -43,10 +46,14 @@ import {
   Video,
   GalleryHorizontal,
   FileText,
+  Pencil,
+  ChevronDown,
+  Copy,
+  Bug,
+  Braces,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-
 const SCREEN_META_REQUESTS = "s-meta-requests"
 
 type ConfirmAction = "approve" | "reject" | "execute" | "retry"
@@ -339,6 +346,75 @@ function sortCreatedObjects(objects: MetaCreatedObjectDto[]) {
   return [...objects].sort((left, right) => (order[left.entityType as keyof typeof order] ?? 99) - (order[right.entityType as keyof typeof order] ?? 99))
 }
 
+function getLogStatus(log: MetaOperationLogDto): LogStatus {
+  if (log.status === "succeeded") return "success"
+  if (log.status === "failed") return "error"
+  return "pending"
+}
+
+function formatOperationAction(log: MetaOperationLogDto): string {
+  const raw = (log.action ?? log.step ?? "operation").trim()
+  if (!raw) return "Operation"
+  return raw
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function formatStepLabel(step?: string | null): string {
+  if (!step?.trim()) return "-"
+  return step.replaceAll("_", " ").toUpperCase()
+}
+
+function formatLogStatusLabel(status?: string | null): string {
+  switch (status) {
+    case "succeeded":
+      return "Succeeded"
+    case "failed":
+      return "Failed"
+    default:
+      return "Started"
+  }
+}
+
+function getLogStatusClasses(status?: string | null): string {
+  if (status === "succeeded") return "bg-green-100 text-green-700"
+  if (status === "failed") return "bg-red-100 text-red-700"
+  return "bg-slate-100 text-slate-600"
+}
+
+
+function tryFormatJson(value?: string | null): string {
+  if (!value?.trim()) return ""
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch {
+    return value.trim()
+  }
+}
+
+function buildOperationErrorSummary(log: MetaOperationLogDto): string {
+  const parts = [
+    log.summaryMessage?.trim(),
+    log.errorMessage?.trim(),
+    log.metaErrorType ? `${log.metaErrorType}${log.metaErrorCode ? ` (${log.metaErrorCode})` : ""}` : null,
+    log.metaTraceId ? `Trace: ${log.metaTraceId}` : null,
+  ].filter((part): part is string => !!part)
+
+  return parts.length > 0 ? parts.join("\n") : "No error summary available."
+}
+
+function getLatestFailedLog(logs: MetaOperationLogDto[]): MetaOperationLogDto | null {
+  for (let index = logs.length - 1; index >= 0; index -= 1) {
+    if (logs[index]?.status === "failed") return logs[index]
+  }
+  return null
+}
+
+function hasLogDebugPayload(log: MetaOperationLogDto): boolean {
+  return !!(log.requestJson?.trim() || log.responseJson?.trim() || log.errorMessage?.trim())
+}
+
 interface Props {
   requestId: string
 }
@@ -347,6 +423,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const router = useRouter()
   const { toast } = useToast()
 
+  const canCreate = hasScreenFunction(SCREEN_META_REQUESTS, "create")
   const canApprove = hasScreenFunction(SCREEN_META_REQUESTS, "approve")
   const canExecute = hasScreenFunction(SCREEN_META_REQUESTS, "execute")
   const canRetry = hasScreenFunction(SCREEN_META_REQUESTS, "retry")
@@ -359,6 +436,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const numericRequestId = Number(requestId)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({})
 
   const { data: detail, loading, error, refetch } = useApi(
     () => metaRequestsApi.getById(numericRequestId),
@@ -377,6 +455,38 @@ export function RequestDetailContent({ requestId }: Props) {
       return {}
     }
   }, [detail?.validationErrorsJson])
+
+  const latestFailedLog = useMemo(() => getLatestFailedLog(detail?.operationLogs ?? []), [detail?.operationLogs])
+
+  useEffect(() => {
+    if (!detail?.operationLogs) return
+    const nextState: Record<number, boolean> = {}
+    for (const log of detail.operationLogs) {
+      if (log.status === "failed") {
+        nextState[log.id] = true
+      }
+    }
+    setExpandedLogs(nextState)
+  }, [detail?.operationLogs])
+
+  const handleCopy = async (label: string, value?: string | null) => {
+    if (!value?.trim()) {
+      toast({ title: `${label} is empty`, variant: "destructive" })
+      return
+    }
+
+    const copied = await copyTextToClipboard(value)
+    toast({
+      title: copied ? `${label} copied` : `Unable to copy ${label.toLowerCase()}`,
+      variant: copied ? "default" : "destructive",
+    })
+  }
+
+  const jumpToOperationLog = (logId: number) => {
+    setExpandedLogs((current) => ({ ...current, [logId]: true }))
+    if (typeof document === "undefined") return
+    document.getElementById(`meta-operation-log-${logId}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   const handleAction = async (action: ConfirmAction) => {
     if (!detail) return
@@ -408,8 +518,22 @@ export function RequestDetailContent({ requestId }: Props) {
       })
       setConfirmAction(null)
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Request action failed."
-      toast({ title: "Action failed", description: message, variant: "destructive" })
+      const errorResponse = apiError instanceof Error ? (apiError as Error & { response?: { data?: { message?: string; detail?: MetaCampaignRequestDetailDto } } }).response : undefined
+      const failedDetail = errorResponse?.data?.detail
+      const message = failedDetail?.failureSummary ?? errorResponse?.data?.message ?? (apiError instanceof Error ? apiError.message : "Request action failed.")
+
+      if (action === "execute" || action === "retry") {
+        invalidateCache(`meta-request:${detail.id}`)
+        invalidateCache("meta-reference:create-campaign")
+        await refetch()
+      }
+
+      setConfirmAction(null)
+      toast({
+        title: action === "execute" || action === "retry" ? "Execution failed" : "Action failed",
+        description: message,
+        variant: "destructive",
+      })
     } finally {
       setActionLoading(false)
     }
@@ -480,6 +604,12 @@ export function RequestDetailContent({ requestId }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canCreate && detail.status !== "executing" ? (
+              <Button variant="outline" onClick={() => router.push(`/meta-ads/requests/${detail.id}/edit`)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Request
+              </Button>
+            ) : null}
             {detail.status === "pending_approval" && canApprove ? (
               <>
                 <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setConfirmAction("reject")}>
@@ -508,13 +638,60 @@ export function RequestDetailContent({ requestId }: Props) {
         </div>
       </div>
 
+      {detail.status !== "draft" && detail.status !== "executing" ? (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-800">
+            Editing this request will return it to <strong>Pending Approval</strong> after changes are saved.
+          </p>
+        </div>
+      ) : null}
+
       {detail.status === "failed" ? (
-        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-red-800">Request execution failed</p>
-            <p className="text-xs text-red-600 mt-0.5">{detail.failureSummary ?? "Execution failed. Check operation logs for more details."}</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-800">Request execution failed</p>
+              <p className="text-xs text-red-600 mt-0.5">{detail.failureSummary ?? "Execution failed. Check operation logs for more details."}</p>
+            </div>
           </div>
+
+          {latestFailedLog ? (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                  <Bug className="w-4 h-4" />
+                  Latest Meta Error
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-red-100 text-red-700">{formatOperationAction(latestFailedLog)}</Badge>
+                  <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                    {formatStepLabel(latestFailedLog.step)}
+                  </Badge>
+                  {latestFailedLog.httpStatusCode ? (
+                    <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                      HTTP {latestFailedLog.httpStatusCode}
+                    </Badge>
+                  ) : null}
+                  {latestFailedLog.metaErrorCode ? (
+                    <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                      Meta {latestFailedLog.metaErrorCode}{latestFailedLog.metaErrorSubcode ? `/${latestFailedLog.metaErrorSubcode}` : ""}
+                    </Badge>
+                  ) : null}
+                </div>
+                {latestFailedLog.resourcePath ? <ValueBlock label="Resource Path" value={latestFailedLog.resourcePath} mono breakAll /> : null}
+                <ValueBlock label="Summary" value={latestFailedLog.summaryMessage ?? latestFailedLog.errorMessage ?? detail.failureSummary ?? "-"} preserveWhitespace />
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={() => jumpToOperationLog(latestFailedLog.id)}>
+                    Jump to Failed Step
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       ) : null}
 
@@ -656,7 +833,12 @@ export function RequestDetailContent({ requestId }: Props) {
 
           <Card className="border-slate-200">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">Operation Logs</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-sm font-semibold text-slate-900">Operation Logs</CardTitle>
+                <Badge variant="outline" className="text-[10px] font-mono text-slate-500 border-slate-300">
+                  {detail.operationLogs.length} step{detail.operationLogs.length === 1 ? "" : "s"}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               {detail.operationLogs.length === 0 ? (
@@ -665,22 +847,94 @@ export function RequestDetailContent({ requestId }: Props) {
                 <div className="relative">
                   <div className="absolute left-[13px] top-2 bottom-2 w-px bg-slate-200" />
                   <div className="space-y-4">
-                    {detail.operationLogs.map((log) => (
-                      <div key={log.id} className="flex items-start gap-3 relative">
-                        <div className="relative z-10 flex-shrink-0 bg-white">
-                          {logStatusIcon[(log.status === "succeeded" ? "success" : log.status === "failed" ? "error" : "pending") as LogStatus]}
-                        </div>
-                        <div className="flex-1 pb-1">
-                          <div className="flex items-center justify-between gap-4">
-                            <p className="text-sm font-semibold text-slate-900">{log.step}</p>
-                            <span className="text-xs text-slate-400">{formatDateTime(log.startedAt)}</span>
+                    {detail.operationLogs.map((log) => {
+                      const status = getLogStatus(log)
+                      const expanded = !!expandedLogs[log.id]
+                      const formattedRequest = tryFormatJson(log.requestJson)
+                      const formattedResponse = tryFormatJson(log.responseJson)
+                      const formattedErrorSummary = buildOperationErrorSummary(log)
+
+                      return (
+                        <div key={log.id} id={`meta-operation-log-${log.id}`} className="relative flex items-start gap-3">
+                          <div className="relative z-10 flex-shrink-0 bg-white">
+                            {logStatusIcon[status]}
                           </div>
-                          <p className="text-xs text-slate-500">Attempt #{log.attemptNumber}</p>
-                          {log.errorMessage ? <p className="text-xs text-red-600 mt-1">{log.errorMessage}</p> : null}
-                          {log.correlationId ? <p className="text-[11px] text-slate-400 mt-1 font-mono">Correlation: {log.correlationId}</p> : null}
+                          <div className="min-w-0 flex-1 pb-1">
+                            <Collapsible open={expanded} onOpenChange={(open) => setExpandedLogs((current) => ({ ...current, [log.id]: open }))}>
+                              <div className={`rounded-lg border px-4 py-3 ${log.status === "failed" ? "border-red-200 bg-red-50/60" : "border-slate-200 bg-white"}`}>
+                                <CollapsibleTrigger className="w-full text-left">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="min-w-0 space-y-2">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-sm font-semibold text-slate-900">{formatOperationAction(log)}</p>
+                                        <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                                          {formatStepLabel(log.step)}
+                                        </Badge>
+                                        <Badge className={`text-[10px] ${getLogStatusClasses(log.status)}`}>{formatLogStatusLabel(log.status)}</Badge>
+                                        {log.httpStatusCode ? (
+                                          <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                                            HTTP {log.httpStatusCode}
+                                          </Badge>
+                                        ) : null}
+                                        {log.metaErrorCode ? (
+                                          <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                                            Meta {log.metaErrorCode}{log.metaErrorSubcode ? `/${log.metaErrorSubcode}` : ""}
+                                          </Badge>
+                                        ) : null}
+                                      </div>
+                                      <p className="text-xs text-slate-500">{log.summaryMessage ?? log.errorMessage ?? "No summary available."}</p>
+                                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                                        <span>{formatDateTime(log.startedAt)}</span>
+                                        <span>Attempt #{log.attemptNumber}</span>
+                                        {log.resourcePath ? <span className="font-mono text-slate-500">{log.resourcePath}</span> : null}
+                                        {log.correlationId ? <span className="font-mono">Correlation: {log.correlationId}</span> : null}
+                                      </div>
+                                    </div>
+                                    <ChevronDown className={`mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                                  </div>
+                                </CollapsibleTrigger>
+
+                                <CollapsibleContent className="pt-4">
+                                  <div className="grid gap-3 lg:grid-cols-3">
+                                    <OperationLogPanel
+                                      title="Request to Meta"
+                                      icon={<Braces className="h-3.5 w-3.5" />}
+                                      value={formattedRequest}
+                                      emptyLabel="No request payload captured."
+                                      onCopy={() => void handleCopy("Request payload", formattedRequest)}
+                                    />
+                                    <OperationLogPanel
+                                      title="Response from Meta"
+                                      icon={<Braces className="h-3.5 w-3.5" />}
+                                      value={formattedResponse}
+                                      emptyLabel={log.status === "failed" && log.errorMessage ? "Legacy log: raw Meta response was not captured for this failure." : "No response payload captured."}
+                                      onCopy={() => void handleCopy("Response payload", formattedResponse)}
+                                    />
+                                    <OperationLogPanel
+                                      title="Error Summary"
+                                      icon={<Bug className="h-3.5 w-3.5" />}
+                                      value={formattedErrorSummary}
+                                      emptyLabel="No error summary available."
+                                      onCopy={() => void handleCopy("Error summary", formattedErrorSummary)}
+                                      footer={
+                                        <div className="space-y-1 text-[11px] text-slate-500">
+                                          {log.metaErrorType ? <p>Type: <span className="font-mono text-slate-700">{log.metaErrorType}</span></p> : null}
+                                          {log.metaTraceId ? <p>Trace: <span className="font-mono text-slate-700">{log.metaTraceId}</span></p> : null}
+                                          {log.resourcePath ? <p>Endpoint: <span className="font-mono text-slate-700 break-all">{log.resourcePath}</span></p> : null}
+                                        </div>
+                                      }
+                                    />
+                                  </div>
+                                  {!hasLogDebugPayload(log) ? (
+                                    <p className="mt-3 text-[11px] text-slate-400">This operation log predates the extended debug payload and only contains minimal legacy data.</p>
+                                  ) : null}
+                                </CollapsibleContent>
+                              </div>
+                            </Collapsible>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -847,6 +1101,45 @@ function CreativeTypeSnapshot({ detail }: { detail: MetaCampaignRequestDetailDto
   )
 }
 
+function OperationLogPanel({
+  title,
+  icon,
+  value,
+  emptyLabel,
+  onCopy,
+  footer,
+}: {
+  title: string
+  icon: ReactNode
+  value?: string
+  emptyLabel: string
+  onCopy: () => void
+  footer?: ReactNode
+}) {
+  const hasValue = !!value?.trim()
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          {icon}
+          <span>{title}</span>
+        </div>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-500" onClick={onCopy}>
+          <Copy className="mr-1 h-3.5 w-3.5" />
+          Copy
+        </Button>
+      </div>
+      <div className="space-y-3 p-3">
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-100">
+          {hasValue ? value : emptyLabel}
+        </pre>
+        {footer}
+      </div>
+    </div>
+  )
+}
+
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="col-span-1">
@@ -891,3 +1184,13 @@ function ObjectRow({ label, metaId, localId }: { label: string; metaId: string; 
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+

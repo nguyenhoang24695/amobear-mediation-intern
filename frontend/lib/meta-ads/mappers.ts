@@ -42,11 +42,12 @@ export function createEmptyCarouselCard(): MetaCarouselCardFormState {
   }
 }
 
-function parseOptionalLong(value: string): number | null {
+function parseOptionalAmount(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null
-  const parsed = Number(trimmed)
-  return Number.isFinite(parsed) ? Math.round(parsed) : null
+  const normalized = trimmed.replaceAll(",", "")
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function parseOptionalDate(value: string): string | null {
@@ -63,10 +64,10 @@ function parseGender(value: string): string[] {
 
 function parseBudgetStrategy(form: MetaRequestFormState) {
   return {
-    campaignDailyBudget: form.budgetStrategy === "CBO" ? parseOptionalLong(form.campaignDailyBudget) : null,
-    campaignLifetimeBudget: form.budgetStrategy === "CBO" ? parseOptionalLong(form.campaignLifetimeBudget) : null,
-    adSetDailyBudget: form.budgetStrategy === "ABO" ? parseOptionalLong(form.adSetDailyBudget) : null,
-    adSetLifetimeBudget: form.budgetStrategy === "ABO" ? parseOptionalLong(form.adSetLifetimeBudget) : null,
+    campaignDailyBudget: form.budgetStrategy === "CBO" ? parseOptionalAmount(form.campaignDailyBudget) : null,
+    campaignLifetimeBudget: form.budgetStrategy === "CBO" ? parseOptionalAmount(form.campaignLifetimeBudget) : null,
+    adSetDailyBudget: form.budgetStrategy === "ABO" ? parseOptionalAmount(form.adSetDailyBudget) : null,
+    adSetLifetimeBudget: form.budgetStrategy === "ABO" ? parseOptionalAmount(form.adSetLifetimeBudget) : null,
   }
 }
 
@@ -226,7 +227,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       lifetimeBudget: budgets.adSetLifetimeBudget,
       billingEvent: form.billingEvent.trim(),
       optimizationGoal: form.optimizationGoal.trim(),
-      bidAmount: parseOptionalLong(form.bidAmount),
+      bidAmount: parseOptionalAmount(form.bidAmount),
       startTime: parseOptionalDate(form.startTime),
       endTime: parseOptionalDate(form.endTime),
       countries: form.countries,
@@ -363,3 +364,4 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
+
