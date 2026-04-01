@@ -1194,6 +1194,23 @@ export const alertsApi = {
         return apiClient.put<AlertRule>(`/api/Alerts/rules/${id}`, body)
     },
 
+    testAlertRule: async (body: UpsertAlertRuleRequest): Promise<{
+        triggered: boolean
+        matchCount: number
+        matches: Array<{
+            publisherId?: string | null
+            appId?: string | null
+            mediationGroupId?: string | null
+            alertType?: string | null
+            severity?: string | null
+            message?: string | null
+            value: number
+            threshold: number
+        }>
+    }> => {
+        return apiClient.post('/api/Alerts/rules/test', body)
+    },
+
     deleteAlertRule: async (id: number): Promise<void> => {
         return apiClient.delete(`/api/Alerts/rules/${id}`)
     },

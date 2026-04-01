@@ -691,6 +691,7 @@ export interface AlertCenterListItem {
   additionalData?: string
   alertRuleName?: string | null
   alertRuleDescription?: string | null
+  notificationChannels?: string | null
 }
 
 export interface AlertDetailTimelineItem {

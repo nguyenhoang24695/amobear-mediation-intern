@@ -14,12 +14,37 @@ import { useApi } from "@/hooks/use-api"
 const OPEN_ALERTS_PAGE_SIZE = 200
 
 type OpenAlertsResponse = Awaited<ReturnType<typeof alertsApi.getOpenAlerts>>
+interface UseAlertNotificationsOptions {
+  inAppOnly?: boolean
+}
 
-async function loadAllOpenAlerts(): Promise<OpenAlertsResponse> {
+function parseJsonArray(input?: string | null): string[] {
+  if (!input) return []
+  try {
+    const parsed = JSON.parse(input)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []
+  } catch {
+    return []
+  }
+}
+
+async function loadAllOpenAlerts(inAppOnly: boolean): Promise<OpenAlertsResponse> {
   const firstPage = await alertsApi.getOpenAlerts({ page: 1, pageSize: OPEN_ALERTS_PAGE_SIZE })
 
   if (firstPage.TotalPages <= 1) {
-    return firstPage
+    const filteredData = inAppOnly
+      ? firstPage.Data.filter((alert) =>
+          parseJsonArray(alert.notificationChannels).some((channel) => channel.toUpperCase() === "IN_APP")
+        )
+      : firstPage.Data
+
+    return {
+      ...firstPage,
+      Data: filteredData,
+      TotalCount: filteredData.length,
+      TotalPages: 1,
+      PageSize: filteredData.length,
+    }
   }
 
   const pages = Array.from({ length: firstPage.TotalPages - 1 }, (_, index) => index + 2)
@@ -28,21 +53,29 @@ async function loadAllOpenAlerts(): Promise<OpenAlertsResponse> {
   )
 
   const allAlerts = [firstPage.Data, ...nextPages.map((page) => page.Data)].flat()
+  const filteredAlerts = inAppOnly
+    ? allAlerts.filter((alert) =>
+        parseJsonArray(alert.notificationChannels).some((channel) => channel.toUpperCase() === "IN_APP")
+      )
+    : allAlerts
 
   return {
     ...firstPage,
-    Data: allAlerts,
+    Data: filteredAlerts,
     Page: 1,
-    PageSize: allAlerts.length,
+    PageSize: filteredAlerts.length,
+    TotalCount: filteredAlerts.length,
+    TotalPages: 1,
   }
 }
 
-export function useAlertNotifications() {
+export function useAlertNotifications(options: UseAlertNotificationsOptions = {}) {
+  const { inAppOnly = true } = options
   const userId = getCurrentUser()?.id ?? null
   const [viewedVersion, setViewedVersion] = useState(0)
 
-  const { data, loading, error, refetch } = useApi(loadAllOpenAlerts, {
-    cacheKey: "notification_open_alerts_all",
+  const { data, loading, error, refetch } = useApi(() => loadAllOpenAlerts(inAppOnly), {
+    cacheKey: inAppOnly ? "notification_open_alerts_in_app" : "notification_open_alerts_all",
   })
 
   useEffect(() => {

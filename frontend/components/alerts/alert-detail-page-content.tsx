@@ -29,6 +29,8 @@ import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { toAlertUiItem, toUiSeverity } from "./alert-center-view-model"
 import type { AlertApiItem } from "./alert-center-view-model"
+import type { AlertRule } from "@/types/api"
+import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
 
 interface AlertDetailPageContentProps {
   alertId: string
@@ -115,6 +117,9 @@ const suggestedActions = [
 export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps) {
   const { toast } = useToast()
   const [actionLoading, setActionLoading] = useState<"ack" | "resolve" | "snooze" | null>(null)
+  const [editRuleOpen, setEditRuleOpen] = useState(false)
+  const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
+  const [editRuleLoading, setEditRuleLoading] = useState(false)
   const id = Number(alertId)
 
   const { data: detailData, loading, refetch } = useApi(
@@ -238,6 +243,37 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
     }
   }
 
+  const handleOpenEditRule = async () => {
+    const ruleId = detailData?.alert?.alertRuleId
+    if (!ruleId) {
+      toast({ title: "Không tìm thấy Alert Rule", variant: "destructive" })
+      return
+    }
+
+    try {
+      setEditRuleLoading(true)
+      const rule = await alertsApi.getAlertRule(ruleId)
+      if (rule.ruleType.toUpperCase() !== "MANUAL") {
+        toast({
+          title: "Chưa hỗ trợ",
+          description: "Wizard Edit hiện mới áp dụng cho Manual Alert Rule.",
+          variant: "destructive",
+        })
+        return
+      }
+      setEditingRule(rule)
+      setEditRuleOpen(true)
+    } catch (error: any) {
+      toast({
+        title: "Không thể tải Alert Rule",
+        description: error?.message || "Unknown error",
+        variant: "destructive",
+      })
+    } finally {
+      setEditRuleLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 p-6">
@@ -273,9 +309,9 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
               <Separator orientation="vertical" className="h-6" />
               <p className="text-sm text-slate-500">Alerts & Insights &gt; Alert Detail</p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => void handleOpenEditRule()} disabled={editRuleLoading}>
               <Edit className="w-4 h-4" />
-              Edit Rule
+              {editRuleLoading ? "Loading..." : "Edit Rule"}
             </Button>
           </div>
         </div>
@@ -542,6 +578,18 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
           </div>
         </div>
       </div>
+      <ManualAlertCreatorModal
+        open={editRuleOpen}
+        onOpenChange={(nextOpen) => {
+          setEditRuleOpen(nextOpen)
+          if (!nextOpen) setEditingRule(null)
+        }}
+        onCreated={() => {
+          invalidateAlertCaches()
+          void refetch()
+        }}
+        rule={editingRule}
+      />
     </div>
   )
 }

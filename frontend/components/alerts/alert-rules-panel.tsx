@@ -10,9 +10,9 @@ import { Switch } from "@/components/ui/switch"
 import { useApi } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { alertsApi } from "@/lib/api/services"
-import type { AlertRule, UpsertAlertRuleRequest } from "@/types/api"
-import { AlertRuleFormDialog } from "./alert-rule-form-dialog"
-import { Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
+import type { AlertRule } from "@/types/api"
+import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
+import { Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
 
 interface AlertRulesPanelProps {
   open: boolean
@@ -32,9 +32,8 @@ function parseJsonArray(input?: string | null): string[] {
 export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
   const { toast } = useToast()
   const [enabledFilter, setEnabledFilter] = useState<"all" | "enabled" | "disabled">("all")
-  const [editorOpen, setEditorOpen] = useState(false)
+  const [manualEditorOpen, setManualEditorOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
-  const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
@@ -51,35 +50,9 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
     },
   )
 
-  const openCreate = () => {
-    setEditingRule(null)
-    setEditorOpen(true)
-  }
-
   const openEdit = (rule: AlertRule) => {
     setEditingRule(rule)
-    setEditorOpen(true)
-  }
-
-  const handleSave = async (payload: UpsertAlertRuleRequest) => {
-    setSaving(true)
-    try {
-      if (editingRule) {
-        await alertsApi.updateAlertRule(editingRule.id, payload)
-        toast({ title: "Updated", description: `Rule ${editingRule.name} đã được cập nhật.` })
-      } else {
-        await alertsApi.createAlertRule(payload)
-        toast({ title: "Created", description: "Alert rule đã được tạo." })
-      }
-      setEditorOpen(false)
-      setEditingRule(null)
-      await refetch()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Không thể lưu alert rule."
-      toast({ title: "Error", description: message, variant: "destructive" })
-    } finally {
-      setSaving(false)
-    }
+    setManualEditorOpen(true)
   }
 
   const handleToggle = async (rule: AlertRule) => {
@@ -122,11 +95,10 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
         <SheetContent side="right" className="w-full px-4 sm:max-w-5xl sm:px-6">
           <SheetHeader>
             <SheetTitle>Alert Rules</SheetTitle>
-            <SheetDescription>Quản lý rule và notification channels cho hệ thống alert.</SheetDescription>
+            <SheetDescription>Manage alert rules and notification channels for the alert system.</SheetDescription>
           </SheetHeader>
 
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          <div className="mt-5 flex items-center gap-2">
               <Select value={enabledFilter} onValueChange={(value) => setEnabledFilter(value as "all" | "enabled" | "disabled")}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
@@ -141,11 +113,6 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
-            </div>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Rule
-            </Button>
           </div>
 
           <div className="mt-5 space-y-3 overflow-y-auto pb-4 pr-1">
@@ -239,12 +206,17 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
         </SheetContent>
       </Sheet>
 
-      <AlertRuleFormDialog
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
+      <ManualAlertCreatorModal
+        open={manualEditorOpen}
+        onOpenChange={(nextOpen) => {
+          setManualEditorOpen(nextOpen)
+          if (!nextOpen) setEditingRule(null)
+        }}
+        onCreated={() => {
+          void refetch()
+          setEditingRule(null)
+        }}
         rule={editingRule}
-        saving={saving}
-        onSubmit={handleSave}
       />
     </>
   )

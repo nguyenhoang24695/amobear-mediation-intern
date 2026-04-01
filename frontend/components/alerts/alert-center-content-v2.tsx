@@ -79,7 +79,7 @@ export function AlertCenterContentV2() {
   const { data: rules, refetch: refetchRules } = useApi(() => alertsApi.getAlertRules(), {
     cacheKey: "alert_rules_v2_overview",
   })
-  const { alerts, loading, refetch } = useAlertNotifications()
+  const { alerts, loading, refetch } = useAlertNotifications({ inAppOnly: false })
   const uiAlerts = useMemo(() => toUiAlertList(alerts as AlertApiItem[]), [alerts])
 
   const filteredAlerts = useMemo(() => {
@@ -279,7 +279,7 @@ export function AlertCenterContentV2() {
         ) : filteredAlerts.length === 0 ? (
           <Card className="border-slate-200">
             <CardContent className="py-12 text-center text-slate-500 text-sm">
-              Không có alert phù hợp bộ lọc hiện tại.
+              No alerts match the current filters.
             </CardContent>
           </Card>
         ) : (
