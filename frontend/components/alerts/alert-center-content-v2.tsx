@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -21,16 +21,23 @@ import {
   Settings,
   ChevronDown,
   Loader2,
+  SlidersHorizontal,
+  ChevronLeft,
 } from "lucide-react"
-import { alertsApi } from "@/lib/api/services"
+import { alertsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./alert-center-view-model"
 import type { AlertApiItem } from "./alert-center-view-model"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache } from "@/hooks/use-api"
+import type { AlertCenterTimelineItem } from "@/types/api"
+import { format } from "date-fns"
+import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"] as const
+const TIMELINE_PAGE_SIZE = 25
 
 const formatRelativeTime = (date: Date) => {
   const diffMs = Date.now() - date.getTime()
@@ -51,6 +58,16 @@ const isToday = (date: Date) => {
   )
 }
 
+function parseLocalYmdStart(ymd: string): Date {
+  const [y, m, d] = ymd.split("-").map((x) => Number(x))
+  return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0)
+}
+
+function parseLocalYmdEnd(ymd: string): Date {
+  const [y, m, d] = ymd.split("-").map((x) => Number(x))
+  return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999)
+}
+
 export function AlertCenterContentV2() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -62,6 +79,21 @@ export function AlertCenterContentV2() {
   const [showManualCreator, setShowManualCreator] = useState(false)
   const [alertRulesPanelOpen, setAlertRulesPanelOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState<{ id: number; type: "ack" | "resolve" } | null>(null)
+
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true)
+  const [filterRuleId, setFilterRuleId] = useState<string>("all")
+  const [filterDateFrom, setFilterDateFrom] = useState("")
+  const [filterDateTo, setFilterDateTo] = useState("")
+
+  const [timelineItems, setTimelineItems] = useState<AlertCenterTimelineItem[]>([])
+  const [timelinePage, setTimelinePage] = useState(1)
+  const [timelineHasMore, setTimelineHasMore] = useState(false)
+  const [timelineTotalCount, setTimelineTotalCount] = useState(0)
+  const [timelineLoading, setTimelineLoading] = useState(true)
+  const [timelineLoadingMore, setTimelineLoadingMore] = useState(false)
+  const [timelineNonce, setTimelineNonce] = useState(0)
+  const timelineScrollRef = useRef<HTMLDivElement>(null)
+  const timelineFetchLock = useRef(false)
 
   useEffect(() => {
     const severityParam = searchParams.get("severity")
@@ -79,10 +111,40 @@ export function AlertCenterContentV2() {
   const { data: rules, refetch: refetchRules } = useApi(() => alertsApi.getAlertRules(), {
     cacheKey: "alert_rules_v2_overview",
   })
+  const { data: appsData } = useApi(() => structureApi.getApps(), {
+    cacheKey: "alert_center_filter_apps",
+  })
   const { alerts, loading, refetch } = useAlertNotifications({ inAppOnly: false })
   const uiAlerts = useMemo(() => toUiAlertList(alerts as AlertApiItem[]), [alerts])
 
+  const filterAppsOptions = useMemo(() => {
+    return (appsData?.apps ?? []).map((app) => ({
+      id: app.appId,
+      label: app.displayName || app.name || app.appId,
+    }))
+  }, [appsData])
+
+  const timelineQueryParams = useMemo(() => {
+    const appId = appFilter.trim() || undefined
+    const alertRuleIdParam =
+      filterRuleId !== "all" && filterRuleId.trim() !== "" ? Number(filterRuleId) : undefined
+    const from =
+      filterDateFrom.trim() !== "" ? parseLocalYmdStart(filterDateFrom.trim()).toISOString() : undefined
+    const to =
+      filterDateTo.trim() !== "" ? parseLocalYmdEnd(filterDateTo.trim()).toISOString() : undefined
+    return {
+      appId,
+      alertRuleId: Number.isFinite(alertRuleIdParam as number) ? alertRuleIdParam : undefined,
+      from,
+      to,
+    }
+  }, [appFilter, filterRuleId, filterDateFrom, filterDateTo])
+
   const filteredAlerts = useMemo(() => {
+    const fromD = filterDateFrom.trim() ? parseLocalYmdStart(filterDateFrom.trim()) : null
+    const toD = filterDateTo.trim() ? parseLocalYmdEnd(filterDateTo.trim()) : null
+    const ruleNum = filterRuleId !== "all" && filterRuleId.trim() !== "" ? Number(filterRuleId) : null
+
     return uiAlerts.filter((alert) => {
       const severityMatch =
         severity === "All" ||
@@ -92,6 +154,9 @@ export function AlertCenterContentV2() {
 
       if (!severityMatch) return false
       if (appFilter && (alert.appId || "").toLowerCase() !== appFilter.toLowerCase()) return false
+      if (ruleNum != null && Number.isFinite(ruleNum) && alert.alertRuleId !== ruleNum) return false
+      if (fromD && alert.timestamp.getTime() < fromD.getTime()) return false
+      if (toD && alert.timestamp.getTime() > toD.getTime()) return false
 
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
@@ -103,7 +168,7 @@ export function AlertCenterContentV2() {
         (alert.entityLabel || "").toLowerCase().includes(q)
       )
     })
-  }, [uiAlerts, severity, appFilter, searchQuery])
+  }, [uiAlerts, severity, appFilter, searchQuery, filterRuleId, filterDateFrom, filterDateTo])
 
   const criticalCount = summary?.BySeverity?.HIGH ?? 0
   const warningCount = summary?.BySeverity?.MEDIUM ?? 0
@@ -117,14 +182,100 @@ export function AlertCenterContentV2() {
   const triggeredTodayAlerts = useMemo(() => uiAlerts.filter((a) => isToday(a.timestamp)), [uiAlerts])
   const averageResponseMinutes = useMemo(() => computeAverageResponseMinutes(uiAlerts), [uiAlerts])
 
+  /** Newest first (occurredAt desc, then history id desc for stable ties). */
+  const sortedTimelineItems = useMemo(() => {
+    return [...timelineItems].sort((a, b) => {
+      const ta = new Date(a.occurredAt).getTime()
+      const tb = new Date(b.occurredAt).getTime()
+      if (tb !== ta) return tb - ta
+      return b.id - a.id
+    })
+  }, [timelineItems])
+
   const enabledRules = useMemo(() => (rules ?? []).filter((r) => r.isEnabled), [rules])
   const disabledRules = useMemo(() => (rules ?? []).filter((r) => !r.isEnabled), [rules])
+  const rulesSorted = useMemo(() => [...(rules ?? [])].sort((a, b) => a.name.localeCompare(b.name)), [rules])
 
   const invalidateAlertCaches = () => {
     invalidateCache("notification_open_alerts_all")
     invalidateCache("alerts_open_summary")
     invalidateCache("alerts_open_summary_v2")
   }
+
+  const bumpTimeline = useCallback(() => setTimelineNonce((n) => n + 1), [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadFirstPage() {
+      setTimelineLoading(true)
+      timelineFetchLock.current = true
+      try {
+        const res = await alertsApi.getAlertCenterTimeline({
+          page: 1,
+          pageSize: TIMELINE_PAGE_SIZE,
+          ...timelineQueryParams,
+        })
+        if (cancelled) return
+        setTimelineItems(res.data)
+        setTimelinePage(1)
+        setTimelineHasMore(res.hasNextPage)
+        setTimelineTotalCount(res.totalCount)
+      } catch (error: unknown) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "Unknown error"
+          toast({ title: "Could not load timeline", description: message, variant: "destructive" })
+          setTimelineItems([])
+          setTimelineHasMore(false)
+          setTimelineTotalCount(0)
+        }
+      } finally {
+        timelineFetchLock.current = false
+        if (!cancelled) setTimelineLoading(false)
+      }
+    }
+
+    void loadFirstPage()
+    return () => {
+      cancelled = true
+    }
+  }, [timelineQueryParams, timelineNonce])
+
+  const loadMoreTimeline = useCallback(async () => {
+    if (!timelineHasMore || timelineLoading || timelineLoadingMore || timelineFetchLock.current) return
+    const nextPage = timelinePage + 1
+    timelineFetchLock.current = true
+    setTimelineLoadingMore(true)
+    try {
+      const res = await alertsApi.getAlertCenterTimeline({
+        page: nextPage,
+        pageSize: TIMELINE_PAGE_SIZE,
+        ...timelineQueryParams,
+      })
+      setTimelineItems((prev) => {
+        const seen = new Set(prev.map((r) => r.id))
+        const extra = res.data.filter((r) => !seen.has(r.id))
+        return [...prev, ...extra]
+      })
+      setTimelinePage(nextPage)
+      setTimelineHasMore(res.hasNextPage)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error"
+      toast({ title: "Could not load more timeline", description: message, variant: "destructive" })
+    } finally {
+      timelineFetchLock.current = false
+      setTimelineLoadingMore(false)
+    }
+  }, [timelineQueryParams, timelineHasMore, timelineLoading, timelineLoadingMore, timelinePage])
+
+  const onTimelineScroll = useCallback(() => {
+    const el = timelineScrollRef.current
+    if (!el) return
+    const { scrollTop, scrollHeight, clientHeight } = el
+    if (scrollHeight - scrollTop - clientHeight < 80) {
+      void loadMoreTimeline()
+    }
+  }, [loadMoreTimeline])
 
   const handleRuleCreated = async () => {
     invalidateAlertCaches()
@@ -138,6 +289,7 @@ export function AlertCenterContentV2() {
       await alertsApi.acknowledgeAlert(id, { acknowledgedBy: "UI_USER" })
       invalidateAlertCaches()
       await refetch()
+      bumpTimeline()
       toast({ title: "Đã acknowledge alert" })
     } catch (error: any) {
       toast({ title: "Không thể acknowledge", description: error?.message || "Unknown error", variant: "destructive" })
@@ -146,12 +298,20 @@ export function AlertCenterContentV2() {
     }
   }
 
+  const clearTimelineFilters = () => {
+    setFilterRuleId("all")
+    setFilterDateFrom("")
+    setFilterDateTo("")
+    setAppFilter("")
+  }
+
   const handleResolve = async (id: number) => {
     try {
       setActionLoading({ id, type: "resolve" })
       await alertsApi.resolveAlert(id, { resolvedBy: "UI_USER" })
       invalidateAlertCaches()
       await refetch()
+      bumpTimeline()
       toast({ title: "Đã resolve alert" })
     } catch (error: any) {
       toast({ title: "Không thể resolve", description: error?.message || "Unknown error", variant: "destructive" })
@@ -359,19 +519,172 @@ export function AlertCenterContentV2() {
         <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5" />
           Timeline
+          {timelineTotalCount > 0 ? (
+            <span className="text-sm font-normal text-slate-500">({timelineTotalCount} events)</span>
+          ) : null}
         </h2>
         <Card className="border-slate-200">
-          <CardContent className="p-6 space-y-4">
-            {uiAlerts.slice(0, 5).map((entry, idx) => (
-              <div key={idx} className="flex gap-3">
-                <div className="w-2 h-2 rounded-full bg-slate-400 mt-2" />
-                <div>
-                  <p className="text-xs text-slate-500">{entry.timestamp.toLocaleString()}</p>
-                  <p className="text-sm font-medium text-slate-900">{entry.title}</p>
-                  <p className="text-xs text-slate-500 uppercase">{entry.status}</p>
+          <CardContent className="p-0">
+            <div className="flex max-h-[min(520px,58vh)] min-h-[240px] flex-col overflow-hidden md:flex-row">
+              <aside
+                className={cn(
+                  "flex shrink-0 flex-col border-slate-200 bg-white md:min-h-0 md:h-full",
+                  "border-b md:border-b-0 md:border-r",
+                  filtersCollapsed ? "md:w-11" : "md:w-60 lg:w-64",
+                  "w-full"
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => setFiltersCollapsed((c) => !c)}
+                  className={cn(
+                    "flex items-center gap-2 border-b border-slate-200 px-3 py-2.5 text-left hover:bg-slate-50",
+                    filtersCollapsed && "md:justify-center md:px-1 md:py-3"
+                  )}
+                  title={filtersCollapsed ? "Show filters" : "Hide filters"}
+                >
+                  <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-700" />
+                  {!filtersCollapsed ? (
+                    <>
+                      <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900">Filters</span>
+                      <ChevronLeft className="hidden h-4 w-4 shrink-0 text-slate-500 md:block" aria-hidden />
+                      <ChevronDown
+                        className="ml-auto h-4 w-4 shrink-0 text-slate-500 transition-transform md:hidden rotate-180"
+                        aria-hidden
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-semibold text-slate-900 md:hidden">Filters</span>
+                      <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-500 md:hidden" aria-hidden />
+                    </>
+                  )}
+                </button>
+                {!filtersCollapsed && (
+                  <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3 md:min-h-0">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-600">Alert rule</Label>
+                      <Select value={filterRuleId} onValueChange={setFilterRuleId}>
+                        <SelectTrigger className="h-9 bg-white">
+                          <SelectValue placeholder="All rules" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All rules</SelectItem>
+                          {rulesSorted.map((r) => (
+                            <SelectItem key={r.id} value={String(r.id)}>
+                              {r.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-600">App</Label>
+                      <Select
+                        value={appFilter.trim() === "" ? "all" : appFilter}
+                        onValueChange={(v) => setAppFilter(v === "all" ? "" : v)}
+                      >
+                        <SelectTrigger className="h-9 bg-white">
+                          <SelectValue placeholder="All apps" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All apps</SelectItem>
+                          {filterAppsOptions.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              <span className="truncate">{a.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-600">From date</Label>
+                      <Input
+                        type="date"
+                        className="h-9 bg-white"
+                        value={filterDateFrom}
+                        onChange={(e) => setFilterDateFrom(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-600">To date</Label>
+                      <Input
+                        type="date"
+                        className="h-9 bg-white"
+                        value={filterDateTo}
+                        onChange={(e) => setFilterDateTo(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-auto w-full bg-white"
+                      onClick={clearTimelineFilters}
+                    >
+                      Clear filters
+                    </Button>
+                    <p className="text-[11px] leading-snug text-slate-500">
+                      Also applies to the open-alerts list above. Local calendar dates.
+                    </p>
+                  </div>
+                )}
+              </aside>
+              <div
+                ref={timelineScrollRef}
+                onScroll={onTimelineScroll}
+                className="min-h-0 min-w-0 flex-1 overflow-y-auto p-6 space-y-4"
+              >
+              {timelineLoading ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading timeline…
                 </div>
+              ) : timelineItems.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-10">No timeline events yet.</p>
+              ) : (
+                <>
+                  {sortedTimelineItems.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0"
+                    >
+                      <div className="w-2 h-2 shrink-0 rounded-full bg-slate-400 mt-2" />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-xs text-slate-500">
+                          {format(new Date(entry.occurredAt), "dd/MM/yyyy HH:mm")}
+                        </p>
+                        <p className="text-sm font-medium text-slate-900">{entry.title}</p>
+                        {entry.subtitle ? (
+                          <p className="text-xs text-slate-600 break-words">{entry.subtitle}</p>
+                        ) : null}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 uppercase">
+                          <span>{entry.action}</span>
+                          {entry.actionBy ? <span>· {entry.actionBy}</span> : null}
+                          {entry.newStatus ? <span>· {entry.newStatus}</span> : null}
+                        </div>
+                        <Link
+                          href={`/alert-center/${entry.alertResultId}`}
+                          className="inline-block text-xs font-medium text-indigo-600 hover:underline"
+                        >
+                          View alert
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {timelineLoadingMore ? (
+                    <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-xs">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Loading more…
+                    </div>
+                  ) : null}
+                  {!timelineHasMore && timelineItems.length > 0 ? (
+                    <p className="text-center text-xs text-slate-400 pt-1">End of timeline</p>
+                  ) : null}
+                </>
+              )}
               </div>
-            ))}
+            </div>
           </CardContent>
         </Card>
       </div>

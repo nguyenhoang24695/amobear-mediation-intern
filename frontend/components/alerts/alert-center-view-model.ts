@@ -42,6 +42,7 @@ export interface AlertApiItem {
 export interface AlertUiItem {
   id: string
   numericId: number
+  alertRuleId?: number
   severity: UiSeverity
   status: UiStatus
   title: string
@@ -135,6 +136,7 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
   return {
     id: String(alert.id),
     numericId: alert.id,
+    alertRuleId: alert.alertRuleId,
     severity: toUiSeverity(alert.severity),
     status: toUiStatus(alert.status),
     title: alert.alertRuleName?.trim() || alert.alertType || `Alert #${alert.id}`,

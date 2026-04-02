@@ -1,12 +1,21 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Dialog,
   DialogContent,
@@ -24,21 +33,26 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { invalidateCache, useApi } from "@/hooks/use-api"
+import { useDuplicateOperationPolling } from "@/hooks/use-duplicate-operation-polling"
 import { useToast } from "@/hooks/use-toast"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaCampaignsApi } from "@/lib/api/meta-ads"
+import { DuplicateOperationStatus } from "@/components/meta-ads/campaigns/duplicate-operation-status"
+import { DuplicateReadinessStatus } from "@/components/meta-ads/campaigns/duplicate-readiness-status"
 import { cn } from "@/lib/utils"
 import type {
   MetaCampaignAdSetSummaryDto,
   MetaCampaignAdSummaryDto,
   MetaCampaignCreativeSummaryDto,
   MetaCampaignCreativeUsageAdDto,
+  MetaCampaignDuplicateReadinessResultDto,
 } from "@/types/meta-ads"
 import {
   AlertTriangle,
   ArrowLeft,
   Boxes,
   ChevronRight,
+  Copy,
   Code2,
   ExternalLink,
   Layers3,
@@ -169,6 +183,7 @@ function hasCreativeReviewFields(item: MetaCampaignCreativeSummaryDto): boolean 
 }
 
 function DetailField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+
   return (
     <div className="space-y-1">
       <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
@@ -612,6 +627,12 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
   )
 }
 
+
+function extractReadinessFromApiError(apiError: unknown): MetaCampaignDuplicateReadinessResultDto | null {
+  const readiness = (apiError as { response?: { data?: { readiness?: MetaCampaignDuplicateReadinessResultDto } } })?.response?.data?.readiness
+  return readiness ?? null
+}
+
 interface Props {
   campaignId: string
 }
@@ -620,8 +641,15 @@ export function CampaignDetailContent({ campaignId }: Props) {
   const router = useRouter()
   const { toast } = useToast()
   const canSync = hasScreenFunction("s-meta-campaigns", "edit")
+  const canDuplicate = hasScreenFunction("s-meta-campaigns", "view")
   const numericCampaignId = Number(campaignId)
   const [syncing, setSyncing] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
+  const [activeDuplicateOperationId, setActiveDuplicateOperationId] = useState<number | null>(null)
+  const [handledDuplicateOperationId, setHandledDuplicateOperationId] = useState<number | null>(null)
+  const [checkingReadiness, setCheckingReadiness] = useState(false)
+  const [readiness, setReadiness] = useState<MetaCampaignDuplicateReadinessResultDto | null>(null)
 
   const { data: detail, loading, error, refetch } = useApi(
     () => metaCampaignsApi.getById(numericCampaignId),
@@ -630,6 +658,52 @@ export function CampaignDetailContent({ campaignId }: Props) {
       cacheKey: `meta-campaign:${numericCampaignId}`,
     }
   )
+
+  const { operation: duplicateOperation, isCompleted: duplicateCompleted, isFailed: duplicateFailed } = useDuplicateOperationPolling(
+    activeDuplicateOperationId,
+    activeDuplicateOperationId !== null,
+  )
+
+  useEffect(() => {
+    setReadiness(null)
+    setDuplicateConfirmOpen(false)
+  }, [numericCampaignId])
+
+  useEffect(() => {
+    if (!duplicateOperation) return
+    if (!duplicateCompleted && !duplicateFailed) return
+    if (handledDuplicateOperationId === duplicateOperation.id) return
+
+    setHandledDuplicateOperationId(duplicateOperation.id)
+    setDuplicating(false)
+    setActiveDuplicateOperationId(null)
+
+    if (duplicateCompleted && duplicateOperation.newCampaignId) {
+      invalidateCache(`meta-campaign:${numericCampaignId}`)
+      invalidateCache(`meta-campaign:${duplicateOperation.newCampaignId}`)
+      invalidateCache("meta-campaigns:list")
+      toast({
+        title: "Campaign duplicated",
+        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
+      })
+      router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
+      return
+    }
+
+    if (duplicateFailed) {
+      toast({
+        title: "Duplicate failed",
+        description: duplicateOperation.failureSummary ?? "Campaign duplicate failed.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    toast({
+      title: "Duplicate completed",
+      description: "Meta finished duplicating the campaign, but the new local campaign id is not available yet."
+    })
+  }, [duplicateCompleted, duplicateFailed, duplicateOperation, handledDuplicateOperationId, numericCampaignId, router, toast])
 
   if (loading) {
     return (
@@ -668,6 +742,47 @@ export function CampaignDetailContent({ campaignId }: Props) {
     }
   }
 
+
+  const handleCheckDuplicateReadiness = async () => {
+    try {
+      setCheckingReadiness(true)
+      const result = await metaCampaignsApi.checkDuplicateReadiness(numericCampaignId)
+      setReadiness(result)
+      toast({
+        title: result.isReady ? "Duplicate readiness passed" : "Duplicate readiness failed",
+        description: result.summary,
+        variant: result.isReady ? "default" : "destructive",
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Readiness check failed."
+      toast({ title: "Readiness check failed", description: message, variant: "destructive" })
+    } finally {
+      setCheckingReadiness(false)
+    }
+  }
+  const handleDuplicate = async () => {
+    try {
+      setDuplicating(true)
+      const result = await metaCampaignsApi.duplicate(numericCampaignId, { deepCopy: true })
+      setActiveDuplicateOperationId(result.operationId)
+      setHandledDuplicateOperationId(null)
+      setDuplicateConfirmOpen(false)
+      toast({
+        title: "Duplication started",
+        description: `${detail.name} is being duplicated on Meta. This can take a short while for large campaign trees.`
+      })
+    } catch (apiError) {
+      const readinessResult = extractReadinessFromApiError(apiError)
+      if (readinessResult) {
+        setReadiness(readinessResult)
+      }
+
+      const message = apiError instanceof Error ? apiError.message : "Campaign duplicate failed."
+      toast({ title: "Duplicate failed", description: readinessResult?.summary ?? message, variant: "destructive" })
+      setDuplicating(false)
+      setActiveDuplicateOperationId(null)
+    }
+  }
   return (
     <div className="space-y-5">
       <div>
@@ -715,6 +830,18 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
+            {canDuplicate ? (
+              <>
+                <Button variant="outline" className="gap-2" onClick={() => void handleCheckDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing}>
+                  {checkingReadiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Check Duplicate Readiness
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => setDuplicateConfirmOpen(true)} disabled={duplicating || syncing || readiness?.isReady !== true}>
+                  {duplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                  Duplicate Campaign
+                </Button>
+              </>
+            ) : null}
             {canSync ? (
               <Button variant="outline" className="gap-2" onClick={handleSync} disabled={syncing}>
                 {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -732,6 +859,9 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </div>
         </div>
       </div>
+
+      {duplicateOperation ? <DuplicateOperationStatus operation={duplicateOperation} /> : null}
+      {readiness ? <DuplicateReadinessStatus readiness={readiness} /> : null}
 
       {detail.isUnmapped ? (
         <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
@@ -938,6 +1068,37 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </Tabs>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={duplicateConfirmOpen}
+        onOpenChange={(open) => {
+          if (!duplicating) {
+            setDuplicateConfirmOpen(open)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate Campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will create a direct PAUSED copy of <strong>{detail.name}</strong> on Meta Ad Manager, including its synced ad sets and ads. Only campaigns that passed readiness check on this screen can be duplicated.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicating}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              disabled={duplicating || readiness?.isReady !== true}
+              onClick={() => {
+                void handleDuplicate()
+              }}
+            >
+              {duplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+              Duplicate Campaign
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

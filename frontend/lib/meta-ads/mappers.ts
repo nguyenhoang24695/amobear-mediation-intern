@@ -11,6 +11,7 @@ import type {
   MetaRequestFormState,
   UpdateMetaCampaignRequestDto,
 } from "@/types/meta-ads"
+import { buildMetaRequestAssetContentUrl } from "@/lib/meta-ads/media-preview"
 
 function createId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -124,7 +125,7 @@ function mediaSourceToSelection(source: MetaCreativeMediaSourceDto | null | unde
     videoId: source?.videoId ?? "",
     uploadedAssetId: source?.uploadedAssetId ?? null,
     uploadedAssetName: source?.uploadedAssetId ? `Asset #${source.uploadedAssetId}` : "",
-    uploadedAssetPreviewUrl: source?.uploadedAssetId ? `/api/v1/meta-campaign-requests/assets/${source.uploadedAssetId}/content` : "",
+    uploadedAssetPreviewUrl: source?.uploadedAssetId ? buildMetaRequestAssetContentUrl(source.uploadedAssetId) : "",
   }
 }
 
@@ -401,9 +402,4 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
-
-
-
-
-
 

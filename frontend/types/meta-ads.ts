@@ -377,6 +377,94 @@ export interface MetaCampaignPreviewDto {
   message: string
 }
 
+export interface MetaCampaignDuplicateRequestDto {
+  deepCopy?: boolean
+}
+
+export interface MetaCampaignDuplicateConflictResponseDto {
+  message: string
+  readiness: MetaCampaignDuplicateReadinessResultDto
+}
+
+export interface MetaCampaignDuplicateReadinessCheckDto {
+  key: string
+  label: string
+  status: string
+  message: string
+  targetType: string
+  targetId?: string | null
+  metaErrorCode?: string | null
+  metaErrorSubcode?: string | null
+  metaErrorType?: string | null
+  traceId?: string | null
+}
+
+export interface MetaCampaignDuplicateReadinessResultDto {
+  sourceCampaignId: number
+  sourceExternalCampaignId: string
+  metaAdAccountRowId: number
+  isReady: boolean
+  status: string
+  summary: string
+  checkedAt: string
+  checks: MetaCampaignDuplicateReadinessCheckDto[]
+}
+export interface MetaCampaignSyncSingleResultDto {
+  campaignId: number
+  metaAdAccountRowId: number
+  externalCampaignId: string
+  campaignName: string
+  syncResult: SyncMetaCampaignsResultDto
+}
+
+export interface MetaCampaignDuplicateStartResponseDto {
+  operationId: number
+  status: string
+  correlationId: string
+  jobId?: string | null
+  message: string
+}
+
+export interface MetaCampaignDuplicateOperationLogDto {
+  id: number
+  step: string
+  status: string
+  attemptNumber: number
+  action?: string | null
+  resourcePath?: string | null
+  httpStatusCode?: number | null
+  metaErrorCode?: string | null
+  metaErrorSubcode?: string | null
+  metaErrorType?: string | null
+  metaTraceId?: string | null
+  summaryMessage?: string | null
+  errorMessage?: string | null
+  startedAt: string
+  finishedAt?: string | null
+  createdAt: string
+}
+
+export interface MetaCampaignDuplicateOperationDto {
+  id: number
+  sourceCampaignId: number
+  sourceExternalCampaignId: string
+  metaAdAccountRowId: number
+  appRowId?: number | null
+  status: string
+  correlationId: string
+  jobId?: string | null
+  metaAsyncBatchId?: string | null
+  metaAsyncStatus?: string | null
+  newExternalCampaignId?: string | null
+  newCampaignId?: number | null
+  failureSummary?: string | null
+  startedAt?: string | null
+  completedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  logs: MetaCampaignDuplicateOperationLogDto[]
+}
+
 export interface MetaCampaignDetailDto {
   id: number
   externalCampaignId: string

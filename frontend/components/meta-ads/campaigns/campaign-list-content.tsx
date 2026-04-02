@@ -2,11 +2,27 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Pagination } from "@/components/shared/pagination"
 import {
   Select,
@@ -24,16 +40,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { invalidateCache, useApi } from "@/hooks/use-api"
+import { useDuplicateOperationPolling } from "@/hooks/use-duplicate-operation-polling"
 import { useToast } from "@/hooks/use-toast"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaCampaignsApi, metaReferenceApi } from "@/lib/api/meta-ads"
+import { DuplicateOperationStatus } from "@/components/meta-ads/campaigns/duplicate-operation-status"
+import { DuplicateReadinessStatus } from "@/components/meta-ads/campaigns/duplicate-readiness-status"
 import { cn } from "@/lib/utils"
-import type { MetaCampaignListItemDto } from "@/types/meta-ads"
+import type { MetaCampaignDuplicateReadinessResultDto, MetaCampaignListItemDto } from "@/types/meta-ads"
 import {
   AlertTriangle,
   ChevronRight,
+  Copy,
   Loader2,
   Megaphone,
+  MoreHorizontal,
   RefreshCw,
   Search,
 } from "lucide-react"
@@ -133,6 +154,7 @@ function renderAppCell(item: MetaCampaignListItemDto) {
     </div>
   )
 
+
   return (
     <div className="flex min-w-0 items-center gap-3">
       <Avatar className="h-9 w-9 shrink-0 rounded-lg">
@@ -177,9 +199,15 @@ function SummaryCard({ title, value, tone = "default" }: { title: string; value:
   )
 }
 
+function extractReadinessFromApiError(apiError: unknown): MetaCampaignDuplicateReadinessResultDto | null {
+  const readiness = (apiError as { response?: { data?: { readiness?: MetaCampaignDuplicateReadinessResultDto } } })?.response?.data?.readiness
+  return readiness ?? null
+}
 export function CampaignListContent() {
   const { toast } = useToast()
+  const router = useRouter()
   const canSync = hasScreenFunction(SCREEN_META_CAMPAIGNS, "edit")
+  const canDuplicate = hasScreenFunction(SCREEN_META_CAMPAIGNS, "view")
 
   const [search, setSearch] = useState("")
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all")
@@ -192,12 +220,29 @@ export function CampaignListContent() {
   const [pageSize, setPageSize] = useState(20)
   const [syncing, setSyncing] = useState(false)
   const [listVersion, setListVersion] = useState(0)
+  const [duplicateTarget, setDuplicateTarget] = useState<MetaCampaignListItemDto | null>(null)
+  const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<number | null>(null)
+  const [activeDuplicateOperationId, setActiveDuplicateOperationId] = useState<number | null>(null)
+  const [handledDuplicateOperationId, setHandledDuplicateOperationId] = useState<number | null>(null)
+  const [checkingReadinessCampaignId, setCheckingReadinessCampaignId] = useState<number | null>(null)
+  const [activeReadinessCampaignId, setActiveReadinessCampaignId] = useState<number | null>(null)
+  const [readinessByCampaignId, setReadinessByCampaignId] = useState<Record<number, MetaCampaignDuplicateReadinessResultDto>>({})
 
   const deferredSearch = useDeferredValue(search)
 
   useEffect(() => {
     setPage(1)
   }, [deferredSearch, accountFilter, appFilter, objectiveFilter, effectiveStatusFilter, quickFilter, syncFreshnessFilter])
+
+  useEffect(() => {
+    setReadinessByCampaignId({})
+    setActiveReadinessCampaignId(null)
+  }, [deferredSearch, accountFilter, appFilter, objectiveFilter, effectiveStatusFilter, quickFilter, syncFreshnessFilter, page, pageSize, listVersion])
+
+  const { operation: duplicateOperation, isCompleted: duplicateCompleted, isFailed: duplicateFailed } = useDuplicateOperationPolling(
+    activeDuplicateOperationId,
+    activeDuplicateOperationId !== null,
+  )
 
   const { data: referenceData } = useApi(
     () => metaReferenceApi.getCreateCampaignReference(),
@@ -269,6 +314,8 @@ export function CampaignListContent() {
   }, [response?.items])
 
   const summary = response?.summary
+  const activeReadiness = activeReadinessCampaignId !== null ? readinessByCampaignId[activeReadinessCampaignId] ?? null : null
+  const duplicateTargetReadiness = duplicateTarget ? readinessByCampaignId[duplicateTarget.id] ?? null : null
 
   const handleSync = async () => {
     try {
@@ -293,6 +340,86 @@ export function CampaignListContent() {
     }
   }
 
+  const handleCheckDuplicateReadiness = async (campaign: MetaCampaignListItemDto) => {
+    try {
+      setCheckingReadinessCampaignId(campaign.id)
+      const result = await metaCampaignsApi.checkDuplicateReadiness(campaign.id)
+      setReadinessByCampaignId((previous) => ({ ...previous, [campaign.id]: result }))
+      setActiveReadinessCampaignId(campaign.id)
+      toast({
+        title: result.isReady ? "Duplicate readiness passed" : "Duplicate readiness failed",
+        description: result.summary,
+        variant: result.isReady ? "default" : "destructive",
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Readiness check failed."
+      toast({ title: "Readiness check failed", description: message, variant: "destructive" })
+    } finally {
+      setCheckingReadinessCampaignId(null)
+    }
+  }
+  const handleDuplicate = async (campaign: MetaCampaignListItemDto) => {
+    try {
+      setDuplicatingCampaignId(campaign.id)
+      const result = await metaCampaignsApi.duplicate(campaign.id, { deepCopy: true })
+      setActiveDuplicateOperationId(result.operationId)
+      setHandledDuplicateOperationId(null)
+      setDuplicateTarget(null)
+      toast({
+        title: "Duplication started",
+        description: `${campaign.name} is being duplicated on Meta. This can take a short while for large campaign trees.`
+      })
+    } catch (apiError) {
+      const readiness = extractReadinessFromApiError(apiError)
+      if (readiness) {
+        setReadinessByCampaignId((previous) => ({ ...previous, [campaign.id]: readiness }))
+        setActiveReadinessCampaignId(campaign.id)
+      }
+
+      const message = apiError instanceof Error ? apiError.message : "Meta campaign duplicate failed."
+      toast({ title: "Duplicate failed", description: readiness?.summary ?? message, variant: "destructive" })
+      setDuplicatingCampaignId(null)
+      setActiveDuplicateOperationId(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!duplicateOperation) return
+    if (!duplicateCompleted && !duplicateFailed) return
+    if (handledDuplicateOperationId === duplicateOperation.id) return
+
+    setHandledDuplicateOperationId(duplicateOperation.id)
+    setDuplicatingCampaignId(null)
+    setActiveDuplicateOperationId(null)
+
+    if (duplicateCompleted && duplicateOperation.newCampaignId) {
+      invalidateCache(listCacheKey)
+      invalidateCache(`meta-campaign:${duplicateOperation.sourceCampaignId}`)
+      invalidateCache(`meta-campaign:${duplicateOperation.newCampaignId}`)
+      setListVersion((previous) => previous + 1)
+      void refetch()
+      toast({
+        title: "Campaign duplicated",
+        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
+      })
+      router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
+      return
+    }
+
+    if (duplicateFailed) {
+      toast({
+        title: "Duplicate failed",
+        description: duplicateOperation.failureSummary ?? "Meta campaign duplicate failed.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    toast({
+      title: "Duplicate completed",
+      description: "Meta finished duplicating the campaign, but the new local campaign id is not available yet."
+    })
+  }, [duplicateCompleted, duplicateFailed, duplicateOperation, handledDuplicateOperationId, listCacheKey, refetch, router, toast])
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
@@ -325,6 +452,9 @@ export function CampaignListContent() {
           ) : null}
         </div>
       </div>
+
+      {duplicateOperation ? <DuplicateOperationStatus operation={duplicateOperation} /> : null}
+      {activeReadiness ? <DuplicateReadinessStatus readiness={activeReadiness} /> : null}
 
       <div className="grid gap-3 md:grid-cols-5">
         <SummaryCard title="Total" value={summary?.total ?? 0} />
@@ -459,12 +589,13 @@ export function CampaignListContent() {
                   <TableHead className="w-[150px] text-xs font-medium text-slate-500">Source</TableHead>
                   <TableHead className="w-[150px] text-xs font-medium text-slate-500">Last Synced</TableHead>
                   <TableHead className="w-[150px] text-xs font-medium text-slate-500">Updated</TableHead>
+                  <TableHead className="w-[70px] text-right text-xs font-medium text-slate-500">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-16 text-center">
+                    <TableCell colSpan={11} className="py-16 text-center">
                       <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading campaigns...
@@ -473,19 +604,22 @@ export function CampaignListContent() {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-16 text-center text-sm text-red-600">
+                    <TableCell colSpan={11} className="py-16 text-center text-sm text-red-600">
                       {error.message}
                     </TableCell>
                   </TableRow>
                 ) : (response?.items.length ?? 0) === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-16 text-center text-sm text-slate-400">
+                    <TableCell colSpan={11} className="py-16 text-center text-sm text-slate-400">
                       No campaigns found for the current filters.
                     </TableCell>
                   </TableRow>
                 ) : (
                   response?.items.map((item) => {
                     const hasIssue = item.isUnmapped || item.isSyncStale || issueStatuses.has((item.status ?? "").toUpperCase()) || issueStatuses.has((item.effectiveStatus ?? "").toUpperCase())
+                    const readiness = readinessByCampaignId[item.id]
+                    const readinessPassed = readiness?.isReady === true
+                    const readinessBusy = checkingReadinessCampaignId === item.id
                     return (
                       <TableRow key={item.id} className={cn(hasIssue && "bg-amber-50/40")}>
                         <TableCell>
@@ -541,6 +675,47 @@ export function CampaignListContent() {
                             <div className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</div>
                           </div>
                         </TableCell>
+                        <TableCell className="w-[70px] text-right">
+                          {canDuplicate ? (
+                            <div className="flex justify-end">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={duplicatingCampaignId === item.id || readinessBusy}>
+                                    {duplicatingCampaignId === item.id || readinessBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    className="gap-2"
+                                    onSelect={(event) => {
+                                      event.preventDefault()
+                                      void handleCheckDuplicateReadiness(item)
+                                    }}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Check Duplicate Readiness
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="gap-2"
+                                    disabled={!readinessPassed}
+                                    onSelect={(event) => {
+                                      event.preventDefault()
+                                      if (!readinessPassed) {
+                                        return
+                                      }
+
+                                      setDuplicateTarget(item)
+                                      setActiveReadinessCampaignId(item.id)
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                    Duplicate Campaign
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          ) : null}
+                        </TableCell>
                       </TableRow>
                     )
                   })
@@ -565,8 +740,39 @@ export function CampaignListContent() {
           ) : null}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={Boolean(duplicateTarget)}
+        onOpenChange={(open) => {
+          if (!open && duplicatingCampaignId === null) {
+            setDuplicateTarget(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate Campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will create a direct PAUSED copy of <strong>{duplicateTarget?.name ?? "this campaign"}</strong> on Meta Ad Manager, including its synced ad sets and ads. Only campaigns that passed readiness check on this screen can be duplicated.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicatingCampaignId !== null}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              disabled={!duplicateTarget || duplicatingCampaignId !== null || duplicateTargetReadiness?.isReady !== true}
+              onClick={() => {
+                if (duplicateTarget) {
+                  void handleDuplicate(duplicateTarget)
+                }
+              }}
+            >
+              {duplicatingCampaignId !== null ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+              Duplicate Campaign
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
-
-
