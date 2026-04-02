@@ -1,4 +1,4 @@
-﻿import { apiClient } from "./client"
+import { apiClient } from "./client"
 import type {
   ApproveMetaCampaignRequestDto,
   CreateMetaAppMappingRequestDto,
@@ -13,6 +13,10 @@ import type {
   MetaAppMappingDto,
   MetaAuthorizeUrlResponseDto,
   MetaCampaignDetailDto,
+  MetaCampaignDuplicateOperationDto,
+  MetaCampaignDuplicateReadinessResultDto,
+  MetaCampaignDuplicateRequestDto,
+  MetaCampaignDuplicateStartResponseDto,
   MetaCampaignPreviewDto,
   MetaCampaignListResponseDto,
   MetaCampaignRequestDetailDto,
@@ -123,6 +127,18 @@ export const metaCampaignsApi = {
 
   syncOne: async (id: number) => {
     return apiClient.post<SyncMetaCampaignsResultDto>(`${CAMPAIGNS_PREFIX}/${id}/sync`, {})
+  },
+
+  duplicate: async (id: number, request?: MetaCampaignDuplicateRequestDto) => {
+    return apiClient.post<MetaCampaignDuplicateStartResponseDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate`, request ?? { deepCopy: true })
+  },
+
+  checkDuplicateReadiness: async (id: number) => {
+    return apiClient.post<MetaCampaignDuplicateReadinessResultDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate-readiness-check`, {})
+  },
+
+  getDuplicateOperation: async (operationId: number) => {
+    return apiClient.get<MetaCampaignDuplicateOperationDto>(`${CAMPAIGNS_PREFIX}/duplicate-operations/${operationId}`)
   },
 
   previewAd: async (campaignId: number, adId: number) => {
@@ -266,9 +282,3 @@ export const metaAppMappingsApi = {
     return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`, {})
   },
 }
-
-
-
-
-
-
