@@ -77,9 +77,7 @@ export function NotificationPopup() {
               {recentAlerts.map((alert) => {
                 const styles = getTypeStyles(alert.severity)
                 const Icon = styles.icon
-                const href = alert.mediationGroupId
-                  ? `/mediation/${encodeURIComponent(alert.mediationGroupId)}?tab=waterfall-optimization`
-                  : "/alert-center"
+                const href = `/alert-center/${alert.id}`
 
                 return (
                   <Link

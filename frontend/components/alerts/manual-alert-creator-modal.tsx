@@ -295,7 +295,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   }
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1)
+    if (step < 4) setStep(step + 1)
   }
 
   const handleBack = () => {
@@ -511,80 +511,42 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[80vh] w-[90vw] max-w-[90vw] md:h-[80vh] md:w-[60vw] md:!max-w-[60vw] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">{isEdit ? "Edit Alert Rule" : "Create Alert Rule"}</DialogTitle>
-          <DialogDescription>Step {step} of 3</DialogDescription>
-        </DialogHeader>
-
-        <div className="flex items-center gap-2 mb-6">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  s === step
-                    ? "bg-indigo-600 text-white"
-                    : s < step
-                      ? "bg-green-500 text-white"
-                      : "bg-slate-200 text-slate-500"
-                }`}
-              >
-                {s < step ? <Check className="w-4 h-4" /> : s}
-              </div>
-              <span className={`text-sm ${s === step ? "text-slate-900 font-medium" : "text-slate-500"}`}>
-                {s === 1 ? "What to Monitor" : s === 2 ? "Condition" : "Notifications"}
-              </span>
-              {s < 3 && <ChevronRight className="w-4 h-4 text-slate-300" />}
-            </div>
-          ))}
-        </div>
-
-        <Card className="border-amber-300 bg-amber-50">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
-            <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-              <div>
-                <span className="text-slate-500">Name:</span>
-                <p className="font-medium break-words">{formData.alertName || generateAlertName() || "-"}</p>
-              </div>
-              <div>
-                <span className="text-slate-500">Metric:</span>
-                <p className="font-medium">{metrics.find((m) => m.value === formData.metric)?.label || "-"}</p>
-              </div>
-              <div>
-                <span className="text-slate-500">Apps:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {formData.selectedApps.map((appId) => (
-                    <Badge key={appId} variant="secondary" className="text-xs max-w-full">
-                      {appId === "all" ? "All Apps" : apps.find((a) => a.id === appId)?.name || appId}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="text-slate-500">Severity:</span>
-                <Badge
-                  className={`ml-2 ${
-                    formData.severity === "critical"
-                      ? "bg-red-100 text-red-700"
-                      : formData.severity === "warning"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-blue-100 text-blue-700"
+      <DialogContent className="flex max-h-[min(85vh,900px)] w-[90vw] max-w-[90vw] flex-col gap-0 overflow-hidden p-6 md:w-[60vw] md:!max-w-[60vw]">
+        <div className="shrink-0 space-y-2 border-b border-slate-100 pb-3">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-xl">{isEdit ? "Edit Alert Rule" : "Create Alert Rule"}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">Step {step} of 4</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 pt-1">
+            {[1, 2, 3, 4].map((s) => (
+              <div key={s} className="flex items-center gap-2">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    s === step
+                      ? "bg-indigo-600 text-white"
+                      : s < step
+                        ? "bg-green-500 text-white"
+                        : "bg-slate-200 text-slate-500"
                   }`}
                 >
-                  {formData.severity}
-                </Badge>
+                  {s < step ? <Check className="w-4 h-4" /> : s}
+                </div>
+                <span className={`text-sm ${s === step ? "text-slate-900 font-medium" : "text-slate-500"}`}>
+                  {s === 1
+                    ? "What to Monitor"
+                    : s === 2
+                      ? "Condition"
+                      : s === 3
+                        ? "Notifications"
+                        : "Final"}
+                </span>
+                {s < 4 && <ChevronRight className="w-4 h-4 text-slate-300" />}
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            <Button variant="outline" className="w-full mt-4 gap-2 bg-white" type="button" onClick={() => void handleTestRule()} disabled={testing}>
-              <Zap className="w-4 h-4" />
-              {testing ? "Testing..." : "Test Rule"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto py-4">
           <div className="space-y-6">
             {step === 1 && (
               <div className="space-y-6">
@@ -987,11 +949,68 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                 </div>
               </div>
             )}
-          </div>
 
+            {step === 4 && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-slate-500">Review your alert and run a quick test before saving.</p>
+                </div>
+                <Card className="border-amber-300 bg-amber-50">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
+                    <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <span className="text-slate-500">Name:</span>
+                        <p className="font-medium break-words">{formData.alertName || generateAlertName() || "-"}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Metric:</span>
+                        <p className="font-medium">{metrics.find((m) => m.value === formData.metric)?.label || "-"}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Apps:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {formData.selectedApps.map((appId) => (
+                            <Badge key={appId} variant="secondary" className="text-xs max-w-full">
+                              {appId === "all" ? "All Apps" : apps.find((a) => a.id === appId)?.name || appId}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Severity:</span>
+                        <Badge
+                          className={`ml-2 ${
+                            formData.severity === "critical"
+                              ? "bg-red-100 text-red-700"
+                              : formData.severity === "warning"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {formData.severity}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4 gap-2 bg-white"
+                      type="button"
+                      onClick={() => void handleTestRule()}
+                      disabled={testing}
+                    >
+                      <Zap className="w-4 h-4" />
+                      {testing ? "Testing..." : "Test Rule"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-slate-200 mt-6">
+        <div className="shrink-0 flex items-center justify-between border-t border-slate-200 pt-3">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -1002,7 +1021,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                 Back
               </Button>
             )}
-            {step < 3 ? (
+            {step < 4 ? (
               <Button onClick={handleNext} className="bg-indigo-600 hover:bg-indigo-700">
                 Next
                 <ChevronRight className="w-4 h-4 ml-1" />

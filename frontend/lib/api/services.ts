@@ -1117,6 +1117,9 @@ export const alertsApi = {
     getAlertCenterTimeline: async (params?: {
         publisherId?: string
         appId?: string
+        alertRuleId?: number
+        from?: string
+        to?: string
         page?: number
         pageSize?: number
     }): Promise<PagedAlertCenterTimelineResponse> => {

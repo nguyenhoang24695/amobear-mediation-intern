@@ -201,9 +201,11 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
 
   const timelineData = useMemo(() => {
     if (persistedTimeline.length > 0) {
-      return persistedTimeline.slice(0, 8)
+      return [...persistedTimeline]
+        .sort((a, b) => b.time.getTime() - a.time.getTime())
+        .slice(0, 8)
     }
-    return timelineEvents
+    return [...timelineEvents].sort((a, b) => b.time.getTime() - a.time.getTime())
   }, [persistedTimeline])
 
   const relatedAlertItems = useMemo(() => {
@@ -556,7 +558,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
                       <div>
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-sm font-medium text-slate-900">{event.title}</span>
-                          <span className="text-xs text-slate-400">{format(event.time, "MMM d, HH:mm")}</span>
+                          <span className="text-xs text-slate-400">{format(event.time, "dd/MM/yyyy HH:mm")}</span>
                         </div>
                         <p className="text-sm text-slate-500">{event.description}</p>
                       </div>
