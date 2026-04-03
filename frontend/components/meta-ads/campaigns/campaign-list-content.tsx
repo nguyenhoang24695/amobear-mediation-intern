@@ -306,9 +306,10 @@ export function CampaignListContent() {
   )
 
   const effectiveStatusOptions = useMemo(() => {
-    const values = new Set<string>()
+    const values = new Set<string>(["ARCHIVED"])
     for (const item of response?.items ?? []) {
       if (item.effectiveStatus) values.add(item.effectiveStatus)
+      if (item.status) values.add(item.status)
     }
     return Array.from(values).sort()
   }, [response?.items])
@@ -588,7 +589,7 @@ export function CampaignListContent() {
                   <TableHead className="w-[120px] text-xs font-medium text-slate-500">Status</TableHead>
                   <TableHead className="w-[150px] text-xs font-medium text-slate-500">Source</TableHead>
                   <TableHead className="w-[150px] text-xs font-medium text-slate-500">Last Synced</TableHead>
-                  <TableHead className="w-[150px] text-xs font-medium text-slate-500">Updated</TableHead>
+                  <TableHead className="w-[150px] text-xs font-medium text-slate-500">Created</TableHead>
                   <TableHead className="w-[70px] text-right text-xs font-medium text-slate-500">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -671,8 +672,8 @@ export function CampaignListContent() {
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm text-slate-700">
-                            <div className="font-medium">{formatRelativeTime(item.updatedAt)}</div>
-                            <div className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</div>
+                            <div className="font-medium">{formatRelativeTime(item.createdAt)}</div>
+                            <div className="text-xs text-slate-500">{formatDateTime(item.createdAt)}</div>
                           </div>
                         </TableCell>
                         <TableCell className="w-[70px] text-right">

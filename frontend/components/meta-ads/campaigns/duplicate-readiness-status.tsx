@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { AlertTriangle, CheckCircle2, CircleDashed } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +40,34 @@ function getTone(status?: string | null) {
   }
 }
 
+function getCheckTone(status?: string | null) {
+  const normalized = (status ?? "").trim().toLowerCase()
+  if (normalized === "passed") {
+    return {
+      className: "border-green-200 bg-green-50 text-green-800",
+      badgeClassName: "border-green-200 bg-green-100 text-green-700",
+      messageClassName: "text-green-700",
+      targetClassName: "text-green-600",
+    }
+  }
+
+  if (normalized === "warning") {
+    return {
+      className: "border-amber-200 bg-amber-50 text-amber-800",
+      badgeClassName: "border-amber-200 bg-amber-100 text-amber-700",
+      messageClassName: "text-amber-700",
+      targetClassName: "text-amber-600",
+    }
+  }
+
+  return {
+    className: "border-red-200 bg-red-50 text-red-800",
+    badgeClassName: "border-red-200 bg-red-100 text-red-700",
+    messageClassName: "text-red-700",
+    targetClassName: "text-red-600",
+  }
+}
+
 interface Props {
   readiness: MetaCampaignDuplicateReadinessResultDto
   className?: string
@@ -62,16 +90,20 @@ export function DuplicateReadinessStatus({ readiness, className }: Props) {
         <Badge className={cn("border", tone.badgeClassName)}>{toTitleCase(readiness.status)}</Badge>
       </div>
       <div className="mt-3 grid gap-2">
-        {readiness.checks.map((check) => (
-          <div key={check.key} className="rounded-md border border-current/15 bg-white/50 px-3 py-2 text-sm text-current/90">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-medium">{check.label}</div>
-              <Badge className="border border-current/20 bg-transparent text-current">{toTitleCase(check.status)}</Badge>
+        {readiness.checks.map((check) => {
+          const checkTone = getCheckTone(check.status)
+
+          return (
+            <div key={check.key} className={cn("rounded-md border px-3 py-2 text-sm", checkTone.className)}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-medium">{check.label}</div>
+                <Badge className={cn("border", checkTone.badgeClassName)}>{toTitleCase(check.status)}</Badge>
+              </div>
+              <div className={cn("mt-1", checkTone.messageClassName)}>{check.message}</div>
+              {check.targetId ? <div className={cn("mt-1 text-xs", checkTone.targetClassName)}>Target {check.targetId}</div> : null}
             </div>
-            <div className="mt-1 text-current/80">{check.message}</div>
-            {check.targetId ? <div className="mt-1 text-xs text-current/70">Target {check.targetId}</div> : null}
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
