@@ -430,6 +430,98 @@ export interface JobScheduleUpdateRequest {
   jobMethodName?: string
 }
 
+// Data Sources (Nexus observability)
+export interface DataDomainJobDto {
+  jobId: string
+  displayName?: string | null
+  cronExpression: string
+  enabled: boolean
+  timeZoneId: string
+  lastCheckpointAt?: string | null
+  watermarkDate?: string | null
+  lastCheckpointSuccess?: boolean | null
+  hangfireLastExecution?: string | null
+  hangfireNextExecution?: string | null
+  hangfireLastJobState?: string | null
+}
+
+export interface DataDomainOverviewDto {
+  domainKey: string
+  label: string
+  description: string
+  minioPathPattern?: string | null
+  starRocksNotes?: string | null
+  jobs: DataDomainJobDto[]
+}
+
+export interface DataSourceOverviewItemDto {
+  key: string
+  name: string
+  role: string
+  brandColorClass: string
+  domains: DataDomainOverviewDto[]
+}
+
+export interface DataQualityRowDto {
+  id: string
+  sourceKey: string
+  sourceName: string
+  tableName: string
+  layer: string
+  description: string
+  status: string
+  lastUpdatedRelative?: string | null
+  lastDataAtUtc?: string | null
+  rowCount?: string | null
+  rowCountValue?: number | null
+  notes?: string | null
+}
+
+export interface DataSourcesOverviewDto {
+  sources: DataSourceOverviewItemDto[]
+  quality: DataQualityRowDto[]
+}
+
+export interface DataSourcesTimelineJobDto {
+  jobId: string
+  displayName?: string | null
+  sourceKey?: string | null
+  domainKey?: string | null
+  cronExpression: string
+  enabled: boolean
+  lastExecution?: string | null
+  nextExecution?: string | null
+  lastJobState?: string | null
+  lastCheckpointAt?: string | null
+  watermarkDate?: string | null
+}
+
+export interface DataSourcesVisualBarDto {
+  id: string
+  jobId: string
+  displayName: string
+  startHourFromWindowStart: number
+  durationHours: number
+  status: string
+  recordsLabel: string
+  createdAtUtc?: string | null
+}
+
+export interface DataSourcesVisualRowDto {
+  sourceKey: string
+  sourceName: string
+  sourceColorClass: string
+  bars: DataSourcesVisualBarDto[]
+}
+
+export interface DataSourcesTimelineDto {
+  jobs: DataSourcesTimelineJobDto[]
+  visualRows?: DataSourcesVisualRowDto[] | null
+  visualWindowStartUtc?: string | null
+  visualWindowEndUtc?: string | null
+  currentHourFromWindowStart?: number | null
+}
+
 // Waterfall Recommendation Types
 export interface WaterfallRecommendationConfigDto {
   id: number

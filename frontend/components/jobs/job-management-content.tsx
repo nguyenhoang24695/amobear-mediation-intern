@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -65,8 +66,14 @@ export function JobManagementContent() {
   const canEnableDisable = hasScreenFunction(SCREEN_JOBS, FN_ENABLE_DISABLE)
   const canReload = hasScreenFunction(SCREEN_JOBS, FN_RELOAD)
 
+  const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+
+  useEffect(() => {
+    const q = searchParams.get("search")
+    if (q) setSearchQuery(q)
+  }, [searchParams])
   const [sortBy, setSortBy] = useState("default")
   const [reloadOpen, setReloadOpen] = useState(false)
   const [reloading, setReloading] = useState(false)

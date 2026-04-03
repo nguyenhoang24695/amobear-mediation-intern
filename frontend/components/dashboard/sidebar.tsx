@@ -46,6 +46,7 @@ import {
   Link2,
   CreditCard,
   GitMerge,
+  Database,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -186,7 +187,8 @@ const navItems: NavItem[] = [
       { icon: ListChecks, label: "Waterfall Config", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
       { icon: Layers, label: "Waterfall Automation", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
       { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
-      { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") }
+      { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") },
+      { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
     ],
   },
 ]
