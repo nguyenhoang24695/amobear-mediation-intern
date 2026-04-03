@@ -227,7 +227,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-slate-700">
-            Bid Strategy <span className="text-slate-400 font-normal">(optional)</span>
+            Bid Strategy <span className="text-red-500">*</span>
           </Label>
           <Select value={form.bidStrategy} onValueChange={(value) => onChange({ bidStrategy: value })}>
             <SelectTrigger className={`h-9 text-sm w-72 ${bidAmountRequired && !form.bidAmount.trim() ? "border-amber-400 ring-1 ring-amber-300" : ""}`}>
