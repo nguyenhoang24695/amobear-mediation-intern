@@ -698,6 +698,8 @@ export interface AlertCenterListItem {
   alertRuleName?: string | null
   alertRuleDescription?: string | null
   notificationChannels?: string | null
+  /** Server: user hiện tại đã mở/xem alert trong app (bảng alert_in_app_reads). */
+  inAppReadAt?: string | null
 }
 
 export interface AlertDetailTimelineItem {

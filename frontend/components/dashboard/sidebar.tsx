@@ -343,7 +343,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     ) : (
                       <Link
                         href={item.href}
-                        onClick={item.href === "/alert-center" ? () => markAlertsViewed(openAlertIds) : undefined}
+                        onClick={item.href === "/alert-center" ? () => void markAlertsViewed(openAlertIds) : undefined}
                         className="block"
                       >
                         {content}

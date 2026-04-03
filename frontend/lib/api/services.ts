@@ -1200,6 +1200,11 @@ export const alertsApi = {
         }
     },
 
+    markOpenAlertsViewed: async (alertIds: number[]): Promise<{ updated: number }> => {
+        const response = await apiClient.post<{ updated?: number }>("/api/Alerts/open/mark-viewed", { alertIds })
+        return { updated: response.updated ?? 0 }
+    },
+
     getOpenAlertsSummary: async (publisherId?: string): Promise<{
         Total: number
         BySeverity: Record<string, number>
