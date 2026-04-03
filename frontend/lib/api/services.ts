@@ -39,6 +39,8 @@ import type {
     BulkUpdateWaterfallApplyPoliciesRequestDto,
     BulkUpdateWaterfallApplyPoliciesResponseDto,
     ActiveSession,
+    DataSourcesOverviewDto,
+    DataSourcesTimelineDto,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -1512,6 +1514,16 @@ export const userApi = {
     getMyTeams: async (): Promise<UserTeamWithMembers[]> => {
         const response = await apiClient.get<{ success: boolean; data: UserTeamWithMembers[] }>('/api/v1/user/teams')
         return response.data
+    },
+}
+
+// Data Sources (registry + schedules + checkpoints + Hangfire state)
+export const dataSourcesApi = {
+    getOverview: async (): Promise<DataSourcesOverviewDto> => {
+        return apiClient.get<DataSourcesOverviewDto>('/api/v1/data-sources/overview')
+    },
+    getTimeline: async (): Promise<DataSourcesTimelineDto> => {
+        return apiClient.get<DataSourcesTimelineDto>('/api/v1/data-sources/timeline')
     },
 }
 
