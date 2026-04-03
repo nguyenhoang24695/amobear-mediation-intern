@@ -861,5 +861,131 @@ export interface AlertDetailResponse {
   aiInsight?: string | null
 }
 
+// —— App Insight (daily AI insight)
+export interface InsightAnomaly {
+  label: string
+  severity: string
+  metricKey?: string | null
+}
+
+export interface InsightMetadata {
+  provider?: string | null
+  model?: string | null
+  inputTokens: number
+  outputTokens: number
+  latencyMs: number
+  snapshotPartial?: boolean
+  dataGaps?: string[] | null
+  snapshotRevenueT1?: number | null
+  snapshotImpressionsT1?: number | null
+}
+
+export interface AppDailyInsight {
+  id?: number
+  appRowId: number
+  appId: string
+  displayName?: string | null
+  iconUri?: string | null
+  insightDate: string
+  markdownBody: string
+  healthScore?: number | null
+  healthTier?: string | null
+  dimensionScores?: Record<string, number> | null
+  anomalies: InsightAnomaly[]
+  metadata: InsightMetadata
+  status: string
+  errorMessage?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface AppInsightSettings {
+  appRowId: number
+  insightTemplateId?: number | null
+  generationEnabled: boolean
+  settings: Record<string, unknown>
+}
+
+export interface InsightTemplateSection {
+  id?: number
+  sectionKey: string
+  title: string
+  metrics: string[]
+  comparisonPeriods: string[]
+  aiInstruction: string
+  audience: string[]
+  sortOrder: number
+  isActive: boolean
+  anomalyThresholds?: Record<string, unknown> | null
+}
+
+export interface InsightTemplate {
+  id: number
+  name: string
+  description?: string | null
+  isDefault: boolean
+  globalAiInstructions: string
+  preferredProvider?: string | null
+  maxAppsPerBatch: number
+  parallelDegree: number
+  sections: InsightTemplateSection[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InsightContextTemplate {
+  id: number
+  name: string
+  contextType: string
+  defaultTitle: string
+  body: string
+  description?: string | null
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DailyInsightFeedItem {
+  insightId: number
+  appRowId: number
+  appId: string
+  displayName?: string | null
+  iconUri?: string | null
+  category?: string | null
+  insightDate: string
+  healthScore?: number | null
+  summary: string
+  anomalies: InsightAnomaly[]
+  sectionCount: number
+  totalTokens: number
+  revenueT1?: number | null
+  dauT1?: number | null
+  trend: string
+}
+
+export interface InsightGenerationRun {
+  id: string
+  startedAt: string
+  finishedAt?: string | null
+  triggerKind: string
+  insightDateTarget: string
+  appsTotal: number
+  appsSucceeded: number
+  appsFailed: number
+  errorSummary?: string | null
+}
+
+export interface InsightUserNotification {
+  id: string
+  title: string
+  body?: string | null
+  insightId: number
+  appId: string
+  insightDate: string
+  createdAt: string
+  read: boolean
+}
+
 
 

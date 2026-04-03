@@ -41,6 +41,13 @@ import type {
     ActiveSession,
     DataSourcesOverviewDto,
     DataSourcesTimelineDto,
+    AppDailyInsight,
+    AppInsightSettings,
+    InsightTemplate,
+    InsightContextTemplate,
+    DailyInsightFeedItem,
+    InsightGenerationRun,
+    InsightUserNotification,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -1836,6 +1843,111 @@ export interface AccountAppItem {
     approvalState?: string
     createdAt: string
     updatedAt: string
+}
+
+export const insightApi = {
+    getDailyForApp: async (appRowId: number, date?: string): Promise<AppDailyInsight> => {
+        const q = date ? `?date=${encodeURIComponent(date)}` : ""
+        return apiClient.get<AppDailyInsight>(`/api/app-insights/apps/${appRowId}/daily${q}`)
+    },
+
+    getAvailableDates: async (appRowId: number, from?: string, to?: string): Promise<string[]> => {
+        const p = new URLSearchParams()
+        if (from) p.set("from", from)
+        if (to) p.set("to", to)
+        const q = p.toString() ? `?${p.toString()}` : ""
+        return apiClient.get<string[]>(`/api/app-insights/apps/${appRowId}/dates${q}`)
+    },
+
+    getAppSettings: async (appRowId: number): Promise<AppInsightSettings> => {
+        return apiClient.get<AppInsightSettings>(`/api/app-insights/apps/${appRowId}/settings`)
+    },
+
+    patchAppSettings: async (
+        appRowId: number,
+        body: { insightTemplateId?: number | null; generationEnabled?: boolean; settings?: Record<string, unknown> },
+    ): Promise<AppInsightSettings> => {
+        return apiClient.patch<AppInsightSettings>(`/api/app-insights/apps/${appRowId}/settings`, body)
+    },
+
+    regenerate: async (appRowId: number, insightDate?: string): Promise<{ message: string }> => {
+        return apiClient.post<{ message: string }>(`/api/app-insights/apps/${appRowId}/regenerate`, {
+            insightDate: insightDate ?? null,
+        })
+    },
+
+    listTemplates: async (): Promise<InsightTemplate[]> => {
+        return apiClient.get<InsightTemplate[]>("/api/app-insights/templates")
+    },
+
+    getTemplate: async (id: number): Promise<InsightTemplate> => {
+        return apiClient.get<InsightTemplate>(`/api/app-insights/templates/${id}`)
+    },
+
+    listContextTemplates: async (includeInactive = false): Promise<InsightContextTemplate[]> => {
+        const q = includeInactive ? "?includeInactive=true" : ""
+        return apiClient.get<InsightContextTemplate[]>(`/api/app-insights/context-templates${q}`)
+    },
+
+    createContextTemplate: async (body: Record<string, unknown>): Promise<InsightContextTemplate> => {
+        return apiClient.post<InsightContextTemplate>("/api/app-insights/context-templates", body)
+    },
+
+    updateContextTemplate: async (id: number, body: Record<string, unknown>): Promise<InsightContextTemplate> => {
+        return apiClient.put<InsightContextTemplate>(`/api/app-insights/context-templates/${id}`, body)
+    },
+
+    deleteContextTemplate: async (id: number): Promise<void> => {
+        await apiClient.delete(`/api/app-insights/context-templates/${id}`)
+    },
+
+    createTemplate: async (body: Record<string, unknown>): Promise<InsightTemplate> => {
+        return apiClient.post<InsightTemplate>("/api/app-insights/templates", body)
+    },
+
+    updateTemplate: async (id: number, body: Record<string, unknown>): Promise<InsightTemplate> => {
+        return apiClient.put<InsightTemplate>(`/api/app-insights/templates/${id}`, body)
+    },
+
+    getDailyFeed: async (params: {
+        date?: string
+        severity?: string
+        sort?: string
+        search?: string
+    }): Promise<{
+        date: string
+        summary: { totalApps: number; criticalCount: number; warningCount: number; healthyCount: number; generatedApps: number }
+        items: DailyInsightFeedItem[]
+    }> => {
+        const p = new URLSearchParams()
+        if (params.date) p.set("date", params.date)
+        if (params.severity) p.set("severity", params.severity)
+        if (params.sort) p.set("sort", params.sort)
+        if (params.search) p.set("search", params.search)
+        const q = p.toString() ? `?${p.toString()}` : ""
+        return apiClient.get(`/api/app-insights/daily-feed${q}`)
+    },
+
+    listGenerationRuns: async (page = 1, pageSize = 20): Promise<{
+        data: InsightGenerationRun[]
+        page: number
+        pageSize: number
+        totalCount: number
+    }> => {
+        return apiClient.get(`/api/app-insights/generation-runs?page=${page}&pageSize=${pageSize}`)
+    },
+
+    triggerGeneration: async (insightDate?: string): Promise<{ runId: string; insightDate: string }> => {
+        return apiClient.post(`/api/app-insights/generation-runs/trigger`, { insightDate: insightDate ?? null })
+    },
+
+    getMyNotifications: async (): Promise<InsightUserNotification[]> => {
+        return apiClient.get<InsightUserNotification[]>("/api/app-insights/notifications")
+    },
+
+    markNotificationsRead: async (ids: string[]): Promise<void> => {
+        await apiClient.post("/api/app-insights/notifications/mark-read", { ids })
+    },
 }
 
 
