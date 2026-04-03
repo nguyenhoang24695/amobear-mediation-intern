@@ -1,38 +1,31 @@
 /**
- * App Permission Levels
- * Defines the available permission levels for app access
+ * App Permission Levels (app_permissions.permission_level).
+ * Order matches backend enum numeric order for hierarchy semantics.
  */
 export enum AppPermissionLevel {
   View = "view",
+  Marketing = "marketing",
+  Edit = "edit",
+  Developer = "developer",
   Manage = "manage",
   Owner = "owner",
 }
 
-/**
- * Array of all permission levels in order (from lowest to highest)
- */
+/** Lowest → highest (excluding owner). */
 export const APP_PERMISSION_LEVELS: AppPermissionLevel[] = [
   AppPermissionLevel.View,
+  AppPermissionLevel.Marketing,
+  AppPermissionLevel.Edit,
+  AppPermissionLevel.Developer,
   AppPermissionLevel.Manage,
-  AppPermissionLevel.Owner,
 ]
 
-/**
- * Array of permission levels that include owner
- */
 export const APP_PERMISSION_LEVELS_WITH_OWNER: AppPermissionLevel[] = [
-  AppPermissionLevel.View,
-  AppPermissionLevel.Manage,
+  ...APP_PERMISSION_LEVELS,
   AppPermissionLevel.Owner,
 ]
 
-/**
- * Array of permission levels without owner
- */
-export const APP_PERMISSION_LEVELS_WITHOUT_OWNER: AppPermissionLevel[] = [
-  AppPermissionLevel.View,
-  AppPermissionLevel.Manage,
-]
+export const APP_PERMISSION_LEVELS_WITHOUT_OWNER: AppPermissionLevel[] = APP_PERMISSION_LEVELS
 
 /**
  * Check if a string is a valid permission level
@@ -55,9 +48,19 @@ export function normalizePermissionLevel(level: string): AppPermissionLevel {
 }
 
 /**
- * Get display label for permission level
+ * Display label for permission level (supports legacy PascalCase from API)
  */
-export function getPermissionLevelLabel(level: AppPermissionLevel): string {
-  return level.charAt(0).toUpperCase() + level.slice(1)
+export function getPermissionLevelLabel(level: string): string {
+  const n = level?.toLowerCase().trim() ?? ""
+  const map: Record<string, string> = {
+    view: "View",
+    marketing: "Marketing",
+    edit: "Edit",
+    developer: "Developer",
+    manage: "Manage",
+    owner: "Owner",
+  }
+  if (map[n]) return map[n]
+  if (!level) return "View"
+  return level.charAt(0).toUpperCase() + level.slice(1).toLowerCase()
 }
-

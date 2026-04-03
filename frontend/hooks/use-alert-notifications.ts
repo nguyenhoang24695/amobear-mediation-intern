@@ -9,7 +9,7 @@ import {
   markAlertsViewed as persistViewedAlerts,
 } from "@/lib/alert-notification-state"
 import { alertsApi } from "@/lib/api/services"
-import { useApi } from "@/hooks/use-api"
+import { invalidateCache, useApi } from "@/hooks/use-api"
 
 const OPEN_ALERTS_PAGE_SIZE = 200
 
@@ -74,8 +74,10 @@ export function useAlertNotifications(options: UseAlertNotificationsOptions = {}
   const userId = getCurrentUser()?.id ?? null
   const [viewedVersion, setViewedVersion] = useState(0)
 
+  const cacheKey = inAppOnly ? "notification_open_alerts_in_app" : "notification_open_alerts_all"
+
   const { data, loading, error, refetch } = useApi(() => loadAllOpenAlerts(inAppOnly), {
-    cacheKey: inAppOnly ? "notification_open_alerts_in_app" : "notification_open_alerts_all",
+    cacheKey,
   })
 
   useEffect(() => {
@@ -104,20 +106,36 @@ export function useAlertNotifications(options: UseAlertNotificationsOptions = {}
   const totalOpenCount = data?.TotalCount ?? alerts.length
   const openAlertIds = useMemo(() => alerts.map((alert) => alert.id), [alerts])
   const viewedAlertIds = useMemo(() => getViewedAlertIds(userId), [userId, viewedVersion])
+  const seenAlertIds = useMemo(() => {
+    const merged = new Set(viewedAlertIds)
+    for (const alert of alerts) {
+      if (alert.inAppReadAt) merged.add(alert.id)
+    }
+    return merged
+  }, [alerts, viewedAlertIds])
   const unseenAlerts = useMemo(
-    () => alerts.filter((alert) => !viewedAlertIds.has(alert.id)),
-    [alerts, viewedAlertIds]
+    () => alerts.filter((alert) => !seenAlertIds.has(alert.id)),
+    [alerts, seenAlertIds]
   )
 
   const markAlertsViewed = useCallback(
-    (alertIds: number[]) => {
-      persistViewedAlerts(alertIds, userId)
+    async (alertIds: number[]) => {
+      if (alertIds.length === 0) return
+      try {
+        const { updated } = await alertsApi.markOpenAlertsViewed(alertIds)
+        if (updated > 0) {
+          invalidateCache(cacheKey)
+          await refetch()
+        }
+      } catch {
+        persistViewedAlerts(alertIds, userId)
+      }
     },
-    [userId]
+    [userId, cacheKey, refetch]
   )
 
   const markAllAlertsViewed = useCallback(() => {
-    markAlertsViewed(openAlertIds)
+    void markAlertsViewed(openAlertIds)
   }, [markAlertsViewed, openAlertIds])
 
   return {
@@ -125,6 +143,7 @@ export function useAlertNotifications(options: UseAlertNotificationsOptions = {}
     totalOpenCount,
     unseenAlerts,
     unseenCount: unseenAlerts.length,
+    seenAlertIds,
     openAlertIds,
     loading,
     error,

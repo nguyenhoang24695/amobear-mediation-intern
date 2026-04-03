@@ -35,6 +35,7 @@ import type {
     PagedAlertCenterTimelineResponse,
     AlertDetailResponse,
     UpsertAlertRuleRequest,
+    AppMetricCatalogItem,
     WaterfallBulkPolicyPreviewResponseDto,
     BulkUpdateWaterfallApplyPoliciesRequestDto,
     BulkUpdateWaterfallApplyPoliciesResponseDto,
@@ -124,6 +125,20 @@ export interface CurrentUser {
     avatarUrl?: string
     role: string
     organizationId?: string
+    emailVerified?: boolean
+    slackWebhookUrl?: string
+    organization?: { id: string; name: string; slug: string; logoUrl?: string }
+    teams?: Array<{ id: string; name: string; role: string }>
+    permissions?: Record<string, string>
+    rolePermissions?: Record<string, string[]>
+}
+
+export interface UpdateMyProfileRequest {
+    firstName?: string
+    lastName?: string
+    phone?: string
+    /** Gửi chuỗi rỗng để xóa webhook đã lưu */
+    slackWebhookUrl?: string
 }
 
 export interface PagedResult<T> {
@@ -638,6 +653,12 @@ export const authApi = {
         return apiClient.get('/api/v1/auth/me')
     },
 
+    updateMyProfile: async (
+        body: UpdateMyProfileRequest
+    ): Promise<{ success: boolean; data?: CurrentUser }> => {
+        return apiClient.put('/api/v1/auth/me', body)
+    },
+
     getSessions: async (): Promise<{ success: boolean; data?: ActiveSession[] }> => {
         return apiClient.get('/api/v1/auth/sessions')
     },
@@ -1030,6 +1051,10 @@ export const mediationGroupMetricsApi = {
 
 // Alerts API Service
 export const alertsApi = {
+    getMetricsCatalog: async (): Promise<AppMetricCatalogItem[]> => {
+        return apiClient.get<AppMetricCatalogItem[]>("/api/Alerts/metrics/catalog")
+    },
+
     getAlertResult: async (id: number): Promise<AlertDetailResponse> => {
         const response = await apiClient.get<AlertDetailResponse>(`/api/Alerts/results/${id}`)
         return {
@@ -1173,6 +1198,11 @@ export const alertsApi = {
             TotalCount: response.totalCount ?? 0,
             TotalPages: response.totalPages ?? 0,
         }
+    },
+
+    markOpenAlertsViewed: async (alertIds: number[]): Promise<{ updated: number }> => {
+        const response = await apiClient.post<{ updated?: number }>("/api/Alerts/open/mark-viewed", { alertIds })
+        return { updated: response.updated ?? 0 }
     },
 
     getOpenAlertsSummary: async (publisherId?: string): Promise<{

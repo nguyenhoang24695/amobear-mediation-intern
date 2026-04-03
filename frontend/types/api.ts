@@ -655,6 +655,12 @@ export interface AlertRuleConfigPayload {
   scope: AlertRuleScopeConfig
 }
 
+/** Catalog metric for alert rule builder (from app_metrics, filtered by user app permissions). */
+export interface AppMetricCatalogItem {
+  metricKey: string
+  name: string
+}
+
 export interface AlertCenterListItem {
   id: number
   alertRuleId: number
@@ -692,6 +698,8 @@ export interface AlertCenterListItem {
   alertRuleName?: string | null
   alertRuleDescription?: string | null
   notificationChannels?: string | null
+  /** Server: user hiện tại đã mở/xem alert trong app (bảng alert_in_app_reads). */
+  inAppReadAt?: string | null
 }
 
 export interface AlertDetailTimelineItem {
