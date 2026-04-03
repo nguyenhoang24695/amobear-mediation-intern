@@ -53,7 +53,31 @@ function parseOptionalAmount(value: string): number | null {
 
 function parseOptionalDate(value: string): string | null {
   const trimmed = value.trim()
-  return trimmed ? new Date(trimmed).toISOString() : null
+  if (!trimmed) return null
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(trimmed)
+  if (!match) return null
+
+  const [, yearText, monthText, dayText, hourText, minuteText] = match
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+  const date = new Date(year, month - 1, day, hour, minute, 0, 0)
+
+  if (Number.isNaN(date.getTime())) return null
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day ||
+    date.getHours() !== hour ||
+    date.getMinutes() !== minute
+  ) {
+    return null
+  }
+
+  return date.toISOString()
 }
 
 
@@ -241,6 +265,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       billingEvent: form.billingEvent.trim(),
       optimizationGoal: form.optimizationGoal.trim(),
       bidAmount: parseOptionalAmount(form.bidAmount),
+      advantageAudience: form.advantageAudience,
       startTime: parseOptionalDate(form.startTime),
       endTime: parseOptionalDate(form.endTime),
       geoMode: form.geoMode,
@@ -341,6 +366,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     billingEvent: payload.adSet.billingEvent ?? "IMPRESSIONS",
     optimizationGoal: payload.adSet.optimizationGoal ?? "APP_INSTALLS",
     bidAmount: payload.adSet.bidAmount?.toString() ?? "",
+    advantageAudience: payload.adSet.advantageAudience ?? false,
     startTime: payload.adSet.startTime ? payload.adSet.startTime.slice(0, 16) : "",
     endTime: payload.adSet.endTime ? payload.adSet.endTime.slice(0, 16) : "",
     creativeType,

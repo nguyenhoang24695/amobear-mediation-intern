@@ -240,6 +240,11 @@ export function AccountAppSection({
                 Configure the mapping in <strong>Meta Ads &gt; App Mappings</strong>.
               </p>
             ) : null}
+            {selectedAppMapping?.platform ? (
+              <p className="text-[11px] text-slate-600">
+                {selectedAppMapping.platform === "ANDROID" ? "Android" : selectedAppMapping.platform === "IOS" ? "iOS" : selectedAppMapping.platform} targeting will be derived automatically for app promotion ad sets.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -295,3 +300,4 @@ export function AccountAppSection({
     </Card>
   )
 }
+

@@ -1,10 +1,10 @@
-﻿"use client"
+"use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, AlertCircle, Pause } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
-import { OBJECTIVE_OPTIMIZATION_MAP, bidStrategyRequiresBidAmount } from "./constants"
+import { OBJECTIVE_OPTIMIZATION_MAP, bidStrategyRequiresBidAmount, getAllowedBillingEvents, isBidStrategySupported } from "./constants"
 import type { GroupedValidationErrors, MetaAppMappingDto, MetaRequestStatus } from "@/types/meta-ads"
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
@@ -26,6 +26,11 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const isGoalCompatible = allowedGoals.length === 0 || allowedGoals.includes(form.optimizationGoal)
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
+  const allowedBillingEvents = getAllowedBillingEvents(form.optimizationGoal)
+  const isBillingCompatible = allowedBillingEvents.includes(form.billingEvent)
+  const bidStrategySupported = isBidStrategySupported(form.bidStrategy)
+  const startTimeValid = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(form.startTime)
+  const platformAlignmentReady = !selectedAppMapping?.platform || selectedAppMapping.platform === "ANDROID" || selectedAppMapping.platform === "IOS"
   const tokenOk = tokenState === "ready"
   const creativeStatus = getCreativeStatus(form)
   const geoStatus = getGeoStatus(form)
@@ -51,10 +56,25 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
           <CheckRow state={hasBudget ? "ok" : "error"} label="Budget provided" />
           <CheckRow state={form.campaignObjective ? "ok" : "neutral"} label="Objective set" />
           <CheckRow state={form.campaignObjective ? (isGoalCompatible ? "ok" : "error") : "neutral"} label="Optimization goal compatible" />
+          <CheckRow state={form.optimizationGoal ? (isBillingCompatible ? "ok" : "error") : "neutral"} label="Billing event compatible" />
+          <CheckRow state={form.bidStrategy ? (bidStrategySupported ? "ok" : "warning") : "neutral"} label={form.bidStrategy ? `Bid strategy supported (${form.bidStrategy})` : "Bid strategy optional"} />
           <CheckRow state={bidAmountRequired ? (form.bidAmount ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={bidAmountRequired ? "Bid amount provided for strategy" : "Bid amount optional"} />
+          <CheckRow state={"ok"} label={`Advantage Audience explicitly ${form.advantageAudience ? "enabled" : "disabled"}`} />
           <CheckRow state={geoStatus} label={`Geo targeting (${form.geoMode.toLowerCase()})`} />
+          <CheckRow state={platformAlignmentReady ? "ok" : "error"} label="Platform targeting can be derived from app mapping" />
+          <CheckRow state={startTimeValid ? "ok" : "error"} label="Start time format valid" />
           <CheckRow state={creativeStatus.ok ? "ok" : "error"} label={`Creative ready (${creativeStatus.label})`} />
           <CheckRow state={form.adName ? "ok" : "error"} label="Ad name complete" />
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200">
+        <CardHeader className="pb-2 pt-3 px-3"><CardTitle className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Meta Compatibility</CardTitle></CardHeader>
+        <CardContent className="px-3 pb-3 space-y-1.5 text-[11px]">
+          <p className="text-slate-500">Unavailable options in this form are disabled because Meta would reject them or Mediation Pro does not support the required extra fields yet.</p>
+          <SummaryLine label="Billing events" value={allowedBillingEvents.join(", ")} />
+          <SummaryLine label="Advantage Audience" value={form.advantageAudience ? "Enabled" : "Disabled"} />
+          <SummaryLine label="Platform targeting" value={selectedAppMapping?.platform ? `${selectedAppMapping.platform} auto-derived` : "Depends on selected app mapping"} />
         </CardContent>
       </Card>
 

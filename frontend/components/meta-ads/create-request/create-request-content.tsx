@@ -38,7 +38,7 @@ import type {
 } from "@/types/meta-ads"
 import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { OBJECTIVE_OPTIMIZATION_MAP } from "./constants"
+import { OBJECTIVE_OPTIMIZATION_MAP, getAllowedBillingEvents } from "./constants"
 import { AccountAppSection } from "./section-account-app"
 import { CampaignSettingsSection } from "./section-campaign-settings"
 import { AdSetAudienceSection } from "./section-adset-audience"
@@ -88,6 +88,7 @@ function createDefaultFormState(): RequestFormState {
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "APP_INSTALLS",
     bidAmount: "",
+    advantageAudience: false,
     startTime: formatDateTimeLocal(new Date()),
     endTime: "",
     creativeType: "SINGLE_IMAGE",
@@ -298,6 +299,11 @@ export function CreateRequestContent({ requestId }: Props) {
 
       if (patch.objective && patch.objective !== previous.objective && !patch.campaignObjective) {
         next.campaignObjective = patch.objective
+      }
+
+      const allowedBillingEvents = getAllowedBillingEvents(next.optimizationGoal)
+      if (!allowedBillingEvents.includes(next.billingEvent)) {
+        next.billingEvent = allowedBillingEvents[0] ?? "IMPRESSIONS"
       }
 
       return next
@@ -527,7 +533,7 @@ export function CreateRequestContent({ requestId }: Props) {
             regionsMessage={geoRegionsError?.message ?? null}
             metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
           />
-          <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} />
+          <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} />
           <CreativeSection
             form={form}
             onChange={updateForm}
@@ -601,5 +607,4 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
 

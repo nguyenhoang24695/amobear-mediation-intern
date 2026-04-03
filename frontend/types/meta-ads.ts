@@ -577,6 +577,7 @@ export interface MetaAdSetDraftDto {
   billingEvent: string
   optimizationGoal: string
   bidAmount?: number | null
+  advantageAudience: boolean
   startTime?: string | null
   endTime?: string | null
   geoMode?: MetaGeoMode | null
@@ -866,6 +867,7 @@ export interface MetaRequestFormState {
   billingEvent: string
   optimizationGoal: string
   bidAmount: string
+  advantageAudience: boolean
   startTime: string
   endTime: string
   creativeType: MetaCreativeType
@@ -901,3 +903,4 @@ export interface MetaRequestFilters {
 }
 
 export type GroupedValidationErrors = Record<string, string[]>
+
