@@ -4,10 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarClock, Info } from "lucide-react"
+import { CalendarClock, Info, AlertTriangle } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
-import { OBJECTIVE_OPTIMIZATION_MAP as OPT_MAP, bidStrategyRequiresBidAmount } from "./constants"
+import {
+  BILLING_EVENT_OPTIONS,
+  OBJECTIVE_OPTIMIZATION_MAP as OPT_MAP,
+  bidStrategyRequiresBidAmount,
+  getAllowedBillingEvents,
+  getBillingEventDisabledReason,
+  isBillingEventCompatible,
+} from "./constants"
 
 const ALL_OPTIMIZATION_GOALS = [
   "APP_INSTALLS", "CLICKS", "CONVERSIONS", "IMPRESSIONS", "LANDING_PAGE_VIEWS",
@@ -15,15 +23,14 @@ const ALL_OPTIMIZATION_GOALS = [
   "REACH", "VALUE", "AD_RECALL_LIFT",
 ]
 
-const billingEvents = ["IMPRESSIONS", "LINK_CLICKS", "APP_INSTALLS", "PAGE_LIKES", "POST_ENGAGEMENT", "VIDEO_VIEWS"]
-
 interface Props {
   form: RequestFormState
   onChange: (patch: Partial<RequestFormState>) => void
   currencyCode?: string | null
+  appPlatform?: string | null
 }
 
-export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
+export function AdSetBudgetSection({ form, onChange, currencyCode, appPlatform }: Props) {
   const currency = (currencyCode ?? "USD").trim() || "USD"
   const isABO = form.budgetStrategy === "ABO"
 
@@ -33,6 +40,14 @@ export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
 
   const isGoalCompatible = allowedGoals.includes(form.optimizationGoal)
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
+  const allowedBillingEvents = getAllowedBillingEvents(form.optimizationGoal)
+  const isBillingCompatible = isBillingEventCompatible(form.optimizationGoal, form.billingEvent)
+  const normalizedPlatform = (appPlatform ?? "").trim().toUpperCase()
+  const platformNote = normalizedPlatform === "ANDROID"
+    ? "Android mobile targeting will be applied automatically from the selected app mapping."
+    : normalizedPlatform === "IOS"
+      ? "iOS mobile targeting will be applied automatically from the selected app mapping."
+      : null
 
   return (
     <Card className="border-slate-200">
@@ -43,7 +58,6 @@ export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Ad Set Budgets - only active in ABO mode */}
         <div className={`space-y-2 transition-opacity ${isABO ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
           <div className="flex items-center gap-2">
             <Label className="text-xs font-medium text-slate-700">Ad Set Budget</Label>
@@ -78,29 +92,40 @@ export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
               </div>
             </div>
           </div>
-          {isABO && (
-            <p className="text-[11px] text-slate-400">At least one ad set budget field is required for ABO campaigns.</p>
-          )}
+          {isABO && <p className="text-[11px] text-slate-400">At least one ad set budget field is required for ABO campaigns.</p>}
           <p className="text-[11px] text-slate-400">{`Enter budget and bid amounts in normal ${currency} units. Mediation Pro converts them to Meta minor units during execution.`}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* Billing Event */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-slate-700">Billing Event</Label>
             <Select value={form.billingEvent} onValueChange={v => onChange({ billingEvent: v })}>
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className={`h-9 text-sm ${!isBillingCompatible ? "border-amber-400 ring-1 ring-amber-300" : ""}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {billingEvents.map(e => (
-                  <SelectItem key={e} value={e}><span className="font-mono text-xs">{e}</span></SelectItem>
-                ))}
+                {BILLING_EVENT_OPTIONS.map((eventValue) => {
+                  const reason = getBillingEventDisabledReason(form.optimizationGoal, eventValue)
+                  const disabled = !!reason
+                  return (
+                    <SelectItem key={eventValue} value={eventValue} disabled={disabled}>
+                      <div className="py-0.5">
+                        <div className={`font-mono text-xs ${disabled ? "text-slate-400 line-through" : ""}`}>{eventValue}</div>
+                        {reason ? <div className="text-[10px] text-slate-400 leading-relaxed">{reason}</div> : null}
+                      </div>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
+            <p className={`text-[11px] flex items-start gap-1 ${isBillingCompatible ? "text-slate-400" : "text-amber-700"}`}>
+              <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              {isBillingCompatible
+                ? `Allowed billing events for ${form.optimizationGoal}: ${allowedBillingEvents.join(", ")}`
+                : `Current billing event is incompatible with ${form.optimizationGoal}. Use ${allowedBillingEvents.join(" or ")} instead.`}
+            </p>
           </div>
 
-          {/* Optimization Goal - filtered by objective */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-slate-700">Optimization Goal</Label>
             <Select value={form.optimizationGoal} onValueChange={v => onChange({ optimizationGoal: v })}>
@@ -111,10 +136,12 @@ export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
                 {allowedGoals.map(g => (
                   <SelectItem key={g} value={g}><span className="font-mono text-xs">{g}</span></SelectItem>
                 ))}
-                {/* Show incompatible goals as disabled */}
                 {ALL_OPTIMIZATION_GOALS.filter(g => !allowedGoals.includes(g)).map(g => (
                   <SelectItem key={g} value={g} disabled>
-                    <span className="font-mono text-xs text-slate-400 line-through">{g}</span>
+                    <div className="py-0.5">
+                      <div className="font-mono text-xs text-slate-400 line-through">{g}</div>
+                      <div className="text-[10px] text-slate-400">Unavailable: incompatible with {form.campaignObjective || "the selected objective"}.</div>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -137,26 +164,48 @@ export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
           </div>
         </div>
 
-        {/* Bid Amount */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-slate-700">Bid Amount {bidAmountRequired ? <span className="text-red-500">*</span> : <span className="text-slate-400 font-normal">(optional)</span>}</Label>
-          <div className="relative w-48">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
-            <Input placeholder="0.00" className={`pl-12 h-9 text-sm ${bidAmountRequired && !form.bidAmount.trim() ? "border-amber-400 ring-1 ring-amber-300" : ""}`} value={form.bidAmount} onChange={e => onChange({ bidAmount: e.target.value })} />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-700">Bid Amount {bidAmountRequired ? <span className="text-red-500">*</span> : <span className="text-slate-400 font-normal">(optional)</span>}</Label>
+            <div className="relative w-48">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{currency}</span>
+              <Input placeholder="0.00" className={`pl-12 h-9 text-sm ${bidAmountRequired && !form.bidAmount.trim() ? "border-amber-400 ring-1 ring-amber-300" : ""}`} value={form.bidAmount} onChange={e => onChange({ bidAmount: e.target.value })} />
+            </div>
+            {bidAmountRequired ? (
+              <p className="text-[11px] text-amber-700 flex items-start gap-1">
+                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                Required for {form.bidStrategy}. Meta will reject this ad set without a bid amount.
+              </p>
+            ) : null}
           </div>
-          {bidAmountRequired ? (
-            <p className="text-[11px] text-amber-700 flex items-start gap-1">
-              <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-              Required for {form.bidStrategy}.
-            </p>
-          ) : null}
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Advantage Audience</Label>
+                <p className="text-[11px] text-slate-500 mt-1">Meta now requires this flag to be sent explicitly for this ad set flow.</p>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                <span>{form.advantageAudience ? "Enabled" : "Disabled"}</span>
+                <Switch checked={form.advantageAudience} onCheckedChange={(checked) => onChange({ advantageAudience: checked })} />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400">Set this to Enabled only when you want Meta to expand audience targeting. Disabled keeps audience control tighter.</p>
+          </div>
         </div>
 
-        {/* Schedule */}
+        {platformNote ? (
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-800 flex items-start gap-1.5">
+            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+            {platformNote}
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-slate-700">Start Time <span className="text-red-500">*</span></Label>
             <Input type="datetime-local" className="h-9 text-sm" value={form.startTime} onChange={e => onChange({ startTime: e.target.value })} />
+            <p className="text-[11px] text-slate-400">Uses your local time in the form, then converts to UTC only when sending to Meta.</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-slate-700">End Time <span className="text-slate-400 font-normal">(optional)</span></Label>
@@ -167,8 +216,3 @@ export function AdSetBudgetSection({ form, onChange, currencyCode }: Props) {
     </Card>
   )
 }
-
-
-
-
-
