@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
@@ -11,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2 } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
 import { authApi } from "@/lib/api/services"
-import { clearAuthSessionData, getUserInitials } from "@/lib/auth"
+import { authUserFromMeDto, clearAuthSessionData, getAccessToken, getRefreshToken, getUserInitials, setAuthData } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -34,11 +35,16 @@ export function MyProfileContent() {
   const [sessionsError, setSessionsError] = useState<string | null>(null)
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
   const [showAllSessions, setShowAllSessions] = useState(false)
+  const [slackWebhookDraft, setSlackWebhookDraft] = useState("")
+  const [profileSaving, setProfileSaving] = useState(false)
 
   // Load current user
-  const { data: userResponse, loading: userLoading } = useApi(
+  const { data: userResponse, loading: userLoading, refetch: refetchCurrentUser } = useApi(
     () => authApi.getCurrentUser(),
-    { enabled: typeof window !== 'undefined' && !!localStorage.getItem('accessToken') }
+    {
+      enabled: typeof window !== "undefined" && !!localStorage.getItem("accessToken"),
+      cacheKey: "auth-me-profile",
+    }
   )
 
   const user = userResponse?.data
@@ -94,6 +100,43 @@ export function MyProfileContent() {
       })
     } finally {
       setRevokingSessionId(null)
+    }
+  }
+
+  const openProfileEdit = () => {
+    const u = userResponse?.data ?? userFromStorage
+    const slack = (u as { slackWebhookUrl?: string })?.slackWebhookUrl ?? ""
+    setSlackWebhookDraft(slack)
+    setIsEditing(true)
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      setProfileSaving(true)
+      const res = await authApi.updateMyProfile({
+        slackWebhookUrl: slackWebhookDraft.trim(),
+      })
+      if (!res.success || !res.data) {
+        throw new Error("Failed to update profile")
+      }
+      const token = getAccessToken()
+      if (token) {
+        setAuthData(token, getRefreshToken() ?? null, authUserFromMeDto(res.data))
+      }
+      await refetchCurrentUser()
+      toast({
+        title: "Profile updated",
+        description: "Your Slack webhook URL has been saved.",
+      })
+      setIsEditing(false)
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Could not save profile",
+        variant: "destructive",
+      })
+    } finally {
+      setProfileSaving(false)
     }
   }
 
@@ -178,7 +221,17 @@ export function MyProfileContent() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-semibold">Personal Information</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (isEditing) {
+                    setIsEditing(false)
+                  } else {
+                    openProfileEdit()
+                  }
+                }}
+              >
                 <Edit className="w-4 h-4 mr-1" />
                 {isEditing ? "Cancel" : "Edit"}
               </Button>
@@ -209,13 +262,39 @@ export function MyProfileContent() {
                     {displayUser?.role || "—"}
                   </p>
                 </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-500">Slack webhook URL</p>
+                  {isEditing ? (
+                    <Input
+                      type="url"
+                      className="mt-1.5"
+                      placeholder="https://hooks.slack.com/services/..."
+                      value={slackWebhookDraft}
+                      onChange={(e) => setSlackWebhookDraft(e.target.value)}
+                      autoComplete="off"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium text-slate-900 break-all mt-1">
+                      {(displayUser as { slackWebhookUrl?: string })?.slackWebhookUrl || "—"}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-400 mt-1.5">
+                    Incoming Webhook for personal Slack alerts. Leave empty and save to remove a saved URL.
+                  </p>
+                </div>
               </div>
               {isEditing && (
                 <div className="mt-4 pt-4 border-t flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button variant="outline" onClick={() => setIsEditing(false)} disabled={profileSaving}>
                     Cancel
                   </Button>
-                  <Button className="bg-blue-600 hover:bg-blue-700">Save Changes</Button>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={handleSaveProfile}
+                    disabled={profileSaving}
+                  >
+                    {profileSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
+                  </Button>
                 </div>
               )}
             </CardContent>

@@ -655,6 +655,12 @@ export interface AlertRuleConfigPayload {
   scope: AlertRuleScopeConfig
 }
 
+/** Catalog metric for alert rule builder (from app_metrics, filtered by user app permissions). */
+export interface AppMetricCatalogItem {
+  metricKey: string
+  name: string
+}
+
 export interface AlertCenterListItem {
   id: number
   alertRuleId: number
