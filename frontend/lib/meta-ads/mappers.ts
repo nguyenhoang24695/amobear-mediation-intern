@@ -338,7 +338,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     buyingType: payload.campaign.buyingType ?? "AUCTION",
     campaignObjective: payload.campaign.objective ?? "",
     specialAdCategories: payload.campaign.specialAdCategories ?? [],
-    bidStrategy: payload.campaign.bidStrategy ?? "",
+    bidStrategy: payload.campaign.bidStrategy || "LOWEST_COST_WITHOUT_CAP",
     campaignDailyBudget: payload.campaign.dailyBudget?.toString() ?? "",
     campaignLifetimeBudget: payload.campaign.lifetimeBudget?.toString() ?? "",
     adSetName: payload.adSet.name ?? "",

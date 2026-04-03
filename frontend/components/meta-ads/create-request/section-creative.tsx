@@ -319,7 +319,8 @@ export function CreativeSection({
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-                    <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} className="h-9 text-sm" />
+                    <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
+                    <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                   </div>
                 </div>
                 <MediaSourceEditor title="Image" kind="image" selection={form.singleImageImage} uploading={uploadingKey?.startsWith("singleImageImage") ?? false} allowExternalUrl onModeChange={(mode) => handleMediaModeChange("singleImageImage", mode)} onPatch={(patch) => handleMediaPatch("singleImageImage", patch)} onUpload={(file) => handleUpload("singleImageImage", "image", file)} />
@@ -350,7 +351,8 @@ export function CreativeSection({
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-                    <Input value={form.singleVideoLinkUrl} onChange={(event) => onChange({ singleVideoLinkUrl: event.target.value })} className="h-9 text-sm" />
+                    <Input value={form.singleVideoLinkUrl} onChange={(event) => onChange({ singleVideoLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
+                    <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                   </div>
                 </div>
                 <MediaSourceEditor title="Video" kind="video" selection={form.singleVideoVideo} uploading={uploadingKey?.startsWith("singleVideoVideo") ?? false} onModeChange={(mode) => handleMediaModeChange("singleVideoVideo", mode)} onPatch={(patch) => handleMediaPatch("singleVideoVideo", patch)} onUpload={(file) => handleUpload("singleVideoVideo", "video", file)} />
@@ -396,7 +398,8 @@ export function CreativeSection({
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-                          <Input value={card.linkUrl} onChange={(event) => updateCarouselCard(index, { linkUrl: event.target.value })} className="h-9 text-sm" />
+                          <Input value={card.linkUrl} onChange={(event) => updateCarouselCard(index, { linkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
+                          <p className="text-[11px] text-slate-400">Use a valid absolute URL or leave blank to use the app mapping fallback URL.</p>
                         </div>
                       </div>
                       <div className="space-y-1.5">
