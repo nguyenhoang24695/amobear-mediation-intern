@@ -31,10 +31,11 @@ function rel(iso: string | null | undefined): string {
   }
 }
 
-const statusIcon: Record<string, ReactNode> = {
-  success: <CheckCircle2 className="w-3 h-3 text-green-600" />,
-  failed: <XCircle className="w-3 h-3 text-red-600" />,
-  running: <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />,
+/** Icon trên thanh màu nguồn — chữ trắng + bóng nhẹ để đọc được trên mọi hue. */
+const barGlyph: Record<"success" | "failed" | "running", ReactNode> = {
+  success: <CheckCircle2 className="w-3 h-3 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />,
+  failed: <XCircle className="w-3 h-3 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />,
+  running: <Loader2 className="w-3 h-3 text-white animate-spin drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />,
 }
 
 function barStatus(s: string): "success" | "failed" | "running" {
@@ -64,15 +65,20 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
             <p className="text-xs text-slate-500 mt-1">{windowLabel}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> Success
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-slate-500 max-w-[220px] sm:max-w-none">
+                Bar fill follows each source (row); icon shows success / failed / running.
               </span>
-              <span className="inline-flex items-center gap-1">
-                <XCircle className="w-3.5 h-3.5 text-red-600" /> Failed
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="w-3.5 h-3.5 text-blue-600" /> Running
+              <span className="inline-flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> Success
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <XCircle className="w-3.5 h-3.5 text-red-600" /> Failed
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="w-3.5 h-3.5 text-blue-600" /> Running
+                </span>
               </span>
             </div>
             <Link href="/jobs" className="text-blue-600 hover:underline inline-flex items-center gap-1">
@@ -121,12 +127,13 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
 
                       {row.bars.map((job: DataSourcesVisualBarDto) => {
                         const st = barStatus(job.status)
+                        const sourceHue = row.sourceColorClass?.trim() || "bg-slate-500"
                         const barTone =
                           st === "failed"
-                            ? "bg-red-500 opacity-90"
+                            ? "bg-red-600 opacity-95 ring-1 ring-red-900/25"
                             : st === "running"
-                              ? "bg-sky-500 animate-pulse"
-                              : "bg-emerald-600"
+                              ? `${sourceHue} opacity-95 animate-pulse ring-1 ring-white/40`
+                              : `${sourceHue} opacity-92 hover:opacity-100`
                         const leftPercent = (job.startHourFromWindowStart / WINDOW_HOURS) * 100
                         const widthPercent = (job.durationHours / WINDOW_HOURS) * 100
                         const durMin = Math.round(job.durationHours * 60)
@@ -134,13 +141,13 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
                           <Tooltip key={job.id}>
                             <TooltipTrigger asChild>
                               <div
-                                className={`absolute top-1 bottom-1 ${barTone} rounded cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center gap-1 shadow-sm`}
+                                className={`absolute top-1 bottom-1 ${barTone} rounded cursor-pointer transition-opacity flex items-center justify-center gap-1 shadow-sm`}
                                 style={{
                                   left: `${leftPercent}%`,
                                   width: `${Math.max(widthPercent, 0.6)}%`,
                                 }}
                               >
-                                {statusIcon[st]}
+                                {barGlyph[st]}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="p-3 max-w-xs">
