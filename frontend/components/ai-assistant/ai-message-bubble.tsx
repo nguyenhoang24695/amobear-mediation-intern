@@ -633,6 +633,13 @@ export function AiMessageBubble({ message, onAskAboutTable }: AiMessageBubblePro
                   <span>Cost: ${message.metadata.usage.cost.toFixed(3)}</span>
                 </>
               )}
+              {message.metadata.agentic && (
+                <Badge variant="outline" className="text-xs border-violet-200 text-violet-700">
+                  Phân tích sâu · {message.metadata.agentic.iterations} vòng ·{" "}
+                  {message.metadata.agentic.mcpQueriesUsed} MCP · {message.metadata.agentic.toolCount} tool ·{" "}
+                  {message.metadata.agentic.status}
+                </Badge>
+              )}
             </div>
           )}
 

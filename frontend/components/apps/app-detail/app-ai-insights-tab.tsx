@@ -15,9 +15,11 @@ import { FeedbackSection } from "./ai-insights/feedback-section"
 import { HistoricalInsightsCalendar } from "./ai-insights/historical-insights-calendar"
 import { NoInsightState } from "./ai-insights/no-insight-state"
 import { InsightGeneratingState } from "./ai-insights/insight-generating-state"
+import { HealthRadarChart } from "./ai-insights/health-radar-chart"
 
 interface Props {
-  appRowId: number
+  /** Canonical AdMob app id (same as `/apps/[id]` route). */
+  appId: string
   /** yyyy-MM-dd from URL */
   initialDateYmd?: string | null
 }
@@ -35,7 +37,7 @@ function extractSectionIds(markdown: string): { id: string; title: string }[] {
   return out
 }
 
-export function AppAiInsightsTab({ appRowId, initialDateYmd }: Props) {
+export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
   const { toast } = useToast()
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered")
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -57,13 +59,13 @@ export function AppAiInsightsTab({ appRowId, initialDateYmd }: Props) {
   const dateStr = format(selectedDate, "yyyy-MM-dd")
 
   const load = useCallback(async () => {
-    if (!canView || !appRowId) return
+    if (!canView || !appId) return
     setLoading(true)
     try {
       const [daily, dates] = await Promise.all([
-        insightApi.getDailyForApp(appRowId, dateStr),
+        insightApi.getDailyForApp(appId, dateStr),
         insightApi.getAvailableDates(
-          appRowId,
+          appId,
           format(subDays(new Date(), 90), "yyyy-MM-dd"),
           format(new Date(), "yyyy-MM-dd"),
         ),
@@ -77,7 +79,7 @@ export function AppAiInsightsTab({ appRowId, initialDateYmd }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [appRowId, dateStr, canView, toast])
+  }, [appId, dateStr, canView, toast])
 
   useEffect(() => {
     void load()
@@ -105,7 +107,7 @@ export function AppAiInsightsTab({ appRowId, initialDateYmd }: Props) {
     }
     setRegenerating(true)
     try {
-      await insightApi.regenerate(appRowId, dateStr)
+      await insightApi.regenerate(appId, dateStr)
       toast({ title: "Đã tạo lại insight", description: "Dữ liệu đã được cập nhật." })
       await load()
     } catch (e) {
@@ -210,7 +212,14 @@ export function AppAiInsightsTab({ appRowId, initialDateYmd }: Props) {
         onRegenerate={handleRegenerate}
       />
 
-      <HealthScoreBanner score={score} healthTier={insight.healthTier} anomalies={insight.anomalies ?? []} />
+      <HealthScoreBanner score={score} healthTier={insight.healthTier} anomalies={insight.anomalies ?? []} insightId={insight.id} />
+
+      {insight.dimensionScores && (
+        <HealthRadarChart
+          dimensionScores={insight.dimensionScores}
+          healthTier={insight.healthTier}
+        />
+      )}
 
       <ViewToggleActionsBar
         viewMode={viewMode}

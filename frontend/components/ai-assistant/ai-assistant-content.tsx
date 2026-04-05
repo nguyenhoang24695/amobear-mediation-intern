@@ -11,6 +11,7 @@ import { RenameModal } from "./rename-modal"
 import { aiAssistantApi } from "@/lib/api/ai-assistant"
 import type {
   AskResponse,
+  AskAgenticResponse,
   MessageDto,
   DetailedExplanation,
   ImageAttachmentRequest,
@@ -81,6 +82,12 @@ export interface AiMessage {
     tables?: string[]
     complexity?: "Low" | "Medium" | "High"
     contextSummary?: ContextSummary
+    agentic?: {
+      status: string
+      iterations: number
+      mcpQueriesUsed: number
+      toolCount: number
+    }
   }
 }
 
@@ -212,6 +219,23 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+function agenticResponseToMessage(res: AskAgenticResponse): AiMessage {
+  return {
+    id: `agentic-${Date.now()}`,
+    role: "assistant",
+    content: res.content,
+    timestamp: new Date(),
+    metadata: {
+      agentic: {
+        status: res.status,
+        iterations: res.iterations,
+        mcpQueriesUsed: res.mcpQueriesUsed,
+        toolCount: res.toolExecutions?.length ?? 0,
+      },
+    },
+  }
+}
+
 function askResponseToMessage(res: AskResponse): AiMessage {
   const det = res.detailedExplanation as { breakdown?: { clause: string; explanation: string }[]; performance?: { partitionUsage?: string }; businessContext?: string; tips?: string[] } | undefined
   return {
@@ -288,6 +312,7 @@ export function AiAssistantContent() {
   const [selectedProvider, setSelectedProvider] = useState<"claude" | "gemini" | "chatgpt">("claude")
   const [selectedModelId, setSelectedModelId] = useState<string>("")
   const [autoExplain, setAutoExplain] = useState(false)
+  const [deepAnalysis, setDeepAnalysis] = useState(false)
   const [createContextOpen, setCreateContextOpen] = useState(false)
   const [loadingContexts, setLoadingContexts] = useState(true)
   const [sending, setSending] = useState(false)
@@ -296,7 +321,11 @@ export function AiAssistantContent() {
   const [chooseContextModalOpen, setChooseContextModalOpen] = useState(false)
   const [pendingAskAfterFork, setPendingAskAfterFork] = useState<{
     content: string
-    options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }
+    options?: {
+      images?: ImageAttachmentRequest[]
+      attachedTableData?: AttachedTableDataRequest
+      deepAnalysis?: boolean
+    }
   } | null>(null)
   const [conversationDetail, setConversationDetail] = useState<{ isOwner: boolean; isShared: boolean } | null>(null)
   const [sharedLinkContextFallback, setSharedLinkContextFallback] = useState<{ id: string; name: string } | null>(null)
@@ -671,31 +700,53 @@ export function AiAssistantContent() {
         const attachedTableData = pending.options?.attachedTableData ?? pendingAttachedTable ?? undefined
         setPendingAttachedTable(null)
         setPendingPrefillQuestion(null)
-        const res = await aiAssistantApi.ask({
-          question: pending.content,
-          contextId: targetContextId,
-          conversationId: forked.id,
-          provider: selectedProvider,
-          explainDetails: autoExplain,
-          images: pending.options?.images?.length ? pending.options.images : undefined,
-          attachedTableData: attachedTableData ?? undefined,
-        })
+        const useAgentic = pending.options?.deepAnalysis === true && !pending.options?.images?.length
+        const res = useAgentic
+          ? await aiAssistantApi.askAgentic({
+              question: pending.content,
+              contextId: targetContextId,
+              conversationId: forked.id,
+              provider: selectedProvider,
+              useSmartRouting: true,
+            })
+          : await aiAssistantApi.ask({
+              question: pending.content,
+              contextId: targetContextId,
+              conversationId: forked.id,
+              provider: selectedProvider,
+              explainDetails: autoExplain,
+              images: pending.options?.images?.length ? pending.options.images : undefined,
+              attachedTableData: attachedTableData ?? undefined,
+              useSmartRouting: true,
+            })
         setActiveConversationId(res.conversationId)
-        setMessages((prev) => [...prev.slice(0, -1), userMsg, askResponseToMessage(res)])
-        const responseProvider = toProvider(res.provider)
-        if (res.model && (responseProvider !== selectedProvider || res.model !== selectedModelId)) {
-          setSelectedProvider(responseProvider)
-          setSelectedModelId(res.model)
-          void aiAssistantApi.updateContext(targetContextId, {
-            preferredProvider: responseProvider,
-            preferredModel: res.model,
-          }).then(() => {
-            setContexts((prev) =>
-              prev.map((c) =>
-                c.id === targetContextId ? { ...c, preferredProvider: responseProvider, preferredModel: res.model } : c
-              )
-            )
-          }).catch(() => {})
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          userMsg,
+          useAgentic ? agenticResponseToMessage(res as AskAgenticResponse) : askResponseToMessage(res as AskResponse),
+        ])
+        if (!useAgentic) {
+          const askRes = res as AskResponse
+          const responseProvider = toProvider(askRes.provider)
+          if (askRes.model && (responseProvider !== selectedProvider || askRes.model !== selectedModelId)) {
+            setSelectedProvider(responseProvider)
+            setSelectedModelId(askRes.model)
+            void aiAssistantApi
+              .updateContext(targetContextId, {
+                preferredProvider: responseProvider,
+                preferredModel: askRes.model,
+              })
+              .then(() => {
+                setContexts((prev) =>
+                  prev.map((c) =>
+                    c.id === targetContextId
+                      ? { ...c, preferredProvider: responseProvider, preferredModel: askRes.model }
+                      : c
+                  )
+                )
+              })
+              .catch(() => {})
+          }
         }
         const list = await aiAssistantApi.getConversations(targetContextId).catch(() => [])
         setConversations((list ?? []).map(dtoToConversation))
@@ -726,7 +777,11 @@ export function AiAssistantContent() {
   const handleSendMessage = useCallback(
     async (
       content: string,
-      options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }
+      options?: {
+        images?: ImageAttachmentRequest[]
+        attachedTableData?: AttachedTableDataRequest
+        deepAnalysis?: boolean
+      }
     ) => {
       if (!activeContextId || sending) return
       const viewingSharedNotOwner =
@@ -734,7 +789,7 @@ export function AiAssistantContent() {
       const conversationIdToUse = activeConversationId.startsWith("new-") ? undefined : activeConversationId
 
       if (viewingSharedNotOwner && conversationIdToUse) {
-        setPendingAskAfterFork({ content, options })
+        setPendingAskAfterFork({ content, options: { ...options, deepAnalysis } })
         setChooseContextModalOpen(true)
         return
       }
@@ -746,31 +801,59 @@ export function AiAssistantContent() {
       setPendingAttachedTable(null)
       setPendingPrefillQuestion(null)
       try {
-        const res = await aiAssistantApi.ask({
-          question: content,
-          contextId: activeContextId,
-          conversationId: conversationIdToUse,
-          provider: selectedProvider,
-          explainDetails: autoExplain,
-          images: options?.images?.length ? options.images : undefined,
-          attachedTableData: attachedTableData ?? undefined,
-        })
+        const useAgentic = options?.deepAnalysis === true && !options?.images?.length
+        if (options?.deepAnalysis && options?.images?.length) {
+          toast({
+            title: "Phân tích sâu không kèm ảnh",
+            description: "Đang gửi ở chế độ chat thường (MCP agentic chưa hỗ trợ ảnh đính kèm).",
+          })
+        }
+        const res = useAgentic
+          ? await aiAssistantApi.askAgentic({
+              question: content,
+              contextId: activeContextId,
+              conversationId: conversationIdToUse,
+              provider: selectedProvider,
+              useSmartRouting: true,
+            })
+          : await aiAssistantApi.ask({
+              question: content,
+              contextId: activeContextId,
+              conversationId: conversationIdToUse,
+              provider: selectedProvider,
+              explainDetails: autoExplain,
+              images: options?.images?.length ? options.images : undefined,
+              attachedTableData: attachedTableData ?? undefined,
+              useSmartRouting: true,
+            })
         setActiveConversationId(res.conversationId)
-        setMessages((prev) => [...prev.slice(0, -1), userMsg, askResponseToMessage(res)])
-        const responseProvider = toProvider(res.provider)
-        if (res.model && (responseProvider !== selectedProvider || res.model !== selectedModelId)) {
-          setSelectedProvider(responseProvider)
-          setSelectedModelId(res.model)
-          void aiAssistantApi.updateContext(activeContextId, {
-            preferredProvider: responseProvider,
-            preferredModel: res.model,
-          }).then(() => {
-            setContexts((prev) =>
-              prev.map((c) =>
-                c.id === activeContextId ? { ...c, preferredProvider: responseProvider, preferredModel: res.model } : c
-              )
-            )
-          }).catch(() => {})
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          userMsg,
+          useAgentic ? agenticResponseToMessage(res as AskAgenticResponse) : askResponseToMessage(res as AskResponse),
+        ])
+        if (!useAgentic) {
+          const askRes = res as AskResponse
+          const responseProvider = toProvider(askRes.provider)
+          if (askRes.model && (responseProvider !== selectedProvider || askRes.model !== selectedModelId)) {
+            setSelectedProvider(responseProvider)
+            setSelectedModelId(askRes.model)
+            void aiAssistantApi
+              .updateContext(activeContextId, {
+                preferredProvider: responseProvider,
+                preferredModel: askRes.model,
+              })
+              .then(() => {
+                setContexts((prev) =>
+                  prev.map((c) =>
+                    c.id === activeContextId
+                      ? { ...c, preferredProvider: responseProvider, preferredModel: askRes.model }
+                      : c
+                  )
+                )
+              })
+              .catch(() => {})
+          }
         }
         const list = await aiAssistantApi.getConversations(activeContextId).catch(() => [])
         setConversations((list ?? []).map(dtoToConversation))
@@ -795,7 +878,18 @@ export function AiAssistantContent() {
         setSending(false)
       }
     },
-    [activeContextId, activeConversationId, conversationDetail, selectedProvider, selectedModelId, autoExplain, sending, pendingAttachedTable, toast]
+    [
+      activeContextId,
+      activeConversationId,
+      conversationDetail,
+      selectedProvider,
+      selectedModelId,
+      autoExplain,
+      deepAnalysis,
+      sending,
+      pendingAttachedTable,
+      toast,
+    ]
   )
 
   const handleAskAboutTable = useCallback((result: QueryResult) => {
@@ -846,6 +940,8 @@ export function AiAssistantContent() {
             onModelSelect={handleModelSelect}
             autoExplain={autoExplain}
             onAutoExplainChange={setAutoExplain}
+            deepAnalysis={deepAnalysis}
+            onDeepAnalysisChange={setDeepAnalysis}
             onSendMessage={handleSendMessage}
             sidebarOpen={sidebarOpen}
             pendingAttachedTable={pendingAttachedTable}

@@ -862,6 +862,17 @@ export interface AlertDetailResponse {
 }
 
 // —— App Insight (daily AI insight)
+export interface DimensionScores {
+  revenueMonetization?: number
+  growthAcquisition?: number
+  engagementRetention?: number
+  productContent?: number
+  adInfrastructure?: number
+  unitEconomics?: number
+  portfolioPosition?: number
+  optimizationVelocity?: number
+}
+
 export interface InsightAnomaly {
   label: string
   severity: string
@@ -890,7 +901,7 @@ export interface AppDailyInsight {
   markdownBody: string
   healthScore?: number | null
   healthTier?: string | null
-  dimensionScores?: Record<string, number> | null
+  dimensionScores?: DimensionScores | null
   anomalies: InsightAnomaly[]
   metadata: InsightMetadata
   status: string

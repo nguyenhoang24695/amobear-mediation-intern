@@ -1,15 +1,21 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, AlertCircle, TrendingUp } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { AlertTriangle, AlertCircle, TrendingUp, Search, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { insightApi } from "@/lib/api/services"
+import { useToast } from "@/hooks/use-toast"
 import type { InsightAnomaly } from "@/types/api"
 
 interface HealthScoreBannerProps {
   score: number
   healthTier?: string | null
   anomalies: InsightAnomaly[]
+  insightId?: number
 }
 
 const getScoreConfig = (score: number) => {
@@ -45,10 +51,29 @@ const getScoreConfig = (score: number) => {
   }
 }
 
-export function HealthScoreBanner({ score, healthTier, anomalies }: HealthScoreBannerProps) {
+export function HealthScoreBanner({ score, healthTier, anomalies, insightId }: HealthScoreBannerProps) {
   const config = getScoreConfig(score)
   const critical = anomalies.filter((a) => a.severity === "critical")
   const warning = anomalies.filter((a) => a.severity === "warning")
+  const router = useRouter()
+  const { toast } = useToast()
+  const [investigating, setInvestigating] = useState(false)
+
+  const handleInvestigate = async () => {
+    if (!insightId || investigating) return
+    setInvestigating(true)
+    try {
+      const result = await insightApi.investigate(insightId)
+      router.push(`/ai-assistant?conversationId=${result.conversationId}`)
+    } catch (e) {
+      console.error(e)
+      toast({ title: "Failed to start investigation", variant: "destructive" })
+    } finally {
+      setInvestigating(false)
+    }
+  }
+
+  const hasAnomalies = critical.length > 0 || warning.length > 0
 
   return (
     <Card className={cn("p-6 border-0 shadow-lg", config.bg)}>
@@ -89,35 +114,54 @@ export function HealthScoreBanner({ score, healthTier, anomalies }: HealthScoreB
           </div>
         </div>
 
-        <div className="flex-1 flex flex-wrap gap-2 lg:justify-end">
-          {critical.map((a, i) => (
-            <Badge
-              key={`c-${i}`}
-              variant="secondary"
-              className="bg-red-950/30 text-white border-red-200/30 gap-1"
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              {a.label}
-            </Badge>
-          ))}
-          {warning.map((a, i) => (
-            <Badge
-              key={`w-${i}`}
-              variant="secondary"
-              className="bg-amber-950/20 text-white border-amber-200/30 gap-1"
-            >
-              <AlertCircle className="w-3.5 h-3.5" />
-              {a.label}
-            </Badge>
-          ))}
-          {anomalies
-            .filter((a) => a.severity === "positive")
-            .map((a, i) => (
-              <Badge key={`p-${i}`} variant="secondary" className="bg-emerald-950/20 text-white border-emerald-200/30 gap-1">
-                <TrendingUp className="w-3.5 h-3.5" />
+        <div className="flex-1 flex flex-col items-end gap-3">
+          <div className="flex flex-wrap gap-2 justify-end">
+            {critical.map((a, i) => (
+              <Badge
+                key={`c-${i}`}
+                variant="secondary"
+                className="bg-red-950/30 text-white border-red-200/30 gap-1"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
                 {a.label}
               </Badge>
             ))}
+            {warning.map((a, i) => (
+              <Badge
+                key={`w-${i}`}
+                variant="secondary"
+                className="bg-amber-950/20 text-white border-amber-200/30 gap-1"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                {a.label}
+              </Badge>
+            ))}
+            {anomalies
+              .filter((a) => a.severity === "positive")
+              .map((a, i) => (
+                <Badge key={`p-${i}`} variant="secondary" className="bg-emerald-950/20 text-white border-emerald-200/30 gap-1">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  {a.label}
+                </Badge>
+              ))}
+          </div>
+
+          {insightId && hasAnomalies ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1.5"
+              onClick={handleInvestigate}
+              disabled={investigating}
+            >
+              {investigating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+              {investigating ? "Investigating…" : "Investigate with AI"}
+            </Button>
+          ) : null}
         </div>
       </div>
     </Card>

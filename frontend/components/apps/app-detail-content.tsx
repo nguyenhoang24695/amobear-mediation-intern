@@ -323,14 +323,14 @@ export function AppDetailContent() {
               Performance tab content coming soon...
             </div>
           </TabsContent>
-          {canViewAiInsight && app?.id ? (
+          {canViewAiInsight && app?.appId ? (
             <TabsContent value="ai-insight" className="mt-6">
-              <AppAiInsightsTab appRowId={app.id} initialDateYmd={searchParams.get("date")} />
+              <AppAiInsightsTab appId={app.appId} initialDateYmd={searchParams.get("date")} />
             </TabsContent>
           ) : null}
-          {canConfigureInsight && app?.id ? (
+          {canConfigureInsight && app?.appId ? (
             <TabsContent value="insight-config" className="mt-6 w-full min-w-0">
-              <AppInsightConfigTab appRowId={app.id} />
+              <AppInsightConfigTab appId={app.appId} />
             </TabsContent>
           ) : null}
           <TabsContent value="settings" className="mt-6">

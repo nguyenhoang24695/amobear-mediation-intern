@@ -1845,33 +1845,38 @@ export interface AccountAppItem {
     updatedAt: string
 }
 
+/** Path segment: canonical AdMob `app_id` (same as Structure apps). */
+function insightAppIdPath(appId: string): string {
+    return encodeURIComponent(appId)
+}
+
 export const insightApi = {
-    getDailyForApp: async (appRowId: number, date?: string): Promise<AppDailyInsight> => {
+    getDailyForApp: async (appId: string, date?: string): Promise<AppDailyInsight> => {
         const q = date ? `?date=${encodeURIComponent(date)}` : ""
-        return apiClient.get<AppDailyInsight>(`/api/app-insights/apps/${appRowId}/daily${q}`)
+        return apiClient.get<AppDailyInsight>(`/api/app-insights/apps/${insightAppIdPath(appId)}/daily${q}`)
     },
 
-    getAvailableDates: async (appRowId: number, from?: string, to?: string): Promise<string[]> => {
+    getAvailableDates: async (appId: string, from?: string, to?: string): Promise<string[]> => {
         const p = new URLSearchParams()
         if (from) p.set("from", from)
         if (to) p.set("to", to)
         const q = p.toString() ? `?${p.toString()}` : ""
-        return apiClient.get<string[]>(`/api/app-insights/apps/${appRowId}/dates${q}`)
+        return apiClient.get<string[]>(`/api/app-insights/apps/${insightAppIdPath(appId)}/dates${q}`)
     },
 
-    getAppSettings: async (appRowId: number): Promise<AppInsightSettings> => {
-        return apiClient.get<AppInsightSettings>(`/api/app-insights/apps/${appRowId}/settings`)
+    getAppSettings: async (appId: string): Promise<AppInsightSettings> => {
+        return apiClient.get<AppInsightSettings>(`/api/app-insights/apps/${insightAppIdPath(appId)}/settings`)
     },
 
     patchAppSettings: async (
-        appRowId: number,
+        appId: string,
         body: { insightTemplateId?: number | null; generationEnabled?: boolean; settings?: Record<string, unknown> },
     ): Promise<AppInsightSettings> => {
-        return apiClient.patch<AppInsightSettings>(`/api/app-insights/apps/${appRowId}/settings`, body)
+        return apiClient.patch<AppInsightSettings>(`/api/app-insights/apps/${insightAppIdPath(appId)}/settings`, body)
     },
 
-    regenerate: async (appRowId: number, insightDate?: string): Promise<{ message: string }> => {
-        return apiClient.post<{ message: string }>(`/api/app-insights/apps/${appRowId}/regenerate`, {
+    regenerate: async (appId: string, insightDate?: string): Promise<{ message: string }> => {
+        return apiClient.post<{ message: string }>(`/api/app-insights/apps/${insightAppIdPath(appId)}/regenerate`, {
             insightDate: insightDate ?? null,
         })
     },
@@ -1947,6 +1952,20 @@ export const insightApi = {
 
     markNotificationsRead: async (ids: string[]): Promise<void> => {
         await apiClient.post("/api/app-insights/notifications/mark-read", { ids })
+    },
+
+    investigate: async (
+        insightId: number,
+        focusDimension?: string,
+    ): Promise<{
+        conversationId: string
+        initialResponse: string
+        appId: string
+        insightDate: string
+    }> => {
+        return apiClient.post(`/api/app-insights/${insightId}/investigate`, {
+            focusDimension: focusDimension ?? null,
+        })
     },
 }
 

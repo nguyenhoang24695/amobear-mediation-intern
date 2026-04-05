@@ -101,10 +101,11 @@ function parseGenerationOverride(s: Record<string, unknown>) {
 }
 
 interface Props {
-  appRowId: number
+  /** Canonical AdMob app id (same as `/apps/[id]`). */
+  appId: string
 }
 
-export function AppInsightConfigTab({ appRowId }: Props) {
+export function AppInsightConfigTab({ appId }: Props) {
   const { toast } = useToast()
   const canConfigure = hasScreenFunction("s-apps", "configure-insight")
   const [loading, setLoading] = useState(true)
@@ -140,12 +141,12 @@ export function AppInsightConfigTab({ appRowId }: Props) {
   const [genExtra, setGenExtra] = useState("")
 
   const load = useCallback(async () => {
-    if (!canConfigure || !appRowId) return
+    if (!canConfigure || !appId) return
     setLoading(true)
     try {
       const [tList, s, lib] = await Promise.all([
         insightApi.listTemplates(),
-        insightApi.getAppSettings(appRowId),
+        insightApi.getAppSettings(appId),
         insightApi.listContextTemplates(false),
       ])
       setTemplates(tList)
@@ -178,14 +179,14 @@ export function AppInsightConfigTab({ appRowId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [appRowId, canConfigure, toast])
+  }, [appId, canConfigure, toast])
 
   useEffect(() => {
     void load()
   }, [load])
 
   useEffect(() => {
-    if (!canConfigure || !appRowId) return
+    if (!canConfigure || !appId) return
     const tid = templateId === "default" ? null : Number(templateId)
     let targetId: number | null = tid
     if (targetId == null || Number.isNaN(targetId)) {
@@ -208,7 +209,7 @@ export function AppInsightConfigTab({ appRowId }: Props) {
     return () => {
       cancelled = true
     }
-  }, [canConfigure, appRowId, templateId, templates])
+  }, [canConfigure, appId, templateId, templates])
 
   useEffect(() => {
     if (!resolvedTemplate) return
@@ -397,7 +398,7 @@ export function AppInsightConfigTab({ appRowId }: Props) {
           })),
         },
       }
-      await insightApi.patchAppSettings(appRowId, {
+      await insightApi.patchAppSettings(appId, {
         insightTemplateId: tid,
         generationEnabled,
         settings: nextSettings,
@@ -727,7 +728,7 @@ export function AppInsightConfigTab({ appRowId }: Props) {
       </Card>
 
       {settings ? (
-        <p className="text-xs text-slate-400">App row #{appRowId} · Lưu ghi đè toàn bộ JSON settings — đã merge với dữ liệu hiện có.</p>
+        <p className="text-xs text-slate-400">App ID: {appId} · Lưu ghi đè toàn bộ JSON settings — đã merge với dữ liệu hiện có.</p>
       ) : null}
 
       <Dialog open={ctxModalOpen} onOpenChange={setCtxModalOpen}>
