@@ -34,7 +34,11 @@ import { invalidateCache } from "@/hooks/use-api"
 import type { AlertCenterTimelineItem } from "@/types/api"
 import { format } from "date-fns"
 import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { hasScreenFunction } from "@/lib/auth"
+import { DailyInsightsFeed } from "./daily-insights-feed"
+import { Sparkles } from "lucide-react"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"] as const
 const TIMELINE_PAGE_SIZE = 25
@@ -94,6 +98,15 @@ export function AlertCenterContentV2() {
   const [timelineNonce, setTimelineNonce] = useState(0)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
   const timelineFetchLock = useRef(false)
+
+  const showDailyInsights = hasScreenFunction("s-alerts", "view-daily-insights")
+  const [centerTab, setCenterTab] = useState<"alerts" | "daily-insights">("alerts")
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "daily-insights" && showDailyInsights) {
+      setCenterTab("daily-insights")
+    }
+  }, [searchParams, showDailyInsights])
 
   useEffect(() => {
     const severityParam = searchParams.get("severity")
@@ -320,8 +333,8 @@ export function AlertCenterContentV2() {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-6">
+  const alertsPanel = (
+    <>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500 mb-2">Alerts & Insights &gt; Alert Center</p>
@@ -739,6 +752,34 @@ export function AlertCenterContentV2() {
           {infoCount} Info
         </Badge>
       </div>
+    </>
+  )
+
+  return (
+    <div className="flex flex-col gap-6">
+      {showDailyInsights ? (
+        <Tabs
+          value={centerTab}
+          onValueChange={(v) => setCenterTab(v as "alerts" | "daily-insights")}
+          className="w-full"
+        >
+          <TabsList className="h-10 w-fit bg-slate-100 p-1 mb-2">
+            <TabsTrigger value="alerts">Alerts</TabsTrigger>
+            <TabsTrigger value="daily-insights" className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              Daily Insights
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="alerts" className="mt-0 flex flex-col gap-6">
+            {alertsPanel}
+          </TabsContent>
+          <TabsContent value="daily-insights" className="mt-6">
+            <DailyInsightsFeed />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        alertsPanel
+      )}
 
       <AIAlertBuilderSheet open={showAiBuilder} onOpenChange={setShowAiBuilder} onCreated={handleRuleCreated} />
       <ManualAlertCreatorModal open={showManualCreator} onOpenChange={setShowManualCreator} onCreated={handleRuleCreated} />

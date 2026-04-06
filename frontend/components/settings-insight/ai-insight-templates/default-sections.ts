@@ -1,0 +1,86 @@
+import type { InsightTemplateSection } from "@/types/api"
+
+/** Bản sao cấu trúc 7 section mặc định (khớp backend seed) để tạo template mới. */
+export function createDefaultSections(): InsightTemplateSection[] {
+  return [
+    {
+      sectionKey: "executive_summary",
+      title: "📊 Executive Summary",
+      metrics: ["total_revenue", "impressions", "ecpm", "fill_rate", "health_score"],
+      comparisonPeriods: ["dod", "7d_avg", "14d_avg"],
+      aiInstruction:
+        "Tóm tắt một ngày: health score (0–100), 3 bullet thay đổi quan trọng, tông tổng thể.",
+      audience: ["bod"],
+      sortOrder: 1,
+      isActive: true,
+      anomalyThresholds: null,
+    },
+    {
+      sectionKey: "revenue_monetization",
+      title: "💰 Revenue & Monetization",
+      metrics: ["total_revenue", "iaa_revenue", "iap_revenue", "ecpm", "arpdau", "fill_rate", "revenue_mix"],
+      comparisonPeriods: ["dod", "7d_avg", "14d_avg"],
+      aiInstruction:
+        "Phân tích revenue; nếu IAA giảm → tách volume vs eCPM vs fill; IAP/data gap nêu rõ.",
+      audience: ["bod", "mediation", "da"],
+      sortOrder: 2,
+      isActive: true,
+      anomalyThresholds: { revenuePctVs7d: 20, ecpmPctVs7d: 15, fillRateMinPct: 85 },
+    },
+    {
+      sectionKey: "users_engagement",
+      title: "👥 Users & Engagement",
+      metrics: ["dau_proxy", "new_users", "sessions", "retention_d1", "retention_d7", "session_length"],
+      comparisonPeriods: ["dod", "7d_avg", "14d_avg"],
+      aiInstruction: "Engagement qua impressions/DAU proxy; retention chưa có thì ghi data gap.",
+      audience: ["product", "ua", "bod"],
+      sortOrder: 3,
+      isActive: true,
+      anomalyThresholds: { impressionsPctVs7d: 15, d1RetentionPctVs14d: 10 },
+    },
+    {
+      sectionKey: "game_health",
+      title: "🎮 Game / Product Health",
+      metrics: ["level_drop_rate", "win_rate", "crash_rate", "progression_funnel"],
+      comparisonPeriods: ["7d_avg"],
+      aiInstruction: "Level/crash: nếu snapshot chưa có, đoạn ngắn + data gap.",
+      audience: ["dev", "product", "game"],
+      sortOrder: 4,
+      isActive: true,
+      anomalyThresholds: { levelDropRateMaxPct: 20 },
+    },
+    {
+      sectionKey: "ua_growth",
+      title: "📢 UA & Growth",
+      metrics: ["installs", "cpi", "roas", "channel_split", "organic_ratio"],
+      comparisonPeriods: ["dod", "7d_avg"],
+      aiInstruction: "UA chưa wire → không bịa CPI/ROAS; đề xuất bổ sung nguồn.",
+      audience: ["ua", "marketing", "bod"],
+      sortOrder: 5,
+      isActive: true,
+      anomalyThresholds: { newUsersPctVs7d: 25 },
+    },
+    {
+      sectionKey: "anomalies",
+      title: "⚠️ Anomalies & Alerts",
+      metrics: ["anomalies"],
+      comparisonPeriods: ["dod"],
+      aiInstruction: "Mở rộng danh sách anomaly rule-based theo mức độ nghiêm trọng.",
+      audience: ["bod", "mediation", "ua", "product", "da", "dev"],
+      sortOrder: 6,
+      isActive: true,
+      anomalyThresholds: null,
+    },
+    {
+      sectionKey: "recommendations",
+      title: "✅ Recommendations",
+      metrics: ["actions"],
+      comparisonPeriods: ["dod"],
+      aiInstruction: "5–8 hành động ưu tiên, gắn team [Mediation], [UA], …",
+      audience: ["bod", "mediation", "ua", "product", "da", "dev", "game"],
+      sortOrder: 7,
+      isActive: true,
+      anomalyThresholds: null,
+    },
+  ]
+}

@@ -430,6 +430,98 @@ export interface JobScheduleUpdateRequest {
   jobMethodName?: string
 }
 
+// Data Sources (Nexus observability)
+export interface DataDomainJobDto {
+  jobId: string
+  displayName?: string | null
+  cronExpression: string
+  enabled: boolean
+  timeZoneId: string
+  lastCheckpointAt?: string | null
+  watermarkDate?: string | null
+  lastCheckpointSuccess?: boolean | null
+  hangfireLastExecution?: string | null
+  hangfireNextExecution?: string | null
+  hangfireLastJobState?: string | null
+}
+
+export interface DataDomainOverviewDto {
+  domainKey: string
+  label: string
+  description: string
+  minioPathPattern?: string | null
+  starRocksNotes?: string | null
+  jobs: DataDomainJobDto[]
+}
+
+export interface DataSourceOverviewItemDto {
+  key: string
+  name: string
+  role: string
+  brandColorClass: string
+  domains: DataDomainOverviewDto[]
+}
+
+export interface DataQualityRowDto {
+  id: string
+  sourceKey: string
+  sourceName: string
+  tableName: string
+  layer: string
+  description: string
+  status: string
+  lastUpdatedRelative?: string | null
+  lastDataAtUtc?: string | null
+  rowCount?: string | null
+  rowCountValue?: number | null
+  notes?: string | null
+}
+
+export interface DataSourcesOverviewDto {
+  sources: DataSourceOverviewItemDto[]
+  quality: DataQualityRowDto[]
+}
+
+export interface DataSourcesTimelineJobDto {
+  jobId: string
+  displayName?: string | null
+  sourceKey?: string | null
+  domainKey?: string | null
+  cronExpression: string
+  enabled: boolean
+  lastExecution?: string | null
+  nextExecution?: string | null
+  lastJobState?: string | null
+  lastCheckpointAt?: string | null
+  watermarkDate?: string | null
+}
+
+export interface DataSourcesVisualBarDto {
+  id: string
+  jobId: string
+  displayName: string
+  startHourFromWindowStart: number
+  durationHours: number
+  status: string
+  recordsLabel: string
+  createdAtUtc?: string | null
+}
+
+export interface DataSourcesVisualRowDto {
+  sourceKey: string
+  sourceName: string
+  sourceColorClass: string
+  bars: DataSourcesVisualBarDto[]
+}
+
+export interface DataSourcesTimelineDto {
+  jobs: DataSourcesTimelineJobDto[]
+  visualRows?: DataSourcesVisualRowDto[] | null
+  visualWindowStartUtc?: string | null
+  visualWindowEndUtc?: string | null
+  currentHourFromWindowStart?: number | null
+}
+
 // Waterfall Recommendation Types
 export interface WaterfallRecommendationConfigDto {
   id: number
@@ -777,6 +869,17 @@ export interface AlertDetailResponse {
   aiInsight?: string | null
 }
 
+// —— App Insight (daily AI insight)
+export interface DimensionScores {
+  revenueMonetization?: number
+  growthAcquisition?: number
+  engagementRetention?: number
+  productContent?: number
+  adInfrastructure?: number
+  unitEconomics?: number
+  portfolioPosition?: number
+  optimizationVelocity?: number
+}
 /** Tài liệu Help & Docs do user tải lên (`/api/HelpDocuments`). */
 export interface HelpDocumentListItem {
   id: string
@@ -788,4 +891,131 @@ export interface HelpDocumentListItem {
   isOwner: boolean
   createdAt: string
 }
+
+export interface InsightAnomaly {
+  label: string
+  severity: string
+  metricKey?: string | null
+}
+
+export interface InsightMetadata {
+  provider?: string | null
+  model?: string | null
+  inputTokens: number
+  outputTokens: number
+  latencyMs: number
+  snapshotPartial?: boolean
+  dataGaps?: string[] | null
+  snapshotRevenueT1?: number | null
+  snapshotImpressionsT1?: number | null
+}
+
+export interface AppDailyInsight {
+  id?: number
+  appRowId: number
+  appId: string
+  displayName?: string | null
+  iconUri?: string | null
+  insightDate: string
+  markdownBody: string
+  healthScore?: number | null
+  healthTier?: string | null
+  dimensionScores?: DimensionScores | null
+  anomalies: InsightAnomaly[]
+  metadata: InsightMetadata
+  status: string
+  errorMessage?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface AppInsightSettings {
+  appRowId: number
+  insightTemplateId?: number | null
+  generationEnabled: boolean
+  settings: Record<string, unknown>
+}
+
+export interface InsightTemplateSection {
+  id?: number
+  sectionKey: string
+  title: string
+  metrics: string[]
+  comparisonPeriods: string[]
+  aiInstruction: string
+  audience: string[]
+  sortOrder: number
+  isActive: boolean
+  anomalyThresholds?: Record<string, unknown> | null
+}
+
+export interface InsightTemplate {
+  id: number
+  name: string
+  description?: string | null
+  isDefault: boolean
+  globalAiInstructions: string
+  preferredProvider?: string | null
+  maxAppsPerBatch: number
+  parallelDegree: number
+  sections: InsightTemplateSection[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InsightContextTemplate {
+  id: number
+  name: string
+  contextType: string
+  defaultTitle: string
+  body: string
+  description?: string | null
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DailyInsightFeedItem {
+  insightId: number
+  appRowId: number
+  appId: string
+  displayName?: string | null
+  iconUri?: string | null
+  category?: string | null
+  insightDate: string
+  healthScore?: number | null
+  summary: string
+  anomalies: InsightAnomaly[]
+  sectionCount: number
+  totalTokens: number
+  revenueT1?: number | null
+  dauT1?: number | null
+  trend: string
+}
+
+export interface InsightGenerationRun {
+  id: string
+  startedAt: string
+  finishedAt?: string | null
+  triggerKind: string
+  insightDateTarget: string
+  appsTotal: number
+  appsSucceeded: number
+  appsFailed: number
+  errorSummary?: string | null
+}
+
+export interface InsightUserNotification {
+  id: string
+  title: string
+  body?: string | null
+  insightId: number
+  appId: string
+  insightDate: string
+  createdAt: string
+  read: boolean
+}
+
+
 

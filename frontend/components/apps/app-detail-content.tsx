@@ -25,6 +25,8 @@ import {
   Settings,
   Check,
   RefreshCw,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
@@ -41,6 +43,8 @@ import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
 import { AppSettingsTab } from "./app-detail/app-settings-tab"
+import { AppAiInsightsTab } from "./app-detail/app-ai-insights-tab"
+import { AppInsightConfigTab } from "./app-detail/app-insight-config-tab"
 import { SyncAppPerformanceModal } from "./app-detail/sync-app-performance-modal"
 
 export function AppDetailContent() {
@@ -120,6 +124,9 @@ export function AppDetailContent() {
 
   const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
   const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
+  const canViewAiInsight =
+    hasScreenFunction(SCREEN_APPS, "view-ai-insight") || hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
+  const canConfigureInsight = hasScreenFunction(SCREEN_APPS, "configure-insight")
 
   if (!canViewDetails) {
     return <NoPermissionView />
@@ -276,6 +283,18 @@ export function AppDetailContent() {
             <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">
               Performance
             </TabsTrigger>
+            {canViewAiInsight ? (
+              <TabsTrigger value="ai-insight" className="px-4 data-[state=active]:bg-white gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                AI Insight
+              </TabsTrigger>
+            ) : null}
+            {canConfigureInsight ? (
+              <TabsTrigger value="insight-config" className="px-4 data-[state=active]:bg-white gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Insight config
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger value="settings" className="px-4 data-[state=active]:bg-white">
               Settings
             </TabsTrigger>
@@ -304,6 +323,16 @@ export function AppDetailContent() {
               Performance tab content coming soon...
             </div>
           </TabsContent>
+          {canViewAiInsight && app?.appId ? (
+            <TabsContent value="ai-insight" className="mt-6">
+              <AppAiInsightsTab appId={app.appId} initialDateYmd={searchParams.get("date")} />
+            </TabsContent>
+          ) : null}
+          {canConfigureInsight && app?.appId ? (
+            <TabsContent value="insight-config" className="mt-6 w-full min-w-0">
+              <AppInsightConfigTab appId={app.appId} />
+            </TabsContent>
+          ) : null}
           <TabsContent value="settings" className="mt-6">
             <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
           </TabsContent>
