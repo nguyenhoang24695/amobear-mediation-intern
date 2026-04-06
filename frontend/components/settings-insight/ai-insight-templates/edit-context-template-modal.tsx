@@ -22,7 +22,14 @@ import {
 } from "@/components/ui/select"
 import type { InsightContextTemplate } from "@/types/api"
 
-const CONTEXT_TYPES = ["game-design", "monetization", "user-flow", "geo-strategy", "custom"] as const
+const CONTEXT_TYPES = [
+  "game-design",
+  "monetization",
+  "user-flow",
+  "geo-strategy",
+  "query-context",
+  "custom",
+] as const
 
 export function EditContextTemplateModal({
   open,

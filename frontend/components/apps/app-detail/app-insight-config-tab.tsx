@@ -31,7 +31,13 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cloneRecommendedInsightSettings } from "@/lib/insight-settings-defaults"
 
-type ContextType = "game-design" | "monetization" | "user-flow" | "geo-strategy" | "custom"
+type ContextType =
+  | "game-design"
+  | "monetization"
+  | "user-flow"
+  | "geo-strategy"
+  | "query-context"
+  | "custom"
 
 export interface InsightContextItem {
   id: string
@@ -46,6 +52,7 @@ const CONTEXT_TYPE_LABEL: Record<ContextType, { label: string; className: string
   monetization: { label: "Monetization", className: "bg-green-100 text-green-800" },
   "user-flow": { label: "User Flow", className: "bg-blue-100 text-blue-800" },
   "geo-strategy": { label: "Geo Strategy", className: "bg-amber-100 text-amber-800" },
+  "query-context": { label: "Query (MCP)", className: "bg-cyan-100 text-cyan-900" },
   custom: { label: "Custom", className: "bg-slate-100 text-slate-800" },
 }
 

@@ -18,6 +18,7 @@ const TYPE_BADGE: Record<string, string> = {
   monetization: "bg-green-100 text-green-800",
   "user-flow": "bg-blue-100 text-blue-800",
   "geo-strategy": "bg-amber-100 text-amber-800",
+  "query-context": "bg-cyan-100 text-cyan-900",
   custom: "bg-slate-100 text-slate-800",
 }
 
