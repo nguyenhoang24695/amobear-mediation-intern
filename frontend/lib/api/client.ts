@@ -106,6 +106,56 @@ export class ApiClient {
     async delete<T>(endpoint: string): Promise<T> {
         return this.request<T>(endpoint, { method: "DELETE" })
     }
+
+    /** GET nhị phân (file) kèm Bearer; dùng cho tải / xem tài liệu Help. */
+    async getBlob(endpoint: string): Promise<{ blob: Blob; contentType: string | null }> {
+        const url = `${this.baseUrl}${endpoint}`
+        const token = getAccessToken()
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+
+        const headers: HeadersInit = {}
+        if (token) headers.Authorization = `Bearer ${token}`
+
+        try {
+            let response = await fetch(url, { method: "GET", headers, signal: controller.signal })
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    const newAccessToken = await refreshAuthSession(this.baseUrl)
+                    if (newAccessToken) {
+                        headers.Authorization = `Bearer ${newAccessToken}`
+                        response = await fetch(url, { method: "GET", headers, signal: controller.signal })
+                    }
+                }
+
+                if (!response.ok) {
+                    if (response.status === 401 && typeof window !== "undefined") {
+                        clearAuthSessionData()
+                        if (!isRedirecting && !window.location.pathname.startsWith("/login")) {
+                            isRedirecting = true
+                            setTimeout(() => {
+                                window.location.href = "/login"
+                            }, 100)
+                        }
+                    }
+                    const errText = await response.text().catch(() => "")
+                    throw new Error(errText || `HTTP ${response.status}`)
+                }
+            }
+
+            const blob = await response.blob()
+            const contentType = response.headers.get("content-type")
+            clearTimeout(timeoutId)
+            return { blob, contentType }
+        } catch (error) {
+            clearTimeout(timeoutId)
+            if (error instanceof Error && (error as any).name === "AbortError") {
+                throw new Error("Request timeout. The server took too long to respond.")
+            }
+            throw error
+        }
+    }
 }
 
 export const apiClient = new ApiClient()

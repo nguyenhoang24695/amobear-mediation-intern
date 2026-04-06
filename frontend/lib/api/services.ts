@@ -40,6 +40,7 @@ import type {
     BulkUpdateWaterfallApplyPoliciesRequestDto,
     BulkUpdateWaterfallApplyPoliciesResponseDto,
     ActiveSession,
+    HelpDocumentListItem,
 } from '@/types/api'
 import { apiClient } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
@@ -1318,6 +1319,28 @@ export const alertsApi = {
         return apiClient.post('/api/Alerts/slack/test', {
             webhookUrl: body.webhookUrl.trim(),
         })
+    },
+}
+
+export const helpDocumentsApi = {
+    list: async (): Promise<HelpDocumentListItem[]> => {
+        return apiClient.get<HelpDocumentListItem[]>("/api/HelpDocuments")
+    },
+
+    get: async (id: string): Promise<HelpDocumentListItem> => {
+        return apiClient.get<HelpDocumentListItem>(`/api/HelpDocuments/${id}`)
+    },
+
+    upload: async (file: File, title: string, isPublishedGlobal: boolean): Promise<HelpDocumentListItem> => {
+        const fd = new FormData()
+        fd.append("file", file)
+        fd.append("title", title)
+        fd.append("isPublishedGlobal", isPublishedGlobal ? "true" : "false")
+        return apiClient.post<HelpDocumentListItem>("/api/HelpDocuments/upload", fd)
+    },
+
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/api/HelpDocuments/${id}`)
     },
 }
 

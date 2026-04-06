@@ -777,5 +777,15 @@ export interface AlertDetailResponse {
   aiInsight?: string | null
 }
 
-
+/** Tài liệu Help & Docs do user tải lên (`/api/HelpDocuments`). */
+export interface HelpDocumentListItem {
+  id: string
+  title: string
+  originalFileName: string
+  contentType: string
+  fileSize: number
+  isPublishedGlobal: boolean
+  isOwner: boolean
+  createdAt: string
+}
 
