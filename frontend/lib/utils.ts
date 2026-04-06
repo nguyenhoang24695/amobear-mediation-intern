@@ -5,6 +5,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Id kiểu UUID cho state phía client (keys, context items). Dùng khi `crypto.randomUUID` không có
+ * (HTTP không bảo mật, trình duyệt cũ, hoặc runtime lạ).
+ */
+export function randomClientUuid(): string {
+  const c = globalThis.crypto
+  if (c != null && typeof c.randomUUID === "function") {
+    return c.randomUUID()
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0
+    const v = ch === "x" ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 export async function copyTextToClipboard(text: string): Promise<boolean> {
   if (typeof navigator !== "undefined" && typeof navigator.clipboard?.writeText === "function") {
     try {

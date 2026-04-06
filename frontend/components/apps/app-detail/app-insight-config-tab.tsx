@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { insightApi } from "@/lib/api/services"
+import { randomClientUuid } from "@/lib/utils"
 import { hasScreenFunction } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import type { AppInsightSettings, InsightContextTemplate, InsightTemplate } from "@/types/api"
@@ -65,7 +66,7 @@ function parseContextItems(settings: Record<string, unknown> | undefined): Insig
       .map((x) => {
         if (!x || typeof x !== "object") return null
         const o = x as Record<string, unknown>
-        const id = typeof o.id === "string" ? o.id : crypto.randomUUID()
+        const id = typeof o.id === "string" ? o.id : randomClientUuid()
         const type = (typeof o.type === "string" ? o.type : "custom") as ContextType
         const title = typeof o.title === "string" ? o.title : "Untitled"
         const body = typeof o.body === "string" ? o.body : typeof o.preview === "string" ? o.preview : ""
@@ -273,7 +274,7 @@ export function AppInsightConfigTab({ appId }: Props) {
       setContextItems((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: randomClientUuid(),
           type: formType,
           title,
           body,
@@ -295,7 +296,7 @@ export function AppInsightConfigTab({ appId }: Props) {
     setContextItems((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: randomClientUuid(),
         type: normalizeContextTypeFromTemplate(t.contextType),
         title: t.defaultTitle,
         body: t.body,
@@ -340,7 +341,7 @@ export function AppInsightConfigTab({ appId }: Props) {
       setContextItems((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: randomClientUuid(),
           type: "custom",
           title: "Gợi ý từ mô tả",
           body: `Tóm tắt từ operator: ${snippet}\n\n(Gợi ý offline — chỉnh sửa nội dung trước khi lưu.)`,
