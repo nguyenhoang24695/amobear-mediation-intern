@@ -64,7 +64,7 @@ export function createDefaultSections(): InsightTemplateSection[] {
       ],
       comparisonPeriods: ["dod", "7d_avg", "14d_avg"],
       aiInstruction:
-        "Dùng usersEngagement.dailySeries + gold/Firebase DAU; retention curve qua MCP nếu snapshot thiếu cohort.",
+        "dailySeries có dailyOverviewRowLayer (gold→silver→bronze); DAU bổ sung Firebase rồi AppMetrica qua dim.appmetrica_id. Retention cohort: MCP nếu thiếu.",
       audience: ["product", "ua", "bod"],
       sortOrder: 3,
       isActive: true,
@@ -81,7 +81,7 @@ export function createDefaultSections(): InsightTemplateSection[] {
       metrics: ["level_drop_rate", "win_rate", "crash_rate", "feature_adoption", "progression_funnel"],
       comparisonPeriods: ["7d_avg", "14d_avg"],
       aiInstruction:
-        "gameHealth: AppMetrica (game) hoặc Firebase topEvents; level stress / crash chỉ khi có trong snapshot.",
+        "dim: firebase_id → App (Firebase); appmetrica_id → Game (AppMetrica); cả hai → hybrid. Bám snapshot.gameHealth + dimAppIdentifiers.",
       audience: ["dev", "product", "game"],
       sortOrder: 4,
       isActive: true,
@@ -101,7 +101,7 @@ export function createDefaultSections(): InsightTemplateSection[] {
       ],
       comparisonPeriods: ["dod", "7d_avg"],
       aiInstruction:
-        "snapshot.ua: gold ua_cost/roi, xmpSpendByModule, AppLovin; campaign/Adjust JSON qua MCP read_query — không bịa CPI/ROAS không có dữ liệu.",
+        "snapshot.ua: gold ua_cost/roi, xmp, AppLovin, adjustCampaignRollupTop (cost/revenue theo campaign từ bronze.adjust_report + dim.adjust_id). MCP khi cần chi tiết cohort.",
       audience: ["ua", "marketing", "bod"],
       sortOrder: 5,
       isActive: true,
