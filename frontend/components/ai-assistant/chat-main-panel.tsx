@@ -60,7 +60,16 @@ interface ChatMainPanelProps {
   onModelSelect: (providerKey: string, modelId: string) => void
   autoExplain: boolean
   onAutoExplainChange: (checked: boolean) => void
-  onSendMessage: (content: string, options?: { images?: ImageAttachmentRequest[]; attachedTableData?: AttachedTableDataRequest }) => void
+  deepAnalysis: boolean
+  onDeepAnalysisChange: (checked: boolean) => void
+  onSendMessage: (
+    content: string,
+    options?: {
+      images?: ImageAttachmentRequest[]
+      attachedTableData?: AttachedTableDataRequest
+      deepAnalysis?: boolean
+    }
+  ) => void
   sidebarOpen: boolean
   pendingAttachedTable?: AttachedTableDataRequest | null
   pendingPrefillQuestion?: string | null
@@ -317,6 +326,8 @@ export function ChatMainPanel({
   onProviderChange: _onProviderChange,
   autoExplain,
   onAutoExplainChange,
+  deepAnalysis,
+  onDeepAnalysisChange,
   onSendMessage,
   sidebarOpen,
   selectedModelId,
@@ -339,14 +350,21 @@ export function ChatMainPanel({
     if (pendingPrefillQuestion) setInputValue((prev) => prev || pendingPrefillQuestion)
   }, [pendingPrefillQuestion])
 
-  const sendingSteps = [
-    "Bước 1: Đang kiểm tra quota...",
-    "Bước 2: Đang chuẩn bị context & hội thoại...",
-    "Bước 3: Đang tải lịch sử chat...",
-    "Bước 4: Đang xây dựng prompt...",
-    `Bước 5: Đang gọi ${PROVIDER_SHORT_NAMES[REVERSE_PROVIDER_KEY_MAP[selectedProvider] ?? "anthropic"] ?? selectedProvider}...`,
-    "Bước 6: Đang nhận và xử lý phản hồi...",
-  ]
+  const sendingSteps = deepAnalysis
+    ? [
+        "Bước 1: Đang kiểm tra quota...",
+        "Bước 2: Phân tích sâu — chuẩn bị agentic (MCP)...",
+        "Bước 3: Vòng lặp AI — có thể gọi StarRocks/Postgres nhiều lần...",
+        "Bước 4: Đang tổng hợp kết quả...",
+      ]
+    : [
+        "Bước 1: Đang kiểm tra quota...",
+        "Bước 2: Đang chuẩn bị context & hội thoại...",
+        "Bước 3: Đang tải lịch sử chat...",
+        "Bước 4: Đang xây dựng prompt...",
+        `Bước 5: Đang gọi ${PROVIDER_SHORT_NAMES[REVERSE_PROVIDER_KEY_MAP[selectedProvider] ?? "anthropic"] ?? selectedProvider}...`,
+        "Bước 6: Đang nhận và xử lý phản hồi...",
+      ]
   useEffect(() => {
     if (!sending) {
       setSendingStepIndex(0)
@@ -357,7 +375,7 @@ export function ChatMainPanel({
       setSendingStepIndex((i) => Math.min(i + 1, sendingSteps.length - 1))
     }, 1800)
     return () => clearInterval(t)
-  }, [sending])
+  }, [sending, deepAnalysis])
 
   const selectedProviderKey = REVERSE_PROVIDER_KEY_MAP[selectedProvider] || "anthropic"
 
@@ -373,6 +391,10 @@ export function ChatMainPanel({
   useEffect(() => {
     fetchProviders()
   }, [fetchProviders])
+
+  useEffect(() => {
+    if (pastedImages.length > 0 && deepAnalysis) onDeepAnalysisChange(false)
+  }, [pastedImages.length, deepAnalysis, onDeepAnalysisChange])
 
   const currentProviderConfig = providerConfigs.find(p => p.providerKey === selectedProviderKey)
   const providerHasUsableModels = currentProviderConfig ? currentProviderConfig.availableModels.length > 0 : true
@@ -412,6 +434,7 @@ export function ChatMainPanel({
     onSendMessage(text, {
       images: pastedImages.length ? pastedImages : undefined,
       attachedTableData: pendingAttachedTable ?? undefined,
+      deepAnalysis,
     })
     setInputValue("")
     setPastedImages([])
@@ -559,6 +582,29 @@ export function ChatMainPanel({
                   className="text-sm text-slate-600 cursor-pointer"
                 >
                   Auto-explain
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="deepAnalysis"
+                  checked={deepAnalysis}
+                  disabled={pastedImages.length > 0}
+                  onCheckedChange={(checked) => onDeepAnalysisChange(checked === true)}
+                />
+                <label
+                  htmlFor="deepAnalysis"
+                  className={cn(
+                    "text-sm cursor-pointer",
+                    pastedImages.length > 0 ? "text-slate-400" : "text-slate-600"
+                  )}
+                  title={
+                    pastedImages.length > 0
+                      ? "Phân tích sâu (MCP) chưa hỗ trợ ảnh đính kèm"
+                      : "Bật để gọi agentic: AI tự truy vấn DB qua MCP nhiều bước"
+                  }
+                >
+                  Phân tích sâu (MCP)
                 </label>
               </div>
 

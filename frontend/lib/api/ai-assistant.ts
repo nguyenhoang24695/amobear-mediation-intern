@@ -21,6 +21,33 @@ export interface AskRequest {
   explainDetails?: boolean
   images?: ImageAttachmentRequest[]
   attachedTableData?: AttachedTableDataRequest
+  /** Default true on server: SmartModelRouter picks provider/model. Set false to lock to UI provider + context model. */
+  useSmartRouting?: boolean
+}
+
+export interface AgenticToolExecutionDto {
+  toolName: string
+  query: string
+  success: boolean
+  resultData?: string | null
+  elapsedMs: number
+}
+
+export interface AskAgenticRequest {
+  question: string
+  contextId?: string
+  conversationId?: string
+  provider?: string
+  useSmartRouting?: boolean
+}
+
+export interface AskAgenticResponse {
+  conversationId: string
+  content: string
+  status: string
+  iterations: number
+  mcpQueriesUsed: number
+  toolExecutions: AgenticToolExecutionDto[]
 }
 
 export interface AskResponse {
@@ -459,6 +486,9 @@ export const aiAssistantApi = {
   // Chat
   ask: (request: AskRequest) =>
     apiClient.post<AskResponse>(`${API_PREFIX}/ask`, request),
+
+  askAgentic: (request: AskAgenticRequest) =>
+    apiClient.post<AskAgenticResponse>(`${API_PREFIX}/ask-agentic`, request),
 
   executeSql: (request: ExecuteSqlRequest) =>
     apiClient.post<ExecuteSqlResponse>(`${API_PREFIX}/execute`, request),

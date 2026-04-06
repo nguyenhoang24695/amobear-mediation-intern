@@ -47,6 +47,7 @@ import {
   CreditCard,
   GitMerge,
   Database,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -189,6 +190,18 @@ const navItems: NavItem[] = [
       { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
       { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") },
       { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
+      {
+        icon: Sparkles,
+        label: "AI Insight Templates",
+        href: "/insight-templates",
+        isShow: () => hasScreenFunction("s-insight-settings", "manage-templates"),
+      },
+      {
+        icon: Zap,
+        label: "Insight Generation",
+        href: "/insight-generation",
+        isShow: () => hasScreenFunction("s-insight-settings", "view-generation"),
+      },
     ],
   },
 ]
