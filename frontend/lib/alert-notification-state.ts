@@ -36,7 +36,7 @@ export function getViewedAlertIds(userId?: string | null): Set<number> {
   return new Set(parseViewedAlertIds(window.localStorage.getItem(storageKey)))
 }
 
-// Keep viewed state per browser/user until the backend exposes a persisted read state.
+// Fallback khi API mark-viewed lỗi / offline; trạng thái chính lưu trên server (inAppReadAt).
 export function markAlertsViewed(alertIds: number[], userId?: string | null): void {
   if (typeof window === "undefined" || alertIds.length === 0) {
     return

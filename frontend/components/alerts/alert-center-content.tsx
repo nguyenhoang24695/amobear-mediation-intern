@@ -71,7 +71,7 @@ export function AlertCenterContent() {
 
   useEffect(() => {
     if (openAlertIds.length === 0) return
-    markAlertsViewed(openAlertIds)
+    void markAlertsViewed(openAlertIds)
   }, [markAlertsViewed, openAlertIds])
 
   const filteredAlerts = useMemo(() => {

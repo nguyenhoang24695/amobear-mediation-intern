@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useApi } from "@/hooks/use-api"
-import type { AlertRule, AlertRuleConfigPayload } from "@/types/api"
+import type { AlertRule, AlertRuleConfigPayload, AppMetricCatalogItem } from "@/types/api"
 
 interface ManualAlertCreatorModalProps {
   open: boolean
@@ -57,7 +57,7 @@ type EmailRecipientRow = {
   email: string
 }
 
-const metrics = [
+const FALLBACK_METRICS: Array<{ value: string; label: string }> = [
   { value: "ecpm", label: "eCPM" },
   { value: "revenue", label: "Revenue" },
   { value: "fill_rate", label: "Fill Rate" },
@@ -66,6 +66,18 @@ const metrics = [
   { value: "d1_retention", label: "D1 Retention" },
   { value: "d7_retention", label: "D7 Retention" },
 ]
+
+function resolveMetricSelectOptions(
+  catalog: AppMetricCatalogItem[] | null | undefined,
+  selectedMetricKey: string
+): Array<{ value: string; label: string }> {
+  const fromApi = (catalog ?? []).map((m) => ({ value: m.metricKey, label: m.name }))
+  const base = fromApi.length > 0 ? fromApi : FALLBACK_METRICS
+  if (selectedMetricKey && !base.some((x) => x.value === selectedMetricKey)) {
+    return [{ value: selectedMetricKey, label: selectedMetricKey }, ...base]
+  }
+  return base
+}
 
 const conditionTypes = [
   { value: "threshold", label: "Threshold", description: "Alert when metric crosses a fixed value" },
@@ -190,6 +202,16 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   const { data: appsData, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
     { enabled: open, cacheKey: "manual_alert_create_apps" }
+  )
+
+  const { data: metricsCatalog, loading: metricsCatalogLoading } = useApi(
+    () => alertsApi.getMetricsCatalog(),
+    { enabled: open, cacheKey: "alert_metrics_catalog" }
+  )
+
+  const metricSelectOptions = useMemo(
+    () => resolveMetricSelectOptions(metricsCatalog ?? null, formData.metric),
+    [metricsCatalog, formData.metric]
   )
 
   const apps = useMemo(
@@ -374,7 +396,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   }
 
   const generateAlertName = () => {
-    const metricLabel = metrics.find((m) => m.value === formData.metric)?.label || "Metric"
+    const metricLabel = metricSelectOptions.find((m) => m.value === formData.metric)?.label || "Metric"
     if (formData.conditionType === "threshold") {
       return `${metricLabel} ${formData.operator === "less_than" ? "<" : ">"} ${formData.thresholdValue || "?"}`
     }
@@ -551,13 +573,21 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
             {step === 1 && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label>Select Metric *</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Select Metric *</Label>
+                    {metricsCatalogLoading && (
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Loading catalog…
+                      </span>
+                    )}
+                  </div>
                   <Select value={formData.metric} onValueChange={(v) => setFormData({ ...formData, metric: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose a metric to monitor" />
                     </SelectTrigger>
                     <SelectContent>
-                      {metrics.map((m) => (
+                      {metricSelectOptions.map((m) => (
                         <SelectItem key={m.value} value={m.value}>
                           {m.label}
                         </SelectItem>
@@ -965,7 +995,9 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                       </div>
                       <div>
                         <span className="text-slate-500">Metric:</span>
-                        <p className="font-medium">{metrics.find((m) => m.value === formData.metric)?.label || "-"}</p>
+                        <p className="font-medium">
+                          {metricSelectOptions.find((m) => m.value === formData.metric)?.label || "-"}
+                        </p>
                       </div>
                       <div>
                         <span className="text-slate-500">Apps:</span>

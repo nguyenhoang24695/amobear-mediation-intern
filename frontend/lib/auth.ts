@@ -9,6 +9,8 @@ export interface AuthUser {
   fullName?: string
   avatarUrl?: string
   role: string
+  /** Slack Incoming Webhook URL (profile); dùng khi gửi alert theo cấu hình user */
+  slackWebhookUrl?: string
   organization?: {
     id: string
     name: string
@@ -22,6 +24,39 @@ export interface AuthUser {
   }>
   /** Quyen man hinh/chuc nang theo role: screenKey -> danh sach functionKey */
   rolePermissions?: Record<string, string[]>
+}
+
+/** Đồng bộ object từ GET/PUT /api/v1/auth/me vào AuthUser lưu localStorage */
+export function authUserFromMeDto(d: {
+  id: string
+  email: string
+  firstName?: string
+  lastName?: string
+  fullName?: string
+  avatarUrl?: string
+  role: string
+  slackWebhookUrl?: string
+  organization?: AuthUser["organization"]
+  teams?: AuthUser["teams"]
+  rolePermissions?: AuthUser["rolePermissions"]
+}): AuthUser {
+  const fullName =
+    d.fullName?.trim() ||
+    [d.firstName, d.lastName].filter(Boolean).join(" ").trim() ||
+    undefined
+  return {
+    id: d.id,
+    email: d.email,
+    firstName: d.firstName,
+    lastName: d.lastName,
+    fullName,
+    avatarUrl: d.avatarUrl,
+    role: d.role,
+    slackWebhookUrl: d.slackWebhookUrl,
+    organization: d.organization,
+    teams: d.teams,
+    rolePermissions: d.rolePermissions,
+  }
 }
 
 const ACCESS_TOKEN_KEY = "accessToken"

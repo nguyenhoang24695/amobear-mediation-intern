@@ -358,7 +358,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     ) : (
                       <Link
                         href={item.href}
-                        onClick={item.href === "/alert-center" ? () => markAlertsViewed(openAlertIds) : undefined}
+                        onClick={item.href === "/alert-center" ? () => void markAlertsViewed(openAlertIds) : undefined}
                         className="block"
                       >
                         {content}
@@ -424,10 +424,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="px-2 py-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+              <Link
+                href="/help"
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                  pathname.startsWith("/help")
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                )}
+              >
                 <HelpCircle className="w-5 h-5 flex-shrink-0" />
                 {!collapsed && <span>Help & Docs</span>}
-              </button>
+              </Link>
             </TooltipTrigger>
             {collapsed && (
               <TooltipContent side="right">
