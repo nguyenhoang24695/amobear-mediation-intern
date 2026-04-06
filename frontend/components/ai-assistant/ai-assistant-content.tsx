@@ -18,6 +18,7 @@ import type {
   AttachedTableDataRequest,
 } from "@/lib/api/ai-assistant"
 import { useToast } from "@/hooks/use-toast"
+import { formatAgenticUseToolXmlToMarkdown } from "@/lib/format-agentic-use-tool-xml"
 
 export interface AiContext {
   id: string
@@ -176,7 +177,7 @@ function dtoToMessage(m: MessageDto): AiMessage {
   return {
     id: m.id,
     role: m.role === "user" ? "user" : "assistant",
-    content: m.content,
+    content: m.role === "user" ? m.content : formatAgenticUseToolXmlToMarkdown(m.content),
     timestamp: new Date(m.createdAt),
     metadata: {
       sql: m.sql,
@@ -223,7 +224,7 @@ function agenticResponseToMessage(res: AskAgenticResponse): AiMessage {
   return {
     id: `agentic-${Date.now()}`,
     role: "assistant",
-    content: res.content,
+    content: formatAgenticUseToolXmlToMarkdown(res.content),
     timestamp: new Date(),
     metadata: {
       agentic: {
