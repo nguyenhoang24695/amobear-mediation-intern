@@ -904,3 +904,71 @@ export interface MetaRequestFilters {
 
 export type GroupedValidationErrors = Record<string, string[]>
 
+
+export interface MetaInsightsOverviewDto {
+  totalSpend: number
+  totalInstalls: number
+  totalClicks: number
+  totalImpressions: number
+  totalReach: number
+  avgCpi: number
+  avgCpc: number
+  avgCpm: number
+  avgCtr: number
+  avgFrequency: number
+  totalCampaigns: number
+  prevSpend: number
+  prevInstalls: number
+  prevClicks: number
+  prevImpressions: number
+  prevReach: number
+}
+
+export interface MetaInsightsDailyDto {
+  date: string
+  spend: number
+  installs: number
+  clicks: number
+  impressions: number
+  reach: number
+  cpi: number
+  cpc: number
+  cpm: number
+  ctr: number
+}
+
+export interface MetaCampaignBreakdownDto {
+  campaignId: string
+  campaignName: string
+  accountId: string
+  appId: string
+  spend: number
+  installs: number
+  clicks: number
+  impressions: number
+  reach: number
+  cpi: number
+  cpc: number
+  cpm: number
+  ctr: number
+  frequency: number
+}
+
+export interface MetaCampaignBreakdownPageDto {
+  items: MetaCampaignBreakdownDto[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface MetaInsightsFilterOptionDto {
+  value: string
+  label: string
+}
+
+export interface MetaInsightsFiltersResponseDto {
+  accounts: MetaInsightsFilterOptionDto[]
+  campaigns: MetaInsightsFilterOptionDto[]
+  countries: MetaInsightsFilterOptionDto[]
+}
