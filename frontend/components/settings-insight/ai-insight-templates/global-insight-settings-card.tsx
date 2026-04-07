@@ -186,7 +186,8 @@ export function GlobalInsightSettingsCard({
     try {
       const mapProvider = (v: string) => {
         if (!v || v === "__auto__") return null
-        if (v === "chatgpt") return "openai"
+        // Backend / IAiProviderManager key is "chatgpt" (OpenAI provider registration).
+        if (v === "chatgpt" || v === "openai") return "chatgpt"
         return v
       }
       const updated: InsightTemplate = {
