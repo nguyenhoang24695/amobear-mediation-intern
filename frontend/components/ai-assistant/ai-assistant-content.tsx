@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { ContextSidebar } from "./context-sidebar"
 import { ChatMainPanel } from "./chat-main-panel"
@@ -8,6 +8,8 @@ import { CreateContextModal } from "./create-context-modal"
 import { ShareConversationModal } from "./share-conversation-modal"
 import { ChooseContextForForkModal } from "./choose-context-for-fork-modal"
 import { RenameModal } from "./rename-modal"
+import { AgenticPlanCard } from "./agentic-plan-card"
+import { AgenticThinkingPanel, type AgenticThinkingStep } from "./agentic-thinking-panel"
 import { aiAssistantApi } from "@/lib/api/ai-assistant"
 import type {
   AskResponse,
@@ -66,11 +68,32 @@ export interface ContextSummary {
   savedQueries: number
 }
 
+export interface AgenticToolExecution {
+  toolName: string
+  query: string
+  success: boolean
+  resultData?: string | null
+  elapsedMs: number
+}
+
 export interface AiMessage {
   id: string
   role: "user" | "assistant"
   content: string
   timestamp: Date
+  /** Special message types rendered inline instead of as normal bubbles */
+  messageType?: "plan-card" | "thinking"
+  /** Plan card data */
+  planCard?: {
+    planDescription: string
+    question: string
+    contextId: string
+    conversationId?: string
+  }
+  /** Live thinking steps for streaming */
+  thinkingSteps?: AgenticThinkingStep[]
+  /** Whether the thinking panel is still streaming */
+  thinkingRunning?: boolean
   metadata?: {
     sql?: string
     explanation?: string
@@ -88,6 +111,7 @@ export interface AiMessage {
       iterations: number
       mcpQueriesUsed: number
       toolCount: number
+      toolExecutions?: AgenticToolExecution[]
     }
   }
 }
@@ -232,6 +256,13 @@ function agenticResponseToMessage(res: AskAgenticResponse): AiMessage {
         iterations: res.iterations,
         mcpQueriesUsed: res.mcpQueriesUsed,
         toolCount: res.toolExecutions?.length ?? 0,
+        toolExecutions: res.toolExecutions?.map(t => ({
+          toolName: t.toolName,
+          query: t.query,
+          success: t.success,
+          resultData: t.resultData,
+          elapsedMs: t.elapsedMs,
+        })),
       },
     },
   }
@@ -680,6 +711,7 @@ export function AiAssistantContent() {
 
   const [pendingAttachedTable, setPendingAttachedTable] = useState<AttachedTableDataRequest | null>(null)
   const [pendingPrefillQuestion, setPendingPrefillQuestion] = useState<string | null>(null)
+  const agenticAbortRef = useRef<AbortController | null>(null)
 
   const handleChooseContextForFork = useCallback(
     async (targetContextId: string) => {
@@ -809,15 +841,50 @@ export function AiAssistantContent() {
             description: "Đang gửi ở chế độ chat thường (MCP agentic chưa hỗ trợ ảnh đính kèm).",
           })
         }
-        const res = useAgentic
-          ? await aiAssistantApi.askAgentic({
+
+        if (useAgentic) {
+          // Step 1: Generate plan — the server creates (or resumes) a conversation and
+          // returns its ID so the confirm step always continues the same session.
+          let planDescription = "AI sẽ truy vấn dữ liệu liên quan để phân tích câu hỏi của bạn."
+          let resolvedConversationId: string | undefined = conversationIdToUse
+          try {
+            const planRes = await aiAssistantApi.askAgenticPlan({
               question: content,
               contextId: activeContextId,
               conversationId: conversationIdToUse,
-              provider: selectedProvider,
-              useSmartRouting: true,
             })
-          : await aiAssistantApi.ask({
+            planDescription = planRes.planDescription
+            // Always prefer the server-returned conversationId — it is guaranteed to
+            // be a persisted DB record, even when the client had "new-xxx".
+            if (planRes.conversationId) resolvedConversationId = planRes.conversationId
+          } catch {
+            // planDescription already has fallback; keep conversationIdToUse as-is
+          }
+
+          // Show plan card (replace loading user msg + add plan card)
+          const planCardId = `plan-${Date.now()}`
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            userMsg,
+            {
+              id: planCardId,
+              role: "assistant" as const,
+              content: "",
+              timestamp: new Date(),
+              messageType: "plan-card" as const,
+              planCard: {
+                planDescription,
+                question: content,
+                contextId: activeContextId,
+                conversationId: resolvedConversationId,
+              },
+            },
+          ])
+          setSending(false)
+          return
+        }
+
+        const res = await aiAssistantApi.ask({
               question: content,
               contextId: activeContextId,
               conversationId: conversationIdToUse,
@@ -831,30 +898,28 @@ export function AiAssistantContent() {
         setMessages((prev) => [
           ...prev.slice(0, -1),
           userMsg,
-          useAgentic ? agenticResponseToMessage(res as AskAgenticResponse) : askResponseToMessage(res as AskResponse),
+          askResponseToMessage(res as AskResponse),
         ])
-        if (!useAgentic) {
-          const askRes = res as AskResponse
-          const responseProvider = toProvider(askRes.provider)
-          if (askRes.model && (responseProvider !== selectedProvider || askRes.model !== selectedModelId)) {
-            setSelectedProvider(responseProvider)
-            setSelectedModelId(askRes.model)
-            void aiAssistantApi
-              .updateContext(activeContextId, {
-                preferredProvider: responseProvider,
-                preferredModel: askRes.model,
-              })
-              .then(() => {
-                setContexts((prev) =>
-                  prev.map((c) =>
-                    c.id === activeContextId
-                      ? { ...c, preferredProvider: responseProvider, preferredModel: askRes.model }
-                      : c
-                  )
+        const askRes = res as AskResponse
+        const responseProvider = toProvider(askRes.provider)
+        if (askRes.model && (responseProvider !== selectedProvider || askRes.model !== selectedModelId)) {
+          setSelectedProvider(responseProvider)
+          setSelectedModelId(askRes.model)
+          void aiAssistantApi
+            .updateContext(activeContextId, {
+              preferredProvider: responseProvider,
+              preferredModel: askRes.model,
+            })
+            .then(() => {
+              setContexts((prev) =>
+                prev.map((c) =>
+                  c.id === activeContextId
+                    ? { ...c, preferredProvider: responseProvider, preferredModel: askRes.model }
+                    : c
                 )
-              })
-              .catch(() => {})
-          }
+              )
+            })
+            .catch(() => {})
         }
         const list = await aiAssistantApi.getConversations(activeContextId).catch(() => [])
         setConversations((list ?? []).map(dtoToConversation))
@@ -897,6 +962,125 @@ export function AiAssistantContent() {
     setPendingAttachedTable({ columns: result.columns, rows: result.rows })
     setPendingPrefillQuestion("Phân tích giúp tôi bảng kết quả bên dưới.")
   }, [])
+
+  const handleStopAgentic = useCallback(() => {
+    agenticAbortRef.current?.abort()
+  }, [])
+
+  const handleCancelAgenticPlan = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId))
+  }, [])
+
+  const handleConfirmAgenticPlan = useCallback(async (planCard: NonNullable<AiMessage["planCard"]>) => {
+    if (sending) return
+
+    // Replace plan card with a thinking panel message
+    const thinkingId = `thinking-${Date.now()}`
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.messageType === "plan-card" && m.planCard?.question === planCard.question
+          ? {
+              ...m,
+              id: thinkingId,
+              messageType: "thinking" as const,
+              planCard: undefined,
+              thinkingSteps: [],
+              thinkingRunning: true,
+            }
+          : m
+      )
+    )
+    setSending(true)
+
+    const abort = new AbortController()
+    agenticAbortRef.current = abort
+
+    let finalConversationId = planCard.conversationId ?? ""
+    const steps: AgenticThinkingStep[] = []
+
+    try {
+      await aiAssistantApi.askAgenticStream(
+        {
+          question: planCard.question,
+          contextId: planCard.contextId,
+          conversationId: planCard.conversationId,
+          provider: selectedProvider,
+          useSmartRouting: true,
+        },
+        (event) => {
+          if (event.eventType === "started") {
+            if (event.conversationId) finalConversationId = event.conversationId
+            return
+          }
+          if (event.eventType === "final_result") {
+            // Will be handled after stream ends
+            return
+          }
+          const step: AgenticThinkingStep = {
+            type: event.eventType,
+            iteration: event.iteration,
+            mcpQueriesUsed: event.mcpQueriesUsed,
+            message: event.message,
+            toolName: event.toolName,
+            query: event.query,
+            success: event.success,
+            rowCount: event.rowCount,
+            elapsedMs: event.elapsedMs,
+          }
+          steps.push(step)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === thinkingId
+                ? { ...m, thinkingSteps: [...steps] }
+                : m
+            )
+          )
+        },
+        abort.signal
+      )
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") {
+        setMessages((prev) => prev.map((m) => m.id === thinkingId ? { ...m, thinkingRunning: false } : m))
+        setSending(false)
+        return
+      }
+      const errMessage = err instanceof Error ? err.message : "Lỗi phân tích"
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== thinkingId),
+        { id: `err-${Date.now()}`, role: "assistant" as const, content: errMessage, timestamp: new Date() },
+      ])
+      setSending(false)
+      return
+    }
+
+    // Mark thinking done
+    setMessages((prev) => prev.map((m) => m.id === thinkingId ? { ...m, thinkingRunning: false } : m))
+
+    // The final result content is in the last "final_result" step — fetch from stream events directly
+    // Since we only have the thinkingSteps (not final content), we re-fetch the conversation
+    try {
+      if (finalConversationId) {
+        setActiveConversationId(finalConversationId)
+        if (typeof window !== "undefined") {
+          localStorage.setItem(AI_ASSISTANT_LAST_CONVERSATION_ID, finalConversationId)
+          localStorage.setItem(AI_ASSISTANT_LAST_CONTEXT_ID, planCard.contextId)
+        }
+        const detail = await aiAssistantApi.getConversation(finalConversationId)
+        if (detail?.messages) {
+          setMessages(detail.messages.map(dtoToMessage))
+          setConversationDetail({ isOwner: true, isShared: false })
+        }
+      }
+      const convList = await aiAssistantApi.getConversations(planCard.contextId).catch(() => [])
+      setConversations((convList ?? []).map(dtoToConversation))
+      const q = await aiAssistantApi.getMyUsage().catch(() => null)
+      if (q) setQuota(quotaStatusToQuota(q))
+    } catch {
+      // best effort
+    }
+
+    setSending(false)
+  }, [sending, selectedProvider, quotaStatusToQuota])
 
   if (loadingContexts && contexts.length === 0) {
     return (
@@ -949,6 +1133,9 @@ export function AiAssistantContent() {
             pendingPrefillQuestion={pendingPrefillQuestion}
             onAskAboutTable={handleAskAboutTable}
             sending={sending}
+            onConfirmAgenticPlan={handleConfirmAgenticPlan}
+            onCancelAgenticPlan={handleCancelAgenticPlan}
+            onStopAgentic={handleStopAgentic}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-slate-50 text-slate-500">

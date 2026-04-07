@@ -29,6 +29,8 @@ import {
 import type { AiContext, AiMessage } from "./ai-assistant-content"
 import { AiMessageBubble } from "./ai-message-bubble"
 import { UserMessageBubble } from "./user-message-bubble"
+import { AgenticPlanCard } from "./agentic-plan-card"
+import { AgenticThinkingPanel } from "./agentic-thinking-panel"
 import {
   aiAssistantApi,
   type AiProviderConfigDto,
@@ -75,6 +77,9 @@ interface ChatMainPanelProps {
   pendingPrefillQuestion?: string | null
   onAskAboutTable?: (result: { columns: string[]; rows: Record<string, unknown>[] }) => void
   sending?: boolean
+  onConfirmAgenticPlan?: (planCard: NonNullable<AiMessage["planCard"]>) => void
+  onCancelAgenticPlan?: (messageId: string) => void
+  onStopAgentic?: () => void
 }
 
 const REVERSE_PROVIDER_KEY_MAP: Record<string, string> = {
@@ -302,19 +307,48 @@ function ModelSelectorDropdown({
 const ChatMessagesList = memo(function ChatMessagesList({
   messages,
   onAskAboutTable,
+  onConfirmAgenticPlan,
+  onCancelAgenticPlan,
+  onStopAgentic,
+  sending,
 }: {
   messages: AiMessage[]
   onAskAboutTable?: (result: { columns: string[]; rows: Record<string, unknown>[] }) => void
+  onConfirmAgenticPlan?: (planCard: NonNullable<AiMessage["planCard"]>) => void
+  onCancelAgenticPlan?: (messageId: string) => void
+  onStopAgentic?: () => void
+  sending?: boolean
 }) {
   return (
     <>
-      {messages.map((message) =>
-        message.role === "user" ? (
+      {messages.map((message) => {
+        if (message.messageType === "plan-card" && message.planCard) {
+          return (
+            <AgenticPlanCard
+              key={message.id}
+              planDescription={message.planCard.planDescription}
+              onConfirm={() => onConfirmAgenticPlan?.(message.planCard!)}
+              onCancel={() => onCancelAgenticPlan?.(message.id)}
+              disabled={sending}
+            />
+          )
+        }
+        if (message.messageType === "thinking") {
+          return (
+            <AgenticThinkingPanel
+              key={message.id}
+              steps={message.thinkingSteps ?? []}
+              isRunning={message.thinkingRunning ?? false}
+              onStop={onStopAgentic}
+            />
+          )
+        }
+        return message.role === "user" ? (
           <UserMessageBubble key={message.id} message={message} />
         ) : (
           <AiMessageBubble key={message.id} message={message} onAskAboutTable={onAskAboutTable} />
         )
-      )}
+      })}
     </>
   )
 })
@@ -336,6 +370,9 @@ export function ChatMainPanel({
   pendingPrefillQuestion = null,
   onAskAboutTable,
   sending = false,
+  onConfirmAgenticPlan,
+  onCancelAgenticPlan,
+  onStopAgentic,
 }: ChatMainPanelProps) {
   const { toast } = useToast()
   const [inputValue, setInputValue] = useState("")
@@ -484,13 +521,20 @@ export function ChatMainPanel({
       {/* Messages Area */}
       <ScrollArea className="flex-1 min-h-0 p-6">
         <div className="max-w-4xl mx-auto space-y-6">
-          <ChatMessagesList messages={messages} onAskAboutTable={onAskAboutTable} />
+          <ChatMessagesList
+            messages={messages}
+            onAskAboutTable={onAskAboutTable}
+            onConfirmAgenticPlan={onConfirmAgenticPlan}
+            onCancelAgenticPlan={onCancelAgenticPlan}
+            onStopAgentic={onStopAgentic}
+            sending={sending}
+          />
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
-      {/* Sending status — từng bước giống log backend */}
-      {sending && (
+      {/* Sending status — shown only when no plan-card / thinking panel is already visible */}
+      {sending && !messages.some(m => m.messageType === "plan-card" || m.messageType === "thinking") && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border-t border-blue-100 text-sm text-blue-800">
           <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
           <span className="truncate">{sendingSteps[sendingStepIndex]}</span>

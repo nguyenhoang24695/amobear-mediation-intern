@@ -51,8 +51,13 @@ import {
   Check,
   FileText,
   Type,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react"
-import type { AiMessage, QueryResult } from "./ai-assistant-content"
+import type { AiMessage, QueryResult, AgenticToolExecution } from "./ai-assistant-content"
 import { QueryResultTable } from "./query-result-table"
 import { aiAssistantApi } from "@/lib/api/ai-assistant"
 import { useToast } from "@/hooks/use-toast"
@@ -643,6 +648,11 @@ export function AiMessageBubble({ message, onAskAboutTable }: AiMessageBubblePro
             </div>
           )}
 
+          {/* Agentic Tool Executions Panel */}
+          {message.metadata?.agentic?.toolExecutions && message.metadata.agentic.toolExecutions.length > 0 && (
+            <AgenticToolExecutionsPanel toolExecutions={message.metadata.agentic.toolExecutions} />
+          )}
+
           {/* Run error */}
           {runError && (
             <div className="px-4 py-2 bg-red-50 border-t border-red-100 text-sm text-red-700">
@@ -752,6 +762,72 @@ export function AiMessageBubble({ message, onAskAboutTable }: AiMessageBubblePro
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function AgenticToolExecutionsPanel({ toolExecutions }: { toolExecutions: AgenticToolExecution[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const [expandedQueries, setExpandedQueries] = useState<Set<number>>(new Set())
+
+  const toggleQuery = (idx: number) => {
+    setExpandedQueries(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  return (
+    <div className="border-t border-slate-100">
+      <button
+        className="w-full flex items-center justify-between px-4 py-2 bg-slate-50 hover:bg-slate-100 transition-colors text-left border-b border-slate-100"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2">
+          <Database className="h-3.5 w-3.5 text-violet-500" />
+          <span className="text-xs font-medium text-slate-600">
+            Chi tiết truy vấn MCP ({toolExecutions.length} bước)
+          </span>
+        </div>
+        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-slate-400" /> : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />}
+      </button>
+      {expanded && (
+        <div className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto">
+          {toolExecutions.map((tool, idx) => (
+            <div key={idx} className="px-4 py-2">
+              <button className="w-full text-left" onClick={() => toggleQuery(idx)}>
+                <div className="flex items-center gap-2">
+                  {tool.success
+                    ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                    : <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                  }
+                  <Database className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                  <code className={cn("text-xs rounded px-1 flex-shrink-0", tool.success ? "text-emerald-700 bg-emerald-50" : "text-red-700 bg-red-50")}>
+                    {tool.toolName}
+                  </code>
+                  <span className="text-xs text-slate-500 truncate flex-1">
+                    {tool.query?.split('\n')[0]?.trim().slice(0, 60)}…
+                  </span>
+                  <span className="text-xs text-slate-400 flex-shrink-0">{tool.elapsedMs}ms</span>
+                  {expandedQueries.has(idx) ? <ChevronUp className="h-3 w-3 text-slate-400 flex-shrink-0" /> : <ChevronDown className="h-3 w-3 text-slate-400 flex-shrink-0" />}
+                </div>
+              </button>
+              {expandedQueries.has(idx) && (
+                <div className="mt-2 ml-8">
+                  <div className="rounded bg-slate-900 p-2 overflow-x-auto">
+                    <pre className="text-xs text-slate-200 font-mono whitespace-pre-wrap">{tool.query}</pre>
+                  </div>
+                  {!tool.success && tool.resultData && (
+                    <div className="mt-1 text-xs text-red-600 bg-red-50 rounded p-2">{tool.resultData}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
