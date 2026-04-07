@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +28,17 @@ const formatRelativeTime = (iso?: string) => {
 
 type ListFilter = "all" | "unread"
 
-const ALERTS_PAGE_SIZE = 5
+const NOTIFICATIONS_PAGE_SIZE = 5
+
+type MergedNotificationItem =
+  | { kind: "insight"; sortAt: number; note: InsightUserNotification }
+  | { kind: "alert"; sortAt: number; alert: AlertCenterListItem }
+
+function parseSortTime(iso?: string | null): number {
+  if (!iso) return 0
+  const t = new Date(iso).getTime()
+  return Number.isFinite(t) ? t : 0
+}
 
 function appAvatarInitial(alert: AlertCenterListItem): string {
   const name = alert.appDisplayName?.trim()
@@ -40,7 +50,7 @@ function appAvatarInitial(alert: AlertCenterListItem): string {
 
 export function NotificationPopup() {
   const [listFilter, setListFilter] = useState<ListFilter>("all")
-  const [visibleAlertCount, setVisibleAlertCount] = useState(ALERTS_PAGE_SIZE)
+  const [visibleItemCount, setVisibleItemCount] = useState(NOTIFICATIONS_PAGE_SIZE)
   const {
     alerts,
     unseenAlerts,
@@ -55,7 +65,7 @@ export function NotificationPopup() {
   const refreshInsights = useCallback(() => {
     void insightApi
       .getMyNotifications()
-      .then((list) => setInsightNotes(list.slice(0, 6)))
+      .then((list) => setInsightNotes(Array.isArray(list) ? list : []))
       .catch(() => setInsightNotes([]))
   }, [])
 
@@ -64,15 +74,40 @@ export function NotificationPopup() {
   }, [refreshInsights])
 
   useEffect(() => {
-    setVisibleAlertCount(ALERTS_PAGE_SIZE)
+    setVisibleItemCount(NOTIFICATIONS_PAGE_SIZE)
   }, [listFilter])
 
   const insightUnread = insightNotes.filter((n) => !n.read).length
   const headerUnseen = unseenCount + insightUnread
+  const unreadTabBadgeCount = insightUnread + unseenCount
 
-  const sourceList = listFilter === "all" ? alerts : unseenAlerts
-  const displayedAlerts = sourceList.slice(0, visibleAlertCount)
-  const hasMoreAlerts = sourceList.length > visibleAlertCount
+  const insightPool = useMemo(
+    () => (listFilter === "unread" ? insightNotes.filter((n) => !n.read) : insightNotes),
+    [insightNotes, listFilter]
+  )
+
+  const alertPool = listFilter === "all" ? alerts : unseenAlerts
+
+  const mergedTimeline = useMemo(() => {
+    const items: MergedNotificationItem[] = []
+    for (const note of insightPool) {
+      items.push({ kind: "insight", sortAt: parseSortTime(note.createdAt), note })
+    }
+    for (const alert of alertPool) {
+      items.push({ kind: "alert", sortAt: parseSortTime(alert.triggeredAt), alert })
+    }
+    items.sort((a, b) => {
+      if (b.sortAt !== a.sortAt) return b.sortAt - a.sortAt
+      if (a.kind !== b.kind) return a.kind === "insight" ? -1 : 1
+      const idA = a.kind === "insight" ? a.note.id : String(a.alert.id)
+      const idB = b.kind === "insight" ? b.note.id : String(b.alert.id)
+      return idA.localeCompare(idB, undefined, { numeric: true })
+    })
+    return items
+  }, [insightPool, alertPool])
+
+  const displayedMerged = mergedTimeline.slice(0, visibleItemCount)
+  const hasMoreItems = mergedTimeline.length > visibleItemCount
 
   const getTypeStyles = (severity: string) => {
     switch (severity?.toUpperCase()) {
@@ -145,62 +180,64 @@ export function NotificationPopup() {
               )}
             >
               Unread
-              {unseenCount > 0 && (
+              {unreadTabBadgeCount > 0 && (
                 <span
                   className={cn(
                     "tabular-nums text-xs min-w-[1.25rem] text-center rounded-full px-1",
                     listFilter === "unread" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                   )}
                 >
-                  {formatAlertBadgeCount(unseenCount)}
+                  {formatAlertBadgeCount(unreadTabBadgeCount)}
                 </span>
               )}
             </button>
           </div>
         </div>
 
-        {displayedAlerts.length > 0 || insightNotes.length > 0 ? (
+        {displayedMerged.length > 0 ? (
           <div className="max-h-[min(420px,70vh)] overflow-y-auto overscroll-y-contain">
             <div className="divide-y divide-slate-100 pb-1">
-              {insightNotes.map((note) => {
-                const href = `/apps/${encodeURIComponent(note.appId)}?tab=ai-insight&date=${encodeURIComponent(note.insightDate)}`
-                return (
-                  <Link
-                    key={note.id}
-                    href={href}
-                    onClick={() => {
-                      if (!note.read) {
-                        void insightApi.markNotificationsRead([note.id]).then(() => refreshInsights())
-                      }
-                    }}
-                    className={cn(
-                      "flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors",
-                      !note.read && "bg-indigo-50/50",
-                    )}
-                  >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100">
-                      <Sparkles className="w-4 h-4 text-indigo-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{note.title}</p>
-                      {note.body ? (
-                        <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{note.body}</p>
-                      ) : null}
-                      <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(note.createdAt)}</p>
-                    </div>
-                  </Link>
-                )
-              })}
-              {displayedAlerts.map((alert) => {
+              {displayedMerged.map((item) => {
+                if (item.kind === "insight") {
+                  const note = item.note
+                  const href = `/apps/${encodeURIComponent(note.appId)}?tab=ai-insight&date=${encodeURIComponent(note.insightDate)}`
+                  return (
+                    <Link
+                      key={`insight-${note.id}`}
+                      href={href}
+                      onClick={() => {
+                        if (!note.read) {
+                          void insightApi.markNotificationsRead([note.id]).then(() => refreshInsights())
+                        }
+                      }}
+                      className={cn(
+                        "flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors",
+                        !note.read && "bg-indigo-50/50",
+                      )}
+                    >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900">{note.title}</p>
+                        {note.body ? (
+                          <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{note.body}</p>
+                        ) : null}
+                        <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(note.createdAt)}</p>
+                      </div>
+                    </Link>
+                  )
+                }
+
+                const alert = item.alert
                 const styles = getTypeStyles(alert.severity)
                 const Icon = styles.icon
                 const href = `/alert-center/${alert.id}`
-
                 const isUnread = !seenAlertIds.has(alert.id)
 
                 return (
                   <Link
-                    key={alert.id}
+                    key={`alert-${alert.id}`}
                     href={href}
                     onClick={() => void markAlertsViewed([alert.id])}
                     className={cn(
@@ -239,13 +276,13 @@ export function NotificationPopup() {
                   </Link>
                 )
               })}
-              {hasMoreAlerts && (
+              {hasMoreItems && (
                 <a
                   href="#"
                   className="block w-full text-center py-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
                   onClick={(e) => {
                     e.preventDefault()
-                    setVisibleAlertCount((n) => n + ALERTS_PAGE_SIZE)
+                    setVisibleItemCount((n) => n + NOTIFICATIONS_PAGE_SIZE)
                   }}
                 >
                   Load more
@@ -253,13 +290,13 @@ export function NotificationPopup() {
               )}
             </div>
           </div>
-        ) : listFilter === "unread" && alerts.length > 0 ? (
+        ) : listFilter === "unread" && (alerts.length > 0 || insightNotes.length > 0) ? (
           <div className="flex flex-col items-center justify-center py-12 px-4">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
               <Bell className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm font-medium text-slate-900">No unread alerts</p>
-            <p className="text-xs text-slate-500 mt-1 text-center">Switch to All to see read notifications.</p>
+            <p className="text-sm font-medium text-slate-900">No unread items</p>
+            <p className="text-xs text-slate-500 mt-1 text-center">Switch to All to see read insights and alerts.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12">

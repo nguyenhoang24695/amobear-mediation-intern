@@ -21,6 +21,10 @@ import type {
   MetaCampaignListResponseDto,
   MetaCampaignRequestDetailDto,
   MetaCampaignRequestListItemDto,
+  MetaCampaignBreakdownPageDto,
+  MetaInsightsDailyDto,
+  MetaInsightsFiltersResponseDto,
+  MetaInsightsOverviewDto,
   MetaRequestAssetDto,
   MetaCreateCampaignReferenceDto,
   MetaExecuteResponseDto,
@@ -47,6 +51,7 @@ const ACCOUNTS_PREFIX = "/api/v1/meta-accounts"
 const REFERENCE_PREFIX = "/api/v1/meta-reference"
 const REQUESTS_PREFIX = "/api/v1/meta-campaign-requests"
 const CAMPAIGNS_PREFIX = "/api/v1/meta-campaigns"
+const INSIGHTS_PREFIX = "/api/v1/meta-insights"
 
 export const metaRequestsApi = {
   list: async (params?: { status?: string; appRowId?: number; metaAdAccountId?: number }) => {
@@ -282,3 +287,51 @@ export const metaAppMappingsApi = {
     return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`, {})
   },
 }
+
+export const metaInsightsApi = {
+  getOverview: async (params: {
+    startDate: string
+    endDate: string
+    accountId?: string
+    campaignId?: string
+    country?: string
+  }) => {
+    return apiClient.get<MetaInsightsOverviewDto>(`${INSIGHTS_PREFIX}/overview`, params)
+  },
+
+  getDaily: async (params: {
+    startDate: string
+    endDate: string
+    accountId?: string
+    campaignId?: string
+    country?: string
+  }) => {
+    return apiClient.get<MetaInsightsDailyDto[]>(`${INSIGHTS_PREFIX}/daily`, params)
+  },
+
+  getCampaigns: async (params: {
+    startDate: string
+    endDate: string
+    accountId?: string
+    campaignId?: string
+    country?: string
+    sortBy?: string
+    sortDir?: "asc" | "desc"
+    page?: number
+    pageSize?: number
+    search?: string
+  }) => {
+    return apiClient.get<MetaCampaignBreakdownPageDto>(`${INSIGHTS_PREFIX}/campaigns`, params)
+  },
+
+  getFilters: async (params: {
+    startDate: string
+    endDate: string
+    accountId?: string
+    campaignId?: string
+    country?: string
+  }) => {
+    return apiClient.get<MetaInsightsFiltersResponseDto>(`${INSIGHTS_PREFIX}/filters`, params)
+  },
+}
+
