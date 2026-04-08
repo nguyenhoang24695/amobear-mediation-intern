@@ -141,7 +141,10 @@ function domainBadgeClass(domain: string) {
 function buildDateParam(dateValue: string, isEndOfDay = false) {
   if (!dateValue) return undefined
 
-  return `${dateValue}T${isEndOfDay ? "23:59:59" : "00:00:00"}`
+  const localDateTime = new Date(`${dateValue}T${isEndOfDay ? "23:59:59.999" : "00:00:00.000"}`)
+  if (Number.isNaN(localDateTime.getTime())) return undefined
+
+  return localDateTime.toISOString()
 }
 
 function normalizeDateInput(value?: string | null) {
