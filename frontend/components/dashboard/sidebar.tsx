@@ -172,13 +172,7 @@ const navItems: NavItem[] = [
         "settings",
       ].some((fn) => hasScreenFunction("s-ai-assistant", fn)),
     children: [
-      {
-        icon: BarChart3,
-        label: "Insights",
-        href: "/meta-ads/insights",
-        isNew: true,
-        isShow: () => ["view"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
-      },
+
       { icon: Bot, label: "Chat", href: "/ai-assistant", isShow: () => hasScreenFunction("s-ai-assistant", "chat") },
       { icon: Library, label: "Library", href: "/ai-assistant/library", isShow: () => hasScreenFunction("s-ai-assistant", "library") },
       { icon: BookOpen, label: "Knowledge Base", href: "/ai-assistant/knowledge-base", isShow: () => hasScreenFunction("s-ai-assistant", "knowledge-base") },
@@ -197,13 +191,7 @@ const navItems: NavItem[] = [
     hasSubmenu: true,
     isShow: true,
     children: [
-      {
-        icon: BarChart3,
-        label: "Insights",
-        href: "/meta-ads/insights",
-        isNew: true,
-        isShow: () => ["view"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
-      },
+
       { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
       { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
       { icon: ListChecks, label: "Waterfall Config", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },

@@ -64,6 +64,15 @@ import {
 
 const issueStatuses = new Set(["WITH_ISSUES", "DISAPPROVED", "ARCHIVED", "DELETED", "PENDING_BILLING_INFO"])
 
+const BID_STRATEGY_LABELS: Record<string, string> = {
+  LOWEST_COST_WITHOUT_CAP: "Highest volume",
+  COST_CAP: "Cost per result goal",
+  LOWEST_COST_WITH_MIN_ROAS: "ROAS goal",
+  LOWEST_COST_WITH_BID_CAP: "Bid cap",
+  TARGET_COST: "Target cost",
+}
+
+
 function toTitleCase(value?: string | null): string {
   if (!value) return "-"
   return value
@@ -102,6 +111,12 @@ function formatRelativeTime(value?: string | null): string {
 
   const months = Math.floor(days / 30)
   return `${months}mo ago`
+}
+
+function formatBidStrategy(value?: string | null): string {
+  const normalized = (value ?? "").trim().toUpperCase()
+  if (!normalized) return "-"
+  return BID_STRATEGY_LABELS[normalized] ?? toTitleCase(value)
 }
 
 function formatRawValue(value?: string | null): string {
@@ -296,7 +311,7 @@ function AdSetConfigurationTable({ items }: { items: MetaCampaignAdSetSummaryDto
               <TableCell>
                 <div className="space-y-1 text-sm text-slate-700">
                   <div>Bid: {formatRawValue(item.bidAmount)}</div>
-                  <div>Strategy: {item.bidStrategy ? toTitleCase(item.bidStrategy) : "-"}</div>
+                  <div>Strategy: {formatBidStrategy(item.bidStrategy)}</div>
                 </div>
               </TableCell>
               <TableCell>
@@ -901,7 +916,8 @@ export function CampaignDetailContent({ campaignId }: Props) {
               <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
                 <DetailField label="Objective" value={toTitleCase(detail.objective)} />
                 <DetailField label="Buying Type" value={toTitleCase(detail.buyingType)} />
-                <DetailField label="Bid Strategy" value={toTitleCase(detail.bidStrategy)} />
+                <DetailField label="Budget Strategy" value={detail.budgetStrategy ?? "-"} />
+                <DetailField label="Bid Strategy" value={formatBidStrategy(detail.bidStrategy)} />
                 <DetailField label="Daily Budget" value={formatRawValue(detail.dailyBudget)} mono />
                 <DetailField label="Lifetime Budget" value={formatRawValue(detail.lifetimeBudget)} mono />
                 <DetailField label="Spend Cap" value={formatRawValue(detail.spendCap)} mono />
