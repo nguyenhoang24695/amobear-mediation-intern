@@ -186,6 +186,21 @@ function getMediaSourceValue(source?: MetaCreativeMediaSourceDto | null, kind: "
   return "-"
 }
 
+function getRequestValueEventLabel(value?: string | null): string {
+  if (value === "IN_APP_AD_IMPRESSION") return "In-app ad impression"
+  return "In-app purchase"
+}
+
+function getRequestPerformanceGoalSummary(detail: MetaCampaignRequestDetailDto): string {
+  const adSet = detail.payload.adSet
+  if (adSet.performanceGoalType === "VALUE") {
+    return `Maximize value of conversions${adSet.performanceGoalValueType ? ` - ${getRequestValueEventLabel(adSet.performanceGoalValueType)}` : ""}`
+  }
+  if (adSet.performanceGoalType === "APP_EVENT") {
+    return adSet.performanceGoalEventName ? `Maximize number of app events - ${adSet.performanceGoalEventName}` : "Maximize number of app events"
+  }
+  return "Maximize number of app installs"
+}
 function getCreativeSummaryHeadline(detail: MetaCampaignRequestDetailDto): string {
   const creative = detail.payload.creative
   switch (getCreativeType(detail)) {
@@ -736,7 +751,7 @@ export function RequestDetailContent({ requestId }: Props) {
                 <DetailRow label="Age Range" value={`${detail.payload.adSet.ageMin ?? "-"}-${detail.payload.adSet.ageMax ?? "-"}`} />
                 <DetailRow label="Gender" value={getGenderLabel(detail)} />
                 <DetailRow label="Placement" value={getPlacementLabel(detail)} />
-                <DetailRow label="Optimization Goal" value={detail.payload.adSet.optimizationGoal} mono />
+                <DetailRow label="Performance Goal" value={getRequestPerformanceGoalSummary(detail)} mono />
                 <DetailRow label="Budget" value={getBudgetSummary(detail)} />
                 <DetailRow label="Creative Type" value={creativeType.replaceAll("_", " ")} mono />
                 <DetailRow label="Creative Name" value={creativeCommon.name || "-"} />
@@ -1196,4 +1211,6 @@ function ObjectRow({ label, metaId, localId }: { label: string; metaId: string; 
     </div>
   )
 }
+
+
 

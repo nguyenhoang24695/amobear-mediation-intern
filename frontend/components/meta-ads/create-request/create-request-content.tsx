@@ -33,12 +33,13 @@ import type {
   MetaFacebookPageReferenceDto,
   MetaGeoRegionDto,
   MetaIntegrationDto,
+  MetaPerformanceGoalReferenceDto,
   MetaRequestFormState,
   MetaRequestStatus,
 } from "@/types/meta-ads"
 import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { OBJECTIVE_OPTIMIZATION_MAP, getAllowedBillingEvents } from "./constants"
+import { getAllowedBillingEvents, getAllowedBidStrategies, getAllowedPerformanceGoalTypes, getAllowedPerformanceGoalsForBidStrategy, bidStrategyRequiresBidAmount, resolveOptimizationGoal } from "./constants"
 import { AccountAppSection } from "./section-account-app"
 import { CampaignSettingsSection } from "./section-campaign-settings"
 import { AdSetAudienceSection } from "./section-adset-audience"
@@ -58,8 +59,50 @@ function formatDateTimeLocal(date: Date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
+function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
+  const next = { ...state }
+
+  const allowedPerformanceGoals = getAllowedPerformanceGoalTypes(next.campaignObjective)
+  if (!allowedPerformanceGoals.includes(next.performanceGoalType)) {
+    next.performanceGoalType = allowedPerformanceGoals[0] ?? "APP_INSTALLS"
+  }
+
+  const allowedPerformanceGoalsForBidStrategy = getAllowedPerformanceGoalsForBidStrategy(next.bidStrategy)
+  if (!allowedPerformanceGoalsForBidStrategy.includes(next.performanceGoalType)) {
+    next.performanceGoalType = allowedPerformanceGoalsForBidStrategy[0] ?? "APP_INSTALLS"
+  }
+
+  next.optimizationGoal = resolveOptimizationGoal(next.performanceGoalType)
+
+  if (next.performanceGoalType !== "APP_EVENT") {
+    next.performanceGoalEventName = ""
+  }
+
+  if (next.performanceGoalType !== "VALUE") {
+    next.performanceGoalValueType = "IN_APP_PURCHASE"
+  } else if (!next.performanceGoalValueType.trim()) {
+    next.performanceGoalValueType = "IN_APP_PURCHASE"
+  }
+
+  const allowedBillingEvents = getAllowedBillingEvents(next.optimizationGoal)
+  if (!allowedBillingEvents.includes(next.billingEvent)) {
+    next.billingEvent = allowedBillingEvents[0] ?? "IMPRESSIONS"
+  }
+
+  const allowedBidStrategies = getAllowedBidStrategies(next.performanceGoalType)
+  if (!allowedBidStrategies.includes(next.bidStrategy)) {
+    next.bidStrategy = allowedBidStrategies[0] ?? "LOWEST_COST_WITHOUT_CAP"
+  }
+
+  if (!bidStrategyRequiresBidAmount(next.bidStrategy)) {
+    next.bidAmount = ""
+  }
+
+  return next
+}
+
 function createDefaultFormState(): RequestFormState {
-  return {
+  return sanitizeRequestFormState({
     adAccountId: "",
     appRowId: "",
     objective: "OUTCOME_APP_PROMOTION",
@@ -69,6 +112,7 @@ function createDefaultFormState(): RequestFormState {
     campaignObjective: "OUTCOME_APP_PROMOTION",
     specialAdCategories: [],
     bidStrategy: "LOWEST_COST_WITHOUT_CAP",
+    isAdSetBudgetSharingEnabled: true,
     campaignDailyBudget: "",
     campaignLifetimeBudget: "",
     adSetName: "",
@@ -87,6 +131,9 @@ function createDefaultFormState(): RequestFormState {
     adSetLifetimeBudget: "",
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "APP_INSTALLS",
+    performanceGoalType: "APP_INSTALLS",
+    performanceGoalEventName: "",
+    performanceGoalValueType: "IN_APP_PURCHASE",
     bidAmount: "",
     advantageAudience: true,
     startTime: formatDateTimeLocal(new Date()),
@@ -96,13 +143,17 @@ function createDefaultFormState(): RequestFormState {
     facebookPageId: "",
     instagramActorId: "",
     singleImagePrimaryText: "",
+    singleImagePrimaryTexts: [""],
     singleImageHeadline: "",
+    singleImageHeadlines: [""],
     singleImageDescription: "",
     singleImageCallToAction: "LEARN_MORE",
     singleImageLinkUrl: "",
     singleImageImage: createEmptyMediaSelection("meta_ref"),
     singleVideoPrimaryText: "",
+    singleVideoPrimaryTexts: [""],
     singleVideoHeadline: "",
+    singleVideoHeadlines: [""],
     singleVideoDescription: "",
     singleVideoCallToAction: "LEARN_MORE",
     singleVideoLinkUrl: "",
@@ -114,7 +165,7 @@ function createDefaultFormState(): RequestFormState {
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
-  }
+  })
 }
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
@@ -262,6 +313,18 @@ export function CreateRequestContent({ requestId }: Props) {
   )
 
   const {
+    data: performanceGoalReference,
+    loading: performanceGoalReferenceLoading,
+    error: performanceGoalReferenceError,
+    refetch: refetchPerformanceGoalReference,
+  } = useApi<MetaPerformanceGoalReferenceDto>(
+    () => metaReferenceApi.getAppPerformanceGoals(Number(form.appRowId)),
+    {
+      enabled: !!form.appRowId,
+      cacheKey: form.appRowId ? `meta-reference:app:${form.appRowId}:performance-goals` : "meta-reference:app:none:performance-goals",
+    }
+  )
+  const {
     data: geoRegions,
     loading: geoRegionsLoading,
     error: geoRegionsError,
@@ -291,9 +354,11 @@ export function CreateRequestContent({ requestId }: Props) {
       const next = { ...previous, ...patch }
 
       if (patch.campaignObjective && patch.campaignObjective !== previous.campaignObjective) {
-        const allowed = OBJECTIVE_OPTIMIZATION_MAP[patch.campaignObjective]
-        if (allowed && !allowed.includes(next.optimizationGoal)) {
-          next.optimizationGoal = allowed[0]
+        const allowedPerformanceGoals = getAllowedPerformanceGoalTypes(patch.campaignObjective)
+        if (!allowedPerformanceGoals.includes(next.performanceGoalType)) {
+          next.performanceGoalType = allowedPerformanceGoals[0] ?? "APP_INSTALLS"
+          next.performanceGoalEventName = ""
+          next.performanceGoalValueType = "IN_APP_PURCHASE"
         }
       }
 
@@ -301,12 +366,7 @@ export function CreateRequestContent({ requestId }: Props) {
         next.campaignObjective = patch.objective
       }
 
-      const allowedBillingEvents = getAllowedBillingEvents(next.optimizationGoal)
-      if (!allowedBillingEvents.includes(next.billingEvent)) {
-        next.billingEvent = allowedBillingEvents[0] ?? "IMPRESSIONS"
-      }
-
-      return next
+      return sanitizeRequestFormState(next)
     })
 
     setIsDirty(true)
@@ -322,7 +382,7 @@ export function CreateRequestContent({ requestId }: Props) {
 
   useEffect(() => {
     if (!editDetail || loadedRequestId === editDetail.id) return
-    setForm(detailDtoToFormState(editDetail))
+    setForm(sanitizeRequestFormState(detailDtoToFormState(editDetail)))
     syncFromDetail(editDetail)
     setLoadedRequestId(editDetail.id)
   }, [editDetail, loadedRequestId])
@@ -533,7 +593,7 @@ export function CreateRequestContent({ requestId }: Props) {
             regionsMessage={geoRegionsError?.message ?? null}
             metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
           />
-          <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} />
+          <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
           <CreativeSection
             form={form}
             onChange={updateForm}
@@ -607,4 +667,17 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 

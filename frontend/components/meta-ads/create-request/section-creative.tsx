@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,6 +26,8 @@ const ctaOptions = [
   "LEARN_MORE", "SHOP_NOW", "DOWNLOAD", "INSTALL_MOBILE_APP", "USE_MOBILE_APP",
   "SIGN_UP", "GET_OFFER", "BOOK_TRAVEL", "CONTACT_US", "WATCH_MORE"
 ]
+
+const maxCreativeTextVariations = 5
 
 interface Props {
   form: RequestFormState
@@ -122,6 +124,18 @@ export function CreativeSection({
     } finally {
       setUploadingKey(null)
     }
+  }
+
+  const updateTextVariations = (
+    valuesField: "singleImagePrimaryTexts" | "singleImageHeadlines" | "singleVideoPrimaryTexts" | "singleVideoHeadlines",
+    firstField: "singleImagePrimaryText" | "singleImageHeadline" | "singleVideoPrimaryText" | "singleVideoHeadline",
+    values: string[]
+  ) => {
+    const nextValues = normalizeVariationRows(values)
+    onChange({
+      [valuesField]: nextValues,
+      [firstField]: getFirstFilledVariation(nextValues),
+    } as Partial<RequestFormState>)
   }
 
   return (
@@ -295,21 +309,26 @@ export function CreativeSection({
               </TabsList>
 
               <TabsContent value="SINGLE_IMAGE" className="mt-4 space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Primary Text <span className="text-red-500">*</span></Label>
-                  <Textarea rows={3} value={form.singleImagePrimaryText} onChange={(event) => onChange({ singleImagePrimaryText: event.target.value })} className="text-sm resize-none" />
-                </div>
+                <TextVariationEditor
+                  label="Primary Text"
+                  values={form.singleImagePrimaryTexts}
+                  required
+                  multiline
+                  placeholder="Enter primary text variation"
+                  onChange={(values) => updateTextVariations("singleImagePrimaryTexts", "singleImagePrimaryText", values)}
+                />
+                <TextVariationEditor
+                  label="Headline"
+                  values={form.singleImageHeadlines}
+                  required
+                  placeholder="Enter headline variation"
+                  onChange={(values) => updateTextVariations("singleImageHeadlines", "singleImageHeadline", values)}
+                />
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
-                    <Input value={form.singleImageHeadline} onChange={(event) => onChange({ singleImageHeadline: event.target.value })} className="h-9 text-sm" />
-                  </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-slate-700">Description</Label>
                     <Input value={form.singleImageDescription} onChange={(event) => onChange({ singleImageDescription: event.target.value })} className="h-9 text-sm" />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
                     <Select value={form.singleImageCallToAction} onValueChange={(value) => onChange({ singleImageCallToAction: value })}>
@@ -317,31 +336,36 @@ export function CreativeSection({
                       <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-                    <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
-                    <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
-                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                  <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
+                  <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                 </div>
                 <MediaSourceEditor title="Image" kind="image" selection={form.singleImageImage} uploading={uploadingKey?.startsWith("singleImageImage") ?? false} allowExternalUrl onModeChange={(mode) => handleMediaModeChange("singleImageImage", mode)} onPatch={(patch) => handleMediaPatch("singleImageImage", patch)} onUpload={(file) => handleUpload("singleImageImage", "image", file)} />
               </TabsContent>
 
               <TabsContent value="SINGLE_VIDEO" className="mt-4 space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Primary Text <span className="text-red-500">*</span></Label>
-                  <Textarea rows={3} value={form.singleVideoPrimaryText} onChange={(event) => onChange({ singleVideoPrimaryText: event.target.value })} className="text-sm resize-none" />
-                </div>
+                <TextVariationEditor
+                  label="Primary Text"
+                  values={form.singleVideoPrimaryTexts}
+                  required
+                  multiline
+                  placeholder="Enter primary text variation"
+                  onChange={(values) => updateTextVariations("singleVideoPrimaryTexts", "singleVideoPrimaryText", values)}
+                />
+                <TextVariationEditor
+                  label="Headline"
+                  values={form.singleVideoHeadlines}
+                  required
+                  placeholder="Enter headline variation"
+                  onChange={(values) => updateTextVariations("singleVideoHeadlines", "singleVideoHeadline", values)}
+                />
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
-                    <Input value={form.singleVideoHeadline} onChange={(event) => onChange({ singleVideoHeadline: event.target.value })} className="h-9 text-sm" />
-                  </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-slate-700">Description</Label>
                     <Input value={form.singleVideoDescription} onChange={(event) => onChange({ singleVideoDescription: event.target.value })} className="h-9 text-sm" />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
                     <Select value={form.singleVideoCallToAction} onValueChange={(value) => onChange({ singleVideoCallToAction: value })}>
@@ -349,11 +373,11 @@ export function CreativeSection({
                       <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-                    <Input value={form.singleVideoLinkUrl} onChange={(event) => onChange({ singleVideoLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
-                    <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
-                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                  <Input value={form.singleVideoLinkUrl} onChange={(event) => onChange({ singleVideoLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
+                  <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                 </div>
                 <MediaSourceEditor title="Video" kind="video" selection={form.singleVideoVideo} uploading={uploadingKey?.startsWith("singleVideoVideo") ?? false} onModeChange={(mode) => handleMediaModeChange("singleVideoVideo", mode)} onPatch={(patch) => handleMediaPatch("singleVideoVideo", patch)} onUpload={(file) => handleUpload("singleVideoVideo", "video", file)} />
                 <MediaSourceEditor title="Thumbnail" kind="image" selection={form.singleVideoThumbnail} uploading={uploadingKey?.startsWith("singleVideoThumbnail") ?? false} allowExternalUrl optional onModeChange={(mode) => handleMediaModeChange("singleVideoThumbnail", mode)} onPatch={(patch) => handleMediaPatch("singleVideoThumbnail", patch)} onUpload={(file) => handleUpload("singleVideoThumbnail", "image", file)} />
@@ -536,13 +560,94 @@ function InlineMediaSourceEditor({ selection, uploading, onModeChange, onPatch, 
   )
 }
 
+function TextVariationEditor({
+  label,
+  values,
+  required,
+  multiline,
+  placeholder,
+  onChange,
+}: {
+  label: string
+  values: string[]
+  required?: boolean
+  multiline?: boolean
+  placeholder?: string
+  onChange: (values: string[]) => void
+}) {
+  const rows = normalizeVariationRows(values)
+
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label className="text-xs font-medium text-slate-700">{label} {required ? <span className="text-red-500">*</span> : null}</Label>
+          <p className="text-[11px] text-slate-400">Add up to {maxCreativeTextVariations} variations. Meta can rotate these variations at delivery time.</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => onChange([...rows, ""])}
+          disabled={rows.length >= maxCreativeTextVariations}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />Add text
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {rows.map((value, index) => (
+          <div key={`${label}-${index}`} className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              {multiline ? (
+                <Textarea
+                  rows={3}
+                  value={value}
+                  placeholder={placeholder || `${label} ${index + 1}`}
+                  onChange={(event) => {
+                    const nextValues = [...rows]
+                    nextValues[index] = event.target.value
+                    onChange(nextValues)
+                  }}
+                  className="text-sm resize-none bg-white"
+                />
+              ) : (
+                <Input
+                  value={value}
+                  placeholder={placeholder || `${label} ${index + 1}`}
+                  onChange={(event) => {
+                    const nextValues = [...rows]
+                    nextValues[index] = event.target.value
+                    onChange(nextValues)
+                  }}
+                  className="h-9 text-sm bg-white"
+                />
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-1 h-8 px-2 text-red-600"
+              onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
+              disabled={rows.length <= 1}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function getCreativeCompletion(form: RequestFormState) {
   if (form.creativeType === "SINGLE_VIDEO") {
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
       { label: "Facebook Page ID", ok: !!form.facebookPageId },
-      { label: "Message", ok: !!form.singleVideoPrimaryText },
-      { label: "Headline", ok: !!form.singleVideoHeadline },
+      { label: "Message", ok: hasAnyTextVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText) },
+      { label: "Headline", ok: hasAnyTextVariation(form.singleVideoHeadlines, form.singleVideoHeadline) },
       { label: "CTA", ok: !!form.singleVideoCallToAction },
       { label: "Video source", ok: !!(form.singleVideoVideo.uploadedAssetId || form.singleVideoVideo.videoId) },
     ]
@@ -569,12 +674,28 @@ function getCreativeCompletion(form: RequestFormState) {
   const items = [
     { label: "Creative name", ok: !!form.creativeName },
     { label: "Facebook Page ID", ok: !!form.facebookPageId },
-    { label: "Message", ok: !!form.singleImagePrimaryText },
-    { label: "Headline", ok: !!form.singleImageHeadline },
+    { label: "Message", ok: hasAnyTextVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) },
+    { label: "Headline", ok: hasAnyTextVariation(form.singleImageHeadlines, form.singleImageHeadline) },
     { label: "CTA", ok: !!form.singleImageCallToAction },
     { label: "Image source", ok: !!(form.singleImageImage.uploadedAssetId || form.singleImageImage.imageHash || form.singleImageImage.imageUrl) },
   ]
   return { complete: items.every((item) => item.ok), items }
+}
+
+function normalizeVariationRows(values?: string[]): string[] {
+  const nextValues = Array.isArray(values) ? values.slice(0, maxCreativeTextVariations) : []
+  return nextValues.length > 0 ? nextValues : [""]
+}
+
+function getFirstFilledVariation(values?: string[], fallback = ""): string {
+  const found = normalizeVariationRows(values)
+    .map((value) => value.trim())
+    .find((value) => value.length > 0)
+  return found || fallback
+}
+
+function hasAnyTextVariation(values?: string[], fallback = ""): boolean {
+  return !!getFirstFilledVariation(values, fallback)
 }
 
 function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: boolean } {
@@ -584,17 +705,17 @@ function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: b
 }
 
 function getPreviewHeadline(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoHeadline
+  if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoHeadlines, form.singleVideoHeadline)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
   if (form.creativeType === "EXISTING_POST") return form.existingPostId ? `Existing Post ${form.existingPostId}` : "Existing post preview"
-  return form.singleImageHeadline
+  return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
 }
 
 function getPreviewMessage(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoPrimaryText
+  if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
   if (form.creativeType === "EXISTING_POST") return "Existing post preview will be resolved from Meta post at execution time."
-  return form.singleImagePrimaryText
+  return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
 }
 
 function getPreviewCta(form: RequestFormState): string {

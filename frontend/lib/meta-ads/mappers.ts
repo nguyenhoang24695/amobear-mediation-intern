@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CreateMetaCampaignRequestDto,
   GroupedValidationErrors,
   MetaCampaignRequestDetailDto,
@@ -41,6 +41,22 @@ export function createEmptyCarouselCard(): MetaCarouselCardFormState {
     linkUrl: "",
     image: createEmptyMediaSelection("meta_ref"),
   }
+}
+
+function sanitizeTextVariations(values: string[] | null | undefined, fallback?: string | null): string[] {
+  const normalized = (values ?? [])
+    .map((value) => value.trim())
+    .filter((value, index, array) => !!value && array.indexOf(value) === index)
+    .slice(0, 5)
+
+  if (normalized.length > 0) return normalized
+
+  const fallbackValue = fallback?.trim()
+  return fallbackValue ? [fallbackValue] : []
+}
+
+function getFirstVariation(values: string[] | null | undefined, fallback?: string | null): string {
+  return sanitizeTextVariations(values, fallback)[0] ?? ""
 }
 
 function parseOptionalAmount(value: string): number | null {
@@ -91,6 +107,44 @@ function inferGeoModeFromDraft(adSet: CreateMetaCampaignRequestDto["adSet"]): Me
   if ((adSet.regionKeys?.length ?? 0) > 0) return "REGION"
   if ((adSet.countries?.length ?? 0) > 0) return "COUNTRY"
   return "GLOBAL"
+}
+function inferPerformanceGoalState(adSet: CreateMetaCampaignRequestDto["adSet"]): Pick<MetaRequestFormState, "performanceGoalType" | "performanceGoalEventName" | "performanceGoalValueType" | "optimizationGoal"> {
+  const optimizationGoal = (adSet.optimizationGoal ?? "APP_INSTALLS").trim().toUpperCase()
+  const performanceGoalType = (adSet.performanceGoalType ?? "").trim().toUpperCase()
+
+  if (performanceGoalType === "APP_EVENT" || performanceGoalType === "VALUE" || performanceGoalType === "APP_INSTALLS") {
+    return {
+      performanceGoalType,
+      performanceGoalEventName: adSet.performanceGoalEventName ?? "",
+      performanceGoalValueType: adSet.performanceGoalValueType ?? "",
+      optimizationGoal,
+    }
+  }
+
+  if (optimizationGoal === "VALUE" || optimizationGoal === "IN_APP_VALUE") {
+    return {
+      performanceGoalType: "VALUE",
+      performanceGoalEventName: "",
+      performanceGoalValueType: adSet.performanceGoalValueType ?? "IN_APP_PURCHASE",
+      optimizationGoal: "VALUE",
+    }
+  }
+
+  if (optimizationGoal === "APP_INSTALLS") {
+    return {
+      performanceGoalType: "APP_INSTALLS",
+      performanceGoalEventName: "",
+      performanceGoalValueType: "",
+      optimizationGoal: "APP_INSTALLS",
+    }
+  }
+
+  return {
+    performanceGoalType: "APP_EVENT",
+    performanceGoalEventName: adSet.performanceGoalEventName ?? "",
+    performanceGoalValueType: "",
+    optimizationGoal: optimizationGoal || "CONVERSIONS",
+  }
 }
 function parseGender(value: string): string[] {
   if (value === "ALL") return []
@@ -211,8 +265,10 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
 
   if (form.creativeType === "SINGLE_VIDEO") {
     creative.singleVideo = {
-      message: form.singleVideoPrimaryText.trim() || null,
-      headline: form.singleVideoHeadline.trim() || null,
+      message: getFirstVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText) || null,
+      messages: sanitizeTextVariations(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText),
+      headline: getFirstVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || null,
+      headlines: sanitizeTextVariations(form.singleVideoHeadlines, form.singleVideoHeadline),
       description: form.singleVideoDescription.trim() || null,
       callToActionType: form.singleVideoCallToAction.trim() || null,
       linkUrl: form.singleVideoLinkUrl.trim() || null,
@@ -236,8 +292,10 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
     }
   } else {
     creative.singleImage = {
-      message: form.singleImagePrimaryText.trim() || null,
-      headline: form.singleImageHeadline.trim() || null,
+      message: getFirstVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) || null,
+      messages: sanitizeTextVariations(form.singleImagePrimaryTexts, form.singleImagePrimaryText),
+      headline: getFirstVariation(form.singleImageHeadlines, form.singleImageHeadline) || null,
+      headlines: sanitizeTextVariations(form.singleImageHeadlines, form.singleImageHeadline),
       description: form.singleImageDescription.trim() || null,
       callToActionType: form.singleImageCallToAction.trim() || null,
       linkUrl: form.singleImageLinkUrl.trim() || null,
@@ -256,6 +314,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       dailyBudget: budgets.campaignDailyBudget,
       lifetimeBudget: budgets.campaignLifetimeBudget,
       bidStrategy: form.bidStrategy.trim() || null,
+      isAdSetBudgetSharingEnabled: form.budgetStrategy === "ABO" ? form.isAdSetBudgetSharingEnabled : false,
       specialAdCategories: form.specialAdCategories,
     },
     adSet: {
@@ -264,6 +323,9 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       lifetimeBudget: budgets.adSetLifetimeBudget,
       billingEvent: form.billingEvent.trim(),
       optimizationGoal: form.optimizationGoal.trim(),
+      performanceGoalType: form.performanceGoalType.trim(),
+      performanceGoalEventName: form.performanceGoalType === "APP_EVENT" ? form.performanceGoalEventName.trim() || null : null,
+      performanceGoalValueType: form.performanceGoalType === "VALUE" ? form.performanceGoalValueType.trim() || null : null,
       bidAmount: parseOptionalAmount(form.bidAmount),
       advantageAudience: form.advantageAudience,
       startTime: parseOptionalDate(form.startTime),
@@ -324,6 +386,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
 
   const creativeType = payload.creative.type ?? "SINGLE_IMAGE"
   const geoMode = inferGeoModeFromDraft(payload.adSet)
+  const performanceGoal = inferPerformanceGoalState(payload.adSet)
   const common = getCreativeCommon(payload.creative)
   const singleImage = getSingleImageCreative(payload.creative)
   const singleVideo = getSingleVideoCreative(payload.creative)
@@ -339,6 +402,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     campaignObjective: payload.campaign.objective ?? "",
     specialAdCategories: payload.campaign.specialAdCategories ?? [],
     bidStrategy: payload.campaign.bidStrategy || "LOWEST_COST_WITHOUT_CAP",
+    isAdSetBudgetSharingEnabled: payload.campaign.isAdSetBudgetSharingEnabled ?? !(payload.campaign.dailyBudget || payload.campaign.lifetimeBudget),
     campaignDailyBudget: payload.campaign.dailyBudget?.toString() ?? "",
     campaignLifetimeBudget: payload.campaign.lifetimeBudget?.toString() ?? "",
     adSetName: payload.adSet.name ?? "",
@@ -364,7 +428,10 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     adSetDailyBudget: payload.adSet.dailyBudget?.toString() ?? "",
     adSetLifetimeBudget: payload.adSet.lifetimeBudget?.toString() ?? "",
     billingEvent: payload.adSet.billingEvent ?? "IMPRESSIONS",
-    optimizationGoal: payload.adSet.optimizationGoal ?? "APP_INSTALLS",
+    optimizationGoal: performanceGoal.optimizationGoal,
+    performanceGoalType: performanceGoal.performanceGoalType,
+    performanceGoalEventName: performanceGoal.performanceGoalEventName,
+    performanceGoalValueType: performanceGoal.performanceGoalValueType,
     bidAmount: payload.adSet.bidAmount?.toString() ?? "",
     advantageAudience: payload.adSet.advantageAudience ?? false,
     startTime: payload.adSet.startTime ? payload.adSet.startTime.slice(0, 16) : "",
@@ -373,14 +440,18 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     creativeName: common.name,
     facebookPageId: common.pageId,
     instagramActorId: common.instagramActorId,
-    singleImagePrimaryText: singleImage.message ?? "",
-    singleImageHeadline: singleImage.headline ?? "",
+    singleImagePrimaryText: getFirstVariation(singleImage.messages, singleImage.message),
+    singleImagePrimaryTexts: sanitizeTextVariations(singleImage.messages, singleImage.message).length > 0 ? sanitizeTextVariations(singleImage.messages, singleImage.message) : [""],
+    singleImageHeadline: getFirstVariation(singleImage.headlines, singleImage.headline),
+    singleImageHeadlines: sanitizeTextVariations(singleImage.headlines, singleImage.headline).length > 0 ? sanitizeTextVariations(singleImage.headlines, singleImage.headline) : [""],
     singleImageDescription: singleImage.description ?? "",
     singleImageCallToAction: singleImage.callToActionType ?? "LEARN_MORE",
     singleImageLinkUrl: singleImage.linkUrl ?? "",
     singleImageImage: mediaSourceToSelection(singleImage.image, "image"),
-    singleVideoPrimaryText: singleVideo.message ?? "",
-    singleVideoHeadline: singleVideo.headline ?? "",
+    singleVideoPrimaryText: getFirstVariation(singleVideo.messages, singleVideo.message),
+    singleVideoPrimaryTexts: sanitizeTextVariations(singleVideo.messages, singleVideo.message).length > 0 ? sanitizeTextVariations(singleVideo.messages, singleVideo.message) : [""],
+    singleVideoHeadline: getFirstVariation(singleVideo.headlines, singleVideo.headline),
+    singleVideoHeadlines: sanitizeTextVariations(singleVideo.headlines, singleVideo.headline).length > 0 ? sanitizeTextVariations(singleVideo.headlines, singleVideo.headline) : [""],
     singleVideoDescription: singleVideo.description ?? "",
     singleVideoCallToAction: singleVideo.callToActionType ?? "LEARN_MORE",
     singleVideoLinkUrl: singleVideo.linkUrl ?? "",
@@ -428,4 +499,9 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
+
+
+
+
+
 

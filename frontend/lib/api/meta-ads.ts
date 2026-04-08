@@ -1,6 +1,7 @@
 import { apiClient } from "./client"
 import type {
   ApproveMetaCampaignRequestDto,
+  CreateMetaAppCustomEventDto,
   CreateMetaAppMappingRequestDto,
   CreateMetaCampaignRequestDto,
   CreateMetaIntegrationRequestDto,
@@ -34,6 +35,8 @@ import type {
   MetaIntegrationDto,
   MetaIntegrationTestRequestDto,
   MetaIntegrationTestResultDto,
+  MetaPerformanceGoalOptionDto,
+  MetaPerformanceGoalReferenceDto,
   MetaTokenStatusDto,
   MetaValidationResultDto,
   RejectMetaCampaignRequestDto,
@@ -106,7 +109,6 @@ export const metaRequestsApi = {
   },
 }
 
-
 export const metaCampaignsApi = {
   list: async (params?: {
     search?: string
@@ -170,6 +172,14 @@ export const metaReferenceApi = {
 
   searchGeoCities: async (metaAdAccountId: number, q: string) => {
     return apiClient.get<MetaGeoCityReferenceDto[]>(`${REFERENCE_PREFIX}/geo/cities`, { metaAdAccountId, q })
+  },
+
+  getAppPerformanceGoals: async (appRowId: number) => {
+    return apiClient.get<MetaPerformanceGoalReferenceDto>(`${REFERENCE_PREFIX}/apps/${appRowId}/performance-goals`)
+  },
+
+  createAppCustomEvent: async (appRowId: number, request: CreateMetaAppCustomEventDto) => {
+    return apiClient.post<MetaPerformanceGoalOptionDto>(`${REFERENCE_PREFIX}/apps/${appRowId}/performance-goals/custom-events`, request)
   },
 }
 
@@ -334,4 +344,3 @@ export const metaInsightsApi = {
     return apiClient.get<MetaInsightsFiltersResponseDto>(`${INSIGHTS_PREFIX}/filters`, params)
   },
 }
-
