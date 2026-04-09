@@ -1,4 +1,4 @@
-export type MetaRequestStatus =
+﻿export type MetaRequestStatus =
   | "draft"
   | "pending_approval"
   | "approved"
@@ -473,7 +473,9 @@ export interface MetaCampaignDetailDto {
   status: string
   effectiveStatus?: string | null
   buyingType?: string | null
+  budgetStrategy?: string | null
   bidStrategy?: string | null
+  isAdSetBudgetSharingEnabled?: boolean | null
   dailyBudget?: string | null
   lifetimeBudget?: string | null
   spendCap?: string | null
@@ -540,6 +542,36 @@ export interface MetaBidStrategyPresetDto {
   key: string
   label: string
   description: string
+  metaUiLabel?: string | null
+  contextualValueLabel?: string | null
+}
+
+export interface MetaPerformanceGoalTypeOptionDto {
+  key: string
+  label: string
+  description: string
+  isEnabled: boolean
+  disabledReason?: string | null
+}
+
+export interface MetaPerformanceGoalOptionDto {
+  key: string
+  label: string
+  description: string
+  groupKey?: "STANDARD" | "CUSTOM" | null
+  isCustom?: boolean | null
+}
+
+export interface CreateMetaAppCustomEventDto {
+  eventKeyOrName: string
+  displayName?: string | null
+}
+
+export interface MetaPerformanceGoalReferenceDto {
+  appRowId: number
+  goalTypes: MetaPerformanceGoalTypeOptionDto[]
+  appEvents: MetaPerformanceGoalOptionDto[]
+  valueTypes: MetaPerformanceGoalOptionDto[]
 }
 export interface MetaCampaignDraftDto {
   name: string
@@ -548,6 +580,7 @@ export interface MetaCampaignDraftDto {
   dailyBudget?: number | null
   lifetimeBudget?: number | null
   bidStrategy?: string | null
+  isAdSetBudgetSharingEnabled?: boolean | null
   specialAdCategories: string[]
 }
 
@@ -576,6 +609,9 @@ export interface MetaAdSetDraftDto {
   lifetimeBudget?: number | null
   billingEvent: string
   optimizationGoal: string
+  performanceGoalType: string
+  performanceGoalEventName?: string | null
+  performanceGoalValueType?: string | null
   bidAmount?: number | null
   advantageAudience: boolean
   startTime?: string | null
@@ -610,7 +646,9 @@ export interface MetaCreativeCommonDraftDto {
 
 export interface MetaSingleImageCreativeDraftDto {
   message?: string | null
+  messages?: string[] | null
   headline?: string | null
+  headlines?: string[] | null
   description?: string | null
   callToActionType?: string | null
   linkUrl?: string | null
@@ -619,7 +657,9 @@ export interface MetaSingleImageCreativeDraftDto {
 
 export interface MetaSingleVideoCreativeDraftDto {
   message?: string | null
+  messages?: string[] | null
   headline?: string | null
+  headlines?: string[] | null
   description?: string | null
   callToActionType?: string | null
   linkUrl?: string | null
@@ -848,6 +888,7 @@ export interface MetaRequestFormState {
   campaignObjective: string
   specialAdCategories: string[]
   bidStrategy: string
+  isAdSetBudgetSharingEnabled: boolean
   campaignDailyBudget: string
   campaignLifetimeBudget: string
   adSetName: string
@@ -866,6 +907,9 @@ export interface MetaRequestFormState {
   adSetLifetimeBudget: string
   billingEvent: string
   optimizationGoal: string
+  performanceGoalType: string
+  performanceGoalEventName: string
+  performanceGoalValueType: string
   bidAmount: string
   advantageAudience: boolean
   startTime: string
@@ -875,13 +919,17 @@ export interface MetaRequestFormState {
   facebookPageId: string
   instagramActorId: string
   singleImagePrimaryText: string
+  singleImagePrimaryTexts: string[]
   singleImageHeadline: string
+  singleImageHeadlines: string[]
   singleImageDescription: string
   singleImageCallToAction: string
   singleImageLinkUrl: string
   singleImageImage: MetaRequestAssetSelectionState
   singleVideoPrimaryText: string
+  singleVideoPrimaryTexts: string[]
   singleVideoHeadline: string
+  singleVideoHeadlines: string[]
   singleVideoDescription: string
   singleVideoCallToAction: string
   singleVideoLinkUrl: string
@@ -972,3 +1020,12 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
+
+
+
+
+
+
+
+
+

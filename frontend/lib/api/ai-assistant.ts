@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import { getAccessToken } from '@/lib/auth'
 
 const API_PREFIX = '/api/v1/ai-assistant'
 
@@ -48,6 +49,21 @@ export interface AskAgenticResponse {
   iterations: number
   mcpQueriesUsed: number
   toolExecutions: AgenticToolExecutionDto[]
+}
+
+export interface AgenticProgressEventDto {
+  eventType: string
+  iteration: number
+  mcpQueriesUsed: number
+  message?: string | null
+  toolName?: string | null
+  query?: string | null
+  success?: boolean | null
+  rowCount?: number | null
+  elapsedMs?: number | null
+  finalContent?: string | null
+  finalStatus?: string | null
+  conversationId?: string | null
 }
 
 export interface AskResponse {
@@ -489,6 +505,51 @@ export const aiAssistantApi = {
 
   askAgentic: (request: AskAgenticRequest) =>
     apiClient.post<AskAgenticResponse>(`${API_PREFIX}/ask-agentic`, request),
+
+  askAgenticPlan: (request: { question: string; contextId?: string; conversationId?: string }) =>
+    apiClient.post<{ planDescription: string; conversationId: string }>(`${API_PREFIX}/ask-agentic/plan`, request),
+
+  askAgenticStream: async (
+    request: AskAgenticRequest,
+    onEvent: (event: AgenticProgressEventDto) => void,
+    signal?: AbortSignal
+  ): Promise<void> => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+    const token = getAccessToken()
+    const response = await fetch(`${API_BASE_URL}${API_PREFIX}/ask-agentic/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(request),
+      signal,
+    })
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}))
+      throw new Error(errBody?.error || `HTTP ${response.status}`)
+    }
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6).trim()
+        if (raw === '[DONE]') return
+        try {
+          onEvent(JSON.parse(raw) as AgenticProgressEventDto)
+        } catch {
+          // skip malformed lines
+        }
+      }
+    }
+  },
 
   executeSql: (request: ExecuteSqlRequest) =>
     apiClient.post<ExecuteSqlResponse>(`${API_PREFIX}/execute`, request),
