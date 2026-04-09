@@ -731,6 +731,10 @@ export interface UpsertAlertRuleRequest {
 export interface AlertRuleScopeConfig {
   allApps: boolean
   appIds: string[]
+  /** Metric key (revenue, ecpm, …) để sắp xếp thứ tự xử lý alert theo app; để trống = thứ tự mặc định */
+  orderByMetric?: string | null
+  /** "asc" | "desc"; mặc định desc khi có orderByMetric */
+  orderByDirection?: string | null
 }
 
 /** Một điều kiện trong rule_config.conditions[] (AND/OR qua conditionLogic). */
@@ -751,7 +755,7 @@ export interface AlertRuleConfigPayload {
   /** Legacy: một metric gốc khi không dùng conditions[]. */
   metricKey?: string | null
   metricUnit?: string | null
-  /** "all" = AND, "any" = OR */
+  /** "all" = AND, "any" = OR, "always_true" = luôn kích hoạt (không dùng conditions[]) */
   conditionLogic?: string | null
   conditions?: AlertRuleConditionPayload[] | null
   conditionType?: string | null
