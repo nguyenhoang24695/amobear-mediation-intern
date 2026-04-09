@@ -23,6 +23,10 @@ import {
   Loader2,
   SlidersHorizontal,
   ChevronLeft,
+  Pencil,
+  Play,
+  Trash2,
+  Eye,
 } from "lucide-react"
 import { alertsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
@@ -31,14 +35,21 @@ import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./al
 import type { AlertApiItem } from "./alert-center-view-model"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache } from "@/hooks/use-api"
-import type { AlertCenterTimelineItem } from "@/types/api"
+import type { AlertCenterTimelineItem, AlertRule, AlertRuleConfigPayload } from "@/types/api"
 import { format } from "date-fns"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { hasScreenFunction } from "@/lib/auth"
 import { DailyInsightsFeed } from "./daily-insights-feed"
 import { Sparkles } from "lucide-react"
+import {
+  AlertRuleDetailsDialog,
+  formatRuleConditionsSummary,
+  parseAlertRuleConfig,
+} from "./alert-rule-details-dialog"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"] as const
 const TIMELINE_PAGE_SIZE = 25
@@ -72,15 +83,63 @@ function parseLocalYmdEnd(ymd: string): Date {
   return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999)
 }
 
+function extractMetricKeysFromRule(rule: AlertRule): string[] {
+  const keys = new Set<string>()
+  const cfg = parseAlertRuleConfig(rule)
+  if (!cfg) return []
+  if (cfg.metricKey) keys.add(cfg.metricKey)
+  for (const c of cfg.conditions ?? []) {
+    if (c.metricKey) keys.add(c.metricKey)
+  }
+  return [...keys]
+}
+
+function ruleMatchesOverviewAppTextFilter(
+  rule: AlertRule,
+  query: string,
+  apps: { id: string; label: string }[],
+): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const cfg = parseAlertRuleConfig(rule)
+  if (!cfg?.scope) return true
+  if (cfg.scope.allApps) return true
+  const ids = cfg.scope.appIds ?? []
+  if (ids.length === 0) return true
+
+  const idToLabel = new Map<string, string>()
+  for (const a of apps) {
+    idToLabel.set(a.id.toLowerCase(), a.label)
+  }
+
+  return ids.some((rawId) => {
+    const idLower = rawId.toLowerCase()
+    const label = (idToLabel.get(idLower) ?? "").toLowerCase()
+    return idLower.includes(q) || label.includes(q)
+  })
+}
+
+function ruleMatchesOverviewMetricFilter(rule: AlertRule, metricKey: string): boolean {
+  if (!metricKey || metricKey === "all") return true
+  return extractMetricKeysFromRule(rule).some((k) => k.toLowerCase() === metricKey.toLowerCase())
+}
+
 export function AlertCenterContentV2() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [severity, setSeverity] = useState<string>("All")
   const [appFilter, setAppFilter] = useState<string>("")
-  const [rulesExpanded, setRulesExpanded] = useState(false)
   const [showAiBuilder, setShowAiBuilder] = useState(false)
   const [showManualCreator, setShowManualCreator] = useState(false)
+  const [manualEditRule, setManualEditRule] = useState<AlertRule | null>(null)
+  const [rulesOverviewAppQuery, setRulesOverviewAppQuery] = useState("")
+  const [rulesOverviewMetric, setRulesOverviewMetric] = useState("all")
+  const [rulesOverviewStatus, setRulesOverviewStatus] = useState<"all" | "enabled" | "disabled">("all")
+  const [overviewTogglingId, setOverviewTogglingId] = useState<number | null>(null)
+  const [overviewDeletingId, setOverviewDeletingId] = useState<number | null>(null)
+  const [overviewRunningId, setOverviewRunningId] = useState<number | null>(null)
+  const [detailsRule, setDetailsRule] = useState<AlertRule | null>(null)
   const [alertRulesPanelOpen, setAlertRulesPanelOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState<{ id: number; type: "ack" | "resolve" } | null>(null)
 
@@ -121,7 +180,7 @@ export function AlertCenterContentV2() {
   }, [searchParams])
 
   const { data: summary } = useApi(() => alertsApi.getOpenAlertsSummary(), { cacheKey: "alerts_open_summary_v2" })
-  const { data: rules, refetch: refetchRules } = useApi(() => alertsApi.getAlertRules(), {
+  const { data: rules, refetch: refetchRules, loading: rulesLoading } = useApi(() => alertsApi.getAlertRules(), {
     cacheKey: "alert_rules_v2_overview",
   })
   const { data: appsData } = useApi(() => structureApi.getApps(), {
@@ -205,9 +264,45 @@ export function AlertCenterContentV2() {
     })
   }, [timelineItems])
 
-  const enabledRules = useMemo(() => (rules ?? []).filter((r) => r.isEnabled), [rules])
-  const disabledRules = useMemo(() => (rules ?? []).filter((r) => !r.isEnabled), [rules])
   const rulesSorted = useMemo(() => [...(rules ?? [])].sort((a, b) => a.name.localeCompare(b.name)), [rules])
+
+  const appIdToLabel = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const a of filterAppsOptions) {
+      m.set(a.id.toLowerCase(), a.label)
+    }
+    return m
+  }, [filterAppsOptions])
+
+  const rulesMetricOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of rules ?? []) {
+      for (const k of extractMetricKeysFromRule(r)) set.add(k)
+    }
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [rules])
+
+  const filteredRulesOverview = useMemo(() => {
+    return rulesSorted.filter((r) => {
+      if (rulesOverviewStatus === "enabled" && !r.isEnabled) return false
+      if (rulesOverviewStatus === "disabled" && r.isEnabled) return false
+      if (!ruleMatchesOverviewAppTextFilter(r, rulesOverviewAppQuery, filterAppsOptions)) return false
+      if (!ruleMatchesOverviewMetricFilter(r, rulesOverviewMetric)) return false
+      return true
+    })
+  }, [rulesSorted, rulesOverviewStatus, rulesOverviewAppQuery, rulesOverviewMetric, filterAppsOptions])
+
+  const formatRuleScope = useCallback(
+    (rule: AlertRule) => {
+      const cfg = parseAlertRuleConfig(rule)
+      if (!cfg?.scope) return "—"
+      if (cfg.scope.allApps) return "All apps"
+      const ids = cfg.scope.appIds ?? []
+      if (ids.length === 0) return "All apps"
+      return ids.map((id) => appIdToLabel.get(id.toLowerCase()) ?? id).join(", ")
+    },
+    [appIdToLabel],
+  )
 
   const invalidateAlertCaches = () => {
     invalidateCache("notification_open_alerts_all")
@@ -291,9 +386,86 @@ export function AlertCenterContentV2() {
   }, [loadMoreTimeline])
 
   const handleRuleCreated = async () => {
+    setManualEditRule(null)
     invalidateAlertCaches()
     invalidateCache("alert_rules_v2_overview")
+    invalidateCache("alert_rules_all")
+    invalidateCache("alert_rules_enabled")
+    invalidateCache("alert_rules_disabled")
     await refetchRules()
+  }
+
+  const openOverviewEdit = (rule: AlertRule) => {
+    setManualEditRule(rule)
+    setShowManualCreator(true)
+  }
+
+  const handleOverviewToggle = async (rule: AlertRule) => {
+    setOverviewTogglingId(rule.id)
+    try {
+      await alertsApi.toggleAlertRule(rule.id)
+      invalidateCache("alert_rules_v2_overview")
+      invalidateCache("alert_rules_all")
+      invalidateCache("alert_rules_enabled")
+      invalidateCache("alert_rules_disabled")
+      await refetchRules()
+      toast({
+        title: "Đã cập nhật",
+        description: `Rule ${rule.name} đã ${rule.isEnabled ? "tắt" : "bật"}.`,
+      })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Không thể đổi trạng thái rule."
+      toast({ title: "Lỗi", description: message, variant: "destructive" })
+    } finally {
+      setOverviewTogglingId(null)
+    }
+  }
+
+  const handleOverviewDelete = async (rule: AlertRule) => {
+    const confirmed = window.confirm(`Xóa alert rule "${rule.name}"?`)
+    if (!confirmed) return
+    setOverviewDeletingId(rule.id)
+    try {
+      await alertsApi.deleteAlertRule(rule.id)
+      invalidateCache("alert_rules_v2_overview")
+      invalidateCache("alert_rules_all")
+      invalidateCache("alert_rules_enabled")
+      invalidateCache("alert_rules_disabled")
+      await refetchRules()
+      toast({ title: "Đã xóa", description: `Rule ${rule.name} đã được xóa.` })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Không thể xóa alert rule."
+      toast({ title: "Lỗi", description: message, variant: "destructive" })
+    } finally {
+      setOverviewDeletingId(null)
+    }
+  }
+
+  const handleOverviewRunNow = async (rule: AlertRule) => {
+    setOverviewRunningId(rule.id)
+    try {
+      const res = await alertsApi.runAlertRuleNow(rule.id)
+      invalidateAlertCaches()
+      invalidateCache("alert_rules_v2_overview")
+      invalidateCache("alert_rules_all")
+      invalidateCache("alert_rules_enabled")
+      invalidateCache("alert_rules_disabled")
+      await refetchRules()
+      await refetch()
+      bumpTimeline()
+      toast({
+        title: "Đã chạy rule",
+        description:
+          res.alertsCreated > 0
+            ? `Tạo ${res.alertsCreated} alert mới; thông báo đã được xếp hàng.`
+            : "Không có alert mới (điều kiện không khớp hoặc bị cooldown/dedup).",
+      })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Không thể chạy rule."
+      toast({ title: "Lỗi", description: message, variant: "destructive" })
+    } finally {
+      setOverviewRunningId(null)
+    }
   }
 
   const handleAcknowledge = async (id: number) => {
@@ -354,7 +526,10 @@ export function AlertCenterContentV2() {
           <Button
             variant="outline"
             className="h-9 gap-2 bg-transparent"
-            onClick={() => setShowManualCreator(true)}
+            onClick={() => {
+              setManualEditRule(null)
+              setShowManualCreator(true)
+            }}
           >
             Create Manual Alert
           </Button>
@@ -406,6 +581,186 @@ export function AlertCenterContentV2() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-slate-200">
+        <CardContent className="p-6">
+          <div className="flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" />
+              Alert Rules Overview
+            </h2>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1 min-w-[200px] flex-1 max-w-sm">
+                <Label className="text-xs text-slate-500">App</Label>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Tìm theo tên app hoặc appId…"
+                    value={rulesOverviewAppQuery}
+                    onChange={(e) => setRulesOverviewAppQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 min-w-[140px]">
+                <Label className="text-xs text-slate-500">Metric</Label>
+                <Select value={rulesOverviewMetric} onValueChange={setRulesOverviewMetric}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="All metrics" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All metrics</SelectItem>
+                    {rulesMetricOptions.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {key}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1 min-w-[140px]">
+                <Label className="text-xs text-slate-500">Status</Label>
+                <Select
+                  value={rulesOverviewStatus}
+                  onValueChange={(v) => setRulesOverviewStatus(v as "all" | "enabled" | "disabled")}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="enabled">Enabled</SelectItem>
+                    <SelectItem value="disabled">Disabled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {rulesLoading ? (
+              <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading rules…
+              </div>
+            ) : filteredRulesOverview.length === 0 ? (
+              <p className="text-sm text-slate-500 py-8 text-center">No rules match the filters.</p>
+            ) : (
+              <div className="rounded-md border border-slate-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-slate-200">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="min-w-[200px] max-w-[min(28rem,40vw)]">Conditions</TableHead>
+                      <TableHead className="hidden md:table-cell">Apps</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right w-[240px] min-w-[240px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRulesOverview.map((rule) => {
+                      const condSummary = formatRuleConditionsSummary(rule)
+                      return (
+                        <TableRow key={rule.id} className="border-slate-200">
+                          <TableCell className="max-w-[220px]">
+                            <span className="font-medium text-slate-900 truncate block" title={rule.name}>
+                              {rule.name}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {rule.ruleType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[min(28rem,40vw)] align-top">
+                            <span
+                              className="text-xs text-slate-600 whitespace-normal line-clamp-3 leading-snug"
+                              title={condSummary}
+                            >
+                              {condSummary}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell max-w-[240px]">
+                            <span className="text-xs text-slate-600 whitespace-normal">
+                              {formatRuleScope(rule)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                rule.isEnabled
+                                  ? "bg-green-100 text-green-700 border-0"
+                                  : "bg-slate-100 text-slate-600 border-0"
+                              }
+                            >
+                              {rule.isEnabled ? "Enabled" : "Disabled"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-0.5 flex-nowrap">
+                              <Switch
+                                checked={rule.isEnabled}
+                                disabled={overviewTogglingId === rule.id}
+                                onCheckedChange={() => void handleOverviewToggle(rule)}
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => setDetailsRule(rule)}
+                                title="View details"
+                              >
+                                <Eye className="h-4 w-4 text-slate-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => void handleOverviewRunNow(rule)}
+                                disabled={
+                                  overviewRunningId === rule.id ||
+                                  overviewDeletingId === rule.id ||
+                                  overviewTogglingId === rule.id
+                                }
+                                title="Run now"
+                              >
+                                {overviewRunningId === rule.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Play className="h-4 w-4 text-indigo-600" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => openOverviewEdit(rule)}
+                                title="Edit"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => void handleOverviewDelete(rule)}
+                                disabled={overviewDeletingId === rule.id}
+                                title="Delete"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div>
         <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -702,45 +1057,6 @@ export function AlertCenterContentV2() {
         </Card>
       </div>
 
-      <Card className="border-slate-200">
-        <CardContent className="p-6">
-          <button
-            onClick={() => setRulesExpanded((v) => !v)}
-            className="flex items-center justify-between w-full"
-            type="button"
-          >
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" />
-              Alert Rules Overview
-            </h2>
-            <ChevronDown className={`w-5 h-5 transition-transform ${rulesExpanded ? "rotate-180" : ""}`} />
-          </button>
-
-          {rulesExpanded ? (
-            <div className="mt-6 grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-4">Enabled Rules ({enabledRules.length})</h3>
-                <div className="space-y-2 text-sm text-slate-700">
-                  {(enabledRules.length > 0 ? enabledRules.slice(0, 6) : []).map((rule) => (
-                    <p key={rule.id}>{rule.name}</p>
-                  ))}
-                  {enabledRules.length === 0 ? <p>No enabled rule</p> : null}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-4">Disabled Rules ({disabledRules.length})</h3>
-                <div className="space-y-2 text-sm text-slate-700">
-                  {(disabledRules.length > 0 ? disabledRules.slice(0, 6) : []).map((rule) => (
-                    <p key={rule.id}>{rule.name}</p>
-                  ))}
-                  {disabledRules.length === 0 ? <p>No disabled rule</p> : null}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
       <div className="flex items-center gap-3">
         <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
           {criticalCount} Critical
@@ -782,8 +1098,24 @@ export function AlertCenterContentV2() {
       )}
 
       <AIAlertBuilderSheet open={showAiBuilder} onOpenChange={setShowAiBuilder} onCreated={handleRuleCreated} />
-      <ManualAlertCreatorModal open={showManualCreator} onOpenChange={setShowManualCreator} onCreated={handleRuleCreated} />
+      <ManualAlertCreatorModal
+        open={showManualCreator}
+        onOpenChange={(open) => {
+          setShowManualCreator(open)
+          if (!open) setManualEditRule(null)
+        }}
+        onCreated={handleRuleCreated}
+        rule={manualEditRule}
+      />
       <AlertRulesPanel open={alertRulesPanelOpen} onOpenChange={setAlertRulesPanelOpen} />
+      <AlertRuleDetailsDialog
+        rule={detailsRule}
+        open={detailsRule != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailsRule(null)
+        }}
+        appIdToLabel={appIdToLabel}
+      />
     </div>
   )
 }

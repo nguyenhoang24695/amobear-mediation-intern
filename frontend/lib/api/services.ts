@@ -137,6 +137,9 @@ export interface CurrentUser {
     organizationId?: string
     emailVerified?: boolean
     slackWebhookUrl?: string
+    slackWebhookUrlRealtime?: string
+    slackWebhookUrlHourly?: string
+    slackWebhookUrlDaily?: string
     organization?: { id: string; name: string; slug: string; logoUrl?: string }
     teams?: Array<{ id: string; name: string; role: string }>
     permissions?: Record<string, string>
@@ -147,8 +150,11 @@ export interface UpdateMyProfileRequest {
     firstName?: string
     lastName?: string
     phone?: string
-    /** Gửi chuỗi rỗng để xóa webhook đã lưu */
+    /** Direct Message — mặc định khi URL theo tần suất trống. Chuỗi rỗng = xóa. */
     slackWebhookUrl?: string
+    slackWebhookUrlRealtime?: string
+    slackWebhookUrlHourly?: string
+    slackWebhookUrlDaily?: string
 }
 
 export interface PagedResult<T> {
@@ -1278,6 +1284,13 @@ export const alertsApi = {
             message?: string | null
             value: number
             threshold: number
+            conditionEvals?: Array<{
+                conditionId?: string | null
+                metricKey?: string | null
+                evaluable: boolean
+                triggered: boolean
+                detail?: string | null
+            }>
         }>
     }> => {
         return apiClient.post('/api/Alerts/rules/test', body)
@@ -1289,6 +1302,10 @@ export const alertsApi = {
 
     toggleAlertRule: async (id: number): Promise<{ id: number; isEnabled: boolean }> => {
         return apiClient.patch<{ id: number; isEnabled: boolean }>(`/api/Alerts/rules/${id}/toggle`, {})
+    },
+
+    runAlertRuleNow: async (id: number): Promise<{ alertsCreated: number }> => {
+        return apiClient.post<{ alertsCreated: number }>(`/api/Alerts/rules/${id}/run`, {})
     },
 
     validateTelegramChat: async (params: {

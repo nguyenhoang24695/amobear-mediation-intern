@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Zap, Search, Loader2, Plus, Trash2 } from "lucide-react"
+import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Search, Loader2, Plus, Trash2 } from "lucide-react"
 import { alertsApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useApi } from "@/hooks/use-api"
 import type { AlertRule, AlertRuleConfigPayload, AppMetricCatalogItem } from "@/types/api"
+import { cn } from "@/lib/utils"
 
 interface ManualAlertCreatorModalProps {
   open: boolean
@@ -55,6 +56,40 @@ type SlackDestinationRow = {
 type EmailRecipientRow = {
   id: string
   email: string
+}
+
+type ManualConditionRow = {
+  id: string
+  metric: string
+  conditionType: string
+  operator: string
+  thresholdValue: string
+  percentChange: string
+  consecutiveDays: string
+}
+
+type Step2ConditionErrors = {
+  metric?: string
+  value?: string
+}
+
+type Step3SectionErrors = {
+  telegram?: string
+  slack?: string
+  email?: string
+  frequency?: string
+}
+
+function emptyConditionRow(): ManualConditionRow {
+  return {
+    id: newRowId(),
+    metric: "",
+    conditionType: "threshold",
+    operator: "less_than",
+    thresholdValue: "",
+    percentChange: "",
+    consecutiveDays: "3",
+  }
 }
 
 const FALLBACK_METRICS: Array<{ value: string; label: string }> = [
@@ -173,29 +208,64 @@ function toSeverityValue(value?: string | null): "critical" | "warning" | "info"
   return "info"
 }
 
+function metricLabelFromCatalog(catalog: AppMetricCatalogItem[] | null | undefined, metricKey: string) {
+  const opts = resolveMetricSelectOptions(catalog, metricKey)
+  return opts.find((m) => m.value === metricKey)?.label || metricKey || "Metric"
+}
+
+function conditionTypeDisplayName(conditionType: string) {
+  return conditionTypes.find((x) => x.value === conditionType)?.label ?? conditionType
+}
+
+/** Human-readable condition copy (no &lt; / &gt; symbols). */
+function describeManualConditionText(metricLabel: string, c: ManualConditionRow): string {
+  const typeName = conditionTypeDisplayName(c.conditionType)
+  if (c.conditionType === "threshold") {
+    const op = c.operator === "less_than" ? "is less than" : "is greater than"
+    return `${metricLabel} (${typeName}): ${op} ${c.thresholdValue?.trim() || "?"}`
+  }
+  if (c.conditionType === "percent_change") {
+    const op = c.operator === "less_than" ? "decreases by at least" : "increases by at least"
+    return `${metricLabel} (${typeName}): ${op} ${c.percentChange?.trim() || "?"}% vs baseline`
+  }
+  if (c.conditionType === "consecutive") {
+    const op = c.operator === "less_than" ? "stays below" : "stays above"
+    return `${metricLabel} (${typeName}): ${op} ${c.thresholdValue?.trim() || "?"} for ${c.consecutiveDays || "?"} consecutive days`
+  }
+  return `${metricLabel} (${typeName})`
+}
+
 export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }: ManualAlertCreatorModalProps) {
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
-  const [testing, setTesting] = useState(false)
   const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
   const [pendingDuplicateName, setPendingDuplicateName] = useState("")
   const [appSearch, setAppSearch] = useState("")
   const [telegramRows, setTelegramRows] = useState<TelegramDestinationRow[]>([emptyTelegramRow()])
   const [slackRows, setSlackRows] = useState<SlackDestinationRow[]>([emptySlackRow()])
   const [emailRows, setEmailRows] = useState<EmailRecipientRow[]>([emptyEmailRow()])
+  const [step1Error, setStep1Error] = useState<string | undefined>(undefined)
+  const [step2ListError, setStep2ListError] = useState<string | undefined>(undefined)
+  const [step2FieldErrors, setStep2FieldErrors] = useState<Record<string, Step2ConditionErrors>>({})
+  const [step3Errors, setStep3Errors] = useState<Step3SectionErrors>({})
   const [step, setStep] = useState(1)
+
+  const clearValidationErrors = useCallback(() => {
+    setStep1Error(undefined)
+    setStep2ListError(undefined)
+    setStep2FieldErrors({})
+    setStep3Errors({})
+  }, [])
   const [formData, setFormData] = useState({
-    metric: "",
+    conditionLogic: "all" as "all" | "any",
+    conditions: [emptyConditionRow()] as ManualConditionRow[],
     selectedApps: ["all"],
     alertName: "",
-    conditionType: "threshold",
-    operator: "less_than",
-    thresholdValue: "",
-    percentChange: "",
-    consecutiveDays: "3",
     severity: "warning",
     channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
     frequency: "daily",
+    evaluationCooldownMinutes: "",
+    dailyEvaluationHourUtc: "any",
     autoResolve: true,
   })
 
@@ -207,11 +277,6 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   const { data: metricsCatalog, loading: metricsCatalogLoading } = useApi(
     () => alertsApi.getMetricsCatalog(),
     { enabled: open, cacheKey: "alert_metrics_catalog" }
-  )
-
-  const metricSelectOptions = useMemo(
-    () => resolveMetricSelectOptions(metricsCatalog ?? null, formData.metric),
-    [metricsCatalog, formData.metric]
   )
 
   const apps = useMemo(
@@ -252,17 +317,15 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
 
     if (!rule) {
       setFormData({
-        metric: "",
+        conditionLogic: "all",
+        conditions: [emptyConditionRow()],
         selectedApps: ["all"],
         alertName: "",
-        conditionType: "threshold",
-        operator: "less_than",
-        thresholdValue: "",
-        percentChange: "",
-        consecutiveDays: "3",
         severity: "warning",
         channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
         frequency: "daily",
+        evaluationCooldownMinutes: "",
+        dailyEvaluationHourUtc: "any",
         autoResolve: true,
       })
       setTelegramRows([emptyTelegramRow()])
@@ -279,20 +342,47 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
           ? scope.appIds
           : ["all"]
 
+    const logic =
+      parsedConfig?.conditionLogic?.toLowerCase() === "any" ? "any" : ("all" as const)
+    const conds = parsedConfig?.conditions
+    const rows: ManualConditionRow[] =
+      conds && conds.length > 0
+        ? conds.map((c) => ({
+            id: c.id?.trim() || newRowId(),
+            metric: c.metricKey || parsedConfig?.metricKey || "",
+            conditionType: c.conditionType || "threshold",
+            operator: c.operator || "less_than",
+            thresholdValue:
+              c.thresholdValue != null
+                ? String(c.thresholdValue)
+                : rule.thresholdValue != null
+                  ? String(rule.thresholdValue)
+                  : "",
+            percentChange: c.percentChange != null ? String(c.percentChange) : "",
+            consecutiveDays: c.consecutiveDays != null ? String(c.consecutiveDays) : "3",
+          }))
+        : [
+            {
+              id: newRowId(),
+              metric: parsedConfig?.metricKey || "",
+              conditionType: parsedConfig?.conditionType || "threshold",
+              operator: parsedConfig?.operator || "less_than",
+              thresholdValue:
+                parsedConfig?.thresholdValue != null
+                  ? String(parsedConfig.thresholdValue)
+                  : rule.thresholdValue != null
+                    ? String(rule.thresholdValue)
+                    : "",
+              percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
+              consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
+            },
+          ]
+
     setFormData({
-      metric: parsedConfig?.metricKey || "",
+      conditionLogic: logic,
+      conditions: rows,
       selectedApps,
       alertName: rule.name || "",
-      conditionType: parsedConfig?.conditionType || "threshold",
-      operator: parsedConfig?.operator || "less_than",
-      thresholdValue:
-        parsedConfig?.thresholdValue != null
-          ? String(parsedConfig.thresholdValue)
-          : rule.thresholdValue != null
-            ? String(rule.thresholdValue)
-            : "",
-      percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
-      consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
       severity: toSeverityValue(rule.severity),
       channels: {
         inApp: notificationChannels.includes("IN_APP"),
@@ -302,11 +392,26 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
         email: notificationChannels.includes("EMAIL"),
       },
       frequency: parsedConfig?.frequency || (rule.timeWindowHours === 24 ? "daily" : rule.timeWindowHours === 1 ? "hourly" : "realtime"),
+      evaluationCooldownMinutes:
+        parsedConfig?.evaluationCooldownMinutes != null && parsedConfig.evaluationCooldownMinutes > 0
+          ? String(parsedConfig.evaluationCooldownMinutes)
+          : "",
+      dailyEvaluationHourUtc:
+        parsedConfig?.dailyEvaluationHourUtc != null &&
+        parsedConfig.dailyEvaluationHourUtc >= 0 &&
+        parsedConfig.dailyEvaluationHourUtc <= 23
+          ? String(parsedConfig.dailyEvaluationHourUtc)
+          : "any",
       autoResolve: parsedConfig?.autoResolve ?? true,
     })
   }, [open, rule])
 
+  useEffect(() => {
+    if (open) clearValidationErrors()
+  }, [open, clearValidationErrors])
+
   const toggleSpecificApp = (appId: string, checked: boolean) => {
+    setStep1Error(undefined)
     setFormData((current) => {
       const withoutAll = current.selectedApps.filter((id) => id !== "all")
       if (checked) {
@@ -317,11 +422,89 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   }
 
   const handleNext = () => {
+    if (step === 1) {
+      if (!isAllApps && formData.selectedApps.length === 0) {
+        setStep1Error("Chọn All Apps hoặc ít nhất một app cụ thể.")
+        return
+      }
+      setStep1Error(undefined)
+    }
+    if (step === 2) {
+      if (formData.conditions.length === 0) {
+        setStep2ListError("Thêm ít nhất một điều kiện (Add condition).")
+        setStep2FieldErrors({})
+        return
+      }
+      setStep2ListError(undefined)
+      const byId: Record<string, Step2ConditionErrors> = {}
+      for (const c of formData.conditions) {
+        const e: Step2ConditionErrors = {}
+        if (!c.metric?.trim()) {
+          e.metric = "Chọn metric."
+        }
+        if (c.conditionType === "threshold" && !c.thresholdValue?.trim()) {
+          e.value = "Nhập giá trị threshold."
+        }
+        if (c.conditionType === "percent_change" && !c.percentChange?.trim()) {
+          e.value = "Nhập phần trăm thay đổi."
+        }
+        if (c.conditionType === "consecutive" && !c.thresholdValue?.trim()) {
+          e.value = "Nhập ngưỡng cho consecutive."
+        }
+        if (e.metric || e.value) {
+          byId[c.id] = e
+        }
+      }
+      if (Object.keys(byId).length > 0) {
+        setStep2FieldErrors(byId)
+        return
+      }
+      setStep2FieldErrors({})
+    }
+    if (step === 3) {
+      const e: Step3SectionErrors = {}
+      const cooldownRaw = formData.evaluationCooldownMinutes.trim()
+      if (
+        (formData.frequency === "realtime" || formData.frequency === "hourly") &&
+        cooldownRaw.length > 0
+      ) {
+        const n = Number(cooldownRaw)
+        if (!Number.isFinite(n) || n < 1 || !Number.isInteger(n)) {
+          e.frequency = "Cooldown phải là số nguyên phút ≥ 1 (hoặc để trống)."
+        }
+      }
+      if (formData.frequency === "daily" && formData.dailyEvaluationHourUtc !== "any") {
+        const h = Number(formData.dailyEvaluationHourUtc)
+        if (!Number.isFinite(h) || h < 0 || h > 23 || !Number.isInteger(h)) {
+          e.frequency = "Giờ chạy hằng ngày (GMT+7) phải từ 0–23."
+        }
+      }
+      if (formData.channels.telegram) {
+        const ok = telegramRows.some((row) => telegramTopicTokenFromRow(row))
+        if (!ok) e.telegram = "Nhập ít nhất một Chat ID khi bật Telegram."
+      }
+      if (formData.channels.slack) {
+        const ok = slackRows.some((row) => row.webhookUrl.trim().length > 0)
+        if (!ok) e.slack = "Nhập ít nhất một Slack webhook URL."
+      }
+      if (formData.channels.email) {
+        const ok = emailRows.some((row) => row.email.trim().length > 0)
+        if (!ok) e.email = "Nhập ít nhất một địa chỉ email."
+      }
+      if (Object.keys(e).length > 0) {
+        setStep3Errors(e)
+        return
+      }
+      setStep3Errors({})
+    }
     if (step < 4) setStep(step + 1)
   }
 
   const handleBack = () => {
-    if (step > 1) setStep(step - 1)
+    if (step > 1) {
+      clearValidationErrors()
+      setStep(step - 1)
+    }
   }
 
   const formatTimestampYmdHisSSS = (date: Date) => {
@@ -396,14 +579,10 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   }
 
   const generateAlertName = () => {
-    const metricLabel = metricSelectOptions.find((m) => m.value === formData.metric)?.label || "Metric"
-    if (formData.conditionType === "threshold") {
-      return `${metricLabel} ${formData.operator === "less_than" ? "<" : ">"} ${formData.thresholdValue || "?"}`
-    }
-    if (formData.conditionType === "percent_change") {
-      return `${metricLabel} ${formData.operator === "less_than" ? "drops" : "increases"} ${formData.percentChange || "?"}%`
-    }
-    return `${metricLabel} below threshold for ${formData.consecutiveDays} days`
+    const c = formData.conditions[0]
+    if (!c) return "Manual Alert"
+    const metricLabel = metricLabelFromCatalog(metricsCatalog ?? null, c.metric)
+    return describeManualConditionText(metricLabel, c)
   }
 
   const buildRulePayload = (name: string) => {
@@ -413,7 +592,6 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
         if (channel === "inApp") return "IN_APP"
         return channel.toUpperCase()
       })
-    const metricKey = toMetricKey(formData.metric)
     const telegramTopics = telegramRows
       .map((row) => telegramTopicTokenFromRow(row))
       .filter((value): value is string => !!value)
@@ -424,17 +602,61 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       .map((row) => row.email.trim())
       .filter((value) => value.length > 0)
 
+    const conditionsPayload = formData.conditions.map((c, i) => {
+      const mk = toMetricKey(c.metric)
+      return {
+        id: c.id || `c${i}`,
+        metricKey: mk,
+        metricUnit: toMetricUnit(mk),
+        conditionType: c.conditionType,
+        operator: c.operator,
+        thresholdValue:
+          c.conditionType === "threshold" || c.conditionType === "consecutive"
+            ? c.thresholdValue
+              ? Number(c.thresholdValue)
+              : null
+            : null,
+        percentChange: c.conditionType === "percent_change" ? (c.percentChange ? Number(c.percentChange) : null) : null,
+        consecutiveDays: c.conditionType === "consecutive" ? (c.consecutiveDays ? Number(c.consecutiveDays) : null) : null,
+      }
+    })
+    const first = conditionsPayload[0]
+    const anyPercent = formData.conditions.some((c) => c.conditionType === "percent_change")
+    const firstThreshold =
+      formData.conditions.find((c) => c.conditionType === "threshold") ?? formData.conditions[0]
+
+    const evalCooldownParsed =
+      formData.frequency === "realtime" || formData.frequency === "hourly"
+        ? (() => {
+            const t = formData.evaluationCooldownMinutes.trim()
+            if (!t) return null
+            const n = Number(t)
+            return Number.isFinite(n) && n >= 1 && Number.isInteger(n) ? n : null
+          })()
+        : null
+
+    const dailyHourParsed =
+      formData.frequency === "daily" && formData.dailyEvaluationHourUtc !== "any"
+        ? Number(formData.dailyEvaluationHourUtc)
+        : null
+    const dailyHourUtc =
+      dailyHourParsed != null && dailyHourParsed >= 0 && dailyHourParsed <= 23 ? dailyHourParsed : null
+
     const ruleConfig: AlertRuleConfigPayload = {
-      version: 1,
+      version: 2,
       source: "manual",
-      metricKey,
-      metricUnit: toMetricUnit(metricKey),
-      conditionType: formData.conditionType,
-      operator: formData.operator,
-      thresholdValue: formData.thresholdValue ? Number(formData.thresholdValue) : null,
-      percentChange: formData.percentChange ? Number(formData.percentChange) : null,
-      consecutiveDays: formData.consecutiveDays ? Number(formData.consecutiveDays) : null,
+      conditionLogic: formData.conditionLogic,
+      conditions: conditionsPayload,
+      metricKey: first?.metricKey ?? null,
+      metricUnit: first?.metricUnit ?? null,
+      conditionType: first?.conditionType ?? null,
+      operator: first?.operator ?? null,
+      thresholdValue: first?.thresholdValue ?? null,
+      percentChange: first?.percentChange ?? null,
+      consecutiveDays: first?.consecutiveDays ?? null,
       frequency: formData.frequency,
+      evaluationCooldownMinutes: evalCooldownParsed,
+      dailyEvaluationHourUtc: dailyHourUtc,
       autoResolve: formData.autoResolve,
       scope: {
         allApps: isAllApps,
@@ -442,12 +664,12 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       },
     }
 
-    const ruleExpression =
-      formData.conditionType === "threshold"
-        ? `${formData.metric} ${formData.operator === "less_than" ? "<" : ">"} ${formData.thresholdValue || "0"}`
-        : formData.conditionType === "percent_change"
-          ? `${formData.metric} ${formData.operator === "less_than" ? "drop" : "increase"} ${formData.percentChange || "0"}%`
-          : `${formData.metric} consecutive ${formData.consecutiveDays} days`
+    const joiner = formData.conditionLogic === "any" ? " or " : " and "
+    const ruleExpression = formData.conditions
+      .map((c) =>
+        describeManualConditionText(metricLabelFromCatalog(metricsCatalog ?? null, c.metric), c)
+      )
+      .join(joiner)
 
     return {
       name,
@@ -455,15 +677,21 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       ruleType: rule?.ruleType?.trim() || "MANUAL",
       severity: formData.severity.toUpperCase(),
       ruleExpression,
-      thresholdValue: formData.conditionType === "threshold" ? Number(formData.thresholdValue || 0) : null,
+      thresholdValue:
+        firstThreshold?.conditionType === "threshold" && firstThreshold.thresholdValue
+          ? Number(firstThreshold.thresholdValue)
+          : null,
       timeWindowHours: formData.frequency === "daily" ? 24 : 1,
-      comparisonPeriodHours: formData.conditionType === "percent_change" ? 24 : null,
+      comparisonPeriodHours: anyPercent ? 24 : null,
       filterConditions: JSON.stringify(ruleConfig),
       configVersion: rule?.configVersion ?? 1,
       ruleConfig: JSON.stringify(ruleConfig),
       messageTemplate: `${name} triggered`,
       isEnabled: rule?.isEnabled ?? true,
-      cooldownMinutes: rule?.cooldownMinutes ?? 60,
+      cooldownMinutes:
+        evalCooldownParsed != null && evalCooldownParsed > 0
+          ? evalCooldownParsed
+          : rule?.cooldownMinutes ?? 60,
       notificationChannels: JSON.stringify(channels.length > 0 ? channels : ["IN_APP"]),
       telegramTopics: JSON.stringify(formData.channels.telegram ? telegramTopics : []),
       emailRecipients: JSON.stringify(formData.channels.email ? emailRecipients : []),
@@ -472,51 +700,19 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
     }
   }
 
-  const handleTestRule = async () => {
-    const name = (formData.alertName || generateAlertName()).trim() || "Manual Alert Test"
-    try {
-      setTesting(true)
-      const payload = buildRulePayload(name)
-      const result = await alertsApi.testAlertRule(payload)
-      if (result.triggered) {
-        const previewApps = result.matches
-          .map((match) => match.appId)
-          .filter((value): value is string => !!value)
-          .slice(0, 3)
-        toast({
-          title: "Rule matched current data",
-          description:
-            previewApps.length > 0
-              ? `${result.matchCount} match(es). Apps: ${previewApps.join(", ")}${result.matchCount > previewApps.length ? "..." : ""}`
-              : `${result.matchCount} match(es) found.`,
-        })
-      } else {
-        toast({
-          title: "No current matches",
-          description: "This rule does not match any current data right now.",
-        })
-      }
-    } catch (error: any) {
-      toast({
-        title: "Unable to test rule",
-        description: error?.message || "Unknown error",
-        variant: "destructive",
-      })
-    } finally {
-      setTesting(false)
-    }
-  }
-
   const updateTelegramRow = (id: string, patch: Partial<TelegramDestinationRow>) => {
     setTelegramRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+    setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
   }
 
   const updateSlackRow = (id: string, patch: Partial<SlackDestinationRow>) => {
     setSlackRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+    setStep3Errors((prev) => ({ ...prev, slack: undefined }))
   }
 
   const updateEmailRow = (id: string, patch: Partial<EmailRecipientRow>) => {
     setEmailRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+    setStep3Errors((prev) => ({ ...prev, email: undefined }))
   }
 
   const removeTelegramRow = (id: string) => {
@@ -532,7 +728,13 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) clearValidationErrors()
+        onOpenChange(next)
+      }}
+    >
       <DialogContent className="flex max-h-[min(85vh,900px)] w-[90vw] max-w-[90vw] flex-col gap-0 overflow-hidden p-6 md:w-[60vw] md:!max-w-[60vw]">
         <div className="shrink-0 space-y-2 border-b border-slate-100 pb-3">
           <DialogHeader className="space-y-1 text-left">
@@ -555,7 +757,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                 </div>
                 <span className={`text-sm ${s === step ? "text-slate-900 font-medium" : "text-slate-500"}`}>
                   {s === 1
-                    ? "What to Monitor"
+                    ? "Scope"
                     : s === 2
                       ? "Condition"
                       : s === 3
@@ -573,36 +775,18 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
             {step === 1 && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label>Select Metric *</Label>
-                    {metricsCatalogLoading && (
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Loading catalog…
-                      </span>
-                    )}
-                  </div>
-                  <Select value={formData.metric} onValueChange={(v) => setFormData({ ...formData, metric: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a metric to monitor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {metricSelectOptions.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <Label>Select App(s) *</Label>
-                  <div className="space-y-3">
+                  <div
+                    className={cn(
+                      "space-y-3 rounded-lg transition-[box-shadow]",
+                      step1Error && "ring-2 ring-red-500/80 ring-offset-2"
+                    )}
+                  >
                     <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 border-slate-200">
                       <Checkbox
                         checked={isAllApps}
                         onCheckedChange={(checked) => {
+                          setStep1Error(undefined)
                           if (checked) {
                             setFormData((current) => ({ ...current, selectedApps: ["all"] }))
                           } else {
@@ -672,117 +856,273 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                       </>
                     )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Alert Name</Label>
-                  <Input
-                    placeholder="Auto-generated or enter custom name"
-                    value={formData.alertName || generateAlertName()}
-                    onChange={(e) => setFormData({ ...formData, alertName: e.target.value })}
-                  />
+                  {step1Error && (
+                    <p className="text-sm text-red-600 mt-1.5" role="alert">
+                      {step1Error}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
             {step === 2 && (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Condition Type *</Label>
-                  <RadioGroup
-                    value={formData.conditionType}
-                    onValueChange={(v) => setFormData({ ...formData, conditionType: v })}
-                    className="grid grid-cols-1 gap-3"
-                  >
-                    {conditionTypes.map((ct) => (
-                      <label
-                        key={ct.value}
-                        className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer hover:bg-slate-50 ${
-                          formData.conditionType === ct.value ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
-                        }`}
-                      >
-                        <RadioGroupItem value={ct.value} />
-                        <div>
-                          <p className="font-medium text-slate-900">{ct.label}</p>
-                          <p className="text-sm text-slate-500">{ct.description}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </RadioGroup>
+                <div className="flex items-center gap-2">
+                  <Label>Combine conditions</Label>
+                  {metricsCatalogLoading && (
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Loading catalog…
+                    </span>
+                  )}
                 </div>
+                <RadioGroup
+                  value={formData.conditionLogic}
+                  onValueChange={(v) => setFormData({ ...formData, conditionLogic: v as "all" | "any" })}
+                  className="flex flex-wrap gap-4"
+                >
+                  <label
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
+                      formData.conditionLogic === "all" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                    }`}
+                  >
+                    <RadioGroupItem value="all" />
+                    <span className="text-sm font-medium">All (AND)</span>
+                  </label>
+                  <label
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
+                      formData.conditionLogic === "any" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                    }`}
+                  >
+                    <RadioGroupItem value="any" />
+                    <span className="text-sm font-medium">Any (OR)</span>
+                  </label>
+                </RadioGroup>
 
-                {formData.conditionType === "threshold" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Operator</Label>
-                      <Select value={formData.operator} onValueChange={(v) => setFormData({ ...formData, operator: v })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="less_than">Less than (&lt;)</SelectItem>
-                          <SelectItem value="greater_than">Greater than (&gt;)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Value</Label>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 5.00"
-                        value={formData.thresholdValue}
-                        onChange={(e) => setFormData({ ...formData, thresholdValue: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base">Conditions *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="bg-white"
+                    onClick={() => {
+                      setStep2ListError(undefined)
+                      setFormData((prev) => ({ ...prev, conditions: [...prev.conditions, emptyConditionRow()] }))
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add condition
+                  </Button>
+                </div>
+                {step2ListError && (
+                  <p className="text-sm text-red-600 -mt-2" role="alert">
+                    {step2ListError}
+                  </p>
                 )}
 
-                {formData.conditionType === "percent_change" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Change Direction</Label>
-                      <Select value={formData.operator} onValueChange={(v) => setFormData({ ...formData, operator: v })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="less_than">Decreases by</SelectItem>
-                          <SelectItem value="greater_than">Increases by</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Percentage (%)</Label>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 20"
-                        value={formData.percentChange}
-                        onChange={(e) => setFormData({ ...formData, percentChange: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {formData.conditionType === "consecutive" && (
-                  <div className="space-y-2">
-                    <Label>Consecutive Days</Label>
-                    <Select
-                      value={formData.consecutiveDays}
-                      onValueChange={(v) => setFormData({ ...formData, consecutiveDays: v })}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[2, 3, 5, 7].map((d) => (
-                          <SelectItem key={d} value={d.toString()}>
-                            {d} days
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                <div className="space-y-4">
+                  {formData.conditions.map((c, idx) => {
+                    const rowOptions = resolveMetricSelectOptions(metricsCatalog ?? null, c.metric)
+                    const fe = step2FieldErrors[c.id]
+                    const updateRow = (patch: Partial<ManualConditionRow>) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        conditions: prev.conditions.map((row, i) => (i === idx ? { ...row, ...patch } : row)),
+                      }))
+                      setStep2FieldErrors((prev) => {
+                        const cur = prev[c.id]
+                        if (!cur) return prev
+                        const nextE = { ...cur }
+                        if ("metric" in patch) delete nextE.metric
+                        if (
+                          "thresholdValue" in patch ||
+                          "percentChange" in patch ||
+                          "consecutiveDays" in patch ||
+                          "conditionType" in patch
+                        )
+                          delete nextE.value
+                        const next = { ...prev }
+                        if (Object.keys(nextE).length === 0) delete next[c.id]
+                        else next[c.id] = nextE
+                        return next
+                      })
+                    }
+                    const removeRow = () => {
+                      if (formData.conditions.length <= 1) return
+                      setFormData((prev) => ({
+                        ...prev,
+                        conditions: prev.conditions.filter((_, i) => i !== idx),
+                      }))
+                    }
+                    return (
+                      <Card key={c.id} className="border-slate-200 shadow-sm">
+                        <CardContent className="p-4 space-y-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-slate-800">Condition {idx + 1}</span>
+                            {formData.conditions.length > 1 && (
+                              <Button type="button" variant="ghost" size="sm" className="text-red-600" onClick={removeRow}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Metric *</Label>
+                            <Select value={c.metric} onValueChange={(v) => updateRow({ metric: v })}>
+                              <SelectTrigger
+                                className={cn("w-full", fe?.metric && "border-red-500 focus-visible:ring-red-500/30")}
+                              >
+                                <SelectValue placeholder="Choose a metric" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {rowOptions.map((m) => (
+                                  <SelectItem key={m.value} value={m.value}>
+                                    {m.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {fe?.metric && (
+                              <p className="text-sm text-red-600" role="alert">
+                                {fe.metric}
+                              </p>
+                            )}
+                          </div>
+                          <div className="border-t border-slate-100 pt-4 space-y-3">
+                            <Label>Condition type *</Label>
+                            <div className="grid gap-4 sm:grid-cols-[minmax(0,18.5rem)_1fr] sm:gap-7 sm:items-start">
+                              <RadioGroup
+                                value={c.conditionType}
+                                onValueChange={(v) => updateRow({ conditionType: v })}
+                                className="flex flex-col gap-2 min-w-0"
+                              >
+                                {conditionTypes.map((ct) => (
+                                  <label
+                                    key={ct.value}
+                                    className={`flex items-start gap-2.5 p-2.5 border rounded-lg cursor-pointer hover:bg-slate-50 ${
+                                      c.conditionType === ct.value ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                                    }`}
+                                  >
+                                    <RadioGroupItem value={ct.value} className="mt-0.5 shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-slate-900 leading-snug">{ct.label}</p>
+                                      <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{ct.description}</p>
+                                    </div>
+                                  </label>
+                                ))}
+                              </RadioGroup>
+                              <div className="space-y-4 min-w-0">
+                              {c.conditionType === "threshold" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Operator</Label>
+                                    <Select value={c.operator} onValueChange={(v) => updateRow({ operator: v })}>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="less_than">Is less than</SelectItem>
+                                        <SelectItem value="greater_than">Is greater than</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Value</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="e.g., 5.00"
+                                      value={c.thresholdValue}
+                                      onChange={(e) => updateRow({ thresholdValue: e.target.value })}
+                                      className={cn(fe?.value && "border-red-500 focus-visible:ring-red-500/30")}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {c.conditionType === "percent_change" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Change direction</Label>
+                                    <Select value={c.operator} onValueChange={(v) => updateRow({ operator: v })}>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="less_than">Decreases by at least (vs baseline)</SelectItem>
+                                        <SelectItem value="greater_than">Increases by at least (vs baseline)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Percentage (%)</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="e.g., 20"
+                                      value={c.percentChange}
+                                      onChange={(e) => updateRow({ percentChange: e.target.value })}
+                                      className={cn(fe?.value && "border-red-500 focus-visible:ring-red-500/30")}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {c.conditionType === "consecutive" && (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label>Operator</Label>
+                                      <Select value={c.operator} onValueChange={(v) => updateRow({ operator: v })}>
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="less_than">Stays below threshold</SelectItem>
+                                          <SelectItem value="greater_than">Stays above threshold</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Threshold value</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="e.g., 5.00"
+                                        value={c.thresholdValue}
+                                        onChange={(e) => updateRow({ thresholdValue: e.target.value })}
+                                        className={cn(fe?.value && "border-red-500 focus-visible:ring-red-500/30")}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Consecutive days</Label>
+                                    <Select
+                                      value={c.consecutiveDays}
+                                      onValueChange={(v) => updateRow({ consecutiveDays: v })}
+                                    >
+                                      <SelectTrigger className="w-full sm:w-40">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {[2, 3, 5, 7].map((d) => (
+                                          <SelectItem key={d} value={d.toString()}>
+                                            {d} days
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              )}
+                              {fe?.value && (
+                                <p className="text-sm text-red-600" role="alert">
+                                  {fe.value}
+                                </p>
+                              )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
 
                 <div className="space-y-2">
                   <Label>Severity *</Label>
@@ -839,13 +1179,19 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                       <span className="text-sm">Telegram</span>
                       <Switch
                         checked={formData.channels.telegram}
-                        onCheckedChange={(c) =>
+                        onCheckedChange={(c) => {
+                          setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
                           setFormData({ ...formData, channels: { ...formData.channels, telegram: c } })
-                        }
+                        }}
                       />
                     </div>
                     {formData.channels.telegram && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                      <div
+                        className={cn(
+                          "rounded-lg border bg-slate-50 p-3 space-y-3",
+                          step3Errors.telegram ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200"
+                        )}
+                      >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-900">Telegram destinations</p>
                           <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}>
@@ -872,17 +1218,30 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                             </div>
                           ))}
                         </div>
+                        {step3Errors.telegram && (
+                          <p className="text-sm text-red-600" role="alert">
+                            {step3Errors.telegram}
+                          </p>
+                        )}
                       </div>
                     )}
                     <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                       <span className="text-sm">Slack</span>
                       <Switch
                         checked={formData.channels.slack}
-                        onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, slack: c } })}
+                        onCheckedChange={(c) => {
+                          setStep3Errors((prev) => ({ ...prev, slack: undefined }))
+                          setFormData({ ...formData, channels: { ...formData.channels, slack: c } })
+                        }}
                       />
                     </div>
                     {formData.channels.slack && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                      <div
+                        className={cn(
+                          "rounded-lg border bg-slate-50 p-3 space-y-3",
+                          step3Errors.slack ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200"
+                        )}
+                      >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-900">Slack webhook URLs</p>
                           <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setSlackRows((prev) => [...prev, emptySlackRow()])}>
@@ -904,6 +1263,11 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                             </div>
                           ))}
                         </div>
+                        {step3Errors.slack && (
+                          <p className="text-sm text-red-600" role="alert">
+                            {step3Errors.slack}
+                          </p>
+                        )}
                       </div>
                     )}
                     <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
@@ -917,11 +1281,19 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                       <span className="text-sm">Email</span>
                       <Switch
                         checked={formData.channels.email}
-                        onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, email: c } })}
+                        onCheckedChange={(c) => {
+                          setStep3Errors((prev) => ({ ...prev, email: undefined }))
+                          setFormData({ ...formData, channels: { ...formData.channels, email: c } })
+                        }}
                       />
                     </div>
                     {formData.channels.email && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                      <div
+                        className={cn(
+                          "rounded-lg border bg-slate-50 p-3 space-y-3",
+                          step3Errors.email ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200"
+                        )}
+                      >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-900">Email recipients</p>
                           <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setEmailRows((prev) => [...prev, emptyEmailRow()])}>
@@ -944,23 +1316,106 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                             </div>
                           ))}
                         </div>
+                        {step3Errors.email && (
+                          <p className="text-sm text-red-600" role="alert">
+                            {step3Errors.email}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Evaluation Frequency</Label>
-                  <Select value={formData.frequency} onValueChange={(v) => setFormData({ ...formData, frequency: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="realtime">Real-time</SelectItem>
-                      <SelectItem value="hourly">Hourly</SelectItem>
-                      <SelectItem value="daily">Daily (after pipeline)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid gap-6 md:grid-cols-2 md:items-start">
+                  <div className="space-y-2">
+                    <Label>Evaluation Frequency</Label>
+                    <Select
+                      value={formData.frequency}
+                      onValueChange={(v) => {
+                        setStep3Errors((p) => ({ ...p, frequency: undefined }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          frequency: v,
+                          evaluationCooldownMinutes:
+                            v === "realtime" || v === "hourly" ? prev.evaluationCooldownMinutes : "",
+                          dailyEvaluationHourUtc: v === "daily" ? prev.dailyEvaluationHourUtc : "any",
+                        }))
+                      }}
+                    >
+                      <SelectTrigger className="w-1/2 min-w-[11rem]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="realtime">Real-time</SelectItem>
+                        <SelectItem value="hourly">Hourly</SelectItem>
+                        <SelectItem value="daily">Daily (after pipeline)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 min-w-0">
+                    {(formData.frequency === "realtime" || formData.frequency === "hourly") && (
+                      <>
+                        <Label>Cooldown (minutes)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          inputMode="numeric"
+                          placeholder="Phút — để trống = mặc định"
+                          value={formData.evaluationCooldownMinutes}
+                          onChange={(e) => {
+                            setStep3Errors((p) => ({ ...p, frequency: undefined }))
+                            setFormData((prev) => ({ ...prev, evaluationCooldownMinutes: e.target.value }))
+                          }}
+                          className={cn(
+                            "w-1/2 min-w-[6rem]",
+                            step3Errors.frequency && "border-red-500 focus-visible:ring-red-500/30"
+                          )}
+                        />
+                        <p className="text-xs text-slate-500">
+                          Nếu nhập: chỉ đánh giá lại cho cùng app khi alert gần nhất của rule này đã cách hiện tại
+                          &gt; số phút này (theo thời điểm tạo alert).
+                        </p>
+                      </>
+                    )}
+                    {formData.frequency === "daily" && (
+                      <>
+                        <Label>Daily run hour (GMT+7)</Label>
+                        <Select
+                          value={formData.dailyEvaluationHourUtc}
+                          onValueChange={(v) => {
+                            setStep3Errors((p) => ({ ...p, frequency: undefined }))
+                            setFormData((prev) => ({ ...prev, dailyEvaluationHourUtc: v }))
+                          }}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-1/2 min-w-[11rem]",
+                              step3Errors.frequency && "border-red-500 focus-visible:ring-red-500/30"
+                            )}
+                          >
+                            <SelectValue placeholder="Any time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="any">Any time (legacy)</SelectItem>
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <SelectItem key={i} value={String(i)}>
+                                {String(i).padStart(2, "0")}:00
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">
+                          Giờ theo múi GMT+7 (UTC+7). Job chỉ đánh giá trong đúng khung giờ đó;
+                        </p>
+                      </>
+                    )}
+                    {step3Errors.frequency && (
+                      <p className="text-sm text-red-600" role="alert">
+                        {step3Errors.frequency}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -982,21 +1437,27 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
 
             {step === 4 && (
               <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-slate-500">Review your alert and run a quick test before saving.</p>
+                <p className="text-xs text-slate-500">Đặt tên và xem lại cấu hình trước khi lưu.</p>
+                <div className="space-y-2">
+                  <Label>Alert Name</Label>
+                  <Input
+                    placeholder="Auto-generated or enter custom name"
+                    value={formData.alertName || generateAlertName()}
+                    onChange={(e) => setFormData({ ...formData, alertName: e.target.value })}
+                  />
                 </div>
                 <Card className="border-amber-300 bg-amber-50">
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
                     <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-                      <div>
-                        <span className="text-slate-500">Name:</span>
-                        <p className="font-medium break-words">{formData.alertName || generateAlertName() || "-"}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Metric:</span>
-                        <p className="font-medium">
-                          {metricSelectOptions.find((m) => m.value === formData.metric)?.label || "-"}
+                      <div className="md:col-span-2 xl:col-span-4">
+                        <span className="text-slate-500">Conditions ({formData.conditionLogic === "any" ? "OR" : "AND"}):</span>
+                        <p className="mt-1 text-sm font-medium text-slate-800 break-words leading-snug">
+                          {formData.conditions
+                            .map((c) =>
+                              describeManualConditionText(metricLabelFromCatalog(metricsCatalog ?? null, c.metric), c)
+                            )
+                            .join(formData.conditionLogic === "any" ? " or " : " and ")}
                         </p>
                       </div>
                       <div>
@@ -1024,17 +1485,6 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                         </Badge>
                       </div>
                     </div>
-
-                    <Button
-                      variant="outline"
-                      className="w-full mt-4 gap-2 bg-white"
-                      type="button"
-                      onClick={() => void handleTestRule()}
-                      disabled={testing}
-                    >
-                      <Zap className="w-4 h-4" />
-                      {testing ? "Testing..." : "Test Rule"}
-                    </Button>
                   </CardContent>
                 </Card>
               </div>

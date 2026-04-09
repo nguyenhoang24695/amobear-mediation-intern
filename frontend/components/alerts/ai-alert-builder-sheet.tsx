@@ -155,17 +155,37 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         const numericValue = numberMatch ? Number(numberMatch[1]) : null
         const isPercentChange = rawCondition.includes("%") || rawCondition.includes("drop") || rawCondition.includes("increase")
         const operator = rawCondition.includes(">") || rawCondition.includes("increase") ? "greater_than" : "less_than"
+        const metricUnit =
+          metricKey === "revenue" || metricKey === "ecpm" ? "usd" : metricKey === "fill_rate" ? "percent" : "count"
+        const conditionType = isPercentChange ? "percent_change" : "threshold"
+        const thresholdValue = !isPercentChange ? numericValue : null
+        const percentChange = isPercentChange ? numericValue : null
 
         return {
-          version: 1,
+          version: 2,
           source: "ai",
+          conditionLogic: "all",
+          conditions: [
+            {
+              id: "c0",
+              metricKey,
+              metricUnit,
+              conditionType,
+              operator,
+              thresholdValue,
+              percentChange,
+              consecutiveDays: null,
+            },
+          ],
           metricKey,
-          metricUnit: metricKey === "revenue" || metricKey === "ecpm" ? "usd" : metricKey === "fill_rate" ? "percent" : "count",
-          conditionType: isPercentChange ? "percent_change" : "threshold",
+          metricUnit,
+          conditionType,
           operator,
-          thresholdValue: !isPercentChange ? numericValue : null,
-          percentChange: isPercentChange ? numericValue : null,
+          thresholdValue,
+          percentChange,
           frequency: "daily",
+          evaluationCooldownMinutes: null,
+          dailyEvaluationHourUtc: null,
           autoResolve: true,
           prompt: preview.condition,
           scope: {

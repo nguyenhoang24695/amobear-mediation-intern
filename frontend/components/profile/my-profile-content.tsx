@@ -35,7 +35,12 @@ export function MyProfileContent() {
   const [sessionsError, setSessionsError] = useState<string | null>(null)
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
   const [showAllSessions, setShowAllSessions] = useState(false)
-  const [slackWebhookDraft, setSlackWebhookDraft] = useState("")
+  const [slackDrafts, setSlackDrafts] = useState({
+    direct: "",
+    realtime: "",
+    hourly: "",
+    daily: "",
+  })
   const [profileSaving, setProfileSaving] = useState(false)
 
   // Load current user
@@ -105,8 +110,12 @@ export function MyProfileContent() {
 
   const openProfileEdit = () => {
     const u = userResponse?.data ?? userFromStorage
-    const slack = (u as { slackWebhookUrl?: string })?.slackWebhookUrl ?? ""
-    setSlackWebhookDraft(slack)
+    setSlackDrafts({
+      direct: u?.slackWebhookUrl ?? "",
+      realtime: u?.slackWebhookUrlRealtime ?? "",
+      hourly: u?.slackWebhookUrlHourly ?? "",
+      daily: u?.slackWebhookUrlDaily ?? "",
+    })
     setIsEditing(true)
   }
 
@@ -114,7 +123,10 @@ export function MyProfileContent() {
     try {
       setProfileSaving(true)
       const res = await authApi.updateMyProfile({
-        slackWebhookUrl: slackWebhookDraft.trim(),
+        slackWebhookUrl: slackDrafts.direct.trim(),
+        slackWebhookUrlRealtime: slackDrafts.realtime.trim(),
+        slackWebhookUrlHourly: slackDrafts.hourly.trim(),
+        slackWebhookUrlDaily: slackDrafts.daily.trim(),
       })
       if (!res.success || !res.data) {
         throw new Error("Failed to update profile")
@@ -126,7 +138,7 @@ export function MyProfileContent() {
       await refetchCurrentUser()
       toast({
         title: "Profile updated",
-        description: "Your Slack webhook URL has been saved.",
+        description: "Your Slack webhook URLs have been saved.",
       })
       setIsEditing(false)
     } catch (err) {
@@ -262,25 +274,79 @@ export function MyProfileContent() {
                     {displayUser?.role || "—"}
                   </p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-xs text-slate-500">Slack webhook URL</p>
-                  {isEditing ? (
-                    <Input
-                      type="url"
-                      className="mt-1.5"
-                      placeholder="https://hooks.slack.com/services/..."
-                      value={slackWebhookDraft}
-                      onChange={(e) => setSlackWebhookDraft(e.target.value)}
-                      autoComplete="off"
-                    />
-                  ) : (
-                    <p className="text-sm font-medium text-slate-900 break-all mt-1">
-                      {(displayUser as { slackWebhookUrl?: string })?.slackWebhookUrl || "—"}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-400 mt-1.5">
-                    Incoming Webhook for personal Slack alerts. Leave empty and save to remove a saved URL.
+                <div className="col-span-2 space-y-4">
+                  <p className="text-xs text-slate-400">
+                    Metric-scoped Slack alerts use the webhook for the rule frequency (real-time, hourly, daily). If that
+                    URL is empty, the Direct message webhook is used. Leave any field empty and save to clear it.
                   </p>
+                  <div>
+                    <p className="text-xs text-slate-500">Slack — Direct message (default)</p>
+                    {isEditing ? (
+                      <Input
+                        type="url"
+                        className="mt-1.5"
+                        placeholder="https://hooks.slack.com/services/..."
+                        value={slackDrafts.direct}
+                        onChange={(e) => setSlackDrafts((d) => ({ ...d, direct: e.target.value }))}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
+                        {displayUser?.slackWebhookUrl || "—"}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Slack — Real-time alerts</p>
+                    {isEditing ? (
+                      <Input
+                        type="url"
+                        className="mt-1.5"
+                        placeholder="https://hooks.slack.com/services/..."
+                        value={slackDrafts.realtime}
+                        onChange={(e) => setSlackDrafts((d) => ({ ...d, realtime: e.target.value }))}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
+                        {displayUser?.slackWebhookUrlRealtime || "—"}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Slack — Hourly alerts</p>
+                    {isEditing ? (
+                      <Input
+                        type="url"
+                        className="mt-1.5"
+                        placeholder="https://hooks.slack.com/services/..."
+                        value={slackDrafts.hourly}
+                        onChange={(e) => setSlackDrafts((d) => ({ ...d, hourly: e.target.value }))}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
+                        {displayUser?.slackWebhookUrlHourly || "—"}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Slack — Daily alerts</p>
+                    {isEditing ? (
+                      <Input
+                        type="url"
+                        className="mt-1.5"
+                        placeholder="https://hooks.slack.com/services/..."
+                        value={slackDrafts.daily}
+                        onChange={(e) => setSlackDrafts((d) => ({ ...d, daily: e.target.value }))}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
+                        {displayUser?.slackWebhookUrlDaily || "—"}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               {isEditing && (

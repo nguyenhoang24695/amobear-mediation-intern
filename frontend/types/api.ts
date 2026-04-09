@@ -700,6 +700,8 @@ export interface AlertRule {
   slackChannels?: string | null
   priority: number
   createdAt: string
+  /** User id (UUID) người tạo rule; thiếu nếu rule hệ thống hoặc dữ liệu cũ */
+  createdBy?: string | null
   updatedAt: string
   lastTriggeredAt?: string | null
 }
@@ -731,9 +733,9 @@ export interface AlertRuleScopeConfig {
   appIds: string[]
 }
 
-export interface AlertRuleConfigPayload {
-  version: number
-  source?: string | null
+/** Một điều kiện trong rule_config.conditions[] (AND/OR qua conditionLogic). */
+export interface AlertRuleConditionPayload {
+  id?: string | null
   metricKey?: string | null
   metricUnit?: string | null
   conditionType?: string | null
@@ -741,7 +743,27 @@ export interface AlertRuleConfigPayload {
   thresholdValue?: number | null
   percentChange?: number | null
   consecutiveDays?: number | null
+}
+
+export interface AlertRuleConfigPayload {
+  version: number
+  source?: string | null
+  /** Legacy: một metric gốc khi không dùng conditions[]. */
+  metricKey?: string | null
+  metricUnit?: string | null
+  /** "all" = AND, "any" = OR */
+  conditionLogic?: string | null
+  conditions?: AlertRuleConditionPayload[] | null
+  conditionType?: string | null
+  operator?: string | null
+  thresholdValue?: number | null
+  percentChange?: number | null
+  consecutiveDays?: number | null
   frequency?: string | null
+  /** Realtime/Hourly: phút tối thiểu giữa hai lần check cho cùng app + rule */
+  evaluationCooldownMinutes?: number | null
+  /** Daily: giờ 0–23 theo GMT+7 (UTC+7); key JSON vẫn dailyEvaluationHourUtc; null = không khóa giờ */
+  dailyEvaluationHourUtc?: number | null
   autoResolve?: boolean | null
   prompt?: string | null
   scope: AlertRuleScopeConfig

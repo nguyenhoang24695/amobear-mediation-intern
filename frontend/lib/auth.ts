@@ -9,8 +9,11 @@ export interface AuthUser {
   fullName?: string
   avatarUrl?: string
   role: string
-  /** Slack Incoming Webhook URL (profile); dùng khi gửi alert theo cấu hình user */
+  /** Direct Message — webhook mặc định khi URL theo tần suất trống */
   slackWebhookUrl?: string
+  slackWebhookUrlRealtime?: string
+  slackWebhookUrlHourly?: string
+  slackWebhookUrlDaily?: string
   organization?: {
     id: string
     name: string
@@ -36,6 +39,9 @@ export function authUserFromMeDto(d: {
   avatarUrl?: string
   role: string
   slackWebhookUrl?: string
+  slackWebhookUrlRealtime?: string
+  slackWebhookUrlHourly?: string
+  slackWebhookUrlDaily?: string
   organization?: AuthUser["organization"]
   teams?: AuthUser["teams"]
   rolePermissions?: AuthUser["rolePermissions"]
@@ -53,6 +59,9 @@ export function authUserFromMeDto(d: {
     avatarUrl: d.avatarUrl,
     role: d.role,
     slackWebhookUrl: d.slackWebhookUrl,
+    slackWebhookUrlRealtime: d.slackWebhookUrlRealtime,
+    slackWebhookUrlHourly: d.slackWebhookUrlHourly,
+    slackWebhookUrlDaily: d.slackWebhookUrlDaily,
     organization: d.organization,
     teams: d.teams,
     rolePermissions: d.rolePermissions,
