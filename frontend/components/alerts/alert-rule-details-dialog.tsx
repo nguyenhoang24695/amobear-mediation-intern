@@ -67,6 +67,9 @@ export function formatRuleConditionsSummary(rule: AlertRule): string {
   if (!cfg) {
     return rule.ruleExpression?.trim() ? rule.ruleExpression.trim() : "—"
   }
+  if (cfg.conditionLogic?.toLowerCase() === "always_true") {
+    return "Always true (no metric conditions; fires each evaluation per app in scope)"
+  }
   const list = cfg.conditions?.filter(Boolean) ?? []
   if (list.length > 0) {
     const joiner = cfg.conditionLogic?.toLowerCase() === "any" ? " OR " : " AND "
@@ -144,7 +147,22 @@ export function AlertRuleDetailsDialog({ rule, open, onOpenChange, appIdToLabel 
       .join(", ")
   })()
 
-  const logicLabel = cfg?.conditionLogic?.toLowerCase() === "any" ? "ANY (OR)" : "ALL (AND)"
+  const scopeOrderText = (() => {
+    if (!cfg?.scope) return "—"
+    const m = cfg.scope.orderByMetric?.trim()
+    if (!m) return "—"
+    const raw = (cfg.scope.orderByDirection ?? "desc").toString().trim().toLowerCase()
+    const dir = raw === "asc" ? "ASC" : "DESC"
+    return `${m} (${dir})`
+  })()
+
+  const logicLabel =
+    cfg?.conditionLogic?.toLowerCase() === "always_true"
+      ? "ALWAYS TRUE"
+      : cfg?.conditionLogic?.toLowerCase() === "any"
+        ? "ANY (OR)"
+        : "ALL (AND)"
+  const isAlwaysTrueCfg = cfg?.conditionLogic?.toLowerCase() === "always_true"
   const conditionLines =
     cfg?.conditions?.filter(Boolean).map((c, i) => ({
       idx: i + 1,
@@ -205,6 +223,7 @@ export function AlertRuleDetailsDialog({ rule, open, onOpenChange, appIdToLabel 
             {cfg ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <DetailBlock label="Scope">{scopeText}</DetailBlock>
+                <DetailBlock label="App order (by metric)">{scopeOrderText}</DetailBlock>
                 <DetailBlock label="Frequency">{cfg.frequency ?? "—"}</DetailBlock>
                 <DetailBlock label="Evaluation cooldown (minutes)">
                   {cfg.evaluationCooldownMinutes ?? "—"}
@@ -225,7 +244,11 @@ export function AlertRuleDetailsDialog({ rule, open, onOpenChange, appIdToLabel 
                 ) : null}
                 <div className="sm:col-span-2 space-y-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Conditions</p>
-                  {conditionLines.length > 0 ? (
+                  {isAlwaysTrueCfg ? (
+                    <p className="text-sm text-slate-800">
+                      Always true — no metric conditions; fires each evaluation per app in scope.
+                    </p>
+                  ) : conditionLines.length > 0 ? (
                     <ul className="list-decimal pl-5 space-y-1 text-sm text-slate-800">
                       {conditionLines.map((line) => (
                         <li key={line.idx}>{line.text}</li>

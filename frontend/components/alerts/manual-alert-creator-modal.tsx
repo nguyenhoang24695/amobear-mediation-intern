@@ -80,6 +80,25 @@ type Step3SectionErrors = {
   frequency?: string
 }
 
+/** Khớp backend ManualRuleConfigParser / InferMetricKeyFromRuleType — dùng khi Always true (không có conditions). */
+function inferMetricKeyFromRuleType(ruleType: string | undefined | null): string {
+  const t = (ruleType ?? "").toLowerCase()
+  if (t.includes("ecpm")) return "ecpm"
+  if (t.includes("fill")) return "fill_rate"
+  if (t.includes("match")) return "match_rate"
+  if (t.includes("impression")) return "impressions"
+  if (t.includes("sow")) return "sow"
+  if (t.includes("cost") || t.includes("ua_cost")) return "cost"
+  return "revenue"
+}
+
+function parseConditionCombineMode(raw: string | null | undefined): "all" | "any" | "always_true" {
+  const s = (raw ?? "").toLowerCase().trim()
+  if (s === "any") return "any"
+  if (s === "always_true") return "always_true"
+  return "all"
+}
+
 function emptyConditionRow(): ManualConditionRow {
   return {
     id: newRowId(),
@@ -258,9 +277,12 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
     setStep3Errors({})
   }, [])
   const [formData, setFormData] = useState({
-    conditionLogic: "all" as "all" | "any",
+    conditionLogic: "all" as "all" | "any" | "always_true",
     conditions: [emptyConditionRow()] as ManualConditionRow[],
     selectedApps: ["all"],
+    /** Metric key để sort thứ tự alert theo app; "" = không sort theo metric */
+    scopeOrderByMetric: "",
+    scopeOrderByDirection: "desc" as "asc" | "desc",
     alertName: "",
     severity: "warning",
     channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
@@ -299,6 +321,11 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
     )
   }, [apps, appSearch])
 
+  const scopeOrderMetricOptions = useMemo(() => {
+    const base = resolveMetricSelectOptions(metricsCatalog ?? null, formData.scopeOrderByMetric || "revenue")
+    return [{ value: "__none__", label: "Default (dataset order)" }, ...base]
+  }, [metricsCatalog, formData.scopeOrderByMetric])
+
   const isAllApps = formData.selectedApps.includes("all")
   const isEdit = !!rule
 
@@ -321,6 +348,8 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
         conditionLogic: "all",
         conditions: [emptyConditionRow()],
         selectedApps: ["all"],
+        scopeOrderByMetric: "",
+        scopeOrderByDirection: "desc",
         alertName: "",
         severity: "warning",
         channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
@@ -343,46 +372,52 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
           ? scope.appIds
           : ["all"]
 
-    const logic =
-      parsedConfig?.conditionLogic?.toLowerCase() === "any" ? "any" : ("all" as const)
+    const scopeOrderRaw = scope?.orderByMetric?.trim() ?? ""
+    const scopeDirRaw = (scope?.orderByDirection ?? "desc").toLowerCase() === "asc" ? "asc" : "desc"
+
+    const logic = parseConditionCombineMode(parsedConfig?.conditionLogic)
     const conds = parsedConfig?.conditions
     const rows: ManualConditionRow[] =
-      conds && conds.length > 0
-        ? conds.map((c) => ({
-            id: c.id?.trim() || newRowId(),
-            metric: c.metricKey || parsedConfig?.metricKey || "",
-            conditionType: c.conditionType || "threshold",
-            operator: c.operator || "less_than",
-            thresholdValue:
-              c.thresholdValue != null
-                ? String(c.thresholdValue)
-                : rule.thresholdValue != null
-                  ? String(rule.thresholdValue)
-                  : "",
-            percentChange: c.percentChange != null ? String(c.percentChange) : "",
-            consecutiveDays: c.consecutiveDays != null ? String(c.consecutiveDays) : "3",
-          }))
-        : [
-            {
-              id: newRowId(),
-              metric: parsedConfig?.metricKey || "",
-              conditionType: parsedConfig?.conditionType || "threshold",
-              operator: parsedConfig?.operator || "less_than",
+      logic === "always_true"
+        ? [emptyConditionRow()]
+        : conds && conds.length > 0
+          ? conds.map((c) => ({
+              id: c.id?.trim() || newRowId(),
+              metric: c.metricKey || parsedConfig?.metricKey || "",
+              conditionType: c.conditionType || "threshold",
+              operator: c.operator || "less_than",
               thresholdValue:
-                parsedConfig?.thresholdValue != null
-                  ? String(parsedConfig.thresholdValue)
+                c.thresholdValue != null
+                  ? String(c.thresholdValue)
                   : rule.thresholdValue != null
                     ? String(rule.thresholdValue)
                     : "",
-              percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
-              consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
-            },
-          ]
+              percentChange: c.percentChange != null ? String(c.percentChange) : "",
+              consecutiveDays: c.consecutiveDays != null ? String(c.consecutiveDays) : "3",
+            }))
+          : [
+              {
+                id: newRowId(),
+                metric: parsedConfig?.metricKey || "",
+                conditionType: parsedConfig?.conditionType || "threshold",
+                operator: parsedConfig?.operator || "less_than",
+                thresholdValue:
+                  parsedConfig?.thresholdValue != null
+                    ? String(parsedConfig.thresholdValue)
+                    : rule.thresholdValue != null
+                      ? String(rule.thresholdValue)
+                      : "",
+                percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
+                consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
+              },
+            ]
 
     setFormData({
       conditionLogic: logic,
       conditions: rows,
       selectedApps,
+      scopeOrderByMetric: scopeOrderRaw,
+      scopeOrderByDirection: scopeDirRaw,
       alertName: rule.name || "",
       severity: toSeverityValue(rule.severity),
       channels: {
@@ -431,36 +466,41 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       setStep1Error(undefined)
     }
     if (step === 2) {
-      if (formData.conditions.length === 0) {
-        setStep2ListError("Thêm ít nhất một điều kiện (Add condition).")
+      if (formData.conditionLogic !== "always_true") {
+        if (formData.conditions.length === 0) {
+          setStep2ListError("Thêm ít nhất một điều kiện (Add condition).")
+          setStep2FieldErrors({})
+          return
+        }
+        setStep2ListError(undefined)
+        const byId: Record<string, Step2ConditionErrors> = {}
+        for (const c of formData.conditions) {
+          const e: Step2ConditionErrors = {}
+          if (!c.metric?.trim()) {
+            e.metric = "Chọn metric."
+          }
+          if (c.conditionType === "threshold" && !c.thresholdValue?.trim()) {
+            e.value = "Nhập giá trị threshold."
+          }
+          if (c.conditionType === "percent_change" && !c.percentChange?.trim()) {
+            e.value = "Nhập phần trăm thay đổi."
+          }
+          if (c.conditionType === "consecutive" && !c.thresholdValue?.trim()) {
+            e.value = "Nhập ngưỡng cho consecutive."
+          }
+          if (e.metric || e.value) {
+            byId[c.id] = e
+          }
+        }
+        if (Object.keys(byId).length > 0) {
+          setStep2FieldErrors(byId)
+          return
+        }
         setStep2FieldErrors({})
-        return
+      } else {
+        setStep2ListError(undefined)
+        setStep2FieldErrors({})
       }
-      setStep2ListError(undefined)
-      const byId: Record<string, Step2ConditionErrors> = {}
-      for (const c of formData.conditions) {
-        const e: Step2ConditionErrors = {}
-        if (!c.metric?.trim()) {
-          e.metric = "Chọn metric."
-        }
-        if (c.conditionType === "threshold" && !c.thresholdValue?.trim()) {
-          e.value = "Nhập giá trị threshold."
-        }
-        if (c.conditionType === "percent_change" && !c.percentChange?.trim()) {
-          e.value = "Nhập phần trăm thay đổi."
-        }
-        if (c.conditionType === "consecutive" && !c.thresholdValue?.trim()) {
-          e.value = "Nhập ngưỡng cho consecutive."
-        }
-        if (e.metric || e.value) {
-          byId[c.id] = e
-        }
-      }
-      if (Object.keys(byId).length > 0) {
-        setStep2FieldErrors(byId)
-        return
-      }
-      setStep2FieldErrors({})
     }
     if (step === 3) {
       const e: Step3SectionErrors = {}
@@ -589,6 +629,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
   }
 
   const generateAlertName = () => {
+    if (formData.conditionLogic === "always_true") return "Manual alert (always true)"
     const c = formData.conditions[0]
     if (!c) return "Manual Alert"
     const metricLabel = metricLabelFromCatalog(metricsCatalog ?? null, c.metric)
@@ -612,28 +653,34 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       .map((row) => row.email.trim())
       .filter((value) => value.length > 0)
 
-    const conditionsPayload = formData.conditions.map((c, i) => {
-      const mk = toMetricKey(c.metric)
-      return {
-        id: c.id || `c${i}`,
-        metricKey: mk,
-        metricUnit: toMetricUnit(mk),
-        conditionType: c.conditionType,
-        operator: c.operator,
-        thresholdValue:
-          c.conditionType === "threshold" || c.conditionType === "consecutive"
-            ? c.thresholdValue
-              ? Number(c.thresholdValue)
-              : null
-            : null,
-        percentChange: c.conditionType === "percent_change" ? (c.percentChange ? Number(c.percentChange) : null) : null,
-        consecutiveDays: c.conditionType === "consecutive" ? (c.consecutiveDays ? Number(c.consecutiveDays) : null) : null,
-      }
-    })
+    const isAlwaysTrue = formData.conditionLogic === "always_true"
+    const conditionsPayload = isAlwaysTrue
+      ? []
+      : formData.conditions.map((c, i) => {
+          const mk = toMetricKey(c.metric)
+          return {
+            id: c.id || `c${i}`,
+            metricKey: mk,
+            metricUnit: toMetricUnit(mk),
+            conditionType: c.conditionType,
+            operator: c.operator,
+            thresholdValue:
+              c.conditionType === "threshold" || c.conditionType === "consecutive"
+                ? c.thresholdValue
+                  ? Number(c.thresholdValue)
+                  : null
+                : null,
+            percentChange: c.conditionType === "percent_change" ? (c.percentChange ? Number(c.percentChange) : null) : null,
+            consecutiveDays: c.conditionType === "consecutive" ? (c.consecutiveDays ? Number(c.consecutiveDays) : null) : null,
+          }
+        })
     const first = conditionsPayload[0]
-    const anyPercent = formData.conditions.some((c) => c.conditionType === "percent_change")
+    const defaultMetricWhenAlways = inferMetricKeyFromRuleType(rule?.ruleType)
+    const anyPercent = !isAlwaysTrue && formData.conditions.some((c) => c.conditionType === "percent_change")
     const firstThreshold =
-      formData.conditions.find((c) => c.conditionType === "threshold") ?? formData.conditions[0]
+      !isAlwaysTrue
+        ? (formData.conditions.find((c) => c.conditionType === "threshold") ?? formData.conditions[0])
+        : undefined
 
     const evalCooldownParsed =
       formData.frequency === "realtime" || formData.frequency === "hourly"
@@ -657,13 +704,13 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       source: "manual",
       conditionLogic: formData.conditionLogic,
       conditions: conditionsPayload,
-      metricKey: first?.metricKey ?? null,
-      metricUnit: first?.metricUnit ?? null,
-      conditionType: first?.conditionType ?? null,
-      operator: first?.operator ?? null,
-      thresholdValue: first?.thresholdValue ?? null,
-      percentChange: first?.percentChange ?? null,
-      consecutiveDays: first?.consecutiveDays ?? null,
+      metricKey: isAlwaysTrue ? defaultMetricWhenAlways : (first?.metricKey ?? null),
+      metricUnit: isAlwaysTrue ? toMetricUnit(defaultMetricWhenAlways) : (first?.metricUnit ?? null),
+      conditionType: isAlwaysTrue ? null : (first?.conditionType ?? null),
+      operator: isAlwaysTrue ? null : (first?.operator ?? null),
+      thresholdValue: isAlwaysTrue ? null : (first?.thresholdValue ?? null),
+      percentChange: isAlwaysTrue ? null : (first?.percentChange ?? null),
+      consecutiveDays: isAlwaysTrue ? null : (first?.consecutiveDays ?? null),
       frequency: formData.frequency,
       evaluationCooldownMinutes: evalCooldownParsed,
       dailyEvaluationHourUtc: dailyHourUtc,
@@ -671,15 +718,23 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       scope: {
         allApps: isAllApps,
         appIds: isAllApps ? [] : formData.selectedApps,
+        ...(formData.scopeOrderByMetric.trim()
+          ? {
+              orderByMetric: toMetricKey(formData.scopeOrderByMetric),
+              orderByDirection: formData.scopeOrderByDirection,
+            }
+          : {}),
       },
     }
 
     const joiner = formData.conditionLogic === "any" ? " or " : " and "
-    const ruleExpression = formData.conditions
-      .map((c) =>
-        describeManualConditionText(metricLabelFromCatalog(metricsCatalog ?? null, c.metric), c)
-      )
-      .join(joiner)
+    const ruleExpression = isAlwaysTrue
+      ? "Always true — fires every evaluation for each app in scope (no metric conditions)."
+      : formData.conditions
+          .map((c) =>
+            describeManualConditionText(metricLabelFromCatalog(metricsCatalog ?? null, c.metric), c)
+          )
+          .join(joiner)
 
     return {
       name,
@@ -688,7 +743,9 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       severity: formData.severity.toUpperCase(),
       ruleExpression,
       thresholdValue:
-        firstThreshold?.conditionType === "threshold" && firstThreshold.thresholdValue
+        !isAlwaysTrue &&
+        firstThreshold?.conditionType === "threshold" &&
+        firstThreshold.thresholdValue
           ? Number(firstThreshold.thresholdValue)
           : null,
       timeWindowHours: formData.frequency === "daily" ? 24 : 1,
@@ -872,6 +929,62 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                     </p>
                   )}
                 </div>
+
+                <div className="space-y-3 pt-4 border-t border-slate-200">
+                  <div>
+                    <Label>Order alerts by metric</Label>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Optional. Sorts processing order per app using each app&apos;s latest day in the evaluation window
+                      (alerts, Slack batches, etc.). Leave default to keep loader order.
+                    </p>
+                  </div>
+                  <Select
+                    value={formData.scopeOrderByMetric.trim() ? formData.scopeOrderByMetric : "__none__"}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        scopeOrderByMetric: v === "__none__" ? "" : v,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full max-w-md bg-white">
+                      <SelectValue placeholder="Default order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {scopeOrderMetricOptions.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.scopeOrderByMetric.trim() !== "" && (
+                    <RadioGroup
+                      value={formData.scopeOrderByDirection}
+                      onValueChange={(v) =>
+                        setFormData((prev) => ({ ...prev, scopeOrderByDirection: v as "asc" | "desc" }))
+                      }
+                      className="flex flex-wrap gap-3"
+                    >
+                      <label
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm ${
+                          formData.scopeOrderByDirection === "asc" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                        }`}
+                      >
+                        <RadioGroupItem value="asc" id="scope-order-asc" />
+                        <span>ASC (low → high)</span>
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm ${
+                          formData.scopeOrderByDirection === "desc" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                        }`}
+                      >
+                        <RadioGroupItem value="desc" id="scope-order-desc" />
+                        <span>DESC (high → low)</span>
+                      </label>
+                    </RadioGroup>
+                  )}
+                </div>
               </div>
             )}
 
@@ -888,7 +1001,9 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                 </div>
                 <RadioGroup
                   value={formData.conditionLogic}
-                  onValueChange={(v) => setFormData({ ...formData, conditionLogic: v as "all" | "any" })}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, conditionLogic: v as "all" | "any" | "always_true" })
+                  }
                   className="flex flex-wrap gap-4"
                 >
                   <label
@@ -907,8 +1022,24 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                     <RadioGroupItem value="any" />
                     <span className="text-sm font-medium">Any (OR)</span>
                   </label>
+                  <label
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
+                      formData.conditionLogic === "always_true" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                    }`}
+                  >
+                    <RadioGroupItem value="always_true" />
+                    <span className="text-sm font-medium">Always true</span>
+                  </label>
                 </RadioGroup>
+                {formData.conditionLogic === "always_true" && (
+                  <p className="text-sm text-slate-600 -mt-2">
+                    Job sẽ tạo alert mỗi lần chạy cho từng app trong phạm vi có dữ liệu, không kiểm tra điều kiện metric.
+                    Metric mặc định để tải dữ liệu / hiển thị theo loại rule (ví dụ MANUAL → revenue).
+                  </p>
+                )}
 
+                {formData.conditionLogic !== "always_true" && (
+                  <>
                 <div className="flex items-center justify-between">
                   <Label className="text-base">Conditions *</Label>
                   <Button
@@ -1133,6 +1264,8 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                     )
                   })}
                 </div>
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <Label>Severity *</Label>
@@ -1462,13 +1595,23 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                     <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
                     <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                       <div className="md:col-span-2 xl:col-span-4">
-                        <span className="text-slate-500">Conditions ({formData.conditionLogic === "any" ? "OR" : "AND"}):</span>
+                        <span className="text-slate-500">
+                          Conditions (
+                          {formData.conditionLogic === "always_true"
+                            ? "always true"
+                            : formData.conditionLogic === "any"
+                              ? "OR"
+                              : "AND"}
+                          ):
+                        </span>
                         <p className="mt-1 text-sm font-medium text-slate-800 break-words leading-snug">
-                          {formData.conditions
-                            .map((c) =>
-                              describeManualConditionText(metricLabelFromCatalog(metricsCatalog ?? null, c.metric), c)
-                            )
-                            .join(formData.conditionLogic === "any" ? " or " : " and ")}
+                          {formData.conditionLogic === "always_true"
+                            ? "Không có điều kiện metric — job luôn tạo alert cho mỗi app trong phạm vi có dữ liệu."
+                            : formData.conditions
+                                .map((c) =>
+                                  describeManualConditionText(metricLabelFromCatalog(metricsCatalog ?? null, c.metric), c)
+                                )
+                                .join(formData.conditionLogic === "any" ? " or " : " and ")}
                         </p>
                       </div>
                       <div>
@@ -1481,6 +1624,15 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                           ))}
                         </div>
                       </div>
+                      {formData.scopeOrderByMetric.trim() !== "" && (
+                        <div className="md:col-span-2 xl:col-span-4">
+                          <span className="text-slate-500">App alert order:</span>
+                          <p className="mt-1 text-sm font-medium text-slate-800">
+                            {metricLabelFromCatalog(metricsCatalog ?? null, formData.scopeOrderByMetric)} ·{" "}
+                            {formData.scopeOrderByDirection.toUpperCase()}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <span className="text-slate-500">Severity:</span>
                         <Badge
