@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   CreateMetaCampaignRequestDto,
   GroupedValidationErrors,
   MetaCampaignRequestDetailDto,
@@ -24,12 +24,20 @@ function createId(): string {
 export function createEmptyMediaSelection(mode: MetaCreativeMediaMode = "meta_ref"): MetaRequestAssetSelectionState {
   return {
     mode,
+    metaRefSource: "manual",
     imageHash: "",
     imageUrl: "",
     videoId: "",
     uploadedAssetId: null,
     uploadedAssetName: "",
     uploadedAssetPreviewUrl: "",
+    metaPreviewUrl: "",
+    metaPreviewRequiresAuth: false,
+    metaPlayableUrl: "",
+    metaAssetId: "",
+    metaAssetName: "",
+    metaAssetType: "",
+    metaAdAccountId: "",
   }
 }
 
@@ -198,12 +206,20 @@ function mediaSourceToSelection(source: MetaCreativeMediaSourceDto | null | unde
   const mode = source?.mode ?? (source?.uploadedAssetId ? "uploaded_asset" : source?.videoId ? "meta_ref" : source?.imageHash ? "meta_ref" : source?.imageUrl ? "external_url" : kind === "video" ? "meta_ref" : "meta_ref")
   return {
     mode,
+    metaRefSource: "manual",
     imageHash: source?.imageHash ?? "",
     imageUrl: source?.imageUrl ?? "",
     videoId: source?.videoId ?? "",
     uploadedAssetId: source?.uploadedAssetId ?? null,
     uploadedAssetName: source?.uploadedAssetId ? `Asset #${source.uploadedAssetId}` : "",
     uploadedAssetPreviewUrl: source?.uploadedAssetId ? buildMetaRequestAssetContentUrl(source.uploadedAssetId) : "",
+    metaPreviewUrl: "",
+    metaPreviewRequiresAuth: false,
+    metaPlayableUrl: "",
+    metaAssetId: "",
+    metaAssetName: "",
+    metaAssetType: "",
+    metaAdAccountId: "",
   }
 }
 
@@ -499,6 +515,10 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
+
+
+
+
 
 
 

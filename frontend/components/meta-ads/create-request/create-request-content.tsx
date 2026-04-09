@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +49,23 @@ import { AdSection } from "./section-ad"
 import { RequestSummaryRail } from "./summary-rail"
 
 export type RequestFormState = MetaRequestFormState
+
+type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
+
+const requestSectionIds: Record<RequestSectionTarget, string> = {
+  "account-app": "meta-request-section-account-app",
+  "campaign-settings": "meta-request-section-campaign-settings",
+  "adset-audience": "meta-request-section-adset-audience",
+  "adset-budget": "meta-request-section-adset-budget",
+  creative: "meta-request-section-creative",
+  ad: "meta-request-section-ad",
+}
+
+function getSectionWrapperClass(target: RequestSectionTarget, highlightedSection: RequestSectionTarget | null): string {
+  const base = "-m-2 rounded-2xl p-2 scroll-mt-24 transition-all duration-500"
+  if (highlightedSection !== target) return base
+  return `${base} bg-amber-50/80 ring-2 ring-amber-200 ring-offset-2 ring-offset-amber-100/60 shadow-[0_0_0_8px_rgba(253,230,138,0.22)] animate-pulse`
+}
 
 function formatDateTimeLocal(date: Date) {
   const year = date.getFullYear()
@@ -101,6 +118,38 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
   return next
 }
 
+
+function clearMetaLibrarySelection(selection: MetaRequestFormState["singleImageImage"], adAccountId: string): MetaRequestFormState["singleImageImage"] {
+  if (selection.mode !== "meta_ref" || selection.metaRefSource !== "from_meta") return selection
+  if (selection.metaAdAccountId === adAccountId) return selection
+
+  return {
+    ...selection,
+    imageHash: "",
+    videoId: "",
+    metaRefSource: "manual",
+    metaPreviewUrl: "",
+    metaPreviewRequiresAuth: false,
+    metaPlayableUrl: "",
+    metaAssetId: "",
+    metaAssetName: "",
+    metaAssetType: "",
+    metaAdAccountId: "",
+  }
+}
+
+function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): RequestFormState {
+  return {
+    ...state,
+    singleImageImage: clearMetaLibrarySelection(state.singleImageImage, state.adAccountId),
+    singleVideoVideo: clearMetaLibrarySelection(state.singleVideoVideo, state.adAccountId),
+    singleVideoThumbnail: clearMetaLibrarySelection(state.singleVideoThumbnail, state.adAccountId),
+    carouselCards: state.carouselCards.map((card) => ({
+      ...card,
+      image: clearMetaLibrarySelection(card.image, state.adAccountId),
+    })),
+  }
+}
 function createDefaultFormState(): RequestFormState {
   return sanitizeRequestFormState({
     adAccountId: "",
@@ -257,6 +306,8 @@ export function CreateRequestContent({ requestId }: Props) {
   const [isDirty, setIsDirty] = useState(false)
   const [loadedRequestId, setLoadedRequestId] = useState<number | null>(null)
   const [facebookPageSource, setFacebookPageSource] = useState<"promote_pages" | "access_token_all">("promote_pages")
+  const [highlightedSection, setHighlightedSection] = useState<RequestSectionTarget | null>(null)
+  const highlightTimeoutRef = useRef<number | null>(null)
 
   const {
     data: referenceData,
@@ -349,6 +400,31 @@ export function CreateRequestContent({ requestId }: Props) {
 
   const isSubmitBlocked = submitting || saving || validating || tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
 
+  const scrollToSection = (target: RequestSectionTarget) => {
+    setHighlightedSection(target)
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current)
+    }
+    if (typeof document !== "undefined") {
+      const element = document.getElementById(requestSectionIds[target])
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" })
+      }
+    }
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedSection((current) => (current === target ? null : current))
+      highlightTimeoutRef.current = null
+    }, 2200)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const updateForm = (patch: Partial<RequestFormState>) => {
     setForm((previous) => {
       const next = { ...previous, ...patch }
@@ -366,7 +442,9 @@ export function CreateRequestContent({ requestId }: Props) {
         next.campaignObjective = patch.objective
       }
 
-      return sanitizeRequestFormState(next)
+      const normalizedNext = patch.adAccountId && patch.adAccountId !== previous.adAccountId ? clearMetaLibrarySelectionsForAccountChange(next) : next
+
+      return sanitizeRequestFormState(normalizedNext)
     })
 
     setIsDirty(true)
@@ -562,49 +640,61 @@ export function CreateRequestContent({ requestId }: Props) {
           )}
         </div>
       </div>
-
       <div className="flex gap-5 items-start">
         <div className="flex-1 min-w-0 space-y-4">
-          <AccountAppSection
-            form={form}
-            onChange={updateForm}
-            tokenState={tokenState}
-            adAccounts={referenceData.adAccounts}
-            appMappings={availableAppMappings}
-            selectedAppMapping={selectedAppMapping}
-            appMappingsLoading={accountScopedAppMappingsLoading}
-            appMappingsMessage={accountScopedAppMappingsError?.message ?? null}
-            objectives={referenceData.objectives}
-            integrationName={selectedIntegration?.displayName}
-          />
-          <CampaignSettingsSection
-            form={form}
-            onChange={updateForm}
-            objectives={referenceData.objectives}
-            bidStrategies={referenceData.bidStrategies}
-            currencyCode={selectedAdAccount?.currency}
-            selectedAppMapping={selectedAppMapping}
-          />
-          <AdSetAudienceSection
-            form={form}
-            onChange={updateForm}
-            regions={geoRegions ?? []}
-            regionsLoading={geoRegionsLoading}
-            regionsMessage={geoRegionsError?.message ?? null}
-            metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
-          />
-          <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
-          <CreativeSection
-            form={form}
-            onChange={updateForm}
-            facebookPages={facebookPages ?? []}
-            facebookPagesLoading={facebookPagesLoading}
-            selectedAppMapping={selectedAppMapping}
-            facebookPagesMessage={facebookPagesError?.message ?? null}
-            facebookPageSource={facebookPageSource}
-            onFacebookPageSourceChange={setFacebookPageSource}
-          />
-          <AdSection form={form} onChange={updateForm} />
+          <div id={requestSectionIds["account-app"]} className={getSectionWrapperClass("account-app", highlightedSection)}>
+            <AccountAppSection
+              form={form}
+              onChange={updateForm}
+              tokenState={tokenState}
+              adAccounts={referenceData.adAccounts}
+              appMappings={availableAppMappings}
+              selectedAppMapping={selectedAppMapping}
+              appMappingsLoading={accountScopedAppMappingsLoading}
+              appMappingsMessage={accountScopedAppMappingsError?.message ?? null}
+              objectives={referenceData.objectives}
+              integrationName={selectedIntegration?.displayName}
+            />
+          </div>
+          <div id={requestSectionIds["campaign-settings"]} className={getSectionWrapperClass("campaign-settings", highlightedSection)}>
+            <CampaignSettingsSection
+              form={form}
+              onChange={updateForm}
+              objectives={referenceData.objectives}
+              bidStrategies={referenceData.bidStrategies}
+              currencyCode={selectedAdAccount?.currency}
+              selectedAppMapping={selectedAppMapping}
+            />
+          </div>
+          <div id={requestSectionIds["adset-audience"]} className={getSectionWrapperClass("adset-audience", highlightedSection)}>
+            <AdSetAudienceSection
+              form={form}
+              onChange={updateForm}
+              regions={geoRegions ?? []}
+              regionsLoading={geoRegionsLoading}
+              regionsMessage={geoRegionsError?.message ?? null}
+              metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+            />
+          </div>
+          <div id={requestSectionIds["adset-budget"]} className={getSectionWrapperClass("adset-budget", highlightedSection)}>
+            <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
+          </div>
+          <div id={requestSectionIds["creative"]} className={getSectionWrapperClass("creative", highlightedSection)}>
+            <CreativeSection
+              form={form}
+              onChange={updateForm}
+              facebookPages={facebookPages ?? []}
+              facebookPagesLoading={facebookPagesLoading}
+              selectedAppMapping={selectedAppMapping}
+              adAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+              facebookPagesMessage={facebookPagesError?.message ?? null}
+              facebookPageSource={facebookPageSource}
+              onFacebookPageSourceChange={setFacebookPageSource}
+            />
+          </div>
+          <div id={requestSectionIds["ad"]} className={getSectionWrapperClass("ad", highlightedSection)}>
+            <AdSection form={form} onChange={updateForm} />
+          </div>
         </div>
 
         <div className="w-72 flex-shrink-0 sticky top-20">
@@ -615,6 +705,7 @@ export function CreateRequestContent({ requestId }: Props) {
             tokenState={tokenState}
             selectedAppMapping={selectedAppMapping}
             isPersisted={!!draftId}
+            onNavigateToSection={scrollToSection}
           />
         </div>
       </div>
@@ -667,6 +758,9 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
+
+
+
 
 
 

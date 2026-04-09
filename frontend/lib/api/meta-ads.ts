@@ -32,6 +32,8 @@ import type {
   MetaFacebookPageReferenceDto,
   MetaGeoCityReferenceDto,
   MetaGeoRegionDto,
+  MetaReferenceMediaPageDto,
+  MetaReferenceMediaQueryDto,
   MetaIntegrationDto,
   MetaIntegrationTestRequestDto,
   MetaIntegrationTestResultDto,
@@ -164,6 +166,14 @@ export const metaReferenceApi = {
 
   getAdAccountFacebookPages: async (adAccountId: number, source: "promote_pages" | "access_token_all" = "promote_pages") => {
     return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source })
+  },
+
+  getAdAccountImages: async (adAccountId: number, query?: MetaReferenceMediaQueryDto) => {
+    return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/images`, query)
+  },
+
+  getAdAccountVideos: async (adAccountId: number, query?: MetaReferenceMediaQueryDto) => {
+    return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos`, query)
   },
 
   getGeoRegions: async () => {
@@ -344,3 +354,7 @@ export const metaInsightsApi = {
     return apiClient.get<MetaInsightsFiltersResponseDto>(`${INSIGHTS_PREFIX}/filters`, params)
   },
 }
+
+
+
+
