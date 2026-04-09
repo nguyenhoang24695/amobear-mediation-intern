@@ -254,11 +254,6 @@ export function AlertRuleFormDialog({
     }
 
     if (isSlackEnabled) {
-      const webhooks = slackRows.map((row) => row.webhookUrl.trim()).filter((item) => item.length > 0)
-      if (webhooks.length === 0) {
-        nextErrors.slackChannels = "Thêm ít nhất 1 Slack webhook URL."
-      }
-
       slackRows.forEach((row, idx) => {
         const value = row.webhookUrl.trim()
         if (!value) return
@@ -773,7 +768,8 @@ export function AlertRuleFormDialog({
                   <span className="text-sm font-medium text-slate-800">SLACK</span>
                 </div>
                 <div className="mt-2 space-y-1.5">
-                  <Label className="text-xs text-slate-600">Slack Webhook URLs</Label>
+                  <Label className="text-xs text-slate-600">Slack Webhook URLs (tùy chọn)</Label>
+                  <p className="text-[11px] text-slate-500">Có thể để trống nếu chỉ dùng webhook cá nhân (My Profile).</p>
                   {errors.slackChannels ? <p className="text-xs text-red-600">{errors.slackChannels}</p> : null}
 
                   <div className="space-y-2">
@@ -783,7 +779,7 @@ export function AlertRuleFormDialog({
                         <div key={row.id} className="rounded-md border bg-white p-2">
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-end">
                             <div className="space-y-1 sm:col-span-8">
-                              <Label className="text-[11px] text-slate-600">webhookUrl *</Label>
+                              <Label className="text-[11px] text-slate-600">webhookUrl</Label>
                               <Input
                                 value={row.webhookUrl}
                                 onChange={(e) => updateSlackRow(row.id, { webhookUrl: e.target.value })}

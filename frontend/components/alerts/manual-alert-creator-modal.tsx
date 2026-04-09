@@ -485,8 +485,17 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
         if (!ok) e.telegram = "Nhập ít nhất một Chat ID khi bật Telegram."
       }
       if (formData.channels.slack) {
-        const ok = slackRows.some((row) => row.webhookUrl.trim().length > 0)
-        if (!ok) e.slack = "Nhập ít nhất một Slack webhook URL."
+        const badUrl = slackRows.some((row) => {
+          const v = row.webhookUrl.trim()
+          if (!v) return false
+          try {
+            const u = new URL(v)
+            return !["http:", "https:"].includes(u.protocol)
+          } catch {
+            return true
+          }
+        })
+        if (badUrl) e.slack = "Mỗi Slack webhook URL (nếu nhập) phải là http/https hợp lệ."
       }
       if (formData.channels.email) {
         const ok = emailRows.some((row) => row.email.trim().length > 0)
@@ -1245,6 +1254,7 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
                       >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-900">Slack webhook URLs</p>
+                          <p className="text-xs text-slate-500">Tùy chọn — có thể để trống (ví dụ chỉ dùng webhook trong My Profile).</p>
                           <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setSlackRows((prev) => [...prev, emptySlackRow()])}>
                             <Plus className="w-4 h-4 mr-1" />
                             Add
