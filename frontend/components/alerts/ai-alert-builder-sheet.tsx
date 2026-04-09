@@ -135,6 +135,8 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         if (normalized.includes("fill")) return "fill_rate"
         if (normalized.includes("impression")) return "impressions"
         if (normalized.includes("ecpm")) return "ecpm"
+        if (normalized.includes("cost") || normalized.includes("spend") || normalized.includes("ua cost"))
+          return "cost"
         return "revenue"
       }
       const parsePreviewConfig = (): AlertRuleConfigPayload => {
@@ -156,7 +158,11 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         const isPercentChange = rawCondition.includes("%") || rawCondition.includes("drop") || rawCondition.includes("increase")
         const operator = rawCondition.includes(">") || rawCondition.includes("increase") ? "greater_than" : "less_than"
         const metricUnit =
-          metricKey === "revenue" || metricKey === "ecpm" ? "usd" : metricKey === "fill_rate" ? "percent" : "count"
+          metricKey === "revenue" || metricKey === "ecpm" || metricKey === "cost"
+            ? "usd"
+            : metricKey === "fill_rate"
+              ? "percent"
+              : "count"
         const conditionType = isPercentChange ? "percent_change" : "threshold"
         const thresholdValue = !isPercentChange ? numericValue : null
         const percentChange = isPercentChange ? numericValue : null

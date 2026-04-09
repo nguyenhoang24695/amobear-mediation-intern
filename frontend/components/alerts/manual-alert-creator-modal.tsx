@@ -95,6 +95,7 @@ function emptyConditionRow(): ManualConditionRow {
 const FALLBACK_METRICS: Array<{ value: string; label: string }> = [
   { value: "ecpm", label: "eCPM" },
   { value: "revenue", label: "Revenue" },
+  { value: "cost", label: "Metric Cost" },
   { value: "fill_rate", label: "Fill Rate" },
   { value: "impressions", label: "Impressions" },
   { value: "dau", label: "DAU" },
@@ -125,7 +126,7 @@ function toMetricKey(value: string) {
 }
 
 function toMetricUnit(metricKey: string) {
-  if (metricKey === "revenue" || metricKey === "ecpm") return "usd"
+  if (metricKey === "revenue" || metricKey === "ecpm" || metricKey === "cost") return "usd"
   if (metricKey === "fill_rate") return "percent"
   return "count"
 }
