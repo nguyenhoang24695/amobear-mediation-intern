@@ -13,6 +13,7 @@ import { formatDistanceToNow } from "date-fns"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
 import { formatAlertCardTitle, parseSlackFinanceFromAdditionalData } from "@/components/alerts/alert-center-view-model"
 import { AlertSlackFinanceRow } from "@/components/alerts/alert-slack-finance-row"
+import { AlertAppAvatar } from "@/components/alerts/alert-app-avatar"
 
 export function AlertSummary() {
   const [expanded, setExpanded] = useState(false)
@@ -65,21 +66,6 @@ export function AlertSummary() {
     : { critical: 0, high: 0, medium: 0, low: 0 }
 
   const alerts = alertsData?.data || []
-
-  const getSeverityIcon = (severity: string) => {
-    switch (severity?.toUpperCase()) {
-      case "CRITICAL":
-        return <AlertTriangle className="w-4 h-4 text-red-600" />
-      case "HIGH":
-        return <AlertOctagon className="w-4 h-4 text-orange-500" />
-      case "MEDIUM":
-        return <AlertCircle className="w-4 h-4 text-amber-500" />
-      case "LOW":
-        return <Info className="w-4 h-4 text-blue-500" />
-      default:
-        return <Info className="w-4 h-4 text-slate-400" />
-    }
-  }
 
   const getSeverityBadgeVariant = (severity: string) => {
     switch (severity?.toUpperCase()) {
@@ -174,7 +160,13 @@ export function AlertSummary() {
                       href={`/alert-center/${alert.id}`}
                       className="flex items-start gap-3 p-3 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block"
                     >
-                      {getSeverityIcon(alert.severity)}
+                      <AlertAppAvatar
+                        appIconUri={alert.appIconUri}
+                        appDisplayName={alert.appDisplayName}
+                        appId={alert.appId}
+                        severity={alert.severity}
+                        size="sm"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-900 truncate">
                           {formatAlertCardTitle(alert)}

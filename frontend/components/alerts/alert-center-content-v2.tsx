@@ -29,6 +29,7 @@ import {
   Eye,
 } from "lucide-react"
 import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
+import { AlertAppAvatar } from "./alert-app-avatar"
 import { alertsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
@@ -825,39 +826,37 @@ export function AlertCenterContentV2() {
                       : "border-l-blue-500 bg-blue-50"
                 } border-slate-200`}
               >
-                <CardContent className="p-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {alert.severity === "critical" ? (
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                      ) : alert.severity === "warning" ? (
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                      ) : (
-                        <Info className="w-5 h-5 text-blue-600" />
-                      )}
-                      <span className="font-semibold text-slate-900">{alert.title}</span>
-                    </div>
-                    <span className="text-xs text-slate-500">
-                      Triggered {formatRelativeTime(alert.timestamp)}
-                    </span>
-                  </div>
+                <CardContent className="p-6">
+                  <div className="flex gap-3">
+                    <AlertAppAvatar
+                      appIconUri={alert.appIconUri}
+                      appDisplayName={alert.appLabel}
+                      appId={alert.appId}
+                      severity={alert.severity}
+                      size="md"
+                    />
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-slate-900">{alert.title}</span>
+                        <span className="text-xs text-slate-500 shrink-0">
+                          Triggered {formatRelativeTime(alert.timestamp)}
+                        </span>
+                      </div>
 
-                  <div className="flex items-center gap-3 ml-8">
-                    {alert.value != null ? (
-                      <span className="font-mono text-sm text-red-600">
-                        {alert.metricLabel}: {alert.value.toFixed(2)}
-                        {alert.threshold != null ? ` (threshold ${alert.threshold.toFixed(2)})` : ""}
-                      </span>
-                    ) : null}
-                  </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        {alert.value != null ? (
+                          <span className="font-mono text-sm text-red-600">
+                            {alert.metricLabel}: {alert.value.toFixed(2)}
+                            {alert.threshold != null ? ` (threshold ${alert.threshold.toFixed(2)})` : ""}
+                          </span>
+                        ) : null}
+                      </div>
 
-                  {alert.slackFinance ? (
-                    <AlertSlackFinanceRow fin={alert.slackFinance} className="ml-8 mt-1" />
-                  ) : null}
+                      {alert.slackFinance ? <AlertSlackFinanceRow fin={alert.slackFinance} /> : null}
 
-                  <p className="ml-8 text-sm text-slate-600">{alert.description}</p>
+                      <p className="text-sm text-slate-600">{alert.description}</p>
 
-                  <div className="ml-8 flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -878,6 +877,8 @@ export function AlertCenterContentV2() {
                     >
                       {actionLoading?.id === alert.numericId && actionLoading.type === "resolve" ? "Resolving..." : "Resolve"}
                     </Button>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
