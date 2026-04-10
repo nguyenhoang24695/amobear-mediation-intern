@@ -88,6 +88,7 @@ function inferMetricKeyFromRuleType(ruleType: string | undefined | null): string
   if (t.includes("match")) return "match_rate"
   if (t.includes("impression")) return "impressions"
   if (t.includes("sow")) return "sow"
+  if (t.includes("profit") || t.includes("net profit")) return "profit"
   if (t.includes("cost") || t.includes("ua_cost")) return "cost"
   return "revenue"
 }
@@ -115,6 +116,7 @@ const FALLBACK_METRICS: Array<{ value: string; label: string }> = [
   { value: "ecpm", label: "eCPM" },
   { value: "revenue", label: "Revenue" },
   { value: "cost", label: "Metric Cost" },
+  { value: "profit", label: "Profit (Revenue − UA cost)" },
   { value: "fill_rate", label: "Fill Rate" },
   { value: "impressions", label: "Impressions" },
   { value: "dau", label: "DAU" },
@@ -145,7 +147,8 @@ function toMetricKey(value: string) {
 }
 
 function toMetricUnit(metricKey: string) {
-  if (metricKey === "revenue" || metricKey === "ecpm" || metricKey === "cost") return "usd"
+  if (metricKey === "revenue" || metricKey === "ecpm" || metricKey === "cost" || metricKey === "profit")
+    return "usd"
   if (metricKey === "fill_rate") return "percent"
   return "count"
 }

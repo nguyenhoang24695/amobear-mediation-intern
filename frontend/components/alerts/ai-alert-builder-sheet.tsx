@@ -135,6 +135,8 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         if (normalized.includes("fill")) return "fill_rate"
         if (normalized.includes("impression")) return "impressions"
         if (normalized.includes("ecpm")) return "ecpm"
+        if (normalized.includes("profit") || normalized.includes("net profit") || normalized.includes("loi nhuan"))
+          return "profit"
         if (normalized.includes("cost") || normalized.includes("spend") || normalized.includes("ua cost"))
           return "cost"
         return "revenue"
@@ -158,7 +160,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
         const isPercentChange = rawCondition.includes("%") || rawCondition.includes("drop") || rawCondition.includes("increase")
         const operator = rawCondition.includes(">") || rawCondition.includes("increase") ? "greater_than" : "less_than"
         const metricUnit =
-          metricKey === "revenue" || metricKey === "ecpm" || metricKey === "cost"
+          metricKey === "revenue" || metricKey === "ecpm" || metricKey === "cost" || metricKey === "profit"
             ? "usd"
             : metricKey === "fill_rate"
               ? "percent"
