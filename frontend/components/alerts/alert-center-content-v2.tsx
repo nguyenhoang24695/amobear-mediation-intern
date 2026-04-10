@@ -28,6 +28,7 @@ import {
   Trash2,
   Eye,
 } from "lucide-react"
+import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { alertsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
@@ -849,6 +850,10 @@ export function AlertCenterContentV2() {
                       </span>
                     ) : null}
                   </div>
+
+                  {alert.slackFinance ? (
+                    <AlertSlackFinanceRow fin={alert.slackFinance} className="ml-8 mt-1" />
+                  ) : null}
 
                   <p className="ml-8 text-sm text-slate-600">{alert.description}</p>
 

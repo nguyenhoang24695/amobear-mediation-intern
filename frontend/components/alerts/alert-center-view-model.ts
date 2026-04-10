@@ -67,6 +67,8 @@ export interface AlertUiItem {
   resolvedAt?: Date
   snoozedUntil?: Date
   mediationGroupId?: string
+  /** Từ `additionalData.slack*` khi backend merge finance snapshot. */
+  slackFinance?: SlackFinanceSnapshot | null
 }
 
 function safeDate(value?: string): Date | undefined {
@@ -121,6 +123,46 @@ export type AlertCardTitleInput = Pick<
   AlertApiItem,
   "appDisplayName" | "appId" | "appStoreId" | "alertRuleName" | "alertType" | "id" | "mediationGroupDisplayName" | "mediationGroupId"
 >
+
+/** Các trường `slack*` do backend gắn vào `additionalData` (MergeSlackFinanceSummaryIntoRoot). */
+export interface SlackFinanceSnapshot {
+  revenue: number
+  cost: number
+  profit: number
+  ecpm: number
+  /** % so với baseline; dương = tăng, âm = giảm. */
+  ecpmDeltaPercent: number | null
+}
+
+export function parseSlackFinanceFromAdditionalData(
+  additionalData?: string | null
+): SlackFinanceSnapshot | null {
+  const data = parseAdditionalData(additionalData)
+  if (!data) return null
+  const revenue = getAdditionalNumber(data, "slackRevenue")
+  const cost = getAdditionalNumber(data, "slackCost")
+  const profit = getAdditionalNumber(data, "slackProfit")
+  const ecpm = getAdditionalNumber(data, "slackEcpm")
+  const ecpmDeltaPercent = getAdditionalNumber(data, "slackEcpmDeltaPercent")
+
+  const hasAny =
+    revenue !== undefined ||
+    cost !== undefined ||
+    profit !== undefined ||
+    ecpm !== undefined ||
+    ecpmDeltaPercent !== undefined
+  if (!hasAny) return null
+
+  const r = revenue ?? 0
+  const c = cost ?? 0
+  return {
+    revenue: r,
+    cost: c,
+    profit: profit ?? r - c,
+    ecpm: ecpm ?? 0,
+    ecpmDeltaPercent: ecpmDeltaPercent ?? null,
+  }
+}
 
 export function formatAlertCardTitle(alert: AlertCardTitleInput): string {
   const appName = alert.appDisplayName?.trim() || alert.appId?.trim()
@@ -179,6 +221,7 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
     resolvedAt,
     snoozedUntil,
     mediationGroupId: alert.mediationGroupId || undefined,
+    slackFinance: parseSlackFinanceFromAdditionalData(alert.additionalData),
   }
 }
 

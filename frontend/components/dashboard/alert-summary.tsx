@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,10 +11,12 @@ import { useApi } from "@/hooks/use-api"
 import { alertsApi } from "@/lib/api/services"
 import { formatDistanceToNow } from "date-fns"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
-import { useEffect } from "react"
+import { formatAlertCardTitle, parseSlackFinanceFromAdditionalData } from "@/components/alerts/alert-center-view-model"
+import { AlertSlackFinanceRow } from "@/components/alerts/alert-slack-finance-row"
 
 export function AlertSummary() {
   const [expanded, setExpanded] = useState(false)
+  const prevActiveTotalRef = useRef<number | null>(null)
   const { refreshKey } = useDashboardDate()
 
   // Fetch active alerts summary
@@ -28,6 +30,19 @@ export function AlertSummary() {
     () => alertsApi.getActiveAlerts({ page: 1, pageSize: 5 }),
     { enabled: true, cacheKey: "active_alerts_today_page1_size5" } // Fetch always; only render when expanded
   )
+
+  const activeTotal = alertsSummary?.Total ?? 0
+
+  // Có alert active: mở mặc định lần đầu (hoặc khi Total nhảy từ 0 → >0). Không ép mở lại khi user đã thu gọn và Total chỉ giảm nhẹ.
+  useEffect(() => {
+    const prev = prevActiveTotalRef.current
+    prevActiveTotalRef.current = activeTotal
+    if (prev === null) {
+      if (activeTotal > 0) setExpanded(true)
+      return
+    }
+    if (prev === 0 && activeTotal > 0) setExpanded(true)
+  }, [activeTotal])
 
   // Refetch only when Apply/Refresh is clicked (one run per refreshKey change)
   useEffect(() => {
@@ -161,7 +176,14 @@ export function AlertSummary() {
                     >
                       {getSeverityIcon(alert.severity)}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700">{alert.message}</p>
+                        <p className="text-sm font-medium text-slate-900 truncate">
+                          {formatAlertCardTitle(alert)}
+                        </p>
+                        <p className="text-sm text-slate-700 mt-0.5">{alert.message}</p>
+                        {(() => {
+                          const fin = parseSlackFinanceFromAdditionalData(alert.additionalData)
+                          return fin ? <AlertSlackFinanceRow fin={fin} className="mt-1.5" /> : null
+                        })()}
                         {alert.alertRuleName && (
                           <p className="text-xs text-slate-500 mt-0.5">{alert.alertRuleName}</p>
                         )}
