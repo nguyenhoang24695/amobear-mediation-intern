@@ -34,6 +34,7 @@ const DOMAIN_OPTIONS = [
   { value: "all", label: "All Domains" },
   { value: "waterfall", label: "Waterfall" },
   { value: "job", label: "Jobs" },
+  { value: "app", label: "App" },
   { value: "organization", label: "Organization" },
   { value: "user", label: "User" },
 ]
@@ -95,6 +96,7 @@ const EVENT_TYPE_OPTIONS = [
   { value: "user.permissions_updated", label: "User Permissions Updated", domain: "user" },
   { value: "user.team_added", label: "User Team Added", domain: "user" },
   { value: "user.team_removed", label: "User Team Removed", domain: "user" },
+  { value: "app.alert_status.updated", label: "App alert rules toggled", domain: "app" },
 ]
 
 function formatDateTime(value: string) {
@@ -133,6 +135,8 @@ function domainBadgeClass(domain: string) {
       return "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50"
     case "user":
       return "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100"
+    case "app":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50"
     default:
       return "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50"
   }

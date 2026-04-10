@@ -387,6 +387,11 @@ export const structureApi = {
         return apiClient.patch(`/api/Structure/apps/${id}/firebase-params`, payload ?? { firebaseParams: null })
     },
 
+    /** 0 = DISABLE, 1 = ENABLE — job alert chỉ load metrics cho app ENABLE. */
+    updateAppAlertStatus: async (id: number, alertStatus: 0 | 1): Promise<{ id: number; alertStatus: number }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/alert-status`, { alertStatus })
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,

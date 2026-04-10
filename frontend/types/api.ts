@@ -14,6 +14,8 @@ export interface App {
   createdAt: string
   updatedAt: string
   lastSyncedAt?: string
+  /** 0 = alerts disabled (default), 1 = alert rules may evaluate this app */
+  alertStatus?: number
   adUnitsCount?: number
   /** Waterfall Ad Units (from SyncAdMobNetworkWaterfallAdUnitsAsync), distinct from adUnitsCount (from SyncAdUnitsAsync). */
   waterfallAdUnitsCount?: number
