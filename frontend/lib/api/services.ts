@@ -51,7 +51,7 @@ import type {
     InsightGenerationRun,
     InsightUserNotification,
 } from '@/types/api'
-import { apiClient } from './client'
+import { apiClient, APP_INSIGHT_REGENERATE_TIMEOUT_MS } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
 
 // Auth Types
@@ -1946,9 +1946,11 @@ export const insightApi = {
     },
 
     regenerate: async (appId: string, insightDate?: string): Promise<{ message: string }> => {
-        return apiClient.post<{ message: string }>(`/api/app-insights/apps/${insightAppIdPath(appId)}/regenerate`, {
-            insightDate: insightDate ?? null,
-        })
+        return apiClient.post<{ message: string }>(
+            `/api/app-insights/apps/${insightAppIdPath(appId)}/regenerate`,
+            { insightDate: insightDate ?? null },
+            APP_INSIGHT_REGENERATE_TIMEOUT_MS,
+        )
     },
 
     listTemplates: async (): Promise<InsightTemplate[]> => {
