@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Bell, AlertTriangle, AlertCircle, Info, ArrowRight, BellOff, Sparkles } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { AlertCenterListItem } from "@/types/api"
+import { formatAlertCardTitle } from "@/components/alerts/alert-center-view-model"
 import { cn } from "@/lib/utils"
 import { formatAlertBadgeCount } from "@/lib/alert-notification-state"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
@@ -269,7 +270,7 @@ export function NotificationPopup() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{alert.alertType}</p>
+                      <p className="text-sm font-medium text-slate-900">{formatAlertCardTitle(alert)}</p>
                       <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{alert.message}</p>
                       <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(alert.triggeredAt)}</p>
                     </div>

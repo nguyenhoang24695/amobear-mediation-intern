@@ -237,6 +237,7 @@ export function AlertCenterContentV2() {
         alert.description.toLowerCase().includes(q) ||
         (alert.appId || "").toLowerCase().includes(q) ||
         (alert.appLabel || "").toLowerCase().includes(q) ||
+        (alert.appStoreId || "").toLowerCase().includes(q) ||
         (alert.entityLabel || "").toLowerCase().includes(q)
       )
     })
@@ -841,9 +842,6 @@ export function AlertCenterContentV2() {
                   </div>
 
                   <div className="flex items-center gap-3 ml-8">
-                    {alert.appLabel ? (
-                      <span className="font-medium text-blue-600">App: {alert.appLabel}</span>
-                    ) : null}
                     {alert.value != null ? (
                       <span className="font-mono text-sm text-red-600">
                         {alert.metricLabel}: {alert.value.toFixed(2)}

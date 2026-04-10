@@ -10,6 +10,7 @@ export interface AlertApiItem {
   publisherId: string
   appId?: string
   appDisplayName?: string
+  appStoreId?: string | null
   appPlatform?: string
   appIconUri?: string
   mediationGroupId?: string
@@ -50,6 +51,8 @@ export interface AlertUiItem {
   timestamp: Date
   appId?: string
   appLabel?: string
+  /** App Store / Play id — search & display helper */
+  appStoreId?: string
   appPlatform?: string
   appIconUri?: string
   adSourceId?: string
@@ -113,6 +116,23 @@ export function toUiStatus(status?: string): UiStatus {
   return "active"
 }
 
+/** Tiêu đề thẻ Alert Center: ưu tiên "Tên app (app_store_id)", không dùng rule type làm headline. */
+export type AlertCardTitleInput = Pick<
+  AlertApiItem,
+  "appDisplayName" | "appId" | "appStoreId" | "alertRuleName" | "alertType" | "id" | "mediationGroupDisplayName" | "mediationGroupId"
+>
+
+export function formatAlertCardTitle(alert: AlertCardTitleInput): string {
+  const appName = alert.appDisplayName?.trim() || alert.appId?.trim()
+  if (appName) {
+    const sid = alert.appStoreId?.trim()
+    return sid ? `${appName} (${sid})` : appName
+  }
+  const mg = alert.mediationGroupDisplayName?.trim() || alert.mediationGroupId?.trim()
+  if (mg) return mg
+  return alert.alertRuleName?.trim() || alert.alertType || `Alert #${alert.id}`
+}
+
 function detectMetricLabel(alertType?: string): string {
   const type = (alertType || "").toLowerCase()
   if (type.includes("change_pct")) return "Change %"
@@ -139,11 +159,12 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
     alertRuleId: alert.alertRuleId,
     severity: toUiSeverity(alert.severity),
     status: toUiStatus(alert.status),
-    title: alert.alertRuleName?.trim() || alert.alertType || `Alert #${alert.id}`,
+    title: formatAlertCardTitle(alert),
     description: alert.message || "No message",
     timestamp: triggeredAt,
     appId: alert.appId || undefined,
     appLabel: alert.appDisplayName || alert.appId || undefined,
+    appStoreId: alert.appStoreId?.trim() || undefined,
     appPlatform: alert.appPlatform || undefined,
     appIconUri: alert.appIconUri || undefined,
     adSourceId: alert.adSourceId || undefined,

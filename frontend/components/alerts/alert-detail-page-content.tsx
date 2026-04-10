@@ -27,7 +27,7 @@ import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLin
 import { alertsApi } from "@/lib/api/services"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
-import { toAlertUiItem, toUiSeverity } from "./alert-center-view-model"
+import { formatAlertCardTitle, toAlertUiItem, toUiSeverity } from "./alert-center-view-model"
 import type { AlertApiItem } from "./alert-center-view-model"
 import type { AlertRule } from "@/types/api"
 import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
@@ -214,7 +214,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
     return rows
       .map((item) => ({
         id: String(item.id),
-        title: item.alertRuleName || item.alertType || item.message,
+        title: formatAlertCardTitle(item as AlertApiItem),
         severity: toUiSeverity(item.severity),
         time: formatDistanceToNow(new Date(item.triggeredAt), { addSuffix: true }),
       }))

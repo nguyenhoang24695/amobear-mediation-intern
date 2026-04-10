@@ -790,6 +790,7 @@ export interface AlertCenterListItem {
   publisherId: string
   appId?: string
   appDisplayName?: string
+  appStoreId?: string | null
   appPlatform?: string
   appIconUri?: string
   mediationGroupId?: string
