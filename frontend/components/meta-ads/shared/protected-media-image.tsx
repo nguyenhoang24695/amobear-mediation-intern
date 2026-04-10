@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type ImgHTMLAttributes, type ReactNode } from "react"
+import { useEffect, useState, type ImgHTMLAttributes, type ReactNode, type VideoHTMLAttributes } from "react"
 import { clearAuthSessionData, getAccessToken, refreshAuthSession } from "@/lib/auth"
 import { getMetaAdsApiBaseUrl } from "@/lib/meta-ads/media-preview"
 
@@ -36,7 +36,7 @@ async function fetchProtectedMedia(sourceUrl: string, signal: AbortSignal): Prom
   return response.blob()
 }
 
-function useProtectedMediaPreview(sourceUrl?: string, requiresAuth?: boolean): string {
+export function useProtectedMediaPreview(sourceUrl?: string, requiresAuth?: boolean): string {
   const [resolvedUrl, setResolvedUrl] = useState("")
 
   useEffect(() => {
@@ -89,3 +89,17 @@ export function ProtectedMediaImage({ fallback = null, requiresAuth = false, src
   return <img {...props} src={resolvedUrl} />
 }
 
+
+type ProtectedMediaVideoProps = VideoHTMLAttributes<HTMLVideoElement> & {
+  fallback?: ReactNode
+  requiresAuth?: boolean
+}
+
+export function ProtectedMediaVideo({ fallback = null, requiresAuth = false, src, ...props }: ProtectedMediaVideoProps) {
+  const sourceUrl = typeof src === "string" ? src : ""
+  const resolvedUrl = useProtectedMediaPreview(sourceUrl, requiresAuth)
+
+  if (!resolvedUrl) return <>{fallback}</>
+
+  return <video {...props} src={resolvedUrl} />
+}

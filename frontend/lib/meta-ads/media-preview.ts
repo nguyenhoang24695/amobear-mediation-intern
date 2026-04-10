@@ -47,9 +47,17 @@ export function getSelectionPreviewSource(selection?: MetaRequestAssetSelectionS
     }
   }
 
+  if (selection.mode === "meta_ref" && selection.metaPreviewUrl) {
+    return {
+      url: selection.metaPreviewUrl,
+      requiresAuth: selection.metaPreviewRequiresAuth,
+    }
+  }
+
   return {
     url: selection.imageUrl,
     requiresAuth: false,
   }
 }
+
 

@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,7 @@ import { bidStrategyRequiresBidAmount, getAllowedBillingEvents, getAllowedPerfor
 import type { GroupedValidationErrors, MetaAppMappingDto, MetaRequestStatus } from "@/types/meta-ads"
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
+type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
 
 interface Props {
   form: RequestFormState
@@ -16,9 +17,10 @@ interface Props {
   tokenState: TokenState
   selectedAppMapping?: MetaAppMappingDto | null
   isPersisted: boolean
+  onNavigateToSection?: (target: RequestSectionTarget) => void
 }
 
-export function RequestSummaryRail({ form, serverStatus, validationErrors, tokenState, selectedAppMapping, isPersisted }: Props) {
+export function RequestSummaryRail({ form, serverStatus, validationErrors, tokenState, selectedAppMapping, isPersisted, onNavigateToSection }: Props) {
   const hasErrors = Object.keys(validationErrors).length > 0
   const isCBO = form.budgetStrategy === "CBO"
   const hasBudget = isCBO ? !!(form.campaignDailyBudget || form.campaignLifetimeBudget) : !!(form.adSetDailyBudget || form.adSetLifetimeBudget)
@@ -50,22 +52,22 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
       <Card className="border-slate-200">
         <CardHeader className="pb-2 pt-3 px-3"><CardTitle className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Readiness Checklist</CardTitle></CardHeader>
         <CardContent className="px-3 pb-3 space-y-1.5">
-          <CheckRow state={form.adAccountId ? "ok" : "error"} label="Account selected" />
-          <CheckRow state={tokenOk ? "ok" : tokenState === "not_tested" ? "warning" : form.adAccountId ? "error" : "neutral"} label={tokenState === "not_tested" ? "Integration token not tested" : "Integration token valid"} />
-          <CheckRow state={form.appRowId ? (selectedAppMapping?.metaApplicationId && mappingUrl ? "ok" : "error") : "neutral"} label="Promoted object valid" />
-          <CheckRow state={form.budgetStrategy ? "ok" : "error"} label={`Budget strategy (${form.budgetStrategy})`} />
-          <CheckRow state={hasBudget ? "ok" : "error"} label="Budget provided" />
-          <CheckRow state={form.campaignObjective ? "ok" : "neutral"} label="Objective set" />
-          <CheckRow state={form.campaignObjective ? (isGoalCompatible ? "ok" : "error") : "neutral"} label="Performance goal compatible" />
-          <CheckRow state={form.performanceGoalType ? (isBillingCompatible ? "ok" : "error") : "neutral"} label="Billing event compatible" />
-          <CheckRow state={form.bidStrategy ? (bidStrategySupported ? "ok" : "warning") : "neutral"} label={form.bidStrategy ? `Bid strategy supported (${form.bidStrategy})` : "Bid strategy optional"} />
-          <CheckRow state={bidAmountRequired ? (form.bidAmount ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={bidAmountRequired ? "Bid amount provided for strategy" : "Bid amount optional"} />
-          <CheckRow state={"ok"} label={`Advantage Audience explicitly ${form.advantageAudience ? "enabled" : "disabled"}`} />
-          <CheckRow state={geoStatus} label={`Geo targeting (${form.geoMode.toLowerCase()})`} />
-          <CheckRow state={platformAlignmentReady ? "ok" : "error"} label="Platform targeting can be derived from app mapping" />
-          <CheckRow state={startTimeValid ? "ok" : "error"} label="Start time format valid" />
-          <CheckRow state={creativeStatus.ok ? "ok" : "error"} label={`Creative ready (${creativeStatus.label})`} />
-          <CheckRow state={form.adName ? "ok" : "error"} label="Ad name complete" />
+          <CheckRow state={form.adAccountId ? "ok" : "error"} label="Account selected" onClick={() => onNavigateToSection?.("account-app")} />
+          <CheckRow state={tokenOk ? "ok" : tokenState === "not_tested" ? "warning" : form.adAccountId ? "error" : "neutral"} label={tokenState === "not_tested" ? "Integration token not tested" : "Integration token valid"} onClick={() => onNavigateToSection?.("account-app")} />
+          <CheckRow state={form.appRowId ? (selectedAppMapping?.metaApplicationId && mappingUrl ? "ok" : "error") : "neutral"} label="Promoted object valid" onClick={() => onNavigateToSection?.("account-app")} />
+          <CheckRow state={form.budgetStrategy ? "ok" : "error"} label={`Budget strategy (${form.budgetStrategy})`} onClick={() => onNavigateToSection?.("campaign-settings")} />
+          <CheckRow state={hasBudget ? "ok" : "error"} label="Budget provided" onClick={() => onNavigateToSection?.(isCBO ? "campaign-settings" : "adset-budget")} />
+          <CheckRow state={form.campaignObjective ? "ok" : "neutral"} label="Objective set" onClick={() => onNavigateToSection?.("campaign-settings")} />
+          <CheckRow state={form.campaignObjective ? (isGoalCompatible ? "ok" : "error") : "neutral"} label="Performance goal compatible" onClick={() => onNavigateToSection?.("adset-budget")} />
+          <CheckRow state={form.performanceGoalType ? (isBillingCompatible ? "ok" : "error") : "neutral"} label="Billing event compatible" onClick={() => onNavigateToSection?.("adset-budget")} />
+          <CheckRow state={form.bidStrategy ? (bidStrategySupported ? "ok" : "warning") : "neutral"} label={form.bidStrategy ? `Bid strategy supported (${form.bidStrategy})` : "Bid strategy optional"} onClick={() => onNavigateToSection?.("campaign-settings")} />
+          <CheckRow state={bidAmountRequired ? (form.bidAmount ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={bidAmountRequired ? "Bid amount provided for strategy" : "Bid amount optional"} onClick={() => onNavigateToSection?.("adset-budget")} />
+          <CheckRow state={"ok"} label={`Advantage Audience explicitly ${form.advantageAudience ? "enabled" : "disabled"}`} onClick={() => onNavigateToSection?.("adset-budget")} />
+          <CheckRow state={geoStatus} label={`Geo targeting (${form.geoMode.toLowerCase()})`} onClick={() => onNavigateToSection?.("adset-audience")} />
+          <CheckRow state={platformAlignmentReady ? "ok" : "error"} label="Platform targeting can be derived from app mapping" onClick={() => onNavigateToSection?.("account-app")} />
+          <CheckRow state={startTimeValid ? "ok" : "error"} label="Start time format valid" onClick={() => onNavigateToSection?.("adset-budget")} />
+          <CheckRow state={creativeStatus.ok ? "ok" : "error"} label={`Creative ready (${creativeStatus.label})`} onClick={() => onNavigateToSection?.("creative")} />
+          <CheckRow state={form.adName ? "ok" : "error"} label="Ad name complete" onClick={() => onNavigateToSection?.("ad")} />
         </CardContent>
       </Card>
 
@@ -212,11 +214,38 @@ function getCreativeCta(form: RequestFormState): string {
 
 type CheckState = "ok" | "error" | "warning" | "neutral"
 
-function CheckRow({ state, label }: { state: CheckState; label: string }) {
-  if (state === "neutral") return <div className="flex items-center gap-2 text-xs text-slate-400"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /><span>{label}</span></div>
-  if (state === "ok") return <div className="flex items-center gap-2 text-xs text-green-700"><CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-green-600" /><span>{label}</span></div>
-  if (state === "warning") return <div className="flex items-center gap-2 text-xs text-amber-700"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" /><span>{label}</span></div>
-  return <div className="flex items-center gap-2 text-xs text-red-600"><XCircle className="w-3.5 h-3.5 flex-shrink-0" /><span>{label}</span></div>
+
+function CheckRow({ state, label, onClick }: { state: CheckState; label: string; onClick?: () => void }) {
+  const icon = state === "ok"
+    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-green-600" />
+    : state === "warning"
+      ? <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
+      : state === "neutral"
+        ? <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+        : <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+
+  const tone = state === "ok"
+    ? "text-green-700"
+    : state === "warning"
+      ? "text-amber-700"
+      : state === "neutral"
+        ? "text-slate-400"
+        : "text-red-600"
+
+  if (!onClick) {
+    return <div className={`flex items-center gap-2 text-xs ${tone}`}>{icon}<span>{label}</span></div>
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${tone}`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  )
 }
 
 function SummaryLine({ label, value }: { label: string; value: string }) {

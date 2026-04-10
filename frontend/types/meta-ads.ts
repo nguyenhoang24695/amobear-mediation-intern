@@ -1,4 +1,4 @@
-﻿export type MetaRequestStatus =
+export type MetaRequestStatus =
   | "draft"
   | "pending_approval"
   | "approved"
@@ -845,6 +845,37 @@ export interface MetaFacebookPageReferenceDto {
   accessStatus?: string | null
 }
 
+export interface MetaReferenceMediaDto {
+  id: string
+  assetType: "IMAGE" | "VIDEO"
+  hash?: string | null
+  videoId?: string | null
+  name?: string | null
+  thumbnailUrl?: string | null
+  playableUrl?: string | null
+  playableUrlExpiresAt?: string | null
+  width?: number | null
+  height?: number | null
+  createdTime?: string | null
+  requiresAuth?: boolean
+}
+
+export interface MetaReferenceMediaPageDto {
+  items: MetaReferenceMediaDto[]
+  nextCursor?: string | null
+  hasMore: boolean
+}
+
+export interface MetaReferenceMediaQueryDto {
+  [key: string]: string | number | undefined
+  q?: string
+  after?: string
+  limit?: number
+  sort?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
 export interface MetaGeoRegionDto {
   key: string
   label: string
@@ -862,12 +893,20 @@ export interface MetaExecuteResponseDto {
 
 export interface MetaRequestAssetSelectionState {
   mode: MetaCreativeMediaMode
+  metaRefSource: "manual" | "from_meta"
   imageHash: string
   imageUrl: string
   videoId: string
   uploadedAssetId: number | null
   uploadedAssetName: string
   uploadedAssetPreviewUrl: string
+  metaPreviewUrl: string
+  metaPreviewRequiresAuth: boolean
+  metaPlayableUrl: string
+  metaAssetId: string
+  metaAssetName: string
+  metaAssetType: "IMAGE" | "VIDEO" | ""
+  metaAdAccountId: string
 }
 
 export interface MetaCarouselCardFormState {
@@ -1020,6 +1059,10 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
+
+
+
+
 
 
 
