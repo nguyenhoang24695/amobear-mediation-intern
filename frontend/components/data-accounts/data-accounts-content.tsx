@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Key, Search, Plus, Download, CheckCircle2, AlertTriangle, Smartphone, Layers, X, Loader2 } from "lucide-react"
 import { DataAccountsTable } from "./data-accounts-table"
 import { AddEditAccountModal } from "./add-edit-account-modal"
+import { IntegrationsContent } from "@/components/meta-ads/integrations/integrations-content"
 import { useApi } from "@/hooks/use-api"
 import { dataAccountsApi, type DataAccountItem } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
@@ -24,15 +27,22 @@ interface ActiveFilter {
   value: string
 }
 
-export function DataAccountsContent() {
+type DataAccountsTab = "accounts" | "meta-integrations"
+
+function buildTabUrl(pathname: string, searchParamsKey: string, tab: DataAccountsTab) {
+  const params = new URLSearchParams(searchParamsKey)
+  params.set("tab", tab)
+  const query = params.toString()
+  return query ? `${pathname}?${query}` : pathname
+}
+
+function DataAccountsListPanel() {
   const [searchQuery, setSearchQuery] = useState("")
   const [networkFilter, setNetworkFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [addModalOpen, setAddModalOpen] = useState(false)
 
-  // Permission checks
-  const canView = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_VIEW)
   const canCreate = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_CREATE)
   const canEdit = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_EDIT)
   const canDelete = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_DELETE)
@@ -42,7 +52,6 @@ export function DataAccountsContent() {
     { cacheKey: "data-accounts-list" }
   )
 
-  // Compute stats from real data
   const stats = useMemo(() => {
     if (!accounts) return { total: 0, active: 0, errors: 0, admob: 0, applovin: 0, xmp: 0 }
     return {
@@ -98,13 +107,8 @@ export function DataAccountsContent() {
 
   const hasFilters = searchQuery !== "" || networkFilter !== "all" || statusFilter !== "all"
 
-  if (!canView) {
-    return <NoPermissionView />
-  }
-
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -118,24 +122,21 @@ export function DataAccountsContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* TODO: Add export functionality */}
-          {false && <Button variant="outline" className="gap-2 bg-transparent">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>}
-          {canCreate && (
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-2" 
-              onClick={() => setAddModalOpen(true)}
-            >
+          {false && (
+            <Button variant="outline" className="gap-2 bg-transparent">
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+          )}
+          {canCreate ? (
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddModalOpen(true)}>
               <Plus className="w-4 h-4" />
               Add Account
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center gap-3">
@@ -205,7 +206,6 @@ export function DataAccountsContent() {
         </div>
       </div>
 
-      {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -240,8 +240,7 @@ export function DataAccountsContent() {
         </Select>
       </div>
 
-      {/* Active Filter Chips */}
-      {activeFilters.length > 0 && (
+      {activeFilters.length > 0 ? (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-slate-500">Active filters:</span>
           {activeFilters.map((filter) => (
@@ -260,9 +259,8 @@ export function DataAccountsContent() {
             Clear all
           </button>
         </div>
-      )}
+      ) : null}
 
-      {/* Table */}
       <DataAccountsTable
         accounts={accounts || []}
         loading={loading}
@@ -277,11 +275,59 @@ export function DataAccountsContent() {
         canDelete={canDelete}
       />
 
-      <AddEditAccountModal
-        open={addModalOpen}
-        onOpenChange={setAddModalOpen}
-        onSaved={refetch}
-      />
+      <AddEditAccountModal open={addModalOpen} onOpenChange={setAddModalOpen} onSaved={refetch} />
+    </div>
+  )
+}
+
+export function DataAccountsContent() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const searchParamsKey = searchParams.toString()
+
+  const canViewAccounts = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_VIEW)
+  const canViewMetaIntegrations = hasScreenFunction("s-meta-accounts", FN_VIEW)
+
+  const availableTabs = useMemo(() => {
+    const tabs: DataAccountsTab[] = []
+    if (canViewAccounts) tabs.push("accounts")
+    if (canViewMetaIntegrations) tabs.push("meta-integrations")
+    return tabs
+  }, [canViewAccounts, canViewMetaIntegrations])
+
+  const requestedTab = searchParams.get("tab")
+  const activeTab = useMemo<DataAccountsTab | null>(() => {
+    if (availableTabs.length === 0) return null
+    if (requestedTab === "accounts" && canViewAccounts) return "accounts"
+    if (requestedTab === "meta-integrations" && canViewMetaIntegrations) return "meta-integrations"
+    return canViewAccounts ? "accounts" : "meta-integrations"
+  }, [availableTabs.length, canViewAccounts, canViewMetaIntegrations, requestedTab])
+
+  useEffect(() => {
+    if (!activeTab || requestedTab === activeTab) return
+    router.replace(buildTabUrl(pathname, searchParamsKey, activeTab))
+  }, [activeTab, pathname, requestedTab, router, searchParamsKey])
+
+  if (!activeTab) {
+    return <NoPermissionView />
+  }
+
+  const showTabs = availableTabs.length > 1
+
+  return (
+    <div className="space-y-6">
+      {showTabs ? (
+        <Tabs value={activeTab} onValueChange={(value) => router.push(buildTabUrl(pathname, searchParamsKey, value as DataAccountsTab))}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            {canViewAccounts ? <TabsTrigger value="accounts">Accounts</TabsTrigger> : null}
+            {canViewMetaIntegrations ? <TabsTrigger value="meta-integrations">Meta Integrations</TabsTrigger> : null}
+          </TabsList>
+        </Tabs>
+      ) : null}
+
+      {activeTab === "accounts" ? <DataAccountsListPanel /> : null}
+      {activeTab === "meta-integrations" ? <IntegrationsContent embedded /> : null}
     </div>
   )
 }

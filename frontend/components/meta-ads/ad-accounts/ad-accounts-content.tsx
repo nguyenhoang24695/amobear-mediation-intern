@@ -57,6 +57,25 @@ function formatDateTime(value?: string | null) {
   return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
 }
 
+function formatMoney(value?: number | null, currency?: string | null) {
+  if (value == null) return "-"
+
+  if (currency) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value)
+    } catch {
+      // Fall back to numeric formatting when the currency code is not supported.
+    }
+  }
+
+  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function formatAdAccountStatus(value?: string | null) {
   switch ((value ?? "").trim()) {
     case "1":
@@ -281,7 +300,7 @@ export function AdAccountsContent() {
         />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
@@ -292,6 +311,9 @@ export function AdAccountsContent() {
               <TableHead className="text-xs text-slate-500 font-medium">Timezone</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business Name</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium text-right">Amount Spent</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium text-right">Balance</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium text-right">Spend Cap</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-24">Status</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-20">Active</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-32">Last Synced</TableHead>
@@ -301,7 +323,7 @@ export function AdAccountsContent() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} className="py-12">
+                <TableCell colSpan={14} className="py-12">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading ad accounts...
@@ -310,13 +332,13 @@ export function AdAccountsContent() {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={14} className="text-center py-12 text-sm text-red-600">
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={14} className="text-center py-12 text-sm text-slate-400">
                   No ad accounts found.
                 </TableCell>
               </TableRow>
@@ -332,6 +354,9 @@ export function AdAccountsContent() {
                     <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "-"}</TableCell>
                     <TableCell className="font-mono text-xs text-slate-600">{account.businessId ?? "-"}</TableCell>
                     <TableCell className="text-xs text-slate-600">{account.businessName ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-slate-600 text-right">{formatMoney(account.amountSpent, account.currency)}</TableCell>
+                    <TableCell className="text-xs text-slate-600 text-right">{formatMoney(account.balance, account.currency)}</TableCell>
+                    <TableCell className="text-xs text-slate-600 text-right">{formatMoney(account.spendCap, account.currency)}</TableCell>
                     <TableCell>
                       <Badge className={formatAdAccountStatus(account.status) === "Active" ? "bg-green-100 text-green-700 text-[11px]" : formatAdAccountStatus(account.status) === "Disabled" || formatAdAccountStatus(account.status) === "Closed" ? "bg-red-100 text-red-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
                         {formatAdAccountStatus(account.status)}
