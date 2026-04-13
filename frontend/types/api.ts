@@ -788,6 +788,8 @@ export interface AlertCenterListItem {
   severity: string
   message: string
   publisherId: string
+  /** admob_accounts.display_name khi PublisherId khớp account_id. */
+  adMobAccountDisplayName?: string | null
   appId?: string
   appDisplayName?: string
   appStoreId?: string | null
