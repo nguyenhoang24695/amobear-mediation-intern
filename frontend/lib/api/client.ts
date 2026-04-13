@@ -2,8 +2,8 @@ import { clearAuthSessionData, getAccessToken, refreshAuthSession } from "@/lib/
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000
-/** ≥ AppInsight:RegenerateTimeoutSeconds (clamp backend 120–3600s) + đệm; tránh FE AbortError → backend 499. */
-export const APP_INSIGHT_REGENERATE_TIMEOUT_MS = 3_700_000
+/** ≥ backend regenerate budget (default 1200s) + đệm cho proxy; regenerate tiếp tục trên server nếu tab đóng nhưng client vẫn cần timeout dài nếu chờ JSON response. */
+export const APP_INSIGHT_REGENERATE_TIMEOUT_MS = 1_500_000
 let isRedirecting = false
 
 type RequestOptions = RequestInit & { timeoutMs?: number }
