@@ -8,6 +8,7 @@ export interface AlertApiItem {
   severity: string
   message: string
   publisherId: string
+  adMobAccountDisplayName?: string | null
   appId?: string
   appDisplayName?: string
   appStoreId?: string | null
@@ -57,6 +58,10 @@ export interface AlertUiItem {
   appIconUri?: string
   adSourceId?: string
   networkLabel?: string
+  /** AdMob publisher ID (ca-app-pub-...) từ API `publisherId`. */
+  publisherId?: string
+  /** Tên hiển thị từ bảng admob_accounts. */
+  adMobAccountDisplayName?: string
   entityLabel?: string
   value: number
   threshold: number
@@ -211,6 +216,8 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
     appIconUri: alert.appIconUri || undefined,
     adSourceId: alert.adSourceId || undefined,
     networkLabel: alert.adSourceDisplayName || alert.adSourceId || undefined,
+    publisherId: alert.publisherId?.trim() || undefined,
+    adMobAccountDisplayName: alert.adMobAccountDisplayName?.trim() || undefined,
     entityLabel: alert.mediationGroupDisplayName || alert.mediationGroupId || undefined,
     value: alert.value,
     threshold: alert.threshold,

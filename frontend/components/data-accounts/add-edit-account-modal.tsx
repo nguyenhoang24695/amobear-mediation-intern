@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Loader2, Eye, EyeOff, Plug, Upload, X, CheckCircle2, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -64,6 +65,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [accessToken, setAccessToken] = useState("")
   const [refreshToken, setRefreshToken] = useState("")
   const [tokenType, setTokenType] = useState("Bearer")
+  const [admobDefaultAppType, setAdmobDefaultAppType] = useState<string>("")
   const [showClientSecret, setShowClientSecret] = useState(false)
 
   // AppLovin fields
@@ -98,6 +100,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           setAccessToken(editAccount.accessToken ?? "")
           setRefreshToken(editAccount.refreshToken ?? "")
           setTokenType(editAccount.tokenType ?? "Bearer")
+          setAdmobDefaultAppType(editAccount.defaultAppType ?? "")
         } else if (editAccount.network === "applovin") {
           setApplovinName(editAccount.name)
           setReportKey(editAccount.reportKey ?? "")
@@ -116,6 +119,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         setAccessToken("")
         setRefreshToken("")
         setTokenType("Bearer")
+        setAdmobDefaultAppType("")
         setApplovinName("")
         setReportKey("")
         setBaseUrl("https://r.applovin.com")
@@ -171,6 +175,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             accessToken: accessToken.trim() || undefined,
             refreshToken: refreshToken.trim() || undefined,
             tokenType: tokenType.trim() || undefined,
+            defaultAppType: admobDefaultAppType,
           })
         } else if (network === "applovin") {
           await dataAccountsApi.update(network, id, {
@@ -197,6 +202,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             accessToken: accessToken.trim() || undefined,
             refreshToken: refreshToken.trim() || undefined,
             tokenType: tokenType.trim() || undefined,
+            defaultAppType: admobDefaultAppType || undefined,
           })
         } else if (activeTab === "applovin") {
           await dataAccountsApi.create({
@@ -368,6 +374,21 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                   onChange={(e) => setTokenType(e.target.value)}
                   disabled={saving}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="default-app-type">Default app type (new apps from sync)</Label>
+                <Select value={admobDefaultAppType || "__none__"} onValueChange={(v) => setAdmobDefaultAppType(v === "__none__" ? "" : v)} disabled={saving}>
+                  <SelectTrigger id="default-app-type" className="bg-white">
+                    <SelectValue placeholder="Not set" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not set</SelectItem>
+                    <SelectItem value="game">Game</SelectItem>
+                    <SelectItem value="app">App</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">Applied to <span className="font-mono">apps.type</span> when a new app is inserted for this publisher during structure sync.</p>
               </div>
             </TabsContent>
 

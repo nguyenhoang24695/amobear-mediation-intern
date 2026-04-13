@@ -438,11 +438,20 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
               </Button>
             </Link>
             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-              <span className="text-sm font-medium text-slate-700">{alert.networkLabel || "N/A"}</span>
-            </div>
-            <div className="px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-sm text-slate-600">{alert.entityLabel || "N/A"}</span>
+              <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-green-500" />
+              <div className="min-w-0">
+                <div
+                  className="text-sm font-medium text-slate-800 truncate"
+                  title={alert.adMobAccountDisplayName || alert.publisherId || undefined}
+                >
+                  {alert.adMobAccountDisplayName || alert.publisherId || "N/A"}
+                </div>
+                {alert.adMobAccountDisplayName && alert.publisherId ? (
+                  <div className="text-xs text-slate-500 font-mono truncate" title={alert.publisherId}>
+                    {alert.publisherId}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>

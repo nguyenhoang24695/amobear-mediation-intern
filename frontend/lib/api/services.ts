@@ -1799,6 +1799,8 @@ export interface DataAccountItem {
     xmpClientSecret?: string
     hasToken?: boolean
     tokenExpiresAt?: string
+    /** admob: default "game" | "app" for new apps on structure sync */
+    defaultAppType?: string | null
     createdAt: string
     updatedAt: string
 }
@@ -1815,6 +1817,7 @@ export interface CreateDataAccountRequest {
     refreshToken?: string
     tokenType?: string
     timezoneOffsetHours?: number
+    defaultAppType?: string
     // AppLovin
     reportKey?: string
     baseUrl?: string
@@ -1833,6 +1836,7 @@ export interface UpdateDataAccountRequest {
     refreshToken?: string
     tokenType?: string
     timezoneOffsetHours?: number
+    defaultAppType?: string
     reportKey?: string
     baseUrl?: string
     xmpClientId?: string
