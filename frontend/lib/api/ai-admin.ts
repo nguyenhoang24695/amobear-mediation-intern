@@ -187,7 +187,17 @@ export interface UpdateMetricRequest {
   isActive?: boolean
 }
 
-export type MetricDomain = 'revenue' | 'engagement' | 'retention' | 'iap' | 'ua' | 'game' | 'ad_perf'
+export type MetricDomain =
+  | 'revenue'
+  | 'engagement'
+  | 'retention'
+  | 'iap'
+  | 'ua'
+  | 'game'
+  | 'ad_perf'
+  | 'product'
+  | 'growth'
+  | 'health'
 
 export const METRIC_DOMAINS: { value: MetricDomain; label: string; color: string }[] = [
   { value: 'revenue', label: 'Revenue', color: 'bg-emerald-100 text-emerald-700' },
@@ -197,6 +207,9 @@ export const METRIC_DOMAINS: { value: MetricDomain; label: string; color: string
   { value: 'ua', label: 'UA', color: 'bg-rose-100 text-rose-700' },
   { value: 'game', label: 'Game', color: 'bg-indigo-100 text-indigo-700' },
   { value: 'ad_perf', label: 'Ad Performance', color: 'bg-orange-100 text-orange-700' },
+  { value: 'product', label: 'Product', color: 'bg-sky-100 text-sky-700' },
+  { value: 'growth', label: 'Growth', color: 'bg-teal-100 text-teal-700' },
+  { value: 'health', label: 'Health', color: 'bg-violet-100 text-violet-700' },
 ]
 
 // ============================================================

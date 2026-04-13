@@ -53,7 +53,7 @@ function DataAccountsListPanel() {
   )
 
   const stats = useMemo(() => {
-    if (!accounts) return { total: 0, active: 0, errors: 0, admob: 0, applovin: 0, xmp: 0 }
+    if (!accounts) return { total: 0, active: 0, errors: 0, admob: 0, applovin: 0, xmp: 0, appsflyer: 0 }
     return {
       total: accounts.length,
       active: accounts.filter((a) => a.status === "active").length,
@@ -61,6 +61,7 @@ function DataAccountsListPanel() {
       admob: accounts.filter((a) => a.network === "admob").length,
       applovin: accounts.filter((a) => a.network === "applovin").length,
       xmp: accounts.filter((a) => a.network === "xmp").length,
+      appsflyer: accounts.filter((a) => a.network === "appsflyer").length,
     }
   }, [accounts])
 
@@ -137,7 +138,8 @@ function DataAccountsListPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-slate-100">
@@ -204,6 +206,17 @@ function DataAccountsListPanel() {
             </div>
           </div>
         </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-sky-50">
+              <Smartphone className="w-5 h-5 text-sky-700" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.appsflyer}</p>
+              <p className="text-sm text-slate-500">AppsFlyer</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -225,6 +238,7 @@ function DataAccountsListPanel() {
             <SelectItem value="admob">AdMob</SelectItem>
             <SelectItem value="applovin">AppLovin</SelectItem>
             <SelectItem value="xmp">XMP</SelectItem>
+            <SelectItem value="appsflyer">AppsFlyer</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => handleFilterChange("Status", v)}>

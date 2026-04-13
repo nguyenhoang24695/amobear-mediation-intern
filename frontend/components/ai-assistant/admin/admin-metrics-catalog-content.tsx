@@ -47,7 +47,7 @@ import {
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { aiAdminApi, MetricsCatalogDto, METRIC_DOMAINS } from "@/lib/api/ai-admin"
+import { aiAdminApi, MetricsCatalogDto } from "@/lib/api/ai-admin"
 
 const domainColors: Record<string, string> = {
   revenue: "bg-emerald-100 text-emerald-700",
@@ -57,6 +57,9 @@ const domainColors: Record<string, string> = {
   ua: "bg-rose-100 text-rose-700",
   game: "bg-indigo-100 text-indigo-700",
   ad_perf: "bg-orange-100 text-orange-700",
+  product: "bg-sky-100 text-sky-700",
+  growth: "bg-teal-100 text-teal-700",
+  health: "bg-violet-100 text-violet-700",
 }
 
 const domainLabels: Record<string, string> = {
@@ -67,9 +70,24 @@ const domainLabels: Record<string, string> = {
   ua: "UA",
   game: "Game",
   ad_perf: "Ad Perf",
+  product: "Product",
+  growth: "Growth",
+  health: "Health",
 }
 
-const domains = ["all", "revenue", "engagement", "retention", "iap", "ua", "game", "ad_perf"] as const
+const domains = [
+  "all",
+  "revenue",
+  "engagement",
+  "retention",
+  "iap",
+  "ua",
+  "game",
+  "ad_perf",
+  "product",
+  "growth",
+  "health",
+] as const
 
 const emptyMetricForm = {
   metricKey: "",
@@ -494,6 +512,8 @@ export function AdminMetricsCatalogContent() {
                   <SelectItem value="$">$</SelectItem>
                   <SelectItem value="count">count</SelectItem>
                   <SelectItem value="ratio">ratio</SelectItem>
+                  <SelectItem value="score">score</SelectItem>
+                  <SelectItem value="tier">tier</SelectItem>
                 </SelectContent>
               </Select>
             </div>

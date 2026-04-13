@@ -21,7 +21,7 @@ import { dataAccountsApi, type AccountAppItem } from "@/lib/api/services"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-type NetworkType = "admob" | "applovin" | "xmp"
+type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer"
 
 interface OverviewProps {
   account: {
@@ -46,6 +46,9 @@ interface OverviewProps {
     // XMP
     xmpClientId?: string
     xmpClientSecret?: string
+    // AppsFlyer
+    apiV2Token?: string
+    pushWebhookAuthToken?: string
     createdAt?: string
     updatedAt?: string
   }
@@ -144,6 +147,18 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
               </>
             )}
 
+            {account.network === "appsflyer" && (
+              <>
+                <DetailItem label="API Base URL" value={account.baseUrl || "—"} isCode={!!account.baseUrl} />
+                <DetailItem label="API V2 Token" value={account.apiV2Token || "—"} isCode={!!account.apiV2Token} />
+                <DetailItem
+                  label="Push webhook token"
+                  value={account.pushWebhookAuthToken || "—"}
+                  isCode={!!account.pushWebhookAuthToken}
+                />
+              </>
+            )}
+
             {/* Common status fields */}
             <DetailItem label="Is Default" value={account.isDefault ? "Yes" : "No"} />
             <DetailItem label="Enabled" value={account.enabled ? "Yes" : "No"} />
@@ -172,7 +187,11 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
           ) : apps.length === 0 ? (
             <div className="text-center py-8 px-4">
               <p className="text-sm text-slate-500">
-                {isAdMob ? "No apps found for this account" : "App listing is only available for AdMob accounts"}
+                {isAdMob
+                  ? "No apps found for this account"
+                  : account.network === "appsflyer"
+                    ? "Manage AppsFlyer app IDs on the AF Apps tab"
+                    : "App listing is only available for AdMob accounts"}
               </p>
             </div>
           ) : (
