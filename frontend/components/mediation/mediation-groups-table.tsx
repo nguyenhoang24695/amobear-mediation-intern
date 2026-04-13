@@ -201,6 +201,20 @@ const getNetworkName = (adSourceId?: string, title?: string): string => {
   return adSourceId
 }
 
+const normalizeMediationGroupStatus = (status?: string): string => {
+  const normalized = (status || "").trim().toUpperCase()
+  if (!normalized) return "Active"
+  if (normalized === "ENABLED" || normalized === "ACTIVE") return "Active"
+  if (normalized === "DISABLED" || normalized === "PAUSED" || normalized === "INACTIVE") return "Paused"
+  if (normalized === "ERROR" || normalized === "FAILED") return "Error"
+
+  return normalized
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
 interface MediationGroupsTableProps {
   mediationGroups: MediationGroup[]
   loading?: boolean
@@ -277,7 +291,7 @@ export function MediationGroupsTable({
         formatKey: normalizeAdFormat(group.adFormat) || "UNKNOWN",
         adSources: group.adSources || [],
         targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
-        status: group.state === "ENABLED" ? "Active" : group.state || "Active",
+        status: normalizeMediationGroupStatus(group.status || group.state),
         ecpm: group.ecpm || 0,
         ecpmTrend: group.ecpmChangePct || 0, // From cache if available
         revenue: group.revenue || 0,
@@ -304,7 +318,7 @@ export function MediationGroupsTable({
       adSources: group.adSources || [], // From cache
       countries: group.countries || [], // Keep countries array for easy access
       targeting: (group.countries && group.countries.length > 0) ? group.countries : "Global",
-      status: group.state === "ENABLED" ? "Active" : group.state || "Active",
+      status: normalizeMediationGroupStatus(group.status || group.state),
       ecpm: group.ecpm || 0, // From cache
       ecpmTrend: group.ecpmTrend || 0, // From cache (EcpmChangePct)
       revenue: group.revenue || 0,
@@ -425,7 +439,7 @@ export function MediationGroupsTable({
       case "Error":
         return <Badge className="bg-red-100 text-red-700 border-0">Error</Badge>
       default:
-        return null
+        return <Badge className="bg-slate-100 text-slate-700 border-0">{status}</Badge>
     }
   }
 
