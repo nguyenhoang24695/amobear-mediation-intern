@@ -387,6 +387,11 @@ export const structureApi = {
         return apiClient.patch(`/api/Structure/apps/${id}/firebase-params`, payload ?? { firebaseParams: null })
     },
 
+    /** 0 = DISABLE, 1 = ENABLE — job alert chỉ load metrics cho app ENABLE. */
+    updateAppAlertStatus: async (id: number, alertStatus: 0 | 1): Promise<{ id: number; alertStatus: number }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/alert-status`, { alertStatus })
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,
@@ -1113,32 +1118,7 @@ export const alertsApi = {
         severity?: string
         page?: number
         pageSize?: number
-    }): Promise<{
-        data: Array<{
-            id: number
-            alertType: string
-            severity: string
-            message: string
-            publisherId: string
-            appId?: string
-            mediationGroupId?: string
-            adSourceId?: string
-            countryCode?: string
-            value: number
-            threshold: number
-            status: string
-            triggeredAt: string
-            sentAt?: string
-            acknowledgedAt?: string
-            acknowledgedBy?: string
-            alertRuleName?: string
-            alertRuleDescription?: string
-        }>
-        page: number
-        pageSize: number
-        totalCount: number
-        totalPages: number
-    }> => {
+    }): Promise<PagedResponse<AlertCenterListItem>> => {
         return apiClient.get('/api/Alerts/active', params)
     },
 
@@ -1822,6 +1802,8 @@ export interface DataAccountItem {
     pushWebhookAuthToken?: string
     hasToken?: boolean
     tokenExpiresAt?: string
+    /** admob: default "game" | "app" for new apps on structure sync */
+    defaultAppType?: string | null
     createdAt: string
     updatedAt: string
 }
@@ -1838,6 +1820,7 @@ export interface CreateDataAccountRequest {
     refreshToken?: string
     tokenType?: string
     timezoneOffsetHours?: number
+    defaultAppType?: string
     // AppLovin
     reportKey?: string
     baseUrl?: string
@@ -1859,6 +1842,7 @@ export interface UpdateDataAccountRequest {
     refreshToken?: string
     tokenType?: string
     timezoneOffsetHours?: number
+    defaultAppType?: string
     reportKey?: string
     baseUrl?: string
     xmpClientId?: string

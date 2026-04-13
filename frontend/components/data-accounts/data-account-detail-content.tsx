@@ -175,6 +175,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     accessToken: account.network === "admob" ? account.accessToken : undefined,
     refreshToken: account.network === "admob" ? account.refreshToken : undefined,
     tokenType: account.network === "admob" ? account.tokenType : undefined,
+    defaultAppType: account.network === "admob" ? (account.defaultAppType ?? undefined) : undefined,
     reportKey: account.network === "applovin" ? account.reportKey : undefined,
     baseUrl:
       account.network === "applovin" || account.network === "appsflyer" ? account.baseUrl : undefined,

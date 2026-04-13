@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,10 +11,13 @@ import { useApi } from "@/hooks/use-api"
 import { alertsApi } from "@/lib/api/services"
 import { formatDistanceToNow } from "date-fns"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
-import { useEffect } from "react"
+import { formatAlertCardTitle, parseSlackFinanceFromAdditionalData } from "@/components/alerts/alert-center-view-model"
+import { AlertSlackFinanceRow } from "@/components/alerts/alert-slack-finance-row"
+import { AlertAppAvatar } from "@/components/alerts/alert-app-avatar"
 
 export function AlertSummary() {
   const [expanded, setExpanded] = useState(false)
+  const prevActiveTotalRef = useRef<number | null>(null)
   const { refreshKey } = useDashboardDate()
 
   // Fetch active alerts summary
@@ -28,6 +31,19 @@ export function AlertSummary() {
     () => alertsApi.getActiveAlerts({ page: 1, pageSize: 5 }),
     { enabled: true, cacheKey: "active_alerts_today_page1_size5" } // Fetch always; only render when expanded
   )
+
+  const activeTotal = alertsSummary?.Total ?? 0
+
+  // Có alert active: mở mặc định lần đầu (hoặc khi Total nhảy từ 0 → >0). Không ép mở lại khi user đã thu gọn và Total chỉ giảm nhẹ.
+  useEffect(() => {
+    const prev = prevActiveTotalRef.current
+    prevActiveTotalRef.current = activeTotal
+    if (prev === null) {
+      if (activeTotal > 0) setExpanded(true)
+      return
+    }
+    if (prev === 0 && activeTotal > 0) setExpanded(true)
+  }, [activeTotal])
 
   // Refetch only when Apply/Refresh is clicked (one run per refreshKey change)
   useEffect(() => {
@@ -50,21 +66,6 @@ export function AlertSummary() {
     : { critical: 0, high: 0, medium: 0, low: 0 }
 
   const alerts = alertsData?.data || []
-
-  const getSeverityIcon = (severity: string) => {
-    switch (severity?.toUpperCase()) {
-      case "CRITICAL":
-        return <AlertTriangle className="w-4 h-4 text-red-600" />
-      case "HIGH":
-        return <AlertOctagon className="w-4 h-4 text-orange-500" />
-      case "MEDIUM":
-        return <AlertCircle className="w-4 h-4 text-amber-500" />
-      case "LOW":
-        return <Info className="w-4 h-4 text-blue-500" />
-      default:
-        return <Info className="w-4 h-4 text-slate-400" />
-    }
-  }
 
   const getSeverityBadgeVariant = (severity: string) => {
     switch (severity?.toUpperCase()) {
@@ -159,9 +160,22 @@ export function AlertSummary() {
                       href={`/alert-center/${alert.id}`}
                       className="flex items-start gap-3 p-3 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block"
                     >
-                      {getSeverityIcon(alert.severity)}
+                      <AlertAppAvatar
+                        appIconUri={alert.appIconUri}
+                        appDisplayName={alert.appDisplayName}
+                        appId={alert.appId}
+                        severity={alert.severity}
+                        size="sm"
+                      />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700">{alert.message}</p>
+                        <p className="text-sm font-medium text-slate-900 truncate">
+                          {formatAlertCardTitle(alert)}
+                        </p>
+                        <p className="text-sm text-slate-700 mt-0.5">{alert.message}</p>
+                        {(() => {
+                          const fin = parseSlackFinanceFromAdditionalData(alert.additionalData)
+                          return fin ? <AlertSlackFinanceRow fin={fin} className="mt-1.5" /> : null
+                        })()}
                         {alert.alertRuleName && (
                           <p className="text-xs text-slate-500 mt-0.5">{alert.alertRuleName}</p>
                         )}

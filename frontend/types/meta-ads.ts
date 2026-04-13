@@ -125,6 +125,9 @@ export interface MetaAdAccountDto {
   timezoneOffsetMinutes?: number | null
   businessId?: string | null
   businessName?: string | null
+  amountSpent?: number | null
+  balance?: number | null
+  spendCap?: number | null
   status: string
   isActive: boolean
   lastSyncedAt?: string | null

@@ -58,6 +58,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     name: app.displayName || app.name,
     icon: app.iconUri,
     platform: app.platform,
+    appStoreId: app.appStoreId,
   })) || []
 
   const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

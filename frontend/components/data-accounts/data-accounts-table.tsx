@@ -108,6 +108,7 @@ export function DataAccountsTable({
       name: account.name,
       network: account.network,
       publisherId: account.network === "admob" ? account.accountId : undefined,
+      defaultAppType: account.network === "admob" ? (account.defaultAppType ?? undefined) : undefined,
       reportKey: account.network === "applovin" ? account.reportKey : undefined,
       baseUrl:
         account.network === "applovin" || account.network === "appsflyer" ? account.baseUrl : undefined,

@@ -8,8 +8,10 @@ export interface AlertApiItem {
   severity: string
   message: string
   publisherId: string
+  adMobAccountDisplayName?: string | null
   appId?: string
   appDisplayName?: string
+  appStoreId?: string | null
   appPlatform?: string
   appIconUri?: string
   mediationGroupId?: string
@@ -50,10 +52,16 @@ export interface AlertUiItem {
   timestamp: Date
   appId?: string
   appLabel?: string
+  /** App Store / Play id — search & display helper */
+  appStoreId?: string
   appPlatform?: string
   appIconUri?: string
   adSourceId?: string
   networkLabel?: string
+  /** AdMob publisher ID (ca-app-pub-...) từ API `publisherId`. */
+  publisherId?: string
+  /** Tên hiển thị từ bảng admob_accounts. */
+  adMobAccountDisplayName?: string
   entityLabel?: string
   value: number
   threshold: number
@@ -64,6 +72,8 @@ export interface AlertUiItem {
   resolvedAt?: Date
   snoozedUntil?: Date
   mediationGroupId?: string
+  /** Từ `additionalData.slack*` khi backend merge finance snapshot. */
+  slackFinance?: SlackFinanceSnapshot | null
 }
 
 function safeDate(value?: string): Date | undefined {
@@ -113,6 +123,63 @@ export function toUiStatus(status?: string): UiStatus {
   return "active"
 }
 
+/** Tiêu đề thẻ Alert Center: ưu tiên "Tên app (app_store_id)", không dùng rule type làm headline. */
+export type AlertCardTitleInput = Pick<
+  AlertApiItem,
+  "appDisplayName" | "appId" | "appStoreId" | "alertRuleName" | "alertType" | "id" | "mediationGroupDisplayName" | "mediationGroupId"
+>
+
+/** Các trường `slack*` do backend gắn vào `additionalData` (MergeSlackFinanceSummaryIntoRoot). */
+export interface SlackFinanceSnapshot {
+  revenue: number
+  cost: number
+  profit: number
+  ecpm: number
+  /** % so với baseline; dương = tăng, âm = giảm. */
+  ecpmDeltaPercent: number | null
+}
+
+export function parseSlackFinanceFromAdditionalData(
+  additionalData?: string | null
+): SlackFinanceSnapshot | null {
+  const data = parseAdditionalData(additionalData)
+  if (!data) return null
+  const revenue = getAdditionalNumber(data, "slackRevenue")
+  const cost = getAdditionalNumber(data, "slackCost")
+  const profit = getAdditionalNumber(data, "slackProfit")
+  const ecpm = getAdditionalNumber(data, "slackEcpm")
+  const ecpmDeltaPercent = getAdditionalNumber(data, "slackEcpmDeltaPercent")
+
+  const hasAny =
+    revenue !== undefined ||
+    cost !== undefined ||
+    profit !== undefined ||
+    ecpm !== undefined ||
+    ecpmDeltaPercent !== undefined
+  if (!hasAny) return null
+
+  const r = revenue ?? 0
+  const c = cost ?? 0
+  return {
+    revenue: r,
+    cost: c,
+    profit: profit ?? r - c,
+    ecpm: ecpm ?? 0,
+    ecpmDeltaPercent: ecpmDeltaPercent ?? null,
+  }
+}
+
+export function formatAlertCardTitle(alert: AlertCardTitleInput): string {
+  const appName = alert.appDisplayName?.trim() || alert.appId?.trim()
+  if (appName) {
+    const sid = alert.appStoreId?.trim()
+    return sid ? `${appName} (${sid})` : appName
+  }
+  const mg = alert.mediationGroupDisplayName?.trim() || alert.mediationGroupId?.trim()
+  if (mg) return mg
+  return alert.alertRuleName?.trim() || alert.alertType || `Alert #${alert.id}`
+}
+
 function detectMetricLabel(alertType?: string): string {
   const type = (alertType || "").toLowerCase()
   if (type.includes("change_pct")) return "Change %"
@@ -139,15 +206,18 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
     alertRuleId: alert.alertRuleId,
     severity: toUiSeverity(alert.severity),
     status: toUiStatus(alert.status),
-    title: alert.alertRuleName?.trim() || alert.alertType || `Alert #${alert.id}`,
+    title: formatAlertCardTitle(alert),
     description: alert.message || "No message",
     timestamp: triggeredAt,
     appId: alert.appId || undefined,
     appLabel: alert.appDisplayName || alert.appId || undefined,
+    appStoreId: alert.appStoreId?.trim() || undefined,
     appPlatform: alert.appPlatform || undefined,
     appIconUri: alert.appIconUri || undefined,
     adSourceId: alert.adSourceId || undefined,
     networkLabel: alert.adSourceDisplayName || alert.adSourceId || undefined,
+    publisherId: alert.publisherId?.trim() || undefined,
+    adMobAccountDisplayName: alert.adMobAccountDisplayName?.trim() || undefined,
     entityLabel: alert.mediationGroupDisplayName || alert.mediationGroupId || undefined,
     value: alert.value,
     threshold: alert.threshold,
@@ -158,6 +228,7 @@ export function toAlertUiItem(alert: AlertApiItem): AlertUiItem {
     resolvedAt,
     snoozedUntil,
     mediationGroupId: alert.mediationGroupId || undefined,
+    slackFinance: parseSlackFinanceFromAdditionalData(alert.additionalData),
   }
 }
 

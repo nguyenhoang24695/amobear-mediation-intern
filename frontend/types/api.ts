@@ -14,6 +14,8 @@ export interface App {
   createdAt: string
   updatedAt: string
   lastSyncedAt?: string
+  /** 0 = alerts disabled (default), 1 = alert rules may evaluate this app */
+  alertStatus?: number
   adUnitsCount?: number
   /** Waterfall Ad Units (from SyncAdMobNetworkWaterfallAdUnitsAsync), distinct from adUnitsCount (from SyncAdUnitsAsync). */
   waterfallAdUnitsCount?: number
@@ -786,8 +788,11 @@ export interface AlertCenterListItem {
   severity: string
   message: string
   publisherId: string
+  /** admob_accounts.display_name khi PublisherId khớp account_id. */
+  adMobAccountDisplayName?: string | null
   appId?: string
   appDisplayName?: string
+  appStoreId?: string | null
   appPlatform?: string
   appIconUri?: string
   mediationGroupId?: string

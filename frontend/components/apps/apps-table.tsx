@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
@@ -45,7 +45,6 @@ import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import { useToast } from "@/hooks/use-toast"
 import type { App } from "@/types/api"
-import { useMemo } from "react"
 
 interface AppsTableProps {
   apps: App[]
@@ -95,6 +94,10 @@ export function AppsTable({
   const [selectedAppForAction, setSelectedAppForAction] = useState<App | null>(null)
   const [isActionLoading, setIsActionLoading] = useState(false)
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
   // Transform apps data to match table format
   const transformedApps = useMemo(() => {
     if (!apps || apps.length === 0) return []
@@ -130,10 +133,20 @@ export function AppsTable({
     return total > 0 ? (app.waterfallAdUnitsRevenue / total) * 100 : null
   }
 
-  // Filter apps
+  // Filter apps (search: name, AdMob app id, store id)
   const filteredApps = transformedApps.filter((app) => {
-    if (searchQuery && !app.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      const storeId = (app._original.appStoreId ?? "").toLowerCase()
+      const appId = (app.appId ?? "").toLowerCase()
+      const displayOrName = app.name.toLowerCase()
+      const internalName = (app._original.name ?? "").toLowerCase()
+      const matches =
+        displayOrName.includes(q) ||
+        internalName.includes(q) ||
+        appId.includes(q) ||
+        storeId.includes(q)
+      if (!matches) return false
     }
     if (platformFilter !== "All Platforms" && app.platform !== platformFilter) {
       return false

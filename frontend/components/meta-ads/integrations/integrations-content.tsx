@@ -178,7 +178,11 @@ function MaskedInput({
   )
 }
 
-export function IntegrationsContent() {
+interface IntegrationsContentProps {
+  embedded?: boolean
+}
+
+export function IntegrationsContent({ embedded = false }: IntegrationsContentProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -207,7 +211,6 @@ export function IntegrationsContent() {
     () => integrations?.find((integration) => integration.isDefault) ?? integrations?.[0] ?? null,
     [integrations]
   )
-
   useEffect(() => {
     const oauthStatus = searchParams.get("oauth")
     if (!oauthStatus) return
@@ -230,8 +233,13 @@ export function IntegrationsContent() {
       })
     }
 
-    router.replace(pathname)
+    const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.delete("oauth")
+    nextParams.delete("message")
+    const nextQuery = nextParams.toString()
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname)
   }, [pathname, router, searchParams, toast])
+
 
   const openCreate = () => {
     setEditTarget(null)
@@ -457,11 +465,13 @@ export function IntegrationsContent() {
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
-            <span>Meta Ads</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">Integrations</span>
-          </nav>
+          {!embedded ? (
+            <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
+              <span>Meta Ads</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-slate-900 font-medium">Integrations</span>
+            </nav>
+          ) : null}
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-50">
               <Link2 className="w-5 h-5 text-blue-600" />
@@ -778,4 +788,3 @@ export function IntegrationsContent() {
     </div>
   )
 }
-

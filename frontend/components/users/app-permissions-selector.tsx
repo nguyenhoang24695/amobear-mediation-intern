@@ -23,6 +23,8 @@ export interface App {
   name: string
   icon?: string
   platform?: string
+  /** Play / App Store id — included in search. */
+  appStoreId?: string
 }
 
 interface AppPermissionsSelectorProps {
@@ -101,7 +103,7 @@ export function AppPermissionsSelector({
 
           {!giveAllApps && (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Popover open={appsOpen} onOpenChange={setAppsOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -115,16 +117,17 @@ export function AppPermissionsSelector({
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0" align="start">
                   <Command shouldFilter={true}>
-                    <CommandInput placeholder="Search by app name or app ID..." />
+                    <CommandInput placeholder="Search by name, app ID, or store ID..." />
                     <CommandList>
                       <CommandEmpty>No app found.</CommandEmpty>
                       <CommandGroup>
                         {apps.map((app) => {
                           const isSelected = selectedApps.find((a) => a.id === app.id)
+                          const searchValue = [app.name, app.id, app.appStoreId].filter(Boolean).join(" ")
                           return (
                             <CommandItem
                               key={app.id}
-                              value={`${app.name} ${app.id}`}
+                              value={searchValue}
                               onSelect={() => onToggleApp(app.id)}
                             >
                               <Check
@@ -178,6 +181,18 @@ export function AppPermissionsSelector({
                   disabled={apps.length === 0 || apps.every((app) => selectedApps.some((s) => s.id === app.id))}
                 >
                   Select all
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    selectedApps.forEach((s) => onRemoveApp?.(s.id))
+                  }}
+                  disabled={selectedApps.length === 0 || !onRemoveApp}
+                >
+                  Clear all
                 </Button>
               </div>
 

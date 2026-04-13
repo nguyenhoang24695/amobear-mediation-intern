@@ -13,6 +13,7 @@ import { alertsApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { cn } from "@/lib/utils"
+import { formatAlertCardTitle } from "@/components/alerts/alert-center-view-model"
 import { AlertRulesPanel } from "./alert-rules-panel"
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"]
@@ -83,8 +84,11 @@ export function AlertCenterContent() {
       if (!searchQuery) return true
       const q = searchQuery.toLowerCase()
       return (
+        formatAlertCardTitle(alert).toLowerCase().includes(q) ||
         alert.alertType.toLowerCase().includes(q) ||
         alert.message.toLowerCase().includes(q) ||
+        (alert.appId ?? "").toLowerCase().includes(q) ||
+        (alert.appStoreId ?? "").toLowerCase().includes(q) ||
         (alert.mediationGroupId ?? "").toLowerCase().includes(q)
       )
     })
@@ -138,7 +142,7 @@ export function AlertCenterContent() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search by alert type, message, or mediation group..."
+                placeholder="Search by app, store id, rule type, message, or mediation group..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -192,7 +196,7 @@ export function AlertCenterContent() {
                           </Badge>
                           <span className="text-xs text-slate-400">{formatRelativeTime(alert.triggeredAt)}</span>
                         </div>
-                        <h3 className="text-base font-semibold text-slate-900">{alert.alertType}</h3>
+                        <h3 className="text-base font-semibold text-slate-900">{formatAlertCardTitle(alert)}</h3>
                         <p className="text-sm text-slate-600 mt-1">{alert.message}</p>
                         <div className="flex flex-wrap gap-2 mt-3">
                           {alert.mediationGroupId && (

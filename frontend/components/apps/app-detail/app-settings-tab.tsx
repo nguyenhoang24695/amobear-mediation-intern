@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast"
 import { structureApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
 import {
+    Bell,
     Flame,
     Save,
     Trash2,
@@ -202,6 +203,7 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
     const [isClearDialogOpen, setIsClearDialogOpen] = useState(false)
     const [isDirty, setIsDirty] = useState(false)
     const [isConfigured, setIsConfigured] = useState(false)
+    const [alertStatusSaving, setAlertStatusSaving] = useState(false)
 
     const validation = validateFirebaseForm(formState, fileUploadError)
     const showValidation = isDirty || fileUploadError !== null || (isConfigured && !validation.valid)
@@ -219,6 +221,29 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
     const handleEnabledChange = (checked: boolean) => {
         setFormState((prev) => ({ ...prev, enabled: checked }))
         setIsDirty(true)
+    }
+
+    const handleAlertStatusChange = async (checked: boolean) => {
+        if (!app) return
+        setAlertStatusSaving(true)
+        try {
+            await structureApi.updateAppAlertStatus(app.id, checked ? 1 : 0)
+            onAppUpdated?.()
+            toast({
+                title: checked ? "Alerts enabled for this app" : "Alerts disabled for this app",
+                description: checked
+                    ? "Alert rules will include this app when loading performance data."
+                    : "This app is excluded until you enable alerts again.",
+            })
+        } catch (err: any) {
+            toast({
+                title: "Failed to update alert setting",
+                description: err?.message || "Could not save alert status.",
+                variant: "destructive",
+            })
+        } finally {
+            setAlertStatusSaving(false)
+        }
     }
 
     const handleFirebaseAppKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -351,8 +376,57 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
         }
     }
 
+    const alertRulesEnabled = (app?.alertStatus ?? 0) === 1
+
     return (
         <div className="flex flex-col gap-6 max-w-4xl">
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-violet-50">
+                            <Bell className="w-5 h-5 text-violet-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-semibold text-slate-900">Alert rules</h3>
+                            <p className="text-sm text-slate-500">
+                                When disabled, scheduled alert evaluation skips this app when loading metrics
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-6">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                                <Label htmlFor="app-alert-status" className="text-sm font-medium text-slate-700">
+                                    Include this app in alert rule evaluation
+                                </Label>
+                                <p className="text-xs text-slate-500">
+                                    Default is off for new apps. Turn on only for apps you want monitored by alert rules.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                                {alertStatusSaving ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                                ) : (
+                                    <span
+                                        className={`text-sm font-medium ${alertRulesEnabled ? "text-green-700" : "text-slate-500"}`}
+                                    >
+                                        {alertRulesEnabled ? "Enabled" : "Disabled"}
+                                    </span>
+                                )}
+                                <Switch
+                                    id="app-alert-status"
+                                    checked={alertRulesEnabled}
+                                    disabled={!app || alertStatusSaving}
+                                    onCheckedChange={handleAlertStatusChange}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                     <div className="flex items-center gap-3">
