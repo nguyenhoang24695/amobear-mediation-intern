@@ -1801,7 +1801,7 @@ export const permissionApi = {
 export interface DataAccountItem {
     id: number
     name: string
-    network: 'admob' | 'applovin' | 'xmp'
+    network: 'admob' | 'applovin' | 'xmp' | 'appsflyer'
     accountId: string
     status: string
     enabled: boolean
@@ -1817,6 +1817,9 @@ export interface DataAccountItem {
     baseUrl?: string
     xmpClientId?: string
     xmpClientSecret?: string
+    /** AppsFlyer — masked in API responses */
+    apiV2Token?: string
+    pushWebhookAuthToken?: string
     hasToken?: boolean
     tokenExpiresAt?: string
     createdAt: string
@@ -1841,6 +1844,9 @@ export interface CreateDataAccountRequest {
     // XMP
     xmpClientId?: string
     xmpClientSecret?: string
+    // AppsFlyer
+    apiV2Token?: string
+    pushWebhookAuthToken?: string
 }
 
 export interface UpdateDataAccountRequest {
@@ -1857,6 +1863,33 @@ export interface UpdateDataAccountRequest {
     baseUrl?: string
     xmpClientId?: string
     xmpClientSecret?: string
+    apiV2Token?: string
+    pushWebhookAuthToken?: string
+}
+
+export interface AppsFlyerAppAdminItem {
+    id: number
+    appsFlyerAccountId: number
+    afAppId: string
+    displayName: string
+    enabled: boolean
+    pushWebhookAuthToken?: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateAppsFlyerAppRequest {
+    afAppId: string
+    displayName: string
+    enabled?: boolean
+    pushWebhookAuthToken?: string
+}
+
+export interface UpdateAppsFlyerAppRequest {
+    afAppId?: string
+    displayName?: string
+    enabled?: boolean
+    pushWebhookAuthToken?: string
 }
 
 // Data Accounts API Service
@@ -1899,6 +1932,32 @@ export const dataAccountsApi = {
     // Get apps belonging to an AdMob account
     getApps: async (accountId: number): Promise<{ apps: AccountAppItem[]; total: number }> => {
         return apiClient.get<{ apps: AccountAppItem[]; total: number }>(`/api/v1/data-accounts/admob/${accountId}/apps`)
+    },
+
+    getAppsFlyerApps: async (accountId: number): Promise<AppsFlyerAppAdminItem[]> => {
+        return apiClient.get<AppsFlyerAppAdminItem[]>(`/api/v1/data-accounts/appsflyer/${accountId}/apps`)
+    },
+
+    createAppsFlyerApp: async (
+        accountId: number,
+        body: CreateAppsFlyerAppRequest
+    ): Promise<AppsFlyerAppAdminItem> => {
+        return apiClient.post<AppsFlyerAppAdminItem>(`/api/v1/data-accounts/appsflyer/${accountId}/apps`, body)
+    },
+
+    updateAppsFlyerApp: async (
+        accountId: number,
+        appRowId: number,
+        body: UpdateAppsFlyerAppRequest
+    ): Promise<AppsFlyerAppAdminItem> => {
+        return apiClient.put<AppsFlyerAppAdminItem>(
+            `/api/v1/data-accounts/appsflyer/${accountId}/apps/${appRowId}`,
+            body
+        )
+    },
+
+    deleteAppsFlyerApp: async (accountId: number, appRowId: number): Promise<{ message: string }> => {
+        return apiClient.delete(`/api/v1/data-accounts/appsflyer/${accountId}/apps/${appRowId}`)
     },
 }
 
