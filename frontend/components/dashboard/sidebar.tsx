@@ -43,7 +43,6 @@ import {
   Loader2,
   Megaphone,
   FileText,
-  Link2,
   CreditCard,
   GitMerge,
   Database,
@@ -134,12 +133,6 @@ const navItems: NavItem[] = [
         isShow: () => ["view", "edit"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
       },
       {
-        icon: Link2,
-        label: "Integrations",
-        href: "/meta-ads/integrations",
-        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-meta-accounts", fn)),
-      },
-      {
         icon: CreditCard,
         label: "Ad Accounts",
         href: "/meta-ads/ad-accounts",
@@ -197,7 +190,12 @@ const navItems: NavItem[] = [
       { icon: ListChecks, label: "Waterfall Config", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
       { icon: Layers, label: "Waterfall Automation", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
       { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
-      { icon: KeyRound, label: "Data Accounts", href: "/data-accounts", isShow: () => hasScreenFunction("s-data-accounts", "view") },
+      {
+        icon: KeyRound,
+        label: "Data Accounts",
+        href: "/data-accounts",
+        isShow: () => hasScreenFunction("s-data-accounts", "view") || hasScreenFunction("s-meta-accounts", "view"),
+      },
       { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
       {
         icon: Sparkles,
@@ -545,9 +543,3 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     </TooltipProvider>
   )
 }
-
-
-
-
-
-

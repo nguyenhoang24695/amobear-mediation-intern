@@ -7,13 +7,12 @@ import { ScreenFunctionGuard } from "@/components/auth/screen-function-guard"
 import { invalidateCache } from "@/hooks/use-api"
 import { metaIntegrationsApi } from "@/lib/api/meta-ads"
 import { Loader2 } from "lucide-react"
-
 function buildRedirectUrl(status: "success" | "error", message?: string) {
-  const params = new URLSearchParams({ oauth: status })
+  const params = new URLSearchParams({ tab: "meta-integrations", oauth: status })
   if (message) {
     params.set("message", message)
   }
-  return `/meta-ads/integrations?${params.toString()}`
+  return `/data-accounts?${params.toString()}`
 }
 
 export default function MetaIntegrationOAuthCallbackPage() {
