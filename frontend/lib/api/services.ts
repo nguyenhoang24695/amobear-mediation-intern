@@ -44,6 +44,7 @@ import type {
     DataSourcesOverviewDto,
     DataSourcesTimelineDto,
     AppDailyInsight,
+    AppInsightHistoryDay,
     AppInsightSettings,
     InsightTemplate,
     InsightContextTemplate,
@@ -1975,6 +1976,14 @@ export const insightApi = {
         if (to) p.set("to", to)
         const q = p.toString() ? `?${p.toString()}` : ""
         return apiClient.get<string[]>(`/api/app-insights/apps/${insightAppIdPath(appId)}/dates${q}`)
+    },
+
+    getInsightHistory: async (appId: string, from?: string, to?: string): Promise<AppInsightHistoryDay[]> => {
+        const p = new URLSearchParams()
+        if (from) p.set("from", from)
+        if (to) p.set("to", to)
+        const q = p.toString() ? `?${p.toString()}` : ""
+        return apiClient.get<AppInsightHistoryDay[]>(`/api/app-insights/apps/${insightAppIdPath(appId)}/history${q}`)
     },
 
     getAppSettings: async (appId: string): Promise<AppInsightSettings> => {
