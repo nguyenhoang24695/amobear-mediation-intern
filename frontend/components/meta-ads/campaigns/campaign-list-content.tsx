@@ -24,13 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Pagination } from "@/components/shared/pagination"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Table,
   TableBody,
@@ -44,12 +39,15 @@ import { useDuplicateOperationPolling } from "@/hooks/use-duplicate-operation-po
 import { useToast } from "@/hooks/use-toast"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaCampaignsApi, metaReferenceApi } from "@/lib/api/meta-ads"
+import { structureApi } from "@/lib/api/services"
 import { DuplicateOperationStatus } from "@/components/meta-ads/campaigns/duplicate-operation-status"
 import { DuplicateReadinessStatus } from "@/components/meta-ads/campaigns/duplicate-readiness-status"
 import { cn } from "@/lib/utils"
 import type { MetaCampaignDuplicateReadinessResultDto, MetaCampaignListItemDto } from "@/types/meta-ads"
 import {
   AlertTriangle,
+  Check,
+  ChevronDown,
   ChevronRight,
   Copy,
   Loader2,
@@ -122,6 +120,186 @@ function formatPrefixedIdentifier(value?: string | null, prefix?: string): strin
   if (!trimmed) return "-"
   if (!prefix) return trimmed
   return trimmed.toLowerCase().startsWith(`${prefix.toLowerCase()}_`) ? trimmed : `${prefix}_${trimmed}`
+}
+
+function formatAppIdDisplay(appId?: string | null): string {
+  if (!appId) return ""
+  return appId.length <= 20 ? appId : `${appId.slice(0, 5)}...${appId.slice(-12)}`
+}
+
+function formatPlatformDisplay(platform?: string | null): string {
+  if (!platform) return ""
+  return platform.toUpperCase().slice(0, 3)
+}
+
+interface SearchableFilterOption {
+  value: string
+  label: string
+  helperText?: string
+  searchText?: string
+}
+
+interface AppFilterOption {
+  value: string
+  label: string
+  appId?: string | null
+  platform?: string | null
+  iconUri?: string | null
+  searchText?: string
+}
+
+interface SearchableFilterComboboxProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  value: string
+  onChange: (value: string) => void
+  options: SearchableFilterOption[]
+  placeholder: string
+  searchPlaceholder: string
+  emptyLabel: string
+  className?: string
+}
+
+function SearchableFilterCombobox({
+  open,
+  onOpenChange,
+  value,
+  onChange,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyLabel,
+  className,
+}: SearchableFilterComboboxProps) {
+  const selectedOption = options.find((option) => option.value === value) ?? options[0]
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("h-9 w-full justify-between bg-white text-sm font-normal", className)}
+        >
+          <span className="truncate">{selectedOption?.label ?? placeholder}</span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <Command shouldFilter>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyLabel}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={`${option.label} ${option.searchText ?? ""}`}
+                  onSelect={() => {
+                    onChange(option.value)
+                    onOpenChange(false)
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                  <div className="flex min-w-0 flex-col text-left">
+                    <span className="truncate font-medium">{option.label}</span>
+                    {option.helperText ? <span className="truncate text-xs text-slate-500">{option.helperText}</span> : null}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+interface AppFilterComboboxProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  value: string
+  onChange: (value: string) => void
+  options: AppFilterOption[]
+}
+
+function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: AppFilterComboboxProps) {
+  const selectedOption = options.find((option) => option.value === value) ?? options[0]
+  const selectedMeta = selectedOption?.value === "all"
+    ? ""
+    : [formatPlatformDisplay(selectedOption?.platform), formatAppIdDisplay(selectedOption?.appId)].filter(Boolean).join(" � ")
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-full justify-between bg-white text-sm font-normal"
+        >
+          {selectedOption?.value === "all" ? (
+            <span className="truncate">All Apps</span>
+          ) : (
+            <span className="flex min-w-0 items-center gap-2">
+              <Avatar className="h-5 w-5 shrink-0 rounded">
+                <AvatarImage src={selectedOption?.iconUri || "/placeholder.svg"} alt={selectedOption?.label ?? "App"} className="rounded object-cover" />
+                <AvatarFallback className="rounded bg-slate-100 text-[10px] font-semibold text-slate-600">
+                  {getInitials(selectedOption?.label)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="min-w-0 text-left">
+                <span className="block truncate">{selectedOption?.label ?? "All Apps"}</span>
+                {selectedMeta ? <span className="block truncate text-[11px] text-slate-500">{selectedMeta}</span> : null}
+              </span>
+            </span>
+          )}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[360px] p-0" align="start">
+        <Command shouldFilter>
+          <CommandInput placeholder="Search by app name or app ID..." />
+          <CommandList>
+            <CommandEmpty>No app found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value === "all" ? "all apps" : `${option.label} ${option.appId ?? ""} ${option.platform ?? ""} ${option.searchText ?? ""}`}
+                  onSelect={() => {
+                    onChange(option.value)
+                    onOpenChange(false)
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                  {option.value === "all" ? (
+                    <span className="font-medium">All Apps</span>
+                  ) : (
+                    <>
+                      <Avatar className="h-8 w-8 shrink-0 rounded">
+                        <AvatarImage src={option.iconUri || "/placeholder.svg"} alt={option.label} className="rounded object-cover" />
+                        <AvatarFallback className="rounded bg-slate-100 text-xs font-semibold text-slate-600">
+                          {getInitials(option.label)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex min-w-0 flex-col text-left">
+                        <span className="truncate font-medium">{option.label}</span>
+                        <span className="truncate text-xs text-slate-500">
+                          {[formatPlatformDisplay(option.platform), formatAppIdDisplay(option.appId)].filter(Boolean).join(" � ")}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 function getStatusBadgeClass(value?: string | null): string {
@@ -216,6 +394,11 @@ export function CampaignListContent() {
   const [objectiveFilter, setObjectiveFilter] = useState("all")
   const [effectiveStatusFilter, setEffectiveStatusFilter] = useState("all")
   const [syncFreshnessFilter, setSyncFreshnessFilter] = useState("all")
+  const [accountFilterOpen, setAccountFilterOpen] = useState(false)
+  const [appFilterOpen, setAppFilterOpen] = useState(false)
+  const [objectiveFilterOpen, setObjectiveFilterOpen] = useState(false)
+  const [effectiveStatusFilterOpen, setEffectiveStatusFilterOpen] = useState(false)
+  const [syncFreshnessFilterOpen, setSyncFreshnessFilterOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [syncing, setSyncing] = useState(false)
@@ -247,6 +430,11 @@ export function CampaignListContent() {
   const { data: referenceData } = useApi(
     () => metaReferenceApi.getCreateCampaignReference(),
     { cacheKey: "meta-reference:create-campaign" }
+  )
+
+  const { data: appsResponse } = useApi(
+    () => structureApi.getApps(),
+    { cacheKey: "structure:apps" }
   )
 
   const listCacheKey = [
@@ -295,10 +483,36 @@ export function CampaignListContent() {
     [referenceData?.adAccounts]
   )
 
-  const appOptions = useMemo(
-    () => [...(referenceData?.appMappings ?? [])].sort((left, right) => (left.appDisplayName ?? left.appId ?? "").localeCompare(right.appDisplayName ?? right.appId ?? "")),
-    [referenceData?.appMappings]
-  )
+  const appsById = useMemo(() => {
+    return new Map((appsResponse?.apps ?? []).map((app) => [app.id, app]))
+  }, [appsResponse?.apps])
+
+  const appOptions = useMemo<AppFilterOption[]>(() => {
+    const uniqueOptions = new Map<string, AppFilterOption>()
+    uniqueOptions.set("all", { value: "all", label: "All Apps", searchText: "all apps" })
+
+    for (const mapping of referenceData?.appMappings ?? []) {
+      const value = mapping.appRowId.toString()
+      if (uniqueOptions.has(value)) continue
+
+      const app = appsById.get(mapping.appRowId)
+      const label = app?.displayName || app?.name || mapping.appDisplayName || mapping.appId || `App ${mapping.appRowId}`
+      uniqueOptions.set(value, {
+        value,
+        label,
+        appId: app?.appId || mapping.appId,
+        platform: app?.platform || mapping.platform,
+        iconUri: app?.iconUri,
+        searchText: `${label} ${app?.appId ?? mapping.appId ?? ""} ${app?.platform ?? mapping.platform ?? ""}`,
+      })
+    }
+
+    return Array.from(uniqueOptions.values()).sort((left, right) => {
+      if (left.value === "all") return -1
+      if (right.value === "all") return 1
+      return left.label.localeCompare(right.label)
+    })
+  }, [appsById, referenceData?.appMappings])
 
   const objectiveOptions = useMemo(
     () => Array.from(new Set((referenceData?.objectives ?? []).map((item) => item.key))).sort(),
@@ -313,6 +527,40 @@ export function CampaignListContent() {
     }
     return Array.from(values).sort()
   }, [response?.items])
+
+  const accountFilterOptions = useMemo<SearchableFilterOption[]>(() => [
+    { value: "all", label: "All ad accounts", searchText: "all ad accounts" },
+    ...accountOptions.map((account) => ({
+      value: account.id.toString(),
+      label: account.name,
+      helperText: [formatPrefixedIdentifier(account.metaAdAccountId, "act"), account.businessName ?? account.currency ?? account.timeZoneName].filter(Boolean).join(" "),
+      searchText: `${account.name} ${account.metaAdAccountId} ${account.businessName ?? ""} ${account.currency ?? ""} ${account.timeZoneName ?? ""}`,
+    })),
+  ], [accountOptions])
+
+  const objectiveFilterOptions = useMemo<SearchableFilterOption[]>(() => [
+    { value: "all", label: "All objectives", searchText: "all objectives" },
+    ...objectiveOptions.map((objective) => ({
+      value: objective,
+      label: toTitleCase(objective),
+      searchText: objective,
+    })),
+  ], [objectiveOptions])
+
+  const effectiveStatusFilterOptions = useMemo<SearchableFilterOption[]>(() => [
+    { value: "all", label: "All effective statuses", searchText: "all effective statuses" },
+    ...effectiveStatusOptions.map((status) => ({
+      value: status,
+      label: toTitleCase(status),
+      searchText: status,
+    })),
+  ], [effectiveStatusOptions])
+
+  const syncFreshnessFilterOptions = useMemo<SearchableFilterOption[]>(() => [
+    { value: "all", label: "All freshness", searchText: "all freshness" },
+    { value: "fresh", label: "Fresh sync", helperText: "Recently synced campaigns", searchText: "fresh sync recent" },
+    { value: "stale", label: "Stale sync", helperText: "Campaigns needing refresh", searchText: "stale sync old" },
+  ], [])
 
   const summary = response?.summary
   const activeReadiness = activeReadinessCampaignId !== null ? readinessByCampaignId[activeReadinessCampaignId] ?? null : null
@@ -505,72 +753,57 @@ export function CampaignListContent() {
                 />
               </div>
 
-              <Select value={accountFilter} onValueChange={setAccountFilter}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <SelectValue placeholder="Ad account" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All ad accounts</SelectItem>
-                  {accountOptions.map((account) => (
-                    <SelectItem key={account.id} value={account.id.toString()}>
-                      {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableFilterCombobox
+                open={accountFilterOpen}
+                onOpenChange={setAccountFilterOpen}
+                value={accountFilter}
+                onChange={setAccountFilter}
+                options={accountFilterOptions}
+                placeholder="Ad account"
+                searchPlaceholder="Search ad account..."
+                emptyLabel="No ad account found."
+              />
 
-              <Select value={appFilter} onValueChange={setAppFilter}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <SelectValue placeholder="App" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All apps</SelectItem>
-                  {appOptions.map((mapping) => (
-                    <SelectItem key={mapping.id} value={mapping.appRowId.toString()}>
-                      {mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AppFilterCombobox
+                open={appFilterOpen}
+                onOpenChange={setAppFilterOpen}
+                value={appFilter}
+                onChange={setAppFilter}
+                options={appOptions}
+              />
 
-              <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <SelectValue placeholder="Objective" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All objectives</SelectItem>
-                  {objectiveOptions.map((objective) => (
-                    <SelectItem key={objective} value={objective}>
-                      {toTitleCase(objective)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableFilterCombobox
+                open={objectiveFilterOpen}
+                onOpenChange={setObjectiveFilterOpen}
+                value={objectiveFilter}
+                onChange={setObjectiveFilter}
+                options={objectiveFilterOptions}
+                placeholder="Objective"
+                searchPlaceholder="Search objective..."
+                emptyLabel="No objective found."
+              />
 
-              <Select value={effectiveStatusFilter} onValueChange={setEffectiveStatusFilter}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <SelectValue placeholder="Effective status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All effective statuses</SelectItem>
-                  {effectiveStatusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {toTitleCase(status)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableFilterCombobox
+                open={effectiveStatusFilterOpen}
+                onOpenChange={setEffectiveStatusFilterOpen}
+                value={effectiveStatusFilter}
+                onChange={setEffectiveStatusFilter}
+                options={effectiveStatusFilterOptions}
+                placeholder="Effective status"
+                searchPlaceholder="Search effective status..."
+                emptyLabel="No effective status found."
+              />
 
-              <Select value={syncFreshnessFilter} onValueChange={setSyncFreshnessFilter}>
-                <SelectTrigger className="h-9 w-full text-sm">
-                  <SelectValue placeholder="Sync freshness" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All freshness</SelectItem>
-                  <SelectItem value="fresh">Fresh sync</SelectItem>
-                  <SelectItem value="stale">Stale sync</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableFilterCombobox
+                open={syncFreshnessFilterOpen}
+                onOpenChange={setSyncFreshnessFilterOpen}
+                value={syncFreshnessFilter}
+                onChange={setSyncFreshnessFilter}
+                options={syncFreshnessFilterOptions}
+                placeholder="Sync freshness"
+                searchPlaceholder="Search sync freshness..."
+                emptyLabel="No freshness option found."
+              />
             </div>
           </div>
         </CardHeader>
@@ -777,3 +1010,4 @@ export function CampaignListContent() {
     </div>
   )
 }
+
