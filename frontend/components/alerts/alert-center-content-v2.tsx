@@ -184,7 +184,9 @@ export function AlertCenterContentV2() {
     if (appIdParam) setAppFilter(appIdParam)
   }, [searchParams])
 
-  const { data: summary } = useApi(() => alertsApi.getOpenAlertsSummary(), { cacheKey: "alerts_open_summary_v2" })
+  const { data: summary, refetch: refetchOpenAlertsSummary } = useApi(() => alertsApi.getOpenAlertsSummary(), {
+    cacheKey: "alerts_open_summary_v2",
+  })
   const { data: rules, refetch: refetchRules, loading: rulesLoading } = useApi(() => alertsApi.getAlertRules(), {
     cacheKey: "alert_rules_v2_overview",
   })
@@ -301,9 +303,21 @@ export function AlertCenterContentV2() {
 
   const triggeredNowAlerts = useMemo(
     () => uiAlerts.filter((a) => Date.now() - a.timestamp.getTime() <= 60 * 60000),
-    [uiAlerts]
+    [uiAlerts],
   )
   const triggeredTodayAlerts = useMemo(() => uiAlerts.filter((a) => isToday(a.timestamp)), [uiAlerts])
+  const triggeredTodayCriticalCount = useMemo(
+    () => triggeredTodayAlerts.filter((a) => a.severity === "critical").length,
+    [triggeredTodayAlerts],
+  )
+  const triggeredTodayWarningCount = useMemo(
+    () => triggeredTodayAlerts.filter((a) => a.severity === "warning").length,
+    [triggeredTodayAlerts],
+  )
+  const triggeredTodayInfoCount = useMemo(
+    () => triggeredTodayAlerts.filter((a) => a.severity === "info").length,
+    [triggeredTodayAlerts],
+  )
   const averageResponseMinutes = useMemo(() => computeAverageResponseMinutes(uiAlerts), [uiAlerts])
 
   /** Newest first (occurredAt desc, then history id desc for stable ties). */
@@ -360,6 +374,7 @@ export function AlertCenterContentV2() {
     invalidateCache("notification_open_alerts_all")
     invalidateCache("alerts_open_summary")
     invalidateCache("alerts_open_summary_v2")
+    void refetchOpenAlertsSummary()
   }
 
   const bumpTimeline = useCallback(() => setTimelineNonce((n) => n + 1), [])
@@ -619,7 +634,7 @@ export function AlertCenterContentV2() {
             <div className="text-2xl font-bold text-slate-900">{triggeredTodayAlerts.length}</div>
             <p className="text-sm text-slate-500">Triggered today</p>
             <p className="text-xs text-slate-400 mt-2">
-              {criticalCount} red • {warningCount} yellow • {infoCount} blue
+              {triggeredTodayCriticalCount} red • {triggeredTodayWarningCount} yellow • {triggeredTodayInfoCount} blue
             </p>
           </CardContent>
         </Card>
