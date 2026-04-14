@@ -33,7 +33,7 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
 import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
-import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2 } from "lucide-react"
+import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
 const SCREEN_META_ACCOUNTS = "s-meta-accounts"
 
@@ -103,6 +103,10 @@ function formatAdAccountStatus(value?: string | null) {
         .replace(/\b\w/g, (char) => char.toUpperCase())
   }
 }
+
+type SortKey = "amountSpent" | "balance" | "spendCap"
+type SortDir = "asc" | "desc"
+
 export function AdAccountsContent() {
   const { toast } = useToast()
   const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
@@ -133,6 +137,15 @@ export function AdAccountsContent() {
   const [businessIdFilter, setBusinessIdFilter] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: SortDir } | null>(null)
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig((prev) =>
+      prev?.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: "desc" }
+    )
+  }
 
   const integrationById = useMemo(() => {
     return new Map((integrations ?? []).map((integration) => [integration.id, integration.displayName]))
@@ -143,7 +156,7 @@ export function AdAccountsContent() {
     const metaIdQuery = metaIdFilter.trim().toLowerCase()
     const businessIdQuery = businessIdFilter.trim().toLowerCase()
 
-    return (accounts ?? []).filter((account) => {
+    const list = (accounts ?? []).filter((account) => {
       const matchesSearch = !query || [
         account.name.toLowerCase(),
         account.metaAdAccountId.toLowerCase(),
@@ -157,7 +170,23 @@ export function AdAccountsContent() {
 
       return matchesSearch && matchesMetaId && matchesBusinessId
     })
-  }, [accounts, businessIdFilter, integrationById, metaIdFilter, search])
+
+    if (!sortConfig) return list
+
+    const { key, dir } = sortConfig
+    return [...list].sort((a, b) => {
+      const aVal = a[key] ?? -Infinity
+      const bVal = b[key] ?? -Infinity
+      return dir === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number)
+    })
+  }, [accounts, businessIdFilter, integrationById, metaIdFilter, search, sortConfig])
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortConfig?.key !== col) return <ArrowUpDown className="inline ml-1 w-3 h-3 opacity-40" />
+    return sortConfig.dir === "asc"
+      ? <ArrowUp className="inline ml-1 w-3 h-3" />
+      : <ArrowDown className="inline ml-1 w-3 h-3" />
+  }
 
   const openEdit = (account: MetaAdAccountDto) => {
     setEditTarget(account)
@@ -311,9 +340,24 @@ export function AdAccountsContent() {
               <TableHead className="text-xs text-slate-500 font-medium">Timezone</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business Name</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium text-right">Amount Spent</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium text-right">Balance</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium text-right">Spend Cap</TableHead>
+              <TableHead
+                className="text-xs text-slate-500 font-medium text-right cursor-pointer select-none hover:text-slate-800 whitespace-nowrap"
+                onClick={() => handleSort("amountSpent")}
+              >
+                Amount Spent<SortIcon col="amountSpent" />
+              </TableHead>
+              <TableHead
+                className="text-xs text-slate-500 font-medium text-right cursor-pointer select-none hover:text-slate-800 whitespace-nowrap"
+                onClick={() => handleSort("balance")}
+              >
+                Balance<SortIcon col="balance" />
+              </TableHead>
+              <TableHead
+                className="text-xs text-slate-500 font-medium text-right cursor-pointer select-none hover:text-slate-800 whitespace-nowrap"
+                onClick={() => handleSort("spendCap")}
+              >
+                Spend Cap<SortIcon col="spendCap" />
+              </TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-24">Status</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-20">Active</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-32">Last Synced</TableHead>
@@ -523,7 +567,3 @@ export function AdAccountsContent() {
     </div>
   )
 }
-
-
-
-

@@ -92,6 +92,8 @@ export interface AuthResponse {
                 role: string
             }>
             permissions?: Record<string, string>
+            metaAdAccountIds?: number[] | null
+            metaAdAccountCount?: number
         }
     }
     error?: {
@@ -144,6 +146,8 @@ export interface CurrentUser {
     organization?: { id: string; name: string; slug: string; logoUrl?: string }
     teams?: Array<{ id: string; name: string; role: string }>
     permissions?: Record<string, string>
+    metaAdAccountIds?: number[] | null
+    metaAdAccountCount?: number
     rolePermissions?: Record<string, string[]>
 }
 
@@ -725,6 +729,14 @@ export interface InviteUserRequest {
     message?: string
 }
 
+export interface MetaAdAccountPermissionOption {
+    id: number
+    metaAdAccountId: string
+    name: string
+    metaIntegrationId: number
+    integrationName?: string | null
+    isActive: boolean
+}
 export const teamMembersApi = {
     filterTeamMembers: async (request: TeamMemberFilterRequest): Promise<{ success: boolean; data: PagedTeamMembersResponse }> => {
         return apiClient.post('/api/v1/team-members/filter', request)
@@ -732,6 +744,10 @@ export const teamMembersApi = {
 
     viewProfile: async (userId: string): Promise<{ success: boolean; data?: TeamMember }> => {
         return apiClient.get(`/api/v1/team-members/view-profile/${userId}`)
+    },
+
+    getMetaAdAccountPermissionOptions: async (): Promise<{ success: boolean; data: MetaAdAccountPermissionOption[] }> => {
+        return apiClient.get('/api/v1/team-members/permission-options/meta-ad-accounts')
     },
 
     inviteUser: async (request: InviteUserRequest): Promise<{ success: boolean; data?: { invitationId: string; email: string; expiresAt: string; message: string } }> => {
@@ -759,7 +775,7 @@ export const teamMembersApi = {
     // Update team role + app permissions for a user in a team
     managePermissions: async (
         userId: string,
-        body: { teamId: string; role: string; appPermissions?: Array<{ AppId: string; Level: string }> }
+        body: { teamId: string; role: string; appPermissions?: Array<{ AppId: string; Level: string }>; metaAdAccountIds?: number[] }
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/manage-permissions/${userId}`, body)
     },
@@ -2106,4 +2122,7 @@ export const insightApi = {
         })
     },
 }
+
+
+
 
