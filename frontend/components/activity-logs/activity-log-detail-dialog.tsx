@@ -89,7 +89,16 @@ export function ActivityLogDetailDialog({
   loading,
   error,
 }: ActivityLogDetailDialogProps) {
-  const displayLog = log ?? preview
+  const displayLog = log
+    ? {
+        ...(preview ?? {}),
+        ...log,
+        startedAt: preview?.startedAt ?? log.startedAt,
+        completedAt: preview?.completedAt ?? log.completedAt,
+        eventCount: Math.max(preview?.eventCount ?? 0, log.eventCount ?? 0),
+        milestones: preview?.milestones?.length ? preview.milestones : log.milestones,
+      }
+    : preview
   const detailLog = log
 
   return (
@@ -157,10 +166,41 @@ export function ActivityLogDetailDialog({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailField label="Occurred At" value={formatDateTime(displayLog.occurredAt)} />
+                <DetailField label="Started At" value={formatDateTime(displayLog.startedAt ?? displayLog.occurredAt)} />
+                <DetailField label="Completed At" value={displayLog.completedAt ? formatDateTime(displayLog.completedAt) : "-"} />
+                <DetailField label="Milestones" value={displayLog.eventCount?.toString()} />
                 {detailLog ? <DetailField label="Recorded At" value={formatDateTime(detailLog.createdAt)} /> : null}
                 {detailLog ? <DetailField label="Actor User ID" value={detailLog.actorUserId} mono /> : null}
                 {detailLog ? <DetailField label="Organization ID" value={detailLog.organizationId} mono /> : null}
               </div>
+
+              {displayLog.milestones.length > 0 ? (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Milestones</p>
+                      <p className="text-xs text-slate-500">Timeline grouped into the selected activity row.</p>
+                    </div>
+                    <div className="space-y-2">
+                      {displayLog.milestones.map((milestone) => (
+                        <div
+                          key={milestone.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-slate-900">{milestone.stage}</p>
+                            <p className="text-xs text-slate-500">{formatDateTime(milestone.occurredAt)}</p>
+                          </div>
+                          <Badge variant="outline" className={statusBadgeClass(milestone.status, milestone.severity)}>
+                            {milestone.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : null}
 
               {detailLog && detailLog.refs.length > 0 ? (
                 <>

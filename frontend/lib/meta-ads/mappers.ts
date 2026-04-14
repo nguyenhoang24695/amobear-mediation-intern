@@ -4,6 +4,7 @@ import type {
   MetaCampaignRequestDetailDto,
   MetaCarouselCardDraftDto,
   MetaCarouselCardFormState,
+  MetaFlexibleAssetFormState,
   MetaCreativeDraftDto,
   MetaCreativeMediaMode,
   MetaCreativeMediaSourceDto,
@@ -51,6 +52,15 @@ export function createEmptyCarouselCard(): MetaCarouselCardFormState {
   }
 }
 
+export function createEmptyFlexibleAsset(assetType: "IMAGE" | "VIDEO" = "IMAGE"): MetaFlexibleAssetFormState {
+  return {
+    id: createId(),
+    assetType,
+    image: createEmptyMediaSelection("meta_ref"),
+    video: createEmptyMediaSelection("meta_ref"),
+    thumbnail: createEmptyMediaSelection("meta_ref"),
+  }
+}
 function sanitizeTextVariations(values: string[] | null | undefined, fallback?: string | null): string[] {
   const normalized = (values ?? [])
     .map((value) => value.trim())
@@ -266,6 +276,16 @@ function getCarouselCreative(creative: MetaCreativeDraftDto) {
   }
 }
 
+function getFlexibleCreative(creative: MetaCreativeDraftDto) {
+  return creative.flexible ?? {
+    primaryTexts: [],
+    headlines: [],
+    callToActionType: creative.callToActionType,
+    linkUrl: creative.linkUrl,
+    assets: [],
+  }
+}
+
 export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?: string): CreateMetaCampaignRequestDto {
   const budgets = parseBudgetStrategy(form)
   const creativeCommon = {
@@ -305,6 +325,19 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
   } else if (form.creativeType === "EXISTING_POST") {
     creative.existingPost = {
       sourcePostId: form.existingPostId.trim() || null,
+    }
+  } else if (form.creativeType === "FLEXIBLE") {
+    creative.flexible = {
+      primaryTexts: sanitizeTextVariations(form.flexiblePrimaryTexts),
+      headlines: sanitizeTextVariations(form.flexibleHeadlines),
+      callToActionType: form.flexibleCallToAction.trim() || null,
+      linkUrl: form.flexibleLinkUrl.trim() || null,
+      assets: form.flexibleAssets.map((asset) => ({
+        assetType: asset.assetType,
+        image: asset.assetType === "IMAGE" ? buildMediaSource(asset.image, "image") : null,
+        video: asset.assetType === "VIDEO" ? buildMediaSource(asset.video, "video") : null,
+        thumbnail: asset.assetType === "VIDEO" ? buildMediaSource(asset.thumbnail, "image") : null,
+      })),
     }
   } else {
     creative.singleImage = {
@@ -407,6 +440,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
   const singleImage = getSingleImageCreative(payload.creative)
   const singleVideo = getSingleVideoCreative(payload.creative)
   const carousel = getCarouselCreative(payload.creative)
+  const flexible = getFlexibleCreative(payload.creative)
 
   return {
     adAccountId: detail.metaAdAccountId.toString(),
@@ -482,12 +516,22 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
       linkUrl: card.linkUrl ?? "",
       image: mediaSourceToSelection(card.image, "image"),
     })),
+    flexiblePrimaryTexts: sanitizeTextVariations(flexible.primaryTexts).length > 0 ? sanitizeTextVariations(flexible.primaryTexts) : [""],
+    flexibleHeadlines: sanitizeTextVariations(flexible.headlines).length > 0 ? sanitizeTextVariations(flexible.headlines) : [""],
+    flexibleCallToAction: flexible.callToActionType ?? "LEARN_MORE",
+    flexibleLinkUrl: flexible.linkUrl ?? "",
+    flexibleAssets: (flexible.assets ?? []).map((asset) => ({
+      id: createId(),
+      assetType: (asset.assetType ?? "IMAGE").trim().toUpperCase() === "VIDEO" ? "VIDEO" : "IMAGE",
+      image: mediaSourceToSelection(asset.image, "image"),
+      video: mediaSourceToSelection(asset.video, "video"),
+      thumbnail: mediaSourceToSelection(asset.thumbnail, "image"),
+    })),
     existingPostId: payload.creative.existingPost?.sourcePostId ?? "",
     adName: payload.ad.name ?? "",
     trackingSpecs: payload.ad.trackingSpecsJson ?? "",
   }
 }
-
 export function groupValidationErrors(errors: string[]): GroupedValidationErrors {
   return errors.reduce<GroupedValidationErrors>((groups, error) => {
     const normalized = error.toLowerCase()
@@ -515,6 +559,12 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
+
+
+
+
+
+
 
 
 
