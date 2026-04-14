@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { metaRequestsApi } from "@/lib/api/meta-ads"
-import { createEmptyCarouselCard } from "@/lib/meta-ads/mappers"
+import { createEmptyCarouselCard, createEmptyFlexibleAsset } from "@/lib/meta-ads/mappers"
 import { getSelectionPreviewSource } from "@/lib/meta-ads/media-preview"
 import type { MetaAppMappingDto, MetaFacebookPageReferenceDto, MetaReferenceMediaDto, MetaRequestAssetSelectionState } from "@/types/meta-ads"
 import { ImageIcon, Smartphone, Video, GalleryHorizontal, FileText, AlertTriangle, Check, CheckCircle2, ChevronsUpDown, Loader2, Plus, Trash2, Wand2 } from "lucide-react"
@@ -176,6 +176,50 @@ export function CreativeSection({
     }
   }
 
+
+  const updateFlexibleAsset = (index: number, patch: Partial<RequestFormState["flexibleAssets"][number]>) => {
+    onChange({ flexibleAssets: form.flexibleAssets.map((asset, assetIndex) => (assetIndex === index ? { ...asset, ...patch } : asset)) })
+  }
+
+  const updateFlexibleAssetMedia = (
+    index: number,
+    field: "image" | "video" | "thumbnail",
+    patch: Partial<MetaRequestAssetSelectionState>
+  ) => {
+    onChange({
+      flexibleAssets: form.flexibleAssets.map((asset, assetIndex) => (assetIndex === index ? { ...asset, [field]: { ...asset[field], ...patch } } : asset)),
+    })
+  }
+
+  const handleFlexibleMetaSelection = (index: number, field: "image" | "video" | "thumbnail", media: MetaReferenceMediaDto) => {
+    updateFlexibleAssetMedia(index, field, buildMetaLibrarySelectionPatch(media, adAccountId))
+  }
+
+  const handleFlexibleUpload = async (index: number, kind: "image" | "video" | "thumbnail", file: File | null) => {
+    if (!file) return
+
+    try {
+      setUploadingKey(`flexible:${index}:${kind}:${file.name}`)
+      const asset = await metaRequestsApi.uploadAsset(file, kind === "video" ? "video" : "image")
+      updateFlexibleAssetMedia(index, kind, {
+        mode: "uploaded_asset",
+        uploadedAssetId: asset.id,
+        uploadedAssetName: asset.fileName,
+        uploadedAssetPreviewUrl: kind === "video" ? "" : URL.createObjectURL(file),
+        metaPlayableUrl: "",
+        imageHash: "",
+        imageUrl: "",
+        videoId: "",
+      })
+      toast({ title: `${kind === "video" ? "Video" : "Image"} uploaded`, description: asset.fileName })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed."
+      toast({ title: "Upload failed", description: message, variant: "destructive" })
+    } finally {
+      setUploadingKey(null)
+    }
+  }
+
   const updateTextVariations = (
     valuesField: "singleImagePrimaryTexts" | "singleImageHeadlines" | "singleVideoPrimaryTexts" | "singleVideoHeadlines",
     firstField: "singleImagePrimaryText" | "singleImageHeadline" | "singleVideoPrimaryText" | "singleVideoHeadline",
@@ -255,6 +299,7 @@ export function CreativeSection({
                     <SelectItem value="SINGLE_IMAGE">Single Image</SelectItem>
                     <SelectItem value="SINGLE_VIDEO">Single Video</SelectItem>
                     <SelectItem value="CAROUSEL_IMAGE">Carousel</SelectItem>
+                    <SelectItem value="FLEXIBLE">Flexible</SelectItem>
                     <SelectItem value="EXISTING_POST">Existing Post</SelectItem>
                   </SelectContent>
                 </Select>
@@ -355,6 +400,7 @@ export function CreativeSection({
                 <TabsTrigger value="SINGLE_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single Image</TabsTrigger>
                 <TabsTrigger value="SINGLE_VIDEO" className="text-xs px-3 data-[state=active]:bg-white"><Video className="w-3.5 h-3.5 mr-1.5" />Single Video</TabsTrigger>
                 <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
+                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible</TabsTrigger>
                 <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
               </TabsList>
 
@@ -486,6 +532,79 @@ export function CreativeSection({
                 </div>
               </TabsContent>
 
+
+              <TabsContent value="FLEXIBLE" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-[11px] text-blue-700">
+                  Flexible lets Meta choose the best-performing format from the images and videos you provide in one group.
+                </div>
+                <TextVariationEditor
+                  label="Primary Text"
+                  values={form.flexiblePrimaryTexts}
+                  required
+                  multiline
+                  placeholder="Enter primary text variation"
+                  onChange={(values) => onChange({ flexiblePrimaryTexts: normalizeVariationRows(values) })}
+                />
+                <TextVariationEditor
+                  label="Headline"
+                  values={form.flexibleHeadlines}
+                  required
+                  placeholder="Enter headline variation"
+                  onChange={(values) => onChange({ flexibleHeadlines: normalizeVariationRows(values) })}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Select value={form.flexibleCallToAction} onValueChange={(value) => onChange({ flexibleCallToAction: value })}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                    <Input value={form.flexibleLinkUrl} onChange={(event) => onChange({ flexibleLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
+                    <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-slate-700">Flexible Assets</p>
+                      <p className="text-[11px] text-slate-400">Add at least 1 image or video for the flexible group.</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onChange({ flexibleAssets: [...form.flexibleAssets, createEmptyFlexibleAsset()] })}>
+                      <Plus className="w-3.5 h-3.5 mr-1" />Add Asset
+                    </Button>
+                  </div>
+                  {form.flexibleAssets.map((asset, index) => (
+                    <div key={asset.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold text-slate-700">Asset {index + 1}</p>
+                        <div className="flex items-center gap-2">
+                          <Select value={asset.assetType} onValueChange={(value) => updateFlexibleAsset(index, { assetType: value as "IMAGE" | "VIDEO" })}>
+                            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="IMAGE">Image</SelectItem>
+                              <SelectItem value="VIDEO">Video</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600" onClick={() => onChange({ flexibleAssets: form.flexibleAssets.filter((_, assetIndex) => assetIndex !== index) })} disabled={form.flexibleAssets.length <= 1}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />Remove
+                          </Button>
+                        </div>
+                      </div>
+                      {asset.assetType === "VIDEO" ? (
+                        <div className="space-y-3">
+                          <MediaSourceEditor title="Video Asset" kind="video" selection={asset.video} uploading={uploadingKey?.startsWith(`flexible:${index}:video:`) ?? false} adAccountId={adAccountId ?? null} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(index, "video", patch)} onUpload={(file) => handleFlexibleUpload(index, "video", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(index, "video", media)} />
+                          <MediaSourceEditor title="Thumbnail" kind="image" selection={asset.thumbnail} uploading={uploadingKey?.startsWith(`flexible:${index}:thumbnail:`) ?? false} allowExternalUrl optional adAccountId={adAccountId ?? null} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(index, "thumbnail", patch)} onUpload={(file) => handleFlexibleUpload(index, "thumbnail", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(index, "thumbnail", media)} />
+                        </div>
+                      ) : (
+                        <MediaSourceEditor title="Image Asset" kind="image" selection={asset.image} uploading={uploadingKey?.startsWith(`flexible:${index}:image:`) ?? false} allowExternalUrl adAccountId={adAccountId ?? null} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(index, "image", patch)} onUpload={(file) => handleFlexibleUpload(index, "image", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(index, "image", media)} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
               <TabsContent value="EXISTING_POST" className="mt-4 space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-700">Source Post ID <span className="text-red-500">*</span></Label>
@@ -595,8 +714,8 @@ function MediaSourceEditor({
 
   const handleEditorModeChange = (value: string) => {
     if (value === "uploaded_asset") {
-      onModeChange("uploaded_asset")
       onPatch(clearMetaReferenceDecoration({
+        mode: "uploaded_asset",
         metaRefSource: "manual",
         imageHash: "",
         imageUrl: "",
@@ -606,8 +725,8 @@ function MediaSourceEditor({
     }
 
     if (value === "external_url") {
-      onModeChange("external_url")
       onPatch(clearMetaReferenceDecoration({
+        mode: "external_url",
         metaRefSource: "manual",
         imageHash: "",
         videoId: "",
@@ -615,10 +734,9 @@ function MediaSourceEditor({
       return
     }
 
-    onModeChange("meta_ref")
     onPatch(value === "from_meta"
-      ? clearMetaReferenceDecoration({ metaRefSource: "from_meta", imageHash: "", imageUrl: "", videoId: "" })
-      : clearMetaReferenceDecoration({ metaRefSource: "manual" }))
+      ? clearMetaReferenceDecoration({ mode: "meta_ref", metaRefSource: "from_meta", imageHash: "", imageUrl: "", videoId: "" })
+      : clearMetaReferenceDecoration({ mode: "meta_ref", metaRefSource: "manual" }))
   }
 
   return (
@@ -755,8 +873,8 @@ function InlineMediaSourceEditor({
 
   const handleEditorModeChange = (value: string) => {
     if (value === "uploaded_asset") {
-      onModeChange("uploaded_asset")
       onPatch(clearMetaReferenceDecoration({
+        mode: "uploaded_asset",
         metaRefSource: "manual",
         imageHash: "",
         imageUrl: "",
@@ -765,15 +883,13 @@ function InlineMediaSourceEditor({
     }
 
     if (value === "external_url") {
-      onModeChange("external_url")
-      onPatch(clearMetaReferenceDecoration({ metaRefSource: "manual", imageHash: "" }))
+      onPatch(clearMetaReferenceDecoration({ mode: "external_url", metaRefSource: "manual", imageHash: "" }))
       return
     }
 
-    onModeChange("meta_ref")
     onPatch(value === "from_meta"
-      ? clearMetaReferenceDecoration({ metaRefSource: "from_meta", imageHash: "", imageUrl: "", videoId: "" })
-      : clearMetaReferenceDecoration({ metaRefSource: "manual" }))
+      ? clearMetaReferenceDecoration({ mode: "meta_ref", metaRefSource: "from_meta", imageHash: "", imageUrl: "", videoId: "" })
+      : clearMetaReferenceDecoration({ mode: "meta_ref", metaRefSource: "manual" }))
   }
 
   return (
@@ -936,6 +1052,24 @@ function getCreativeCompletion(form: RequestFormState) {
     ]
     return { complete: items.every((item) => item.ok), items }
   }
+  if (form.creativeType === "FLEXIBLE") {
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "Primary text", ok: hasAnyTextVariation(form.flexiblePrimaryTexts) },
+      { label: "Headline", ok: hasAnyTextVariation(form.flexibleHeadlines) },
+      { label: "CTA", ok: !!form.flexibleCallToAction },
+      { label: "Link URL or app fallback", ok: true },
+      { label: "At least 1 asset", ok: form.flexibleAssets.length >= 1 },
+      {
+        label: "Assets complete",
+        ok: form.flexibleAssets.length > 0 && form.flexibleAssets.every((asset) => asset.assetType === "VIDEO"
+          ? !!(asset.video.uploadedAssetId || asset.video.videoId)
+          : !!(asset.image.uploadedAssetId || asset.image.imageHash || asset.image.imageUrl)),
+      },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
   if (form.creativeType === "EXISTING_POST") {
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
@@ -974,12 +1108,18 @@ function hasAnyTextVariation(values?: string[], fallback = ""): boolean {
 function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: boolean } {
   if (form.creativeType === "SINGLE_VIDEO") return getSelectionPreviewSource(form.singleVideoThumbnail)
   if (form.creativeType === "CAROUSEL_IMAGE") return getSelectionPreviewSource(form.carouselCards[0]?.image)
+  if (form.creativeType === "FLEXIBLE") {
+    const firstAsset = form.flexibleAssets[0]
+    if (!firstAsset) return { url: "", requiresAuth: false }
+    return firstAsset.assetType === "VIDEO" ? getSelectionPreviewSource(firstAsset.thumbnail) : getSelectionPreviewSource(firstAsset.image)
+  }
   return getSelectionPreviewSource(form.singleImageImage)
 }
 
 function getPreviewHeadline(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoHeadlines, form.singleVideoHeadline)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
+  if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexibleHeadlines)
   if (form.creativeType === "EXISTING_POST") return form.existingPostId ? `Existing Post ${form.existingPostId}` : "Existing post preview"
   return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
 }
@@ -987,6 +1127,7 @@ function getPreviewHeadline(form: RequestFormState): string {
 function getPreviewMessage(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
+  if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexiblePrimaryTexts) || `${form.flexibleAssets.length} flexible assets`
   if (form.creativeType === "EXISTING_POST") return "Existing post preview will be resolved from Meta post at execution time."
   return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
 }
@@ -994,6 +1135,7 @@ function getPreviewMessage(form: RequestFormState): string {
 function getPreviewCta(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return formatCta(form.singleVideoCallToAction)
   if (form.creativeType === "CAROUSEL_IMAGE") return formatCta(form.carouselCallToAction)
+  if (form.creativeType === "FLEXIBLE") return formatCta(form.flexibleCallToAction)
   if (form.creativeType === "EXISTING_POST") return "OPEN POST"
   return formatCta(form.singleImageCallToAction)
 }
@@ -1001,6 +1143,10 @@ function getPreviewCta(form: RequestFormState): string {
 function formatCta(value: string): string {
   return value ? value.replaceAll("_", " ") : "LEARN MORE"
 }
+
+
+
+
 
 
 

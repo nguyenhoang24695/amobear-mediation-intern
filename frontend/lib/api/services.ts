@@ -173,9 +173,22 @@ export interface ActivityLogRef {
     refLabel?: string | null
 }
 
+export interface ActivityLogMilestone {
+    id: number
+    occurredAt: string
+    eventType: string
+    status: string
+    severity: string
+    summary: string
+    stage: string
+}
+
 export interface ActivityLogListItem {
     id: number
     occurredAt: string
+    startedAt?: string | null
+    completedAt?: string | null
+    eventCount: number
     actorName?: string | null
     actorRole?: string | null
     source: string
@@ -192,6 +205,7 @@ export interface ActivityLogListItem {
     targetName?: string | null
     correlationId?: string | null
     metadata?: unknown
+    milestones: ActivityLogMilestone[]
 }
 
 export interface ActivityLogDetail extends ActivityLogListItem {
@@ -2092,11 +2106,4 @@ export const insightApi = {
         })
     },
 }
-
-
-
-
-
-
-
 

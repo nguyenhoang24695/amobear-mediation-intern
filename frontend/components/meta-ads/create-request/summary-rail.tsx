@@ -192,6 +192,22 @@ function getCreativeStatus(form: RequestFormState) {
   if (form.creativeType === "CAROUSEL_IMAGE") {
     return { ok: !!(form.creativeName && form.facebookPageId && form.carouselCallToAction && form.carouselCards.length >= 2 && form.carouselCards.every((card) => card.headline && (card.image.imageHash || card.image.imageUrl || card.image.uploadedAssetId))), label: "carousel" }
   }
+  if (form.creativeType === "FLEXIBLE") {
+    return {
+      ok: !!(
+        form.creativeName
+        && form.facebookPageId
+        && hasCreativeVariation(form.flexiblePrimaryTexts)
+        && hasCreativeVariation(form.flexibleHeadlines)
+        && form.flexibleCallToAction
+        && form.flexibleAssets.length > 0
+        && form.flexibleAssets.every((asset) => asset.assetType === "VIDEO"
+          ? (asset.video.videoId || asset.video.uploadedAssetId)
+          : (asset.image.imageHash || asset.image.imageUrl || asset.image.uploadedAssetId))
+      ),
+      label: "flexible",
+    }
+  }
   if (form.creativeType === "EXISTING_POST") {
     return { ok: !!(form.creativeName && form.facebookPageId && form.existingPostId), label: "existing post" }
   }
@@ -201,6 +217,7 @@ function getCreativeStatus(form: RequestFormState) {
 function getCreativeHeadline(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return getFirstCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || "-"
+  if (form.creativeType === "FLEXIBLE") return getFirstCreativeVariation(form.flexibleHeadlines) || "-"
   if (form.creativeType === "EXISTING_POST") return form.existingPostId || "-"
   return getFirstCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) || "-"
 }
@@ -208,6 +225,7 @@ function getCreativeHeadline(form: RequestFormState): string {
 function getCreativeCta(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoCallToAction || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCallToAction || "-"
+  if (form.creativeType === "FLEXIBLE") return form.flexibleCallToAction || "-"
   if (form.creativeType === "EXISTING_POST") return "EXISTING_POST"
   return form.singleImageCallToAction || "-"
 }
@@ -251,6 +269,8 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
+
+
 
 
 
