@@ -19,6 +19,7 @@ import { hasScreenFunction } from "@/lib/auth"
 import { metaIntegrationsApi, metaReferenceApi, metaRequestsApi } from "@/lib/api/meta-ads"
 import {
   createEmptyCarouselCard,
+  createEmptyFlexibleAsset,
   createEmptyMediaSelection,
   detailDtoToFormState,
   formStateToCreateDto,
@@ -47,7 +48,6 @@ import { AdSetBudgetSection } from "./section-adset-budget"
 import { CreativeSection } from "./section-creative"
 import { AdSection } from "./section-ad"
 import { RequestSummaryRail } from "./summary-rail"
-
 export type RequestFormState = MetaRequestFormState
 
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
@@ -115,6 +115,10 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
     next.bidAmount = ""
   }
 
+  if (!Array.isArray(next.flexiblePrimaryTexts) || next.flexiblePrimaryTexts.length === 0) next.flexiblePrimaryTexts = [""]
+  if (!Array.isArray(next.flexibleHeadlines) || next.flexibleHeadlines.length === 0) next.flexibleHeadlines = [""]
+  if (!Array.isArray(next.flexibleAssets) || next.flexibleAssets.length === 0) next.flexibleAssets = [createEmptyFlexibleAsset()]
+
   return next
 }
 
@@ -147,6 +151,12 @@ function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): Re
     carouselCards: state.carouselCards.map((card) => ({
       ...card,
       image: clearMetaLibrarySelection(card.image, state.adAccountId),
+    })),
+    flexibleAssets: state.flexibleAssets.map((asset) => ({
+      ...asset,
+      image: clearMetaLibrarySelection(asset.image, state.adAccountId),
+      video: clearMetaLibrarySelection(asset.video, state.adAccountId),
+      thumbnail: clearMetaLibrarySelection(asset.thumbnail, state.adAccountId),
     })),
   }
 }
@@ -211,6 +221,11 @@ function createDefaultFormState(): RequestFormState {
     carouselPrimaryText: "",
     carouselCallToAction: "LEARN_MORE",
     carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
+    flexiblePrimaryTexts: [""],
+    flexibleHeadlines: [""],
+    flexibleCallToAction: "LEARN_MORE",
+    flexibleLinkUrl: "",
+    flexibleAssets: [createEmptyFlexibleAsset()],
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
@@ -758,6 +773,11 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
+
+
+
+
+
 
 
 

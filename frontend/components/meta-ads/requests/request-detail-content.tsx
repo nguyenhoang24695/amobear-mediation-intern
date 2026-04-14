@@ -172,6 +172,16 @@ function getCarouselCreative(creative: MetaCreativeDraftDto) {
   }
 }
 
+function getFlexibleCreative(creative: MetaCreativeDraftDto) {
+  return creative.flexible ?? {
+    primaryTexts: [],
+    headlines: [],
+    callToActionType: creative.callToActionType,
+    linkUrl: creative.linkUrl,
+    assets: [],
+  }
+}
+
 function getExistingPostCreative(creative: MetaCreativeDraftDto) {
   return creative.existingPost ?? { sourcePostId: null }
 }
@@ -208,6 +218,8 @@ function getCreativeSummaryHeadline(detail: MetaCampaignRequestDetailDto): strin
       return getSingleVideoCreative(creative).headline ?? "-"
     case "CAROUSEL_IMAGE":
       return getCarouselCreative(creative).cards[0]?.headline ?? "-"
+    case "FLEXIBLE":
+      return getFlexibleCreative(creative).headlines?.[0] ?? "-"
     case "EXISTING_POST":
       return getExistingPostCreative(creative).sourcePostId ?? "-"
     default:
@@ -222,6 +234,8 @@ function getCreativeSummaryCallToAction(detail: MetaCampaignRequestDetailDto): s
       return getSingleVideoCreative(creative).callToActionType ?? "-"
     case "CAROUSEL_IMAGE":
       return getCarouselCreative(creative).callToActionType ?? "-"
+    case "FLEXIBLE":
+      return getFlexibleCreative(creative).callToActionType ?? "-"
     case "EXISTING_POST":
       return "EXISTING_POST"
     default:
@@ -259,6 +273,18 @@ function getCreativeChecklist(detail: MetaCampaignRequestDetailDto): ChecklistIt
     ]
   }
 
+  if (getCreativeType(detail) === "FLEXIBLE") {
+    const flexible = getFlexibleCreative(creative)
+    return [
+      { label: "Creative name", ok: !!common.name },
+      { label: "Facebook Page ID", ok: !!common.pageId },
+      { label: "Primary text", ok: (flexible.primaryTexts?.length ?? 0) > 0 },
+      { label: "Headline", ok: (flexible.headlines?.length ?? 0) > 0 },
+      { label: "CTA", ok: !!flexible.callToActionType },
+      { label: "At least 1 asset", ok: (flexible.assets?.length ?? 0) > 0 },
+    ]
+  }
+
   if (getCreativeType(detail) === "EXISTING_POST") {
     const existingPost = getExistingPostCreative(creative)
     return [
@@ -290,6 +316,13 @@ function getCreativePreviewImage(detail: MetaCampaignRequestDetailDto): { url: s
       return getMediaPreviewSource(getSingleVideoCreative(creative).thumbnail)
     case "CAROUSEL_IMAGE":
       return getMediaPreviewSource(getCarouselCreative(creative).cards[0]?.image)
+    case "FLEXIBLE": {
+      const flexible = getFlexibleCreative(creative)
+      const firstAsset = flexible.assets?.[0]
+      return firstAsset?.assetType === "VIDEO"
+        ? getMediaPreviewSource(firstAsset.thumbnail)
+        : getMediaPreviewSource(firstAsset?.image)
+    }
     case "EXISTING_POST":
       return { url: "", requiresAuth: false }
     default:
@@ -304,6 +337,8 @@ function getCreativePreviewHeadline(detail: MetaCampaignRequestDetailDto): strin
       return getSingleVideoCreative(creative).headline ?? "Video creative"
     case "CAROUSEL_IMAGE":
       return getCarouselCreative(creative).cards[0]?.headline ?? "Carousel creative"
+    case "FLEXIBLE":
+      return getFlexibleCreative(creative).headlines?.[0] ?? "Flexible creative"
     case "EXISTING_POST":
       return getExistingPostCreative(creative).sourcePostId ? `Existing Post ${getExistingPostCreative(creative).sourcePostId}` : "Existing post preview"
     default:
@@ -319,6 +354,10 @@ function getCreativePreviewMessage(detail: MetaCampaignRequestDetailDto): string
       const carousel = getCarouselCreative(creative)
       return carousel.message ?? `${carousel.cards?.length ?? 0} carousel cards`
     }
+    case "FLEXIBLE": {
+      const flexible = getFlexibleCreative(creative)
+      return flexible.primaryTexts?.[0] ?? `${flexible.assets?.length ?? 0} flexible assets`
+    }
     case "EXISTING_POST":
       return "Existing post preview will be resolved from Meta post."
     default:
@@ -333,6 +372,8 @@ function getCreativePreviewCallToAction(detail: MetaCampaignRequestDetailDto): s
       return formatCallToAction(getSingleVideoCreative(creative).callToActionType)
     case "CAROUSEL_IMAGE":
       return formatCallToAction(getCarouselCreative(creative).callToActionType)
+    case "FLEXIBLE":
+      return formatCallToAction(getFlexibleCreative(creative).callToActionType)
     case "EXISTING_POST":
       return "VIEW POST"
     default:
@@ -345,6 +386,8 @@ function getCreativePreviewIcon(detail: MetaCampaignRequestDetailDto) {
     case "SINGLE_VIDEO":
       return <Video className="w-6 h-6 text-slate-300" />
     case "CAROUSEL_IMAGE":
+      return <GalleryHorizontal className="w-6 h-6 text-slate-300" />
+    case "FLEXIBLE":
       return <GalleryHorizontal className="w-6 h-6 text-slate-300" />
     case "EXISTING_POST":
       return <FileText className="w-6 h-6 text-slate-300" />
@@ -1096,6 +1139,30 @@ function CreativeTypeSnapshot({ detail }: { detail: MetaCampaignRequestDetailDto
     )
   }
 
+
+  if (creativeType === "FLEXIBLE") {
+    const flexible = getFlexibleCreative(creative)
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+          <DetailRow label="Call To Action" value={formatCallToAction(flexible.callToActionType)} mono />
+          <DetailRow label="Asset Count" value={(flexible.assets?.length ?? 0).toString()} mono />
+        </div>
+        <ValueBlock label="Link URL" value={flexible.linkUrl} breakAll />
+        <ValueBlock label="Primary Texts" value={(flexible.primaryTexts ?? []).join("\n\n")} preserveWhitespace />
+        <ValueBlock label="Headlines" value={(flexible.headlines ?? []).join("\n")} preserveWhitespace />
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Flexible Assets</p>
+          {(flexible.assets ?? []).map((asset, index) => (
+            <div key={`${asset.assetType}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              <p className="font-medium">Asset {index + 1} ({asset.assetType ?? "IMAGE"})</p>
+              <p className="font-mono text-[12px] text-slate-500 break-all">{asset.assetType === "VIDEO" ? getMediaSourceValue(asset.video, "video") : getMediaSourceValue(asset.image)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
   if (creativeType === "EXISTING_POST") {
     const existingPost = getExistingPostCreative(creative)
     return (
@@ -1211,6 +1278,8 @@ function ObjectRow({ label, metaId, localId }: { label: string; metaId: string; 
     </div>
   )
 }
+
+
 
 
 

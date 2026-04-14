@@ -7,7 +7,7 @@ export type MetaRequestStatus =
   | "completed"
   | "failed"
 
-export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "CAROUSEL_IMAGE" | "EXISTING_POST"
+export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE"
 export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
@@ -695,6 +695,20 @@ export interface MetaExistingPostCreativeDraftDto {
   sourcePostId?: string | null
 }
 
+export interface MetaFlexibleCreativeAssetDraftDto {
+  assetType: "IMAGE" | "VIDEO"
+  image?: MetaCreativeMediaSourceDto | null
+  video?: MetaCreativeMediaSourceDto | null
+  thumbnail?: MetaCreativeMediaSourceDto | null
+}
+
+export interface MetaFlexibleCreativeDraftDto {
+  primaryTexts?: string[] | null
+  headlines?: string[] | null
+  callToActionType?: string | null
+  linkUrl?: string | null
+  assets: MetaFlexibleCreativeAssetDraftDto[]
+}
 export interface MetaCreativeDraftDto {
   type?: MetaCreativeType | null
   common?: MetaCreativeCommonDraftDto | null
@@ -702,6 +716,7 @@ export interface MetaCreativeDraftDto {
   singleVideo?: MetaSingleVideoCreativeDraftDto | null
   carousel?: MetaCarouselCreativeDraftDto | null
   existingPost?: MetaExistingPostCreativeDraftDto | null
+  flexible?: MetaFlexibleCreativeDraftDto | null
   name?: string | null
   pageId?: string | null
   instagramActorId?: string | null
@@ -928,6 +943,13 @@ export interface MetaCarouselCardFormState {
   image: MetaRequestAssetSelectionState
 }
 
+export interface MetaFlexibleAssetFormState {
+  id: string
+  assetType: "IMAGE" | "VIDEO"
+  image: MetaRequestAssetSelectionState
+  video: MetaRequestAssetSelectionState
+  thumbnail: MetaRequestAssetSelectionState
+}
 export interface MetaRequestFormState {
   adAccountId: string
   appRowId: string
@@ -988,6 +1010,11 @@ export interface MetaRequestFormState {
   carouselPrimaryText: string
   carouselCallToAction: string
   carouselCards: MetaCarouselCardFormState[]
+  flexiblePrimaryTexts: string[]
+  flexibleHeadlines: string[]
+  flexibleCallToAction: string
+  flexibleLinkUrl: string
+  flexibleAssets: MetaFlexibleAssetFormState[]
   existingPostId: string
   adName: string
   trackingSpecs: string
@@ -1070,6 +1097,7 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
+
 
 
 

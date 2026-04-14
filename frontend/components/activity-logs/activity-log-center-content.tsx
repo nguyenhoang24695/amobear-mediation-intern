@@ -125,6 +125,28 @@ function statusBadgeClass(status: string, severity: string) {
   return "border-green-200 bg-green-50 text-green-700 hover:bg-green-50"
 }
 
+function formatStageLabel(stage?: string | null) {
+  if (!stage) return "Event"
+
+  return stage
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
+function resolveStartedAt(log: ActivityLogListItem) {
+  return log.startedAt ?? log.milestones[0]?.occurredAt ?? log.occurredAt
+}
+
+function resolveCompletedAt(log: ActivityLogListItem) {
+  return log.completedAt ?? (log.milestones.length > 1 ? log.milestones[log.milestones.length - 1]?.occurredAt : null)
+}
+
+function hasFailedMilestone(log: ActivityLogListItem) {
+  return log.milestones.some((milestone) => milestone.status === "failed" || milestone.severity === "error")
+}
+
 function domainBadgeClass(domain: string) {
   switch (domain) {
     case "waterfall":
@@ -398,9 +420,7 @@ export function ActivityLogCenterContent() {
       toDate
   )
 
-  const currentPageFailureCount = result.items.filter(
-    (item) => item.status === "failed" || item.severity === "error"
-  ).length
+  const currentPageFailureCount = result.items.filter((item) => hasFailedMilestone(item)).length
   const currentPageDomainCount = new Set(result.items.map((item) => item.domain)).size
   const latestOccurredAt = result.items[0]?.occurredAt
 
@@ -448,7 +468,7 @@ export function ActivityLogCenterContent() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border-slate-200 bg-slate-50">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-slate-500">Matched Logs</p>
+            <p className="text-sm font-medium text-slate-500">Matched Activities</p>
             <p className="mt-1 text-2xl font-bold text-slate-900">{result.total}</p>
           </CardContent>
         </Card>
@@ -657,7 +677,7 @@ export function ActivityLogCenterContent() {
             <div>
               <CardTitle className="text-base">Activity Timeline</CardTitle>
               <CardDescription>
-                Ordered by event time descending. Open any row to inspect refs and metadata.
+                Grouped by activity correlation so each run stays on one row with its timeline and milestones.
               </CardDescription>
             </div>
             <div className="text-sm text-slate-500">
@@ -682,7 +702,7 @@ export function ActivityLogCenterContent() {
                 <Activity className="size-6 text-slate-500" />
               </EmptyMedia>
               <EmptyHeader>
-                <EmptyTitle>No activity logs found</EmptyTitle>
+                <EmptyTitle>No activities found</EmptyTitle>
                 <EmptyDescription>
                   {hasActiveFilters
                     ? "Try relaxing your filters or searching a different target."
@@ -698,7 +718,7 @@ export function ActivityLogCenterContent() {
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
                     <TableHead className="px-4">
-                      <span className="text-[11px] uppercase tracking-wide text-slate-500">Time</span>
+                      <span className="text-[11px] uppercase tracking-wide text-slate-500">Window</span>
                     </TableHead>
                     <TableHead>
                       <span className="text-[11px] uppercase tracking-wide text-slate-500">Event</span>
@@ -712,87 +732,126 @@ export function ActivityLogCenterContent() {
                     <TableHead>
                       <span className="text-[11px] uppercase tracking-wide text-slate-500">Target</span>
                     </TableHead>
-                    <TableHead className="w-[140px]">
+                    <TableHead className="w-[280px]">
                       <span className="text-[11px] uppercase tracking-wide text-slate-500">Status</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.items.map((log) => (
-                    <TableRow
-                      key={log.id}
-                      className="cursor-pointer hover:bg-slate-50"
-                      onClick={() => handleOpenDetails(log)}
-                    >
-                      <TableCell className="px-4 py-3 align-top">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-slate-900">{formatRelativeTime(log.occurredAt)}</p>
-                          <p className="text-xs text-slate-500">{formatDateTime(log.occurredAt)}</p>
-                        </div>
-                      </TableCell>
+                  {result.items.map((log) => {
+                    const startedAt = resolveStartedAt(log)
+                    const completedAt = resolveCompletedAt(log)
+                    const showCompletedAt = Boolean(completedAt && completedAt !== startedAt)
 
-                      <TableCell className="py-3 align-top">
-                        <div className="space-y-2">
-                          <Badge variant="outline" className={domainBadgeClass(log.domain)}>
-                            {log.domain}
-                          </Badge>
-                          <p className="break-all font-mono text-xs text-slate-600">{log.eventType}</p>
-                        </div>
-                      </TableCell>
+                    return (
+                      <TableRow
+                        key={log.id}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => handleOpenDetails(log)}
+                      >
+                        <TableCell className="px-4 py-3 align-top">
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                                {showCompletedAt ? "Start" : "At"}
+                              </p>
+                              <p className="text-sm font-medium text-slate-900">{formatRelativeTime(startedAt)}</p>
+                              <p className="text-xs text-slate-500">{formatDateTime(startedAt)}</p>
+                            </div>
+                            {showCompletedAt && completedAt ? (
+                              <div className="space-y-1 border-t border-slate-100 pt-3">
+                                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">End</p>
+                                <p className="text-sm font-medium text-slate-900">{formatRelativeTime(completedAt)}</p>
+                                <p className="text-xs text-slate-500">{formatDateTime(completedAt)}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="max-w-[380px] py-3 align-top">
-                        <div className="space-y-1">
-                          <p className="whitespace-normal font-medium text-slate-900">{log.summary}</p>
-                          {log.correlationId && (
-                            <p className="break-all font-mono text-xs text-slate-500">
-                              Correlation: {log.correlationId}
+                        <TableCell className="py-3 align-top">
+                          <div className="space-y-2">
+                            <Badge variant="outline" className={domainBadgeClass(log.domain)}>
+                              {log.domain}
+                            </Badge>
+                            <p className="text-xs font-medium text-slate-700">
+                              {log.eventCount} event{log.eventCount > 1 ? "s" : ""}
                             </p>
-                          )}
-                        </div>
-                      </TableCell>
+                            <p className="break-all font-mono text-xs text-slate-600">{log.eventType}</p>
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="py-3 align-top">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-slate-900">{log.actorName || "System"}</p>
-                          <p className="text-xs text-slate-500">{log.actorRole || log.source}</p>
-                        </div>
-                      </TableCell>
+                        <TableCell className="max-w-[380px] py-3 align-top">
+                          <div className="space-y-1">
+                            <p className="whitespace-normal font-medium text-slate-900">{log.summary}</p>
+                            {log.correlationId && (
+                              <p className="break-all font-mono text-xs text-slate-500">
+                                Correlation: {log.correlationId}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="max-w-[260px] py-3 align-top">
-                        <div className="space-y-1">
-                          <p className="whitespace-normal text-sm font-medium text-slate-900">
-                            {log.targetName || log.jobName || log.targetId || "-"}
-                          </p>
-                          <p className="break-all text-xs text-slate-500">
-                            {log.targetType || "unknown"}
-                            {log.appId ? ` | app ${log.appId}` : ""}
-                            {log.mediationGroupId ? ` | ${log.mediationGroupId}` : ""}
-                          </p>
-                        </div>
-                      </TableCell>
+                        <TableCell className="py-3 align-top">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-slate-900">{log.actorName || "System"}</p>
+                            <p className="text-xs text-slate-500">{log.actorRole || log.source}</p>
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="py-3 align-top">
-                        <div className="flex items-center justify-between gap-2">
-                          <Badge variant="outline" className={statusBadgeClass(log.status, log.severity)}>
-                            {log.status}
-                          </Badge>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              handleOpenDetails(log)
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View log details</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell className="max-w-[260px] py-3 align-top">
+                          <div className="space-y-1">
+                            <p className="whitespace-normal text-sm font-medium text-slate-900">
+                              {log.targetName || log.jobName || log.targetId || "-"}
+                            </p>
+                            <p className="break-all text-xs text-slate-500">
+                              {log.targetType || "unknown"}
+                              {log.appId ? ` | app ${log.appId}` : ""}
+                              {log.mediationGroupId ? ` | ${log.mediationGroupId}` : ""}
+                            </p>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-3 align-top">
+                          <div className="space-y-2">
+                            {log.milestones.map((milestone) => (
+                              <div
+                                key={milestone.id}
+                                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                              >
+                                <div className="min-w-0 space-y-1">
+                                  <p className="text-xs font-medium text-slate-700">
+                                    {formatStageLabel(milestone.stage)}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500">{formatDateTime(milestone.occurredAt)}</p>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={statusBadgeClass(milestone.status, milestone.severity)}
+                                >
+                                  {milestone.status}
+                                </Badge>
+                              </div>
+                            ))}
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleOpenDetails(log)
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">View log details</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -803,7 +862,7 @@ export function ActivityLogCenterContent() {
                 totalPages={Math.max(result.totalPages, 1)}
                 totalItems={result.total}
                 pageSize={result.pageSize}
-                itemName="activity logs"
+                itemName="activities"
                 onPageChange={setCurrentPage}
                 onPageSizeChange={(size) => {
                   setPageSize(size)
