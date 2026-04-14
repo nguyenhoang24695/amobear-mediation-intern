@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,6 +17,15 @@ import {
   APP_PERMISSION_LEVELS_WITH_OWNER,
   getPermissionLevelLabel,
 } from "@/lib/enums/app-permission-level"
+
+function appMatchesSearchQuery(app: App, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const name = (app.name || "").toLowerCase()
+  const id = (app.id || "").toLowerCase()
+  const storeId = (app.appStoreId || "").toLowerCase()
+  return name.includes(q) || id.includes(q) || storeId.includes(q)
+}
 
 export interface App {
   id: string
@@ -61,8 +70,14 @@ export function AppPermissionsSelector({
   hideGiveAllApps = false,
 }: AppPermissionsSelectorProps) {
   const [appsOpen, setAppsOpen] = useState(false)
+  const [appSearchQuery, setAppSearchQuery] = useState("")
   /** Dùng để hiển thị tên/icon app đã chọn; không bị ảnh hưởng bởi filter. */
   const appsForSelectedList = allAppsForDisplay ?? apps
+
+  const appsMatchingSearch = useMemo(
+    () => apps.filter((app) => appMatchesSearchQuery(app, appSearchQuery)),
+    [apps, appSearchQuery]
+  )
 
   const permissionLevels = showOwnerPermission
     ? APP_PERMISSION_LEVELS_WITH_OWNER
@@ -104,7 +119,13 @@ export function AppPermissionsSelector({
           {!giveAllApps && (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <Popover open={appsOpen} onOpenChange={setAppsOpen}>
+                <Popover
+                  open={appsOpen}
+                  onOpenChange={(open) => {
+                    setAppsOpen(open)
+                    if (!open) setAppSearchQuery("")
+                  }}
+                >
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -116,18 +137,23 @@ export function AppPermissionsSelector({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0" align="start">
-                  <Command shouldFilter={true}>
-                    <CommandInput placeholder="Search by name, app ID, or store ID..." />
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Search by name, app ID, or store ID..."
+                      value={appSearchQuery}
+                      onValueChange={setAppSearchQuery}
+                    />
                     <CommandList>
-                      <CommandEmpty>No app found.</CommandEmpty>
-                      <CommandGroup>
-                        {apps.map((app) => {
+                      {appsMatchingSearch.length === 0 ? (
+                        <CommandEmpty>No app found.</CommandEmpty>
+                      ) : (
+                        <CommandGroup>
+                        {appsMatchingSearch.map((app) => {
                           const isSelected = selectedApps.find((a) => a.id === app.id)
-                          const searchValue = [app.name, app.id, app.appStoreId].filter(Boolean).join(" ")
                           return (
                             <CommandItem
                               key={app.id}
-                              value={searchValue}
+                              value={app.id}
                               onSelect={() => onToggleApp(app.id)}
                             >
                               <Check
@@ -163,7 +189,8 @@ export function AppPermissionsSelector({
                             </CommandItem>
                           )
                         })}
-                      </CommandGroup>
+                        </CommandGroup>
+                      )}
                     </CommandList>
                   </Command>
                   </PopoverContent>
@@ -174,11 +201,14 @@ export function AppPermissionsSelector({
                   size="sm"
                   className="shrink-0"
                   onClick={() => {
-                    apps.forEach((app) => {
+                    appsMatchingSearch.forEach((app) => {
                       if (!selectedApps.some((s) => s.id === app.id)) onToggleApp(app.id)
                     })
                   }}
-                  disabled={apps.length === 0 || apps.every((app) => selectedApps.some((s) => s.id === app.id))}
+                  disabled={
+                    appsMatchingSearch.length === 0 ||
+                    appsMatchingSearch.every((app) => selectedApps.some((s) => s.id === app.id))
+                  }
                 >
                   Select all
                 </Button>
