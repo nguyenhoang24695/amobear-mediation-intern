@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2 } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
-import { authApi } from "@/lib/api/services"
+import { alertsApi, authApi } from "@/lib/api/services"
 import { authUserFromMeDto, clearAuthSessionData, getAccessToken, getRefreshToken, getUserInitials, setAuthData } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
@@ -42,8 +42,9 @@ export function MyProfileContent() {
     daily: "",
   })
   const [profileSaving, setProfileSaving] = useState(false)
+  const [slackTestKey, setSlackTestKey] = useState<"direct" | "realtime" | "hourly" | "daily" | null>(null)
 
-  // Load current user
+  // Load current user (must be before callbacks that read displayUser)
   const { data: userResponse, loading: userLoading, refetch: refetchCurrentUser } = useApi(
     () => authApi.getCurrentUser(),
     {
@@ -58,6 +59,76 @@ export function MyProfileContent() {
     : null
 
   const displayUser = user || userFromStorage
+
+  const getSlackWebhookUrlForTest = useCallback(
+    (key: "direct" | "realtime" | "hourly" | "daily"): string => {
+      if (isEditing) {
+        return slackDrafts[key].trim()
+      }
+      const u = displayUser as {
+        slackWebhookUrl?: string
+        slackWebhookUrlRealtime?: string
+        slackWebhookUrlHourly?: string
+        slackWebhookUrlDaily?: string
+      } | null
+      if (!u) return ""
+      switch (key) {
+        case "direct":
+          return (u.slackWebhookUrl ?? "").trim()
+        case "realtime":
+          return (u.slackWebhookUrlRealtime ?? "").trim()
+        case "hourly":
+          return (u.slackWebhookUrlHourly ?? "").trim()
+        case "daily":
+          return (u.slackWebhookUrlDaily ?? "").trim()
+        default:
+          return ""
+      }
+    },
+    [isEditing, slackDrafts, displayUser],
+  )
+
+  const sendSlackTestForChannel = useCallback(
+    async (key: "direct" | "realtime" | "hourly" | "daily") => {
+      const webhookUrl = getSlackWebhookUrlForTest(key)
+      if (!webhookUrl) {
+        toast({
+          title: "Error",
+          description: "Configure a Slack webhook URL first.",
+          variant: "destructive",
+        })
+        return
+      }
+      try {
+        const parsed = new URL(webhookUrl)
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+          toast({
+            title: "Error",
+            description: "Webhook URL must use http or https.",
+            variant: "destructive",
+          })
+          return
+        }
+      } catch {
+        toast({ title: "Error", description: "Invalid webhook URL.", variant: "destructive" })
+        return
+      }
+      setSlackTestKey(key)
+      try {
+        await alertsApi.sendSlackTest({ webhookUrl })
+        toast({
+          title: "Test sent",
+          description: "Check your Slack channel for the test message.",
+        })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Could not send Slack test message."
+        toast({ title: "Error", description: msg, variant: "destructive" })
+      } finally {
+        setSlackTestKey(null)
+      }
+    },
+    [getSlackWebhookUrlForTest, toast],
+  )
 
   // Get apps and teams from user data
   const myApps = displayUser?.permissions ? Object.keys(displayUser.permissions) : []
@@ -279,74 +350,61 @@ export function MyProfileContent() {
                     Metric-scoped Slack alerts use the webhook for the rule frequency (real-time, hourly, daily). If that
                     URL is empty, the Direct message webhook is used. Leave any field empty and save to clear it.
                   </p>
-                  <div>
-                    <p className="text-xs text-slate-500">Slack — Direct message (default)</p>
-                    {isEditing ? (
-                      <Input
-                        type="url"
-                        className="mt-1.5"
-                        placeholder="https://hooks.slack.com/services/..."
-                        value={slackDrafts.direct}
-                        onChange={(e) => setSlackDrafts((d) => ({ ...d, direct: e.target.value }))}
-                        autoComplete="off"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
-                        {displayUser?.slackWebhookUrl || "—"}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Slack — Real-time alerts</p>
-                    {isEditing ? (
-                      <Input
-                        type="url"
-                        className="mt-1.5"
-                        placeholder="https://hooks.slack.com/services/..."
-                        value={slackDrafts.realtime}
-                        onChange={(e) => setSlackDrafts((d) => ({ ...d, realtime: e.target.value }))}
-                        autoComplete="off"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
-                        {displayUser?.slackWebhookUrlRealtime || "—"}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Slack — Hourly alerts</p>
-                    {isEditing ? (
-                      <Input
-                        type="url"
-                        className="mt-1.5"
-                        placeholder="https://hooks.slack.com/services/..."
-                        value={slackDrafts.hourly}
-                        onChange={(e) => setSlackDrafts((d) => ({ ...d, hourly: e.target.value }))}
-                        autoComplete="off"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
-                        {displayUser?.slackWebhookUrlHourly || "—"}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Slack — Daily alerts</p>
-                    {isEditing ? (
-                      <Input
-                        type="url"
-                        className="mt-1.5"
-                        placeholder="https://hooks.slack.com/services/..."
-                        value={slackDrafts.daily}
-                        onChange={(e) => setSlackDrafts((d) => ({ ...d, daily: e.target.value }))}
-                        autoComplete="off"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-900 break-all mt-1">
-                        {displayUser?.slackWebhookUrlDaily || "—"}
-                      </p>
-                    )}
-                  </div>
+                  {(
+                    [
+                      { key: "direct" as const, label: "Slack — Direct message (default)" },
+                      { key: "realtime" as const, label: "Slack — Real-time alerts" },
+                      { key: "hourly" as const, label: "Slack — Hourly alerts" },
+                      { key: "daily" as const, label: "Slack — Daily alerts" },
+                    ] as const
+                  ).map(({ key, label }) => {
+                    const saved =
+                      key === "direct"
+                        ? displayUser?.slackWebhookUrl
+                        : key === "realtime"
+                          ? displayUser?.slackWebhookUrlRealtime
+                          : key === "hourly"
+                            ? displayUser?.slackWebhookUrlHourly
+                            : displayUser?.slackWebhookUrlDaily
+                    const hasTestTarget = !!getSlackWebhookUrlForTest(key)
+                    return (
+                      <div key={key}>
+                        <p className="text-xs text-slate-500">{label}</p>
+                        <div className="flex gap-2 mt-1.5 items-start">
+                          <div className="min-w-0 flex-1">
+                            {isEditing ? (
+                              <Input
+                                type="url"
+                                placeholder="https://hooks.slack.com/services/..."
+                                value={slackDrafts[key]}
+                                onChange={(e) =>
+                                  setSlackDrafts((d) => ({ ...d, [key]: e.target.value }))
+                                }
+                                autoComplete="off"
+                              />
+                            ) : (
+                              <p className="text-sm font-medium text-slate-900 break-all">{saved || "—"}</p>
+                            )}
+                          </div>
+                          {hasTestTarget ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0 gap-2"
+                              disabled={slackTestKey !== null}
+                              onClick={() => void sendSlackTestForChannel(key)}
+                            >
+                              {slackTestKey === key ? (
+                                <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden />
+                              ) : null}
+                              Send test message
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
               {isEditing && (
