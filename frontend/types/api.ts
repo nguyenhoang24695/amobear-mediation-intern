@@ -378,7 +378,9 @@ export interface TeamMember {
     status: string
     joinedAt?: string
   }>
-  permissions?: Record<string, string> // AppId -> PermissionLevel
+  permissions?: Record<string, string>
+  metaAdAccountIds?: number[] | null
+  metaAdAccountCount?: number
 }
 
 export interface ActiveSession {
@@ -1047,6 +1049,8 @@ export interface InsightUserNotification {
   createdAt: string
   read: boolean
 }
+
+
 
 
 
