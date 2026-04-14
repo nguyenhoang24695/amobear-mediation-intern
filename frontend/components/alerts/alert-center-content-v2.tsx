@@ -27,6 +27,7 @@ import {
   Play,
   Trash2,
   Eye,
+  MailCheck,
 } from "lucide-react"
 import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { AlertAppAvatar } from "./alert-app-avatar"
@@ -42,6 +43,7 @@ import { format } from "date-fns"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { Pagination } from "@/components/shared/pagination"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { hasScreenFunction } from "@/lib/auth"
@@ -55,6 +57,7 @@ import {
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"] as const
 const TIMELINE_PAGE_SIZE = 25
+const REQUIRES_ATTENTION_MARK_READ_CHUNK = 200
 
 const formatRelativeTime = (date: Date) => {
   const diffMs = Date.now() - date.getTime()
@@ -189,6 +192,9 @@ export function AlertCenterContentV2() {
     cacheKey: "alert_center_filter_apps",
   })
   const { alerts, loading, refetch } = useAlertNotifications({ inAppOnly: false })
+  const [requiresAttentionPage, setRequiresAttentionPage] = useState(1)
+  const [requiresAttentionPageSize, setRequiresAttentionPageSize] = useState(10)
+  const [markReadLoading, setMarkReadLoading] = useState(false)
   const uiAlerts = useMemo(() => toUiAlertList(alerts as AlertApiItem[]), [alerts])
 
   const filterAppsOptions = useMemo(() => {
@@ -244,6 +250,49 @@ export function AlertCenterContentV2() {
       )
     })
   }, [uiAlerts, severity, appFilter, searchQuery, filterRuleId, filterDateFrom, filterDateTo])
+
+  const requiresAttentionTotalPages = Math.max(1, Math.ceil(filteredAlerts.length / requiresAttentionPageSize))
+
+  const paginatedRequiresAttention = useMemo(() => {
+    const start = (requiresAttentionPage - 1) * requiresAttentionPageSize
+    return filteredAlerts.slice(start, start + requiresAttentionPageSize)
+  }, [filteredAlerts, requiresAttentionPage, requiresAttentionPageSize])
+
+  useEffect(() => {
+    setRequiresAttentionPage(1)
+  }, [severity, appFilter, searchQuery, filterRuleId, filterDateFrom, filterDateTo])
+
+  useEffect(() => {
+    setRequiresAttentionPage((p) => Math.min(Math.max(1, p), requiresAttentionTotalPages))
+  }, [requiresAttentionTotalPages])
+
+  const handleMarkRequiresAttentionAsRead = async () => {
+    const ids = filteredAlerts.map((a) => a.numericId).filter((id) => Number.isFinite(id))
+    if (ids.length === 0) return
+    setMarkReadLoading(true)
+    try {
+      let updatedTotal = 0
+      for (let i = 0; i < ids.length; i += REQUIRES_ATTENTION_MARK_READ_CHUNK) {
+        const chunk = ids.slice(i, i + REQUIRES_ATTENTION_MARK_READ_CHUNK)
+        const res = await alertsApi.markOpenAlertsViewed(chunk)
+        updatedTotal += res.updated ?? 0
+      }
+      invalidateAlertCaches()
+      await refetch()
+      toast({
+        title: "Marked as read",
+        description:
+          updatedTotal > 0
+            ? `${updatedTotal} alert(s) marked as read for this view.`
+            : "No new read records (alerts may already be read).",
+      })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Could not mark alerts as read."
+      toast({ title: "Error", description: message, variant: "destructive" })
+    } finally {
+      setMarkReadLoading(false)
+    }
+  }
 
   const criticalCount = summary?.BySeverity?.HIGH ?? 0
   const warningCount = summary?.BySeverity?.MEDIUM ?? 0
@@ -766,11 +815,25 @@ export function AlertCenterContentV2() {
       </Card>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
-          Requires Attention
-          <Badge className="ml-2 bg-red-100 text-red-700">{filteredAlerts.length}</Badge>
-        </h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            Requires Attention
+            <Badge className="bg-red-100 text-red-700">{filteredAlerts.length}</Badge>
+          </h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-2 border-slate-300 bg-white"
+            title="Mark all alerts that match the current filters as read (in-app)."
+            onClick={() => void handleMarkRequiresAttentionAsRead()}
+            disabled={markReadLoading || filteredAlerts.length === 0}
+          >
+            {markReadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailCheck className="h-4 w-4" />}
+            Mark as read
+          </Button>
+        </div>
 
         <Card className="border-slate-200 mb-4">
           <CardContent className="p-4">
@@ -815,74 +878,94 @@ export function AlertCenterContentV2() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredAlerts.map((alert) => (
-              <Card
-                key={alert.id}
-                className={`border-l-4 ${
-                  alert.severity === "critical"
-                    ? "border-l-red-500 bg-red-50"
-                    : alert.severity === "warning"
-                      ? "border-l-amber-500 bg-amber-50"
-                      : "border-l-blue-500 bg-blue-50"
-                } border-slate-200`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex gap-3">
-                    <AlertAppAvatar
-                      appIconUri={alert.appIconUri}
-                      appDisplayName={alert.appLabel}
-                      appId={alert.appId}
-                      severity={alert.severity}
-                      size="md"
-                    />
-                    <div className="flex-1 min-w-0 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-semibold text-slate-900">{alert.title}</span>
-                        <span className="text-xs text-slate-500 shrink-0">
-                          Triggered {formatRelativeTime(alert.timestamp)}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3">
-                        {alert.value != null ? (
-                          <span className="font-mono text-sm text-red-600">
-                            {alert.metricLabel}: {alert.value.toFixed(2)}
-                            {alert.threshold != null ? ` (threshold ${alert.threshold.toFixed(2)})` : ""}
+            <div className="space-y-4">
+              {paginatedRequiresAttention.map((alert) => (
+                <Card
+                  key={alert.id}
+                  className={`border-l-4 ${
+                    alert.severity === "critical"
+                      ? "border-l-red-500 bg-red-50"
+                      : alert.severity === "warning"
+                        ? "border-l-amber-500 bg-amber-50"
+                        : "border-l-blue-500 bg-blue-50"
+                  } border-slate-200`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex gap-3">
+                      <AlertAppAvatar
+                        appIconUri={alert.appIconUri}
+                        appDisplayName={alert.appLabel}
+                        appId={alert.appId}
+                        severity={alert.severity}
+                        size="md"
+                      />
+                      <div className="flex-1 min-w-0 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-semibold text-slate-900">{alert.title}</span>
+                          <span className="text-xs text-slate-500 shrink-0">
+                            Triggered {formatRelativeTime(alert.timestamp)}
                           </span>
-                        ) : null}
-                      </div>
+                        </div>
 
-                      {alert.slackFinance ? <AlertSlackFinanceRow fin={alert.slackFinance} /> : null}
+                        <div className="flex flex-wrap items-center gap-3">
+                          {alert.value != null ? (
+                            <span className="font-mono text-sm text-red-600">
+                              {alert.metricLabel}: {alert.value.toFixed(2)}
+                              {alert.threshold != null ? ` (threshold ${alert.threshold.toFixed(2)})` : ""}
+                            </span>
+                          ) : null}
+                        </div>
 
-                      <p className="text-sm text-slate-600">{alert.description}</p>
+                        {alert.slackFinance ? <AlertSlackFinanceRow fin={alert.slackFinance} /> : null}
 
-                      <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-transparent"
-                      onClick={() => handleAcknowledge(alert.numericId)}
-                      disabled={actionLoading != null}
-                    >
-                      {actionLoading?.id === alert.numericId && actionLoading.type === "ack" ? "Acknowledging..." : "Acknowledge"}
-                    </Button>
-                    <Button size="sm" variant="outline" className="bg-transparent" asChild>
-                      <Link href={`/alert-center/${alert.id}`}>View Detail</Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent"
-                      onClick={() => handleResolve(alert.numericId)}
-                      disabled={actionLoading != null}
-                    >
-                      {actionLoading?.id === alert.numericId && actionLoading.type === "resolve" ? "Resolving..." : "Resolve"}
-                    </Button>
+                        <p className="text-sm text-slate-600">{alert.description}</p>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-transparent"
+                            onClick={() => handleAcknowledge(alert.numericId)}
+                            disabled={actionLoading != null}
+                          >
+                            {actionLoading?.id === alert.numericId && actionLoading.type === "ack"
+                              ? "Acknowledging..."
+                              : "Acknowledge"}
+                          </Button>
+                          <Button size="sm" variant="outline" className="bg-transparent" asChild>
+                            <Link href={`/alert-center/${alert.id}`}>View Detail</Link>
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent"
+                            onClick={() => handleResolve(alert.numericId)}
+                            disabled={actionLoading != null}
+                          >
+                            {actionLoading?.id === alert.numericId && actionLoading.type === "resolve"
+                              ? "Resolving..."
+                              : "Resolve"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {filteredAlerts.length > 0 ? (
+              <Pagination
+                currentPage={requiresAttentionPage}
+                totalPages={requiresAttentionTotalPages}
+                totalItems={filteredAlerts.length}
+                pageSize={requiresAttentionPageSize}
+                onPageChange={setRequiresAttentionPage}
+                onPageSizeChange={(size) => {
+                  setRequiresAttentionPageSize(size)
+                  setRequiresAttentionPage(1)
+                }}
+                itemName="alerts"
+              />
+            ) : null}
           </div>
         )}
       </div>

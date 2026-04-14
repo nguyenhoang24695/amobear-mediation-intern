@@ -93,6 +93,11 @@ function scopesToString(scopes: string[] | undefined) {
   return (scopes ?? []).join(", ")
 }
 
+function formatNumericTotal(value?: number | null) {
+  if (value === null || value === undefined) return "-"
+  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function formatAuthMode(value: string) {
   return AUTH_MODE_OPTIONS.find((option) => option.value === value)?.label ?? value
 }
@@ -498,14 +503,19 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
               <TableHead className="text-xs text-slate-500 font-medium">Name</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-32">Auth Mode</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Business Name</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Meta App ID</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium w-24">Ad Accounts</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Total Spent</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Total Balance</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Total Spend Cap</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-36">Token Status</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Scopes</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-20">Default</TableHead>
@@ -517,7 +527,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-12">
+                <TableCell colSpan={15} className="py-12">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading integrations...
@@ -526,13 +536,13 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={15} className="text-center py-12 text-sm text-red-600">
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : (integrations ?? []).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={15} className="text-center py-12 text-sm text-slate-400">
                   No integrations configured yet.
                 </TableCell>
               </TableRow>
@@ -556,7 +566,12 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                       <div className="text-[11px] text-slate-400">{getAuthModeHelper(integration.authMode)}</div>
                     </TableCell>
                     <TableCell className="font-mono text-xs text-slate-500">{integration.metaBusinessId || "-"}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{integration.metaBusinessName || "-"}</TableCell>
                     <TableCell className="font-mono text-xs text-slate-500">{integration.metaAppId || "-"}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{integration.syncedAdAccountCount.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{formatNumericTotal(integration.totalAmountSpent)}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{formatNumericTotal(integration.totalBalance)}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{formatNumericTotal(integration.totalSpendCap)}</TableCell>
                     <TableCell>
                       <Badge className={`text-[11px] flex items-center gap-1 w-fit ${badge.className}`}>
                         {badge.icon}

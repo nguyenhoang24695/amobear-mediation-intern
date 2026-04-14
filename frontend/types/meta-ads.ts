@@ -19,6 +19,7 @@ export interface MetaIntegrationDto {
   isProductionSafe: boolean
   productionUsageMessage?: string | null
   metaBusinessId?: string | null
+  metaBusinessName?: string | null
   metaAppId?: string | null
   hasAppSecret: boolean
   appSecretHint?: string | null
@@ -30,6 +31,10 @@ export interface MetaIntegrationDto {
   scopes: string[]
   tokenStatus: string
   lastCheckMessage?: string | null
+  syncedAdAccountCount: number
+  totalAmountSpent?: number | null
+  totalBalance?: number | null
+  totalSpendCap?: number | null
   isDefault: boolean
   isEnabled: boolean
   createdAt: string
@@ -40,6 +45,7 @@ export interface CreateMetaIntegrationRequestDto {
   displayName: string
   authMode: string
   metaBusinessId?: string | null
+  metaBusinessName?: string | null
   metaAppId?: string | null
   appSecret?: string | null
   accessToken?: string | null
@@ -54,6 +60,7 @@ export interface UpdateMetaIntegrationRequestDto {
   displayName?: string | null
   authMode?: string | null
   metaBusinessId?: string | null
+  metaBusinessName?: string | null
   metaAppId?: string | null
   appSecret?: string | null
   accessToken?: string | null
@@ -93,6 +100,7 @@ export interface MetaIntegrationTestRequestDto {
   integrationId?: number | null
   authMode?: string | null
   metaBusinessId?: string | null
+  metaBusinessName?: string | null
   metaAppId?: string | null
   appSecret?: string | null
   accessToken?: string | null
