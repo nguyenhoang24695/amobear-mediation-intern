@@ -68,6 +68,7 @@ const networkConfig: Record<string, { label: string; className: string; initials
   admob: { label: "AdMob", className: "bg-amber-50 text-amber-700 border-amber-200", initials: "AM", bgColor: "bg-amber-100 text-amber-700" },
   applovin: { label: "AppLovin", className: "bg-violet-50 text-violet-700 border-violet-200", initials: "AL", bgColor: "bg-violet-100 text-violet-700" },
   xmp: { label: "XMP", className: "bg-blue-50 text-blue-700 border-blue-200", initials: "XM", bgColor: "bg-blue-100 text-blue-700" },
+  appsflyer: { label: "AppsFlyer", className: "bg-sky-50 text-sky-800 border-sky-200", initials: "AF", bgColor: "bg-sky-100 text-sky-800" },
 }
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
@@ -109,10 +110,11 @@ export function DataAccountsTable({
       publisherId: account.network === "admob" ? account.accountId : undefined,
       defaultAppType: account.network === "admob" ? (account.defaultAppType ?? undefined) : undefined,
       reportKey: account.network === "applovin" ? account.reportKey : undefined,
-      sdkKey: undefined,
-      apiKey: account.network === "xmp" ? account.xmpClientId : undefined,
-      apiSecret: account.network === "xmp" ? account.xmpClientSecret : undefined,
-      apiDomain: "global",
+      baseUrl:
+        account.network === "applovin" || account.network === "appsflyer" ? account.baseUrl : undefined,
+      xmpClientId: account.network === "xmp" ? account.xmpClientId : undefined,
+      xmpClientSecret: account.network === "xmp" ? account.xmpClientSecret : undefined,
+      isDefault: account.network === "appsflyer" ? account.isDefault : undefined,
     }
     setEditAccount(mapped)
     setEditModalOpen(true)

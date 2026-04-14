@@ -24,7 +24,7 @@ import { dataAccountsApi } from "@/lib/api/services"
 export interface DataAccount {
   id: string
   name: string
-  network: "admob" | "applovin" | "xmp"
+  network: "admob" | "applovin" | "xmp" | "appsflyer"
   // admob
   publisherId?: string
   clientId?: string
@@ -38,6 +38,10 @@ export interface DataAccount {
   // xmp
   xmpClientId?: string
   xmpClientSecret?: string
+  // appsflyer
+  apiV2Token?: string
+  pushWebhookAuthToken?: string
+  isDefault?: boolean
 }
 
 interface AddEditAccountModalProps {
@@ -53,7 +57,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const { toast } = useToast()
   const isEdit = !!editAccount
 
-  const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp">("admob")
+  const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp" | "appsflyer">("admob")
   const [saving, setSaving] = useState(false)
   const [testState, setTestState] = useState<TestState>("idle")
 
@@ -80,6 +84,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [xmpClientSecret, setXmpClientSecret] = useState("")
   const [showXmpClientSecret, setShowXmpClientSecret] = useState(false)
 
+  // AppsFlyer
+  const [appsflyerName, setAppsflyerName] = useState("")
+  const [afApiV2Token, setAfApiV2Token] = useState("")
+  const [afBaseUrl, setAfBaseUrl] = useState("https://hq1.appsflyer.com")
+  const [afPushWebhookToken, setAfPushWebhookToken] = useState("")
+  const [showAfApiToken, setShowAfApiToken] = useState(false)
+  const [afIsDefault, setAfIsDefault] = useState(false)
+
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Reset / pre-fill on open
@@ -105,6 +117,12 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           setApplovinName(editAccount.name)
           setReportKey(editAccount.reportKey ?? "")
           setBaseUrl(editAccount.baseUrl ?? "https://r.applovin.com")
+        } else if (editAccount.network === "appsflyer") {
+          setAppsflyerName(editAccount.name)
+          setAfApiV2Token("")
+          setAfBaseUrl(editAccount.baseUrl ?? "https://hq1.appsflyer.com")
+          setAfPushWebhookToken("")
+          setAfIsDefault(editAccount.isDefault ?? false)
         } else {
           setXmpName(editAccount.name)
           setXmpClientId(editAccount.xmpClientId ?? "")
@@ -126,6 +144,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         setXmpName("")
         setXmpClientId("")
         setXmpClientSecret("")
+        setAppsflyerName("")
+        setAfApiV2Token("")
+        setAfBaseUrl("https://hq1.appsflyer.com")
+        setAfPushWebhookToken("")
+        setAfIsDefault(false)
       }
     }
   }, [open, editAccount])
@@ -137,6 +160,9 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
       if (!publisherId.trim()) newErrors.publisherId = "Publisher ID is required"
     } else if (activeTab === "applovin") {
       if (!applovinName.trim()) newErrors.applovinName = "Account name is required"
+    } else if (activeTab === "appsflyer") {
+      if (!appsflyerName.trim()) newErrors.appsflyerName = "Account name is required"
+      if (!isEdit && !afApiV2Token.trim()) newErrors.afApiV2Token = "API V2 token is required"
     } else {
       if (!xmpName.trim()) newErrors.xmpName = "Account name is required"
       if (!xmpClientId.trim()) newErrors.xmpClientId = "Client ID is required"
@@ -150,7 +176,13 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
     await new Promise((r) => setTimeout(r, 1800))
     // Simulate: error if name contains "test" (case-insensitive)
     const currentName =
-      activeTab === "admob" ? admobName : activeTab === "applovin" ? applovinName : xmpName
+      activeTab === "admob"
+        ? admobName
+        : activeTab === "applovin"
+          ? applovinName
+          : activeTab === "appsflyer"
+            ? appsflyerName
+            : xmpName
     const success = !currentName.toLowerCase().includes("error")
     setTestState(success ? "success" : "error")
     // Auto-reset after 3s
@@ -183,6 +215,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             reportKey: reportKey || undefined,
             baseUrl: baseUrl.trim() || undefined,
           })
+        } else if (network === "appsflyer") {
+          await dataAccountsApi.update(network, id, {
+            name: appsflyerName.trim(),
+            baseUrl: afBaseUrl.trim() || undefined,
+            isDefault: afIsDefault,
+            ...(afApiV2Token.trim() ? { apiV2Token: afApiV2Token.trim() } : {}),
+            ...(afPushWebhookToken.trim() ? { pushWebhookAuthToken: afPushWebhookToken.trim() } : {}),
+          })
         } else {
           await dataAccountsApi.update(network, id, {
             name: xmpName.trim(),
@@ -210,6 +250,15 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             name: applovinName.trim(),
             reportKey: reportKey || undefined,
             baseUrl: baseUrl.trim() || undefined,
+          })
+        } else if (activeTab === "appsflyer") {
+          await dataAccountsApi.create({
+            network: "appsflyer",
+            name: appsflyerName.trim(),
+            baseUrl: afBaseUrl.trim() || undefined,
+            apiV2Token: afApiV2Token.trim(),
+            pushWebhookAuthToken: afPushWebhookToken.trim() || undefined,
+            isDefault: afIsDefault,
           })
         } else {
           await dataAccountsApi.create({
@@ -269,10 +318,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               }
             }}
           >
-            <TabsList className={`grid w-full grid-cols-3 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
+            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-4 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
               <TabsTrigger value="admob">AdMob</TabsTrigger>
               <TabsTrigger value="applovin">AppLovin</TabsTrigger>
-              <TabsTrigger value="xmp">XMP / Mintegral</TabsTrigger>
+              <TabsTrigger value="xmp">XMP</TabsTrigger>
+              <TabsTrigger value="appsflyer">AppsFlyer</TabsTrigger>
             </TabsList>
 
             {/* ── AdMob Tab ── */}
@@ -440,6 +490,83 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                   onChange={(e) => setBaseUrl(e.target.value)}
                   disabled={saving}
                 />
+              </div>
+            </TabsContent>
+
+            {/* ── AppsFlyer Tab ── */}
+            <TabsContent value="appsflyer" className="mt-5 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="af-name">
+                  Account Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="af-name"
+                  placeholder="e.g. AppsFlyer Production"
+                  value={appsflyerName}
+                  onChange={(e) => {
+                    setAppsflyerName(e.target.value)
+                    setErrors((p) => ({ ...p, appsflyerName: "" }))
+                  }}
+                  className={errors.appsflyerName ? "border-red-500" : ""}
+                  disabled={saving}
+                />
+                {errors.appsflyerName && <p className="text-xs text-red-500">{errors.appsflyerName}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="af-api-token">
+                  API V2 Token {!isEdit && <span className="text-red-500">*</span>}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="af-api-token"
+                    type={showAfApiToken ? "text" : "password"}
+                    placeholder={isEdit ? "Leave blank to keep existing token" : "From Dashboard → Integration → API Access"}
+                    value={afApiV2Token}
+                    onChange={(e) => {
+                      setAfApiV2Token(e.target.value)
+                      setErrors((p) => ({ ...p, afApiV2Token: "" }))
+                    }}
+                    className={errors.afApiV2Token ? "border-red-500 pr-10" : "pr-10"}
+                    disabled={saving}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    onClick={() => setShowAfApiToken(!showAfApiToken)}
+                  >
+                    {showAfApiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.afApiV2Token && <p className="text-xs text-red-500">{errors.afApiV2Token}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="af-base-url">API base URL</Label>
+                <Input
+                  id="af-base-url"
+                  placeholder="https://hq1.appsflyer.com"
+                  value={afBaseUrl}
+                  onChange={(e) => setAfBaseUrl(e.target.value)}
+                  disabled={saving}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="af-push-token">Push webhook auth token (optional)</Label>
+                <Input
+                  id="af-push-token"
+                  type="password"
+                  placeholder={isEdit ? "Leave blank to keep unchanged" : "Bearer secret for /api/webhooks/appsflyer"}
+                  value={afPushWebhookToken}
+                  onChange={(e) => setAfPushWebhookToken(e.target.value)}
+                  disabled={saving}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Switch id="af-default" checked={afIsDefault} onCheckedChange={setAfIsDefault} disabled={saving} />
+                <Label htmlFor="af-default" className="font-normal cursor-pointer">
+                  Default AppsFlyer account (used when jobs need a single credential set)
+                </Label>
               </div>
             </TabsContent>
 

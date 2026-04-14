@@ -55,20 +55,29 @@ import {
 const categories = [
   { id: "all", label: "All", icon: BookOpen },
   { id: "schema", label: "Schema", icon: Database },
+  { id: "rules", label: "Rules", icon: AlertTriangle },
   { id: "metric", label: "Metric", icon: TrendingUp },
-  { id: "business_rule", label: "Rules", icon: AlertTriangle },
   { id: "faq", label: "FAQ", icon: HelpCircle },
   { id: "query_pattern", label: "Query Patterns", icon: FileCode },
   { id: "best_practice", label: "Best Practices", icon: Lightbulb },
 ]
 
+const rulesStyle = { color: "text-amber-600", bgColor: "bg-amber-100", label: "Rules" } as const
+
 const categoryConfig: Record<string, { color: string; bgColor: string; label: string }> = {
   schema: { color: "text-blue-600", bgColor: "bg-blue-100", label: "Schema" },
   metric: { color: "text-emerald-600", bgColor: "bg-emerald-100", label: "Metric" },
-  business_rule: { color: "text-amber-600", bgColor: "bg-amber-100", label: "Business Rule" },
+  rules: { ...rulesStyle },
+  business_rule: { ...rulesStyle },
   faq: { color: "text-purple-600", bgColor: "bg-purple-100", label: "FAQ" },
   query_pattern: { color: "text-cyan-600", bgColor: "bg-cyan-100", label: "Query Pattern" },
   best_practice: { color: "text-pink-600", bgColor: "bg-pink-100", label: "Best Practice" },
+}
+
+/** Map legacy DB value business_rule → form/API slug rules */
+function normalizeKnowledgeBaseCategoryForForm(category: string): string {
+  const c = category.toLowerCase()
+  return c === "business_rule" ? "rules" : c
 }
 
 interface FormState {
@@ -144,7 +153,7 @@ export function KnowledgeBaseContent() {
   const handleOpenEdit = (entry: KnowledgeBaseEntry) => {
     setFormState({
       title: entry.title,
-      category: entry.category.toLowerCase(),
+      category: normalizeKnowledgeBaseCategoryForForm(entry.category),
       content: entry.content,
       tags: entry.tags.join(", "),
       focusAreas: entry.focusAreas.join(", "),
@@ -531,13 +540,14 @@ export function KnowledgeBaseContent() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={(open) => !open && handleCloseDialog()}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingEntry ? "Edit Entry" : "Add New Entry"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+          <div className="flex min-h-0 flex-1 flex-col px-6 pt-6">
+            <DialogHeader className="shrink-0 pb-4 text-left">
+              <DialogTitle>
+                {editingEntry ? "Edit Entry" : "Add New Entry"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden pb-2 pr-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Title *</Label>
@@ -558,8 +568,8 @@ export function KnowledgeBaseContent() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="schema">Schema</SelectItem>
+                    <SelectItem value="rules">Rules</SelectItem>
                     <SelectItem value="metric">Metric</SelectItem>
-                    <SelectItem value="business_rule">Business Rule</SelectItem>
                     <SelectItem value="faq">FAQ</SelectItem>
                     <SelectItem value="query_pattern">Query Pattern</SelectItem>
                     <SelectItem value="best_practice">Best Practice</SelectItem>
@@ -571,7 +581,7 @@ export function KnowledgeBaseContent() {
               <Label>Content *</Label>
               <Textarea
                 placeholder="Entry content..."
-                className="min-h-[150px] font-mono text-sm"
+                className="field-sizing-fixed min-h-[150px] max-h-[min(55vh,480px)] resize-y overflow-y-auto font-mono text-sm"
                 value={formState.content}
                 onChange={(e) => setFormState((s) => ({ ...s, content: e.target.value }))}
               />
@@ -606,8 +616,9 @@ export function KnowledgeBaseContent() {
                 }
               />
             </div>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
             <Button variant="outline" onClick={handleCloseDialog} disabled={saving}>
               Cancel
             </Button>

@@ -2,7 +2,11 @@ import { clearAuthSessionData, getAccessToken, refreshAuthSession } from "@/lib/
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000
+/** ≥ backend regenerate budget (default 1200s) + đệm cho proxy; regenerate tiếp tục trên server nếu tab đóng nhưng client vẫn cần timeout dài nếu chờ JSON response. */
+export const APP_INSIGHT_REGENERATE_TIMEOUT_MS = 1_500_000
 let isRedirecting = false
+
+type RequestOptions = RequestInit & { timeoutMs?: number }
 
 export class ApiClient {
     private baseUrl: string
@@ -11,20 +15,22 @@ export class ApiClient {
         this.baseUrl = baseUrl.replace(/\/$/, "")
     }
 
-    private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+        const { timeoutMs, ...fetchInit } = options
+        const effectiveTimeoutMs = timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
         const url = `${this.baseUrl}${endpoint}`
         const token = getAccessToken()
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
-        const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData
+        const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs)
+        const isFormData = typeof FormData !== "undefined" && fetchInit.body instanceof FormData
 
         const config: RequestInit = {
-            ...options,
+            ...fetchInit,
             signal: controller.signal,
             headers: {
                 ...(!isFormData && { "Content-Type": "application/json" }),
                 ...(token && { Authorization: `Bearer ${token}` }),
-                ...options.headers,
+                ...fetchInit.headers,
             },
         }
 
@@ -91,8 +97,12 @@ export class ApiClient {
         return this.request<T>(`${endpoint}${queryString}`, { method: "GET" })
     }
 
-    async post<T>(endpoint: string, data?: unknown): Promise<T> {
-        return this.request<T>(endpoint, { method: "POST", body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined })
+    async post<T>(endpoint: string, data?: unknown, timeoutMs?: number): Promise<T> {
+        return this.request<T>(endpoint, {
+            method: "POST",
+            body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
+            timeoutMs,
+        })
     }
 
     async put<T>(endpoint: string, data?: unknown): Promise<T> {

@@ -5,7 +5,7 @@ import { addDays, format, isAfter, startOfDay, subDays } from "date-fns"
 import { insightApi } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
-import type { AppDailyInsight } from "@/types/api"
+import type { AppDailyInsight, AppInsightHistoryDay } from "@/types/api"
 import { InsightHeader } from "./ai-insights/insight-header"
 import { HealthScoreBanner } from "./ai-insights/health-score-banner"
 import { ViewToggleActionsBar } from "./ai-insights/view-toggle-actions-bar"
@@ -50,7 +50,7 @@ export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [insight, setInsight] = useState<AppDailyInsight | null>(null)
-  const [availableDates, setAvailableDates] = useState<string[]>([])
+  const [insightHistory, setInsightHistory] = useState<AppInsightHistoryDay[]>([])
   const [feedbackGiven, setFeedbackGiven] = useState<"up" | "down" | null>(null)
 
   const canView = hasScreenFunction("s-apps", "view-ai-insight") || hasScreenFunction("s-apps", "view-details")
@@ -62,20 +62,20 @@ export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
     if (!canView || !appId) return
     setLoading(true)
     try {
-      const [daily, dates] = await Promise.all([
+      const todayLocal = startOfDay(new Date())
+      const historyFrom = format(subDays(todayLocal, 29), "yyyy-MM-dd")
+      const historyTo = format(todayLocal, "yyyy-MM-dd")
+      const [daily, history] = await Promise.all([
         insightApi.getDailyForApp(appId, dateStr),
-        insightApi.getAvailableDates(
-          appId,
-          format(subDays(new Date(), 90), "yyyy-MM-dd"),
-          format(new Date(), "yyyy-MM-dd"),
-        ),
+        insightApi.getInsightHistory(appId, historyFrom, historyTo),
       ])
       setInsight(daily)
-      setAvailableDates(dates)
+      setInsightHistory(history)
     } catch (e) {
       console.error(e)
       toast({ title: "Không tải được insight", variant: "destructive" })
       setInsight(null)
+      setInsightHistory([])
     } finally {
       setLoading(false)
     }
@@ -119,18 +119,21 @@ export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
   }
 
   const historicalData = useMemo(() => {
-    const set = new Set(availableDates)
+    const byDate = new Map<string, AppInsightHistoryDay>()
+    for (const h of insightHistory) {
+      byDate.set(h.insightDate, h)
+    }
     return Array.from({ length: 30 }, (_, i) => {
       const date = subDays(today, 29 - i)
       const ymd = format(date, "yyyy-MM-dd")
-      const has = set.has(ymd)
+      const h = byDate.get(ymd)
       return {
         date,
-        score: has ? 72 : null,
-        anomalies: 0,
+        score: h?.healthScore ?? null,
+        anomalies: h?.anomalyCount ?? 0,
       }
     })
-  }, [availableDates, today])
+  }, [insightHistory, today])
 
   if (!canView) {
     return <p className="text-sm text-slate-500">Bạn không có quyền xem AI Insight.</p>
@@ -179,14 +182,21 @@ export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
 
   if (failed) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        <p className="font-medium">Tạo insight thất bại</p>
-        <p className="mt-1">{insight.errorMessage ?? "Unknown error"}</p>
-        {canRegenerate ? (
-          <button type="button" className="mt-3 text-indigo-600 underline" onClick={() => void handleRegenerate()}>
-            Thử lại
-          </button>
-        ) : null}
+      <div className="flex flex-col gap-6">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-medium">Tạo insight thất bại</p>
+          <p className="mt-1">{insight.errorMessage ?? "Unknown error"}</p>
+          {canRegenerate ? (
+            <button type="button" className="mt-3 text-indigo-600 underline" onClick={() => void handleRegenerate()}>
+              Thử lại
+            </button>
+          ) : null}
+        </div>
+        <HistoricalInsightsCalendar
+          data={historicalData}
+          selectedDate={selectedDate}
+          onDateClick={handleDateChange}
+        />
       </div>
     )
   }
