@@ -228,7 +228,7 @@ function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: App
   const selectedOption = options.find((option) => option.value === value) ?? options[0]
   const selectedMeta = selectedOption?.value === "all"
     ? ""
-    : [formatPlatformDisplay(selectedOption?.platform), formatAppIdDisplay(selectedOption?.appId)].filter(Boolean).join(" � ")
+    : [formatPlatformDisplay(selectedOption?.platform), formatAppIdDisplay(selectedOption?.appId)].filter(Boolean).join(" ")
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -287,7 +287,7 @@ function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: App
                       <div className="flex min-w-0 flex-col text-left">
                         <span className="truncate font-medium">{option.label}</span>
                         <span className="truncate text-xs text-slate-500">
-                          {[formatPlatformDisplay(option.platform), formatAppIdDisplay(option.appId)].filter(Boolean).join(" � ")}
+                          {[formatPlatformDisplay(option.platform), formatAppIdDisplay(option.appId)].filter(Boolean).join(" ")}
                         </span>
                       </div>
                     </>
