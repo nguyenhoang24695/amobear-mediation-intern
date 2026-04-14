@@ -1,17 +1,92 @@
 "use client"
 
-import { Loader2, RefreshCw } from "lucide-react"
+import { useState } from "react"
+import { Check, ChevronsUpDown, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { DateRangePicker, type DateRange } from "@/components/ui/date-range-picker"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import type { MetaInsightsFiltersResponseDto } from "@/types/meta-ads"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import type { MetaInsightsFilterOptionDto, MetaInsightsFiltersResponseDto } from "@/types/meta-ads"
+
+interface SearchableFilterSelectProps {
+  value: string
+  options: MetaInsightsFilterOptionDto[]
+  allLabel: string
+  searchPlaceholder: string
+  emptyMessage: string
+  onValueChange: (value: string) => void
+  className?: string
+}
+
+function SearchableFilterSelect({
+  value,
+  options,
+  allLabel,
+  searchPlaceholder,
+  emptyMessage,
+  onValueChange,
+  className,
+}: SearchableFilterSelectProps) {
+  const [open, setOpen] = useState(false)
+  const selectedOption = value === "all" ? null : options.find((option) => option.value === value) ?? null
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("h-10 w-full justify-between bg-white px-3 text-left font-normal", className)}
+        >
+          <span className="min-w-0 flex-1 truncate text-left">
+            {selectedOption ? selectedOption.label || selectedOption.value : <span className="text-slate-500">{allLabel}</span>}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[220px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value={`all ${allLabel}`}
+                onSelect={() => {
+                  onValueChange("all")
+                  setOpen(false)
+                }}
+              >
+                <Check className={cn("mr-2 h-4 w-4", value === "all" ? "opacity-100" : "opacity-0")} />
+                <span>{allLabel}</span>
+              </CommandItem>
+              {options.map((option) => {
+                const isSelected = option.value === value
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={`${option.label} ${option.value}`}
+                    onSelect={() => {
+                      onValueChange(option.value)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                    <span className="truncate">{option.label || option.value}</span>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 interface MetaInsightsFiltersProps {
   range: DateRange
@@ -51,47 +126,35 @@ export function MetaInsightsFilters({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Select value={accountId} onValueChange={onAccountChange}>
-            <SelectTrigger className="h-10 min-w-[190px] bg-white text-sm">
-              <SelectValue placeholder="Ad account" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All ad accounts</SelectItem>
-              {(filters?.accounts ?? []).map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableFilterSelect
+            value={accountId}
+            options={filters?.accounts ?? []}
+            allLabel="All ad accounts"
+            searchPlaceholder="Search ad accounts..."
+            emptyMessage="No ad accounts found."
+            onValueChange={onAccountChange}
+            className="min-w-[190px] text-sm"
+          />
 
-          <Select value={campaignId} onValueChange={onCampaignChange}>
-            <SelectTrigger className="h-10 min-w-[220px] bg-white text-sm">
-              <SelectValue placeholder="Campaign" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All campaigns</SelectItem>
-              {(filters?.campaigns ?? []).map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label || option.value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableFilterSelect
+            value={campaignId}
+            options={filters?.campaigns ?? []}
+            allLabel="All campaigns"
+            searchPlaceholder="Search campaigns..."
+            emptyMessage="No campaigns found."
+            onValueChange={onCampaignChange}
+            className="min-w-[220px] text-sm"
+          />
 
-          <Select value={country} onValueChange={onCountryChange}>
-            <SelectTrigger className="h-10 min-w-[160px] bg-white text-sm">
-              <SelectValue placeholder="Country" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All countries</SelectItem>
-              {(filters?.countries ?? []).map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableFilterSelect
+            value={country}
+            options={filters?.countries ?? []}
+            allLabel="All countries"
+            searchPlaceholder="Search countries..."
+            emptyMessage="No countries found."
+            onValueChange={onCountryChange}
+            className="min-w-[160px] text-sm"
+          />
 
           <Button
             type="button"

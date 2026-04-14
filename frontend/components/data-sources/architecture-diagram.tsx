@@ -12,6 +12,7 @@ const sources = [
   { name: "AppMetrica", color: "bg-red-500" },
   { name: "XMP", color: "bg-blue-600" },
   { name: "Adjust", color: "bg-teal-500" },
+  { name: "AppsFlyer", color: "bg-sky-600" },
 ]
 
 const layers = [

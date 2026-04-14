@@ -35,16 +35,18 @@ import { AddEditAccountModal } from "./add-edit-account-modal"
 import { DataAccountOverviewTab } from "./tabs/data-account-overview-tab"
 import { DataAccountSyncHistoryTab } from "./tabs/data-account-sync-history-tab"
 import { DataAccountSettingsTab } from "./tabs/data-account-settings-tab"
+import { DataAccountAppsFlyerAppsTab } from "./data-account-appsflyer-apps-tab"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { dataAccountsApi, type DataAccountItem } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 
-type NetworkType = "admob" | "applovin" | "xmp"
+type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer"
 
 const networkConfig: Record<NetworkType, { label: string; color: string; badgeClass: string }> = {
   admob: { label: "AdMob", color: "bg-blue-500", badgeClass: "bg-blue-100 text-blue-700 border-blue-200" },
   applovin: { label: "AppLovin", color: "bg-green-500", badgeClass: "bg-green-100 text-green-700 border-green-200" },
   xmp: { label: "XMP / Mintegral", color: "bg-purple-500", badgeClass: "bg-purple-100 text-purple-700 border-purple-200" },
+  appsflyer: { label: "AppsFlyer", color: "bg-sky-500", badgeClass: "bg-sky-100 text-sky-800 border-sky-200" },
 }
 
 const statusConfig: Record<string, { label: string; badgeClass: string; dotClass: string }> = {
@@ -56,11 +58,12 @@ const statusConfig: Record<string, { label: string; badgeClass: string; dotClass
 // ─── Network avatar icon ──────────────────────────────────────────────────────
 
 function NetworkAvatar({ network }: { network: NetworkType }) {
-  const initials: Record<NetworkType, string> = { admob: "AM", applovin: "AL", xmp: "XM" }
+  const initials: Record<NetworkType, string> = { admob: "AM", applovin: "AL", xmp: "XM", appsflyer: "AF" }
   const colors: Record<NetworkType, string> = {
     admob: "bg-blue-100 text-blue-700",
     applovin: "bg-green-100 text-green-700",
     xmp: "bg-purple-100 text-purple-700",
+    appsflyer: "bg-sky-100 text-sky-800",
   }
   return (
     <div className={`h-16 w-16 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${colors[network]}`}>
@@ -83,8 +86,7 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
 // ─── Parse composite ID ───────────────────────────────────────────────────────
 
 function parseAccountId(compositeId: string): { network: string; id: number } | null {
-  // Format: "admob-1", "applovin-2", "xmp-3"
-  const match = compositeId.match(/^(admob|applovin|xmp)-(\d+)$/)
+  const match = compositeId.match(/^(admob|applovin|xmp|appsflyer)-(\d+)$/)
   if (!match) return null
   return { network: match[1], id: Number(match[2]) }
 }
@@ -166,7 +168,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
   const editAccountData = {
     id: String(account.id),
     name: account.name,
-    network: account.network as "admob" | "applovin" | "xmp",
+    network: account.network as "admob" | "applovin" | "xmp" | "appsflyer",
     publisherId: account.network === "admob" ? account.accountId : undefined,
     clientId: account.network === "admob" ? account.clientId : undefined,
     clientSecret: account.network === "admob" ? account.clientSecret : undefined,
@@ -175,9 +177,11 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     tokenType: account.network === "admob" ? account.tokenType : undefined,
     defaultAppType: account.network === "admob" ? (account.defaultAppType ?? undefined) : undefined,
     reportKey: account.network === "applovin" ? account.reportKey : undefined,
-    baseUrl: account.network === "applovin" ? account.baseUrl : undefined,
+    baseUrl:
+      account.network === "applovin" || account.network === "appsflyer" ? account.baseUrl : undefined,
     xmpClientId: account.network === "xmp" ? account.xmpClientId : undefined,
     xmpClientSecret: account.network === "xmp" ? account.xmpClientSecret : undefined,
+    isDefault: account.network === "appsflyer" ? account.isDefault : undefined,
   }
 
   // Build account-like object for tabs that expect it
@@ -217,6 +221,9 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     // XMP
     xmpClientId: account.xmpClientId,
     xmpClientSecret: account.xmpClientSecret,
+    // AppsFlyer
+    apiV2Token: account.apiV2Token,
+    pushWebhookAuthToken: account.pushWebhookAuthToken,
   }
 
   return (
@@ -289,14 +296,23 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-slate-100">
+          <TabsList className="bg-slate-100 flex flex-wrap h-auto gap-1 py-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            {account.network === "appsflyer" && (
+              <TabsTrigger value="af-apps">AF Apps</TabsTrigger>
+            )}
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
             <DataAccountOverviewTab account={accountForTabs} />
           </TabsContent>
+
+          {account.network === "appsflyer" && (
+            <TabsContent value="af-apps">
+              <DataAccountAppsFlyerAppsTab accountId={account.id} />
+            </TabsContent>
+          )}
 
           <TabsContent value="settings">
             <DataAccountSettingsTab

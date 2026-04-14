@@ -378,7 +378,9 @@ export interface TeamMember {
     status: string
     joinedAt?: string
   }>
-  permissions?: Record<string, string> // AppId -> PermissionLevel
+  permissions?: Record<string, string>
+  metaAdAccountIds?: number[] | null
+  metaAdAccountCount?: number
 }
 
 export interface ActiveSession {
@@ -929,6 +931,15 @@ export interface InsightAnomaly {
   metricKey?: string | null
 }
 
+export interface InsightActionItem {
+  id: string
+  title: string
+  severity: string
+  metricKey?: string | null
+  status: string
+  source: string
+}
+
 export interface InsightMetadata {
   provider?: string | null
   model?: string | null
@@ -939,6 +950,13 @@ export interface InsightMetadata {
   dataGaps?: string[] | null
   snapshotRevenueT1?: number | null
   snapshotImpressionsT1?: number | null
+}
+
+/** Per-day summary for insight history calendar. */
+export interface AppInsightHistoryDay {
+  insightDate: string
+  healthScore?: number | null
+  anomalyCount: number
 }
 
 export interface AppDailyInsight {
@@ -952,6 +970,7 @@ export interface AppDailyInsight {
   healthScore?: number | null
   healthTier?: string | null
   dimensionScores?: DimensionScores | null
+  actions?: InsightActionItem[]
   anomalies: InsightAnomaly[]
   metadata: InsightMetadata
   status: string
@@ -1047,6 +1066,8 @@ export interface InsightUserNotification {
   createdAt: string
   read: boolean
 }
+
+
 
 
 
