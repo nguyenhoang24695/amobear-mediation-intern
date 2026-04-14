@@ -1,10 +1,14 @@
 "use client"
 
+import { useState, type ReactNode } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck, Loader2, Check, ChevronsUpDown } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 import type { MetaAdAccountDto, MetaAppMappingDto, MetaObjectivePresetDto } from "@/types/meta-ads"
 
@@ -21,6 +25,86 @@ interface Props {
   appMappingsMessage?: string | null
   objectives: MetaObjectivePresetDto[]
   integrationName?: string | null
+}
+
+interface SearchableSelectProps<T> {
+  value: string
+  options: T[]
+  placeholder: string
+  searchPlaceholder: string
+  emptyMessage: string
+  disabled?: boolean
+  className?: string
+  onValueChange: (value: string) => void
+  getValue: (option: T) => string
+  getSearchText: (option: T) => string
+  renderOption: (option: T) => ReactNode
+  renderValue: (option: T) => ReactNode
+}
+
+function SearchableSelect<T>({
+  value,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
+  disabled = false,
+  className,
+  onValueChange,
+  getValue,
+  getSearchText,
+  renderOption,
+  renderValue,
+}: SearchableSelectProps<T>) {
+  const [open, setOpen] = useState(false)
+  const selectedOption = options.find((option) => getValue(option) === value)
+
+  return (
+    <Popover open={open} onOpenChange={(nextOpen) => !disabled && setOpen(nextOpen)}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn("h-9 w-full justify-between bg-white px-3 text-left font-normal", className)}
+        >
+          <span className="min-w-0 flex-1 truncate text-left">
+            {selectedOption ? renderValue(selectedOption) : <span className="text-slate-500">{placeholder}</span>}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[320px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => {
+                const optionValue = getValue(option)
+                const isSelected = optionValue === value
+                return (
+                  <CommandItem
+                    key={optionValue}
+                    value={getSearchText(option)}
+                    onSelect={() => {
+                      onValueChange(optionValue)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                    <span className="min-w-0 flex-1">{renderOption(option)}</span>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 function StatusRow({ ok, label }: { ok: boolean | null; label: string }) {
@@ -91,119 +175,138 @@ export function AccountAppSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-slate-700">
-            Meta Ad Account <span className="text-red-500">*</span>
-          </Label>
-          <Select value={form.adAccountId} onValueChange={(value) => onChange({ adAccountId: value, appRowId: "" })}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Select ad account..." />
-            </SelectTrigger>
-            <SelectContent>
-              {adAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id.toString()}>
+        <div className="grid gap-4 md:grid-cols-2 md:items-start">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-700">
+                Meta Ad Account <span className="text-red-500">*</span>
+              </Label>
+              <SearchableSelect
+                value={form.adAccountId}
+                options={adAccounts}
+                placeholder="Select ad account..."
+                searchPlaceholder="Search by ad account ID, name, currency, timezone..."
+                emptyMessage="No ad accounts found."
+                onValueChange={(value) => onChange({ adAccountId: value, appRowId: "" })}
+                getValue={(account) => account.id.toString()}
+                getSearchText={(account) => `${account.metaAdAccountId} ${account.name} ${account.currency ?? ""} ${account.timeZoneName ?? ""}`}
+                renderValue={(account) => (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium text-slate-900">{account.name}</span>
+                    <span className="truncate font-mono text-xs text-slate-500">{account.metaAdAccountId}</span>
+                  </span>
+                )}
+                renderOption={(account) => (
                   <div className="flex items-center gap-3 py-0.5">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-slate-500">{account.metaAdAccountId}</span>
                         <Badge className={account.isActive ? "bg-green-100 text-green-700 text-[10px] px-1.5 py-0" : "bg-red-100 text-red-600 text-[10px] px-1.5 py-0"}>
                           {account.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </div>
-                      <div className="text-sm font-medium">
+                      <div className="truncate text-sm font-medium text-slate-900">
                         {account.name} - {account.currency ?? "-"} - {account.timeZoneName ?? "-"}
                       </div>
                     </div>
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {form.adAccountId ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-600">
-                Integration Status{integrationName ? ` - ${integrationName}` : ""}
-              </span>
-              <TokenStatusBadge state={tokenState} />
+                )}
+              />
             </div>
-            {isTokenBlocking ? (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-red-700">
-                  {tokenState === "expired" && "The selected integration token is missing or expired. Update the access token and test the integration again before submitting."}
-                  {tokenState === "missing_permissions" && "The selected integration is missing required permissions (ads_management, ads_read)."}
-                  {tokenState === "invalid" && "The selected integration failed its last connection test. Review the access token, app credentials, and business permissions."}
-                  {tokenState === "disabled" && "The selected integration or ad account is disabled. Re-enable it from Meta Ads setup screens."}{" "}
-                  <strong>Submit for Approval is blocked until resolved.</strong>
-                </p>
-              </div>
-            ) : tokenState === "not_tested" ? (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-amber-800">
-                  This integration has not been tested recently. Request execution may still work, but operators should validate the Meta connection from the integration screen.
-                </p>
+
+            {form.adAccountId ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-600">
+                    Integration Status{integrationName ? ` - ${integrationName}` : ""}
+                  </span>
+                  <TokenStatusBadge state={tokenState} />
+                </div>
+                {isTokenBlocking ? (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-red-700">
+                      {tokenState === "expired" && "The selected integration token is missing or expired. Update the access token and test the integration again before submitting."}
+                      {tokenState === "missing_permissions" && "The selected integration is missing required permissions (ads_management, ads_read)."}
+                      {tokenState === "invalid" && "The selected integration failed its last connection test. Review the access token, app credentials, and business permissions."}
+                      {tokenState === "disabled" && "The selected integration or ad account is disabled. Re-enable it from Meta Ads setup screens."}{" "}
+                      <strong>Submit for Approval is blocked until resolved.</strong>
+                    </p>
+                  </div>
+                ) : tokenState === "not_tested" ? (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-800">
+                      This integration has not been tested recently. Request execution may still work, but operators should validate the Meta connection from the integration screen.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
-        ) : null}
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-slate-700">
-            App <span className="text-red-500">*</span>
-          </Label>
-          <Select value={form.appRowId} onValueChange={(value) => onChange({ appRowId: value })} disabled={appSelectDisabled}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={form.adAccountId ? (appMappingsLoading ? "Loading apps for this ad account..." : "Select app...") : "Select ad account first..."} />
-            </SelectTrigger>
-            <SelectContent>
-              {appMappings.map((mapping) => (
-                <SelectItem key={mapping.id} value={mapping.appRowId.toString()}>
-                  <div className="flex items-center gap-2 py-0.5">
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] px-1.5 py-0 ${mapping.platform === "IOS" ? "border-blue-200 text-blue-700" : "border-green-200 text-green-700"}`}
-                    >
-                      {mapping.platform ?? "APP"}
-                    </Badge>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}</span>
-                        {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.deepLinkUrlOverride)) ? (
-                          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Missing Mapping</Badge>
-                        ) : null}
-                      </div>
-                      <div className="text-xs text-slate-400 font-mono">{mapping.appId ?? `row:${mapping.appRowId}`}</div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-700">
+              App <span className="text-red-500">*</span>
+            </Label>
+            <SearchableSelect
+              value={form.appRowId}
+              options={appMappings}
+              placeholder={form.adAccountId ? (appMappingsLoading ? "Loading apps for this ad account..." : "Select app...") : "Select ad account first..."}
+              searchPlaceholder="Search by app name, app ID, platform..."
+              emptyMessage="No apps found."
+              disabled={appSelectDisabled}
+              onValueChange={(value) => onChange({ appRowId: value })}
+              getValue={(mapping) => mapping.appRowId.toString()}
+              getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.platform ?? ""} ${mapping.metaApplicationId ?? ""}`}
+              renderValue={(mapping) => (
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate font-medium text-slate-900">{mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}</span>
+                  <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? `row:${mapping.appRowId}`}</span>
+                </span>
+              )}
+              renderOption={(mapping) => (
+                <div className="flex items-center gap-2 py-0.5">
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 ${mapping.platform === "IOS" ? "border-blue-200 text-blue-700" : "border-green-200 text-green-700"}`}
+                  >
+                    {mapping.platform ?? "APP"}
+                  </Badge>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}</span>
+                      {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.deepLinkUrlOverride)) ? (
+                        <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Missing Mapping</Badge>
+                      ) : null}
                     </div>
+                    <div className="truncate text-xs text-slate-400 font-mono">{mapping.appId ?? `row:${mapping.appRowId}`}</div>
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </div>
+              )}
+            />
 
-          {!form.adAccountId ? (
-            <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account's advertisable applications.</p>
-          ) : appMappingsLoading ? (
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Loading apps available for this ad account...
-            </div>
-          ) : appMappingsMessage ? (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-              <p className="text-[11px] text-red-700">{appMappingsMessage}</p>
-            </div>
-          ) : appMappings.length === 0 ? (
-            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-[11px] text-amber-800">No active app mappings are currently advertisable for the selected Meta ad account.</p>
-            </div>
-          ) : (
-            <p className="text-[11px] text-slate-500">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
-          )}
+            {!form.adAccountId ? (
+              <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account's advertisable applications.</p>
+            ) : appMappingsLoading ? (
+              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading apps available for this ad account...
+              </div>
+            ) : appMappingsMessage ? (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-[11px] text-red-700">{appMappingsMessage}</p>
+              </div>
+            ) : appMappings.length === 0 ? (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-[11px] text-amber-800">No active app mappings are currently advertisable for the selected Meta ad account.</p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-500">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
+            )}
+          </div>
         </div>
 
         {selectedAppMapping ? (
@@ -300,4 +403,5 @@ export function AccountAppSection({
     </Card>
   )
 }
+
 

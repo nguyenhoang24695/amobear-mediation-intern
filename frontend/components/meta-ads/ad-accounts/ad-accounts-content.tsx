@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast"
 import { invalidateCache, useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
+import { Pagination } from "@/components/shared/pagination"
 import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
 import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
@@ -138,8 +139,11 @@ export function AdAccountsContent() {
   const [submitting, setSubmitting] = useState(false)
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: SortDir } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   const handleSort = (key: SortKey) => {
+    setCurrentPage(1)
     setSortConfig((prev) =>
       prev?.key === key
         ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
@@ -180,6 +184,17 @@ export function AdAccountsContent() {
       return dir === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number)
     })
   }, [accounts, businessIdFilter, integrationById, metaIdFilter, search, sortConfig])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginatedAccounts = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, metaIdFilter, businessIdFilter])
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortConfig?.key !== col) return <ArrowUpDown className="inline ml-1 w-3 h-3 opacity-40" />
@@ -387,7 +402,7 @@ export function AdAccountsContent() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((account) => {
+              paginatedAccounts.map((account) => {
                 const isBusy = rowActionLoadingId === account.id
                 return (
                   <TableRow key={account.id} className="text-sm">
@@ -439,6 +454,21 @@ export function AdAccountsContent() {
             )}
           </TableBody>
         </Table>
+
+        {filtered.length > 0 ? (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setCurrentPage(1)
+            }}
+            itemName="ad accounts"
+          />
+        ) : null}
       </div>
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -567,3 +597,4 @@ export function AdAccountsContent() {
     </div>
   )
 }
+
