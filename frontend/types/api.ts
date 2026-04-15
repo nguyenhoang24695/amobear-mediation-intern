@@ -684,6 +684,8 @@ export interface WaterfallFilterOptionDto {
 
 export interface AlertRule {
   id: number
+  /** ORG = rule tổ chức; PRIVATE = rule cá nhân (My Alerts). */
+  visibility?: string | null
   name: string
   description?: string | null
   ruleType: string
@@ -711,6 +713,8 @@ export interface AlertRule {
 }
 
 export interface UpsertAlertRuleRequest {
+  /** ORG | PRIVATE — mặc định ORG nếu bỏ qua. */
+  visibility?: string | null
   name: string
   description?: string | null
   ruleType: string

@@ -1265,10 +1265,15 @@ export const alertsApi = {
         }
     },
 
-    getAlertRules: async (isEnabled?: boolean): Promise<AlertRule[]> => {
+    getAlertRules: async (isEnabled?: boolean, visibility?: "ORG" | "PRIVATE"): Promise<AlertRule[]> => {
         return apiClient.get<AlertRule[]>('/api/Alerts/rules', {
             isEnabled: isEnabled == null ? undefined : (isEnabled ? "true" : "false"),
+            visibility: visibility ?? undefined,
         })
+    },
+
+    getPrivateAlertRuleQuota: async (): Promise<{ used: number; max: number; remaining: number }> => {
+        return apiClient.get<{ used: number; max: number; remaining: number }>("/api/Alerts/rules/private-quota")
     },
 
     getAlertRule: async (id: number): Promise<AlertRule> => {

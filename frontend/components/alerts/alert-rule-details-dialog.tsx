@@ -130,6 +130,7 @@ export interface AlertRuleDetailsDialogProps {
 
 export function AlertRuleDetailsDialog({ rule, open, onOpenChange, appIdToLabel }: AlertRuleDetailsDialogProps) {
   const cfg = rule ? parseAlertRuleConfig(rule) : null
+  const isPrivateRule = String(rule?.visibility ?? "").toUpperCase() === "PRIVATE"
   const channels = rule ? parseJsonArray(rule.notificationChannels) : []
   const telegramTopics = rule ? parseJsonArray(rule.telegramTopics) : []
   const emailRecipients = rule ? parseJsonArray(rule.emailRecipients) : []
@@ -299,15 +300,26 @@ export function AlertRuleDetailsDialog({ rule, open, onOpenChange, appIdToLabel 
                   "—"
                 )}
               </DetailBlock>
-              <DetailBlock label="Telegram topics">
-                {telegramTopics.length ? telegramTopics.join(", ") : "—"}
-              </DetailBlock>
-              <DetailBlock label="Email recipients">
-                {emailRecipients.length ? emailRecipients.join(", ") : "—"}
-              </DetailBlock>
-              <DetailBlock label="Slack channels / webhooks">
-                {slackChannels.length ? slackChannels.join(", ") : "—"}
-              </DetailBlock>
+              {isPrivateRule ? (
+                <div className="sm:col-span-2">
+                  <p className="text-sm text-slate-700">
+                    Rule My Alerts: không dùng topic Telegram, webhook Slack hay danh sách email trên rule. Email/Slack
+                    (nếu bật trên rule) lấy từ My Profile của người tạo rule.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <DetailBlock label="Telegram topics">
+                    {telegramTopics.length ? telegramTopics.join(", ") : "—"}
+                  </DetailBlock>
+                  <DetailBlock label="Email recipients">
+                    {emailRecipients.length ? emailRecipients.join(", ") : "—"}
+                  </DetailBlock>
+                  <DetailBlock label="Slack channels / webhooks">
+                    {slackChannels.length ? slackChannels.join(", ") : "—"}
+                  </DetailBlock>
+                </>
+              )}
             </div>
           </section>
 

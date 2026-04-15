@@ -43,10 +43,10 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
   }, [enabledFilter])
 
   const { data: rules, loading, refetch } = useApi(
-    () => alertsApi.getAlertRules(enabledValue),
+    () => alertsApi.getAlertRules(enabledValue, "ORG"),
     {
       enabled: open,
-      cacheKey: `alert_rules_${enabledFilter}`,
+      cacheKey: `alert_rules_org_${enabledFilter}`,
     },
   )
 
