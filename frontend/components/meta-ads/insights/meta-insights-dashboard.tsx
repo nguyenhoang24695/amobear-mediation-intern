@@ -110,7 +110,7 @@ export function MetaInsightsDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Meta Ads Insights</h1>
-              <p className="text-sm text-slate-500">Campaign-level Meta spend, installs, CPI, CTR, CPC, CPM, reach, frequency, impressions, and clicks.</p>
+              <p className="text-sm text-slate-500">Campaign-level Meta spend, installs, CPI, CTR, CPC, CPM, reach, frequency, impressions, plus Adjust-attributed revenue and ROAS.</p>
             </div>
           </div>
         </div>
@@ -161,3 +161,4 @@ export function MetaInsightsDashboard() {
     </div>
   )
 }
+

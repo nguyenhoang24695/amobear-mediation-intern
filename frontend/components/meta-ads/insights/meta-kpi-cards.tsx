@@ -18,9 +18,12 @@ import {
 
 const cardConfig: { key: MetaCardMetricKey; label: string }[] = [
   { key: "spend", label: "Total Spend" },
+  { key: "revenue", label: "Revenue" },
   { key: "installs", label: "Installs" },
   { key: "cpi", label: "CPI" },
   { key: "ctr", label: "CTR" },
+  { key: "roasD7", label: "ROAS D7" },
+  { key: "roasD30", label: "ROAS D30" },
   { key: "impressions", label: "Impressions" },
   { key: "reach", label: "Reach" },
 ]
@@ -34,8 +37,8 @@ interface MetaKpiCardsProps {
 export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, index) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+        {Array.from({ length: cardConfig.length }).map((_, index) => (
           <Card key={index} className="border-slate-200 bg-white shadow-sm">
             <CardContent className="space-y-4 p-5">
               <Skeleton className="h-4 w-24" />
@@ -50,12 +53,12 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
       {cardConfig.map((item) => {
         const current = overview ? getOverviewMetricCurrent(item.key, overview) : 0
         const previous = overview ? getOverviewMetricPrevious(item.key, overview) : 0
         const change = calculateChange(current, previous)
-        const chartData = daily.map((point, index) => ({ id: index, value: getDailyMetricValue(item.key, point) }))
+        const chartData = daily.map((point, index) => ({ id: index, value: getDailyMetricValue(item.key, point) ?? 0 }))
         const trend = change >= 0 ? "up" : "down"
         const color = metaMetricColors[item.key]
         const gradientId = `meta-${item.key}-gradient`

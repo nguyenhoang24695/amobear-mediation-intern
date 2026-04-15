@@ -17,10 +17,14 @@ import {
 
 const tabConfig: { key: MetaChartMetricKey; label: string }[] = [
   { key: "spend", label: "Spend" },
+  { key: "revenue", label: "Revenue" },
   { key: "installs", label: "Installs" },
   { key: "cpi", label: "CPI" },
   { key: "ctr", label: "CTR" },
   { key: "impressions", label: "Impressions" },
+  { key: "roas", label: "ROAS" },
+  { key: "roasD7", label: "ROAS D7" },
+  { key: "roasD30", label: "ROAS D30" },
 ]
 
 interface MetaSpendChartProps {
@@ -71,10 +75,10 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
       <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="text-base font-semibold text-slate-900">Performance Over Time</CardTitle>
-          <CardDescription className="text-sm text-slate-500">Current-period Meta campaign metrics grouped by day.</CardDescription>
+          <CardDescription className="text-sm text-slate-500">Current-period Meta campaign metrics and attribution ROAS grouped by day.</CardDescription>
         </div>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MetaChartMetricKey)}>
-          <TabsList className="grid h-auto grid-cols-2 gap-1 bg-slate-100 p-1 md:grid-cols-5">
+          <TabsList className="grid h-auto grid-cols-3 gap-1 bg-slate-100 p-1 lg:grid-cols-9">
             {tabConfig.map((tab) => (
               <TabsTrigger key={tab.key} value={tab.key} className="px-3 py-1.5 text-xs">
                 {tab.label}
@@ -105,7 +109,9 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload || payload.length === 0) return null
-                  const value = Number(payload[0]?.value ?? 0)
+                  const rawValue = payload[0]?.value
+                  if (rawValue == null) return null
+                  const value = Number(rawValue)
                   return (
                     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-md">
                       <div className="text-sm font-medium text-slate-900">{label}</div>
@@ -114,7 +120,7 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
                   )
                 }}
               />
-              <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} fill="url(#meta-chart-gradient)" />
+              <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} fill="url(#meta-chart-gradient)" connectNulls={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
