@@ -31,7 +31,6 @@ import {
   MailCheck,
   Plus,
   Sparkles,
-  Zap,
 } from "lucide-react"
 import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { AlertAppAvatar } from "./alert-app-avatar"
@@ -228,6 +227,7 @@ export function AlertCenterContentV2() {
   const timelineFetchLock = useRef(false)
 
   const showDailyInsights = hasScreenFunction("s-alerts", "view-daily-insights")
+  const showMyAlertsTab = hasScreenFunction("s-alerts", "setting-my-alerts")
   const [centerTab, setCenterTab] = useState<AlertCenterTab>("alerts")
   const isMyAlertsTab = centerTab === "my-alerts"
   const rulesVisibilityForApi: "ORG" | "PRIVATE" = isMyAlertsTab ? "PRIVATE" : "ORG"
@@ -239,7 +239,7 @@ export function AlertCenterContentV2() {
       return
     }
     if (tab === "my-alerts") {
-      setCenterTab("my-alerts")
+      setCenterTab(showMyAlertsTab ? "my-alerts" : "alerts")
       return
     }
     if (tab === "alerts") {
@@ -249,7 +249,20 @@ export function AlertCenterContentV2() {
     if (!tab) {
       setCenterTab("alerts")
     }
-  }, [searchParams, showDailyInsights])
+  }, [searchParams, showDailyInsights, showMyAlertsTab])
+
+  useEffect(() => {
+    if (centerTab === "my-alerts") setShowAiBuilder(false)
+  }, [centerTab])
+
+  useEffect(() => {
+    if (centerTab !== "my-alerts" || showMyAlertsTab) return
+    setCenterTab("alerts")
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("tab")
+    const q = params.toString()
+    router.replace(q ? `${pathname}?${q}` : pathname)
+  }, [centerTab, showMyAlertsTab, pathname, router, searchParams])
 
   useEffect(() => {
     const severityParam = searchParams.get("severity")
@@ -269,12 +282,12 @@ export function AlertCenterContentV2() {
   const { data: rules, refetch: refetchRules, loading: rulesLoading } = useApi(
     () => alertsApi.getAlertRules(undefined, rulesVisibilityForApi),
     {
-      enabled: centerTab === "alerts" || centerTab === "my-alerts",
+      enabled: centerTab === "alerts" || (centerTab === "my-alerts" && showMyAlertsTab),
       cacheKey: `alert_rules_v2_${rulesVisibilityForApi}`,
     },
   )
   const { data: privateQuota, refetch: refetchPrivateQuota } = useApi(() => alertsApi.getPrivateAlertRuleQuota(), {
-    enabled: centerTab === "my-alerts",
+    enabled: centerTab === "my-alerts" && showMyAlertsTab,
     cacheKey: "alert_private_quota",
   })
   const privateSlotsFull = Boolean(isMyAlertsTab && privateQuota && privateQuota.used >= privateQuota.max)
@@ -331,12 +344,28 @@ export function AlertCenterContentV2() {
     }
   }, [appFilter, filterRuleId, filterDateFrom, filterDateTo])
 
+  /** Tab My Alerts: chỉ alert gắn rule PRIVATE của user (danh sách rule đã fetch theo visibility=PRIVATE). */
+  const privateRuleIdSet = useMemo(() => {
+    if (!isMyAlertsTab) return null
+    const ids = new Set<number>()
+    for (const r of rules ?? []) {
+      if (Number.isFinite(r.id)) ids.add(r.id)
+    }
+    return ids
+  }, [isMyAlertsTab, rules])
+
   const filteredAlerts = useMemo(() => {
+    if (isMyAlertsTab && rulesLoading) return []
+
     const fromD = filterDateFrom.trim() ? parseLocalYmdStart(filterDateFrom.trim()) : null
     const toD = filterDateTo.trim() ? parseLocalYmdEnd(filterDateTo.trim()) : null
     const ruleNum = filterRuleId !== "all" && filterRuleId.trim() !== "" ? Number(filterRuleId) : null
 
     return uiAlerts.filter((alert) => {
+      if (isMyAlertsTab && privateRuleIdSet) {
+        if (alert.alertRuleId == null || !privateRuleIdSet.has(alert.alertRuleId)) return false
+      }
+
       const severityMatch =
         severity === "All" ||
         (severity === "HIGH" && alert.severity === "critical") ||
@@ -360,7 +389,18 @@ export function AlertCenterContentV2() {
         (alert.entityLabel || "").toLowerCase().includes(q)
       )
     })
-  }, [uiAlerts, severity, appFilter, searchQuery, filterRuleId, filterDateFrom, filterDateTo])
+  }, [
+    uiAlerts,
+    severity,
+    appFilter,
+    searchQuery,
+    filterRuleId,
+    filterDateFrom,
+    filterDateTo,
+    isMyAlertsTab,
+    rulesLoading,
+    privateRuleIdSet,
+  ])
 
   const requiresAttentionTotalPages = Math.max(1, Math.ceil(filteredAlerts.length / requiresAttentionPageSize))
 
@@ -371,7 +411,7 @@ export function AlertCenterContentV2() {
 
   useEffect(() => {
     setRequiresAttentionPage(1)
-  }, [severity, appFilter, searchQuery, filterRuleId, filterDateFrom, filterDateTo])
+  }, [severity, appFilter, searchQuery, filterRuleId, filterDateFrom, filterDateTo, isMyAlertsTab])
 
   useEffect(() => {
     setRequiresAttentionPage((p) => Math.min(Math.max(1, p), requiresAttentionTotalPages))
@@ -409,6 +449,15 @@ export function AlertCenterContentV2() {
   const warningCount = summary?.BySeverity?.MEDIUM ?? 0
   const infoCount = summary?.BySeverity?.LOW ?? 0
   const totalOpen = summary?.Total ?? uiAlerts.length
+
+  const myAlertsSeverityCounts = useMemo(() => {
+    if (!isMyAlertsTab) return null
+    return {
+      critical: filteredAlerts.filter((a) => a.severity === "critical").length,
+      warning: filteredAlerts.filter((a) => a.severity === "warning").length,
+      info: filteredAlerts.filter((a) => a.severity === "info").length,
+    }
+  }, [isMyAlertsTab, filteredAlerts])
 
   const triggeredNowAlerts = useMemo(
     () => uiAlerts.filter((a) => Date.now() - a.timestamp.getTime() <= 60 * 60000),
@@ -492,6 +541,16 @@ export function AlertCenterContentV2() {
     let cancelled = false
 
     async function loadFirstPage() {
+      if (isMyAlertsTab) {
+        setTimelineItems([])
+        setTimelinePage(1)
+        setTimelineHasMore(false)
+        setTimelineTotalCount(0)
+        timelineFetchLock.current = false
+        setTimelineLoading(false)
+        return
+      }
+
       setTimelineLoading(true)
       timelineFetchLock.current = true
       try {
@@ -523,9 +582,10 @@ export function AlertCenterContentV2() {
     return () => {
       cancelled = true
     }
-  }, [timelineQueryParams, timelineNonce])
+  }, [timelineQueryParams, timelineNonce, isMyAlertsTab])
 
   const loadMoreTimeline = useCallback(async () => {
+    if (isMyAlertsTab) return
     if (!timelineHasMore || timelineLoading || timelineLoadingMore || timelineFetchLock.current) return
     const nextPage = timelinePage + 1
     timelineFetchLock.current = true
@@ -550,7 +610,7 @@ export function AlertCenterContentV2() {
       timelineFetchLock.current = false
       setTimelineLoadingMore(false)
     }
-  }, [timelineQueryParams, timelineHasMore, timelineLoading, timelineLoadingMore, timelinePage])
+  }, [timelineQueryParams, timelineHasMore, timelineLoading, timelineLoadingMore, timelinePage, isMyAlertsTab])
 
   const onTimelineScroll = useCallback(() => {
     const el = timelineScrollRef.current
@@ -704,6 +764,7 @@ export function AlertCenterContentV2() {
     (value: string) => {
       const next = value as AlertCenterTab
       if (next === "daily-insights" && !showDailyInsights) return
+      if (next === "my-alerts" && !showMyAlertsTab) return
       setCenterTab(next)
       const params = new URLSearchParams(searchParams.toString())
       if (next === "alerts") {
@@ -714,7 +775,7 @@ export function AlertCenterContentV2() {
       const q = params.toString()
       router.replace(q ? `${pathname}?${q}` : pathname)
     },
-    [pathname, router, searchParams, showDailyInsights],
+    [pathname, router, searchParams, showDailyInsights, showMyAlertsTab],
   )
 
   const alertsPanel = (
@@ -729,14 +790,14 @@ export function AlertCenterContentV2() {
           <p className="text-sm text-slate-500 mt-2">{headerTagline}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700"
-            disabled={privateSlotsFull}
-            onClick={() => setShowAiBuilder(true)}
-          >
-            {isMyAlertsTab ? <Zap className="w-4 h-4" /> : null}
-            {isMyAlertsTab ? "Create via AI" : "Create Alert via AI"}
-          </Button>
+          {!isMyAlertsTab ? (
+            <Button
+              className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700"
+              onClick={() => setShowAiBuilder(true)}
+            >
+              Create Alert via AI
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             className="h-9 gap-2 bg-transparent"
@@ -1172,6 +1233,7 @@ export function AlertCenterContentV2() {
         )}
       </div>
 
+      {!isMyAlertsTab ? (
       <div>
         <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5" />
@@ -1345,16 +1407,17 @@ export function AlertCenterContentV2() {
           </CardContent>
         </Card>
       </div>
+      ) : null}
 
       <div className="flex items-center gap-3">
         <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
-          {criticalCount} Critical
+          {myAlertsSeverityCounts ? myAlertsSeverityCounts.critical : criticalCount} Critical
         </Badge>
         <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
-          {warningCount} Warning
+          {myAlertsSeverityCounts ? myAlertsSeverityCounts.warning : warningCount} Warning
         </Badge>
         <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
-          {infoCount} Info
+          {myAlertsSeverityCounts ? myAlertsSeverityCounts.info : infoCount} Info
         </Badge>
       </div>
     </>
@@ -1365,7 +1428,7 @@ export function AlertCenterContentV2() {
       <Tabs value={centerTab} onValueChange={handleCenterTabChange} className="w-full">
         <TabsList className="h-10 w-fit bg-slate-100 p-1 mb-2">
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
-          <TabsTrigger value="my-alerts">My Alerts</TabsTrigger>
+          {showMyAlertsTab ? <TabsTrigger value="my-alerts">My Alerts</TabsTrigger> : null}
           {showDailyInsights ? (
             <TabsTrigger value="daily-insights" className="gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
@@ -1373,7 +1436,7 @@ export function AlertCenterContentV2() {
             </TabsTrigger>
           ) : null}
         </TabsList>
-        {(centerTab === "alerts" || centerTab === "my-alerts") && (
+        {(centerTab === "alerts" || (centerTab === "my-alerts" && showMyAlertsTab)) && (
           <div className="mt-0 flex flex-col gap-6">{alertsPanel}</div>
         )}
         {showDailyInsights ? (
@@ -1387,7 +1450,7 @@ export function AlertCenterContentV2() {
         open={showAiBuilder}
         onOpenChange={setShowAiBuilder}
         onCreated={handleRuleCreated}
-        ruleVisibility={isMyAlertsTab ? "PRIVATE" : "ORG"}
+        ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
       <ManualAlertCreatorModal
         open={showManualCreator}
@@ -1397,7 +1460,7 @@ export function AlertCenterContentV2() {
         }}
         onCreated={handleRuleCreated}
         rule={manualEditRule}
-        ruleVisibility={isMyAlertsTab ? "PRIVATE" : "ORG"}
+        ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
       <AlertRulesPanel open={alertRulesPanelOpen} onOpenChange={setAlertRulesPanelOpen} />
       <AlertRuleDetailsDialog

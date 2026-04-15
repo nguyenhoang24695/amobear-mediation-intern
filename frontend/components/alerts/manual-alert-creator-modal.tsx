@@ -340,8 +340,16 @@ export function ManualAlertCreatorModal({
   const isAllApps = formData.selectedApps.includes("all")
   const isEdit = !!rule
 
+  /** Tab My Alerts hoặc rule PRIVATE đang sửa — không cấu hình Telegram/Slack/Email trên rule. */
+  const isMyPrivateRule =
+    ruleVisibility === "PRIVATE" || String(rule?.visibility ?? "").toUpperCase() === "PRIVATE"
+
   useEffect(() => {
     if (!open) return
+
+    const isPrivateFlow =
+      ruleVisibility === "PRIVATE" ||
+      (rule != null && String(rule.visibility ?? "").toUpperCase() === "PRIVATE")
 
     const parsedConfig = parseRuleConfig(rule?.ruleConfig || rule?.filterConditions)
     const notificationChannels = parseJsonArray(rule?.notificationChannels).map((item) => item.toUpperCase())
@@ -350,9 +358,15 @@ export function ManualAlertCreatorModal({
     setAppSearch("")
     setDuplicateConfirmOpen(false)
     setPendingDuplicateName("")
-    setTelegramRows(rowsFromTelegramTopics(parseJsonArray(rule?.telegramTopics)))
-    setSlackRows(rowsFromSlackChannels(parseJsonArray(rule?.slackChannels)))
-    setEmailRows(rowsFromEmailRecipients(parseJsonArray(rule?.emailRecipients)))
+    if (isPrivateFlow) {
+      setTelegramRows([emptyTelegramRow()])
+      setSlackRows([emptySlackRow()])
+      setEmailRows([emptyEmailRow()])
+    } else {
+      setTelegramRows(rowsFromTelegramTopics(parseJsonArray(rule?.telegramTopics)))
+      setSlackRows(rowsFromSlackChannels(parseJsonArray(rule?.slackChannels)))
+      setEmailRows(rowsFromEmailRecipients(parseJsonArray(rule?.emailRecipients)))
+    }
 
     if (!rule) {
       setFormData({
@@ -363,7 +377,9 @@ export function ManualAlertCreatorModal({
         scopeOrderByDirection: "desc",
         alertName: "",
         severity: "warning",
-        channels: { inApp: true, telegram: false, slack: false, lark: false, email: false },
+        channels: isPrivateFlow
+          ? { inApp: true, telegram: false, slack: true, lark: false, email: true }
+          : { inApp: true, telegram: false, slack: false, lark: false, email: false },
         frequency: "daily",
         evaluationCooldownMinutes: "",
         dailyEvaluationHourUtc: "any",
@@ -451,7 +467,7 @@ export function ManualAlertCreatorModal({
           : "any",
       autoResolve: parsedConfig?.autoResolve ?? true,
     })
-  }, [open, rule])
+  }, [open, rule, ruleVisibility])
 
   useEffect(() => {
     if (open) clearValidationErrors()
@@ -531,26 +547,28 @@ export function ManualAlertCreatorModal({
           e.frequency = "Giờ chạy hằng ngày (GMT+7) phải từ 0–23."
         }
       }
-      if (formData.channels.telegram) {
-        const ok = telegramRows.some((row) => telegramTopicTokenFromRow(row))
-        if (!ok) e.telegram = "Nhập ít nhất một Chat ID khi bật Telegram."
-      }
-      if (formData.channels.slack) {
-        const badUrl = slackRows.some((row) => {
-          const v = row.webhookUrl.trim()
-          if (!v) return false
-          try {
-            const u = new URL(v)
-            return !["http:", "https:"].includes(u.protocol)
-          } catch {
-            return true
-          }
-        })
-        if (badUrl) e.slack = "Mỗi Slack webhook URL (nếu nhập) phải là http/https hợp lệ."
-      }
-      if (formData.channels.email) {
-        const ok = emailRows.some((row) => row.email.trim().length > 0)
-        if (!ok) e.email = "Nhập ít nhất một địa chỉ email."
+      if (!isMyPrivateRule) {
+        if (formData.channels.telegram) {
+          const ok = telegramRows.some((row) => telegramTopicTokenFromRow(row))
+          if (!ok) e.telegram = "Nhập ít nhất một Chat ID khi bật Telegram."
+        }
+        if (formData.channels.slack) {
+          const badUrl = slackRows.some((row) => {
+            const v = row.webhookUrl.trim()
+            if (!v) return false
+            try {
+              const u = new URL(v)
+              return !["http:", "https:"].includes(u.protocol)
+            } catch {
+              return true
+            }
+          })
+          if (badUrl) e.slack = "Mỗi Slack webhook URL (nếu nhập) phải là http/https hợp lệ."
+        }
+        if (formData.channels.email) {
+          const ok = emailRows.some((row) => row.email.trim().length > 0)
+          if (!ok) e.email = "Nhập ít nhất một địa chỉ email."
+        }
       }
       if (Object.keys(e).length > 0) {
         setStep3Errors(e)
@@ -752,7 +770,7 @@ export function ManualAlertCreatorModal({
     const effectiveVisibility: "ORG" | "PRIVATE" =
       rule?.visibility === "PRIVATE" || ruleVisibility === "PRIVATE" ? "PRIVATE" : "ORG"
 
-    return {
+    const basePayload = {
       visibility: effectiveVisibility,
       name,
       description: rule?.description || "Created from manual alert wizard",
@@ -782,6 +800,19 @@ export function ManualAlertCreatorModal({
       slackChannels: JSON.stringify(formData.channels.slack ? slackChannels : []),
       priority: formData.severity === "critical" ? 10 : formData.severity === "warning" ? 5 : 1,
     }
+
+    if (effectiveVisibility === "PRIVATE") {
+      const privateChannels = channels.length > 0 ? channels : ["IN_APP"]
+      return {
+        ...basePayload,
+        notificationChannels: JSON.stringify(privateChannels),
+        telegramTopics: JSON.stringify([]),
+        emailRecipients: JSON.stringify([]),
+        slackChannels: JSON.stringify([]),
+      }
+    }
+
+    return basePayload
   }
 
   const updateTelegramRow = (id: string, patch: Partial<TelegramDestinationRow>) => {
@@ -1327,6 +1358,13 @@ export function ManualAlertCreatorModal({
               <div className="space-y-6">
                 <div className="space-y-3">
                   <Label>Notification Channels</Label>
+                  {isMyPrivateRule && (
+                    <p className="text-sm text-slate-600">
+                      Bật/tắt in-app bên dưới. Slack và email khi gửi lấy từ{" "}
+                      <span className="font-medium text-slate-800">My Profile</span> — không nhập topic, webhook hay
+                      danh sách email trên rule.
+                    </p>
+                  )}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                       <span className="text-sm">In-app Notification</span>
@@ -1335,6 +1373,58 @@ export function ManualAlertCreatorModal({
                         onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, inApp: c } })}
                       />
                     </div>
+                    {isMyPrivateRule ? (
+                      <>
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm">Telegram</span>
+                          </div>
+                          <Switch
+                            checked={formData.channels.telegram}
+                            onCheckedChange={(c) => {
+                              setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
+                              setFormData({ ...formData, channels: { ...formData.channels, telegram: c } })
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm">Slack</span>
+                          </div>
+                          <Switch
+                            checked={formData.channels.slack}
+                            onCheckedChange={(c) => {
+                              setStep3Errors((prev) => ({ ...prev, slack: undefined }))
+                              setFormData({ ...formData, channels: { ...formData.channels, slack: c } })
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm">Lark</span>
+                            <span className="text-xs text-slate-500">Chưa hỗ trợ cho My Alerts</span>
+                          </div>
+                          <Switch
+                            checked={formData.channels.lark}
+                            onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, lark: c } })}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm">Email</span>
+                          </div>
+                          <Switch
+                            checked={formData.channels.email}
+                            onCheckedChange={(c) => {
+                              setStep3Errors((prev) => ({ ...prev, email: undefined }))
+                              setFormData({ ...formData, channels: { ...formData.channels, email: c } })
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : null}
+                    {!isMyPrivateRule ? (
+                      <>
                     <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                       <span className="text-sm">Telegram</span>
                       <Switch
@@ -1484,6 +1574,8 @@ export function ManualAlertCreatorModal({
                         )}
                       </div>
                     )}
+                      </>
+                    ) : null}
                   </div>
                 </div>
 
@@ -1664,6 +1756,14 @@ export function ManualAlertCreatorModal({
                           {formData.severity}
                         </Badge>
                       </div>
+                      {isMyPrivateRule && (
+                        <div className="md:col-span-2 xl:col-span-4">
+                          <span className="text-slate-500">Thông báo:</span>
+                          <p className="mt-1 text-sm text-slate-800">
+                            Sẽ gửi thông báo qua các kênh cấu hình ở bước 3 theo cấu hình của bạn trong My Profile.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
