@@ -1036,17 +1036,29 @@ export interface MetaInsightsOverviewDto {
   totalClicks: number
   totalImpressions: number
   totalReach: number
+  totalRevenue: number
+  totalRevenueD7: number
+  totalRevenueD30: number
   avgCpi: number
   avgCpc: number
   avgCpm: number
   avgCtr: number
   avgFrequency: number
+  avgRoas: number
+  avgRoasD7: number
+  avgRoasD30: number
   totalCampaigns: number
   prevSpend: number
   prevInstalls: number
   prevClicks: number
   prevImpressions: number
   prevReach: number
+  prevRevenue: number
+  prevRevenueD7: number
+  prevRevenueD30: number
+  prevRoas: number
+  prevRoasD7: number
+  prevRoasD30: number
 }
 
 export interface MetaInsightsDailyDto {
@@ -1060,6 +1072,10 @@ export interface MetaInsightsDailyDto {
   cpc: number
   cpm: number
   ctr: number
+  revenue: number | null
+  roas: number | null
+  roasD7: number | null
+  roasD30: number | null
 }
 
 export interface MetaCampaignBreakdownDto {
@@ -1077,6 +1093,12 @@ export interface MetaCampaignBreakdownDto {
   cpm: number
   ctr: number
   frequency: number
+  revenue: number | null
+  revenueD7: number | null
+  revenueD30: number | null
+  roas: number | null
+  roasD7: number | null
+  roasD30: number | null
 }
 
 export interface MetaCampaignBreakdownPageDto {
@@ -1097,6 +1119,7 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
+
 
 
 

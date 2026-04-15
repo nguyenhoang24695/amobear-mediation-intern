@@ -11,9 +11,9 @@ import { useApi } from "@/hooks/use-api"
 import { metaInsightsApi } from "@/lib/api/meta-ads"
 import { cn } from "@/lib/utils"
 import type { MetaCampaignBreakdownDto } from "@/types/meta-ads"
-import { formatCompactNumber, formatCurrency, formatPercent } from "./meta-insights-utils"
+import { formatCompactNumber, formatMetricValue, formatNullableMetricValue } from "./meta-insights-utils"
 
-type SortBy = "campaignName" | "accountId" | "spend" | "installs" | "cpi" | "clicks" | "ctr" | "cpm" | "impressions" | "reach" | "frequency"
+type SortBy = "campaignName" | "accountId" | "spend" | "installs" | "cpi" | "clicks" | "ctr" | "cpm" | "impressions" | "reach" | "frequency" | "revenue" | "roas" | "roasD7" | "roasD30"
 type SortDir = "asc" | "desc"
 
 interface MetaCampaignTableProps {
@@ -29,6 +29,10 @@ const columns: { key: SortBy; label: string; align?: "right" }[] = [
   { key: "campaignName", label: "Campaign" },
   { key: "accountId", label: "Account" },
   { key: "spend", label: "Spend", align: "right" },
+  { key: "revenue", label: "Revenue", align: "right" },
+  { key: "roas", label: "ROAS", align: "right" },
+  { key: "roasD7", label: "ROAS D7", align: "right" },
+  { key: "roasD30", label: "ROAS D30", align: "right" },
   { key: "installs", label: "Installs", align: "right" },
   { key: "cpi", label: "CPI", align: "right" },
   { key: "clicks", label: "Clicks", align: "right" },
@@ -47,6 +51,13 @@ function getCpiToneClass(value: number): string {
 
 function getCtrToneClass(value: number): string {
   if (value >= 2) return "bg-emerald-50 text-emerald-700"
+  if (value >= 1) return "bg-amber-50 text-amber-700"
+  return "bg-rose-50 text-rose-700"
+}
+
+function getRoasToneClass(value: number | null): string {
+  if (value == null) return "bg-slate-50 text-slate-400"
+  if (value >= 1.5) return "bg-emerald-50 text-emerald-700"
   if (value >= 1) return "bg-amber-50 text-amber-700"
   return "bg-rose-50 text-rose-700"
 }
@@ -149,12 +160,14 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
     setSortDir(column === "campaignName" || column === "accountId" ? "asc" : "desc")
   }
 
+  const columnCount = columns.length
+
   return (
     <Card className="border-slate-200 bg-white shadow-sm">
       <CardHeader className="gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <CardTitle className="text-base font-semibold text-slate-900">Campaign Performance</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">Sortable, server-paginated campaign performance from Meta campaign ROI facts.</p>
+          <p className="mt-1 text-sm text-slate-500">Sortable, server-paginated campaign performance enriched with Adjust-attributed revenue and ROAS.</p>
         </div>
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -188,20 +201,20 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
               {loading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={11} className="px-4 py-3">
+                    <TableCell colSpan={columnCount} className="px-4 py-3">
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="px-4 py-10 text-center text-sm text-rose-600">
+                  <TableCell colSpan={columnCount} className="px-4 py-10 text-center text-sm text-rose-600">
                     {error.message}
                   </TableCell>
                 </TableRow>
               ) : (data?.items.length ?? 0) === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <TableCell colSpan={columnCount} className="px-4 py-10 text-center text-sm text-slate-500">
                     No campaign data matches the selected filters.
                   </TableCell>
                 </TableRow>
@@ -210,12 +223,16 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
                   <TableRow key={item.campaignId} className="transition-colors hover:bg-slate-50/80">
                     <TableCell className="px-4 py-3"><CampaignCell item={item} /></TableCell>
                     <TableCell className="px-4 py-3 text-sm text-slate-600">{item.accountId}</TableCell>
-                    <TableCell className="px-4 py-3"><MetricCell value={formatCurrency(item.spend)} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatMetricValue("spend", item.spend)} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatNullableMetricValue("revenue", item.revenue)} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatNullableMetricValue("roas", item.roas)} className={cn("rounded-md px-2 py-1", getRoasToneClass(item.roas))} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatNullableMetricValue("roasD7", item.roasD7)} className={cn("rounded-md px-2 py-1", getRoasToneClass(item.roasD7))} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatNullableMetricValue("roasD30", item.roasD30)} className={cn("rounded-md px-2 py-1", getRoasToneClass(item.roasD30))} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatCompactNumber(item.installs)} /></TableCell>
-                    <TableCell className="px-4 py-3"><MetricCell value={formatCurrency(item.cpi)} className={cn("rounded-md px-2 py-1", getCpiToneClass(item.cpi))} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatMetricValue("cpi", item.cpi)} className={cn("rounded-md px-2 py-1", getCpiToneClass(item.cpi))} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatCompactNumber(item.clicks)} /></TableCell>
-                    <TableCell className="px-4 py-3"><MetricCell value={formatPercent(item.ctr)} className={cn("rounded-md px-2 py-1", getCtrToneClass(item.ctr))} /></TableCell>
-                    <TableCell className="px-4 py-3"><MetricCell value={formatCurrency(item.cpm)} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatMetricValue("ctr", item.ctr)} className={cn("rounded-md px-2 py-1", getCtrToneClass(item.ctr))} /></TableCell>
+                    <TableCell className="px-4 py-3"><MetricCell value={formatMetricValue("cpi", item.cpm)} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatCompactNumber(item.impressions)} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatCompactNumber(item.reach)} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={item.frequency.toFixed(2)} /></TableCell>
@@ -226,12 +243,12 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
           </Table>
         </div>
 
-        {data && data.total > 0 ? (
+        <div className="border-t border-slate-200 px-4 py-3">
           <Pagination
-            currentPage={data.page}
-            totalPages={Math.max(data.totalPages, 1)}
-            totalItems={data.total}
-            pageSize={data.pageSize}
+            currentPage={data?.page ?? page}
+            totalPages={data?.totalPages ?? 1}
+            totalItems={data?.total ?? 0}
+            pageSize={pageSize}
             itemName="campaigns"
             onPageChange={setPage}
             onPageSizeChange={(value) => {
@@ -239,8 +256,9 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
               setPage(1)
             }}
           />
-        ) : null}
+        </div>
       </CardContent>
     </Card>
   )
 }
+
