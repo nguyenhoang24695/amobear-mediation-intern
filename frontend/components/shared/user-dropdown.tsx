@@ -49,6 +49,7 @@ import {
   Keyboard,
   LogOut,
   Loader2,
+  AlertTriangle,
 } from "lucide-react"
 
 export function UserDropdown() {
@@ -137,6 +138,12 @@ export function UserDropdown() {
             <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
               <User className="w-4 h-4" />
               My Profile
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/alert-center?tab=my-alerts" className="flex items-center gap-2 cursor-pointer">
+              <AlertTriangle className="w-4 h-4" />
+              My Alerts
             </Link>
           </DropdownMenuItem>
 

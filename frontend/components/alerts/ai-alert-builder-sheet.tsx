@@ -26,6 +26,7 @@ interface AIAlertBuilderSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated?: () => void
+  ruleVisibility?: "ORG" | "PRIVATE"
 }
 
 interface Message {
@@ -58,7 +59,7 @@ const initialMessages: Message[] = [
   },
 ]
 
-export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBuilderSheetProps) {
+export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibility = "ORG" }: AIAlertBuilderSheetProps) {
   const { toast } = useToast()
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
@@ -204,6 +205,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
       }
       const ruleConfig = parsePreviewConfig()
       await alertsApi.createAlertRule({
+        visibility: ruleVisibility === "PRIVATE" ? "PRIVATE" : "ORG",
         name: finalName,
         description: "Created from AI alert builder",
         ruleType: "AI_BUILDER",
@@ -248,7 +250,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated }: AIAlertBu
 
   const handleCreateAlert = async (preview: AlertPreview) => {
     try {
-      const existingRules = await alertsApi.getAlertRules()
+      const existingRules = await alertsApi.getAlertRules(undefined, ruleVisibility === "PRIVATE" ? "PRIVATE" : "ORG")
       const isDuplicate = existingRules.some((rule) => rule.name.trim().toLowerCase() === preview.name.trim().toLowerCase())
       if (isDuplicate) {
         setPendingPreview(preview)

@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AIAlertBuilderSheet } from "./ai-alert-builder-sheet"
@@ -28,10 +29,13 @@ import {
   Trash2,
   Eye,
   MailCheck,
+  Plus,
+  Sparkles,
+  Zap,
 } from "lucide-react"
 import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { AlertAppAvatar } from "./alert-app-avatar"
-import { alertsApi, structureApi } from "@/lib/api/services"
+import { alertsApi, organizationsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./alert-center-view-model"
@@ -46,9 +50,10 @@ import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { hasScreenFunction } from "@/lib/auth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { DailyInsightsFeed } from "./daily-insights-feed"
-import { Sparkles } from "lucide-react"
 import {
   AlertRuleDetailsDialog,
   formatRuleConditionsSummary,
@@ -86,6 +91,61 @@ function parseLocalYmdStart(ymd: string): Date {
 function parseLocalYmdEnd(ymd: string): Date {
   const [y, m, d] = ymd.split("-").map((x) => Number(x))
   return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999)
+}
+
+/** Initials for avatar; nếu chỉ có UUID thì lấy 2 ký tự đầu (bỏ dấu gạch). */
+function ruleCreatorInitials(displayName: string, userId: string): string {
+  const t = displayName.trim()
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) {
+    const compact = userId.replace(/-/g, "")
+    return compact.length >= 2 ? compact.slice(0, 2).toUpperCase() : "?"
+  }
+  const parts = t.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    const a = parts[0][0]
+    const b = parts[parts.length - 1][0]
+    if (a && b) return `${a}${b}`.toUpperCase()
+  }
+  if (parts.length === 1) {
+    const p = parts[0]
+    if (p.includes("@")) return p.slice(0, 2).toUpperCase()
+    if (p.length >= 2) return p.slice(0, 2).toUpperCase()
+    if (p.length === 1) return `${p[0]}`.toUpperCase()
+  }
+  const compact = userId.replace(/-/g, "")
+  return compact.length >= 2 ? compact.slice(0, 2).toUpperCase() : "?"
+}
+
+function RuleCreatorAvatar({
+  createdBy,
+  lookup,
+}: {
+  createdBy: string
+  lookup: Map<string, { name: string; avatarUrl?: string | null }>
+}) {
+  const info = lookup.get(createdBy.toLowerCase())
+  const displayName = (info?.name?.trim() || createdBy).trim()
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="inline-flex cursor-default rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          tabIndex={0}
+        >
+          <Avatar className="h-8 w-8 border border-slate-200 bg-slate-50">
+            <AvatarImage src={info?.avatarUrl ?? undefined} alt="" />
+            <AvatarFallback className="text-[10px] font-semibold bg-slate-100 text-slate-700">
+              {ruleCreatorInitials(displayName, createdBy)}
+            </AvatarFallback>
+          </Avatar>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs">
+        <p className="text-sm font-medium">{displayName}</p>
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 function extractMetricKeysFromRule(rule: AlertRule): string[] {
@@ -129,7 +189,11 @@ function ruleMatchesOverviewMetricFilter(rule: AlertRule, metricKey: string): bo
   return extractMetricKeysFromRule(rule).some((k) => k.toLowerCase() === metricKey.toLowerCase())
 }
 
+export type AlertCenterTab = "alerts" | "my-alerts" | "daily-insights"
+
 export function AlertCenterContentV2() {
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
@@ -164,11 +228,26 @@ export function AlertCenterContentV2() {
   const timelineFetchLock = useRef(false)
 
   const showDailyInsights = hasScreenFunction("s-alerts", "view-daily-insights")
-  const [centerTab, setCenterTab] = useState<"alerts" | "daily-insights">("alerts")
+  const [centerTab, setCenterTab] = useState<AlertCenterTab>("alerts")
+  const isMyAlertsTab = centerTab === "my-alerts"
+  const rulesVisibilityForApi: "ORG" | "PRIVATE" = isMyAlertsTab ? "PRIVATE" : "ORG"
 
   useEffect(() => {
-    if (searchParams.get("tab") === "daily-insights" && showDailyInsights) {
-      setCenterTab("daily-insights")
+    const tab = searchParams.get("tab")
+    if (tab === "daily-insights") {
+      setCenterTab(showDailyInsights ? "daily-insights" : "alerts")
+      return
+    }
+    if (tab === "my-alerts") {
+      setCenterTab("my-alerts")
+      return
+    }
+    if (tab === "alerts") {
+      setCenterTab("alerts")
+      return
+    }
+    if (!tab) {
+      setCenterTab("alerts")
     }
   }, [searchParams, showDailyInsights])
 
@@ -187,12 +266,42 @@ export function AlertCenterContentV2() {
   const { data: summary, refetch: refetchOpenAlertsSummary } = useApi(() => alertsApi.getOpenAlertsSummary(), {
     cacheKey: "alerts_open_summary_v2",
   })
-  const { data: rules, refetch: refetchRules, loading: rulesLoading } = useApi(() => alertsApi.getAlertRules(), {
-    cacheKey: "alert_rules_v2_overview",
+  const { data: rules, refetch: refetchRules, loading: rulesLoading } = useApi(
+    () => alertsApi.getAlertRules(undefined, rulesVisibilityForApi),
+    {
+      enabled: centerTab === "alerts" || centerTab === "my-alerts",
+      cacheKey: `alert_rules_v2_${rulesVisibilityForApi}`,
+    },
+  )
+  const { data: privateQuota, refetch: refetchPrivateQuota } = useApi(() => alertsApi.getPrivateAlertRuleQuota(), {
+    enabled: centerTab === "my-alerts",
+    cacheKey: "alert_private_quota",
   })
+  const privateSlotsFull = Boolean(isMyAlertsTab && privateQuota && privateQuota.used >= privateQuota.max)
   const { data: appsData } = useApi(() => structureApi.getApps(), {
     cacheKey: "alert_center_filter_apps",
   })
+  const orgId = getCurrentUser()?.organization?.id
+  const { data: orgUsersPage } = useApi(
+    () => organizationsApi.getUsers(orgId!, { page: 1, pageSize: 500 }),
+    {
+      enabled: Boolean(orgId),
+      cacheKey: orgId ? `org_users_alert_rule_creators_${orgId}` : "org_users_alert_rule_creators_skip",
+    },
+  )
+
+  const ruleCreatorLookup = useMemo(() => {
+    const m = new Map<string, { name: string; avatarUrl?: string | null }>()
+    for (const u of orgUsersPage?.items ?? []) {
+      if (!u.id) continue
+      m.set(u.id.toLowerCase(), {
+        name: u.fullName?.trim() || u.email || u.id,
+        avatarUrl: u.avatarUrl,
+      })
+    }
+    return m
+  }, [orgUsersPage])
+
   const { alerts, loading, refetch } = useAlertNotifications({ inAppOnly: false })
   const [requiresAttentionPage, setRequiresAttentionPage] = useState(1)
   const [requiresAttentionPageSize, setRequiresAttentionPageSize] = useState(10)
@@ -455,11 +564,14 @@ export function AlertCenterContentV2() {
   const handleRuleCreated = async () => {
     setManualEditRule(null)
     invalidateAlertCaches()
-    invalidateCache("alert_rules_v2_overview")
+    invalidateCache("alert_rules_v2_ORG")
+    invalidateCache("alert_rules_v2_PRIVATE")
+    invalidateCache("alert_private_quota")
     invalidateCache("alert_rules_all")
     invalidateCache("alert_rules_enabled")
     invalidateCache("alert_rules_disabled")
     await refetchRules()
+    void refetchPrivateQuota()
   }
 
   const openOverviewEdit = (rule: AlertRule) => {
@@ -471,7 +583,9 @@ export function AlertCenterContentV2() {
     setOverviewTogglingId(rule.id)
     try {
       await alertsApi.toggleAlertRule(rule.id)
-      invalidateCache("alert_rules_v2_overview")
+      invalidateCache("alert_rules_v2_ORG")
+      invalidateCache("alert_rules_v2_PRIVATE")
+      invalidateCache("alert_private_quota")
       invalidateCache("alert_rules_all")
       invalidateCache("alert_rules_enabled")
       invalidateCache("alert_rules_disabled")
@@ -494,7 +608,9 @@ export function AlertCenterContentV2() {
     setOverviewDeletingId(rule.id)
     try {
       await alertsApi.deleteAlertRule(rule.id)
-      invalidateCache("alert_rules_v2_overview")
+      invalidateCache("alert_rules_v2_ORG")
+      invalidateCache("alert_rules_v2_PRIVATE")
+      invalidateCache("alert_private_quota")
       invalidateCache("alert_rules_all")
       invalidateCache("alert_rules_enabled")
       invalidateCache("alert_rules_disabled")
@@ -513,7 +629,9 @@ export function AlertCenterContentV2() {
     try {
       const res = await alertsApi.runAlertRuleNow(rule.id)
       invalidateAlertCaches()
-      invalidateCache("alert_rules_v2_overview")
+      invalidateCache("alert_rules_v2_ORG")
+      invalidateCache("alert_rules_v2_PRIVATE")
+      invalidateCache("alert_private_quota")
       invalidateCache("alert_rules_all")
       invalidateCache("alert_rules_enabled")
       invalidateCache("alert_rules_disabled")
@@ -572,82 +690,143 @@ export function AlertCenterContentV2() {
     }
   }
 
+  const headerBreadcrumb = isMyAlertsTab
+    ? "Alerts & Insights > My Alerts"
+    : "Alerts & Insights > Alert Center"
+  const headerTitle = isMyAlertsTab ? "My Alerts" : "Alert Center"
+  const headerTagline = isMyAlertsTab
+    ? privateQuota
+      ? `Your personal alert rules — ${privateQuota.used} of ${privateQuota.max} slots used`
+      : "Your personal alert rules"
+    : "Real-time monitoring across 200+ apps"
+
+  const handleCenterTabChange = useCallback(
+    (value: string) => {
+      const next = value as AlertCenterTab
+      if (next === "daily-insights" && !showDailyInsights) return
+      setCenterTab(next)
+      const params = new URLSearchParams(searchParams.toString())
+      if (next === "alerts") {
+        params.delete("tab")
+      } else {
+        params.set("tab", next)
+      }
+      const q = params.toString()
+      router.replace(q ? `${pathname}?${q}` : pathname)
+    },
+    [pathname, router, searchParams, showDailyInsights],
+  )
+
   const alertsPanel = (
     <>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-500 mb-2">Alerts & Insights &gt; Alert Center</p>
+          <p className="text-sm text-slate-500 mb-2">{headerBreadcrumb}</p>
           <h1 className="text-3xl font-bold text-slate-900">
-            Alert Center
+            {headerTitle}
             <span className="text-amber-500 text-3xl">.</span>
           </h1>
-          <p className="text-sm text-slate-500 mt-2">Real-time monitoring across 200+ apps</p>
+          <p className="text-sm text-slate-500 mt-2">{headerTagline}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700"
+            disabled={privateSlotsFull}
             onClick={() => setShowAiBuilder(true)}
           >
-            Create Alert via AI
+            {isMyAlertsTab ? <Zap className="w-4 h-4" /> : null}
+            {isMyAlertsTab ? "Create via AI" : "Create Alert via AI"}
           </Button>
           <Button
             variant="outline"
             className="h-9 gap-2 bg-transparent"
+            disabled={privateSlotsFull}
             onClick={() => {
               setManualEditRule(null)
               setShowManualCreator(true)
             }}
           >
-            Create Manual Alert
+            {isMyAlertsTab ? <Plus className="w-4 h-4" /> : null}
+            {isMyAlertsTab ? "Create Manually" : "Create Manual Alert"}
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setAlertRulesPanelOpen(true)}>
-            <Settings className="w-4 h-4" />
-          </Button>
+          {!isMyAlertsTab ? (
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setAlertRulesPanelOpen(true)}>
+              <Settings className="w-4 h-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {isMyAlertsTab ? (
         <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-slate-900">{totalOpen}</div>
-            <p className="text-sm text-slate-500">Active alerts</p>
-            <p className="text-xs text-slate-400 mt-2">Open alerts in queue</p>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200 border-red-200 bg-red-50">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-2xl font-bold text-red-600">{triggeredNowAlerts.length}</div>
-                <p className="text-sm text-slate-600">Triggered now</p>
-                <p className="text-xs text-slate-500 mt-2">
-                  {triggeredNowAlerts.filter((a) => a.severity === "critical").length} critical •{" "}
-                  {triggeredNowAlerts.filter((a) => a.severity === "warning").length} warning
-                </p>
-              </div>
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <CardContent className="p-6 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <span className="font-semibold text-slate-900">Alert Slots Used</span>
+              <span className="text-sm text-slate-500 shrink-0">
+                {privateQuota ? `${privateQuota.remaining} remaining` : "—"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-slate-900">{triggeredTodayAlerts.length}</div>
-            <p className="text-sm text-slate-500">Triggered today</p>
-            <p className="text-xs text-slate-400 mt-2">
-              {triggeredTodayCriticalCount} red • {triggeredTodayWarningCount} yellow • {triggeredTodayInfoCount} blue
+            <div className="[&_[data-slot=progress-indicator]]:bg-indigo-600 [&_[data-slot=progress]]:bg-slate-100">
+              <Progress
+                className="h-2.5"
+                value={
+                  privateQuota && privateQuota.max > 0
+                    ? Math.min(100, Math.round((privateQuota.used / privateQuota.max) * 100))
+                    : 0
+                }
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              {privateQuota
+                ? `${privateQuota.used} of ${privateQuota.max} slots used`
+                : "Loading slot usage…"}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-slate-900">
-              {averageResponseMinutes != null ? `${averageResponseMinutes} min` : "--"}
-            </div>
-            <p className="text-sm text-slate-500">Avg response time</p>
-            <p className="text-xs text-slate-400 mt-2">Based on acknowledged/resolved alerts</p>
-          </CardContent>
-        </Card>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="border-slate-200">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-slate-900">{totalOpen}</div>
+              <p className="text-sm text-slate-500">Active alerts</p>
+              <p className="text-xs text-slate-400 mt-2">Open alerts in queue</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200 border-red-200 bg-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-red-600">{triggeredNowAlerts.length}</div>
+                  <p className="text-sm text-slate-600">Triggered now</p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {triggeredNowAlerts.filter((a) => a.severity === "critical").length} critical •{" "}
+                    {triggeredNowAlerts.filter((a) => a.severity === "warning").length} warning
+                  </p>
+                </div>
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-slate-900">{triggeredTodayAlerts.length}</div>
+              <p className="text-sm text-slate-500">Triggered today</p>
+              <p className="text-xs text-slate-400 mt-2">
+                {triggeredTodayCriticalCount} red • {triggeredTodayWarningCount} yellow • {triggeredTodayInfoCount} blue
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-slate-900">
+                {averageResponseMinutes != null ? `${averageResponseMinutes} min` : "--"}
+              </div>
+              <p className="text-sm text-slate-500">Avg response time</p>
+              <p className="text-xs text-slate-400 mt-2">Based on acknowledged/resolved alerts</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card className="border-slate-200">
         <CardContent className="p-6">
@@ -720,6 +899,7 @@ export function AlertCenterContentV2() {
                       <TableHead>Type</TableHead>
                       <TableHead className="min-w-[200px] max-w-[min(28rem,40vw)]">Conditions</TableHead>
                       <TableHead className="hidden md:table-cell">Apps</TableHead>
+                      <TableHead className="hidden md:table-cell max-w-[11rem]">Created by</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right w-[240px] min-w-[240px]">Actions</TableHead>
                     </TableRow>
@@ -751,6 +931,13 @@ export function AlertCenterContentV2() {
                             <span className="text-xs text-slate-600 whitespace-normal">
                               {formatRuleScope(rule)}
                             </span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell max-w-[11rem]">
+                            {rule.createdBy ? (
+                              <RuleCreatorAvatar createdBy={rule.createdBy} lookup={ruleCreatorLookup} />
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -1175,31 +1362,33 @@ export function AlertCenterContentV2() {
 
   return (
     <div className="flex flex-col gap-6">
-      {showDailyInsights ? (
-        <Tabs
-          value={centerTab}
-          onValueChange={(v) => setCenterTab(v as "alerts" | "daily-insights")}
-          className="w-full"
-        >
-          <TabsList className="h-10 w-fit bg-slate-100 p-1 mb-2">
-            <TabsTrigger value="alerts">Alerts</TabsTrigger>
+      <Tabs value={centerTab} onValueChange={handleCenterTabChange} className="w-full">
+        <TabsList className="h-10 w-fit bg-slate-100 p-1 mb-2">
+          <TabsTrigger value="alerts">Alerts</TabsTrigger>
+          <TabsTrigger value="my-alerts">My Alerts</TabsTrigger>
+          {showDailyInsights ? (
             <TabsTrigger value="daily-insights" className="gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
               Daily Insights
             </TabsTrigger>
-          </TabsList>
-          <TabsContent value="alerts" className="mt-0 flex flex-col gap-6">
-            {alertsPanel}
-          </TabsContent>
+          ) : null}
+        </TabsList>
+        {(centerTab === "alerts" || centerTab === "my-alerts") && (
+          <div className="mt-0 flex flex-col gap-6">{alertsPanel}</div>
+        )}
+        {showDailyInsights ? (
           <TabsContent value="daily-insights" className="mt-6">
             <DailyInsightsFeed />
           </TabsContent>
-        </Tabs>
-      ) : (
-        alertsPanel
-      )}
+        ) : null}
+      </Tabs>
 
-      <AIAlertBuilderSheet open={showAiBuilder} onOpenChange={setShowAiBuilder} onCreated={handleRuleCreated} />
+      <AIAlertBuilderSheet
+        open={showAiBuilder}
+        onOpenChange={setShowAiBuilder}
+        onCreated={handleRuleCreated}
+        ruleVisibility={isMyAlertsTab ? "PRIVATE" : "ORG"}
+      />
       <ManualAlertCreatorModal
         open={showManualCreator}
         onOpenChange={(open) => {
@@ -1208,6 +1397,7 @@ export function AlertCenterContentV2() {
         }}
         onCreated={handleRuleCreated}
         rule={manualEditRule}
+        ruleVisibility={isMyAlertsTab ? "PRIVATE" : "ORG"}
       />
       <AlertRulesPanel open={alertRulesPanelOpen} onOpenChange={setAlertRulesPanelOpen} />
       <AlertRuleDetailsDialog

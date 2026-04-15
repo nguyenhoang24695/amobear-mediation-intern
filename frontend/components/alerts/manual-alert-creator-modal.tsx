@@ -40,6 +40,8 @@ interface ManualAlertCreatorModalProps {
   onOpenChange: (open: boolean) => void
   onCreated?: () => void
   rule?: AlertRule | null
+  /** PRIVATE = rule lưu cho tab My Alerts. */
+  ruleVisibility?: "ORG" | "PRIVATE"
 }
 
 type TelegramDestinationRow = {
@@ -258,7 +260,13 @@ function describeManualConditionText(metricLabel: string, c: ManualConditionRow)
   return `${metricLabel} (${typeName})`
 }
 
-export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }: ManualAlertCreatorModalProps) {
+export function ManualAlertCreatorModal({
+  open,
+  onOpenChange,
+  onCreated,
+  rule,
+  ruleVisibility = "ORG",
+}: ManualAlertCreatorModalProps) {
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
   const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
@@ -605,7 +613,9 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
       return
     }
     try {
-      const existingRules = await alertsApi.getAlertRules()
+      const vis: "ORG" | "PRIVATE" =
+        rule?.visibility === "PRIVATE" || ruleVisibility === "PRIVATE" ? "PRIVATE" : "ORG"
+      const existingRules = await alertsApi.getAlertRules(undefined, vis)
       const isDuplicate = existingRules.some((item) => {
         if (rule && item.id === rule.id) return false
         return item.name.trim().toLowerCase() === name.toLowerCase()
@@ -739,7 +749,11 @@ export function ManualAlertCreatorModal({ open, onOpenChange, onCreated, rule }:
           )
           .join(joiner)
 
+    const effectiveVisibility: "ORG" | "PRIVATE" =
+      rule?.visibility === "PRIVATE" || ruleVisibility === "PRIVATE" ? "PRIVATE" : "ORG"
+
     return {
+      visibility: effectiveVisibility,
       name,
       description: rule?.description || "Created from manual alert wizard",
       ruleType: rule?.ruleType?.trim() || "MANUAL",
