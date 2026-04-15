@@ -8,6 +8,7 @@ import {
   getCurrentUser,
   getUserInitials,
   getUserDisplayName,
+  hasScreenFunction,
   type AuthUser,
 } from "@/lib/auth"
 import { logoutUser } from "@/lib/logout"
@@ -140,12 +141,14 @@ export function UserDropdown() {
               My Profile
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/alert-center?tab=my-alerts" className="flex items-center gap-2 cursor-pointer">
-              <AlertTriangle className="w-4 h-4" />
-              My Alerts
-            </Link>
-          </DropdownMenuItem>
+          {hasScreenFunction("s-alerts", "setting-my-alerts") ? (
+            <DropdownMenuItem asChild>
+              <Link href="/alert-center?tab=my-alerts" className="flex items-center gap-2 cursor-pointer">
+                <AlertTriangle className="w-4 h-4" />
+                My Alerts
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
 
           <DropdownMenuSeparator />
 
