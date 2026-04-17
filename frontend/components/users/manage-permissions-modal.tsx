@@ -113,20 +113,32 @@ export function ManagePermissionsModal({
     })
   }, [apps, filterType, filterPlatform, filterAdmobAccount])
 
+  const selectedMetaAdAccountIdSet = useMemo(() => new Set(metaAdAccountIds), [metaAdAccountIds])
+  const initiallyAssignedMetaAdAccountIdSet = useMemo(
+    () => new Set(userProfile?.data?.metaAdAccountIds ?? []),
+    [userProfile?.data?.metaAdAccountIds]
+  )
+
   const filteredMetaAdAccounts = useMemo(() => {
     const search = metaAdAccountSearch.trim().toLowerCase()
-    if (!search) {
-      return metaAdAccountOptions
-    }
+    const filteredOptions = !search
+      ? metaAdAccountOptions
+      : metaAdAccountOptions.filter((option) => {
+          const haystack = [option.metaAdAccountId, option.name, option.integrationName]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+          return haystack.includes(search)
+        })
 
-    return metaAdAccountOptions.filter((option) => {
-      const haystack = [option.metaAdAccountId, option.name, option.integrationName]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-      return haystack.includes(search)
+    return [...filteredOptions].sort((left, right) => {
+      const leftAssigned = initiallyAssignedMetaAdAccountIdSet.has(left.id)
+      const rightAssigned = initiallyAssignedMetaAdAccountIdSet.has(right.id)
+
+      if (leftAssigned === rightAssigned) return 0
+      return leftAssigned ? -1 : 1
     })
-  }, [metaAdAccountOptions, metaAdAccountSearch])
+  }, [metaAdAccountOptions, metaAdAccountSearch, initiallyAssignedMetaAdAccountIdSet])
 
   useEffect(() => {
     if (!open) {
@@ -410,7 +422,7 @@ export function ManagePermissionsModal({
                       <p className="text-sm text-slate-500">No Meta ad accounts assigned</p>
                     ) : (
                       filteredMetaAdAccounts.map((option) => {
-                        const checked = metaAdAccountIds.includes(option.id)
+                        const checked = selectedMetaAdAccountIdSet.has(option.id)
                         return (
                           <label
                             key={option.id}
