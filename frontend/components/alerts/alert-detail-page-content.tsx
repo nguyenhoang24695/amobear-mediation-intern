@@ -25,6 +25,7 @@ import Link from "next/link"
 import { formatDistanceToNow, format } from "date-fns"
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Area } from "recharts"
 import { alertsApi } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { formatAlertCardTitle, toAlertUiItem, toUiSeverity } from "./alert-center-view-model"
@@ -157,6 +158,7 @@ function AlertTrendTooltip({
 
 export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps) {
   const { toast } = useToast()
+  const canEditAlertRule = useMemo(() => hasScreenFunction("s-alerts", "edit-rule"), [])
   const [actionLoading, setActionLoading] = useState<"ack" | "resolve" | "snooze" | null>(null)
   const [editRuleOpen, setEditRuleOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
@@ -327,6 +329,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
   }
 
   const handleOpenEditRule = async () => {
+    if (!canEditAlertRule) return
     const ruleId = detailData?.alert?.alertRuleId
     if (!ruleId) {
       toast({ title: "Không tìm thấy Alert Rule", variant: "destructive" })
@@ -392,10 +395,12 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
               <Separator orientation="vertical" className="h-6" />
               <p className="text-sm text-slate-500">Alerts & Insights &gt; Alert Detail</p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => void handleOpenEditRule()} disabled={editRuleLoading}>
-              <Edit className="w-4 h-4" />
-              {editRuleLoading ? "Loading..." : "Edit Rule"}
-            </Button>
+            {canEditAlertRule ? (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => void handleOpenEditRule()} disabled={editRuleLoading}>
+                <Edit className="w-4 h-4" />
+                {editRuleLoading ? "Loading..." : "Edit Rule"}
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -676,6 +681,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
       <ManualAlertCreatorModal
         open={editRuleOpen}
         onOpenChange={(nextOpen) => {
+          if (nextOpen && !canEditAlertRule) return
           setEditRuleOpen(nextOpen)
           if (!nextOpen) setEditingRule(null)
         }}

@@ -158,10 +158,12 @@ export function MediationGroupsPageContent() {
     ]
   }, [apps])
 
+  const canViewAlertsCenter = useMemo(() => hasScreenFunction("s-alerts", "view"), [])
+
   // Fetch active alerts summary
   const { data: alertsSummary } = useApi(
     () => alertsApi.getActiveAlertsSummary(),
-    { enabled: true }
+    { enabled: canViewAlertsCenter }
   )
 
   // Calculate summary stats

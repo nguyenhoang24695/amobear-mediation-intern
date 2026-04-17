@@ -228,6 +228,9 @@ export function AlertCenterContentV2() {
 
   const showDailyInsights = hasScreenFunction("s-alerts", "view-daily-insights")
   const showMyAlertsTab = hasScreenFunction("s-alerts", "setting-my-alerts")
+  const canCreateAlertRule = hasScreenFunction("s-alerts", "create-rule")
+  const canEditAlertRule = hasScreenFunction("s-alerts", "edit-rule")
+  const canDeleteAlertRule = hasScreenFunction("s-alerts", "delete-rule")
   const [centerTab, setCenterTab] = useState<AlertCenterTab>("alerts")
   const isMyAlertsTab = centerTab === "my-alerts"
   const rulesVisibilityForApi: "ORG" | "PRIVATE" = isMyAlertsTab ? "PRIVATE" : "ORG"
@@ -635,6 +638,7 @@ export function AlertCenterContentV2() {
   }
 
   const openOverviewEdit = (rule: AlertRule) => {
+    if (!canEditAlertRule) return
     setManualEditRule(rule)
     setShowManualCreator(true)
   }
@@ -790,7 +794,7 @@ export function AlertCenterContentV2() {
           <p className="text-sm text-slate-500 mt-2">{headerTagline}</p>
         </div>
         <div className="flex items-center gap-2">
-          {!isMyAlertsTab ? (
+          {!isMyAlertsTab && canCreateAlertRule ? (
             <Button
               className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700"
               onClick={() => setShowAiBuilder(true)}
@@ -798,18 +802,20 @@ export function AlertCenterContentV2() {
               Create Alert via AI
             </Button>
           ) : null}
-          <Button
-            variant="outline"
-            className="h-9 gap-2 bg-transparent"
-            disabled={privateSlotsFull}
-            onClick={() => {
-              setManualEditRule(null)
-              setShowManualCreator(true)
-            }}
-          >
-            {isMyAlertsTab ? <Plus className="w-4 h-4" /> : null}
-            {isMyAlertsTab ? "Create Manually" : "Create Manual Alert"}
-          </Button>
+          {canCreateAlertRule ? (
+            <Button
+              variant="outline"
+              className="h-9 gap-2 bg-transparent"
+              disabled={privateSlotsFull}
+              onClick={() => {
+                setManualEditRule(null)
+                setShowManualCreator(true)
+              }}
+            >
+              {isMyAlertsTab ? <Plus className="w-4 h-4" /> : null}
+              {isMyAlertsTab ? "Create Manually" : "Create Manual Alert"}
+            </Button>
+          ) : null}
           {!isMyAlertsTab ? (
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setAlertRulesPanelOpen(true)}>
               <Settings className="w-4 h-4" />
@@ -1013,11 +1019,13 @@ export function AlertCenterContentV2() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-0.5 flex-nowrap">
-                              <Switch
-                                checked={rule.isEnabled}
-                                disabled={overviewTogglingId === rule.id}
-                                onCheckedChange={() => void handleOverviewToggle(rule)}
-                              />
+                              {canEditAlertRule ? (
+                                <Switch
+                                  checked={rule.isEnabled}
+                                  disabled={overviewTogglingId === rule.id}
+                                  onCheckedChange={() => void handleOverviewToggle(rule)}
+                                />
+                              ) : null}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1027,43 +1035,49 @@ export function AlertCenterContentV2() {
                               >
                                 <Eye className="h-4 w-4 text-slate-600" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={() => void handleOverviewRunNow(rule)}
-                                disabled={
-                                  overviewRunningId === rule.id ||
-                                  overviewDeletingId === rule.id ||
-                                  overviewTogglingId === rule.id
-                                }
-                                title="Run now"
-                              >
-                                {overviewRunningId === rule.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Play className="h-4 w-4 text-indigo-600" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={() => openOverviewEdit(rule)}
-                                title="Edit"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={() => void handleOverviewDelete(rule)}
-                                disabled={overviewDeletingId === rule.id}
-                                title="Delete"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-600" />
-                              </Button>
+                              {canEditAlertRule ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => void handleOverviewRunNow(rule)}
+                                  disabled={
+                                    overviewRunningId === rule.id ||
+                                    overviewDeletingId === rule.id ||
+                                    overviewTogglingId === rule.id
+                                  }
+                                  title="Run now"
+                                >
+                                  {overviewRunningId === rule.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Play className="h-4 w-4 text-indigo-600" />
+                                  )}
+                                </Button>
+                              ) : null}
+                              {canEditAlertRule ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => openOverviewEdit(rule)}
+                                  title="Edit"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                              {canDeleteAlertRule ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => void handleOverviewDelete(rule)}
+                                  disabled={overviewDeletingId === rule.id}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              ) : null}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1447,14 +1461,19 @@ export function AlertCenterContentV2() {
       </Tabs>
 
       <AIAlertBuilderSheet
-        open={showAiBuilder}
-        onOpenChange={setShowAiBuilder}
+        open={showAiBuilder && canCreateAlertRule}
+        onOpenChange={(open) => {
+          if (open && !canCreateAlertRule) return
+          setShowAiBuilder(open)
+        }}
         onCreated={handleRuleCreated}
         ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
       <ManualAlertCreatorModal
         open={showManualCreator}
         onOpenChange={(open) => {
+          if (open && manualEditRule == null && !canCreateAlertRule) return
+          if (open && manualEditRule != null && !canEditAlertRule) return
           setShowManualCreator(open)
           if (!open) setManualEditRule(null)
         }}

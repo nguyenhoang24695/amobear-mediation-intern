@@ -80,6 +80,43 @@ type NavItem = {
   children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean); isNew?: boolean }[]
 }
 
+function isNavChildVisible(child: { isShow?: boolean | (() => boolean) }): boolean {
+  if (child.isShow === undefined) return true
+  return typeof child.isShow === "function" ? child.isShow() : child.isShow
+}
+
+const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
+  { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
+  { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
+  {
+    icon: ListChecks,
+    label: "Waterfall Config",
+    href: "/waterfall-rules",
+    isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules"),
+  },
+  { icon: Layers, label: "Waterfall Automation", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
+  { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
+  {
+    icon: KeyRound,
+    label: "Data Accounts",
+    href: "/data-accounts",
+    isShow: () => hasScreenFunction("s-data-accounts", "view") || hasScreenFunction("s-meta-accounts", "view"),
+  },
+  { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
+  {
+    icon: Sparkles,
+    label: "AI Insight Templates",
+    href: "/insight-templates",
+    isShow: () => hasScreenFunction("s-insight-settings", "manage-templates"),
+  },
+  {
+    icon: Zap,
+    label: "Insight Generation",
+    href: "/insight-generation",
+    isShow: () => hasScreenFunction("s-insight-settings", "view-generation"),
+  },
+]
+
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/", isShow: true },
   {
@@ -95,8 +132,14 @@ const navItems: NavItem[] = [
     isShow: () => hasScreenFunction("s-waterfall", "view") 
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
-  { icon: BarChart3, label: "Reports", href: "/reports", isShow: true },
-  { icon: Bell, label: "Alert Center", href: "/alert-center", isShow: true },
+  { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") },
+  {
+    icon: Bell,
+    label: "Alert Center",
+    href: "/alert-center",
+    isShow: () =>
+      hasScreenFunction("s-alerts", "view") || hasScreenFunction("s-alerts", "setting-my-alerts"),
+  },
   { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
   {
     icon: Megaphone,
@@ -182,34 +225,8 @@ const navItems: NavItem[] = [
     label: "Settings",
     href: "#",
     hasSubmenu: true,
-    isShow: true,
-    children: [
-
-      { icon: Building2, label: "Organizations", href: "/organizations", isShow: () => hasScreenFunction("s-orgs", "view") },
-      { icon: Briefcase, label: "Job Management", href: "/jobs", isShow: () => hasScreenFunction("s-jobs", "view") },
-      { icon: ListChecks, label: "Waterfall Config", href: "/waterfall-rules", isShow: () => hasScreenFunction("s-waterfall-rules", "view-configs") || hasScreenFunction("s-waterfall-rules", "view-rules") },
-      { icon: Layers, label: "Waterfall Automation", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
-      { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
-      {
-        icon: KeyRound,
-        label: "Data Accounts",
-        href: "/data-accounts",
-        isShow: () => hasScreenFunction("s-data-accounts", "view") || hasScreenFunction("s-meta-accounts", "view"),
-      },
-      { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
-      {
-        icon: Sparkles,
-        label: "AI Insight Templates",
-        href: "/insight-templates",
-        isShow: () => hasScreenFunction("s-insight-settings", "manage-templates"),
-      },
-      {
-        icon: Zap,
-        label: "Insight Generation",
-        href: "/insight-generation",
-        isShow: () => hasScreenFunction("s-insight-settings", "view-generation"),
-      },
-    ],
+    isShow: () => settingsSidebarChildren.some(isNavChildVisible),
+    children: settingsSidebarChildren,
   },
 ]
 
@@ -383,13 +400,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {!collapsed && isExpanded && (item as any).children && (item as any).children.length > 0 && (
                   <div className="mt-0.5 ml-5 space-y-0.5">
                     {(item as any).children.map((child: any) => {
-                      const childVisible =
-                        child.isShow === undefined
-                          ? true
-                          : typeof child.isShow === "function"
-                            ? child.isShow()
-                            : child.isShow
-                      if (!childVisible) return null
+                      if (!isNavChildVisible(child)) return null
 
                       const childActive =
                         pathname === child.href || (child.href !== "/" && pathname.startsWith(child.href))

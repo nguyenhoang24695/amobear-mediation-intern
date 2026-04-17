@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,8 +14,10 @@ import { useDashboardDate } from "@/contexts/dashboard-date-context"
 import { formatAlertCardTitle, parseSlackFinanceFromAdditionalData } from "@/components/alerts/alert-center-view-model"
 import { AlertSlackFinanceRow } from "@/components/alerts/alert-slack-finance-row"
 import { AlertAppAvatar } from "@/components/alerts/alert-app-avatar"
+import { hasScreenFunction } from "@/lib/auth"
 
 export function AlertSummary() {
+  const canViewAlerts = useMemo(() => hasScreenFunction("s-alerts", "view"), [])
   const [expanded, setExpanded] = useState(false)
   const prevActiveTotalRef = useRef<number | null>(null)
   const { refreshKey } = useDashboardDate()
@@ -23,13 +25,13 @@ export function AlertSummary() {
   // Fetch active alerts summary
   const { data: alertsSummary, loading: summaryLoading, refetch: refetchSummary } = useApi(
     () => alertsApi.getActiveAlertsSummary(),
-    { enabled: true, cacheKey: "active_alerts_summary_today" }
+    { enabled: canViewAlerts, cacheKey: "active_alerts_summary_today" }
   )
 
   // Fetch recent active alerts
   const { data: alertsData, loading: alertsLoading, refetch: refetchAlerts } = useApi(
     () => alertsApi.getActiveAlerts({ page: 1, pageSize: 5 }),
-    { enabled: true, cacheKey: "active_alerts_today_page1_size5" } // Fetch always; only render when expanded
+    { enabled: canViewAlerts, cacheKey: "active_alerts_today_page1_size5" } // Fetch always; only render when expanded
   )
 
   const activeTotal = alertsSummary?.Total ?? 0
@@ -66,6 +68,10 @@ export function AlertSummary() {
     : { critical: 0, high: 0, medium: 0, low: 0 }
 
   const alerts = alertsData?.data || []
+
+  if (!canViewAlerts) {
+    return null
+  }
 
   const getSeverityBadgeVariant = (severity: string) => {
     switch (severity?.toUpperCase()) {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { getCurrentUser } from "@/lib/auth"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import {
   ALERT_NOTIFICATION_STATE_CHANGED,
   getViewedAlertIds,
@@ -73,11 +73,17 @@ export function useAlertNotifications(options: UseAlertNotificationsOptions = {}
   const { inAppOnly = true } = options
   const userId = getCurrentUser()?.id ?? null
   const [viewedVersion, setViewedVersion] = useState(0)
+  const canViewAlertCenter = useMemo(
+    () =>
+      hasScreenFunction("s-alerts", "view") || hasScreenFunction("s-alerts", "setting-my-alerts"),
+    [],
+  )
 
   const cacheKey = inAppOnly ? "notification_open_alerts_in_app" : "notification_open_alerts_all"
 
   const { data, loading, error, refetch } = useApi(() => loadAllOpenAlerts(inAppOnly), {
     cacheKey,
+    enabled: canViewAlertCenter,
   })
 
   useEffect(() => {
@@ -120,7 +126,7 @@ export function useAlertNotifications(options: UseAlertNotificationsOptions = {}
 
   const markAlertsViewed = useCallback(
     async (alertIds: number[]) => {
-      if (alertIds.length === 0) return
+      if (!canViewAlertCenter || alertIds.length === 0) return
       try {
         const { updated } = await alertsApi.markOpenAlertsViewed(alertIds)
         if (updated > 0) {
@@ -131,7 +137,7 @@ export function useAlertNotifications(options: UseAlertNotificationsOptions = {}
         persistViewedAlerts(alertIds, userId)
       }
     },
-    [userId, cacheKey, refetch]
+    [userId, cacheKey, refetch, canViewAlertCenter]
   )
 
   const markAllAlertsViewed = useCallback(() => {
