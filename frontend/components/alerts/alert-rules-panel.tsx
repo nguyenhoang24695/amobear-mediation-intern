@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { useApi } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { alertsApi } from "@/lib/api/services"
+import { hasScreenFunction } from "@/lib/auth"
 import type { AlertRule } from "@/types/api"
 import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
 import { Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
@@ -30,6 +31,8 @@ function parseJsonArray(input?: string | null): string[] {
 }
 
 export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
+  const canEditAlertRule = useMemo(() => hasScreenFunction("s-alerts", "edit-rule"), [])
+  const canDeleteAlertRule = useMemo(() => hasScreenFunction("s-alerts", "delete-rule"), [])
   const { toast } = useToast()
   const [enabledFilter, setEnabledFilter] = useState<"all" | "enabled" | "disabled">("all")
   const [manualEditorOpen, setManualEditorOpen] = useState(false)
@@ -178,23 +181,29 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
                           ) : null}
                         </div>
                         <div className="flex items-center gap-1">
-                          <Switch
-                            checked={rule.isEnabled}
-                            disabled={togglingId === rule.id}
-                            onCheckedChange={() => void handleToggle(rule)}
-                          />
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(rule)} title="Edit">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => void handleDelete(rule)}
-                            disabled={deletingId === rule.id}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
+                          {canEditAlertRule ? (
+                            <Switch
+                              checked={rule.isEnabled}
+                              disabled={togglingId === rule.id}
+                              onCheckedChange={() => void handleToggle(rule)}
+                            />
+                          ) : null}
+                          {canEditAlertRule ? (
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(rule)} title="Edit">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                          {canDeleteAlertRule ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => void handleDelete(rule)}
+                              disabled={deletingId === rule.id}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
                     </CardContent>
@@ -209,6 +218,7 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
       <ManualAlertCreatorModal
         open={manualEditorOpen}
         onOpenChange={(nextOpen) => {
+          if (nextOpen && !canEditAlertRule) return
           setManualEditorOpen(nextOpen)
           if (!nextOpen) setEditingRule(null)
         }}

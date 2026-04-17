@@ -261,6 +261,8 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
     })
   }, [revenueOverviewData, chartMetric])
 
+  const canViewAlertsCenter = useMemo(() => hasScreenFunction("s-alerts", "view"), [])
+
   // Active alerts for this app
   const { data: alerts } = useApi(
     async () => {
@@ -268,7 +270,7 @@ export function AppOverviewTab({ onNavigateToTab, refreshKey = 0 }: AppOverviewT
       return alertsApi.getActiveAlerts({ appId: app.appId })
     },
     {
-      enabled: !!app,
+      enabled: !!app && canViewAlertsCenter,
       cacheKey: app ? `app_alerts_${app.appId}_${refreshKey}` : undefined,
     },
   )

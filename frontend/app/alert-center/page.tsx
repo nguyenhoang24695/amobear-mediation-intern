@@ -1,13 +1,16 @@
 import { Suspense } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
+import { AlertCenterEntryGuard } from "@/components/auth/alert-center-entry-guard"
 import { AlertCenterContentV2 } from "@/components/alerts/alert-center-content-v2"
 
 export default function AlertCenterPage() {
   return (
     <DashboardLayout>
-      <Suspense fallback={<AlertCenterSkeleton />}>
-        <AlertCenterContentV2 />
-      </Suspense>
+      <AlertCenterEntryGuard>
+        <Suspense fallback={<AlertCenterSkeleton />}>
+          <AlertCenterContentV2 />
+        </Suspense>
+      </AlertCenterEntryGuard>
     </DashboardLayout>
   )
 }
