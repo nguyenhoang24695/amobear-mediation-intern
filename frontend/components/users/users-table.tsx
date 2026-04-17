@@ -84,7 +84,7 @@ const statusConfig = {
   pending: { color: "bg-blue-500", label: "Pending" },
 }
 
-type SortColumn = "name" | "role" | "teams" | "appAccess" | "status" | "joinedAt" | null
+type SortColumn = "name" | "role" | "teams" | "appAccess" | "metaAdAccounts" | "status" | "joinedAt" | null
 type SortDirection = "asc" | "desc"
 
 export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
@@ -128,14 +128,14 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     setPage(1)
   }, [searchQuery, roleFilter, statusFilter, teamId])
 
-  // Nếu filter theo teamId, lấy tên team từ phần tử đầu tiên (teams[0].name)
+  // If filtering by teamId, take the team name from the first item (teams[0].name)
   const teamNameFromItems = useMemo(() => {
     if (!teamId || !filterResponse?.data?.items || filterResponse.data.items.length === 0) return undefined
     const first = filterResponse.data.items[0] as TeamMember
     return first.teams && first.teams.length > 0 ? first.teams[0].name : undefined
   }, [teamId, filterResponse])
 
-  // Đẩy teamName lên cho header sử dụng
+  // Push teamName up for the header
   useEffect(() => {
     if (!onTeamNameChange) return
     onTeamNameChange(teamNameFromItems)
@@ -147,8 +147,9 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     
     return filterResponse.data.items.map((user: TeamMember) => {
       const appAccessCount = user.permissions ? Object.keys(user.permissions).length : 0
+      const metaAdAccountCount = user.metaAdAccountCount ?? user.metaAdAccountIds?.length ?? 0
       
-      // Nếu đang filter theo teamId, ưu tiên role của user trong team đó; fallback về user.role tổng thể
+      // If filtering by teamId, prefer the user role in that team; fallback to overall user.role
       const teamRole = teamId ? user.teams.find((t) => t.id === teamId)?.role : undefined
       const effectiveRole = (teamRole || user.role || "viewer").toLowerCase()
       const roleKey: "admin" | "editor" | "viewer" =
@@ -168,9 +169,10 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         avatar: user.avatarUrl || "",
         isOnline: false, // TODO: Add online status if available
         role: roleKey,
-        // hiển thị tên role theo effectiveRole (giữ nguyên chữ thường/hoa nếu sau này cần)
+        // Display role name from effectiveRole
         teams: user.teams.map(t => ({ id: t.id, name: t.name })),
         appAccess: appAccessCount,
+        metaAdAccounts: metaAdAccountCount,
         status: displayStatus,
         lastActive: "N/A", // TODO: Get lastActive from API if available
         joinedAt: teamJoinedAt, // JoinedAt from team membership
@@ -199,6 +201,9 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           break
         case "appAccess":
           comparison = a.appAccess - b.appAccess
+          break
+        case "metaAdAccounts":
+          comparison = a.metaAdAccounts - b.metaAdAccounts
           break
         case "status":
           comparison = a.status.localeCompare(b.status)
@@ -468,6 +473,15 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 <TableHead>
                   <button
                     className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    onClick={() => handleSort("metaAdAccounts")}
+                  >
+                    Meta Ad Accounts
+                    <SortIcon column="metaAdAccounts" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
                     onClick={() => handleSort("status")}
                   >
                     Status
@@ -534,7 +548,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                     {user.teams.length === 0 ? (
                       <span className="text-sm text-slate-400">No teams</span>
                     ) : teamId ? (
-                      // Khi filter theo teamId: hiển thị team hiện tại + số team khác
+                      // When filtering by teamId: show current team + number of other teams
                       (() => {
                         const currentTeam = user.teams.find(t => t.id === teamId)
                         const otherTeamsCount = user.teams.length - 1
@@ -561,7 +575,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         )
                       })()
                     ) : (
-                      // Khi không filter theo teamId: hiển thị tối đa 2 team
+                      // When not filtering by teamId: show up to 2 teams
                       <div className="flex flex-wrap gap-1">
                         {user.teams.slice(0, 2).map((team) => (
                           <Badge key={team.id} variant="outline" className="text-xs">
@@ -590,6 +604,19 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                       <TooltipContent>
                         <p className="text-xs">
                           {`Has access to ${user.appAccess} apps`}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 text-sm">
+                        {`${user.metaAdAccounts} Accounts`}
+                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          {`Has access to ${user.metaAdAccounts} Meta ad accounts`}
                         </p>
                       </TooltipContent>
                     </Tooltip>
