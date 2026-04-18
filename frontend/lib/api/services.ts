@@ -43,6 +43,7 @@ import type {
     HelpDocumentListItem,
     DataSourcesOverviewDto,
     DataSourcesTimelineDto,
+    SourceDetailsDto,
     AppDailyInsight,
     AppInsightHistoryDay,
     AppInsightSettings,
@@ -1618,6 +1619,17 @@ export const dataSourcesApi = {
     getTimeline: async (): Promise<DataSourcesTimelineDto> => {
         return apiClient.get<DataSourcesTimelineDto>('/api/v1/data-sources/timeline')
     },
+    getSourceDetails: async (
+        sourceKey: string,
+        days: number,
+        layer = 'all'
+    ): Promise<SourceDetailsDto> => {
+        const enc = encodeURIComponent(sourceKey)
+        return apiClient.get<SourceDetailsDto>(`/api/v1/data-sources/${enc}/details`, {
+            layer,
+            days,
+        } as Record<string, string | number | undefined>)
+    },
 }
 
 // Job Schedules API Service
@@ -1650,9 +1662,17 @@ export const activityLogsApi = {
 
 // Jobs Test API Service (for running jobs manually)
 export const jobsTestApi = {
-    // Run a job immediately (not via Hangfire schedule)
-    runJob: async (jobName: string): Promise<{ success: boolean; message?: string }> => {
-        return apiClient.post<{ success: boolean; message?: string }>(`/api/v1/jobs-test/${jobName}`, {})
+    /** Run a jobs-test endpoint (POST). Path is relative to /api/v1/jobs-test/ (e.g. admob-sync/date-range). */
+    runJob: async (
+        endpoint: string,
+        queryParams?: Record<string, string>
+    ): Promise<unknown> => {
+        const path = endpoint.replace(/^\/+/, '')
+        const qs =
+            queryParams && Object.keys(queryParams).length > 0
+                ? `?${new URLSearchParams(queryParams).toString()}`
+                : ''
+        return apiClient.post(`/api/v1/jobs-test/${path}${qs}`, {})
     },
 }
 

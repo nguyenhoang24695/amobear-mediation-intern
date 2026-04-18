@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Database, RefreshCw, CheckCircle2, AlertTriangle, Clock, Loader2 } from "lucide-react"
 import { hasScreenFunction } from "@/lib/auth"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
@@ -12,10 +13,12 @@ import { SourcesOverviewGrid } from "./sources-overview-grid"
 import { SyncJobsTimeline } from "./sync-jobs-timeline"
 import { DataQualityMonitor } from "./data-quality-monitor"
 import { ArchitectureDiagram } from "./architecture-diagram"
+import { SourceDetailsTab } from "./source-details-tab"
 
 const SCREEN_DATA_SOURCES = "s-data-sources"
 
 export function DataSourcesContent() {
+  const [mainTab, setMainTab] = useState("overview")
   const canView = hasScreenFunction(SCREEN_DATA_SOURCES, "view")
   const { data: overview, loading: loadingOverview, error: errOverview } = useApi(
     () => dataSourcesApi.getOverview(),
@@ -103,27 +106,38 @@ export function DataSourcesContent() {
         ))}
       </div>
 
-      {overview && <SourcesOverviewGrid sources={overview.sources} />}
-      {timeline && timeline.jobs.length > 0 && <SyncJobsTimeline timeline={timeline} />}
-      {overview && <DataQualityMonitor rows={overview.quality} />}
+      <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-6 mt-0">
+          {overview && <SourcesOverviewGrid sources={overview.sources} />}
+          {timeline && timeline.jobs.length > 0 && <SyncJobsTimeline timeline={timeline} />}
+          {overview && <DataQualityMonitor rows={overview.quality} />}
 
-      <ArchitectureDiagram />
+          <ArchitectureDiagram />
 
-      <Card className="border-amber-200 bg-amber-50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Revenue double-counting prevention
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm text-amber-700">
-            AppMetrica and Adjust can both carry revenue-like signals. AdMob remains the operational source of truth for ad
-            revenue; Adjust is used for MMP / campaign dimensions and IAP reference. Align consumption with{" "}
-            <span className="font-medium">docs/100 — Data Storage Architecture</span>.
-          </p>
-        </CardContent>
-      </Card>
+          <Card className="border-amber-200 bg-amber-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Revenue double-counting prevention
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm text-amber-700">
+                AppMetrica and Adjust can both carry revenue-like signals. AdMob remains the operational source of truth for ad
+                revenue; Adjust is used for MMP / campaign dimensions and IAP reference. Align consumption with{" "}
+                <span className="font-medium">docs/100 — Data Storage Architecture</span>.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="details" className="mt-0">
+          <SourceDetailsTab sources={overview?.sources ?? []} enabled={mainTab === "details" && Boolean(overview)} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
