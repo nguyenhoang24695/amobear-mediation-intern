@@ -1661,6 +1661,11 @@ export const activityLogsApi = {
 }
 
 // Jobs Test API Service (for running jobs manually)
+export interface JobsTestAsyncRunResponse {
+    runId: string
+    eventsUrl: string
+}
+
 export const jobsTestApi = {
     /** Run a jobs-test endpoint (POST). Path is relative to /api/v1/jobs-test/ (e.g. admob-sync/date-range). */
     runJob: async (
@@ -1673,6 +1678,25 @@ export const jobsTestApi = {
                 ? `?${new URLSearchParams(queryParams).toString()}`
                 : ''
         return apiClient.post(`/api/v1/jobs-test/${path}${qs}`, {})
+    },
+
+    /**
+     * Start jobs-test action in background; stream MediationPro/Hangfire logs via GET eventsUrl (SSE).
+     * Body uses the same endpoint + queryParams as sync runJob (no query string on POST).
+     */
+    startAsyncRun: async (
+        endpoint: string,
+        queryParams?: Record<string, string>
+    ): Promise<JobsTestAsyncRunResponse> => {
+        return apiClient.post<JobsTestAsyncRunResponse>('/api/v1/jobs-test/runs', {
+            endpoint: endpoint.replace(/^\/+/, ''),
+            queryParams: queryParams ?? {},
+        })
+    },
+
+    /** Open SSE stream for an async run (use apiClient.streamGet). */
+    openRunLogStream: (eventsUrl: string, signal?: AbortSignal): Promise<Response> => {
+        return apiClient.streamGet(eventsUrl, signal)
     },
 }
 

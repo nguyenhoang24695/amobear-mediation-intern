@@ -36,13 +36,41 @@ function logTimestamp(): string {
   return new Date().toISOString().replace("T", " ").slice(0, 23) + "Z"
 }
 
-function formatResponseForLog(data: unknown): string {
-  if (data == null) return "(no body)"
-  try {
-    const s = typeof data === "string" ? data : JSON.stringify(data, null, 2)
-    return s.length > 4000 ? `${s.slice(0, 4000)}\n… (truncated)` : s
-  } catch {
-    return String(data)
+/** Parse SSE frames (data: {json}\\n\\n) from fetch streaming body. */
+async function consumeSseLogStream(
+  response: Response,
+  onLogLine: (serverLine: string) => void,
+  signal: AbortSignal
+): Promise<void> {
+  const body = response.body
+  if (!body) throw new Error("No response body for log stream")
+
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let carry = ""
+
+  while (!signal.aborted) {
+    const { done, value } = await reader.read()
+    if (done) break
+    carry += decoder.decode(value, { stream: true })
+    for (;;) {
+      const sep = carry.indexOf("\n\n")
+      if (sep < 0) break
+      const block = carry.slice(0, sep)
+      carry = carry.slice(sep + 2)
+      for (const raw of block.split("\n")) {
+        const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw
+        if (!line.startsWith("data:")) continue
+        const payload = line.startsWith("data: ") ? line.slice(6) : line.slice(5).trimStart()
+        try {
+          const obj = JSON.parse(payload) as { line?: string }
+          if (typeof obj?.line === "string") onLogLine(obj.line)
+          else onLogLine(payload)
+        } catch {
+          onLogLine(payload)
+        }
+      }
+    }
   }
 }
 
@@ -53,6 +81,7 @@ export function BackfillDialog({ open, onOpenChange, action, onSuccess }: Backfi
   const [logLines, setLogLines] = useState<string[]>([])
   const [autoScroll, setAutoScroll] = useState(true)
   const logRef = useRef<HTMLTextAreaElement>(null)
+  const streamAbortRef = useRef<AbortController | null>(null)
   const { toast } = useToast()
 
   const appendLog = useCallback((message: string) => {
@@ -83,15 +112,22 @@ export function BackfillDialog({ open, onOpenChange, action, onSuccess }: Backfi
   }, [logLines, autoScroll])
 
   useEffect(() => {
-    if (!running) return
-    const id = window.setInterval(() => {
-      appendLog("Đang chờ phản hồi HTTP từ server… (job chạy đồng bộ trong request; log chi tiết trên file API / Hangfire)")
-    }, 5000)
-    return () => clearInterval(id)
-  }, [running, appendLog])
+    return () => {
+      streamAbortRef.current?.abort()
+    }
+  }, [])
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) streamAbortRef.current?.abort()
+    onOpenChange(next)
+  }
 
   const handleRun = async () => {
     if (!action) return
+    streamAbortRef.current?.abort()
+    const ac = new AbortController()
+    streamAbortRef.current = ac
+
     setRunning(true)
     const qp = { ...action.queryParams }
     if ("startDate" in qp) qp.startDate = startDate
@@ -101,20 +137,28 @@ export function BackfillDialog({ open, onOpenChange, action, onSuccess }: Backfi
     if ("date" in qp) qp.date = startDate
 
     const path = `/api/v1/jobs-test/${action.endpoint.replace(/^\/+/, "")}`
-    const qs =
-      Object.keys(qp).length > 0 ? `?${new URLSearchParams(qp).toString()}` : ""
-    appendLog(`Gửi POST ${path}${qs}`)
+    const qs = Object.keys(qp).length > 0 ? `?${new URLSearchParams(qp).toString()}` : ""
+    appendLog(`Chạy nền (async) tương đương POST ${path}${qs}`)
+    appendLog("Đang mở luồng log SSE từ API (MediationPro.* / Hangfire.* trong process)…")
 
     try {
-      const data = await jobsTestApi.runJob(action.endpoint, qp)
-      appendLog("HTTP 200 — job hoàn tất trong phiên request này.")
-      appendLog(`Phản hồi JSON:\n${formatResponseForLog(data)}`)
+      const { runId, eventsUrl } = await jobsTestApi.startAsyncRun(action.endpoint, qp)
+      appendLog(`runId=${runId}`)
+      const streamRes = await jobsTestApi.openRunLogStream(eventsUrl, ac.signal)
+      await consumeSseLogStream(
+        streamRes,
+        (serverLine) => {
+          appendLog(serverLine)
+        },
+        ac.signal
+      )
+      appendLog("Luồng log đã kết thúc.")
       toast({
-        title: "Job triggered",
-        description: `${action.label} — xem nhật ký bên dưới; log server trên API / Hangfire.`,
+        title: "Job completed",
+        description: `${action.label} — xem nhật ký bên dưới.`,
       })
-      await new Promise((r) => setTimeout(r, 1200))
-      onOpenChange(false)
+      await new Promise((r) => setTimeout(r, 800))
+      handleOpenChange(false)
       onSuccess?.()
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Failed to run job"
@@ -122,6 +166,7 @@ export function BackfillDialog({ open, onOpenChange, action, onSuccess }: Backfi
       toast({ title: "Error", description: msg, variant: "destructive" })
     } finally {
       setRunning(false)
+      streamAbortRef.current = null
     }
   }
 
@@ -131,7 +176,7 @@ export function BackfillDialog({ open, onOpenChange, action, onSuccess }: Backfi
   const logText = logLines.join("\n")
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent className="max-w-xl max-h-[90vh] flex flex-col gap-0">
         <AlertDialogHeader>
           <AlertDialogTitle>Run backfill</AlertDialogTitle>
@@ -166,18 +211,15 @@ export function BackfillDialog({ open, onOpenChange, action, onSuccess }: Backfi
                     Nhật ký tiến trình
                   </Label>
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="bf-autoscroll"
-                      checked={autoScroll}
-                      onCheckedChange={(v) => setAutoScroll(v === true)}
-                    />
+                    <Checkbox id="bf-autoscroll" checked={autoScroll} onCheckedChange={(v) => setAutoScroll(v === true)} />
                     <Label htmlFor="bf-autoscroll" className="text-xs font-normal text-slate-600 cursor-pointer leading-none">
                       Tự động cuộn xuống
                     </Label>
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 m-0">
-                  Dòng thời gian phía client trong lúc chờ HTTP (mỗi 5s có nhắc nếu job lâu). Log thực của ứng dụng nằm trên server, không stream qua API hiện tại.
+                  Job chạy nền trên server; dòng log là <span className="font-medium">MediationPro.*</span> và{" "}
+                  <span className="font-medium">Hangfire.*</span> (mức Information+) trong cùng process. File log đầy đủ vẫn nằm trên disk.
                 </p>
                 <textarea
                   ref={logRef}
