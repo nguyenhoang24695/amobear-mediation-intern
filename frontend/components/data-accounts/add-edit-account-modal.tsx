@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Loader2, Eye, EyeOff, Plug, Upload, X, CheckCircle2, XCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "@/components/ui/use-toast"
 import { dataAccountsApi } from "@/lib/api/services"
 
 export interface DataAccount {
@@ -60,7 +60,6 @@ interface AddEditAccountModalProps {
 type TestState = "idle" | "loading" | "success" | "error"
 
 export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }: AddEditAccountModalProps) {
-  const { toast } = useToast()
   const isEdit = !!editAccount
 
   const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp" | "appsflyer" | "qonversion">("admob")

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { dataSourcesApi } from "@/lib/api/services"
 import type { DataSourceOverviewItemDto, JobsTestBackfillActionDto, SourceDetailsDto, SourceTableHealthDto } from "@/types/api"
 import { BackfillDialog } from "./backfill-dialog"
+import { QonversionDetailsIntro } from "./qonversion-details-intro"
 
 const LAYER_SECTION_ORDER = ["bronze", "silver", "gold"] as const
 const DAY_OPTIONS = [7, 14, 30] as const
@@ -263,6 +264,8 @@ export function SourceDetailsTab({
           </Button>
         </div>
       </div>
+
+      {sourceKey === "qonversion" && <QonversionDetailsIntro />}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
