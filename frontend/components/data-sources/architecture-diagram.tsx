@@ -13,6 +13,8 @@ const sources = [
   { name: "XMP", color: "bg-blue-600" },
   { name: "Adjust", color: "bg-teal-500" },
   { name: "AppsFlyer", color: "bg-sky-600" },
+  { name: "Qonversion", color: "bg-purple-500" },
+  { name: "Meta Ads", color: "bg-indigo-600" },
 ]
 
 const layers = [

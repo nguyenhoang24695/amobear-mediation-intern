@@ -526,6 +526,65 @@ export interface DataSourcesTimelineDto {
   currentHourFromWindowStart?: number | null
 }
 
+/** Data Sources → Details tab (health by day + jobs-test suggestions) */
+export interface DailyHealthCellDto {
+  date: string
+  count?: number | null
+  /** ok | missing | anomaly | unknown */
+  status: string
+}
+
+export interface JobsTestBackfillActionDto {
+  label: string
+  /** Path under POST /api/v1/jobs-test/ */
+  endpoint: string
+  queryParams: Record<string, string>
+}
+
+export interface SourceTableHealthDto {
+  /** bronze | silver | gold — for grouping when layer=all */
+  starRocksLayer?: string | null
+  groupKey: string
+  displayName?: string | null
+  appKey?: string | null
+  firebaseId?: string | null
+  admobAppId?: string | null
+  median?: number | null
+  missingCount: number
+  anomalyCount: number
+  daily: DailyHealthCellDto[]
+  suggestedActions: JobsTestBackfillActionDto[]
+  isFirebaseRollup?: boolean
+  firebasePerApp?: SourceTableHealthDto[] | null
+}
+
+export interface SourceDetailsLayerBreakdownDto {
+  layer: string
+  tableCount: number
+  missingDaySlots: number
+  anomalyDaySlots: number
+}
+
+export interface SourceDetailsSummaryDto {
+  topLevelTableCount: number
+  tablesWithAnyIssue: number
+  totalMissingDaySlots: number
+  totalAnomalyDaySlots: number
+  byLayer: SourceDetailsLayerBreakdownDto[]
+  quickActions: JobsTestBackfillActionDto[]
+}
+
+export interface SourceDetailsDto {
+  sourceKey: string
+  sourceName: string
+  layer: string
+  days: number
+  rangeFrom: string
+  rangeTo: string
+  tables: SourceTableHealthDto[]
+  summary?: SourceDetailsSummaryDto | null
+}
+
 // Waterfall Recommendation Types
 export interface WaterfallRecommendationConfigDto {
   id: number

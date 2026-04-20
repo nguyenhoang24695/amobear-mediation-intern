@@ -166,6 +166,43 @@ export class ApiClient {
             throw error
         }
     }
+
+    /**
+     * GET stream (e.g. SSE) with Bearer. No default timeout — pass AbortSignal to cancel (e.g. dialog close).
+     */
+    async streamGet(endpoint: string, signal?: AbortSignal): Promise<Response> {
+        const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`
+        const url = `${this.baseUrl}${path}`
+        const token = getAccessToken()
+        const headers: HeadersInit = { Accept: "text/event-stream" }
+        if (token) headers.Authorization = `Bearer ${token}`
+
+        let response = await fetch(url, { method: "GET", headers, signal })
+
+        if (!response.ok && response.status === 401) {
+            const newAccessToken = await refreshAuthSession(this.baseUrl)
+            if (newAccessToken) {
+                headers.Authorization = `Bearer ${newAccessToken}`
+                response = await fetch(url, { method: "GET", headers, signal })
+            }
+        }
+
+        if (!response.ok) {
+            if (response.status === 401 && typeof window !== "undefined") {
+                clearAuthSessionData()
+                if (!isRedirecting && !window.location.pathname.startsWith("/login")) {
+                    isRedirecting = true
+                    setTimeout(() => {
+                        window.location.href = "/login"
+                    }, 100)
+                }
+            }
+            const errText = await response.text().catch(() => "")
+            throw new Error(errText || `HTTP ${response.status}`)
+        }
+
+        return response
+    }
 }
 
 export const apiClient = new ApiClient()
