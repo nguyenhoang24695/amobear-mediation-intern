@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -24,9 +25,10 @@ import { dataAccountsApi } from "@/lib/api/services"
 export interface DataAccount {
   id: string
   name: string
-  network: "admob" | "applovin" | "xmp" | "appsflyer"
+  network: "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion"
   // admob
   publisherId?: string
+  defaultAppType?: string
   clientId?: string
   clientSecret?: string
   accessToken?: string
@@ -42,6 +44,10 @@ export interface DataAccount {
   apiV2Token?: string
   pushWebhookAuthToken?: string
   isDefault?: boolean
+  qonProjectKey?: string
+  qonApiBaseUrl?: string
+  qonGcsBucketName?: string
+  qonHasGcsJson?: boolean
 }
 
 interface AddEditAccountModalProps {
@@ -57,7 +63,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const { toast } = useToast()
   const isEdit = !!editAccount
 
-  const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp" | "appsflyer">("admob")
+  const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp" | "appsflyer" | "qonversion">("admob")
   const [saving, setSaving] = useState(false)
   const [testState, setTestState] = useState<TestState>("idle")
 
@@ -92,6 +98,18 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [showAfApiToken, setShowAfApiToken] = useState(false)
   const [afIsDefault, setAfIsDefault] = useState(false)
 
+  const [qonName, setQonName] = useState("")
+  const [qonProjectKey, setQonProjectKey] = useState("")
+  const [qonSecretKey, setQonSecretKey] = useState("")
+  const [qonWebhookToken, setQonWebhookToken] = useState("")
+  const [qonBaseUrl, setQonBaseUrl] = useState("https://api.qonversion.io/v3")
+  const [qonGcsJson, setQonGcsJson] = useState("")
+  const [qonGcsBucket, setQonGcsBucket] = useState("")
+  const [qonDashboardCookie, setQonDashboardCookie] = useState("")
+  const [qonDashboardUid, setQonDashboardUid] = useState("")
+  const [qonIsDefault, setQonIsDefault] = useState(false)
+  const [showQonSecret, setShowQonSecret] = useState(false)
+
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Reset / pre-fill on open
@@ -123,6 +141,17 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           setAfBaseUrl(editAccount.baseUrl ?? "https://hq1.appsflyer.com")
           setAfPushWebhookToken("")
           setAfIsDefault(editAccount.isDefault ?? false)
+        } else if (editAccount.network === "qonversion") {
+          setQonName(editAccount.name)
+          setQonProjectKey("")
+          setQonSecretKey("")
+          setQonWebhookToken("")
+          setQonBaseUrl(editAccount.qonApiBaseUrl ?? "https://api.qonversion.io/v3")
+          setQonGcsJson("")
+          setQonGcsBucket(editAccount.qonGcsBucketName ?? "")
+          setQonDashboardCookie("")
+          setQonDashboardUid("")
+          setQonIsDefault(editAccount.isDefault ?? false)
         } else {
           setXmpName(editAccount.name)
           setXmpClientId(editAccount.xmpClientId ?? "")
@@ -149,6 +178,16 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         setAfBaseUrl("https://hq1.appsflyer.com")
         setAfPushWebhookToken("")
         setAfIsDefault(false)
+        setQonName("")
+        setQonProjectKey("")
+        setQonSecretKey("")
+        setQonWebhookToken("")
+        setQonBaseUrl("https://api.qonversion.io/v3")
+        setQonGcsJson("")
+        setQonGcsBucket("")
+        setQonDashboardCookie("")
+        setQonDashboardUid("")
+        setQonIsDefault(false)
       }
     }
   }, [open, editAccount])
@@ -163,6 +202,8 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
     } else if (activeTab === "appsflyer") {
       if (!appsflyerName.trim()) newErrors.appsflyerName = "Account name is required"
       if (!isEdit && !afApiV2Token.trim()) newErrors.afApiV2Token = "API V2 token is required"
+    } else if (activeTab === "qonversion") {
+      if (!qonName.trim()) newErrors.qonName = "Account name is required"
     } else {
       if (!xmpName.trim()) newErrors.xmpName = "Account name is required"
       if (!xmpClientId.trim()) newErrors.xmpClientId = "Client ID is required"
@@ -182,7 +223,9 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           ? applovinName
           : activeTab === "appsflyer"
             ? appsflyerName
-            : xmpName
+            : activeTab === "qonversion"
+              ? qonName
+              : xmpName
     const success = !currentName.toLowerCase().includes("error")
     setTestState(success ? "success" : "error")
     // Auto-reset after 3s
@@ -223,6 +266,19 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             ...(afApiV2Token.trim() ? { apiV2Token: afApiV2Token.trim() } : {}),
             ...(afPushWebhookToken.trim() ? { pushWebhookAuthToken: afPushWebhookToken.trim() } : {}),
           })
+        } else if (network === "qonversion") {
+          await dataAccountsApi.update(network, id, {
+            name: qonName.trim(),
+            isDefault: qonIsDefault,
+            ...(qonProjectKey.trim() ? { qonProjectKey: qonProjectKey.trim() } : {}),
+            ...(qonSecretKey.trim() ? { qonSecretKey: qonSecretKey.trim() } : {}),
+            ...(qonWebhookToken.trim() ? { qonWebhookAuthToken: qonWebhookToken.trim() } : {}),
+            qonApiBaseUrl: qonBaseUrl.trim() || undefined,
+            ...(qonGcsJson.trim() ? { qonGcsServiceAccountJson: qonGcsJson.trim() } : {}),
+            ...(qonGcsBucket.trim() ? { qonGcsBucketName: qonGcsBucket.trim() } : {}),
+            ...(qonDashboardCookie.trim() ? { qonDashboardCookie: qonDashboardCookie.trim() } : {}),
+            ...(qonDashboardUid.trim() ? { qonDashboardAccountUid: qonDashboardUid.trim() } : {}),
+          })
         } else {
           await dataAccountsApi.update(network, id, {
             name: xmpName.trim(),
@@ -259,6 +315,20 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             apiV2Token: afApiV2Token.trim(),
             pushWebhookAuthToken: afPushWebhookToken.trim() || undefined,
             isDefault: afIsDefault,
+          })
+        } else if (activeTab === "qonversion") {
+          await dataAccountsApi.create({
+            network: "qonversion",
+            name: qonName.trim(),
+            isDefault: qonIsDefault,
+            ...(qonProjectKey.trim() ? { qonProjectKey: qonProjectKey.trim() } : {}),
+            qonSecretKey: qonSecretKey.trim() || undefined,
+            qonWebhookAuthToken: qonWebhookToken.trim() || undefined,
+            qonApiBaseUrl: qonBaseUrl.trim() || undefined,
+            qonGcsServiceAccountJson: qonGcsJson.trim() || undefined,
+            qonGcsBucketName: qonGcsBucket.trim() || undefined,
+            qonDashboardCookie: qonDashboardCookie.trim() || undefined,
+            qonDashboardAccountUid: qonDashboardUid.trim() || undefined,
           })
         } else {
           await dataAccountsApi.create({
@@ -297,7 +367,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Data Account" : "Add Data Account"}</DialogTitle>
           <DialogDescription>
@@ -318,11 +388,12 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               }
             }}
           >
-            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-4 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
+            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
               <TabsTrigger value="admob">AdMob</TabsTrigger>
               <TabsTrigger value="applovin">AppLovin</TabsTrigger>
               <TabsTrigger value="xmp">XMP</TabsTrigger>
               <TabsTrigger value="appsflyer">AppsFlyer</TabsTrigger>
+              <TabsTrigger value="qonversion">Qonversion</TabsTrigger>
             </TabsList>
 
             {/* ── AdMob Tab ── */}
@@ -622,6 +693,161 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     {showXmpClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+            </TabsContent>
+
+            {/* ── Qonversion Tab — org cookie for crawler; per-app keys in App → Settings ── */}
+            <TabsContent value="qonversion" className="mt-5 min-w-0 space-y-6">
+              <p className="text-sm text-slate-600 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 leading-relaxed">
+                <span className="font-medium text-slate-800">Web crawler</span> uses the dashboard cookie and default account below.
+                <span className="font-medium text-slate-800"> Project / API / secret per app</span> are set under each app&apos;s Settings, not here.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="qon-name">
+                  Account name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="qon-name"
+                  placeholder="e.g. Qonversion — dashboard crawl"
+                  value={qonName}
+                  onChange={(e) => {
+                    setQonName(e.target.value)
+                    setErrors((p) => ({ ...p, qonName: "" }))
+                  }}
+                  className={errors.qonName ? "border-red-500" : ""}
+                  disabled={saving}
+                />
+                {errors.qonName && <p className="text-xs text-red-500">{errors.qonName}</p>}
+              </div>
+
+              <div className="min-w-0 max-w-full space-y-3 rounded-lg border border-sky-100 bg-sky-50/50 p-4">
+                <h4 className="text-sm font-semibold text-slate-800">Dashboard (web crawler)</h4>
+                <div className="min-w-0 space-y-2">
+                  <Label htmlFor="qon-dcookie">Cookie header</Label>
+                  <div className="min-w-0 w-full max-w-full overflow-hidden rounded-md border border-input bg-background shadow-xs">
+                    <Textarea
+                      id="qon-dcookie"
+                      rows={3}
+                      placeholder={
+                        isEdit
+                          ? "Paste new cookie from browser devtools or leave blank"
+                          : "Full Cookie header after login to dash.qonversion.io"
+                      }
+                      value={qonDashboardCookie}
+                      onChange={(e) => setQonDashboardCookie(e.target.value)}
+                      disabled={saving}
+                      className="box-border min-h-[4.5rem] max-h-48 min-w-0 w-full max-w-full resize-y overflow-x-auto overflow-y-auto whitespace-pre border-0 font-mono text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-duid">Dashboard account UID</Label>
+                  <Input
+                    id="qon-duid"
+                    value={qonDashboardUid}
+                    onChange={(e) => setQonDashboardUid(e.target.value)}
+                    disabled={saving}
+                    placeholder="Query param account=... from export URL"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                <h4 className="text-sm font-semibold text-slate-800">Optional — org-wide REST / GCS / webhook</h4>
+                <p className="text-xs text-slate-500">
+                  Fallback only when no per-app keys are configured. Prefer App → Settings for production.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-pk">
+                    Project key
+                    {isEdit && <span className="text-slate-400 font-normal text-xs ml-1">(leave blank to keep)</span>}
+                  </Label>
+                  <Input
+                    id="qon-pk"
+                    placeholder={isEdit ? "Paste new project key or leave blank" : "Optional — legacy single-project Bearer"}
+                    value={qonProjectKey}
+                    onChange={(e) => {
+                      setQonProjectKey(e.target.value)
+                      setErrors((p) => ({ ...p, qonProjectKey: "" }))
+                    }}
+                    className={errors.qonProjectKey ? "border-red-500" : ""}
+                    disabled={saving}
+                    autoComplete="off"
+                  />
+                  {errors.qonProjectKey && <p className="text-xs text-red-500">{errors.qonProjectKey}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-sk">Secret key</Label>
+                  <div className="relative">
+                    <Input
+                      id="qon-sk"
+                      type={showQonSecret ? "text" : "password"}
+                      placeholder={isEdit ? "Leave blank to keep" : "Optional — grant/revoke API"}
+                      value={qonSecretKey}
+                      onChange={(e) => setQonSecretKey(e.target.value)}
+                      disabled={saving}
+                      className="pr-10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      onClick={() => setShowQonSecret(!showQonSecret)}
+                    >
+                      {showQonSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-wh">Webhook auth token</Label>
+                  <Input
+                    id="qon-wh"
+                    type="password"
+                    placeholder={isEdit ? "Leave blank to keep" : "Validates incoming webhooks"}
+                    value={qonWebhookToken}
+                    onChange={(e) => setQonWebhookToken(e.target.value)}
+                    disabled={saving}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-base">API base URL</Label>
+                  <Input
+                    id="qon-base"
+                    value={qonBaseUrl}
+                    onChange={(e) => setQonBaseUrl(e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-gcs">GCS service account JSON</Label>
+                  <Textarea
+                    id="qon-gcs"
+                    rows={4}
+                    placeholder="Paste JSON for GCS reconciliation, or leave empty"
+                    value={qonGcsJson}
+                    onChange={(e) => setQonGcsJson(e.target.value)}
+                    disabled={saving}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qon-bucket">GCS bucket name</Label>
+                  <Input
+                    id="qon-bucket"
+                    value={qonGcsBucket}
+                    onChange={(e) => setQonGcsBucket(e.target.value)}
+                    disabled={saving}
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Switch id="qon-default" checked={qonIsDefault} onCheckedChange={setQonIsDefault} disabled={saving} />
+                <Label htmlFor="qon-default" className="font-normal cursor-pointer">
+                  Default Qonversion account (web crawler + optional legacy jobs use GetDefault)
+                </Label>
               </div>
             </TabsContent>
           </Tabs>

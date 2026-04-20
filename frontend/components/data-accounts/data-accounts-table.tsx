@@ -69,6 +69,7 @@ const networkConfig: Record<string, { label: string; className: string; initials
   applovin: { label: "AppLovin", className: "bg-violet-50 text-violet-700 border-violet-200", initials: "AL", bgColor: "bg-violet-100 text-violet-700" },
   xmp: { label: "XMP", className: "bg-blue-50 text-blue-700 border-blue-200", initials: "XM", bgColor: "bg-blue-100 text-blue-700" },
   appsflyer: { label: "AppsFlyer", className: "bg-sky-50 text-sky-800 border-sky-200", initials: "AF", bgColor: "bg-sky-100 text-sky-800" },
+  qonversion: { label: "Qonversion", className: "bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200", initials: "QO", bgColor: "bg-fuchsia-100 text-fuchsia-800" },
 }
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
@@ -114,7 +115,12 @@ export function DataAccountsTable({
         account.network === "applovin" || account.network === "appsflyer" ? account.baseUrl : undefined,
       xmpClientId: account.network === "xmp" ? account.xmpClientId : undefined,
       xmpClientSecret: account.network === "xmp" ? account.xmpClientSecret : undefined,
-      isDefault: account.network === "appsflyer" ? account.isDefault : undefined,
+      isDefault:
+        account.network === "appsflyer" || account.network === "qonversion" ? account.isDefault : undefined,
+      qonProjectKey: account.network === "qonversion" ? account.qonProjectKey : undefined,
+      qonApiBaseUrl: account.network === "qonversion" ? account.qonApiBaseUrl : undefined,
+      qonGcsBucketName: account.network === "qonversion" ? account.qonGcsBucketName ?? undefined : undefined,
+      qonHasGcsJson: account.network === "qonversion" ? account.qonHasGcsJson : undefined,
     }
     setEditAccount(mapped)
     setEditModalOpen(true)

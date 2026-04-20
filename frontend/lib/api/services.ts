@@ -412,6 +412,21 @@ export const structureApi = {
         return apiClient.patch(`/api/Structure/apps/${id}/alert-status`, { alertStatus })
     },
 
+    updateAppQonversionCrawler: async (
+        id: number,
+        qonversionCrawler: boolean,
+    ): Promise<{ id: number; qonversionCrawler: boolean }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/qonversion-crawler`, { qonversionCrawler })
+    },
+
+    /** Khóa Qonversion theo app (apps.qonversion_params). null để xóa. */
+    updateAppQonversionParams: async (
+        id: number,
+        payload: { qonversionParams: object | string | null } | null,
+    ): Promise<{ id: number; qonversionParams: string | null }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/qonversion-params`, payload ?? { qonversionParams: null })
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,
@@ -1861,7 +1876,7 @@ export const permissionApi = {
 export interface DataAccountItem {
     id: number
     name: string
-    network: 'admob' | 'applovin' | 'xmp' | 'appsflyer'
+    network: 'admob' | 'applovin' | 'xmp' | 'appsflyer' | 'qonversion'
     accountId: string
     status: string
     enabled: boolean
@@ -1884,6 +1899,16 @@ export interface DataAccountItem {
     tokenExpiresAt?: string
     /** admob: default "game" | "app" for new apps on structure sync */
     defaultAppType?: string | null
+    /** Qonversion — masked where applicable */
+    qonProjectKey?: string
+    qonSecretKey?: string
+    qonWebhookAuthToken?: string
+    qonApiBaseUrl?: string
+    qonHasGcsJson?: boolean
+    qonGcsBucketName?: string | null
+    qonHasDashboardCookie?: boolean
+    qonDashboardAccountUid?: string | null
+    qonDashboardCookieUpdatedAt?: string | null
     createdAt: string
     updatedAt: string
 }
@@ -1910,6 +1935,15 @@ export interface CreateDataAccountRequest {
     // AppsFlyer
     apiV2Token?: string
     pushWebhookAuthToken?: string
+    // Qonversion
+    qonProjectKey?: string
+    qonSecretKey?: string
+    qonWebhookAuthToken?: string
+    qonApiBaseUrl?: string
+    qonGcsServiceAccountJson?: string
+    qonGcsBucketName?: string
+    qonDashboardCookie?: string
+    qonDashboardAccountUid?: string
 }
 
 export interface UpdateDataAccountRequest {
@@ -1929,6 +1963,14 @@ export interface UpdateDataAccountRequest {
     xmpClientSecret?: string
     apiV2Token?: string
     pushWebhookAuthToken?: string
+    qonProjectKey?: string
+    qonSecretKey?: string
+    qonWebhookAuthToken?: string
+    qonApiBaseUrl?: string
+    qonGcsServiceAccountJson?: string
+    qonGcsBucketName?: string
+    qonDashboardCookie?: string
+    qonDashboardAccountUid?: string
 }
 
 export interface AppsFlyerAppAdminItem {

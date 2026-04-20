@@ -21,7 +21,7 @@ import { dataAccountsApi, type AccountAppItem } from "@/lib/api/services"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer"
+type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion"
 
 interface OverviewProps {
   account: {
@@ -49,6 +49,16 @@ interface OverviewProps {
     // AppsFlyer
     apiV2Token?: string
     pushWebhookAuthToken?: string
+    // Qonversion
+    qonProjectKey?: string
+    qonSecretKey?: string
+    qonWebhookAuthToken?: string
+    qonApiBaseUrl?: string
+    qonHasGcsJson?: boolean
+    qonGcsBucketName?: string | null
+    qonHasDashboardCookie?: boolean
+    qonDashboardAccountUid?: string | null
+    qonDashboardCookieUpdatedAt?: string | null
     createdAt?: string
     updatedAt?: string
   }
@@ -159,6 +169,31 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
               </>
             )}
 
+            {account.network === "qonversion" && (
+              <>
+                <DetailItem label="Project Key" value={account.qonProjectKey || "—"} isCode={!!account.qonProjectKey} />
+                <DetailItem label="Secret Key" value={account.qonSecretKey || "—"} isCode={!!account.qonSecretKey} />
+                <DetailItem
+                  label="Webhook auth token"
+                  value={account.qonWebhookAuthToken || "—"}
+                  isCode={!!account.qonWebhookAuthToken}
+                />
+                <DetailItem label="API base URL" value={account.qonApiBaseUrl || "—"} isCode={!!account.qonApiBaseUrl} />
+                <DetailItem label="GCS JSON stored" value={account.qonHasGcsJson ? "Yes" : "No"} />
+                <DetailItem label="GCS bucket" value={account.qonGcsBucketName || "—"} />
+                <DetailItem label="Dashboard cookie stored" value={account.qonHasDashboardCookie ? "Yes" : "No"} />
+                <DetailItem
+                  label="Dashboard account UID"
+                  value={account.qonDashboardAccountUid || "—"}
+                  isCode={!!account.qonDashboardAccountUid}
+                />
+                <DetailItem
+                  label="Dashboard cookie updated"
+                  value={formatDate(account.qonDashboardCookieUpdatedAt ?? undefined)}
+                />
+              </>
+            )}
+
             {/* Common status fields */}
             <DetailItem label="Is Default" value={account.isDefault ? "Yes" : "No"} />
             <DetailItem label="Enabled" value={account.enabled ? "Yes" : "No"} />
@@ -191,7 +226,9 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
                   ? "No apps found for this account"
                   : account.network === "appsflyer"
                     ? "Manage AppsFlyer app IDs on the AF Apps tab"
-                    : "App listing is only available for AdMob accounts"}
+                    : account.network === "qonversion"
+                      ? "App-level Qon toggles are under each app’s Settings tab"
+                      : "App listing is only available for AdMob accounts"}
               </p>
             </div>
           ) : (

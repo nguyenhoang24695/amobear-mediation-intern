@@ -16,6 +16,10 @@ export interface App {
   lastSyncedAt?: string
   /** 0 = alerts disabled (default), 1 = alert rules may evaluate this app */
   alertStatus?: number
+  /** Đồng bộ daily export Qonversion dashboard (web crawler) cho app này; job dùng cùng mapping StarRocks theo admob app_id */
+  qonversionCrawler?: boolean
+  /** Qonversion REST keys theo từng app (JSON text: projectKey, apiKey, secretKey) */
+  qonversionParams?: string | null
   adUnitsCount?: number
   /** Waterfall Ad Units (from SyncAdMobNetworkWaterfallAdUnitsAsync), distinct from adUnitsCount (from SyncAdUnitsAsync). */
   waterfallAdUnitsCount?: number
