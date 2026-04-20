@@ -26,6 +26,8 @@ export interface App {
   mediationGroupsCount?: number
   averageEcpm?: number
   firebaseParams?: string | null
+  /** AppMetrica application id (digits) — saved to Postgres and synced to silver.dim_app_identifiers.appmetrica_id */
+  dimAppmetricaId?: string | null
 
   // Metrics from dashboard cache (today) - returned by /api/Structure/apps. Tách: ad unit (placement không waterfall) + waterfall (placement có trong ít nhất 1 waterfall).
   todayRevenue?: number
