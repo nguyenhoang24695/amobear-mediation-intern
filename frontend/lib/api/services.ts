@@ -45,6 +45,7 @@ import type {
     DataSourcesTimelineDto,
     SourceDetailsDto,
     AppDailyInsight,
+    AppHourlyPerformanceResponseDto,
     AppInsightHistoryDay,
     AppInsightSettings,
     InsightTemplate,
@@ -268,6 +269,17 @@ export const structureApi = {
     /** App by AdMob app_id (cho URL /apps/{appId}). Cache key đồng nhất: app_detail_{appId}. */
     getAppByAppId: async (appId: string): Promise<App> => {
         return apiClient.get<App>(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}`)
+    },
+
+    getAppPerformanceHourly: async (
+        appId: string,
+        startDate: string,
+        endDate: string,
+    ): Promise<AppHourlyPerformanceResponseDto> => {
+        return apiClient.get<AppHourlyPerformanceResponseDto>(
+            `/api/Structure/apps/by-appid/${encodeURIComponent(appId)}/performance/hourly`,
+            { startDate, endDate },
+        )
     },
 
     syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
