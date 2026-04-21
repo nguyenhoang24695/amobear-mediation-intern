@@ -45,6 +45,7 @@ import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
 import { AppSettingsTab } from "./app-detail/app-settings-tab"
 import { AppAiInsightsTab } from "./app-detail/app-ai-insights-tab"
 import { AppInsightConfigTab } from "./app-detail/app-insight-config-tab"
+import { AppPerformanceTab } from "./app-detail/app-performance-tab"
 import { SyncAppPerformanceModal } from "./app-detail/sync-app-performance-modal"
 
 export function AppDetailContent() {
@@ -319,9 +320,11 @@ export function AppDetailContent() {
             />
           </TabsContent>
           <TabsContent value="performance" className="mt-6">
-            <div className="flex items-center justify-center h-64 text-slate-500">
-              Performance tab content coming soon...
-            </div>
+            {appLoading ? (
+              <div className="flex items-center justify-center h-40 text-sm text-slate-500">Loading app…</div>
+            ) : app?.appId ? (
+              <AppPerformanceTab appId={app.appId} />
+            ) : null}
           </TabsContent>
           {canViewAiInsight && app?.appId ? (
             <TabsContent value="ai-insight" className="mt-6">
