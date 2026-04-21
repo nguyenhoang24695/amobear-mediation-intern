@@ -45,6 +45,7 @@ import type {
     DataSourcesTimelineDto,
     SourceDetailsDto,
     AppDailyInsight,
+    AppHourlyPerformanceResponseDto,
     AppInsightHistoryDay,
     AppInsightSettings,
     InsightTemplate,
@@ -270,8 +271,56 @@ export const structureApi = {
         return apiClient.get<App>(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}`)
     },
 
+    getAppPerformanceHourly: async (
+        appId: string,
+        startDate: string,
+        endDate: string,
+    ): Promise<AppHourlyPerformanceResponseDto> => {
+        return apiClient.get<AppHourlyPerformanceResponseDto>('/api/Structure/apps/performance/hourly', {
+            appId,
+            startDate,
+            endDate,
+        })
+    },
+
     syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
         return apiClient.post(`/api/Structure/apps/by-appid/${encodeURIComponent(appId)}/sync-performance`)
+    },
+
+    /** Queue Hangfire: AdMob sync app+day + silver/gold hourly revenue for that day. */
+    reprocessAppPerformanceDayRevenue: async (
+        appId: string,
+        reportDate: string,
+    ): Promise<{
+        success: boolean
+        queued?: boolean
+        kind?: string
+        appId?: string
+        reportDate?: string
+        jobId?: string
+        correlationId?: string
+        message?: string
+    }> => {
+        const q = new URLSearchParams({ appId, reportDate }).toString()
+        return apiClient.post(`/api/Structure/apps/performance/day/reprocess-revenue?${q}`)
+    },
+
+    /** Queue Hangfire: XMP sync for that calendar day (reconciles gold UA hourly where data exists). */
+    reprocessAppPerformanceDayCost: async (
+        appId: string,
+        reportDate: string,
+    ): Promise<{
+        success: boolean
+        queued?: boolean
+        kind?: string
+        appId?: string
+        reportDate?: string
+        jobId?: string
+        correlationId?: string
+        message?: string
+    }> => {
+        const q = new URLSearchParams({ appId, reportDate }).toString()
+        return apiClient.post(`/api/Structure/apps/performance/day/reprocess-cost?${q}`)
     },
 
     getAppAdUnits: async (id: number): Promise<AdUnit[]> => {

@@ -47,6 +47,19 @@ export interface App {
   todayFillRateChangePct?: number
 }
 
+/** GET /api/Structure/apps/performance/hourly?appId=&startDate=&endDate= (or path …/by-appid/{appId}/…) — StarRocks gold hourly revenue + UA cost */
+export interface AppHourlyPerformanceBucketDto {
+  bucketStart: string
+  revenue: number
+  cost: number
+}
+
+export interface AppHourlyPerformanceResponseDto {
+  starRocksEnabled: boolean
+  buckets: AppHourlyPerformanceBucketDto[]
+  lastUpdatedUtc: string
+}
+
 export interface AdUnit {
   id: number
   name: string
