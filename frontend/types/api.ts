@@ -47,7 +47,7 @@ export interface App {
   todayFillRateChangePct?: number
 }
 
-/** GET /api/Structure/apps/by-appid/{appId}/performance/hourly — StarRocks gold hourly revenue + UA cost */
+/** GET /api/Structure/apps/performance/hourly?appId=&startDate=&endDate= (or path …/by-appid/{appId}/…) — StarRocks gold hourly revenue + UA cost */
 export interface AppHourlyPerformanceBucketDto {
   bucketStart: string
   revenue: number

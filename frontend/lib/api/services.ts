@@ -276,10 +276,11 @@ export const structureApi = {
         startDate: string,
         endDate: string,
     ): Promise<AppHourlyPerformanceResponseDto> => {
-        return apiClient.get<AppHourlyPerformanceResponseDto>(
-            `/api/Structure/apps/by-appid/${encodeURIComponent(appId)}/performance/hourly`,
-            { startDate, endDate },
-        )
+        return apiClient.get<AppHourlyPerformanceResponseDto>('/api/Structure/apps/performance/hourly', {
+            appId,
+            startDate,
+            endDate,
+        })
     },
 
     syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
