@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useCallback, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   BarChart3,
   Download,
+  Loader2,
   RefreshCw,
   Search,
 } from "lucide-react"
@@ -45,8 +46,9 @@ import {
   ComposedChart,
   ReferenceLine,
 } from "recharts"
-import { format, subDays, startOfDay, isSameDay, parseISO } from "date-fns"
+import { format, subDays, startOfDay, isSameDay, parseISO, addDays, isAfter } from "date-fns"
 import { useApi } from "@/hooks/use-api"
+import { useToast } from "@/hooks/use-toast"
 import { structureApi } from "@/lib/api/services"
 import type { AppHourlyPerformanceResponseDto } from "@/types/api"
 
@@ -59,14 +61,16 @@ export interface HourlyBucket {
 interface DailyData {
   date: string
   dateLabel: string
-  revenue: number
-  cost: number
-  net: number
+  /** Có ít nhất một hourly bucket trong ngày */
+  hasData: boolean
+  revenue: number | null
+  cost: number | null
+  net: number | null
   hourlyData: {
     hour: string
-    revenue: number
-    cost: number
-    net: number
+    revenue: number | null
+    cost: number | null
+    net: number | null
   }[]
 }
 
@@ -101,23 +105,24 @@ function ChartSkeleton() {
   )
 }
 
-function EmptyState({ onReset }: { onReset: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-80 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-      <BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
-      <h3 className="text-base font-medium text-slate-700 mb-1">No data available</h3>
-      <p className="text-sm text-slate-500 mb-4 text-center max-w-xs">
-        There&apos;s no revenue or cost data for the selected time range. Try another range or sync data.
-      </p>
-      <Button variant="outline" size="sm" onClick={onReset} className="gap-2 bg-transparent">
-        <RefreshCw className="w-4 h-4" />
-        Reset Range
-      </Button>
-    </div>
-  )
+function fmtUsd(value: number | null, signedPositive = false): string {
+  if (value === null || Number.isNaN(value)) return "N/A"
+  const sign = signedPositive && value >= 0 ? "+" : ""
+  return `${sign}$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function fmtMarginPct(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return "N/A"
+  const sign = value >= 0 ? "+" : ""
+  return `${sign}${value}%`
+}
+
+function dayReprocessKey(reportDate: string, kind: "revenue" | "cost") {
+  return `${reportDate}:${kind}`
 }
 
 export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
+  const { toast } = useToast()
   const [preset, setPreset] = useState<PresetKey>("7d")
   const [customRange, setCustomRange] = useState<DateRange>({
     from: subDays(new Date(), 7),
@@ -131,6 +136,35 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
   const [tableSearchDate, setTableSearchDate] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+  /** `${yyyy-MM-dd}:revenue` | `:cost` → true while POST in flight */
+  const [dayReprocessBusy, setDayReprocessBusy] = useState<Record<string, true>>({})
+
+  const runDayReprocess = useCallback(
+    async (reportDate: string, kind: "revenue" | "cost") => {
+      const k = dayReprocessKey(reportDate, kind)
+      setDayReprocessBusy((prev) => ({ ...prev, [k]: true }))
+      try {
+        const res =
+          kind === "revenue"
+            ? await structureApi.reprocessAppPerformanceDayRevenue(appId, reportDate)
+            : await structureApi.reprocessAppPerformanceDayCost(appId, reportDate)
+        toast({
+          title: kind === "revenue" ? "Đã xếp hàng — Revenue" : "Đã xếp hàng — UA cost",
+          description: res.message ?? `Hangfire job: ${res.jobId ?? "—"}`,
+        })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Request failed"
+        toast({ title: "Không thể xếp hàng job", description: msg, variant: "destructive" })
+      } finally {
+        setDayReprocessBusy((prev) => {
+          const next = { ...prev }
+          delete next[k]
+          return next
+        })
+      }
+    },
+    [appId, toast],
+  )
 
   /** Calendar date range for API (gold tables use report_date). */
   const apiRange = useMemo(() => {
@@ -204,22 +238,48 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       grouped[dateKey].hourly.push(bucket)
     }
 
-    return Object.entries(grouped).map(([dateKey, values]) => ({
-      date: dateKey,
-      dateLabel: format(parseISO(dateKey), "MMM dd, yyyy"),
-      revenue: Math.round(values.revenue * 100) / 100,
-      cost: Math.round(values.cost * 100) / 100,
-      net: Math.round((values.revenue - values.cost) * 100) / 100,
-      hourlyData: values.hourly
-        .sort((a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime())
-        .map((h) => ({
-          hour: format(new Date(h.bucketStart), "HH:00"),
-          revenue: h.revenue,
-          cost: h.cost,
-          net: Math.round((h.revenue - h.cost) * 100) / 100,
-        })),
-    }))
-  }, [data])
+    const fromD = startOfDay(apiRange.from)
+    const toD = startOfDay(apiRange.to)
+    const dateKeys: string[] = []
+    for (let d = fromD; d <= toD; d = addDays(d, 1)) {
+      dateKeys.push(format(d, "yyyy-MM-dd"))
+    }
+
+    return dateKeys.map((dateKey) => {
+      const values = grouped[dateKey]
+      const hasData = !!values && values.hourly.length > 0
+      if (!hasData) {
+        return {
+          date: dateKey,
+          dateLabel: format(parseISO(dateKey), "MMM dd, yyyy"),
+          hasData: false,
+          revenue: null,
+          cost: null,
+          net: null,
+          hourlyData: [],
+        }
+      }
+      const revenue = Math.round(values.revenue * 100) / 100
+      const cost = Math.round(values.cost * 100) / 100
+      const net = Math.round((values.revenue - values.cost) * 100) / 100
+      return {
+        date: dateKey,
+        dateLabel: format(parseISO(dateKey), "MMM dd, yyyy"),
+        hasData: true,
+        revenue,
+        cost,
+        net,
+        hourlyData: values.hourly
+          .sort((a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime())
+          .map((h) => ({
+            hour: format(new Date(h.bucketStart), "HH:00"),
+            revenue: h.revenue,
+            cost: h.cost,
+            net: Math.round((h.revenue - h.cost) * 100) / 100,
+          })),
+      }
+    })
+  }, [data, apiRange.from, apiRange.to])
 
   const filteredTableData = useMemo(() => {
     let filtered = [...dailyData]
@@ -235,6 +295,15 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       )
     }
 
+    const cmpNullable = (x: number | null, y: number | null): number => {
+      const nx = x === null
+      const ny = y === null
+      if (nx && ny) return 0
+      if (nx) return 1
+      if (ny) return -1
+      return x - y
+    }
+
     filtered.sort((a, b) => {
       let cmp = 0
       switch (tableSortField) {
@@ -242,13 +311,13 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
           cmp = a.date.localeCompare(b.date)
           break
         case "revenue":
-          cmp = a.revenue - b.revenue
+          cmp = cmpNullable(a.revenue, b.revenue)
           break
         case "cost":
-          cmp = a.cost - b.cost
+          cmp = cmpNullable(a.cost, b.cost)
           break
         case "net":
-          cmp = a.net - b.net
+          cmp = cmpNullable(a.net, b.net)
           break
       }
       return tableSortDir === "asc" ? cmp : -cmp
@@ -268,26 +337,40 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((d) => ({
         label: format(parseISO(d.date), "MMM dd"),
-        revenue: d.revenue,
-        cost: d.cost,
-        net: d.net,
+        hasData: d.hasData,
+        revenue: d.hasData ? d.revenue : null,
+        cost: d.hasData ? d.cost : null,
+        net: d.hasData ? d.net : null,
       }))
   }, [dailyData])
 
   const summary = useMemo(() => {
+    const buckets = data.length
+    if (buckets === 0) {
+      return {
+        totalRevenue: null as number | null,
+        totalCost: null as number | null,
+        net: null as number | null,
+        margin: null as number | null,
+        buckets: 0,
+        daysWithData: 0,
+      }
+    }
     const totalRevenue = data.reduce((sum, b) => sum + b.revenue, 0)
     const totalCost = data.reduce((sum, b) => sum + b.cost, 0)
     const net = totalRevenue - totalCost
     const margin = totalRevenue > 0 ? (net / totalRevenue) * 100 : 0
+    const daysWithData = dailyData.filter((d) => d.hasData).length
 
     return {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
       totalCost: Math.round(totalCost * 100) / 100,
       net: Math.round(net * 100) / 100,
       margin: Math.round(margin * 10) / 10,
-      buckets: data.length,
+      buckets,
+      daysWithData,
     }
-  }, [data])
+  }, [data, dailyData])
 
   const handlePresetChange = (value: PresetKey) => {
     setPreset(value)
@@ -409,7 +492,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-xl font-semibold text-slate-900">${summary.totalRevenue.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-slate-900">{fmtUsd(summary.totalRevenue)}</p>
               </div>
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
                 <DollarSign className="w-4 h-4" />
@@ -423,7 +506,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-slate-500 mb-1">Total UA Cost</p>
-                <p className="text-xl font-semibold text-slate-900">${summary.totalCost.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-slate-900">{fmtUsd(summary.totalCost)}</p>
               </div>
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-600">
                 <TrendingDown className="w-4 h-4" />
@@ -437,23 +520,44 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-slate-500 mb-1">Net (Revenue - Cost)</p>
-                <p className={`text-xl font-semibold ${summary.net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {summary.net >= 0 ? "+" : ""}${summary.net.toLocaleString()}
+                <p
+                  className={`text-xl font-semibold ${
+                    summary.net === null ? "text-slate-900" : summary.net >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {fmtUsd(summary.net, true)}
                 </p>
               </div>
               <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center ${summary.net >= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                  summary.net === null
+                    ? "bg-slate-100 text-slate-500"
+                    : summary.net >= 0
+                      ? "bg-green-50 text-green-600"
+                      : "bg-red-50 text-red-600"
+                }`}
               >
-                {summary.net >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                {summary.net === null ? (
+                  <BarChart3 className="w-4 h-4" />
+                ) : summary.net >= 0 ? (
+                  <TrendingUp className="w-4 h-4" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1 mt-2">
               <Badge
                 variant="outline"
-                className={`text-xs ${summary.margin >= 0 ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}
+                className={`text-xs ${
+                  summary.margin === null
+                    ? "bg-slate-50 text-slate-600 border-slate-200"
+                    : summary.margin >= 0
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : "bg-red-50 text-red-700 border-red-200"
+                }`}
               >
-                {summary.margin >= 0 ? "+" : ""}
-                {summary.margin}% margin
+                {summary.margin === null ? "N/A" : `${fmtMarginPct(summary.margin)} margin`}
               </Badge>
             </div>
           </CardContent>
@@ -464,8 +568,10 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-slate-500 mb-1">Data coverage</p>
-                <p className="text-xl font-semibold text-slate-900">{dailyData.length}</p>
-                <p className="text-xs text-slate-400">days · {summary.buckets} hourly buckets</p>
+                <p className="text-xl font-semibold text-slate-900">
+                  {dailyData.length === 0 ? "N/A" : `${summary.daysWithData}/${dailyData.length}`}
+                </p>
+                <p className="text-xs text-slate-400">days with data · {summary.buckets} hourly buckets</p>
               </div>
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
                 <Clock className="w-4 h-4" />
@@ -475,19 +581,21 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
         </Card>
       </div>
 
-      {data.length === 0 ? (
-        <EmptyState onReset={() => handlePresetChange("7d")} />
-      ) : (
-        <Card className="border-slate-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-900">Daily Breakdown</CardTitle>
-                <CardDescription className="text-sm text-slate-500">Revenue and UA cost by day</CardDescription>
-              </div>
+      <Card className="border-slate-200">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold text-slate-900">Daily Breakdown</CardTitle>
+              <CardDescription className="text-sm text-slate-500">Revenue and UA cost by day</CardDescription>
             </div>
-          </CardHeader>
-          <CardContent className="pt-4">
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {chartData.length === 0 ? (
+            <div className="flex h-80 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+              No days in range
+            </div>
+          ) : (
             <div className="h-80 lg:h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -511,26 +619,36 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                   <RechartsTooltip
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length) {
-                        const revenue = payload.find((p) => p.dataKey === "revenue")?.value as number
-                        const cost = payload.find((p) => p.dataKey === "cost")?.value as number
-                        const net = revenue - cost
+                        const row = payload[0]?.payload as {
+                          hasData?: boolean
+                          revenue: number | null
+                          cost: number | null
+                          net: number | null
+                        }
+                        const revenue = row?.revenue ?? null
+                        const cost = row?.cost ?? null
+                        const net = row?.net ?? null
                         return (
                           <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 min-w-[160px]">
                             <p className="text-sm font-medium text-slate-900 mb-2">{label}</p>
                             <div className="space-y-1">
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-slate-600">Revenue:</span>
-                                <span className="font-medium text-green-600">${revenue?.toFixed(2)}</span>
+                                <span className="font-medium text-green-600">{fmtUsd(revenue)}</span>
                               </div>
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-slate-600">UA Cost:</span>
-                                <span className="font-medium text-red-500">${cost?.toFixed(2)}</span>
+                                <span className="font-medium text-red-500">{fmtUsd(cost)}</span>
                               </div>
                               <div className="border-t border-slate-100 pt-1 mt-1">
                                 <div className="flex items-center justify-between text-sm">
                                   <span className="text-slate-600">Net:</span>
-                                  <span className={`font-semibold ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                    {net >= 0 ? "+" : ""}${net.toFixed(2)}
+                                  <span
+                                    className={`font-semibold ${
+                                      net === null ? "text-slate-700" : net >= 0 ? "text-green-600" : "text-red-600"
+                                    }`}
+                                  >
+                                    {fmtUsd(net, true)}
                                   </span>
                                 </div>
                               </div>
@@ -557,21 +675,25 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                     strokeWidth={2}
                     dot={false}
                     name="Net"
+                    connectNulls={false}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {showTable && data.length > 0 && (
+      {showTable && (
         <Card className="border-slate-200">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <CardTitle className="text-base font-semibold text-slate-900">Daily Data Table</CardTitle>
-                <CardDescription className="text-sm text-slate-500">Click a row to expand hourly breakdown</CardDescription>
+                <CardDescription className="text-sm text-slate-500">
+                  Click a row to expand hourly breakdown. Icon rerun (↻) cạnh Revenue / UA Cost để xếp hàng Hangfire chạy lại
+                  dữ liệu cho đúng ngày đó — hover để xem chi tiết.
+                </CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
@@ -683,6 +805,10 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                   ) : (
                     paginatedData.map((row) => {
                       const isExpanded = expandedDates.has(row.date)
+                      const rowDay = startOfDay(parseISO(row.date))
+                      const isRowFuture = isAfter(rowDay, startOfDay(new Date()))
+                      const revBusy = !!dayReprocessBusy[dayReprocessKey(row.date, "revenue")]
+                      const costBusy = !!dayReprocessBusy[dayReprocessKey(row.date, "cost")]
                       return (
                         <Fragment key={row.date}>
                           <TableRow
@@ -697,15 +823,69 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                               )}
                             </TableCell>
                             <TableCell className="font-medium text-slate-900">{row.dateLabel}</TableCell>
-                            <TableCell className="text-right font-medium text-green-600">${row.revenue.toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-medium text-red-500">${row.cost.toFixed(2)}</TableCell>
-                            <TableCell className={`text-right font-semibold ${row.net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                              {row.net >= 0 ? "+" : ""}${row.net.toFixed(2)}
+                            <TableCell className="text-right p-2 align-middle">
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                <span className="font-medium text-green-600 tabular-nums">{fmtUsd(row.revenue)}</span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  title="Chạy lại revenue (AdMob + silver/gold cho ngày này)"
+                                  aria-label="Chạy lại revenue cho ngày này"
+                                  className="h-7 w-7 shrink-0 text-green-700 hover:text-green-800 hover:bg-green-50"
+                                  disabled={isRowFuture || revBusy}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void runDayReprocess(row.date, "revenue")
+                                  }}
+                                >
+                                  {revBusy ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                  ) : (
+                                    <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                                  )}
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right p-2 align-middle">
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                <span className="font-medium text-red-500 tabular-nums">{fmtUsd(row.cost)}</span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  title="Chạy lại UA cost (XMP cả ngày + gold hourly)"
+                                  aria-label="Chạy lại UA cost cho ngày này"
+                                  className="h-7 w-7 shrink-0 text-red-700 hover:text-red-800 hover:bg-red-50"
+                                  disabled={isRowFuture || costBusy}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void runDayReprocess(row.date, "cost")
+                                  }}
+                                >
+                                  {costBusy ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                  ) : (
+                                    <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                                  )}
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-semibold ${
+                                row.net === null ? "text-slate-600" : row.net >= 0 ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {fmtUsd(row.net, true)}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600">
-                                {row.hourlyData.length}h
-                              </Badge>
+                              {row.hasData ? (
+                                <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600">
+                                  {row.hourlyData.length}h
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-slate-500">N/A</span>
+                              )}
                             </TableCell>
                           </TableRow>
                           {isExpanded ? (
@@ -715,23 +895,45 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                                   <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
                                     Hourly breakdown for {row.dateLabel}
                                   </p>
-                                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                                    {row.hourlyData.map((h) => (
-                                      <div
-                                        key={`${row.date}-${h.hour}`}
-                                        className="bg-white border border-slate-200 rounded-md p-2 text-xs"
-                                      >
-                                        <p className="font-medium text-slate-700 mb-1">{h.hour}</p>
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-green-600">${h.revenue.toFixed(2)}</span>
-                                          <span className="text-slate-300">/</span>
-                                          <span className="text-red-500">${h.cost.toFixed(2)}</span>
-                                        </div>
-                                        <p className={`text-[10px] mt-0.5 ${h.net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                          Net: {h.net >= 0 ? "+" : ""}${h.net.toFixed(2)}
-                                        </p>
-                                      </div>
-                                    ))}
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 max-h-56 overflow-y-auto pr-1">
+                                    {row.hasData
+                                      ? row.hourlyData.map((h) => (
+                                          <div
+                                            key={`${row.date}-${h.hour}`}
+                                            className="bg-white border border-slate-200 rounded-md p-2 text-xs"
+                                          >
+                                            <p className="font-medium text-slate-700 mb-1">{h.hour}</p>
+                                            <div className="flex items-center justify-between gap-1">
+                                              <span className="text-green-600">{fmtUsd(h.revenue)}</span>
+                                              <span className="text-slate-300">/</span>
+                                              <span className="text-red-500">{fmtUsd(h.cost)}</span>
+                                            </div>
+                                            <p
+                                              className={`text-[10px] mt-0.5 ${
+                                                h.net === null ? "text-slate-500" : h.net >= 0 ? "text-green-600" : "text-red-600"
+                                              }`}
+                                            >
+                                              Net: {fmtUsd(h.net, true)}
+                                            </p>
+                                          </div>
+                                        ))
+                                      : Array.from({ length: 24 }, (_, i) => {
+                                          const hour = `${String(i).padStart(2, "0")}:00`
+                                          return (
+                                            <div
+                                              key={`${row.date}-${hour}-na`}
+                                              className="bg-white border border-slate-200 rounded-md p-2 text-xs"
+                                            >
+                                              <p className="font-medium text-slate-700 mb-1">{hour}</p>
+                                              <div className="flex items-center justify-between gap-1">
+                                                <span className="text-green-600">N/A</span>
+                                                <span className="text-slate-300">/</span>
+                                                <span className="text-red-500">N/A</span>
+                                              </div>
+                                              <p className="text-[10px] mt-0.5 text-slate-500">Net: N/A</p>
+                                            </div>
+                                          )
+                                        })}
                                   </div>
                                 </div>
                               </TableCell>
