@@ -33,6 +33,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  AlertCircle,
 } from "lucide-react"
 import {
   Bar,
@@ -61,11 +62,14 @@ export interface HourlyBucket {
 interface DailyData {
   date: string
   dateLabel: string
-  /** Có ít nhất một hourly bucket trong ngày */
+  /** Có bucket revenue theo giờ và/hoặc cost từ bronze/gold theo API */
   hasData: boolean
   revenue: number | null
+  /** Cost ngày: bronze.xmp_report (khi API có dailyUaCostByDate), không thì tổng hourly gold */
   cost: number | null
   net: number | null
+  /** Tổng cost bronze vs tổng ua_cost gold hourly lệch (chỉ khi StarRocks trả alignment) */
+  uaCostDailyVsHourlyMismatch: boolean
   hourlyData: {
     hour: string
     revenue: number | null
@@ -238,6 +242,9 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       grouped[dateKey].hourly.push(bucket)
     }
 
+    const alignMap = new Map((perfResponse?.dailyUaCostByDate ?? []).map((x) => [x.reportDate, x]))
+    const useBronzeDailyCost = Boolean(perfResponse?.starRocksEnabled && alignMap.size > 0)
+
     const fromD = startOfDay(apiRange.from)
     const toD = startOfDay(apiRange.to)
     const dateKeys: string[] = []
@@ -247,7 +254,27 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
 
     return dateKeys.map((dateKey) => {
       const values = grouped[dateKey]
-      const hasData = !!values && values.hourly.length > 0
+      const hasHourly = !!values && values.hourly.length > 0
+      const align = alignMap.get(dateKey)
+
+      const revenue = hasHourly ? Math.round(values!.revenue * 100) / 100 : null
+      const hourlyCostRollup = hasHourly ? Math.round(values!.cost * 100) / 100 : null
+
+      let cost: number | null = null
+      if (useBronzeDailyCost && align) {
+        cost = Math.round(Number(align.bronzeXmpReportCostSum) * 100) / 100
+      } else if (hasHourly) {
+        cost = hourlyCostRollup
+      }
+
+      const hasBronzeOrGold =
+        align != null &&
+        (Math.abs(Number(align.bronzeXmpReportCostSum)) > 1e-9 || Math.abs(Number(align.goldHourlyUaCostSum)) > 1e-9)
+      const hasData =
+        hasHourly || hasBronzeOrGold || (revenue != null && Math.abs(revenue) > 1e-9)
+
+      const mismatch = align?.uaCostDailyVsHourlyMismatch === true
+
       if (!hasData) {
         return {
           date: dateKey,
@@ -257,11 +284,13 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
           cost: null,
           net: null,
           hourlyData: [],
+          uaCostDailyVsHourlyMismatch: false,
         }
       }
-      const revenue = Math.round(values.revenue * 100) / 100
-      const cost = Math.round(values.cost * 100) / 100
-      const net = Math.round((values.revenue - values.cost) * 100) / 100
+
+      const net =
+        revenue != null && cost != null ? Math.round((revenue - cost) * 100) / 100 : null
+
       return {
         date: dateKey,
         dateLabel: format(parseISO(dateKey), "MMM dd, yyyy"),
@@ -269,17 +298,20 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
         revenue,
         cost,
         net,
-        hourlyData: values.hourly
-          .sort((a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime())
-          .map((h) => ({
-            hour: format(new Date(h.bucketStart), "HH:00"),
-            revenue: h.revenue,
-            cost: h.cost,
-            net: Math.round((h.revenue - h.cost) * 100) / 100,
-          })),
+        uaCostDailyVsHourlyMismatch: mismatch,
+        hourlyData: hasHourly
+          ? values!.hourly
+              .sort((a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime())
+              .map((h) => ({
+                hour: format(new Date(h.bucketStart), "HH:00"),
+                revenue: h.revenue,
+                cost: h.cost,
+                net: Math.round((h.revenue - h.cost) * 100) / 100,
+              }))
+          : [],
       }
     })
-  }, [data, apiRange.from, apiRange.to])
+  }, [data, apiRange.from, apiRange.to, perfResponse])
 
   const filteredTableData = useMemo(() => {
     let filtered = [...dailyData]
@@ -346,7 +378,8 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
 
   const summary = useMemo(() => {
     const buckets = data.length
-    if (buckets === 0) {
+    const anyDayHasData = dailyData.some((d) => d.hasData)
+    if (buckets === 0 && !anyDayHasData) {
       return {
         totalRevenue: null as number | null,
         totalCost: null as number | null,
@@ -356,8 +389,8 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
         daysWithData: 0,
       }
     }
-    const totalRevenue = data.reduce((sum, b) => sum + b.revenue, 0)
-    const totalCost = data.reduce((sum, b) => sum + b.cost, 0)
+    const totalRevenue = dailyData.reduce((s, d) => s + (d.revenue ?? 0), 0)
+    const totalCost = dailyData.reduce((s, d) => s + (d.cost ?? 0), 0)
     const net = totalRevenue - totalCost
     const margin = totalRevenue > 0 ? (net / totalRevenue) * 100 : 0
     const daysWithData = dailyData.filter((d) => d.hasData).length
@@ -850,6 +883,17 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                             <TableCell className="text-right p-2 align-middle">
                               <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                 <span className="font-medium text-red-500 tabular-nums">{fmtUsd(row.cost)}</span>
+                                {row.uaCostDailyVsHourlyMismatch ? (
+                                  <span
+                                    className="inline-flex"
+                                    title="Tổng cost ngày (bronze.xmp_report) khác tổng ua_cost theo giờ (gold.xmp_ua_cost_sync_hourly)"
+                                  >
+                                    <AlertCircle
+                                      className="h-4 w-4 shrink-0 text-amber-500"
+                                      aria-label="Cost ngày và tổng theo giờ không khớp"
+                                    />
+                                  </span>
+                                ) : null}
                                 <Button
                                   type="button"
                                   variant="outline"

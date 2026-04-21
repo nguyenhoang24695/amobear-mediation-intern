@@ -871,6 +871,30 @@ export interface MetaFacebookPageReferenceDto {
   accessStatus?: string | null
 }
 
+export interface MetaFacebookPostReferenceDto {
+  id: string
+  message?: string | null
+  story?: string | null
+  permalinkUrl?: string | null
+  fullPictureUrl?: string | null
+  createdTime?: string | null
+  type?: string | null
+  statusType?: string | null
+  isPublished?: boolean | null
+}
+
+export interface MetaFacebookPostReferencePageDto {
+  items: MetaFacebookPostReferenceDto[]
+  nextCursor?: string | null
+  hasMore: boolean
+}
+
+export interface MetaFacebookPostReferenceQueryDto {
+  [key: string]: string | number | undefined
+  q?: string
+  after?: string
+  limit?: number
+}
 export interface MetaReferenceMediaDto {
   id: string
   assetType: "IMAGE" | "VIDEO"
@@ -1079,6 +1103,7 @@ export interface MetaInsightsDailyDto {
 }
 
 export interface MetaCampaignBreakdownDto {
+  campaignRowId: number | null
   campaignId: string
   campaignName: string
   accountId: string
@@ -1119,18 +1144,5 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

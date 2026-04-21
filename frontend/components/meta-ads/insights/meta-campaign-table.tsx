@@ -1,7 +1,9 @@
 "use client"
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -11,7 +13,7 @@ import { useApi } from "@/hooks/use-api"
 import { metaInsightsApi } from "@/lib/api/meta-ads"
 import { cn } from "@/lib/utils"
 import type { MetaCampaignBreakdownDto } from "@/types/meta-ads"
-import { formatCompactNumber, formatMetricValue, formatNullableMetricValue } from "./meta-insights-utils"
+import { buildMetaAdsManagerCampaignUrl, formatCompactNumber, formatMetricValue, formatNullableMetricValue } from "./meta-insights-utils"
 
 type SortBy = "campaignName" | "accountId" | "spend" | "installs" | "cpi" | "clicks" | "ctr" | "cpm" | "impressions" | "reach" | "frequency" | "revenue" | "roas" | "roasD7" | "roasD30"
 type SortDir = "asc" | "desc"
@@ -83,11 +85,48 @@ function MetricCell({ value, className }: { value: string; className?: string })
 }
 
 function CampaignCell({ item }: { item: MetaCampaignBreakdownDto }) {
+  const metaCampaignUrl = buildMetaAdsManagerCampaignUrl(item.accountId, item.campaignId)
+
   return (
     <div className="space-y-1">
       <div className="font-medium text-slate-900">{item.campaignName || item.campaignId}</div>
       <div className="text-xs text-slate-500">{item.campaignId}</div>
       {item.appId ? <div className="text-xs text-slate-400">App: {item.appId}</div> : null}
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        {item.campaignRowId ? (
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-700 hover:text-blue-800">
+            <Link href={`/meta-ads/campaigns/${item.campaignRowId}`}>Open Detail</Link>
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-slate-400"
+            disabled
+            title="Campaign is not mapped to an internal detail page yet."
+          >
+            Open Detail
+          </Button>
+        )}
+
+        {metaCampaignUrl ? (
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-700 hover:text-blue-800">
+            <a href={metaCampaignUrl} target="_blank" rel="noreferrer noopener">
+              Open in Meta
+            </a>
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-slate-400"
+            disabled
+            title="Missing account or campaign ID for Ads Manager."
+          >
+            Open in Meta
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

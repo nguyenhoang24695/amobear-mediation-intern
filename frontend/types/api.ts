@@ -56,9 +56,18 @@ export interface AppHourlyPerformanceBucketDto {
   cost: number
 }
 
+/** Per-day: bronze.xmp_report SUM(cost) vs gold.xmp_ua_cost_sync_hourly SUM(ua_cost). */
+export interface AppPerformanceDailyUaCostAlignmentDto {
+  reportDate: string
+  bronzeXmpReportCostSum: number
+  goldHourlyUaCostSum: number
+  uaCostDailyVsHourlyMismatch: boolean
+}
+
 export interface AppHourlyPerformanceResponseDto {
   starRocksEnabled: boolean
   buckets: AppHourlyPerformanceBucketDto[]
+  dailyUaCostByDate?: AppPerformanceDailyUaCostAlignmentDto[]
   lastUpdatedUtc: string
 }
 
