@@ -200,3 +200,27 @@ export function getOverviewMetricPrevious(metric: MetaCardMetricKey, overview: M
 export function formatChartDate(value: string): string {
   return format(new Date(value), "MMM d")
 }
+
+function normalizeMetaAdAccountId(accountId?: string | null): string | null {
+  const trimmed = accountId?.trim()
+  if (!trimmed) return null
+  return trimmed.replace(/^act_/i, "") || null
+}
+
+export function buildMetaAdsManagerCampaignUrl(accountId?: string | null, campaignId?: string | null): string | null {
+  const normalizedAccountId = normalizeMetaAdAccountId(accountId)
+  const normalizedCampaignId = campaignId?.trim()
+
+  if (!normalizedAccountId || !normalizedCampaignId) {
+    return null
+  }
+
+  const query = new URLSearchParams({
+    act: normalizedAccountId,
+    selected_campaign_ids: normalizedCampaignId,
+  })
+
+  return `https://adsmanager.facebook.com/adsmanager/manage/campaigns?${query.toString()}`
+}
+
+
