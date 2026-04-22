@@ -53,6 +53,104 @@ import { useToast } from "@/hooks/use-toast"
 import { structureApi } from "@/lib/api/services"
 import type { AppHourlyPerformanceResponseDto } from "@/types/api"
 
+/** yyyy-MM-dd theo lịch UTC từ bucket ISO (fallback khi parse lỗi). */
+function utcCalendarDateKeyFromBucketIso(iso: string): string {
+  const d = new Date(iso)
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getUTCFullYear()
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0")
+    const day = String(d.getUTCDate()).padStart(2, "0")
+    return `${y}-${m}-${day}`
+  }
+  const head = /^(\d{4}-\d{2}-\d{2})/.exec(iso)
+  return head ? head[1]! : ""
+}
+
+/** Offset cố định (giờ) từ chuỗi API: <c>UTC</c>, <c>+0</c>, <c>+7</c>, <c>-5</c>; null = IANA (dùng Intl). */
+function fixedOffsetHoursFromTimeZoneId(timeZoneId: string): number | null {
+  const t = timeZoneId.trim()
+  if (t === "UTC" || t === "Z" || t === "+0" || t === "-0") return 0
+  const m = /^([+-])(\d{1,2})$/.exec(t)
+  if (!m) return null
+  const n = parseInt(m[2]!, 10)
+  const sign = m[1] === "-" ? -1 : 1
+  return sign * n
+}
+
+/** yyyy-MM-dd theo lịch tại múi (offset cố định hoặc IANA — khớp cách server gom daily UA). */
+function calendarDateKeyInTimeZone(isoUtc: string, timeZoneId: string): string {
+  const d = new Date(isoUtc)
+  if (Number.isNaN(d.getTime())) return utcCalendarDateKeyFromBucketIso(isoUtc)
+  const oh = fixedOffsetHoursFromTimeZoneId(timeZoneId)
+  if (oh !== null) {
+    const shifted = new Date(d.getTime() + oh * 3600_000)
+    const y = shifted.getUTCFullYear()
+    const mo = String(shifted.getUTCMonth() + 1).padStart(2, "0")
+    const day = String(shifted.getUTCDate()).padStart(2, "0")
+    return `${y}-${mo}-${day}`
+  }
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timeZoneId,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d)
+  } catch {
+    return utcCalendarDateKeyFromBucketIso(isoUtc)
+  }
+}
+
+function hourLabelInTimeZone(isoUtc: string, timeZoneId: string): string {
+  const d = new Date(isoUtc)
+  if (Number.isNaN(d.getTime())) return "—"
+  const oh = fixedOffsetHoursFromTimeZoneId(timeZoneId)
+  if (oh !== null) {
+    const shifted = new Date(d.getTime() + oh * 3600_000)
+    const h = shifted.getUTCHours()
+    const min = shifted.getUTCMinutes()
+    return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`
+  }
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: timeZoneId,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(d)
+  } catch {
+    const h = d.getUTCHours()
+    return `${String(h).padStart(2, "0")}:00`
+  }
+}
+
+/** Giá trị gửi API (khớp <c>XmpReportDayUtcWindow</c> backend): offset hoặc <c>UTC</c>. */
+const PERFORMANCE_TIME_ZONES: { id: string; label: string }[] = [
+  { id: "UTC", label: "UTC" },
+  { id: "+7", label: "+7" },
+  { id: "+8", label: "+8" },
+  { id: "+9", label: "+9" },
+  { id: "+6", label: "+6" },
+  { id: "+5", label: "+5" },
+  { id: "+1", label: "+1" },
+  { id: "-5", label: "-5" },
+  { id: "-8", label: "-8" },
+]
+
+function defaultPerformanceTimeZoneId(): string {
+  try {
+    const offsetMin = new Date().getTimezoneOffset()
+    const hours = Math.round(-offsetMin / 60)
+    if (hours === 0) return "UTC"
+    return `${hours > 0 ? "+" : ""}${hours}`
+  } catch {
+    return "UTC"
+  }
+}
+
+/** So cost ngày (sau làm tròn 2 số) với tổng cost các giờ hiển thị — bắt lệch do sync / làm tròn. */
+const dailyVsHourlyDisplayEpsilonUsd = 0.02
+
 export interface HourlyBucket {
   bucketStart: string
   revenue: number
@@ -62,13 +160,13 @@ export interface HourlyBucket {
 interface DailyData {
   date: string
   dateLabel: string
-  /** Có bucket revenue theo giờ và/hoặc cost từ bronze/gold theo API */
+  /** Có bucket revenue theo giờ và/hoặc cost gold hourly theo API */
   hasData: boolean
   revenue: number | null
-  /** Cost ngày: bronze.xmp_report (khi API có dailyUaCostByDate), không thì tổng hourly gold */
+  /** Cost ngày: tổng gold.xmp_ua_cost_sync_hourly (dailyUaCostByDate), không thì rollup từ bucket giờ */
   cost: number | null
   net: number | null
-  /** Tổng cost bronze vs tổng ua_cost gold hourly lệch (chỉ khi StarRocks trả alignment) */
+  /** Lệch giữa cost ngày (gold daily) và tổng cost các bucket giờ hiển thị */
   uaCostDailyVsHourlyMismatch: boolean
   hourlyData: {
     hour: string
@@ -140,6 +238,8 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
   const [tableSearchDate, setTableSearchDate] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+  /** Offset (+7) hoặc UTC — gửi API; ngày trong range là lịch tại offset đó */
+  const [queryTimeZoneId, setQueryTimeZoneId] = useState(defaultPerformanceTimeZoneId)
   /** `${yyyy-MM-dd}:revenue` | `:cost` → true while POST in flight */
   const [dayReprocessBusy, setDayReprocessBusy] = useState<Record<string, true>>({})
 
@@ -208,11 +308,11 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
   }, [preset, customRange])
 
   const fetchPerf = useMemo(
-    () => () => structureApi.getAppPerformanceHourly(appId, apiRange.start, apiRange.end),
-    [appId, apiRange.start, apiRange.end],
+    () => () => structureApi.getAppPerformanceHourly(appId, apiRange.start, apiRange.end, queryTimeZoneId),
+    [appId, apiRange.start, apiRange.end, queryTimeZoneId],
   )
 
-  const cacheKey = `app_perf_hourly_${appId}_${apiRange.start}_${apiRange.end}`
+  const cacheKey = `app_perf_hourly_${appId}_${apiRange.start}_${apiRange.end}_${queryTimeZoneId}`
   const { data: perfResponse, loading, error } = useApi<AppHourlyPerformanceResponseDto>(fetchPerf, {
     enabled: !!appId,
     cacheKey,
@@ -231,8 +331,8 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
     const grouped: Record<string, { revenue: number; cost: number; hourly: HourlyBucket[] }> = {}
 
     for (const bucket of data) {
-      const bucketDate = new Date(bucket.bucketStart)
-      const dateKey = format(bucketDate, "yyyy-MM-dd")
+      const dateKey = calendarDateKeyInTimeZone(bucket.bucketStart, queryTimeZoneId)
+      if (!dateKey) continue
 
       if (!grouped[dateKey]) {
         grouped[dateKey] = { revenue: 0, cost: 0, hourly: [] }
@@ -243,7 +343,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
     }
 
     const alignMap = new Map((perfResponse?.dailyUaCostByDate ?? []).map((x) => [x.reportDate, x]))
-    const useBronzeDailyCost = Boolean(perfResponse?.starRocksEnabled && alignMap.size > 0)
+    const useGoldDailyUaCost = Boolean(perfResponse?.starRocksEnabled && alignMap.size > 0)
 
     const fromD = startOfDay(apiRange.from)
     const toD = startOfDay(apiRange.to)
@@ -261,19 +361,27 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       const hourlyCostRollup = hasHourly ? Math.round(values!.cost * 100) / 100 : null
 
       let cost: number | null = null
-      if (useBronzeDailyCost && align) {
-        cost = Math.round(Number(align.bronzeXmpReportCostSum) * 100) / 100
+      if (useGoldDailyUaCost && align) {
+        cost = Math.round(Number(align.goldHourlyUaCostSum) * 100) / 100
       } else if (hasHourly) {
         cost = hourlyCostRollup
       }
 
-      const hasBronzeOrGold =
+      const hasGoldDailyOrHourly =
         align != null &&
-        (Math.abs(Number(align.bronzeXmpReportCostSum)) > 1e-9 || Math.abs(Number(align.goldHourlyUaCostSum)) > 1e-9)
+        (Math.abs(Number(align.goldHourlyUaCostSum)) > 1e-9 || Math.abs(Number(align.bronzeXmpReportCostSum)) > 1e-9)
       const hasData =
-        hasHourly || hasBronzeOrGold || (revenue != null && Math.abs(revenue) > 1e-9)
+        hasHourly || hasGoldDailyOrHourly || (revenue != null && Math.abs(revenue) > 1e-9)
 
-      const mismatch = align?.uaCostDailyVsHourlyMismatch === true
+      const sumHourlyCostRounded = hasHourly
+        ? Math.round(values!.hourly.reduce((s, h) => s + h.cost, 0) * 100) / 100
+        : null
+      const serverMismatch = align?.uaCostDailyVsHourlyMismatch === true
+      const displayMismatch =
+        cost != null &&
+        sumHourlyCostRounded != null &&
+        Math.abs(cost - sumHourlyCostRounded) > dailyVsHourlyDisplayEpsilonUsd
+      const mismatch = serverMismatch || displayMismatch
 
       if (!hasData) {
         return {
@@ -303,7 +411,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
           ? values!.hourly
               .sort((a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime())
               .map((h) => ({
-                hour: format(new Date(h.bucketStart), "HH:00"),
+                hour: hourLabelInTimeZone(h.bucketStart, queryTimeZoneId),
                 revenue: h.revenue,
                 cost: h.cost,
                 net: Math.round((h.revenue - h.cost) * 100) / 100,
@@ -311,7 +419,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
           : [],
       }
     })
-  }, [data, apiRange.from, apiRange.to, perfResponse])
+  }, [data, apiRange.from, apiRange.to, perfResponse, queryTimeZoneId])
 
   const filteredTableData = useMemo(() => {
     let filtered = [...dailyData]
@@ -442,6 +550,14 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
   }
 
   const rangeLabel = `${format(apiRange.from, "MMM dd, yyyy")} – ${format(apiRange.to, "MMM dd, yyyy")}`
+  const timeZoneLabel = (() => {
+    const z = PERFORMANCE_TIME_ZONES.find((x) => x.id === queryTimeZoneId)
+    if (z) return z.label
+    const echoed = perfResponse?.queryTimeZoneId
+    if (echoed && fixedOffsetHoursFromTimeZoneId(echoed) !== null) return echoed
+    if (echoed === "UTC") return "UTC"
+    return echoed ?? queryTimeZoneId
+  })()
   const starRocksEnabled = perfResponse?.starRocksEnabled ?? false
 
   if (loading && perfResponse == null && !error) {
@@ -471,6 +587,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Revenue vs UA Cost</h2>
           <p className="text-sm text-slate-500">{rangeLabel}</p>
+          <p className="text-xs text-slate-400 mt-0.5">Timezone for query: {timeZoneLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={preset} onValueChange={(v) => handlePresetChange(v as PresetKey)}>
@@ -481,6 +598,29 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
               {presets.map((p) => (
                 <SelectItem key={p.key} value={p.key}>
                   {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={queryTimeZoneId}
+            onValueChange={(v) => {
+              setQueryTimeZoneId(v)
+              setCurrentPage(1)
+              setExpandedDates(new Set())
+            }}
+          >
+            <SelectTrigger className="w-[120px] h-9 text-sm bg-white" title="Offset UTC (vd +7). Ngày trong khoảng hiểu theo offset này khi query StarRocks">
+              <SelectValue placeholder="Timezone" />
+            </SelectTrigger>
+            <SelectContent>
+              {!PERFORMANCE_TIME_ZONES.some((z) => z.id === queryTimeZoneId) ? (
+                <SelectItem value={queryTimeZoneId}>{queryTimeZoneId}</SelectItem>
+              ) : null}
+              {PERFORMANCE_TIME_ZONES.map((z) => (
+                <SelectItem key={z.id} value={z.id}>
+                  {z.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -886,7 +1026,7 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
                                 {row.uaCostDailyVsHourlyMismatch ? (
                                   <span
                                     className="inline-flex"
-                                    title="Tổng cost ngày (bronze.xmp_report) khác tổng ua_cost theo giờ (gold.xmp_ua_cost_sync_hourly)"
+                                    title="Cost ngày (gold hourly theo ngày) khác tổng UA cost theo giờ hiển thị — lệch đồng bộ / làm tròn"
                                   >
                                     <AlertCircle
                                       className="h-4 w-4 shrink-0 text-amber-500"

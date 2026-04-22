@@ -275,12 +275,11 @@ export const structureApi = {
         appId: string,
         startDate: string,
         endDate: string,
+        timeZoneId?: string,
     ): Promise<AppHourlyPerformanceResponseDto> => {
-        return apiClient.get<AppHourlyPerformanceResponseDto>('/api/Structure/apps/performance/hourly', {
-            appId,
-            startDate,
-            endDate,
-        })
+        const params: Record<string, string> = { appId, startDate, endDate }
+        if (timeZoneId) params.timeZoneId = timeZoneId
+        return apiClient.get<AppHourlyPerformanceResponseDto>('/api/Structure/apps/performance/hourly', params)
     },
 
     syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
