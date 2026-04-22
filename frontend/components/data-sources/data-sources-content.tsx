@@ -118,6 +118,19 @@ export function DataSourcesContent() {
 
           <ArchitectureDiagram />
 
+          <Card className="border-fuchsia-200 bg-fuchsia-50/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-fuchsia-900">Qonversion (IAP / subscription)</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm text-fuchsia-900/90">
+                Nguồn IAP độc lập với AdMob IAA: webhook, GCS, web crawler và API reconciliation → StarRocks Bronze/Silver/Gold;{" "}
+                <span className="font-mono text-xs">app_id</span> thống nhất AdMob. Trên tab{" "}
+                <span className="font-medium">Details</span> chọn nguồn Qonversion để xem health theo ngày và backfill.
+              </p>
+            </CardContent>
+          </Card>
+
           <Card className="border-amber-200 bg-amber-50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">

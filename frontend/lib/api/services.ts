@@ -475,6 +475,14 @@ export const structureApi = {
         return apiClient.patch(`/api/Structure/apps/${id}/qonversion-params`, payload ?? { qonversionParams: null })
     },
 
+    /** AppMetrica application id → apps.dim_appmetrica_id + dim sync (null / omit để xóa). */
+    updateAppDimAppmetricaId: async (
+        id: number,
+        payload: { dimAppmetricaId: string | null },
+    ): Promise<{ id: number; dimAppmetricaId: string | null }> => {
+        return apiClient.patch(`/api/Structure/apps/${id}/dim-appmetrica-id`, payload)
+    },
+
     // Mediation Groups
     getMediationGroups: async (
         publisherId?: string,

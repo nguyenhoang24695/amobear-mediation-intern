@@ -127,6 +127,8 @@ export function ArchitectureDiagram() {
               <span>Bronze-Silver-Gold medallion architecture</span>
               <span>|</span>
               <span>MinIO for raw file backup and archival</span>
+              <span>|</span>
+              <span>Qonversion IAP: webhook / GCS / crawler → Bronze → Gold (app_iap_daily, daily_overview)</span>
             </div>
           </div>
         </CardContent>

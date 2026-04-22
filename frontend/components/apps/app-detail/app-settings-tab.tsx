@@ -32,6 +32,7 @@ import {
     Info,
     Upload,
     X,
+    Activity,
     KeyRound,
     Eye,
     EyeOff,
@@ -241,6 +242,9 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
     const [qonApiSaving, setQonApiSaving] = useState(false)
     const [qonApiClearing, setQonApiClearing] = useState(false)
     const [showQonApiSecret, setShowQonApiSecret] = useState(false)
+    const [appmetricaInput, setAppmetricaInput] = useState("")
+    const [appmetricaDirty, setAppmetricaDirty] = useState(false)
+    const [appmetricaSaving, setAppmetricaSaving] = useState(false)
 
     const validation = validateFirebaseForm(formState, fileUploadError)
     const showValidation = isDirty || fileUploadError !== null || (isConfigured && !validation.valid)
@@ -260,6 +264,11 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
         setQonApiDirty(false)
         setShowQonApiSecret(false)
     }, [app?.id, app?.qonversionParams])
+
+    useEffect(() => {
+        setAppmetricaInput((app?.dimAppmetricaId ?? "").trim())
+        setAppmetricaDirty(false)
+    }, [app?.id, app?.dimAppmetricaId])
 
     const handleEnabledChange = (checked: boolean) => {
         setFormState((prev) => ({ ...prev, enabled: checked }))
@@ -342,6 +351,41 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
             toast({ title: "Failed to save", description: message, variant: "destructive" })
         } finally {
             setQonApiSaving(false)
+        }
+    }
+
+    const handleSaveAppmetricaId = async () => {
+        if (!app) return
+        const trimmed = appmetricaInput.trim()
+        if (trimmed.length > 0) {
+            for (const ch of trimmed) {
+                if (ch < "0" || ch > "9") {
+                    toast({
+                        title: "Invalid AppMetrica id",
+                        description: "Use digits only (AppMetrica application id).",
+                        variant: "destructive",
+                    })
+                    return
+                }
+            }
+        }
+        setAppmetricaSaving(true)
+        try {
+            await structureApi.updateAppDimAppmetricaId(app.id, {
+                dimAppmetricaId: trimmed.length > 0 ? trimmed : null,
+            })
+            setAppmetricaDirty(false)
+            onAppUpdated?.()
+            toast({
+                title: "AppMetrica id saved",
+                description: "Stored in Nexus and synced to silver.dim_app_identifiers when StarRocks dim sync runs.",
+            })
+        } catch (err: unknown) {
+            const message =
+                err && typeof err === "object" && "message" in err ? String((err as { message?: string }).message) : "Could not save."
+            toast({ title: "Failed to save", description: message, variant: "destructive" })
+        } finally {
+            setAppmetricaSaving(false)
         }
     }
 
@@ -652,6 +696,78 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                         >
                             {qonApiClearing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                             Clear
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-indigo-50">
+                            <Activity className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-semibold text-slate-900">AppMetrica (StarRocks dim)</h3>
+                            <p className="text-sm text-slate-500">
+                                Maps this AdMob app to AppMetrica&apos;s <span className="font-mono text-[11px]">application_id</span> on{" "}
+                                <span className="font-mono text-[11px]">silver.dim_app_identifiers</span> (AI Insight, game KPI, cohorts)
+                            </p>
+                        </div>
+                    </div>
+                    {appmetricaInput.trim() ? (
+                        <Badge className="bg-green-100 text-green-700 border-0 gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Set
+                        </Badge>
+                    ) : (
+                        <Badge variant="outline" className="bg-slate-50 text-slate-500 gap-1.5">
+                            <XCircle className="w-3.5 h-3.5" />
+                            Not set
+                        </Badge>
+                    )}
+                </div>
+                <div className="p-6 flex flex-col gap-4">
+                    <p className="text-xs text-slate-500">
+                        Numeric AppMetrica application id — stored on this app row, pushed to <span className="font-mono text-[11px]">silver.dim_app_identifiers</span> on
+                        save (dim sync). This value wins over auto-mapping from package; if you clear it, existing dim values are kept on the next sync (same as Adjust id).
+                    </p>
+                    <div className="space-y-2">
+                        <Label htmlFor="app-dim-appmetrica-id">AppMetrica application id</Label>
+                        <Input
+                            id="app-dim-appmetrica-id"
+                            value={appmetricaInput}
+                            onChange={(e) => {
+                                setAppmetricaInput(e.target.value)
+                                setAppmetricaDirty(true)
+                            }}
+                            disabled={!app || appmetricaSaving}
+                            autoComplete="off"
+                            placeholder="e.g. 12345678"
+                            className="font-mono text-sm"
+                            inputMode="numeric"
+                        />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            type="button"
+                            onClick={handleSaveAppmetricaId}
+                            disabled={!app || appmetricaSaving || !appmetricaDirty}
+                            className="bg-indigo-700 hover:bg-indigo-800"
+                        >
+                            {appmetricaSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Save
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setAppmetricaInput("")
+                                setAppmetricaDirty(true)
+                            }}
+                            disabled={!app || appmetricaSaving || !appmetricaInput.trim()}
+                        >
+                            Clear field
                         </Button>
                     </div>
                 </div>
