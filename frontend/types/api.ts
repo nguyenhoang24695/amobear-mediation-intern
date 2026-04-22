@@ -56,7 +56,7 @@ export interface AppHourlyPerformanceBucketDto {
   cost: number
 }
 
-/** Per-day: bronze.xmp_report SUM(cost) vs gold.xmp_ua_cost_sync_hourly SUM(ua_cost). */
+/** Per-day: SUM(ua_cost) từ gold.xmp_ua_cost_sync_hourly (bronzeXmpReportCostSum = goldHourlyUaCostSum, tên cũ giữ tương thích). */
 export interface AppPerformanceDailyUaCostAlignmentDto {
   reportDate: string
   bronzeXmpReportCostSum: number
@@ -68,6 +68,8 @@ export interface AppHourlyPerformanceResponseDto {
   starRocksEnabled: boolean
   buckets: AppHourlyPerformanceBucketDto[]
   dailyUaCostByDate?: AppPerformanceDailyUaCostAlignmentDto[]
+  /** IANA timezone the server used for start/end date boundaries and daily UA rollups */
+  queryTimeZoneId?: string
   lastUpdatedUtc: string
 }
 
