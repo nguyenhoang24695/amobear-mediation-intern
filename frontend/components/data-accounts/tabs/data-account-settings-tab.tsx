@@ -29,7 +29,7 @@ import {
   Edit,
 } from "lucide-react"
 
-type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion"
+type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple"
 
 interface SettingsTabProps {
   account: {
@@ -55,6 +55,7 @@ const networkLabels: Record<NetworkType, string> = {
   xmp: "XMP / Mintegral",
   appsflyer: "AppsFlyer",
   qonversion: "Qonversion",
+  apple: "Apple App Store",
 }
 
 const networkBadge: Record<NetworkType, string> = {
@@ -63,6 +64,7 @@ const networkBadge: Record<NetworkType, string> = {
   xmp: "bg-purple-100 text-purple-700 border-purple-200",
   appsflyer: "bg-sky-100 text-sky-800 border-sky-200",
   qonversion: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
+  apple: "bg-slate-100 text-slate-800 border-slate-200",
 }
 
 
