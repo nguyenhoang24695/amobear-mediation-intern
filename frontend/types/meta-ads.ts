@@ -121,6 +121,7 @@ export interface MetaIntegrationTestResultDto {
   tokenType?: string | null
   tokenExpiresAt?: string | null
   scopes: string[]
+  warningMessages: string[]
 }
 
 export interface MetaAdAccountDto {
@@ -1144,5 +1145,6 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
+
 
 
