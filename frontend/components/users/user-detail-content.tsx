@@ -126,6 +126,19 @@ function formatDateTime(value?: string) {
   })
 }
 
+function formatMappingDate(value?: string | null) {
+  if (value == null || value === "") return "—"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return "—"
+  return d.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
 function isPrivilegedRole(role?: string) {
   return role?.toLowerCase() === "admin" || role?.toLowerCase() === "super_admin"
 }
@@ -162,12 +175,18 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
     { enabled: canView, cacheKey: 'meta_ad_account_permission_options' }
   )
 
+  const { data: abMappingResponse, loading: abMappingLoading } = useApi(
+    () => (userId ? teamMembersApi.getAbUserAppMapping(userId) : Promise.resolve({ success: false, data: undefined })),
+    { enabled: !!userId && canView && !!userResponse?.data, cacheKey: `ab-user-app-mapping-${userId}` }
+  )
 
   const user = userResponse?.data
   const metaAdAccountOptions = metaAdAccountOptionsResponse?.data || []
   const allApps = appsResponse?.apps
   const userStatus = user?.status || "inactive"
   const statusMeta = userStatusConfig[userStatus] || userStatusConfig.inactive
+  const abUserAppMappingRows = abMappingResponse?.data ?? []
+
   const metaPermissionsList = useMemo(() => {
     const selectedMetaAdAccountIds = user?.metaAdAccountIds || []
     const optionMap = new Map(metaAdAccountOptions.map((option) => [option.id, option]))
@@ -713,6 +732,83 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
               </Card>
             </TabsContent>
           </Tabs>
+
+          <Card className="mt-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">AdUser App Mapping</CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Rows from <span className="font-mono">gold.ab_user_app_mapping</span> for this user&apos;s email (StarRocks).
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {abMappingLoading ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading mapping…
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50">
+                      <TableHead className="min-w-[200px]">App</TableHead>
+                      <TableHead className="font-mono text-xs">App ID</TableHead>
+                      <TableHead>Start date</TableHead>
+                      <TableHead>End date</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {abUserAppMappingRows.map((row, idx) => {
+                      const matchedApp = allApps?.find((a) => a.appId === row.appId)
+                      const appLabel = matchedApp?.displayName || matchedApp?.name || row.appId
+                      const active = row.endDate == null || row.endDate === ""
+                      return (
+                        <TableRow key={`${idx}-${row.appId}-${row.startDate ?? ""}-${row.endDate ?? ""}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 rounded-lg">
+                                {matchedApp?.iconUri ? (
+                                  <AvatarImage src={matchedApp.iconUri} alt={appLabel} />
+                                ) : null}
+                                <AvatarFallback className="rounded-lg bg-slate-100">
+                                  <Smartphone className="w-4 h-4 text-slate-400" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium text-slate-900">{appLabel}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs text-slate-600">{row.appId}</span>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-700">{formatMappingDate(row.startDate)}</TableCell>
+                          <TableCell className="text-sm text-slate-700">{formatMappingDate(row.endDate)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                active
+                                  ? "border-green-200 bg-green-50 text-green-700 text-xs"
+                                  : "border-slate-200 bg-slate-50 text-slate-600 text-xs"
+                              }
+                            >
+                              {active ? "Active" : "Ended"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {abUserAppMappingRows.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-slate-500 py-8 text-sm">
+                          No rows in StarRocks for this user, or StarRocks is not configured.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Activity Tab */}

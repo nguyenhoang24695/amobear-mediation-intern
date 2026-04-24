@@ -378,6 +378,13 @@ export interface TopApp {
   trend: "up" | "down"
 }
 
+/** Dòng gold.ab_user_app_mapping (đồng bộ từ app permissions). */
+export interface AbUserAppMappingRow {
+  appId: string
+  startDate?: string | null
+  endDate?: string | null
+}
+
 // Team Members / Users
 export interface TeamMember {
   id: string

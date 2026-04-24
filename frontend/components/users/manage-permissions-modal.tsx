@@ -257,6 +257,7 @@ export function ManagePermissionsModal({
       })
 
       invalidateCache(`user_profile_${userId}`)
+      invalidateCache(`ab-user-app-mapping-${userId}`)
 
       onSuccess?.()
       onOpenChange(false)
