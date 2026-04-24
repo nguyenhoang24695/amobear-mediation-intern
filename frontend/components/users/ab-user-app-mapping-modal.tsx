@@ -32,9 +32,9 @@ export function AbUserAppMappingModal({ open, onOpenChange, userId, userName }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(96vw,1280px)] max-w-[min(96vw,1280px)] sm:max-w-[min(96vw,1280px)] max-h-[92vh] overflow-y-auto p-6 sm:p-8">
         <DialogHeader>
-          <DialogTitle>AdUser App Mapping</DialogTitle>
+          <DialogTitle>History Permission</DialogTitle>
           <DialogDescription>
-            Rows from <span className="font-mono">gold.ab_user_app_mapping</span> for{" "}
+            Lịch sử phân quyền app từ <span className="font-mono">gold.ab_user_app_mapping</span> cho{" "}
             <span className="font-semibold text-slate-900">{userName}</span> (StarRocks).
           </DialogDescription>
         </DialogHeader>
