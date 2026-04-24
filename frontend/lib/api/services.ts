@@ -825,6 +825,19 @@ export const teamMembersApi = {
         return apiClient.get(`/api/v1/team-members/ab-user-app-mapping/${userId}`)
     },
 
+    bulkUpdateAbUserAppMappingDates: async (
+        userId: string,
+        body: {
+            mappingIds: number[]
+            patchStartDate: boolean
+            startDate?: string | null
+            patchEndDate: boolean
+            endDate?: string | null
+        }
+    ): Promise<{ success: boolean; updated?: number; requested?: number; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/ab-user-app-mapping/${userId}/bulk-update-dates`, body)
+    },
+
     getMetaAdAccountPermissionOptions: async (): Promise<{ success: boolean; data: MetaAdAccountPermissionOption[] }> => {
         return apiClient.get('/api/v1/team-members/permission-options/meta-ad-accounts')
     },
