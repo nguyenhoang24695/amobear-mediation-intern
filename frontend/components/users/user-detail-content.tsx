@@ -47,6 +47,7 @@ import { useRoles } from "@/hooks/use-roles"
 import { AddUserToTeamModal } from "../organizations/add-user-to-team-modal"
 import { AddEditUserModal } from "../organizations/modals/add-edit-user-modal"
 import { ResetUserPasswordModal } from "./reset-user-password-modal"
+import { AbUserAppMappingEditor } from "./ab-user-app-mapping-editor"
 
 // Mock data for sections not yet in API
 const activityLog = [
@@ -161,7 +162,6 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
     () => teamMembersApi.getMetaAdAccountPermissionOptions(),
     { enabled: canView, cacheKey: 'meta_ad_account_permission_options' }
   )
-
 
   const user = userResponse?.data
   const metaAdAccountOptions = metaAdAccountOptionsResponse?.data || []
@@ -713,6 +713,25 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
               </Card>
             </TabsContent>
           </Tabs>
+
+          <Card className="mt-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">AdUser App Mapping</CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Rows from <span className="font-mono">gold.ab_user_app_mapping</span> for this user&apos;s email (StarRocks).
+              </p>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {userId ? (
+                <AbUserAppMappingEditor
+                  userId={userId}
+                  canBulkEdit={!!canManageTargetUser}
+                  fetchEnabled={!!userId && canView && !!userResponse?.data}
+                  mappingCacheKey={`ab-user-app-mapping-${userId}`}
+                />
+              ) : null}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Activity Tab */}

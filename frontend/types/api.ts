@@ -378,6 +378,15 @@ export interface TopApp {
   trend: "up" | "down"
 }
 
+/** Dòng gold.ab_user_app_mapping (đồng bộ từ app permissions). */
+export interface AbUserAppMappingRow {
+  /** Khóa StarRocks (PRIMARY KEY); thiếu khi API/backend cũ. */
+  id?: number
+  appId: string
+  startDate?: string | null
+  endDate?: string | null
+}
+
 // Team Members / Users
 export interface TeamMember {
   id: string

@@ -34,11 +34,13 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Database,
 } from "lucide-react"
 import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
 import { teamMembersApi } from "@/lib/api/services"
 import { ManagePermissionsModal } from "./manage-permissions-modal"
+import { AbUserAppMappingModal } from "./ab-user-app-mapping-modal"
 import { getCurrentUser } from "@/lib/auth"
 import {
   Dialog,
@@ -98,6 +100,9 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   const [permissionsUserName, setPermissionsUserName] = useState<string>("")
   const [permissionsUserRole, setPermissionsUserRole] = useState<"admin" | "editor" | "viewer">("viewer")
   const [initialPermissions, setInitialPermissions] = useState<Record<string, string>>({})
+  const [mappingModalOpen, setMappingModalOpen] = useState(false)
+  const [mappingUserId, setMappingUserId] = useState<string | null>(null)
+  const [mappingUserName, setMappingUserName] = useState("")
   const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] = useState(false)
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
   const [usersToRemove, setUsersToRemove] = useState<string[]>([])
@@ -677,6 +682,16 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           <Shield className="w-4 h-4 mr-2" />
                           Manage Permissions
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setMappingUserId(user.id)
+                            setMappingUserName(user.name)
+                            setMappingModalOpen(true)
+                          }}
+                        >
+                          <Database className="w-4 h-4 mr-2" />
+                          AdUser App Mapping
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {user.status === "invited" && (
                           <DropdownMenuItem>
@@ -785,6 +800,18 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
             // Refresh the users table data
             refetch()
           }}
+        />
+      )}
+
+      {mappingUserId && (
+        <AbUserAppMappingModal
+          open={mappingModalOpen}
+          onOpenChange={(open) => {
+            setMappingModalOpen(open)
+            if (!open) setMappingUserId(null)
+          }}
+          userId={mappingUserId}
+          userName={mappingUserName}
         />
       )}
 
