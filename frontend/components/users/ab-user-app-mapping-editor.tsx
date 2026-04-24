@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -22,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Loader2, Smartphone } from "lucide-react"
+import { Check, Loader2, Smartphone, X } from "lucide-react"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { teamMembersApi, structureApi } from "@/lib/api/services"
@@ -39,20 +38,41 @@ function formatMappingDate(value?: string | null) {
   })
 }
 
-function toDatetimeLocalValue(iso?: string | null): string {
+/** yyyy-mm-dd cho <input type="date" /> (theo lịch local của giá trị ISO từ API). */
+function toDateInputValue(iso?: string | null): string {
   if (iso == null || iso === "") return ""
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ""
   const p = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-function fromDatetimeLocalToIso(local: string): string | null {
-  const t = local.trim()
+/** Đầu ngày 00:00:00.000 (local) → ISO UTC gửi API. */
+function fromDateInputToStartDayIso(yyyyMmDd: string): string | null {
+  const t = yyyyMmDd.trim()
   if (!t) return null
-  const ms = new Date(t).getTime()
-  if (Number.isNaN(ms)) return null
-  return new Date(t).toISOString()
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
+  if (!m) return null
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  const day = Number(m[3])
+  const d = new Date(y, mo - 1, day, 0, 0, 0, 0)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+/** Cuối ngày 23:59:59.999 (local) → ISO UTC gửi API (khoảng phủ cả ngày đã chọn). */
+function fromDateInputToEndDayIso(yyyyMmDd: string): string | null {
+  const t = yyyyMmDd.trim()
+  if (!t) return null
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
+  if (!m) return null
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  const day = Number(m[3])
+  const d = new Date(y, mo - 1, day, 23, 59, 59, 999)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
 }
 
 export interface AbUserAppMappingEditorProps {
@@ -89,9 +109,192 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
   const [startLocal, setStartLocal] = useState("")
   const [endLocal, setEndLocal] = useState("")
 
+  /** Sửa start date trực tiếp trên bảng (theo mapping id). */
+  const [inlineStartEditId, setInlineStartEditId] = useState<number | null>(null)
+  const [inlineStartValue, setInlineStartValue] = useState("")
+  const [inlineStartBaseline, setInlineStartBaseline] = useState("")
+  const [inlineStartSaving, setInlineStartSaving] = useState(false)
+
+  const [inlineEndEditId, setInlineEndEditId] = useState<number | null>(null)
+  const [inlineEndValue, setInlineEndValue] = useState("")
+  const [inlineEndBaseline, setInlineEndBaseline] = useState("")
+  const [inlineEndSaving, setInlineEndSaving] = useState(false)
+
+  const cancelInlineStartEdit = useCallback(() => {
+    setInlineStartEditId(null)
+    setInlineStartValue("")
+    setInlineStartBaseline("")
+  }, [])
+
+  const cancelInlineEndEdit = useCallback(() => {
+    setInlineEndEditId(null)
+    setInlineEndValue("")
+    setInlineEndBaseline("")
+  }, [])
+
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [userId])
+    cancelInlineStartEdit()
+    cancelInlineEndEdit()
+  }, [userId, cancelInlineStartEdit, cancelInlineEndEdit])
+
+  useEffect(() => {
+    if (inlineStartEditId == null && inlineEndEditId == null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        cancelInlineStartEdit()
+        cancelInlineEndEdit()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [inlineStartEditId, inlineEndEditId, cancelInlineStartEdit, cancelInlineEndEdit])
+
+  const beginInlineStartEdit = useCallback(
+    (rowId: number, startIso?: string | null) => {
+      cancelInlineEndEdit()
+      const v = toDateInputValue(startIso)
+      setInlineStartEditId(rowId)
+      setInlineStartValue(v)
+      setInlineStartBaseline(v)
+    },
+    [cancelInlineEndEdit]
+  )
+
+  const beginInlineEndEdit = useCallback(
+    (rowId: number, endIso?: string | null) => {
+      cancelInlineStartEdit()
+      const v = toDateInputValue(endIso)
+      setInlineEndEditId(rowId)
+      setInlineEndValue(v)
+      setInlineEndBaseline(v)
+    },
+    [cancelInlineStartEdit]
+  )
+
+  const saveInlineStartEdit = useCallback(async () => {
+    if (inlineStartEditId == null) return
+    const trimmed = inlineStartValue.trim()
+    const iso = trimmed === "" ? null : fromDateInputToStartDayIso(inlineStartValue)
+    if (trimmed !== "" && iso == null) {
+      toast({ title: "Ngày bắt đầu không hợp lệ", variant: "destructive" })
+      return
+    }
+    const rowForStart = rows.find((r) => (r.id ?? 0) === inlineStartEditId)
+    if (iso && rowForStart?.endDate) {
+      if (new Date(iso).getTime() > new Date(rowForStart.endDate).getTime()) {
+        toast({
+          title: "Khoảng thời gian không hợp lệ",
+          description: "Start phải ≤ End hiện tại.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+    setInlineStartSaving(true)
+    try {
+      const res = await teamMembersApi.bulkUpdateAbUserAppMappingDates(userId, {
+        mappingIds: [inlineStartEditId],
+        patchStartDate: true,
+        startDate: iso,
+        patchEndDate: false,
+        endDate: null,
+      })
+      if (!res.success) {
+        toast({
+          title: "Lưu thất bại",
+          description: (res as { message?: string }).message ?? "Unknown error",
+          variant: "destructive",
+        })
+        return
+      }
+      toast({ title: "Đã cập nhật Start date" })
+      invalidateCache(mappingCacheKey)
+      invalidateCache(`ab-user-app-mapping-${userId}`)
+      invalidateCache(`ab-user-app-mapping-modal-${userId}`)
+      await refetch()
+      cancelInlineStartEdit()
+    } catch (e) {
+      toast({
+        title: "Lỗi mạng",
+        description: e instanceof Error ? e.message : "Request failed",
+        variant: "destructive",
+      })
+    } finally {
+      setInlineStartSaving(false)
+    }
+  }, [
+    inlineStartEditId,
+    inlineStartValue,
+    userId,
+    mappingCacheKey,
+    refetch,
+    cancelInlineStartEdit,
+    toast,
+    rows,
+  ])
+
+  const saveInlineEndEdit = useCallback(async () => {
+    if (inlineEndEditId == null) return
+    const trimmed = inlineEndValue.trim()
+    const endIso = trimmed === "" ? null : fromDateInputToEndDayIso(inlineEndValue)
+    if (trimmed !== "" && endIso == null) {
+      toast({ title: "Ngày kết thúc không hợp lệ", variant: "destructive" })
+      return
+    }
+    const rowForEnd = rows.find((r) => (r.id ?? 0) === inlineEndEditId)
+    if (endIso && rowForEnd?.startDate) {
+      if (new Date(rowForEnd.startDate).getTime() > new Date(endIso).getTime()) {
+        toast({
+          title: "Khoảng thời gian không hợp lệ",
+          description: "Start phải ≤ End.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+    setInlineEndSaving(true)
+    try {
+      const res = await teamMembersApi.bulkUpdateAbUserAppMappingDates(userId, {
+        mappingIds: [inlineEndEditId],
+        patchStartDate: false,
+        startDate: null,
+        patchEndDate: true,
+        endDate: endIso,
+      })
+      if (!res.success) {
+        toast({
+          title: "Lưu thất bại",
+          description: (res as { message?: string }).message ?? "Unknown error",
+          variant: "destructive",
+        })
+        return
+      }
+      toast({ title: "Đã cập nhật End date" })
+      invalidateCache(mappingCacheKey)
+      invalidateCache(`ab-user-app-mapping-${userId}`)
+      invalidateCache(`ab-user-app-mapping-modal-${userId}`)
+      await refetch()
+      cancelInlineEndEdit()
+    } catch (e) {
+      toast({
+        title: "Lỗi mạng",
+        description: e instanceof Error ? e.message : "Request failed",
+        variant: "destructive",
+      })
+    } finally {
+      setInlineEndSaving(false)
+    }
+  }, [
+    inlineEndEditId,
+    inlineEndValue,
+    userId,
+    mappingCacheKey,
+    refetch,
+    cancelInlineEndEdit,
+    toast,
+    rows,
+  ])
 
   const selectableRows = useMemo(() => rows.filter((r) => (r.id ?? 0) > 0), [rows])
   const allSelectableSelected =
@@ -126,9 +329,11 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
 
   const openBulkDialog = () => {
     if (!someSelected) return
+    cancelInlineStartEdit()
+    cancelInlineEndEdit()
     const first = rows.find((r) => selectedIds.has(r.id as number))
-    setStartLocal(toDatetimeLocalValue(first?.startDate))
-    setEndLocal(toDatetimeLocalValue(first?.endDate))
+    setStartLocal(toDateInputValue(first?.startDate))
+    setEndLocal(toDateInputValue(first?.endDate))
     setPatchStart(false)
     setPatchEnd(false)
     setClearEnd(false)
@@ -141,7 +346,7 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
       return
     }
     if (patchStart && startLocal.trim()) {
-      const probe = fromDatetimeLocalToIso(startLocal)
+      const probe = fromDateInputToStartDayIso(startLocal)
       if (probe == null) {
         toast({ title: "Start date không hợp lệ", variant: "destructive" })
         return
@@ -152,11 +357,11 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
       return
     }
 
-    const startIso = patchStart ? (startLocal.trim() ? fromDatetimeLocalToIso(startLocal) : null) : undefined
+    const startIso = patchStart ? (startLocal.trim() ? fromDateInputToStartDayIso(startLocal) : null) : undefined
 
     let endIso: string | null | undefined = undefined
     if (patchEnd) {
-      endIso = clearEnd ? null : fromDatetimeLocalToIso(endLocal)
+      endIso = clearEnd ? null : fromDateInputToEndDayIso(endLocal)
       if (!clearEnd && endIso == null) {
         toast({ title: "End date không hợp lệ", variant: "destructive" })
         return
@@ -214,7 +419,9 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
     }
   }
 
-  const colCount = canBulkEdit ? 5 : 4
+  const inlineEditBusy = inlineStartSaving || inlineEndSaving
+
+  const colCount = canBulkEdit ? 4 : 3
 
   return (
     <>
@@ -253,7 +460,6 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
               <TableHead className="min-w-[280px] w-[45%]">App</TableHead>
               <TableHead>Start date</TableHead>
               <TableHead>End date</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -261,7 +467,6 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
               const matchedApp = allApps?.find((a) => a.appId === row.appId)
               const appLabel = matchedApp?.displayName || matchedApp?.name || "Unknown app"
               const storeId = matchedApp?.appStoreId?.trim()
-              const active = row.endDate == null || row.endDate === ""
               const rid = row.id ?? 0
               const selectable = canBulkEdit && rid > 0
               return (
@@ -296,19 +501,107 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-slate-700 align-top">{formatMappingDate(row.startDate)}</TableCell>
-                  <TableCell className="text-sm text-slate-700 align-top">{formatMappingDate(row.endDate)}</TableCell>
-                  <TableCell className="align-top">
-                    <Badge
-                      variant="outline"
-                      className={
-                        active
-                          ? "border-green-200 bg-green-50 text-green-700 text-xs"
-                          : "border-slate-200 bg-slate-50 text-slate-600 text-xs"
-                      }
-                    >
-                      {active ? "Active" : "Ended"}
-                    </Badge>
+                  <TableCell className="text-sm text-slate-700 align-top min-w-[220px]">
+                    {canBulkEdit && rid > 0 && inlineStartEditId === rid ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        <input
+                          type="date"
+                          className="border rounded-md px-2 py-1 text-sm bg-background w-[11.5rem] max-w-full"
+                          value={inlineStartValue}
+                          onChange={(e) => setInlineStartValue(e.target.value)}
+                          disabled={inlineEditBusy}
+                          autoFocus
+                        />
+                        {inlineStartValue !== inlineStartBaseline ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            disabled={inlineEditBusy}
+                            title="Lưu"
+                            aria-label="Lưu"
+                            onClick={() => void saveInlineStartEdit()}
+                          >
+                            {inlineStartSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-slate-600 hover:bg-slate-100"
+                          disabled={inlineEditBusy}
+                          title="Hủy"
+                          aria-label="Hủy"
+                          onClick={cancelInlineStartEdit}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : canBulkEdit && rid > 0 ? (
+                      <button
+                        type="button"
+                        className="rounded px-1.5 py-0.5 -mx-1.5 text-left w-full max-w-full hover:bg-slate-100 text-slate-700 disabled:opacity-50 disabled:pointer-events-none"
+                        disabled={inlineEditBusy}
+                        onClick={() => beginInlineStartEdit(rid, row.startDate)}
+                      >
+                        {formatMappingDate(row.startDate)}
+                      </button>
+                    ) : (
+                      <span>{formatMappingDate(row.startDate)}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-700 align-top min-w-[220px]">
+                    {canBulkEdit && rid > 0 && inlineEndEditId === rid ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        <input
+                          type="date"
+                          className="border rounded-md px-2 py-1 text-sm bg-background w-[11.5rem] max-w-full"
+                          value={inlineEndValue}
+                          onChange={(e) => setInlineEndValue(e.target.value)}
+                          disabled={inlineEditBusy}
+                          autoFocus
+                        />
+                        {inlineEndValue !== inlineEndBaseline ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            disabled={inlineEditBusy}
+                            title="Lưu"
+                            aria-label="Lưu"
+                            onClick={() => void saveInlineEndEdit()}
+                          >
+                            {inlineEndSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-slate-600 hover:bg-slate-100"
+                          disabled={inlineEditBusy}
+                          title="Hủy"
+                          aria-label="Hủy"
+                          onClick={cancelInlineEndEdit}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : canBulkEdit && rid > 0 ? (
+                      <button
+                        type="button"
+                        className="rounded px-1.5 py-0.5 -mx-1.5 text-left w-full max-w-full hover:bg-slate-100 text-slate-700 disabled:opacity-50 disabled:pointer-events-none"
+                        disabled={inlineEditBusy}
+                        onClick={() => beginInlineEndEdit(rid, row.endDate)}
+                      >
+                        {formatMappingDate(row.endDate)}
+                      </button>
+                    ) : (
+                      <span>{formatMappingDate(row.endDate)}</span>
+                    )}
                   </TableCell>
                 </TableRow>
               )
@@ -329,17 +622,38 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
           <DialogHeader>
             <DialogTitle>Bulk edit Start / End date</DialogTitle>
             <DialogDescription>
-              Áp dụng cho {selectedIds.size} dòng đã chọn (theo <span className="font-mono">id</span> trên StarRocks).
+              Áp dụng cho {selectedIds.size} dòng đã chọn (theo <span className="font-mono">id</span> trên StarRocks). Chỉ chọn
+              ngày: Start lưu 00:00, End lưu cuối ngày (theo giờ trình duyệt).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="flex items-start gap-3 space-y-0">
               <Checkbox id="patch-start" checked={patchStart} onCheckedChange={(v) => setPatchStart(v === true)} />
               <div className="grid gap-2 flex-1">
-                <Label htmlFor="patch-start">Cập nhật Start date</Label>
+                <Label
+                  htmlFor="start-date"
+                  className="cursor-pointer select-none"
+                  onClick={(e) => {
+                    if (!patchStart) {
+                      e.preventDefault()
+                      setPatchStart(true)
+                      window.setTimeout(() => {
+                        const el = document.getElementById("start-date") as HTMLInputElement | null
+                        el?.focus()
+                        try {
+                          el?.showPicker?.()
+                        } catch {
+                          /* một số trình duyệt chặn showPicker nếu không có gesture */
+                        }
+                      }, 0)
+                    }
+                  }}
+                >
+                  Cập nhật Start date
+                </Label>
                 <input
-                  id="start-dt"
-                  type="datetime-local"
+                  id="start-date"
+                  type="date"
                   className="border rounded-md px-3 py-2 text-sm w-full max-w-full bg-background"
                   value={startLocal}
                   onChange={(e) => setStartLocal(e.target.value)}
@@ -350,10 +664,31 @@ export function AbUserAppMappingEditor({ userId, canBulkEdit, mappingCacheKey, f
             <div className="flex items-start gap-3 space-y-0">
               <Checkbox id="patch-end" checked={patchEnd} onCheckedChange={(v) => setPatchEnd(v === true)} />
               <div className="grid gap-2 flex-1">
-                <Label htmlFor="patch-end">Cập nhật End date</Label>
+                <Label
+                  htmlFor="end-date"
+                  className="cursor-pointer select-none"
+                  onClick={(e) => {
+                    if (!patchEnd || clearEnd) {
+                      e.preventDefault()
+                      setPatchEnd(true)
+                      setClearEnd(false)
+                      window.setTimeout(() => {
+                        const el = document.getElementById("end-date") as HTMLInputElement | null
+                        el?.focus()
+                        try {
+                          el?.showPicker?.()
+                        } catch {
+                          /* noop */
+                        }
+                      }, 0)
+                    }
+                  }}
+                >
+                  Cập nhật End date
+                </Label>
                 <input
-                  id="end-dt"
-                  type="datetime-local"
+                  id="end-date"
+                  type="date"
                   className="border rounded-md px-3 py-2 text-sm w-full max-w-full bg-background"
                   value={endLocal}
                   onChange={(e) => setEndLocal(e.target.value)}
