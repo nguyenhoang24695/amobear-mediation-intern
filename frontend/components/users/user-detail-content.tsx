@@ -716,9 +716,9 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
 
           <Card className="mt-6">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">AdUser App Mapping</CardTitle>
+              <CardTitle className="text-base font-semibold">History Permission</CardTitle>
               <p className="text-xs text-slate-500 mt-1">
-                Rows from <span className="font-mono">gold.ab_user_app_mapping</span> for this user&apos;s email (StarRocks).
+                Lịch sử phân quyền app từ <span className="font-mono">gold.ab_user_app_mapping</span> theo email user (StarRocks).
               </p>
             </CardHeader>
             <CardContent className="p-4 pt-0">

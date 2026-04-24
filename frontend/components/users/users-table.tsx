@@ -690,7 +690,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           }}
                         >
                           <Database className="w-4 h-4 mr-2" />
-                          AdUser App Mapping
+                          History Permission
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {user.status === "invited" && (
