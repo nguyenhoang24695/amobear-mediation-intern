@@ -67,6 +67,8 @@ const AUTH_MODE_OPTIONS = [
 ] as const
 
 const REQUIRED_SCOPES = ["ads_management", "ads_read"] as const
+const RECOMMENDED_SCOPES = ["pages_show_list", "pages_read_engagement"] as const
+const STABLE_SCOPE_HINT = [...REQUIRED_SCOPES, ...RECOMMENDED_SCOPES].join(", ")
 
 const emptyForm: CreateMetaIntegrationRequestDto = {
   displayName: "",
@@ -124,6 +126,19 @@ function getTokenStatusMessageClass(value?: string | null) {
       return "text-red-700"
     default:
       return "text-slate-700"
+  }
+}
+
+function getConnectionTestToast(result: MetaIntegrationTestResultDto): {
+  title: string
+  description: string
+  variant: "default" | "destructive"
+} {
+  const hasWarnings = result.warningMessages.length > 0
+  return {
+    title: result.success ? (hasWarnings ? "Connection valid with warnings" : "Connection valid") : "Connection failed",
+    description: hasWarnings ? result.warningMessages.join(" ") : result.message,
+    variant: result.success ? "default" : "destructive",
   }
 }
 
@@ -338,11 +353,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
         tokenExpiresAt: result.tokenExpiresAt ? result.tokenExpiresAt.slice(0, 16) : current.tokenExpiresAt,
         scopes: result.scopes.length > 0 ? result.scopes : current.scopes,
       }))
-      toast({
-        title: result.success ? "Connection valid" : "Connection failed",
-        description: result.message,
-        variant: result.success ? "default" : "destructive",
-      })
+      toast(getConnectionTestToast(result))
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to test the Meta integration."
       toast({ title: "Test failed", description: message, variant: "destructive" })
@@ -428,11 +439,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
       const result = await metaIntegrationsApi.testSaved(integration.id)
       invalidateCache("meta-integrations:list")
       await refetch()
-      toast({
-        title: result.success ? "Connection valid" : "Connection failed",
-        description: result.message,
-        variant: result.success ? "default" : "destructive",
-      })
+      toast(getConnectionTestToast(result))
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to test the integration."
       toast({ title: "Test failed", description: message, variant: "destructive" })
@@ -463,6 +470,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     testResult?.message ??
     (connectionStateDirty ? (editTarget ? "Connection test needs to be rerun after recent credential or permission changes." : null) : editTarget?.lastCheckMessage ?? null)
   const displayedScopes = testResult?.scopes.length ? testResult.scopes : form.scopes ?? []
+  const displayedWarnings = testResult?.warningMessages ?? []
   const showUserTokenWarning = form.authMode === "oauth_user"
   const canOpenDefaultDevOAuth = defaultIntegration?.authMode === "oauth_user"
 
@@ -745,9 +753,9 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                         .map((value) => value.trim())
                         .filter(Boolean),
                     })}
-                    placeholder="ads_management, ads_read"
+                    placeholder={STABLE_SCOPE_HINT}
                   />
-                  <p className="text-[11px] text-slate-400">Typical required scopes: ads_management, ads_read</p>
+                  <p className="text-[11px] text-slate-400">Recommended stable scopes: {STABLE_SCOPE_HINT}</p>
                 </div>
                 <div className="grid gap-3 rounded-md border border-slate-200 bg-white px-3 py-3 text-xs md:grid-cols-2">
                 <div>
@@ -766,6 +774,12 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                   <div className="md:col-span-2">
                     <p className="text-slate-500 mb-1">Last Check Message</p>
                     <p className={`text-sm ${getTokenStatusMessageClass(displayedTokenStatus)}`}>{displayedMessage}</p>
+                  </div>
+                ) : null}
+                {displayedWarnings.length > 0 ? (
+                  <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+                    <p className="mb-1 text-xs font-medium text-amber-900">Warnings</p>
+                    <p className="text-sm text-amber-800">{displayedWarnings.join(" ")}</p>
                   </div>
                 ) : null}
               </div>
@@ -803,3 +817,6 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     </div>
   )
 }
+
+
+
