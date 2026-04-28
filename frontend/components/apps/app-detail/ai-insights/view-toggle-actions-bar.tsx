@@ -25,14 +25,12 @@ import { useToast } from "@/hooks/use-toast"
 interface ViewToggleActionsBarProps {
   viewMode: "rendered" | "raw"
   onViewModeChange: (mode: "rendered" | "raw") => void
-  sections: Array<{ id: string; title: string }>
   content: string
 }
 
 export function ViewToggleActionsBar({
   viewMode,
   onViewModeChange,
-  sections,
   content,
 }: ViewToggleActionsBarProps) {
   const { toast } = useToast()
@@ -60,13 +58,6 @@ export function ViewToggleActionsBar({
       title: "Sharing to Lark",
       description: "Opening Lark share dialog...",
     })
-  }
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
   }
 
   return (
@@ -103,25 +94,6 @@ export function ViewToggleActionsBar({
             Raw
           </Button>
         </div>
-
-        {/* Quick Nav Pills */}
-        {viewMode === "rendered" && sections.length > 0 && (
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-xs text-slate-500">Jump to:</span>
-            <div className="flex items-center gap-1.5">
-              {sections.map((section) => (
-                <Badge
-                  key={section.id}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-colors"
-                  onClick={() => scrollToSection(section.title.toLowerCase().replace(/\s+/g, "-"))}
-                >
-                  {section.title}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Right: Actions */}

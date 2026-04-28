@@ -16,6 +16,7 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
   const [error, setError] = useState<string | null>(null)
   const [showSource, setShowSource] = useState(false)
   const [mermaidLoaded, setMermaidLoaded] = useState(false)
+  const normalizedChart = chart.replace(/\\n/g, "\n")
 
   useEffect(() => {
     // Dynamically import mermaid
@@ -60,7 +61,10 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
       try {
         const mermaid = (await import("mermaid")).default
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`
-        const { svg: renderedSvg } = await mermaid.render(id, chart)
+        // Mermaid can throw on unsupported syntaxes; never let it break the insight page layout.
+        // Also clear previous SVG so we don't show stale diagrams after an error.
+        setSvg("")
+        const { svg: renderedSvg } = await mermaid.render(id, normalizedChart)
         setSvg(renderedSvg)
         setError(null)
       } catch (err) {
@@ -70,7 +74,7 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
     }
 
     renderDiagram()
-  }, [chart, mermaidLoaded])
+  }, [chart, mermaidLoaded, normalizedChart])
 
   if (error) {
     return (
@@ -80,8 +84,8 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800">Diagram could not be rendered</p>
             <p className="text-xs text-amber-600 mt-1">{error}</p>
-            <pre className="mt-3 p-3 bg-amber-100 rounded text-xs font-mono text-amber-900 overflow-x-auto">
-              {chart}
+            <pre className="mt-3 p-3 bg-amber-100 rounded text-xs font-mono text-amber-900 overflow-auto max-h-64 whitespace-pre-wrap break-words">
+              {normalizedChart}
             </pre>
           </div>
         </div>
