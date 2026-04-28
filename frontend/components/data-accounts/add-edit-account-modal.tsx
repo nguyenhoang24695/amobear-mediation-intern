@@ -120,12 +120,16 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [appleName, setAppleName] = useState("")
   const [appleVendorNumber, setAppleVendorNumber] = useState("")
   const [appleAscPem, setAppleAscPem] = useState("")
+  const [appleAscFileName, setAppleAscFileName] = useState("")
   const [appleAscKeyId, setAppleAscKeyId] = useState("")
   const [appleAscIssuerId, setAppleAscIssuerId] = useState("")
   const [appleIapPem, setAppleIapPem] = useState("")
+  const [appleIapFileName, setAppleIapFileName] = useState("")
   const [appleIapKeyId, setAppleIapKeyId] = useState("")
   const [appleIapIssuerId, setAppleIapIssuerId] = useState("")
   const [appleSandbox, setAppleSandbox] = useState(false)
+  const [appleAscDragOver, setAppleAscDragOver] = useState(false)
+  const [appleIapDragOver, setAppleIapDragOver] = useState(false)
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -173,9 +177,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           setAppleName(editAccount.name)
           setAppleVendorNumber(editAccount.appleVendorNumber ?? "")
           setAppleAscPem("")
+          setAppleAscFileName("")
           setAppleAscKeyId(editAccount.appleAscKeyId ?? "")
           setAppleAscIssuerId(editAccount.appleAscIssuerId ?? "")
           setAppleIapPem("")
+          setAppleIapFileName("")
           setAppleIapKeyId(editAccount.appleIapKeyId ?? "")
           setAppleIapIssuerId(editAccount.appleIapIssuerId ?? "")
           setAppleSandbox(editAccount.appleUseSandboxStoreKit ?? false)
@@ -218,15 +224,49 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         setAppleName("")
         setAppleVendorNumber("")
         setAppleAscPem("")
+        setAppleAscFileName("")
         setAppleAscKeyId("")
         setAppleAscIssuerId("")
         setAppleIapPem("")
+        setAppleIapFileName("")
         setAppleIapKeyId("")
         setAppleIapIssuerId("")
         setAppleSandbox(false)
       }
     }
   }, [open, editAccount])
+
+  const readP8File = async (
+    file: File,
+    setPem: (v: string) => void,
+    setFileName: (v: string) => void,
+    errorKey: "appleAscPem" | "appleIapPem",
+  ) => {
+    const name = file?.name ?? ""
+    if (!name.toLowerCase().endsWith(".p8")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select a .p8 file",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const text = await file.text()
+    const trimmed = text.trim()
+    if (!trimmed.includes("BEGIN") || !trimmed.includes("PRIVATE KEY")) {
+      toast({
+        title: "Invalid .p8 content",
+        description: "The file does not look like a private key PEM.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setPem(trimmed)
+    setFileName(name)
+    setErrors((p) => ({ ...p, [errorKey]: "" }))
+  }
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -972,21 +1012,102 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="apple-asc-pem">
-                      Private key (.p8 PEM) {!isEdit && <span className="text-red-500">*</span>}
-                      {isEdit && <span className="text-slate-400 font-normal text-xs ml-1">(leave blank to keep)</span>}
+                      Private key (.p8 file) {!isEdit && <span className="text-red-500">*</span>}
+                      {isEdit && (
+                        <span className="text-slate-400 font-normal text-xs ml-1">
+                          (leave empty to keep stored key)
+                        </span>
+                      )}
                     </Label>
-                    <Textarea
-                      id="apple-asc-pem"
-                      rows={5}
-                      className={`font-mono text-xs min-h-[6rem] ${errors.appleAscPem ? "border-red-500" : ""}`}
-                      placeholder="-----BEGIN PRIVATE KEY----- ..."
-                      value={appleAscPem}
-                      onChange={(e) => {
-                        setAppleAscPem(e.target.value)
-                        setErrors((p) => ({ ...p, appleAscPem: "" }))
+                    <div
+                      className={[
+                        "relative flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-3 transition",
+                        appleAscDragOver ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200",
+                        errors.appleAscPem ? "border-red-500" : "",
+                      ].join(" ")}
+                      onDragEnter={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(true)
                       }}
-                      disabled={saving}
-                    />
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(true)
+                        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(false)
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(false)
+                        const f = e.dataTransfer?.files?.[0]
+                        if (!f) return
+                        await readP8File(f, setAppleAscPem, setAppleAscFileName, "appleAscPem")
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm text-slate-700">
+                          Drag & drop <span className="font-mono">AuthKey_*.p8</span> here, or{" "}
+                          <span className="text-blue-600 font-medium">click to upload</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                          {appleAscFileName
+                            ? `Selected: ${appleAscFileName}`
+                            : isEdit && editAccount?.appleHasAscPrivateKey
+                              ? "Stored key exists (upload a new .p8 to replace)"
+                              : "No file selected"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={saving}
+                          className="gap-2"
+                          onClick={() => document.getElementById("apple-asc-file")?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload
+                        </Button>
+                        {(appleAscPem.trim() || appleAscFileName) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={saving}
+                            onClick={() => {
+                              setAppleAscPem("")
+                              setAppleAscFileName("")
+                              setErrors((p) => ({ ...p, appleAscPem: "" }))
+                            }}
+                            className="gap-2 text-slate-600"
+                          >
+                            <X className="w-4 h-4" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
+                      <input
+                        id="apple-asc-file"
+                        type="file"
+                        accept=".p8"
+                        className="hidden"
+                        disabled={saving}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0]
+                          if (!f) return
+                          await readP8File(f, setAppleAscPem, setAppleAscFileName, "appleAscPem")
+                        }}
+                      />
+                    </div>
                     {errors.appleAscPem && <p className="text-xs text-red-500">{errors.appleAscPem}</p>}
                   </div>
                   <div className="space-y-2">
@@ -1025,21 +1146,102 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="apple-iap-pem">
-                      Private key (.p8 PEM) {!isEdit && <span className="text-red-500">*</span>}
-                      {isEdit && <span className="text-slate-400 font-normal text-xs ml-1">(leave blank to keep)</span>}
+                      Private key (.p8 file) {!isEdit && <span className="text-red-500">*</span>}
+                      {isEdit && (
+                        <span className="text-slate-400 font-normal text-xs ml-1">
+                          (leave empty to keep stored key)
+                        </span>
+                      )}
                     </Label>
-                    <Textarea
-                      id="apple-iap-pem"
-                      rows={5}
-                      className={`font-mono text-xs min-h-[6rem] ${errors.appleIapPem ? "border-red-500" : ""}`}
-                      placeholder="-----BEGIN PRIVATE KEY----- ..."
-                      value={appleIapPem}
-                      onChange={(e) => {
-                        setAppleIapPem(e.target.value)
-                        setErrors((p) => ({ ...p, appleIapPem: "" }))
+                    <div
+                      className={[
+                        "relative flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-3 transition",
+                        appleIapDragOver ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200",
+                        errors.appleIapPem ? "border-red-500" : "",
+                      ].join(" ")}
+                      onDragEnter={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(true)
                       }}
-                      disabled={saving}
-                    />
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(true)
+                        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(false)
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(false)
+                        const f = e.dataTransfer?.files?.[0]
+                        if (!f) return
+                        await readP8File(f, setAppleIapPem, setAppleIapFileName, "appleIapPem")
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm text-slate-700">
+                          Drag & drop <span className="font-mono">SubscriptionKey_*.p8</span> here, or{" "}
+                          <span className="text-blue-600 font-medium">click to upload</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                          {appleIapFileName
+                            ? `Selected: ${appleIapFileName}`
+                            : isEdit && editAccount?.appleHasIapPrivateKey
+                              ? "Stored key exists (upload a new .p8 to replace)"
+                              : "No file selected"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={saving}
+                          className="gap-2"
+                          onClick={() => document.getElementById("apple-iap-file")?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload
+                        </Button>
+                        {(appleIapPem.trim() || appleIapFileName) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={saving}
+                            onClick={() => {
+                              setAppleIapPem("")
+                              setAppleIapFileName("")
+                              setErrors((p) => ({ ...p, appleIapPem: "" }))
+                            }}
+                            className="gap-2 text-slate-600"
+                          >
+                            <X className="w-4 h-4" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
+                      <input
+                        id="apple-iap-file"
+                        type="file"
+                        accept=".p8"
+                        className="hidden"
+                        disabled={saving}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0]
+                          if (!f) return
+                          await readP8File(f, setAppleIapPem, setAppleIapFileName, "appleIapPem")
+                        }}
+                      />
+                    </div>
                     {errors.appleIapPem && <p className="text-xs text-red-500">{errors.appleIapPem}</p>}
                   </div>
                   <div className="space-y-2">
