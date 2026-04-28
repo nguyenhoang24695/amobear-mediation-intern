@@ -16,6 +16,7 @@ import type {
     TopApp,
     TopApps,
     TeamMember,
+    AbUserAppMappingRow,
     TeamMemberFilterRequest,
     PagedTeamMembersResponse,
     HangfireJobSchedule,
@@ -816,6 +817,25 @@ export const teamMembersApi = {
 
     viewProfile: async (userId: string): Promise<{ success: boolean; data?: TeamMember }> => {
         return apiClient.get(`/api/v1/team-members/view-profile/${userId}`)
+    },
+
+    getAbUserAppMapping: async (
+        userId: string
+    ): Promise<{ success: boolean; data?: AbUserAppMappingRow[]; message?: string }> => {
+        return apiClient.get(`/api/v1/team-members/ab-user-app-mapping/${userId}`)
+    },
+
+    bulkUpdateAbUserAppMappingDates: async (
+        userId: string,
+        body: {
+            mappingIds: number[]
+            patchStartDate: boolean
+            startDate?: string | null
+            patchEndDate: boolean
+            endDate?: string | null
+        }
+    ): Promise<{ success: boolean; updated?: number; requested?: number; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/ab-user-app-mapping/${userId}/bulk-update-dates`, body)
     },
 
     getMetaAdAccountPermissionOptions: async (): Promise<{ success: boolean; data: MetaAdAccountPermissionOption[] }> => {
