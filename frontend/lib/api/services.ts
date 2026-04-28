@@ -1952,7 +1952,7 @@ export const permissionApi = {
 export interface DataAccountItem {
     id: number
     name: string
-    network: 'admob' | 'applovin' | 'xmp' | 'appsflyer' | 'qonversion'
+    network: 'admob' | 'applovin' | 'xmp' | 'appsflyer' | 'qonversion' | 'apple'
     accountId: string
     status: string
     enabled: boolean
@@ -1985,6 +1985,18 @@ export interface DataAccountItem {
     qonHasDashboardCookie?: boolean
     qonDashboardAccountUid?: string | null
     qonDashboardCookieUpdatedAt?: string | null
+    appleVendorNumber?: string | null
+    appleAscKeyId?: string | null
+    appleAscIssuerId?: string | null
+    appleHasAscPrivateKey?: boolean
+    appleIapKeyId?: string | null
+    appleIapIssuerId?: string | null
+    appleHasIapPrivateKey?: boolean
+    appleUseSandboxStoreKit?: boolean
+    appleLastSalesSyncAt?: string | null
+    appleLastAnalyticsSyncAt?: string | null
+    appleLastFinanceSyncAt?: string | null
+    appleLastMappingSyncAt?: string | null
     createdAt: string
     updatedAt: string
 }
@@ -2020,6 +2032,14 @@ export interface CreateDataAccountRequest {
     qonGcsBucketName?: string
     qonDashboardCookie?: string
     qonDashboardAccountUid?: string
+    appleAscPrivateKeyPem?: string
+    appleVendorNumber?: string
+    appleAscKeyId?: string
+    appleAscIssuerId?: string
+    appleIapPrivateKeyPem?: string
+    appleIapKeyId?: string
+    appleIapIssuerId?: string
+    appleUseSandboxStoreKit?: boolean
 }
 
 export interface UpdateDataAccountRequest {
@@ -2047,6 +2067,48 @@ export interface UpdateDataAccountRequest {
     qonGcsBucketName?: string
     qonDashboardCookie?: string
     qonDashboardAccountUid?: string
+    appleAscPrivateKeyPem?: string
+    appleVendorNumber?: string
+    appleAscKeyId?: string
+    appleAscIssuerId?: string
+    appleIapPrivateKeyPem?: string
+    appleIapKeyId?: string
+    appleIapIssuerId?: string
+    appleUseSandboxStoreKit?: boolean | null
+}
+
+export type AppleFinanceArtifactItem = { objectName: string; lastModified: string }
+
+export const appleStoreApi = {
+    getReconciliation: async (startDate: string, endDate: string) => {
+        return apiClient.get<{ rows: Record<string, unknown>[]; total: number }>(
+            `/api/v1/apple-store/reconciliation?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+        )
+    },
+    getStoreDaily: async (startDate: string, endDate: string, appId?: string) => {
+        const q = appId ? `&appId=${encodeURIComponent(appId)}` : ""
+        return apiClient.get<{ rows: Record<string, unknown>[]; total: number }>(
+            `/api/v1/apple-store/store-daily?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}${q}`,
+        )
+    },
+    listFinanceArtifacts: async (vendorNumber: string, reportMonth?: string) => {
+        const p = new URLSearchParams({ vendorNumber })
+        if (reportMonth) p.set("reportMonth", reportMonth)
+        return apiClient.get<{ bucket: string; prefix: string; items: AppleFinanceArtifactItem[]; total: number }>(
+            `/api/v1/apple-store/finance-artifacts?${p.toString()}`,
+        )
+    },
+    downloadFinanceArtifactBlob: async (objectName: string) => {
+        return apiClient.getBlob(`/api/v1/apple-store/finance-artifact?objectName=${encodeURIComponent(objectName)}`)
+    },
+    getSubscriptionStatusJson: async (accountId: number, bundleId: string, originalTransactionId: string) => {
+        const q = new URLSearchParams({
+            accountId: String(accountId),
+            bundleId,
+            originalTransactionId,
+        })
+        return apiClient.get<unknown>(`/api/v1/apple-store/subscription-status?${q.toString()}`)
+    },
 }
 
 export interface AppsFlyerAppAdminItem {
