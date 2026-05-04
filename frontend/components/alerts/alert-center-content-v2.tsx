@@ -36,7 +36,6 @@ import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { AlertAppAvatar } from "./alert-app-avatar"
 import { alertsApi, organizationsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
-import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./alert-center-view-model"
 import type { AlertApiItem } from "./alert-center-view-model"
 import { useToast } from "@/hooks/use-toast"
@@ -318,11 +317,36 @@ export function AlertCenterContentV2() {
     return m
   }, [orgUsersPage])
 
-  const { alerts, loading, refetch } = useAlertNotifications({ inAppOnly: false })
   const [requiresAttentionPage, setRequiresAttentionPage] = useState(1)
   const [requiresAttentionPageSize, setRequiresAttentionPageSize] = useState(10)
   const [markReadLoading, setMarkReadLoading] = useState(false)
-  const uiAlerts = useMemo(() => toUiAlertList(alerts as AlertApiItem[]), [alerts])
+
+  const canViewAlertCenter = useMemo(
+    () => hasScreenFunction("s-alerts", "view") || hasScreenFunction("s-alerts", "setting-my-alerts"),
+    [],
+  )
+
+  const apiListSeverity = severity === "All" ? undefined : severity
+  const apiListAppId = appFilter.trim() || undefined
+
+  const { data: openAlertsPage, loading, refetch } = useApi(
+    () =>
+      alertsApi.getOpenAlerts({
+        page: requiresAttentionPage,
+        pageSize: requiresAttentionPageSize,
+        appId: apiListAppId,
+        severity: apiListSeverity,
+      }),
+    {
+      enabled: canViewAlertCenter && (centerTab === "alerts" || centerTab === "my-alerts"),
+      cacheKey: `alert_center_v2_open_${centerTab}_${requiresAttentionPage}_${requiresAttentionPageSize}_${apiListAppId ?? ""}_${apiListSeverity ?? "all"}`,
+    },
+  )
+
+  const uiAlerts = useMemo(
+    () => toUiAlertList((openAlertsPage?.Data ?? []) as AlertApiItem[]),
+    [openAlertsPage],
+  )
 
   const filterAppsOptions = useMemo(() => {
     return (appsData?.apps ?? []).map((app) => ({
@@ -405,12 +429,7 @@ export function AlertCenterContentV2() {
     privateRuleIdSet,
   ])
 
-  const requiresAttentionTotalPages = Math.max(1, Math.ceil(filteredAlerts.length / requiresAttentionPageSize))
-
-  const paginatedRequiresAttention = useMemo(() => {
-    const start = (requiresAttentionPage - 1) * requiresAttentionPageSize
-    return filteredAlerts.slice(start, start + requiresAttentionPageSize)
-  }, [filteredAlerts, requiresAttentionPage, requiresAttentionPageSize])
+  const requiresAttentionTotalPages = Math.max(1, openAlertsPage?.TotalPages ?? 1)
 
   useEffect(() => {
     setRequiresAttentionPage(1)
@@ -432,7 +451,6 @@ export function AlertCenterContentV2() {
         updatedTotal += res.updated ?? 0
       }
       invalidateAlertCaches()
-      await refetch()
       toast({
         title: "Marked as read",
         description:
@@ -451,7 +469,7 @@ export function AlertCenterContentV2() {
   const criticalCount = summary?.BySeverity?.HIGH ?? 0
   const warningCount = summary?.BySeverity?.MEDIUM ?? 0
   const infoCount = summary?.BySeverity?.LOW ?? 0
-  const totalOpen = summary?.Total ?? uiAlerts.length
+  const totalOpen = summary?.Total ?? 0
 
   const myAlertsSeverityCounts = useMemo(() => {
     if (!isMyAlertsTab) return null
@@ -532,10 +550,12 @@ export function AlertCenterContentV2() {
   )
 
   const invalidateAlertCaches = () => {
+    invalidateCache("notification_open_alerts_in_app")
     invalidateCache("notification_open_alerts_all")
     invalidateCache("alerts_open_summary")
     invalidateCache("alerts_open_summary_v2")
     void refetchOpenAlertsSummary()
+    void refetch()
   }
 
   const bumpTimeline = useCallback(() => setTimelineNonce((n) => n + 1), [])
@@ -1096,7 +1116,7 @@ export function AlertCenterContentV2() {
           <h2 className="text-xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
             Requires Attention
-            <Badge className="bg-red-100 text-red-700">{filteredAlerts.length}</Badge>
+            <Badge className="bg-red-100 text-red-700">{openAlertsPage?.TotalCount ?? filteredAlerts.length}</Badge>
           </h2>
           <Button
             type="button"
@@ -1156,7 +1176,7 @@ export function AlertCenterContentV2() {
         ) : (
           <div className="space-y-4">
             <div className="space-y-4">
-              {paginatedRequiresAttention.map((alert) => (
+              {filteredAlerts.map((alert) => (
                 <Card
                   key={alert.id}
                   className={`border-l-4 ${
@@ -1229,11 +1249,11 @@ export function AlertCenterContentV2() {
                 </Card>
               ))}
             </div>
-            {filteredAlerts.length > 0 ? (
+            {openAlertsPage && openAlertsPage.TotalCount > 0 ? (
               <Pagination
                 currentPage={requiresAttentionPage}
                 totalPages={requiresAttentionTotalPages}
-                totalItems={filteredAlerts.length}
+                totalItems={openAlertsPage.TotalCount}
                 pageSize={requiresAttentionPageSize}
                 onPageChange={setRequiresAttentionPage}
                 onPageSizeChange={(size) => {
