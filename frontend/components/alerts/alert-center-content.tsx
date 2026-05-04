@@ -271,7 +271,7 @@ export function AlertCenterContent() {
                 </CardContent>
               </Card>
             )
-          })
+          })}
           {openList && openList.TotalCount > 0 ? (
               <Pagination
                 currentPage={listPage}
