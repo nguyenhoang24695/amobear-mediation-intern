@@ -1,17 +1,18 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Search, Download, Settings, AlertTriangle, AlertCircle, Info, ShieldCheck, ExternalLink } from "lucide-react"
 import { alertsApi } from "@/lib/api/services"
-import { useApi } from "@/hooks/use-api"
-import { useAlertNotifications } from "@/hooks/use-alert-notifications"
+import { invalidateCache, useApi } from "@/hooks/use-api"
+import { hasScreenFunction } from "@/lib/auth"
+import { Pagination } from "@/components/shared/pagination"
 import { cn } from "@/lib/utils"
 import { formatAlertCardTitle } from "@/components/alerts/alert-center-view-model"
 import { AlertRulesPanel } from "./alert-rules-panel"
@@ -48,11 +49,26 @@ const severityStyles = {
   },
 } as const
 
+const DEFAULT_LIST_PAGE_SIZE = 20
+
 export function AlertCenterContent() {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
   const [severity, setSeverity] = useState("All")
   const [alertRulesPanelOpen, setAlertRulesPanelOpen] = useState(false)
+  const [listPage, setListPage] = useState(1)
+  const [listPageSize, setListPageSize] = useState(DEFAULT_LIST_PAGE_SIZE)
+
+  const canViewAlertCenter = useMemo(
+    () => hasScreenFunction("s-alerts", "view") || hasScreenFunction("s-alerts", "setting-my-alerts"),
+    [],
+  )
+
+  const apiSeverity = severity !== "All" ? severity : undefined
+  const listCacheKey = useMemo(
+    () => `alert_center_v1_${listPage}_${listPageSize}_${apiSeverity ?? "all"}`,
+    [listPage, listPageSize, apiSeverity],
+  )
 
   useEffect(() => {
     const severityParam = searchParams.get("severity")
@@ -68,19 +84,50 @@ export function AlertCenterContent() {
     { cacheKey: "alerts_open_summary" }
   )
 
-  const { alerts, loading, openAlertIds, markAlertsViewed } = useAlertNotifications({ inAppOnly: false })
+  const { data: openList, loading, refetch: refetchOpenList } = useApi(
+    () => alertsApi.getOpenAlerts({ page: listPage, pageSize: listPageSize, severity: apiSeverity }),
+    { cacheKey: listCacheKey, enabled: canViewAlertCenter },
+  )
+
+  const alerts = openList?.Data ?? []
+
+  const openAlertIds = useMemo(() => alerts.map((a) => a.id), [alerts])
+
+  const markAlertsViewed = useCallback(
+    async (alertIds: number[]) => {
+      if (!canViewAlertCenter || alertIds.length === 0) return
+      try {
+        const { updated } = await alertsApi.markOpenAlertsViewed(alertIds)
+        if (updated > 0) {
+          invalidateCache("notification_open_alerts_in_app")
+          invalidateCache("notification_open_alerts_all")
+          invalidateCache("alerts_open_summary")
+          invalidateCache(listCacheKey)
+          await refetchOpenList()
+        }
+      } catch {
+      }
+    },
+    [canViewAlertCenter, listCacheKey, refetchOpenList],
+  )
 
   useEffect(() => {
     if (openAlertIds.length === 0) return
     void markAlertsViewed(openAlertIds)
   }, [markAlertsViewed, openAlertIds])
 
+  useEffect(() => {
+    setListPage(1)
+  }, [severity, searchQuery])
+
+  const listTotalPages = Math.max(1, openList?.TotalPages ?? 1)
+
+  useEffect(() => {
+    setListPage((p) => Math.min(Math.max(1, p), listTotalPages))
+  }, [listTotalPages])
+
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
-      if (severity !== "All" && alert.severity?.toUpperCase() !== severity) {
-        return false
-      }
-
       if (!searchQuery) return true
       const q = searchQuery.toLowerCase()
       return (
@@ -92,7 +139,7 @@ export function AlertCenterContent() {
         (alert.mediationGroupId ?? "").toLowerCase().includes(q)
       )
     })
-  }, [alerts, severity, searchQuery])
+  }, [alerts, searchQuery])
 
   const criticalCount = summary?.BySeverity?.HIGH ?? 0
   const warningCount = summary?.BySeverity?.MEDIUM ?? 0
@@ -224,7 +271,21 @@ export function AlertCenterContent() {
                 </CardContent>
               </Card>
             )
-          })}
+          })
+          {openList && openList.TotalCount > 0 ? (
+              <Pagination
+                currentPage={listPage}
+                totalPages={listTotalPages}
+                totalItems={openList.TotalCount}
+                pageSize={listPageSize}
+                onPageChange={setListPage}
+                onPageSizeChange={(size) => {
+                  setListPageSize(size)
+                  setListPage(1)
+                }}
+                itemName="alerts"
+              />
+            ) : null}
         </div>
       ) : (
         <Card className="border-slate-200">
