@@ -47,6 +47,7 @@ import {
   GitMerge,
   Database,
   Sparkles,
+  Apple,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -103,6 +104,12 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
     isShow: () => hasScreenFunction("s-data-accounts", "view") || hasScreenFunction("s-meta-accounts", "view"),
   },
   { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
+  {
+    icon: Apple,
+    label: "Apple App Store",
+    href: "/data-sources/apple",
+    isShow: () => hasScreenFunction("s-data-accounts", "view"),
+  },
   {
     icon: Sparkles,
     label: "AI Insight Templates",

@@ -24,19 +24,6 @@ interface Props {
   initialDateYmd?: string | null
 }
 
-function extractSectionIds(markdown: string): { id: string; title: string }[] {
-  const lines = markdown.split("\n")
-  const out: { id: string; title: string }[] = []
-  for (const line of lines) {
-    if (line.startsWith("## ")) {
-      const title = line.slice(3).trim()
-      const id = title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "")
-      out.push({ id, title })
-    }
-  }
-  return out
-}
-
 export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
   const { toast } = useToast()
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered")
@@ -202,7 +189,6 @@ export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
   }
 
   const score = insight.healthScore ?? 0
-  const sections = extractSectionIds(insight.markdownBody || "")
   const generatedAt = insight.updatedAt ?? insight.createdAt ?? null
 
   return (
@@ -234,7 +220,6 @@ export function AppAiInsightsTab({ appId, initialDateYmd }: Props) {
       <ViewToggleActionsBar
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        sections={sections}
         content={insight.markdownBody}
       />
 

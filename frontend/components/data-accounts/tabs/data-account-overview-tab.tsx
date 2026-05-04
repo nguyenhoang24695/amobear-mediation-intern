@@ -21,7 +21,7 @@ import { dataAccountsApi, type AccountAppItem } from "@/lib/api/services"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion"
+type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple"
 
 interface OverviewProps {
   account: {
@@ -59,6 +59,18 @@ interface OverviewProps {
     qonHasDashboardCookie?: boolean
     qonDashboardAccountUid?: string | null
     qonDashboardCookieUpdatedAt?: string | null
+    appleVendorNumber?: string | null
+    appleAscKeyId?: string | null
+    appleAscIssuerId?: string | null
+    appleHasAscPrivateKey?: boolean
+    appleIapKeyId?: string | null
+    appleIapIssuerId?: string | null
+    appleHasIapPrivateKey?: boolean
+    appleUseSandboxStoreKit?: boolean
+    appleLastSalesSyncAt?: string | null
+    appleLastAnalyticsSyncAt?: string | null
+    appleLastFinanceSyncAt?: string | null
+    appleLastMappingSyncAt?: string | null
     createdAt?: string
     updatedAt?: string
   }
@@ -169,6 +181,23 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
               </>
             )}
 
+            {account.network === "apple" && (
+              <>
+                <DetailItem label="Vendor number" value={account.appleVendorNumber || "—"} isCode={!!account.appleVendorNumber} />
+                <DetailItem label="ASC Key ID" value={account.appleAscKeyId || "—"} isCode={!!account.appleAscKeyId} />
+                <DetailItem label="ASC Issuer ID" value={account.appleAscIssuerId || "—"} isCode={!!account.appleAscIssuerId} />
+                <DetailItem label="ASC private key stored" value={account.appleHasAscPrivateKey ? "Yes" : "No"} />
+                <DetailItem label="IAP Key ID" value={account.appleIapKeyId || "—"} isCode={!!account.appleIapKeyId} />
+                <DetailItem label="IAP Issuer ID" value={account.appleIapIssuerId || "—"} isCode={!!account.appleIapIssuerId} />
+                <DetailItem label="IAP private key stored" value={account.appleHasIapPrivateKey ? "Yes" : "No"} />
+                <DetailItem label="StoreKit sandbox" value={account.appleUseSandboxStoreKit ? "Yes" : "No"} />
+                <DetailItem label="Last mapping sync" value={formatDate(account.appleLastMappingSyncAt ?? undefined)} />
+                <DetailItem label="Last sales sync" value={formatDate(account.appleLastSalesSyncAt ?? undefined)} />
+                <DetailItem label="Last analytics sync" value={formatDate(account.appleLastAnalyticsSyncAt ?? undefined)} />
+                <DetailItem label="Last finance sync" value={formatDate(account.appleLastFinanceSyncAt ?? undefined)} />
+              </>
+            )}
+
             {account.network === "qonversion" && (
               <>
                 <DetailItem label="Project Key" value={account.qonProjectKey || "—"} isCode={!!account.qonProjectKey} />
@@ -228,7 +257,9 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
                     ? "Manage AppsFlyer app IDs on the AF Apps tab"
                     : account.network === "qonversion"
                       ? "App-level Qon toggles are under each app’s Settings tab"
-                      : "App listing is only available for AdMob accounts"}
+                      : account.network === "apple"
+                        ? "App ↔ Apple App ID mappings sync from App Store Connect (Hangfire job)"
+                        : "App listing is only available for AdMob accounts"}
               </p>
             </div>
           ) : (

@@ -40,7 +40,7 @@ import { useApi, invalidateCache } from "@/hooks/use-api"
 import { dataAccountsApi, type DataAccountItem } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 
-type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion"
+type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple"
 
 const networkConfig: Record<NetworkType, { label: string; color: string; badgeClass: string }> = {
   admob: { label: "AdMob", color: "bg-blue-500", badgeClass: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -48,6 +48,7 @@ const networkConfig: Record<NetworkType, { label: string; color: string; badgeCl
   xmp: { label: "XMP / Mintegral", color: "bg-purple-500", badgeClass: "bg-purple-100 text-purple-700 border-purple-200" },
   appsflyer: { label: "AppsFlyer", color: "bg-sky-500", badgeClass: "bg-sky-100 text-sky-800 border-sky-200" },
   qonversion: { label: "Qonversion", color: "bg-fuchsia-500", badgeClass: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200" },
+  apple: { label: "Apple App Store", color: "bg-slate-600", badgeClass: "bg-slate-100 text-slate-800 border-slate-200" },
 }
 
 const statusConfig: Record<string, { label: string; badgeClass: string; dotClass: string }> = {
@@ -59,13 +60,14 @@ const statusConfig: Record<string, { label: string; badgeClass: string; dotClass
 // ─── Network avatar icon ──────────────────────────────────────────────────────
 
 function NetworkAvatar({ network }: { network: NetworkType }) {
-  const initials: Record<NetworkType, string> = { admob: "AM", applovin: "AL", xmp: "XM", appsflyer: "AF", qonversion: "QO" }
+  const initials: Record<NetworkType, string> = { admob: "AM", applovin: "AL", xmp: "XM", appsflyer: "AF", qonversion: "QO", apple: "AP" }
   const colors: Record<NetworkType, string> = {
     admob: "bg-blue-100 text-blue-700",
     applovin: "bg-green-100 text-green-700",
     xmp: "bg-purple-100 text-purple-700",
     appsflyer: "bg-sky-100 text-sky-800",
     qonversion: "bg-fuchsia-100 text-fuchsia-800",
+    apple: "bg-slate-200 text-slate-800",
   }
   return (
     <div className={`h-16 w-16 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${colors[network]}`}>
@@ -88,7 +90,7 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
 // ─── Parse composite ID ───────────────────────────────────────────────────────
 
 function parseAccountId(compositeId: string): { network: string; id: number } | null {
-  const match = compositeId.match(/^(admob|applovin|xmp|appsflyer|qonversion)-(\d+)$/)
+  const match = compositeId.match(/^(admob|applovin|xmp|appsflyer|qonversion|apple)-(\d+)$/)
   if (!match) return null
   return { network: match[1], id: Number(match[2]) }
 }
@@ -135,9 +137,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     )
   }
 
-  const net =
-    networkConfig[account.network as NetworkType] ??
-    networkConfig.admob
+  const net = networkConfig[account.network as NetworkType] ?? networkConfig.admob
   const stat = statusConfig[account.status] || statusConfig.active
 
 
@@ -172,7 +172,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
   const editAccountData = {
     id: String(account.id),
     name: account.name,
-    network: account.network as "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion",
+    network: account.network as "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple",
     publisherId: account.network === "admob" ? account.accountId : undefined,
     clientId: account.network === "admob" ? account.clientId : undefined,
     clientSecret: account.network === "admob" ? account.clientSecret : undefined,
@@ -190,6 +190,14 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     qonApiBaseUrl: account.network === "qonversion" ? account.qonApiBaseUrl : undefined,
     qonGcsBucketName: account.network === "qonversion" ? account.qonGcsBucketName ?? undefined : undefined,
     qonHasGcsJson: account.network === "qonversion" ? account.qonHasGcsJson : undefined,
+    appleVendorNumber: account.network === "apple" ? account.appleVendorNumber ?? undefined : undefined,
+    appleAscKeyId: account.network === "apple" ? account.appleAscKeyId ?? undefined : undefined,
+    appleAscIssuerId: account.network === "apple" ? account.appleAscIssuerId ?? undefined : undefined,
+    appleHasAscPrivateKey: account.network === "apple" ? account.appleHasAscPrivateKey : undefined,
+    appleIapKeyId: account.network === "apple" ? account.appleIapKeyId ?? undefined : undefined,
+    appleIapIssuerId: account.network === "apple" ? account.appleIapIssuerId ?? undefined : undefined,
+    appleHasIapPrivateKey: account.network === "apple" ? account.appleHasIapPrivateKey : undefined,
+    appleUseSandboxStoreKit: account.network === "apple" ? account.appleUseSandboxStoreKit : undefined,
   }
 
   // Build account-like object for tabs that expect it
@@ -242,6 +250,18 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
     qonHasDashboardCookie: account.qonHasDashboardCookie,
     qonDashboardAccountUid: account.qonDashboardAccountUid,
     qonDashboardCookieUpdatedAt: account.qonDashboardCookieUpdatedAt,
+    appleVendorNumber: account.appleVendorNumber,
+    appleAscKeyId: account.appleAscKeyId,
+    appleAscIssuerId: account.appleAscIssuerId,
+    appleHasAscPrivateKey: account.appleHasAscPrivateKey,
+    appleIapKeyId: account.appleIapKeyId,
+    appleIapIssuerId: account.appleIapIssuerId,
+    appleHasIapPrivateKey: account.appleHasIapPrivateKey,
+    appleUseSandboxStoreKit: account.appleUseSandboxStoreKit,
+    appleLastSalesSyncAt: account.appleLastSalesSyncAt,
+    appleLastAnalyticsSyncAt: account.appleLastAnalyticsSyncAt,
+    appleLastFinanceSyncAt: account.appleLastFinanceSyncAt,
+    appleLastMappingSyncAt: account.appleLastMappingSyncAt,
   }
 
   return (
@@ -274,8 +294,15 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-
-
+            {account.network === "apple" && account.appleVendorNumber && (
+              <Button variant="outline" className="gap-2 bg-transparent" size="sm" asChild>
+                <Link
+                  href={`/data-sources/apple?vendor=${encodeURIComponent(account.appleVendorNumber)}`}
+                >
+                  Apple insights
+                </Link>
+              </Button>
+            )}
             <Button
               variant="outline"
               className="gap-2 bg-transparent"

@@ -25,7 +25,7 @@ import { dataAccountsApi } from "@/lib/api/services"
 export interface DataAccount {
   id: string
   name: string
-  network: "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion"
+  network: "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple"
   // admob
   publisherId?: string
   defaultAppType?: string
@@ -48,6 +48,14 @@ export interface DataAccount {
   qonApiBaseUrl?: string
   qonGcsBucketName?: string
   qonHasGcsJson?: boolean
+  appleVendorNumber?: string
+  appleAscKeyId?: string
+  appleAscIssuerId?: string
+  appleHasAscPrivateKey?: boolean
+  appleIapKeyId?: string
+  appleIapIssuerId?: string
+  appleHasIapPrivateKey?: boolean
+  appleUseSandboxStoreKit?: boolean
 }
 
 interface AddEditAccountModalProps {
@@ -62,7 +70,7 @@ type TestState = "idle" | "loading" | "success" | "error"
 export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }: AddEditAccountModalProps) {
   const isEdit = !!editAccount
 
-  const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp" | "appsflyer" | "qonversion">("admob")
+  const [activeTab, setActiveTab] = useState<"admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple">("admob")
   const [saving, setSaving] = useState(false)
   const [testState, setTestState] = useState<TestState>("idle")
 
@@ -109,6 +117,20 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [qonIsDefault, setQonIsDefault] = useState(false)
   const [showQonSecret, setShowQonSecret] = useState(false)
 
+  const [appleName, setAppleName] = useState("")
+  const [appleVendorNumber, setAppleVendorNumber] = useState("")
+  const [appleAscPem, setAppleAscPem] = useState("")
+  const [appleAscFileName, setAppleAscFileName] = useState("")
+  const [appleAscKeyId, setAppleAscKeyId] = useState("")
+  const [appleAscIssuerId, setAppleAscIssuerId] = useState("")
+  const [appleIapPem, setAppleIapPem] = useState("")
+  const [appleIapFileName, setAppleIapFileName] = useState("")
+  const [appleIapKeyId, setAppleIapKeyId] = useState("")
+  const [appleIapIssuerId, setAppleIapIssuerId] = useState("")
+  const [appleSandbox, setAppleSandbox] = useState(false)
+  const [appleAscDragOver, setAppleAscDragOver] = useState(false)
+  const [appleIapDragOver, setAppleIapDragOver] = useState(false)
+
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Reset / pre-fill on open
@@ -151,6 +173,18 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           setQonDashboardCookie("")
           setQonDashboardUid("")
           setQonIsDefault(editAccount.isDefault ?? false)
+        } else if (editAccount.network === "apple") {
+          setAppleName(editAccount.name)
+          setAppleVendorNumber(editAccount.appleVendorNumber ?? "")
+          setAppleAscPem("")
+          setAppleAscFileName("")
+          setAppleAscKeyId(editAccount.appleAscKeyId ?? "")
+          setAppleAscIssuerId(editAccount.appleAscIssuerId ?? "")
+          setAppleIapPem("")
+          setAppleIapFileName("")
+          setAppleIapKeyId(editAccount.appleIapKeyId ?? "")
+          setAppleIapIssuerId(editAccount.appleIapIssuerId ?? "")
+          setAppleSandbox(editAccount.appleUseSandboxStoreKit ?? false)
         } else {
           setXmpName(editAccount.name)
           setXmpClientId(editAccount.xmpClientId ?? "")
@@ -187,9 +221,52 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
         setQonDashboardCookie("")
         setQonDashboardUid("")
         setQonIsDefault(false)
+        setAppleName("")
+        setAppleVendorNumber("")
+        setAppleAscPem("")
+        setAppleAscFileName("")
+        setAppleAscKeyId("")
+        setAppleAscIssuerId("")
+        setAppleIapPem("")
+        setAppleIapFileName("")
+        setAppleIapKeyId("")
+        setAppleIapIssuerId("")
+        setAppleSandbox(false)
       }
     }
   }, [open, editAccount])
+
+  const readP8File = async (
+    file: File,
+    setPem: (v: string) => void,
+    setFileName: (v: string) => void,
+    errorKey: "appleAscPem" | "appleIapPem",
+  ) => {
+    const name = file?.name ?? ""
+    if (!name.toLowerCase().endsWith(".p8")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select a .p8 file",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const text = await file.text()
+    const trimmed = text.trim()
+    if (!trimmed.includes("BEGIN") || !trimmed.includes("PRIVATE KEY")) {
+      toast({
+        title: "Invalid .p8 content",
+        description: "The file does not look like a private key PEM.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setPem(trimmed)
+    setFileName(name)
+    setErrors((p) => ({ ...p, [errorKey]: "" }))
+  }
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -203,6 +280,17 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
       if (!isEdit && !afApiV2Token.trim()) newErrors.afApiV2Token = "API V2 token is required"
     } else if (activeTab === "qonversion") {
       if (!qonName.trim()) newErrors.qonName = "Account name is required"
+    } else if (activeTab === "apple") {
+      if (!appleName.trim()) newErrors.appleName = "Account name is required"
+      if (!appleVendorNumber.trim()) newErrors.appleVendorNumber = "Vendor number is required"
+      if (!appleAscKeyId.trim()) newErrors.appleAscKeyId = "ASC Key ID is required"
+      if (!appleAscIssuerId.trim()) newErrors.appleAscIssuerId = "ASC Issuer ID is required"
+      if (!appleIapKeyId.trim()) newErrors.appleIapKeyId = "IAP Key ID is required"
+      if (!appleIapIssuerId.trim()) newErrors.appleIapIssuerId = "IAP Issuer ID is required"
+      if (!isEdit) {
+        if (!appleAscPem.trim()) newErrors.appleAscPem = "ASC private key (.p8 PEM) is required"
+        if (!appleIapPem.trim()) newErrors.appleIapPem = "IAP private key (.p8 PEM) is required"
+      }
     } else {
       if (!xmpName.trim()) newErrors.xmpName = "Account name is required"
       if (!xmpClientId.trim()) newErrors.xmpClientId = "Client ID is required"
@@ -224,7 +312,9 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             ? appsflyerName
             : activeTab === "qonversion"
               ? qonName
-              : xmpName
+              : activeTab === "apple"
+                ? appleName
+                : xmpName
     const success = !currentName.toLowerCase().includes("error")
     setTestState(success ? "success" : "error")
     // Auto-reset after 3s
@@ -278,6 +368,18 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             ...(qonDashboardCookie.trim() ? { qonDashboardCookie: qonDashboardCookie.trim() } : {}),
             ...(qonDashboardUid.trim() ? { qonDashboardAccountUid: qonDashboardUid.trim() } : {}),
           })
+        } else if (network === "apple") {
+          await dataAccountsApi.update(network, id, {
+            name: appleName.trim(),
+            appleVendorNumber: appleVendorNumber.trim(),
+            appleAscKeyId: appleAscKeyId.trim(),
+            appleAscIssuerId: appleAscIssuerId.trim(),
+            ...(appleAscPem.trim() ? { appleAscPrivateKeyPem: appleAscPem.trim() } : {}),
+            appleIapKeyId: appleIapKeyId.trim(),
+            appleIapIssuerId: appleIapIssuerId.trim(),
+            ...(appleIapPem.trim() ? { appleIapPrivateKeyPem: appleIapPem.trim() } : {}),
+            appleUseSandboxStoreKit: appleSandbox,
+          })
         } else {
           await dataAccountsApi.update(network, id, {
             name: xmpName.trim(),
@@ -329,6 +431,19 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             qonDashboardCookie: qonDashboardCookie.trim() || undefined,
             qonDashboardAccountUid: qonDashboardUid.trim() || undefined,
           })
+        } else if (activeTab === "apple") {
+          await dataAccountsApi.create({
+            network: "apple",
+            name: appleName.trim(),
+            appleVendorNumber: appleVendorNumber.trim(),
+            appleAscPrivateKeyPem: appleAscPem.trim(),
+            appleAscKeyId: appleAscKeyId.trim(),
+            appleAscIssuerId: appleAscIssuerId.trim(),
+            appleIapPrivateKeyPem: appleIapPem.trim(),
+            appleIapKeyId: appleIapKeyId.trim(),
+            appleIapIssuerId: appleIapIssuerId.trim(),
+            appleUseSandboxStoreKit: appleSandbox,
+          })
         } else {
           await dataAccountsApi.create({
             network: "xmp",
@@ -366,7 +481,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Data Account" : "Add Data Account"}</DialogTitle>
           <DialogDescription>
@@ -387,12 +502,13 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               }
             }}
           >
-            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
+            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
               <TabsTrigger value="admob">AdMob</TabsTrigger>
               <TabsTrigger value="applovin">AppLovin</TabsTrigger>
               <TabsTrigger value="xmp">XMP</TabsTrigger>
               <TabsTrigger value="appsflyer">AppsFlyer</TabsTrigger>
               <TabsTrigger value="qonversion">Qonversion</TabsTrigger>
+              <TabsTrigger value="apple">Apple</TabsTrigger>
             </TabsList>
 
             {/* ── AdMob Tab ── */}
@@ -846,6 +962,323 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                 <Switch id="qon-default" checked={qonIsDefault} onCheckedChange={setQonIsDefault} disabled={saving} />
                 <Label htmlFor="qon-default" className="font-normal cursor-pointer">
                   Default Qonversion account (web crawler + optional legacy jobs use GetDefault)
+                </Label>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="apple" className="mt-5 min-w-0 space-y-4">
+              <p className="text-sm text-slate-600 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                App Store Connect API (ASC key) for sales, finance, analytics, and catalog. In-App Purchase key for
+                StoreKit Server API. Keys are encrypted in the database; paste full <span className="font-mono">.p8</span> PEM
+                including <span className="font-mono">BEGIN/END</span> lines.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="apple-name">
+                  Account name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="apple-name"
+                  placeholder="e.g. Apple — production vendor"
+                  value={appleName}
+                  onChange={(e) => {
+                    setAppleName(e.target.value)
+                    setErrors((p) => ({ ...p, appleName: "" }))
+                  }}
+                  className={errors.appleName ? "border-red-500" : ""}
+                  disabled={saving}
+                />
+                {errors.appleName && <p className="text-xs text-red-500">{errors.appleName}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="apple-vendor">
+                  Vendor number <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="apple-vendor"
+                  placeholder="From App Store Connect → Payments and Financial Reports"
+                  value={appleVendorNumber}
+                  onChange={(e) => {
+                    setAppleVendorNumber(e.target.value)
+                    setErrors((p) => ({ ...p, appleVendorNumber: "" }))
+                  }}
+                  className={errors.appleVendorNumber ? "border-red-500" : ""}
+                  disabled={saving}
+                />
+                {errors.appleVendorNumber && <p className="text-xs text-red-500">{errors.appleVendorNumber}</p>}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+                <h4 className="text-sm font-semibold text-slate-800">App Store Connect (ASC)</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="apple-asc-pem">
+                      Private key (.p8 file) {!isEdit && <span className="text-red-500">*</span>}
+                      {isEdit && (
+                        <span className="text-slate-400 font-normal text-xs ml-1">
+                          (leave empty to keep stored key)
+                        </span>
+                      )}
+                    </Label>
+                    <div
+                      className={[
+                        "relative flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-3 transition",
+                        appleAscDragOver ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200",
+                        errors.appleAscPem ? "border-red-500" : "",
+                      ].join(" ")}
+                      onDragEnter={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(true)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(true)
+                        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(false)
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleAscDragOver(false)
+                        const f = e.dataTransfer?.files?.[0]
+                        if (!f) return
+                        await readP8File(f, setAppleAscPem, setAppleAscFileName, "appleAscPem")
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm text-slate-700">
+                          Drag & drop <span className="font-mono">AuthKey_*.p8</span> here, or{" "}
+                          <span className="text-blue-600 font-medium">click to upload</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                          {appleAscFileName
+                            ? `Selected: ${appleAscFileName}`
+                            : isEdit && editAccount?.appleHasAscPrivateKey
+                              ? "Stored key exists (upload a new .p8 to replace)"
+                              : "No file selected"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={saving}
+                          className="gap-2"
+                          onClick={() => document.getElementById("apple-asc-file")?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload
+                        </Button>
+                        {(appleAscPem.trim() || appleAscFileName) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={saving}
+                            onClick={() => {
+                              setAppleAscPem("")
+                              setAppleAscFileName("")
+                              setErrors((p) => ({ ...p, appleAscPem: "" }))
+                            }}
+                            className="gap-2 text-slate-600"
+                          >
+                            <X className="w-4 h-4" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
+                      <input
+                        id="apple-asc-file"
+                        type="file"
+                        accept=".p8"
+                        className="hidden"
+                        disabled={saving}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0]
+                          if (!f) return
+                          await readP8File(f, setAppleAscPem, setAppleAscFileName, "appleAscPem")
+                        }}
+                      />
+                    </div>
+                    {errors.appleAscPem && <p className="text-xs text-red-500">{errors.appleAscPem}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apple-asc-kid">Key ID *</Label>
+                    <Input
+                      id="apple-asc-kid"
+                      value={appleAscKeyId}
+                      onChange={(e) => {
+                        setAppleAscKeyId(e.target.value)
+                        setErrors((p) => ({ ...p, appleAscKeyId: "" }))
+                      }}
+                      className={errors.appleAscKeyId ? "border-red-500" : ""}
+                      disabled={saving}
+                    />
+                    {errors.appleAscKeyId && <p className="text-xs text-red-500">{errors.appleAscKeyId}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apple-asc-iss">Issuer ID *</Label>
+                    <Input
+                      id="apple-asc-iss"
+                      value={appleAscIssuerId}
+                      onChange={(e) => {
+                        setAppleAscIssuerId(e.target.value)
+                        setErrors((p) => ({ ...p, appleAscIssuerId: "" }))
+                      }}
+                      className={errors.appleAscIssuerId ? "border-red-500" : ""}
+                      disabled={saving}
+                    />
+                    {errors.appleAscIssuerId && <p className="text-xs text-red-500">{errors.appleAscIssuerId}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+                <h4 className="text-sm font-semibold text-slate-800">In-App Purchase / StoreKit</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="apple-iap-pem">
+                      Private key (.p8 file) {!isEdit && <span className="text-red-500">*</span>}
+                      {isEdit && (
+                        <span className="text-slate-400 font-normal text-xs ml-1">
+                          (leave empty to keep stored key)
+                        </span>
+                      )}
+                    </Label>
+                    <div
+                      className={[
+                        "relative flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-3 transition",
+                        appleIapDragOver ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200",
+                        errors.appleIapPem ? "border-red-500" : "",
+                      ].join(" ")}
+                      onDragEnter={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(true)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(true)
+                        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(false)
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setAppleIapDragOver(false)
+                        const f = e.dataTransfer?.files?.[0]
+                        if (!f) return
+                        await readP8File(f, setAppleIapPem, setAppleIapFileName, "appleIapPem")
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm text-slate-700">
+                          Drag & drop <span className="font-mono">SubscriptionKey_*.p8</span> here, or{" "}
+                          <span className="text-blue-600 font-medium">click to upload</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                          {appleIapFileName
+                            ? `Selected: ${appleIapFileName}`
+                            : isEdit && editAccount?.appleHasIapPrivateKey
+                              ? "Stored key exists (upload a new .p8 to replace)"
+                              : "No file selected"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={saving}
+                          className="gap-2"
+                          onClick={() => document.getElementById("apple-iap-file")?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload
+                        </Button>
+                        {(appleIapPem.trim() || appleIapFileName) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={saving}
+                            onClick={() => {
+                              setAppleIapPem("")
+                              setAppleIapFileName("")
+                              setErrors((p) => ({ ...p, appleIapPem: "" }))
+                            }}
+                            className="gap-2 text-slate-600"
+                          >
+                            <X className="w-4 h-4" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
+                      <input
+                        id="apple-iap-file"
+                        type="file"
+                        accept=".p8"
+                        className="hidden"
+                        disabled={saving}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0]
+                          if (!f) return
+                          await readP8File(f, setAppleIapPem, setAppleIapFileName, "appleIapPem")
+                        }}
+                      />
+                    </div>
+                    {errors.appleIapPem && <p className="text-xs text-red-500">{errors.appleIapPem}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apple-iap-kid">Key ID *</Label>
+                    <Input
+                      id="apple-iap-kid"
+                      value={appleIapKeyId}
+                      onChange={(e) => {
+                        setAppleIapKeyId(e.target.value)
+                        setErrors((p) => ({ ...p, appleIapKeyId: "" }))
+                      }}
+                      className={errors.appleIapKeyId ? "border-red-500" : ""}
+                      disabled={saving}
+                    />
+                    {errors.appleIapKeyId && <p className="text-xs text-red-500">{errors.appleIapKeyId}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apple-iap-iss">Issuer ID *</Label>
+                    <Input
+                      id="apple-iap-iss"
+                      value={appleIapIssuerId}
+                      onChange={(e) => {
+                        setAppleIapIssuerId(e.target.value)
+                        setErrors((p) => ({ ...p, appleIapIssuerId: "" }))
+                      }}
+                      className={errors.appleIapIssuerId ? "border-red-500" : ""}
+                      disabled={saving}
+                    />
+                    {errors.appleIapIssuerId && <p className="text-xs text-red-500">{errors.appleIapIssuerId}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch id="apple-sandbox" checked={appleSandbox} onCheckedChange={setAppleSandbox} disabled={saving} />
+                <Label htmlFor="apple-sandbox" className="font-normal cursor-pointer">
+                  Use sandbox StoreKit environment
                 </Label>
               </div>
             </TabsContent>

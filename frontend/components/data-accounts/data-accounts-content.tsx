@@ -253,6 +253,7 @@ function DataAccountsListPanel() {
             <SelectItem value="xmp">XMP</SelectItem>
             <SelectItem value="appsflyer">AppsFlyer</SelectItem>
             <SelectItem value="qonversion">Qonversion</SelectItem>
+            <SelectItem value="apple">Apple</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => handleFilterChange("Status", v)}>

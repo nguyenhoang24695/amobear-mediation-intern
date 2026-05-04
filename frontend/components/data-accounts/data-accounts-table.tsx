@@ -70,6 +70,7 @@ const networkConfig: Record<string, { label: string; className: string; initials
   xmp: { label: "XMP", className: "bg-blue-50 text-blue-700 border-blue-200", initials: "XM", bgColor: "bg-blue-100 text-blue-700" },
   appsflyer: { label: "AppsFlyer", className: "bg-sky-50 text-sky-800 border-sky-200", initials: "AF", bgColor: "bg-sky-100 text-sky-800" },
   qonversion: { label: "Qonversion", className: "bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200", initials: "QO", bgColor: "bg-fuchsia-100 text-fuchsia-800" },
+  apple: { label: "Apple", className: "bg-slate-100 text-slate-800 border-slate-200", initials: "AP", bgColor: "bg-slate-200 text-slate-800" },
 }
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
@@ -121,6 +122,14 @@ export function DataAccountsTable({
       qonApiBaseUrl: account.network === "qonversion" ? account.qonApiBaseUrl : undefined,
       qonGcsBucketName: account.network === "qonversion" ? account.qonGcsBucketName ?? undefined : undefined,
       qonHasGcsJson: account.network === "qonversion" ? account.qonHasGcsJson : undefined,
+      appleVendorNumber: account.network === "apple" ? account.appleVendorNumber ?? undefined : undefined,
+      appleAscKeyId: account.network === "apple" ? account.appleAscKeyId ?? undefined : undefined,
+      appleAscIssuerId: account.network === "apple" ? account.appleAscIssuerId ?? undefined : undefined,
+      appleHasAscPrivateKey: account.network === "apple" ? account.appleHasAscPrivateKey : undefined,
+      appleIapKeyId: account.network === "apple" ? account.appleIapKeyId ?? undefined : undefined,
+      appleIapIssuerId: account.network === "apple" ? account.appleIapIssuerId ?? undefined : undefined,
+      appleHasIapPrivateKey: account.network === "apple" ? account.appleHasIapPrivateKey : undefined,
+      appleUseSandboxStoreKit: account.network === "apple" ? account.appleUseSandboxStoreKit : undefined,
     }
     setEditAccount(mapped)
     setEditModalOpen(true)
