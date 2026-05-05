@@ -48,6 +48,7 @@ import {
   Database,
   Sparkles,
   Apple,
+  BadgePercent,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -140,6 +141,12 @@ const navItems: NavItem[] = [
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") },
+  {
+    icon: BadgePercent,
+    label: "Commission",
+    href: "/commission",
+    isShow: () => hasScreenFunction("s-commission", "view") || hasScreenFunction("s-commission", "manage"),
+  },
   {
     icon: Bell,
     label: "Alert Center",
