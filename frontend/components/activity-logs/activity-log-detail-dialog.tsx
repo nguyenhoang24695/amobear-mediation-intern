@@ -55,11 +55,15 @@ function statusBadgeClass(status?: string | null, severity?: string | null) {
     return "bg-red-100 text-red-700 hover:bg-red-100 border-red-200"
   }
 
-  if (status === "pending") {
+  if (status === "pending" || severity === "warning") {
     return "bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200"
   }
 
   return "bg-green-100 text-green-700 hover:bg-green-100 border-green-200"
+}
+
+function statusBadgeLabel(status?: string | null, severity?: string | null) {
+  return status === "success" && severity === "warning" ? "warning" : status
 }
 
 function DetailField({
@@ -130,7 +134,7 @@ export function ActivityLogDetailDialog({
                     {displayLog.domain}
                   </Badge>
                   <Badge variant="outline" className={statusBadgeClass(displayLog.status, displayLog.severity)}>
-                    {displayLog.status}
+                    {statusBadgeLabel(displayLog.status, displayLog.severity)}
                   </Badge>
                   {displayLog.targetType && (
                     <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
@@ -193,7 +197,7 @@ export function ActivityLogDetailDialog({
                             <p className="text-xs text-slate-500">{formatDateTime(milestone.occurredAt)}</p>
                           </div>
                           <Badge variant="outline" className={statusBadgeClass(milestone.status, milestone.severity)}>
-                            {milestone.status}
+                            {statusBadgeLabel(milestone.status, milestone.severity)}
                           </Badge>
                         </div>
                       ))}

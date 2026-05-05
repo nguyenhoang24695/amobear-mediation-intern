@@ -9,10 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2 } from "lucide-react"
+import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2, BadgePercent } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
+import { CommissionRevenueTab } from "@/components/commission/revenue/commission-revenue-tab"
 import { alertsApi, authApi } from "@/lib/api/services"
-import { authUserFromMeDto, clearAuthSessionData, getAccessToken, getRefreshToken, getUserInitials, setAuthData } from "@/lib/auth"
+import { authUserFromMeDto, clearAuthSessionData, getAccessToken, getRefreshToken, getUserInitials, hasScreenFunction, setAuthData } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -631,6 +632,21 @@ export function MyProfileContent() {
           </Collapsible>
         </CardContent>
       </Card>
+
+      {/* My Commission */}
+      {(hasScreenFunction("s-commission", "view") || hasScreenFunction("s-commission", "manage")) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <BadgePercent className="w-4 h-4 text-slate-500" />
+              Hoa hồng của tôi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CommissionRevenueTab />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Change Password Modal */}
       <ChangePasswordModal open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />

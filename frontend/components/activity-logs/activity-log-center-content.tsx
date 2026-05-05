@@ -118,11 +118,15 @@ function statusBadgeClass(status: string, severity: string) {
     return "border-red-200 bg-red-50 text-red-700 hover:bg-red-50"
   }
 
-  if (status === "pending") {
+  if (status === "pending" || severity === "warning") {
     return "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50"
   }
 
   return "border-green-200 bg-green-50 text-green-700 hover:bg-green-50"
+}
+
+function statusBadgeLabel(status: string, severity: string) {
+  return status === "success" && severity === "warning" ? "warning" : status
 }
 
 function formatStageLabel(stage?: string | null) {
@@ -144,7 +148,11 @@ function resolveCompletedAt(log: ActivityLogListItem) {
 }
 
 function hasFailedMilestone(log: ActivityLogListItem) {
-  return log.milestones.some((milestone) => milestone.status === "failed" || milestone.severity === "error")
+  return log.status === "failed" || log.severity === "error" || log.milestones.some((milestone) => milestone.status === "failed" || milestone.severity === "error")
+}
+
+function hasWarningSignal(log: ActivityLogListItem) {
+  return log.severity === "warning" || log.milestones.some((milestone) => milestone.severity === "warning")
 }
 
 function domainBadgeClass(domain: string) {
@@ -216,6 +224,10 @@ export function ActivityLogCenterContent() {
     return <NoPermissionView />
   }
 
+  return <ActivityLogCenterBody />
+}
+
+function ActivityLogCenterBody() {
   const { toast } = useToast()
   const searchParams = useSearchParams()
 
@@ -421,6 +433,7 @@ export function ActivityLogCenterContent() {
   )
 
   const currentPageFailureCount = result.items.filter((item) => hasFailedMilestone(item)).length
+  const currentPageWarningCount = result.items.filter((item) => hasWarningSignal(item)).length
   const currentPageDomainCount = new Set(result.items.map((item) => item.domain)).size
   const latestOccurredAt = result.items[0]?.occurredAt
 
@@ -465,7 +478,7 @@ export function ActivityLogCenterContent() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Card className="border-slate-200 bg-slate-50">
           <CardContent className="p-4">
             <p className="text-sm font-medium text-slate-500">Matched Activities</p>
@@ -476,6 +489,12 @@ export function ActivityLogCenterContent() {
           <CardContent className="p-4">
             <p className="text-sm font-medium text-red-700">Failures On Page</p>
             <p className="mt-1 text-2xl font-bold text-red-600">{currentPageFailureCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium text-amber-700">Warnings On Page</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">{currentPageWarningCount}</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-slate-50">
@@ -828,7 +847,7 @@ export function ActivityLogCenterContent() {
                                   variant="outline"
                                   className={statusBadgeClass(milestone.status, milestone.severity)}
                                 >
-                                  {milestone.status}
+                                  {statusBadgeLabel(milestone.status, milestone.severity)}
                                 </Badge>
                               </div>
                             ))}
