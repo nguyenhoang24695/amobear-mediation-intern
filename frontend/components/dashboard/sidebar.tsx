@@ -133,11 +133,11 @@ const navItems: NavItem[] = [
     href: "/apps",
     isShow: () => hasScreenFunction("s-apps", "view"),
   },
-  { 
-    icon: ListFilter, 
-    label: "Waterfall", 
-    href: "/waterfall", 
-    isShow: () => hasScreenFunction("s-waterfall", "view") 
+  {
+    icon: ListFilter,
+    label: "Waterfall",
+    href: "/waterfall",
+    isShow: () => hasScreenFunction("s-waterfall", "view")
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") },
@@ -160,7 +160,7 @@ const navItems: NavItem[] = [
     label: "Meta Ads",
     href: "#",
     hasSubmenu: true,
-    isNew: true,
+    isNew: false,
     isShow: () =>
       [
         ["s-meta-requests", "view"],
@@ -174,7 +174,7 @@ const navItems: NavItem[] = [
         icon: BarChart3,
         label: "Insights",
         href: "/meta-ads/insights",
-        isNew: true,
+        isNew: false,
         isShow: () => ["view"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
       },
       {
