@@ -146,6 +146,8 @@ export interface CurrentUser {
     slackWebhookUrlRealtime?: string
     slackWebhookUrlHourly?: string
     slackWebhookUrlDaily?: string
+    /** JSON array: [{ id, name, chatId, messageThreadId? }, ...] */
+    telegramDestinationsJson?: string
     organization?: { id: string; name: string; slug: string; logoUrl?: string }
     teams?: Array<{ id: string; name: string; role: string }>
     permissions?: Record<string, string>
@@ -163,6 +165,8 @@ export interface UpdateMyProfileRequest {
     slackWebhookUrlRealtime?: string
     slackWebhookUrlHourly?: string
     slackWebhookUrlDaily?: string
+    /** JSON array: [{ id, name, chatId, messageThreadId? }, ...]. Empty string to clear. */
+    telegramDestinationsJson?: string
 }
 
 export interface PagedResult<T> {

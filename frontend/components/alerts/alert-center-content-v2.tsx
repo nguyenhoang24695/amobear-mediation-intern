@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AIAlertBuilderSheet } from "./ai-alert-builder-sheet"
 import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
 import { AlertRulesPanel } from "./alert-rules-panel"
+import { OrgRuleTemplatePicker } from "./org-rule-template-picker"
 import {
   AlertTriangle,
   AlertCircle,
@@ -31,6 +32,7 @@ import {
   MailCheck,
   Plus,
   Sparkles,
+  LayoutTemplate,
 } from "lucide-react"
 import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { AlertAppAvatar } from "./alert-app-avatar"
@@ -89,6 +91,14 @@ function parseLocalYmdStart(ymd: string): Date {
 function parseLocalYmdEnd(ymd: string): Date {
   const [y, m, d] = ymd.split("-").map((x) => Number(x))
   return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999)
+}
+
+/** Active apps (APPROVED / chưa gán state) — cùng logic trang Apps; ≥100 thì làm tròn xuống hàng trăm + dấu +. */
+function formatMonitoringAppsPhrase(activeCount: number): string {
+  if (activeCount <= 0) return "your apps"
+  if (activeCount < 100) return `${activeCount} apps`
+  const roundedDown = Math.floor(activeCount / 100) * 100
+  return `${roundedDown}+ apps`
 }
 
 /** Initials for avatar; nếu chỉ có UUID thì lấy 2 ký tự đầu (bỏ dấu gạch). */
@@ -200,6 +210,8 @@ export function AlertCenterContentV2() {
   const [showAiBuilder, setShowAiBuilder] = useState(false)
   const [showManualCreator, setShowManualCreator] = useState(false)
   const [manualEditRule, setManualEditRule] = useState<AlertRule | null>(null)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [cloneFromRule, setCloneFromRule] = useState<AlertRule | null>(null)
   const [rulesOverviewAppQuery, setRulesOverviewAppQuery] = useState("")
   const [rulesOverviewMetric, setRulesOverviewMetric] = useState("all")
   const [rulesOverviewStatus, setRulesOverviewStatus] = useState<"all" | "enabled" | "disabled">("all")
@@ -292,6 +304,13 @@ export function AlertCenterContentV2() {
     enabled: centerTab === "my-alerts" && showMyAlertsTab,
     cacheKey: "alert_private_quota",
   })
+  const { data: orgRulesForTemplate } = useApi(
+    () => alertsApi.getAlertRules(true, "ORG"),
+    {
+      enabled: centerTab === "my-alerts" && showMyAlertsTab,
+      cacheKey: "alert_org_rules_templates",
+    },
+  )
   const privateSlotsFull = Boolean(isMyAlertsTab && privateQuota && privateQuota.used >= privateQuota.max)
   const { data: appsData } = useApi(() => structureApi.getApps(), {
     cacheKey: "alert_center_filter_apps",
@@ -353,6 +372,14 @@ export function AlertCenterContentV2() {
       id: app.appId,
       label: app.displayName || app.name || app.appId,
     }))
+  }, [appsData])
+
+  const alertCenterMonitoringAppsPhrase = useMemo(() => {
+    const apps = appsData?.apps ?? []
+    const activeCount =
+      appsData?.summary?.totalApprovedApps ??
+      apps.filter((a) => a.approvalState === "APPROVED" || !a.approvalState).length
+    return formatMonitoringAppsPhrase(activeCount)
   }, [appsData])
 
   const timelineQueryParams = useMemo(() => {
@@ -782,7 +809,7 @@ export function AlertCenterContentV2() {
     ? privateQuota
       ? `Your personal alert rules — ${privateQuota.used} of ${privateQuota.max} slots used`
       : "Your personal alert rules"
-    : "Real-time monitoring across 200+ apps"
+    : `Real-time monitoring across ${alertCenterMonitoringAppsPhrase}`
 
   const handleCenterTabChange = useCallback(
     (value: string) => {
@@ -822,6 +849,22 @@ export function AlertCenterContentV2() {
               Create Alert via AI
             </Button>
           ) : null}
+          {isMyAlertsTab && canCreateAlertRule ? (
+            <Button
+              variant="outline"
+              className="h-9 gap-2 bg-transparent"
+              disabled={privateSlotsFull || (orgRulesForTemplate ?? []).length === 0}
+              title={
+                (orgRulesForTemplate ?? []).length === 0
+                  ? "No active org templates available"
+                  : "Pick an org alert rule as a starting point"
+              }
+              onClick={() => setShowTemplatePicker(true)}
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              Use a Template
+            </Button>
+          ) : null}
           {canCreateAlertRule ? (
             <Button
               variant="outline"
@@ -829,6 +872,7 @@ export function AlertCenterContentV2() {
               disabled={privateSlotsFull}
               onClick={() => {
                 setManualEditRule(null)
+                setCloneFromRule(null)
                 setShowManualCreator(true)
               }}
             >
@@ -1489,16 +1533,30 @@ export function AlertCenterContentV2() {
         onCreated={handleRuleCreated}
         ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
+      <OrgRuleTemplatePicker
+        open={showTemplatePicker}
+        onOpenChange={setShowTemplatePicker}
+        rules={orgRulesForTemplate ?? []}
+        onSelect={(rule) => {
+          setCloneFromRule(rule)
+          setManualEditRule(null)
+          setShowManualCreator(true)
+        }}
+      />
       <ManualAlertCreatorModal
         open={showManualCreator}
         onOpenChange={(open) => {
-          if (open && manualEditRule == null && !canCreateAlertRule) return
+          if (open && manualEditRule == null && cloneFromRule == null && !canCreateAlertRule) return
           if (open && manualEditRule != null && !canEditAlertRule) return
           setShowManualCreator(open)
-          if (!open) setManualEditRule(null)
+          if (!open) {
+            setManualEditRule(null)
+            setCloneFromRule(null)
+          }
         }}
         onCreated={handleRuleCreated}
         rule={manualEditRule}
+        cloneFrom={cloneFromRule}
         ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
       <AlertRulesPanel open={alertRulesPanelOpen} onOpenChange={setAlertRulesPanelOpen} />

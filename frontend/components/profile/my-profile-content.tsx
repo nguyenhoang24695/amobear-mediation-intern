@@ -19,6 +19,36 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import type { ActiveSession } from "@/types/api"
 
+type TelegramDestinationDraft = {
+  id: string
+  name: string
+  chatId: string
+  messageThreadId: string
+}
+
+function newRowId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID()
+  return `row_${Math.random().toString(16).slice(2)}`
+}
+
+function parseTelegramDestinationsJson(input?: string | null): TelegramDestinationDraft[] {
+  if (!input?.trim()) return []
+  try {
+    const parsed = JSON.parse(input)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((x) => x && typeof x === "object")
+      .map((x) => ({
+        id: typeof x.id === "string" && x.id.trim() ? x.id.trim() : newRowId(),
+        name: typeof x.name === "string" ? x.name : "",
+        chatId: typeof x.chatId === "string" ? x.chatId : "",
+        messageThreadId: typeof x.messageThreadId === "string" ? x.messageThreadId : "",
+      }))
+  } catch {
+    return []
+  }
+}
+
 export function MyProfileContent() {
   const router = useRouter()
   const { toast } = useToast()
@@ -42,6 +72,7 @@ export function MyProfileContent() {
     hourly: "",
     daily: "",
   })
+  const [telegramDestinationDrafts, setTelegramDestinationDrafts] = useState<TelegramDestinationDraft[]>([])
   const [profileSaving, setProfileSaving] = useState(false)
   const [slackTestKey, setSlackTestKey] = useState<"direct" | "realtime" | "hourly" | "daily" | null>(null)
 
@@ -188,6 +219,7 @@ export function MyProfileContent() {
       hourly: u?.slackWebhookUrlHourly ?? "",
       daily: u?.slackWebhookUrlDaily ?? "",
     })
+    setTelegramDestinationDrafts(parseTelegramDestinationsJson(u?.telegramDestinationsJson))
     setIsEditing(true)
   }
 
@@ -199,6 +231,16 @@ export function MyProfileContent() {
         slackWebhookUrlRealtime: slackDrafts.realtime.trim(),
         slackWebhookUrlHourly: slackDrafts.hourly.trim(),
         slackWebhookUrlDaily: slackDrafts.daily.trim(),
+        telegramDestinationsJson: JSON.stringify(
+          telegramDestinationDrafts
+            .map((x) => ({
+              id: x.id,
+              name: x.name.trim(),
+              chatId: x.chatId.trim(),
+              messageThreadId: x.messageThreadId.trim() || undefined,
+            }))
+            .filter((x) => x.chatId.length > 0),
+        ),
       })
       if (!res.success || !res.data) {
         throw new Error("Failed to update profile")
@@ -210,7 +252,7 @@ export function MyProfileContent() {
       await refetchCurrentUser()
       toast({
         title: "Profile updated",
-        description: "Your Slack webhook URLs have been saved.",
+        description: "Your notification settings have been saved.",
       })
       setIsEditing(false)
     } catch (err) {
@@ -406,6 +448,129 @@ export function MyProfileContent() {
                       </div>
                     )
                   })}
+                </div>
+
+                <div className="col-span-2 space-y-3 border-t pt-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Telegram destinations</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Lưu các preset (tên gợi nhớ + chatId/threadId) để dùng nhanh khi tạo My Alerts.
+                      </p>
+                    </div>
+                    {isEditing ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() =>
+                          setTelegramDestinationDrafts((prev) => [
+                            ...prev,
+                            { id: newRowId(), name: "", chatId: "", messageThreadId: "" },
+                          ])
+                        }
+                      >
+                        Add
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      {(telegramDestinationDrafts.length > 0
+                        ? telegramDestinationDrafts
+                        : [{ id: newRowId(), name: "", chatId: "", messageThreadId: "" } as TelegramDestinationDraft]
+                      ).map((row, idx) => (
+                        <div key={row.id} className="rounded-lg border border-slate-200 p-3 bg-slate-50">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs font-medium text-slate-500">
+                              Destination {idx + 1}
+                            </p>
+                            {telegramDestinationDrafts.length > 0 ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-slate-500"
+                                onClick={() =>
+                                  setTelegramDestinationDrafts((prev) =>
+                                    prev.filter((x) => x.id !== row.id),
+                                  )
+                                }
+                              >
+                                Remove
+                              </Button>
+                            ) : null}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                            <div>
+                              <p className="text-xs text-slate-500">Name</p>
+                              <Input
+                                value={row.name}
+                                placeholder="Finance room"
+                                onChange={(e) =>
+                                  setTelegramDestinationDrafts((prev) =>
+                                    prev.map((x) => (x.id === row.id ? { ...x, name: e.target.value } : x)),
+                                  )
+                                }
+                                autoComplete="off"
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500">chatId</p>
+                              <Input
+                                value={row.chatId}
+                                placeholder="-1001234567890"
+                                onChange={(e) =>
+                                  setTelegramDestinationDrafts((prev) =>
+                                    prev.map((x) => (x.id === row.id ? { ...x, chatId: e.target.value } : x)),
+                                  )
+                                }
+                                autoComplete="off"
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500">threadId (optional)</p>
+                              <Input
+                                value={row.messageThreadId}
+                                placeholder="12"
+                                onChange={(e) =>
+                                  setTelegramDestinationDrafts((prev) =>
+                                    prev.map((x) =>
+                                      x.id === row.id ? { ...x, messageThreadId: e.target.value } : x,
+                                    ),
+                                  )
+                                }
+                                autoComplete="off"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {parseTelegramDestinationsJson(displayUser?.telegramDestinationsJson).length === 0 ? (
+                        <p className="text-sm text-slate-500">—</p>
+                      ) : (
+                        parseTelegramDestinationsJson(displayUser?.telegramDestinationsJson).map((d) => (
+                          <div key={d.id} className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">
+                                {d.name?.trim() || "Telegram destination"}
+                              </p>
+                              <p className="text-xs text-slate-500 break-all">
+                                {d.messageThreadId?.trim()
+                                  ? `${d.chatId}|${d.messageThreadId}`
+                                  : d.chatId}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               {isEditing && (
