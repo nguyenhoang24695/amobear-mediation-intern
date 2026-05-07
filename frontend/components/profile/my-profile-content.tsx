@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2, BadgePercent, CheckCircle2, AlertTriangle } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
@@ -97,7 +98,12 @@ export function MyProfileContent() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [slackTestKey, setSlackTestKey] = useState<"direct" | "realtime" | "hourly" | "daily" | null>(null)
   const [telegramTestRowId, setTelegramTestRowId] = useState<string | null>(null)
-  const [telegramTestResultByRowId, setTelegramTestResultByRowId] = useState<Record<string, { ok: boolean; text: string }>>({})
+  const [telegramTestDialog, setTelegramTestDialog] = useState<{ open: boolean; ok: boolean; message: string }>({
+    open: false,
+    ok: true,
+    message: "",
+  })
+  const [telegramTestAutoCloseSeconds, setTelegramTestAutoCloseSeconds] = useState(10)
   const [telegramRemoveRowId, setTelegramRemoveRowId] = useState<string | null>(null)
 
   // Load current user (must be before callbacks that read displayUser)
@@ -216,33 +222,33 @@ export function MyProfileContent() {
         const res = await alertsApi.sendTelegramTest({ chatId: cid, messageThreadId })
         const ok = !!res?.success
         const msg = (ok ? res?.message : res?.error || res?.message) ?? (ok ? "Telegram message sent" : "Could not send Telegram message")
-        setTelegramTestResultByRowId((prev) => ({ ...prev, [rowId]: { ok, text: msg } }))
-        window.setTimeout(() => {
-          setTelegramTestResultByRowId((prev) => {
-            if (!prev[rowId]) return prev
-            const next = { ...prev }
-            delete next[rowId]
-            return next
-          })
-        }, 6000)
+        setTelegramTestDialog({ open: true, ok, message: msg })
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Could not send Telegram test message."
         toast({ title: "Error", description: msg, variant: "destructive" })
-        setTelegramTestResultByRowId((prev) => ({ ...prev, [rowId]: { ok: false, text: msg } }))
-        window.setTimeout(() => {
-          setTelegramTestResultByRowId((prev) => {
-            if (!prev[rowId]) return prev
-            const next = { ...prev }
-            delete next[rowId]
-            return next
-          })
-        }, 6000)
+        setTelegramTestDialog({ open: true, ok: false, message: msg })
       } finally {
         setTelegramTestRowId(null)
       }
     },
     [toast],
   )
+
+  useEffect(() => {
+    if (!telegramTestDialog.open) return
+    setTelegramTestAutoCloseSeconds(10)
+    const t = window.setInterval(() => {
+      setTelegramTestAutoCloseSeconds((s) => {
+        if (s <= 1) {
+          window.clearInterval(t)
+          setTelegramTestDialog((prev) => ({ ...prev, open: false }))
+          return 10
+        }
+        return s - 1
+      })
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [telegramTestDialog.open])
 
   const removeTelegramDestinationPreset = useCallback(
     async (rowId: string) => {
@@ -409,6 +415,25 @@ export function MyProfileContent() {
 
   return (
     <div className="space-y-6">
+      <Dialog
+        open={telegramTestDialog.open}
+        onOpenChange={(open) => setTelegramTestDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Telegram test</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 flex flex-col items-center justify-center text-center gap-3">
+            {telegramTestDialog.ok ? (
+              <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
+            ) : (
+              <AlertTriangle className="h-10 w-10 text-red-600" aria-hidden />
+            )}
+            <p className="text-sm text-slate-700 whitespace-pre-wrap">{telegramTestDialog.message}</p>
+            <p className="text-xs text-slate-500">Auto-closes in {telegramTestAutoCloseSeconds} seconds</p>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
@@ -668,23 +693,6 @@ export function MyProfileContent() {
                                 </td>
                                 <td className="whitespace-nowrap px-2 py-2 align-middle text-right">
                                   <div className="flex items-center justify-end gap-2">
-                                    {telegramTestResultByRowId[row.id] ? (
-                                      <span
-                                        className={
-                                          telegramTestResultByRowId[row.id].ok
-                                            ? "inline-flex items-center gap-1.5 text-xs text-emerald-700"
-                                            : "inline-flex items-center gap-1.5 text-xs text-red-600"
-                                        }
-                                        title={telegramTestResultByRowId[row.id].text}
-                                      >
-                                        {telegramTestResultByRowId[row.id].ok ? (
-                                          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-                                        ) : (
-                                          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-                                        )}
-                                        <span className="max-w-[240px] truncate">{telegramTestResultByRowId[row.id].text}</span>
-                                      </span>
-                                    ) : null}
                                     {hasChat ? (
                                       <Button
                                         type="button"
@@ -759,23 +767,6 @@ export function MyProfileContent() {
                                     </td>
                                     <td className="px-3 py-2 align-middle text-right">
                                       <div className="flex items-center justify-end gap-2">
-                                        {telegramTestResultByRowId[d.id] ? (
-                                          <span
-                                            className={
-                                              telegramTestResultByRowId[d.id].ok
-                                                ? "inline-flex items-center gap-1.5 text-xs text-emerald-700"
-                                                : "inline-flex items-center gap-1.5 text-xs text-red-600"
-                                            }
-                                            title={telegramTestResultByRowId[d.id].text}
-                                          >
-                                            {telegramTestResultByRowId[d.id].ok ? (
-                                              <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-                                            ) : (
-                                              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-                                            )}
-                                            <span className="max-w-[240px] truncate">{telegramTestResultByRowId[d.id].text}</span>
-                                          </span>
-                                        ) : null}
                                         {hasChat ? (
                                           <Button
                                             type="button"
