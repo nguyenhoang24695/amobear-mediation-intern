@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, Send, Trash2 } from "lucide-react"
+import { Loader2, Send, Trash2, CheckCircle2, AlertTriangle } from "lucide-react"
 import type { AlertRule, UpsertAlertRuleRequest } from "@/types/api"
 import { alertsApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
@@ -159,6 +159,7 @@ export function AlertRuleFormDialog({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [telegramTestRowId, setTelegramTestRowId] = useState<string | null>(null)
   const [slackTestRowId, setSlackTestRowId] = useState<string | null>(null)
+  const [telegramTestResultByRowId, setTelegramTestResultByRowId] = useState<Record<string, { ok: boolean; text: string }>>({})
   const { toast } = useToast()
 
   useEffect(() => {
@@ -471,14 +472,35 @@ export function AlertRuleFormDialog({
 
       setTelegramTestRowId(rowId)
       try {
-        await alertsApi.sendTelegramTest({
+        const res = await alertsApi.sendTelegramTest({
           chatId: row.chatId.trim(),
           messageThreadId,
         })
-        toast({ title: "Đã gửi", description: "Kiểm tra Telegram để xem tin test." })
+        const ok = !!res?.success
+        const msg =
+          (ok ? res?.message : res?.error || res?.message) ??
+          (ok ? "Telegram message sent" : "Could not send Telegram message")
+        setTelegramTestResultByRowId((prev) => ({ ...prev, [rowId]: { ok, text: msg } }))
+        window.setTimeout(() => {
+          setTelegramTestResultByRowId((prev) => {
+            if (!prev[rowId]) return prev
+            const next = { ...prev }
+            delete next[rowId]
+            return next
+          })
+        }, 6000)
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Không gửi được tin test."
         toast({ title: "Lỗi", description: msg, variant: "destructive" })
+        setTelegramTestResultByRowId((prev) => ({ ...prev, [rowId]: { ok: false, text: msg } }))
+        window.setTimeout(() => {
+          setTelegramTestResultByRowId((prev) => {
+            if (!prev[rowId]) return prev
+            const next = { ...prev }
+            delete next[rowId]
+            return next
+          })
+        }, 6000)
       } finally {
         setTelegramTestRowId(null)
       }
@@ -721,6 +743,23 @@ export function AlertRuleFormDialog({
                             ) : null}
                             {row.status === "invalid" ? (
                               <p className="text-red-600">{row.errorMessage ?? "Chat not found"}</p>
+                            ) : null}
+                            {telegramTestResultByRowId[row.id] ? (
+                              <p
+                                className={
+                                  telegramTestResultByRowId[row.id].ok
+                                    ? "flex items-center gap-1.5 text-emerald-700"
+                                    : "flex items-center gap-1.5 text-red-600"
+                                }
+                                title={telegramTestResultByRowId[row.id].text}
+                              >
+                                {telegramTestResultByRowId[row.id].ok ? (
+                                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                ) : (
+                                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                )}
+                                <span className="truncate">{telegramTestResultByRowId[row.id].text}</span>
+                              </p>
                             ) : null}
                           </div>
                         </div>
