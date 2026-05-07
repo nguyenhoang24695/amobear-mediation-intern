@@ -829,6 +829,13 @@ export const teamMembersApi = {
         return apiClient.get(`/api/v1/team-members/ab-user-app-mapping/${userId}`)
     },
 
+    getPermittedApps: async (
+        userId: string,
+        params?: { search?: string; limit?: number }
+    ): Promise<{ success: boolean; data?: import('@/types/api').PermittedAppListItem[]; message?: string }> => {
+        return apiClient.get(`/api/v1/team-members/${encodeURIComponent(userId)}/permitted-apps`, params as Record<string, string | number | undefined>)
+    },
+
     bulkUpdateAbUserAppMappingDates: async (
         userId: string,
         body: {
