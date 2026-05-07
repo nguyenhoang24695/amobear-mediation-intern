@@ -21,7 +21,8 @@ import {
   setRememberedOrganization,
   setRememberMeEnabled,
 } from "@/lib/auth"
-import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail, Zap } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react"
+import { Logo } from "@/components/shared/logo"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -204,9 +205,7 @@ export default function LoginPage() {
             {/* Logo */}
             <div className="flex justify-center">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
+                <Logo size={40} className="rounded-xl overflow-hidden" />
                 <span className="text-xl font-bold text-slate-900">Mediation Pro</span>
               </div>
             </div>

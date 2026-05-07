@@ -17,6 +17,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Logo } from "@/components/shared/logo"
 import { HELP_ALERT_CENTER_CHILDREN, type HelpDocSlug } from "@/lib/help-docs"
 import { helpDocumentsApi } from "@/lib/api/services"
 import type { HelpDocumentListItem } from "@/types/api"
@@ -140,9 +141,9 @@ export function HelpDocsSidebar() {
         )}
       >
         <div className="h-14 flex items-center gap-2 px-4 border-b border-slate-200">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
+          <Logo size={32} className="rounded-lg overflow-hidden" />
+
+
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 truncate">Help &amp; Docs</p>
             <p className="text-xs text-slate-500 truncate">Tài liệu sản phẩm</p>
