@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, Send, Trash2 } from "lucide-react"
+import { Loader2, Send, Trash2, CheckCircle2, AlertTriangle } from "lucide-react"
 import type { AlertRule, UpsertAlertRuleRequest } from "@/types/api"
 import { alertsApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
@@ -159,6 +159,12 @@ export function AlertRuleFormDialog({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [telegramTestRowId, setTelegramTestRowId] = useState<string | null>(null)
   const [slackTestRowId, setSlackTestRowId] = useState<string | null>(null)
+  const [telegramTestDialog, setTelegramTestDialog] = useState<{ open: boolean; ok: boolean; message: string }>({
+    open: false,
+    ok: true,
+    message: "",
+  })
+  const [telegramTestAutoCloseSeconds, setTelegramTestAutoCloseSeconds] = useState(10)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -471,20 +477,41 @@ export function AlertRuleFormDialog({
 
       setTelegramTestRowId(rowId)
       try {
-        await alertsApi.sendTelegramTest({
+        const res = await alertsApi.sendTelegramTest({
           chatId: row.chatId.trim(),
           messageThreadId,
         })
-        toast({ title: "Đã gửi", description: "Kiểm tra Telegram để xem tin test." })
+        const ok = !!res?.success
+        const msg =
+          (ok ? res?.message : res?.error || res?.message) ??
+          (ok ? "Telegram message sent" : "Could not send Telegram message")
+        setTelegramTestDialog({ open: true, ok, message: msg })
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Không gửi được tin test."
         toast({ title: "Lỗi", description: msg, variant: "destructive" })
+        setTelegramTestDialog({ open: true, ok: false, message: msg })
       } finally {
         setTelegramTestRowId(null)
       }
     },
     [toast],
   )
+
+  useEffect(() => {
+    if (!telegramTestDialog.open) return
+    setTelegramTestAutoCloseSeconds(10)
+    const t = window.setInterval(() => {
+      setTelegramTestAutoCloseSeconds((s) => {
+        if (s <= 1) {
+          window.clearInterval(t)
+          setTelegramTestDialog((prev) => ({ ...prev, open: false }))
+          return 10
+        }
+        return s - 1
+      })
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [telegramTestDialog.open])
 
   const sendSlackTestForRow = useCallback(
     async (rowId: string) => {
@@ -525,6 +552,22 @@ export function AlertRuleFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog open={telegramTestDialog.open} onOpenChange={(o) => setTelegramTestDialog((p) => ({ ...p, open: o }))}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Telegram test</DialogTitle>
+            </DialogHeader>
+            <div className="py-6 flex flex-col items-center justify-center text-center gap-3">
+              {telegramTestDialog.ok ? (
+                <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
+              ) : (
+                <AlertTriangle className="h-10 w-10 text-red-600" aria-hidden />
+              )}
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{telegramTestDialog.message}</p>
+              <p className="text-xs text-slate-500">Auto-closes in {telegramTestAutoCloseSeconds} seconds</p>
+            </div>
+          </DialogContent>
+        </Dialog>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Alert Rule" : "Create Alert Rule"}</DialogTitle>
           <DialogDescription>
@@ -722,6 +765,7 @@ export function AlertRuleFormDialog({
                             {row.status === "invalid" ? (
                               <p className="text-red-600">{row.errorMessage ?? "Chat not found"}</p>
                             ) : null}
+                            {/* Telegram test result shown in modal */}
                           </div>
                         </div>
                       )

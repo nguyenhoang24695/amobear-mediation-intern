@@ -1214,6 +1214,15 @@ export interface CommissionRatePagedResult {
   totalPages: number
 }
 
+export interface PermittedAppListItem {
+  appId: string
+  name: string
+  displayName?: string | null
+  appStoreId?: string | null
+  iconUri?: string | null
+  platform?: string | null
+}
+
 
 
 

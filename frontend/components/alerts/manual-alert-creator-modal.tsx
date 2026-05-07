@@ -18,7 +18,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Search, Loader2, Plus, Trash2 } from "lucide-react"
+import {
+  AlertTriangle,
+  AlertCircle,
+  Info,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  CheckCircle2,
+  Search,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { alertsApi, authApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -228,11 +240,19 @@ function emptyEmailRow(): EmailRecipientRow {
   return { id: newRowId(), email: "" }
 }
 
+function telegramDestinationToken(chatId: string, messageThreadId?: string | null): string | null {
+  const c = chatId.trim()
+  if (!c) return null
+  const t = (messageThreadId ?? "").trim()
+  return t ? `${c}|${t}` : c
+}
+
 function telegramTopicTokenFromRow(row: TelegramDestinationRow): string | null {
-  const chatId = row.chatId.trim()
-  if (!chatId) return null
-  const threadId = row.messageThreadId.trim()
-  return threadId ? `${chatId}|${threadId}` : chatId
+  return telegramDestinationToken(row.chatId, row.messageThreadId)
+}
+
+function telegramPresetToken(preset: TelegramDestinationPreset): string | null {
+  return telegramDestinationToken(preset.chatId, preset.messageThreadId)
 }
 
 function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
@@ -248,9 +268,7 @@ function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
 }
 
 function applyPresetToTelegramRows(preset: TelegramDestinationPreset, existing: TelegramDestinationRow[]) {
-  const token = preset.messageThreadId?.trim()
-    ? `${preset.chatId.trim()}|${preset.messageThreadId.trim()}`
-    : preset.chatId.trim()
+  const token = telegramPresetToken(preset)
   if (!token) return existing
 
   const has = existing.some((r) => telegramTopicTokenFromRow(r) === token)
@@ -366,7 +384,11 @@ export function ManualAlertCreatorModal({
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
   const [savingTelegramPresetRowId, setSavingTelegramPresetRowId] = useState<string | null>(null)
+  /** Tăng sau khi lưu preset vào profile để useMemo preset đọc lại từ getCurrentUser(). */
+  const [telegramPresetsRevision, setTelegramPresetsRevision] = useState(0)
   const [telegramPresetNamesByRowId, setTelegramPresetNamesByRowId] = useState<Record<string, string>>({})
+  /** Dòng nào vừa lưu preset Telegram thành công — hiện icon tích xanh. */
+  const [telegramPresetSaveSuccessRowIds, setTelegramPresetSaveSuccessRowIds] = useState<Record<string, true>>({})
   const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
   const [pendingDuplicateName, setPendingDuplicateName] = useState("")
   const [appSearch, setAppSearch] = useState("")
@@ -456,7 +478,16 @@ export function ManualAlertCreatorModal({
   const telegramPresets = useMemo(() => {
     const u = getCurrentUser() as { telegramDestinationsJson?: string } | null
     return parseTelegramPresetsJson(u?.telegramDestinationsJson)
-  }, [open])
+  }, [open, telegramPresetsRevision])
+
+  const telegramDestinationTokensInForm = useMemo(() => {
+    const s = new Set<string>()
+    for (const r of telegramRows) {
+      const t = telegramTopicTokenFromRow(r)
+      if (t) s.add(t)
+    }
+    return s
+  }, [telegramRows])
 
   useEffect(() => {
     if (!open) return
@@ -476,6 +507,7 @@ export function ManualAlertCreatorModal({
     setAppSearch("")
     setDuplicateConfirmOpen(false)
     setPendingDuplicateName("")
+    setTelegramPresetSaveSuccessRowIds({})
     if (isPrivateFlow) {
       setTelegramRows([emptyTelegramRow()])
       setSlackRows([emptySlackRow()])
@@ -974,8 +1006,17 @@ export function ManualAlertCreatorModal({
         setAuthData(accessToken, getRefreshToken() ?? null, authUserFromMeDto(res.data))
       }
 
+      setTelegramPresetsRevision((n) => n + 1)
       toast({ title: "Đã lưu Telegram preset", description: `Saved: ${presetNameRaw}` })
-      setTelegramPresetNamesByRowId((prev) => ({ ...prev, [row.id]: "" }))
+      setTelegramPresetSaveSuccessRowIds((prev) => ({ ...prev, [row.id]: true }))
+      window.setTimeout(() => {
+        setTelegramPresetSaveSuccessRowIds((prev) => {
+          if (!prev[row.id]) return prev
+          const next = { ...prev }
+          delete next[row.id]
+          return next
+        })
+      }, 4000)
     } catch (e: any) {
       toast({ title: "Không thể lưu preset", description: e?.message || "Unknown error", variant: "destructive" })
     } finally {
@@ -986,6 +1027,12 @@ export function ManualAlertCreatorModal({
   const updateTelegramRow = (id: string, patch: Partial<TelegramDestinationRow>) => {
     setTelegramRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
     setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
+    setTelegramPresetSaveSuccessRowIds((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }
 
   const updateSlackRow = (id: string, patch: Partial<SlackDestinationRow>) => {
@@ -1000,6 +1047,12 @@ export function ManualAlertCreatorModal({
 
   const removeTelegramRow = (id: string) => {
     setTelegramRows((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : [emptyTelegramRow()]))
+    setTelegramPresetSaveSuccessRowIds((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }
 
   const removeSlackRow = (id: string) => {
@@ -1616,42 +1669,54 @@ export function ManualAlertCreatorModal({
                           >
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                               <p className="text-sm font-medium text-slate-900">Telegram destinations</p>
-                              <div className="flex items-center gap-2">
-                                {telegramPresets.length > 0 ? (
-                                  <Select
-                                    onValueChange={(v) => {
-                                      const picked = telegramPresets.find((p) => p.id === v)
-                                      if (!picked) return
-                                      setTelegramRows((prev) => applyPresetToTelegramRows(picked, prev))
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 w-[220px] bg-white">
-                                      <SelectValue placeholder="Add from presets…" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {telegramPresets.map((p) => (
-                                        <SelectItem key={p.id} value={p.id}>
-                                          {p.name?.trim() || "Telegram preset"}{" "}
-                                          <span className="text-slate-400">
-                                            ({p.messageThreadId ? `${p.chatId}|${p.messageThreadId}` : p.chatId})
-                                          </span>
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : null}
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-white"
-                                  onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}
-                                >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Add
-                                </Button>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="bg-white"
+                                onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Add
+                              </Button>
                             </div>
+
+                            {telegramPresets.length > 0 ? (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium text-slate-600">Group/Channel đã lưu — bấm để thêm</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {telegramPresets.map((p) => {
+                                    const token = telegramPresetToken(p)
+                                    const already = token != null && telegramDestinationTokensInForm.has(token)
+                                    const label = p.name?.trim() || "Preset"
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        disabled={already}
+                                        title={
+                                          already
+                                            ? "Đã có trong danh sách destinations"
+                                            : `${p.messageThreadId ? `${p.chatId}|${p.messageThreadId}` : p.chatId}`
+                                        }
+                                        onClick={() => {
+                                          setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
+                                          setTelegramRows((prev) => applyPresetToTelegramRows(p, prev))
+                                        }}
+                                        className={cn(
+                                          "inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                                          already
+                                            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                            : "cursor-pointer border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400 hover:bg-indigo-50",
+                                        )}
+                                      >
+                                        <span className="truncate">{label}</span>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            ) : null}
 
                             <div className="space-y-2">
                               {telegramRows.map((row) => (
@@ -1666,31 +1731,46 @@ export function ManualAlertCreatorModal({
                                     value={row.messageThreadId}
                                     onChange={(e) => updateTelegramRow(row.id, { messageThreadId: e.target.value })}
                                   />
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-2 items-center">
                                     <Input
                                       placeholder="Preset name (to save)"
                                       value={telegramPresetNamesByRowId[row.id] ?? ""}
-                                      onChange={(e) =>
+                                      onChange={(e) => {
+                                        setTelegramPresetSaveSuccessRowIds((prev) => {
+                                          if (!prev[row.id]) return prev
+                                          const next = { ...prev }
+                                          delete next[row.id]
+                                          return next
+                                        })
                                         setTelegramPresetNamesByRowId((prev) => ({
                                           ...prev,
                                           [row.id]: e.target.value,
                                         }))
-                                      }
+                                      }}
                                     />
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      className="bg-white shrink-0"
-                                      disabled={savingTelegramPresetRowId === row.id}
-                                      onClick={() => void saveTelegramPresetFromRow(row)}
-                                      title="Save this destination as a preset in My Profile"
-                                    >
-                                      {savingTelegramPresetRowId === row.id ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                      ) : (
-                                        "Save"
-                                      )}
-                                    </Button>
+                                    {telegramPresetSaveSuccessRowIds[row.id] &&
+                                    savingTelegramPresetRowId !== row.id ? (
+                                      <CheckCircle2
+                                        className="h-5 w-5 shrink-0 text-emerald-600"
+                                        aria-label="Đã lưu preset"
+                                        title="Đã lưu preset"
+                                      />
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="bg-white shrink-0"
+                                        disabled={savingTelegramPresetRowId === row.id}
+                                        onClick={() => void saveTelegramPresetFromRow(row)}
+                                        title="Save this destination as a preset in My Profile"
+                                      >
+                                        {savingTelegramPresetRowId === row.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          "Save"
+                                        )}
+                                      </Button>
+                                    )}
                                   </div>
                                   <Button
                                     type="button"

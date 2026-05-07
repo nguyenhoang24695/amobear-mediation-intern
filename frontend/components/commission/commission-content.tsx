@@ -11,7 +11,7 @@ export function CommissionContent() {
   const canManage = hasScreenFunction("s-commission", "manage")
 
   if (!canView && !canManage) {
-    return <NoPermissionView message="Bạn không có quyền truy cập màn hình Commission." />
+    return <NoPermissionView message="You don’t have permission to access the Commission screen." />
   }
 
   return (
@@ -19,14 +19,14 @@ export function CommissionContent() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Commission</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Cấu hình và theo dõi hoa hồng doanh thu theo từng user.
+          Configure and track revenue commissions per user.
         </p>
       </div>
 
       <Tabs defaultValue={canManage ? "config" : "revenue"} className="w-full">
         <TabsList>
-          {canManage && <TabsTrigger value="config">Cấu hình</TabsTrigger>}
-          <TabsTrigger value="revenue">Doanh thu hoa hồng</TabsTrigger>
+          {canManage && <TabsTrigger value="config">Configuration</TabsTrigger>}
+          <TabsTrigger value="revenue">Commission revenue</TabsTrigger>
         </TabsList>
 
         {canManage && (

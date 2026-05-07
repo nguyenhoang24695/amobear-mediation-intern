@@ -25,7 +25,7 @@ function formatUsd(v: number) {
 
 function formatRate(rate: number | null): React.ReactNode {
   if (rate === null)
-    return <Badge className="bg-red-100 text-red-700 border-0 text-xs">Không hưởng</Badge>
+    return <Badge className="bg-red-100 text-red-700 border-0 text-xs">No commission</Badge>
   return <span className="tabular-nums">{rate}%</span>
 }
 
@@ -49,7 +49,7 @@ export function CommissionRevenueTab() {
   const canManage = hasScreenFunction("s-commission", "manage")
   const currentUserEmail = getCurrentUser()?.email ?? ""
 
-  // Date range defaults: 3 tháng gần nhất
+  // Date range defaults: last 3 months
   const defaultFrom = useMemo(() => {
     const d = new Date()
     d.setMonth(d.getMonth() - 3)
@@ -99,7 +99,7 @@ export function CommissionRevenueTab() {
           />
         )}
         <Input
-          placeholder="App ID (tùy chọn)..."
+          placeholder="App ID (optional)..."
           value={appIdFilter}
           onChange={(e) => setAppIdFilter(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -122,18 +122,18 @@ export function CommissionRevenueTab() {
         </div>
         <Button variant="outline" onClick={handleSearch} className="gap-2 shrink-0">
           <Search className="h-4 w-4" />
-          Tìm kiếm
+          Search
         </Button>
       </div>
 
       {/* Summary cards */}
       {rows.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <SummaryCard label="Tổng doanh thu" value={formatUsd(totalRevenue)} />
-          <SummaryCard label="Tổng hoa hồng" value={formatUsd(totalCommission)} />
-          <SummaryCard label="Số dòng" value={rows.length.toString()} />
+          <SummaryCard label="Total revenue" value={formatUsd(totalRevenue)} />
+          <SummaryCard label="Total commission" value={formatUsd(totalCommission)} />
+          <SummaryCard label="Rows" value={rows.length.toString()} />
           <SummaryCard
-            label="Tỷ lệ bình quân"
+            label="Avg. rate"
             value={
               totalRevenue > 0
                 ? ((totalCommission / totalRevenue) * 100).toFixed(2) + "%"
@@ -149,11 +149,11 @@ export function CommissionRevenueTab() {
           {loading ? (
             <div className="py-16 flex items-center justify-center gap-2 text-slate-500">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Đang tải...
+              Loading...
             </div>
           ) : rows.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-500">
-              Không có dữ liệu phù hợp.
+              No matching data found.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -162,10 +162,10 @@ export function CommissionRevenueTab() {
                   <TableRow>
                     {canManage && <TableHead>Username</TableHead>}
                     <TableHead>App</TableHead>
-                    <TableHead>Tháng</TableHead>
-                    <TableHead className="text-right">Doanh thu</TableHead>
-                    <TableHead className="text-center">Tỷ lệ HH</TableHead>
-                    <TableHead className="text-right">Hoa hồng</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-center">Rate</TableHead>
+                    <TableHead className="text-right">Commission</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
