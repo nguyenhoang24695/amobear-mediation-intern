@@ -35,14 +35,14 @@ const PAGE_SIZE = 20
 
 function formatRate(rate: number | null): React.ReactNode {
   if (rate === null)
-    return <Badge className="bg-red-100 text-red-700 border-0">Không hưởng</Badge>
+    return <Badge className="bg-red-100 text-red-700 border-0">No commission</Badge>
   if (rate === 0)
     return <Badge className="bg-amber-100 text-amber-700 border-0">0%</Badge>
   return <Badge className="bg-green-100 text-green-700 border-0">{rate}%</Badge>
 }
 
 function formatDate(d: string | null | undefined) {
-  if (!d) return "Vô hạn"
+  if (!d) return "No expiry"
   return d.slice(0, 10)
 }
 
@@ -78,11 +78,11 @@ export function CommissionConfigTab() {
     setDeleting(true)
     try {
       await commissionApi.deleteRate(deleteTarget.id)
-      toast({ title: "Đã xóa commission rate" })
+      toast({ title: "Commission rate deleted" })
       invalidateCache(cacheKey)
       await refetch()
     } catch {
-      toast({ title: "Lỗi khi xóa", variant: "destructive" })
+      toast({ title: "Failed to delete", variant: "destructive" })
     } finally {
       setDeleting(false)
       setDeleteTarget(null)
@@ -99,14 +99,14 @@ export function CommissionConfigTab() {
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex gap-2 flex-1">
           <Input
-            placeholder="Lọc theo username..."
+            placeholder="Filter by username..."
             value={usernameFilter}
             onChange={(e) => setUsernameFilter(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             className="max-w-xs"
           />
           <Input
-            placeholder="Lọc theo App ID..."
+            placeholder="Filter by App ID..."
             value={appIdFilter}
             onChange={(e) => setAppIdFilter(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -118,7 +118,7 @@ export function CommissionConfigTab() {
         </div>
         <Button onClick={() => setAddOpen(true)} className="gap-2">
           <Plus className="h-4 w-4" />
-          Thêm
+          Add
         </Button>
       </div>
 
@@ -128,11 +128,11 @@ export function CommissionConfigTab() {
           {loading ? (
             <div className="py-16 flex items-center justify-center gap-2 text-slate-500">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Đang tải...
+              Loading...
             </div>
           ) : rows.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-500">
-              Không có commission rate nào.
+              No commission rates found.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -141,9 +141,9 @@ export function CommissionConfigTab() {
                   <TableRow>
                     <TableHead>Username</TableHead>
                     <TableHead>App ID</TableHead>
-                    <TableHead>Tỷ lệ</TableHead>
-                    <TableHead>Ngày hiệu lực</TableHead>
-                    <TableHead>Ngày kết thúc</TableHead>
+                    <TableHead>Rate</TableHead>
+                    <TableHead>Effective date</TableHead>
+                    <TableHead>Expiry date</TableHead>
                     <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
@@ -200,22 +200,22 @@ export function CommissionConfigTab() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogTitle>Confirm deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              Xóa commission rate của <strong>{deleteTarget?.username}</strong> —{" "}
-              <strong>{deleteTarget?.appId}</strong> (từ {formatDate(deleteTarget?.effectiveDate)})?
-              Hành động này không thể hoàn tác.
+              Delete the commission rate for <strong>{deleteTarget?.username}</strong> —{" "}
+              <strong>{deleteTarget?.appId}</strong> (from {formatDate(deleteTarget?.effectiveDate)})?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() => void handleDelete()}
               disabled={deleting}
             >
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Xóa
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

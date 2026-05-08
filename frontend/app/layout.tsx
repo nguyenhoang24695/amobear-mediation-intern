@@ -13,20 +13,7 @@ export const metadata: Metadata = {
   description: "Comprehensive ad mediation platform managing 200+ mobile apps with 60,000+ ad instances",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
+    icon: "/logo/favicon.ico",
     apple: "/apple-icon.png",
   },
 }

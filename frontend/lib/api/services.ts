@@ -146,6 +146,8 @@ export interface CurrentUser {
     slackWebhookUrlRealtime?: string
     slackWebhookUrlHourly?: string
     slackWebhookUrlDaily?: string
+    /** JSON array: [{ id, name, chatId, messageThreadId? }, ...] */
+    telegramDestinationsJson?: string
     organization?: { id: string; name: string; slug: string; logoUrl?: string }
     teams?: Array<{ id: string; name: string; role: string }>
     permissions?: Record<string, string>
@@ -163,6 +165,8 @@ export interface UpdateMyProfileRequest {
     slackWebhookUrlRealtime?: string
     slackWebhookUrlHourly?: string
     slackWebhookUrlDaily?: string
+    /** JSON array: [{ id, name, chatId, messageThreadId? }, ...]. Empty string to clear. */
+    telegramDestinationsJson?: string
 }
 
 export interface PagedResult<T> {
@@ -823,6 +827,13 @@ export const teamMembersApi = {
         userId: string
     ): Promise<{ success: boolean; data?: AbUserAppMappingRow[]; message?: string }> => {
         return apiClient.get(`/api/v1/team-members/ab-user-app-mapping/${userId}`)
+    },
+
+    getPermittedApps: async (
+        userId: string,
+        params?: { search?: string; limit?: number }
+    ): Promise<{ success: boolean; data?: import('@/types/api').PermittedAppListItem[]; message?: string }> => {
+        return apiClient.get(`/api/v1/team-members/${encodeURIComponent(userId)}/permitted-apps`, params as Record<string, string | number | undefined>)
     },
 
     bulkUpdateAbUserAppMappingDates: async (

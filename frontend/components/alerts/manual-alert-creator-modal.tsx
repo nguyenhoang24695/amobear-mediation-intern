@@ -18,8 +18,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { AlertTriangle, AlertCircle, Info, ChevronRight, ChevronLeft, Check, Search, Loader2, Plus, Trash2 } from "lucide-react"
-import { alertsApi, structureApi } from "@/lib/api/services"
+import {
+  AlertTriangle,
+  AlertCircle,
+  Info,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  CheckCircle2,
+  Search,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react"
+import { alertsApi, authApi, structureApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -34,6 +46,8 @@ import {
 import { useApi } from "@/hooks/use-api"
 import type { AlertRule, AlertRuleConfigPayload, AppMetricCatalogItem } from "@/types/api"
 import { cn } from "@/lib/utils"
+import { authUserFromMeDto, getAccessToken, getCurrentUser, getRefreshToken, setAuthData } from "@/lib/auth"
+import { formatRuleConditionsSummary } from "./alert-rule-details-dialog"
 
 interface ManualAlertCreatorModalProps {
   open: boolean
@@ -42,12 +56,21 @@ interface ManualAlertCreatorModalProps {
   rule?: AlertRule | null
   /** PRIVATE = rule lưu cho tab My Alerts. */
   ruleVisibility?: "ORG" | "PRIVATE"
+  /** ORG rule dùng làm template (clone) — wizard prefill nhưng luôn tạo mới (không sửa rule gốc). */
+  cloneFrom?: AlertRule | null
 }
 
 type TelegramDestinationRow = {
   id: string
   chatId: string
   messageThreadId: string
+}
+
+type TelegramDestinationPreset = {
+  id: string
+  name: string
+  chatId: string
+  messageThreadId?: string
 }
 
 type SlackDestinationRow = {
@@ -100,6 +123,51 @@ function parseConditionCombineMode(raw: string | null | undefined): "all" | "any
   if (s === "any") return "any"
   if (s === "always_true") return "always_true"
   return "all"
+}
+
+/** Logic + condition rows từ rule có sẵn (template / edit) — dùng chung init wizard và “Giữ nguyên”. */
+function buildConditionLogicAndRowsFromRule(sourceRule: AlertRule): {
+  logic: "all" | "any" | "always_true"
+  rows: ManualConditionRow[]
+} {
+  const parsedConfig = parseRuleConfig(sourceRule.ruleConfig || sourceRule.filterConditions)
+  const logic = parseConditionCombineMode(parsedConfig?.conditionLogic)
+  const conds = parsedConfig?.conditions
+  const rows: ManualConditionRow[] =
+    logic === "always_true"
+      ? [emptyConditionRow()]
+      : conds && conds.length > 0
+        ? conds.map((c) => ({
+            id: c.id?.trim() || newRowId(),
+            metric: c.metricKey || parsedConfig?.metricKey || "",
+            conditionType: c.conditionType || "threshold",
+            operator: c.operator || "less_than",
+            thresholdValue:
+              c.thresholdValue != null
+                ? String(c.thresholdValue)
+                : sourceRule.thresholdValue != null
+                  ? String(sourceRule.thresholdValue)
+                  : "",
+            percentChange: c.percentChange != null ? String(c.percentChange) : "",
+            consecutiveDays: c.consecutiveDays != null ? String(c.consecutiveDays) : "3",
+          }))
+        : [
+            {
+              id: newRowId(),
+              metric: parsedConfig?.metricKey || "",
+              conditionType: parsedConfig?.conditionType || "threshold",
+              operator: parsedConfig?.operator || "less_than",
+              thresholdValue:
+                parsedConfig?.thresholdValue != null
+                  ? String(parsedConfig.thresholdValue)
+                  : sourceRule.thresholdValue != null
+                    ? String(sourceRule.thresholdValue)
+                    : "",
+              percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
+              consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
+            },
+          ]
+  return { logic, rows }
 }
 
 function emptyConditionRow(): ManualConditionRow {
@@ -172,11 +240,19 @@ function emptyEmailRow(): EmailRecipientRow {
   return { id: newRowId(), email: "" }
 }
 
+function telegramDestinationToken(chatId: string, messageThreadId?: string | null): string | null {
+  const c = chatId.trim()
+  if (!c) return null
+  const t = (messageThreadId ?? "").trim()
+  return t ? `${c}|${t}` : c
+}
+
 function telegramTopicTokenFromRow(row: TelegramDestinationRow): string | null {
-  const chatId = row.chatId.trim()
-  if (!chatId) return null
-  const threadId = row.messageThreadId.trim()
-  return threadId ? `${chatId}|${threadId}` : chatId
+  return telegramDestinationToken(row.chatId, row.messageThreadId)
+}
+
+function telegramPresetToken(preset: TelegramDestinationPreset): string | null {
+  return telegramDestinationToken(preset.chatId, preset.messageThreadId)
 }
 
 function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
@@ -189,6 +265,24 @@ function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
       messageThreadId: messageThreadId?.trim() || "",
     }
   })
+}
+
+function applyPresetToTelegramRows(preset: TelegramDestinationPreset, existing: TelegramDestinationRow[]) {
+  const token = telegramPresetToken(preset)
+  if (!token) return existing
+
+  const has = existing.some((r) => telegramTopicTokenFromRow(r) === token)
+  if (has) return existing
+
+  const next = existing.length === 1 && !existing[0]?.chatId.trim() ? [] : existing
+  return [
+    ...next,
+    {
+      id: newRowId(),
+      chatId: preset.chatId.trim(),
+      messageThreadId: preset.messageThreadId?.trim() ?? "",
+    },
+  ]
 }
 
 function rowsFromSlackChannels(channels: string[]): SlackDestinationRow[] {
@@ -212,6 +306,25 @@ function parseJsonArray(input?: string | null): string[] {
   try {
     const parsed = JSON.parse(input)
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []
+  } catch {
+    return []
+  }
+}
+
+function parseTelegramPresetsJson(input?: string | null): TelegramDestinationPreset[] {
+  if (!input?.trim()) return []
+  try {
+    const parsed = JSON.parse(input)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((x) => x && typeof x === "object")
+      .map((x) => ({
+        id: typeof x.id === "string" && x.id.trim() ? x.id.trim() : newRowId(),
+        name: typeof x.name === "string" ? x.name : "",
+        chatId: typeof x.chatId === "string" ? x.chatId : "",
+        messageThreadId: typeof x.messageThreadId === "string" ? x.messageThreadId : undefined,
+      }))
+      .filter((x) => x.chatId.trim().length > 0)
   } catch {
     return []
   }
@@ -266,9 +379,16 @@ export function ManualAlertCreatorModal({
   onCreated,
   rule,
   ruleVisibility = "ORG",
+  cloneFrom,
 }: ManualAlertCreatorModalProps) {
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
+  const [savingTelegramPresetRowId, setSavingTelegramPresetRowId] = useState<string | null>(null)
+  /** Tăng sau khi lưu preset vào profile để useMemo preset đọc lại từ getCurrentUser(). */
+  const [telegramPresetsRevision, setTelegramPresetsRevision] = useState(0)
+  const [telegramPresetNamesByRowId, setTelegramPresetNamesByRowId] = useState<Record<string, string>>({})
+  /** Dòng nào vừa lưu preset Telegram thành công — hiện icon tích xanh. */
+  const [telegramPresetSaveSuccessRowIds, setTelegramPresetSaveSuccessRowIds] = useState<Record<string, true>>({})
   const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
   const [pendingDuplicateName, setPendingDuplicateName] = useState("")
   const [appSearch, setAppSearch] = useState("")
@@ -280,6 +400,8 @@ export function ManualAlertCreatorModal({
   const [step2FieldErrors, setStep2FieldErrors] = useState<Record<string, Step2ConditionErrors>>({})
   const [step3Errors, setStep3Errors] = useState<Step3SectionErrors>({})
   const [step, setStep] = useState(1)
+  /** Chỉ khi Create from template: Giữ nguyên điều kiện template hay chỉnh tay. */
+  const [cloneConditionMode, setCloneConditionMode] = useState<"keep" | "customize">("keep")
 
   const clearValidationErrors = useCallback(() => {
     setStep1Error(undefined)
@@ -339,10 +461,33 @@ export function ManualAlertCreatorModal({
 
   const isAllApps = formData.selectedApps.includes("all")
   const isEdit = !!rule
+  const isClone = !isEdit && !!cloneFrom
+
+  const cloneTemplateConditionDescription = useMemo(() => {
+    if (!cloneFrom) return "—"
+    return formatRuleConditionsSummary(cloneFrom)
+  }, [cloneFrom])
+
+  /** Clone từ template: chỉnh tay điều kiện hay giữ nguyên như template. */
+  const showConditionEditor = !isClone || cloneConditionMode === "customize"
 
   /** Tab My Alerts hoặc rule PRIVATE đang sửa — không cấu hình Telegram/Slack/Email trên rule. */
   const isMyPrivateRule =
     ruleVisibility === "PRIVATE" || String(rule?.visibility ?? "").toUpperCase() === "PRIVATE"
+
+  const telegramPresets = useMemo(() => {
+    const u = getCurrentUser() as { telegramDestinationsJson?: string } | null
+    return parseTelegramPresetsJson(u?.telegramDestinationsJson)
+  }, [open, telegramPresetsRevision])
+
+  const telegramDestinationTokensInForm = useMemo(() => {
+    const s = new Set<string>()
+    for (const r of telegramRows) {
+      const t = telegramTopicTokenFromRow(r)
+      if (t) s.add(t)
+    }
+    return s
+  }, [telegramRows])
 
   useEffect(() => {
     if (!open) return
@@ -351,24 +496,29 @@ export function ManualAlertCreatorModal({
       ruleVisibility === "PRIVATE" ||
       (rule != null && String(rule.visibility ?? "").toUpperCase() === "PRIVATE")
 
-    const parsedConfig = parseRuleConfig(rule?.ruleConfig || rule?.filterConditions)
-    const notificationChannels = parseJsonArray(rule?.notificationChannels).map((item) => item.toUpperCase())
+    /** Khi clone: dùng dữ liệu template (ORG rule) nhưng không có id. */
+    const sourceRule: AlertRule | null | undefined = isClone ? cloneFrom : rule
+
+    const parsedConfig = parseRuleConfig(sourceRule?.ruleConfig || sourceRule?.filterConditions)
+    const notificationChannels = parseJsonArray(sourceRule?.notificationChannels).map((item) => item.toUpperCase())
 
     setStep(1)
+    if (isClone) setCloneConditionMode("keep")
     setAppSearch("")
     setDuplicateConfirmOpen(false)
     setPendingDuplicateName("")
+    setTelegramPresetSaveSuccessRowIds({})
     if (isPrivateFlow) {
       setTelegramRows([emptyTelegramRow()])
       setSlackRows([emptySlackRow()])
       setEmailRows([emptyEmailRow()])
     } else {
-      setTelegramRows(rowsFromTelegramTopics(parseJsonArray(rule?.telegramTopics)))
-      setSlackRows(rowsFromSlackChannels(parseJsonArray(rule?.slackChannels)))
-      setEmailRows(rowsFromEmailRecipients(parseJsonArray(rule?.emailRecipients)))
+      setTelegramRows(rowsFromTelegramTopics(parseJsonArray(sourceRule?.telegramTopics)))
+      setSlackRows(rowsFromSlackChannels(parseJsonArray(sourceRule?.slackChannels)))
+      setEmailRows(rowsFromEmailRecipients(parseJsonArray(sourceRule?.emailRecipients)))
     }
 
-    if (!rule) {
+    if (!sourceRule) {
       setFormData({
         conditionLogic: "all",
         conditions: [emptyConditionRow()],
@@ -402,42 +552,29 @@ export function ManualAlertCreatorModal({
     const scopeOrderRaw = scope?.orderByMetric?.trim() ?? ""
     const scopeDirRaw = (scope?.orderByDirection ?? "desc").toLowerCase() === "asc" ? "asc" : "desc"
 
-    const logic = parseConditionCombineMode(parsedConfig?.conditionLogic)
-    const conds = parsedConfig?.conditions
-    const rows: ManualConditionRow[] =
-      logic === "always_true"
-        ? [emptyConditionRow()]
-        : conds && conds.length > 0
-          ? conds.map((c) => ({
-              id: c.id?.trim() || newRowId(),
-              metric: c.metricKey || parsedConfig?.metricKey || "",
-              conditionType: c.conditionType || "threshold",
-              operator: c.operator || "less_than",
-              thresholdValue:
-                c.thresholdValue != null
-                  ? String(c.thresholdValue)
-                  : rule.thresholdValue != null
-                    ? String(rule.thresholdValue)
-                    : "",
-              percentChange: c.percentChange != null ? String(c.percentChange) : "",
-              consecutiveDays: c.consecutiveDays != null ? String(c.consecutiveDays) : "3",
-            }))
-          : [
-              {
-                id: newRowId(),
-                metric: parsedConfig?.metricKey || "",
-                conditionType: parsedConfig?.conditionType || "threshold",
-                operator: parsedConfig?.operator || "less_than",
-                thresholdValue:
-                  parsedConfig?.thresholdValue != null
-                    ? String(parsedConfig.thresholdValue)
-                    : rule.thresholdValue != null
-                      ? String(rule.thresholdValue)
-                      : "",
-                percentChange: parsedConfig?.percentChange != null ? String(parsedConfig.percentChange) : "",
-                consecutiveDays: parsedConfig?.consecutiveDays != null ? String(parsedConfig.consecutiveDays) : "3",
-              },
-            ]
+    const { logic, rows } = buildConditionLogicAndRowsFromRule(sourceRule)
+
+    /** Khi clone: tên mặc định "Copy of ..." thay vì giữ tên gốc. */
+    const defaultName = isClone
+      ? `Copy of ${sourceRule.name || "Alert Rule"}`
+      : sourceRule.name || ""
+
+    /** Khi clone PRIVATE: kế thừa kênh notify nhưng strip destinations (lấy từ profile). */
+    const channelsForClone = isPrivateFlow
+      ? {
+          inApp: notificationChannels.includes("IN_APP"),
+          telegram: notificationChannels.includes("TELEGRAM"),
+          slack: notificationChannels.includes("SLACK"),
+          lark: notificationChannels.includes("LARK"),
+          email: notificationChannels.includes("EMAIL"),
+        }
+      : {
+          inApp: notificationChannels.includes("IN_APP"),
+          telegram: notificationChannels.includes("TELEGRAM"),
+          slack: notificationChannels.includes("SLACK"),
+          lark: notificationChannels.includes("LARK"),
+          email: notificationChannels.includes("EMAIL"),
+        }
 
     setFormData({
       conditionLogic: logic,
@@ -445,16 +582,10 @@ export function ManualAlertCreatorModal({
       selectedApps,
       scopeOrderByMetric: scopeOrderRaw,
       scopeOrderByDirection: scopeDirRaw,
-      alertName: rule.name || "",
-      severity: toSeverityValue(rule.severity),
-      channels: {
-        inApp: notificationChannels.includes("IN_APP"),
-        telegram: notificationChannels.includes("TELEGRAM"),
-        slack: notificationChannels.includes("SLACK"),
-        lark: notificationChannels.includes("LARK"),
-        email: notificationChannels.includes("EMAIL"),
-      },
-      frequency: parsedConfig?.frequency || (rule.timeWindowHours === 24 ? "daily" : rule.timeWindowHours === 1 ? "hourly" : "realtime"),
+      alertName: defaultName,
+      severity: toSeverityValue(sourceRule.severity),
+      channels: channelsForClone,
+      frequency: parsedConfig?.frequency || (sourceRule.timeWindowHours === 24 ? "daily" : sourceRule.timeWindowHours === 1 ? "hourly" : "realtime"),
       evaluationCooldownMinutes:
         parsedConfig?.evaluationCooldownMinutes != null && parsedConfig.evaluationCooldownMinutes > 0
           ? String(parsedConfig.evaluationCooldownMinutes)
@@ -467,7 +598,7 @@ export function ManualAlertCreatorModal({
           : "any",
       autoResolve: parsedConfig?.autoResolve ?? true,
     })
-  }, [open, rule, ruleVisibility])
+  }, [open, rule, cloneFrom, ruleVisibility, isClone])
 
   useEffect(() => {
     if (open) clearValidationErrors()
@@ -493,37 +624,43 @@ export function ManualAlertCreatorModal({
       setStep1Error(undefined)
     }
     if (step === 2) {
-      if (formData.conditionLogic !== "always_true") {
-        if (formData.conditions.length === 0) {
-          setStep2ListError("Thêm ít nhất một điều kiện (Add condition).")
+      const skipConditionValidation = isClone && cloneConditionMode === "keep"
+      if (!skipConditionValidation) {
+        if (formData.conditionLogic !== "always_true") {
+          if (formData.conditions.length === 0) {
+            setStep2ListError("Thêm ít nhất một điều kiện (Add condition).")
+            setStep2FieldErrors({})
+            return
+          }
+          setStep2ListError(undefined)
+          const byId: Record<string, Step2ConditionErrors> = {}
+          for (const c of formData.conditions) {
+            const e: Step2ConditionErrors = {}
+            if (!c.metric?.trim()) {
+              e.metric = "Chọn metric."
+            }
+            if (c.conditionType === "threshold" && !c.thresholdValue?.trim()) {
+              e.value = "Nhập giá trị threshold."
+            }
+            if (c.conditionType === "percent_change" && !c.percentChange?.trim()) {
+              e.value = "Nhập phần trăm thay đổi."
+            }
+            if (c.conditionType === "consecutive" && !c.thresholdValue?.trim()) {
+              e.value = "Nhập ngưỡng cho consecutive."
+            }
+            if (e.metric || e.value) {
+              byId[c.id] = e
+            }
+          }
+          if (Object.keys(byId).length > 0) {
+            setStep2FieldErrors(byId)
+            return
+          }
           setStep2FieldErrors({})
-          return
+        } else {
+          setStep2ListError(undefined)
+          setStep2FieldErrors({})
         }
-        setStep2ListError(undefined)
-        const byId: Record<string, Step2ConditionErrors> = {}
-        for (const c of formData.conditions) {
-          const e: Step2ConditionErrors = {}
-          if (!c.metric?.trim()) {
-            e.metric = "Chọn metric."
-          }
-          if (c.conditionType === "threshold" && !c.thresholdValue?.trim()) {
-            e.value = "Nhập giá trị threshold."
-          }
-          if (c.conditionType === "percent_change" && !c.percentChange?.trim()) {
-            e.value = "Nhập phần trăm thay đổi."
-          }
-          if (c.conditionType === "consecutive" && !c.thresholdValue?.trim()) {
-            e.value = "Nhập ngưỡng cho consecutive."
-          }
-          if (e.metric || e.value) {
-            byId[c.id] = e
-          }
-        }
-        if (Object.keys(byId).length > 0) {
-          setStep2FieldErrors(byId)
-          return
-        }
-        setStep2FieldErrors({})
       } else {
         setStep2ListError(undefined)
         setStep2FieldErrors({})
@@ -547,11 +684,11 @@ export function ManualAlertCreatorModal({
           e.frequency = "Giờ chạy hằng ngày (GMT+7) phải từ 0–23."
         }
       }
+      if (formData.channels.telegram) {
+        const ok = telegramRows.some((row) => telegramTopicTokenFromRow(row))
+        if (!ok) e.telegram = "Nhập ít nhất một Chat ID khi bật Telegram."
+      }
       if (!isMyPrivateRule) {
-        if (formData.channels.telegram) {
-          const ok = telegramRows.some((row) => telegramTopicTokenFromRow(row))
-          if (!ok) e.telegram = "Nhập ít nhất một Chat ID khi bật Telegram."
-        }
         if (formData.channels.slack) {
           const badUrl = slackRows.some((row) => {
             const v = row.webhookUrl.trim()
@@ -806,7 +943,8 @@ export function ManualAlertCreatorModal({
       return {
         ...basePayload,
         notificationChannels: JSON.stringify(privateChannels),
-        telegramTopics: JSON.stringify([]),
+        // PRIVATE: cho phép TELEGRAM per-rule (chatId|threadId). Slack/Email vẫn lấy từ profile.
+        telegramTopics: JSON.stringify(formData.channels.telegram ? telegramTopics : []),
         emailRecipients: JSON.stringify([]),
         slackChannels: JSON.stringify([]),
       }
@@ -815,9 +953,86 @@ export function ManualAlertCreatorModal({
     return basePayload
   }
 
+  const saveTelegramPresetFromRow = async (row: TelegramDestinationRow) => {
+    if (!isMyPrivateRule) return
+    const chatId = row.chatId.trim()
+    if (!chatId) {
+      toast({ title: "Thiếu chatId", description: "Nhập chatId trước khi lưu preset.", variant: "destructive" })
+      return
+    }
+    const messageThreadId = row.messageThreadId.trim()
+    const presetNameRaw = (telegramPresetNamesByRowId[row.id] ?? "").trim()
+    if (!presetNameRaw) {
+      toast({ title: "Thiếu tên gợi nhớ", description: "Nhập tên preset để lưu.", variant: "destructive" })
+      return
+    }
+
+    setSavingTelegramPresetRowId(row.id)
+    try {
+      const current = getCurrentUser() as { telegramDestinationsJson?: string } | null
+      const existing = parseTelegramPresetsJson(current?.telegramDestinationsJson)
+
+      const token = messageThreadId ? `${chatId}|${messageThreadId}` : chatId
+      const already = existing.find((p) => {
+        const t = p.messageThreadId?.trim()
+          ? `${p.chatId.trim()}|${p.messageThreadId.trim()}`
+          : p.chatId.trim()
+        return t === token
+      })
+
+      const next: TelegramDestinationPreset[] = already
+        ? existing.map((p) =>
+            p.id === already.id
+              ? { ...p, name: presetNameRaw, chatId, messageThreadId: messageThreadId || undefined }
+              : p,
+          )
+        : [
+            ...existing,
+            {
+              id: newRowId(),
+              name: presetNameRaw,
+              chatId,
+              messageThreadId: messageThreadId || undefined,
+            },
+          ]
+
+      const res = await authApi.updateMyProfile({
+        telegramDestinationsJson: JSON.stringify(next),
+      })
+      if (!res.success || !res.data) throw new Error("Failed to update profile")
+
+      const accessToken = getAccessToken()
+      if (accessToken) {
+        setAuthData(accessToken, getRefreshToken() ?? null, authUserFromMeDto(res.data))
+      }
+
+      setTelegramPresetsRevision((n) => n + 1)
+      toast({ title: "Đã lưu Telegram preset", description: `Saved: ${presetNameRaw}` })
+      setTelegramPresetSaveSuccessRowIds((prev) => ({ ...prev, [row.id]: true }))
+      window.setTimeout(() => {
+        setTelegramPresetSaveSuccessRowIds((prev) => {
+          if (!prev[row.id]) return prev
+          const next = { ...prev }
+          delete next[row.id]
+          return next
+        })
+      }, 4000)
+    } catch (e: any) {
+      toast({ title: "Không thể lưu preset", description: e?.message || "Unknown error", variant: "destructive" })
+    } finally {
+      setSavingTelegramPresetRowId(null)
+    }
+  }
+
   const updateTelegramRow = (id: string, patch: Partial<TelegramDestinationRow>) => {
     setTelegramRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
     setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
+    setTelegramPresetSaveSuccessRowIds((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }
 
   const updateSlackRow = (id: string, patch: Partial<SlackDestinationRow>) => {
@@ -832,6 +1047,12 @@ export function ManualAlertCreatorModal({
 
   const removeTelegramRow = (id: string) => {
     setTelegramRows((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : [emptyTelegramRow()]))
+    setTelegramPresetSaveSuccessRowIds((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }
 
   const removeSlackRow = (id: string) => {
@@ -853,7 +1074,9 @@ export function ManualAlertCreatorModal({
       <DialogContent className="flex max-h-[min(85vh,900px)] w-[90vw] max-w-[90vw] flex-col gap-0 overflow-hidden p-6 md:w-[60vw] md:!max-w-[60vw]">
         <div className="shrink-0 space-y-2 border-b border-slate-100 pb-3">
           <DialogHeader className="space-y-1 text-left">
-            <DialogTitle className="text-xl">{isEdit ? "Edit Alert Rule" : "Create Alert Rule"}</DialogTitle>
+            <DialogTitle className="text-xl">
+              {isEdit ? "Edit Alert Rule" : isClone ? "Create Alert from Template" : "Create Alert Rule"}
+            </DialogTitle>
             <DialogDescription className="text-muted-foreground">Step {step} of 4</DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 pt-1">
@@ -1038,6 +1261,54 @@ export function ManualAlertCreatorModal({
 
             {step === 2 && (
               <div className="space-y-6">
+                {isClone && cloneFrom && (
+                  <div className="space-y-3">
+                    <Label>Điều kiện (từ template)</Label>
+                    <RadioGroup
+                      value={cloneConditionMode}
+                      onValueChange={(v) => {
+                        const mode = v as "keep" | "customize"
+                        setCloneConditionMode(mode)
+                        if (mode === "keep") {
+                          const { logic, rows } = buildConditionLogicAndRowsFromRule(cloneFrom)
+                          setFormData((prev) => ({ ...prev, conditionLogic: logic, conditions: rows }))
+                          setStep2ListError(undefined)
+                          setStep2FieldErrors({})
+                        }
+                      }}
+                      className="flex flex-wrap gap-4"
+                    >
+                      <label
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
+                          cloneConditionMode === "keep" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                        }`}
+                      >
+                        <RadioGroupItem value="keep" id="clone-cond-keep" />
+                        <span className="text-sm font-medium">Giữ nguyên</span>
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
+                          cloneConditionMode === "customize" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                        }`}
+                      >
+                        <RadioGroupItem value="customize" id="clone-cond-customize" />
+                        <span className="text-sm font-medium">Customize</span>
+                      </label>
+                    </RadioGroup>
+                  </div>
+                )}
+
+                {isClone && cloneConditionMode === "keep" && (
+                  <div className="space-y-2">
+                    <Label className="text-slate-700">Mô tả điều kiện</Label>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{cloneTemplateConditionDescription}</p>
+                    </div>
+                  </div>
+                )}
+
+                {showConditionEditor && (
+                  <>
                 <div className="flex items-center gap-2">
                   <Label>Combine conditions</Label>
                   {metricsCatalogLoading && (
@@ -1314,6 +1585,8 @@ export function ManualAlertCreatorModal({
                 </div>
                   </>
                 )}
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <Label>Severity *</Label>
@@ -1360,9 +1633,9 @@ export function ManualAlertCreatorModal({
                   <Label>Notification Channels</Label>
                   {isMyPrivateRule && (
                     <p className="text-sm text-slate-600">
-                      Bật/tắt in-app bên dưới. Slack và email khi gửi lấy từ{" "}
-                      <span className="font-medium text-slate-800">My Profile</span> — không nhập topic, webhook hay
-                      danh sách email trên rule.
+                      Telegram destinations nhập ở dưới. Slack và email khi gửi lấy từ{" "}
+                      <span className="font-medium text-slate-800">My Profile</span> — không nhập webhook/danh sách email
+                      trên rule.
                     </p>
                   )}
                   <div className="space-y-3">
@@ -1387,6 +1660,137 @@ export function ManualAlertCreatorModal({
                             }}
                           />
                         </div>
+                        {formData.channels.telegram && (
+                          <div
+                            className={cn(
+                              "rounded-lg border bg-slate-50 p-3 space-y-3",
+                              step3Errors.telegram ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <p className="text-sm font-medium text-slate-900">Telegram destinations</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="bg-white"
+                                onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Add
+                              </Button>
+                            </div>
+
+                            {telegramPresets.length > 0 ? (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium text-slate-600">Group/Channel đã lưu — bấm để thêm</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {telegramPresets.map((p) => {
+                                    const token = telegramPresetToken(p)
+                                    const already = token != null && telegramDestinationTokensInForm.has(token)
+                                    const label = p.name?.trim() || "Preset"
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        disabled={already}
+                                        title={
+                                          already
+                                            ? "Đã có trong danh sách destinations"
+                                            : `${p.messageThreadId ? `${p.chatId}|${p.messageThreadId}` : p.chatId}`
+                                        }
+                                        onClick={() => {
+                                          setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
+                                          setTelegramRows((prev) => applyPresetToTelegramRows(p, prev))
+                                        }}
+                                        className={cn(
+                                          "inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                                          already
+                                            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                            : "cursor-pointer border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400 hover:bg-indigo-50",
+                                        )}
+                                      >
+                                        <span className="truncate">{label}</span>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <div className="space-y-2">
+                              {telegramRows.map((row) => (
+                                <div key={row.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2">
+                                  <Input
+                                    placeholder="Chat ID"
+                                    value={row.chatId}
+                                    onChange={(e) => updateTelegramRow(row.id, { chatId: e.target.value })}
+                                  />
+                                  <Input
+                                    placeholder="messageThreadId (optional)"
+                                    value={row.messageThreadId}
+                                    onChange={(e) => updateTelegramRow(row.id, { messageThreadId: e.target.value })}
+                                  />
+                                  <div className="flex gap-2 items-center">
+                                    <Input
+                                      placeholder="Preset name (to save)"
+                                      value={telegramPresetNamesByRowId[row.id] ?? ""}
+                                      onChange={(e) => {
+                                        setTelegramPresetSaveSuccessRowIds((prev) => {
+                                          if (!prev[row.id]) return prev
+                                          const next = { ...prev }
+                                          delete next[row.id]
+                                          return next
+                                        })
+                                        setTelegramPresetNamesByRowId((prev) => ({
+                                          ...prev,
+                                          [row.id]: e.target.value,
+                                        }))
+                                      }}
+                                    />
+                                    {telegramPresetSaveSuccessRowIds[row.id] &&
+                                    savingTelegramPresetRowId !== row.id ? (
+                                      <CheckCircle2
+                                        className="h-5 w-5 shrink-0 text-emerald-600"
+                                        aria-label="Đã lưu preset"
+                                        title="Đã lưu preset"
+                                      />
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="bg-white shrink-0"
+                                        disabled={savingTelegramPresetRowId === row.id}
+                                        onClick={() => void saveTelegramPresetFromRow(row)}
+                                        title="Save this destination as a preset in My Profile"
+                                      >
+                                        {savingTelegramPresetRowId === row.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          "Save"
+                                        )}
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeTelegramRow(row.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+
+                            {step3Errors.telegram && (
+                              <p className="text-sm text-red-600" role="alert">
+                                {step3Errors.telegram}
+                              </p>
+                            )}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm">Slack</span>
@@ -1791,7 +2195,9 @@ export function ManualAlertCreatorModal({
             ) : (
               <Button onClick={handleCreate} className="bg-green-600 hover:bg-green-700" disabled={creating}>
                 <Check className="w-4 h-4 mr-1" />
-                {creating ? (isEdit ? "Saving..." : "Creating...") : isEdit ? "Save Alert" : "Create Alert"}
+                {creating
+                  ? isEdit ? "Saving..." : "Creating..."
+                  : isEdit ? "Save Alert" : "Create Alert"}
               </Button>
             )}
           </div>
