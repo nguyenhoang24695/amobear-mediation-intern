@@ -1,0 +1,3 @@
+category_id: "midcore_game"
+pilot: "hero-rpg"
+funnels: [{"name": "progression", "steps": ["level_start", "boss_defeat"]}]

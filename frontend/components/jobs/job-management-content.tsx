@@ -83,15 +83,11 @@ export function JobManagementContent() {
   const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null)
   const { toast } = useToast()
 
-  if (!canView) {
-    return <NoPermissionView />
-  }
-
   // Fetch job schedules from API
   const { data: jobSchedules, loading, refetch } = useApi(
     () => jobSchedulesApi.list(),
     {
-      enabled: true,
+      enabled: canView,
       cacheKey: "job_schedules_list",
     }
   )
@@ -119,6 +115,10 @@ export function JobManagementContent() {
 
   const enabledCount = jobs.filter((j) => j.enabled).length
   const disabledCount = jobs.filter((j) => !j.enabled).length
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
 
   const handleReload = async () => {
     setReloading(true)

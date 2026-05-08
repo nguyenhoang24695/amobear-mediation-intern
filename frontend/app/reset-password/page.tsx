@@ -244,7 +244,7 @@ export default function ResetPasswordPage() {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {confirmPassword && !passwordsMatch && <p className="text-xs text-red-500">Passwords don't match</p>}
+                {confirmPassword && !passwordsMatch && <p className="text-xs text-red-500">Passwords don&apos;t match</p>}
               </div>
 
               {/* Submit Button */}

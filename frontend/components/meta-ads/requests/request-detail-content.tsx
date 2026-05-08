@@ -482,12 +482,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const canApprove = hasScreenFunction(SCREEN_META_REQUESTS, "approve")
   const canExecute = hasScreenFunction(SCREEN_META_REQUESTS, "execute")
   const canRetry = hasScreenFunction(SCREEN_META_REQUESTS, "retry")
-
-  if (requestId === "create") {
-    router.replace("/meta-ads/requests/create")
-    return null
-  }
-
+  const isCreate = requestId === "create"
   const numericRequestId = Number(requestId)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
@@ -496,10 +491,15 @@ export function RequestDetailContent({ requestId }: Props) {
   const { data: detail, loading, error, refetch } = useApi(
     () => metaRequestsApi.getById(numericRequestId),
     {
-      enabled: Number.isFinite(numericRequestId),
+      enabled: !isCreate && Number.isFinite(numericRequestId),
       cacheKey: `meta-request:${numericRequestId}`,
     }
   )
+
+  useEffect(() => {
+    if (!isCreate) return
+    router.replace("/meta-ads/requests/create")
+  }, [isCreate, router])
 
   const groupedValidationErrors = useMemo(() => {
     if (!detail?.validationErrorsJson) return {}
@@ -523,6 +523,8 @@ export function RequestDetailContent({ requestId }: Props) {
     }
     setExpandedLogs(nextState)
   }, [detail?.operationLogs])
+
+  if (isCreate) return null
 
   const handleCopy = async (label: string, value?: string | null) => {
     if (!value?.trim()) {

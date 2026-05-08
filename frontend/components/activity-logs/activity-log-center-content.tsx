@@ -436,7 +436,7 @@ function ActivityLogCenterBody() {
   const currentPageWarningCount = result.items.filter((item) => hasWarningSignal(item)).length
   const currentPageDomainCount = new Set(result.items.map((item) => item.domain)).size
   const latestOccurredAt = result.items[0]?.occurredAt
-
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

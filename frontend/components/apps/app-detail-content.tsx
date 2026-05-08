@@ -47,6 +47,8 @@ import { AppAiInsightsTab } from "./app-detail/app-ai-insights-tab"
 import { AppInsightConfigTab } from "./app-detail/app-insight-config-tab"
 import { AppPerformanceTab } from "./app-detail/app-performance-tab"
 import { SyncAppPerformanceModal } from "./app-detail/sync-app-performance-modal"
+import { AppPlaybookEditorPanel } from "./app-detail/playbook/app-playbook-editor-panel"
+import { PersonaSwitcherDropdown } from "@/components/ai-specialized/persona-switcher-dropdown"
 
 export function AppDetailContent() {
   const router = useRouter()
@@ -90,7 +92,16 @@ export function AppDetailContent() {
   const mediationGroupsCount = mediationGroups?.length ?? 0
   const waterfallAdUnitsCount = waterfallAdUnits?.length ?? 0
 
-  const initialTab = searchParams.get("tab") || "overview"
+  const normalizeTab = (tab: string | null) => {
+    if (!tab) return "overview"
+    // Backward-compat: các tab AI-Specialize cũ đã được gom vào "ai-insight"
+    if (["po-agent", "da-agent", "ua-agent", "med-agent", "dev-agent", "qa-agent"].includes(tab)) {
+      return "ai-insight"
+    }
+    return tab
+  }
+
+  const initialTab = normalizeTab(searchParams.get("tab"))
   const [activeTab, setActiveTab] = useState(initialTab)
   const [copied, setCopied] = useState(false)
   const [syncPerformanceModalOpen, setSyncPerformanceModalOpen] = useState(false)
@@ -105,11 +116,11 @@ export function AppDetailContent() {
   }
 
   useEffect(() => {
-    const tabFromUrl = searchParams.get("tab")
-    if (tabFromUrl && tabFromUrl !== activeTab) {
+    const tabFromUrl = normalizeTab(searchParams.get("tab"))
+    if (tabFromUrl !== activeTab) {
       setActiveTab(tabFromUrl)
     }
-  }, [searchParams])
+  }, [searchParams, activeTab])
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -224,6 +235,7 @@ export function AppDetailContent() {
               <Apple className="w-4 h-4" />
               View in App Store
             </Button>
+            <PersonaSwitcherDropdown appId={String(app?.id ?? "")} />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -235,6 +247,17 @@ export function AppDetailContent() {
                 <DropdownMenuItem className="gap-2">
                   <Settings className="w-4 h-4" />
                   App Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="gap-2"
+                  onClick={() => {
+                    const targetId = (app?.appId ?? appIdFromParams) ?? ""
+                    if (!targetId) return
+                    router.push(`/apps/${targetId}?tab=playbook`)
+                  }}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  AI Playbook
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2"
@@ -296,6 +319,12 @@ export function AppDetailContent() {
                 Insight config
               </TabsTrigger>
             ) : null}
+            {canConfigureInsight ? (
+              <TabsTrigger value="playbook" className="px-4 data-[state=active]:bg-white gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                AI Playbook
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger value="settings" className="px-4 data-[state=active]:bg-white">
               Settings
             </TabsTrigger>
@@ -328,12 +357,17 @@ export function AppDetailContent() {
           </TabsContent>
           {canViewAiInsight && app?.appId ? (
             <TabsContent value="ai-insight" className="mt-6">
-              <AppAiInsightsTab appId={app.appId} initialDateYmd={searchParams.get("date")} />
+              <AppAiInsightsTab appId={app.appId} appRowId={app.id} initialDateYmd={searchParams.get("date")} />
             </TabsContent>
           ) : null}
           {canConfigureInsight && app?.appId ? (
             <TabsContent value="insight-config" className="mt-6 w-full min-w-0">
               <AppInsightConfigTab appId={app.appId} />
+            </TabsContent>
+          ) : null}
+          {canConfigureInsight && app?.appId ? (
+            <TabsContent value="playbook" className="mt-6 w-full min-w-0">
+              <AppPlaybookEditorPanel appId={app.appId} appRowId={app.id} />
             </TabsContent>
           ) : null}
           <TabsContent value="settings" className="mt-6">

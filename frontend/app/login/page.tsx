@@ -375,7 +375,7 @@ export default function LoginPage() {
 
           <CardFooter className="justify-center">
             <p className="text-sm text-slate-500">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="#" className="font-medium text-blue-600 hover:text-blue-700">
                 Contact your administrator
               </Link>

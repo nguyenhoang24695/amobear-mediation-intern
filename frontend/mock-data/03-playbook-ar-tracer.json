@@ -1,0 +1,1 @@
+{ "category_id": "creative_utility", "pilot": "ar-tracer", "funnels": [{ "name": "onboarding", "steps": ["first_open", "session_start"] }] }

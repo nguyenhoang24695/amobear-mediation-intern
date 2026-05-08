@@ -192,7 +192,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
                 )}
               </div>
               <p className="text-[11px] leading-relaxed text-slate-600">
-                We'll share up to 20% of your ad set budget with other ad sets within this campaign when it's likely to improve performance.
+                We&apos;ll share up to 20% of your ad set budget with other ad sets within this campaign when it&apos;s likely to improve performance.
               </p>
             </div>
           </div>
