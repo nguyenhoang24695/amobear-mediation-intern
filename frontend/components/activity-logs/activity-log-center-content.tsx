@@ -212,10 +212,6 @@ function ActivityLogsTableSkeleton() {
 export function ActivityLogCenterContent() {
   const canView = hasScreenFunction(SCREEN_ACTIVITY_LOGS, FN_VIEW)
 
-  if (!canView) {
-    return <NoPermissionView />
-  }
-
   const { toast } = useToast()
   const searchParams = useSearchParams()
 
@@ -423,6 +419,10 @@ export function ActivityLogCenterContent() {
   const currentPageFailureCount = result.items.filter((item) => hasFailedMilestone(item)).length
   const currentPageDomainCount = new Set(result.items.map((item) => item.domain)).size
   const latestOccurredAt = result.items[0]?.occurredAt
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
 
   return (
     <div className="space-y-6">

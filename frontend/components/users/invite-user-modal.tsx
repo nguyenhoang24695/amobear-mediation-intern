@@ -287,14 +287,14 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
                   <div className="p-4 bg-slate-50 rounded-lg border text-sm space-y-3">
-                    <p className="font-medium">Subject: You've been invited to join WeatherPlus Inc on Mediation Pro</p>
+                    <p className="font-medium">Subject: You&apos;ve been invited to join WeatherPlus Inc on Mediation Pro</p>
                     <div className="border-t pt-3 space-y-2 text-slate-600">
                       <p>Hi there,</p>
                       <p>
                         John Doe has invited you to join WeatherPlus Inc on Mediation Pro as a{" "}
                         <strong className="text-slate-900 capitalize">{role}</strong>.
                       </p>
-                      {message && <div className="bg-white p-3 rounded border italic">"{message}"</div>}
+                      {message && <div className="bg-white p-3 rounded border italic">&quot;{message}&quot;</div>}
                       <p>Click the button below to accept your invitation and create your account.</p>
                       <div className="py-2">
                         <Button size="sm" className="bg-blue-600">
@@ -338,7 +338,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">Invitations sent!</h2>
               <p className="text-sm text-slate-500 mb-4">
-                We've sent invitations to {emails.length} email address{emails.length > 1 ? "es" : ""}.
+                We&apos;ve sent invitations to {emails.length} email address{emails.length > 1 ? "es" : ""}.
               </p>
               <div className="space-y-2 w-full max-w-sm">
                 {emails.map((email) => (

@@ -156,7 +156,7 @@ export function PreviewTest() {
         <div className="text-center py-12 px-4 bg-slate-50 rounded-lg border border-slate-200">
           <Eye className="w-8 h-8 text-slate-400 mx-auto mb-3" />
           <p className="text-slate-600 mb-2">No preview generated yet</p>
-          <p className="text-sm text-slate-500">Click "Generate Preview" to see a sample of how the insight will look</p>
+          <p className="text-sm text-slate-500">Click &quot;Generate Preview&quot; to see a sample of how the insight will look</p>
         </div>
       )}
     </Card>

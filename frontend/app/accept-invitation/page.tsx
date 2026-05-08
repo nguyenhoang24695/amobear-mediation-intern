@@ -132,7 +132,7 @@ export default function AcceptInvitationPage() {
 
           {/* Title */}
           <div className="space-y-1">
-            <h1 className="text-xl font-bold text-slate-900">You've been invited to join WeatherPlus Inc</h1>
+            <h1 className="text-xl font-bold text-slate-900">You&apos;ve been invited to join WeatherPlus Inc</h1>
             <p className="text-sm text-slate-500">John Doe invited you to collaborate on Mediation Pro</p>
           </div>
         </CardHeader>
@@ -258,7 +258,7 @@ export default function AcceptInvitationPage() {
                 </button>
               </div>
               {formData.confirmPassword && !passwordsMatch && (
-                <p className="text-xs text-red-500">Passwords don't match</p>
+                <p className="text-xs text-red-500">Passwords don&apos;t match</p>
               )}
             </div>
 

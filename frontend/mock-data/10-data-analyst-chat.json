@@ -1,0 +1,1 @@
+{ "steps": ["decompose", "sql", "run", "viz"], "goldenCaseId": "GC-001" }

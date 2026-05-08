@@ -430,7 +430,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
           <AlertDialogHeader>
             <AlertDialogTitle>Tên Alert đã tồn tại</AlertDialogTitle>
             <AlertDialogDescription>
-              Alert name `"{pendingPreview?.name || ""}"` đã tồn tại. Bạn có muốn tiếp tục tạo mới không? Nếu tiếp tục, hệ thống sẽ thêm timestamp hiện tại vào cuối tên.
+              Alert name &quot;{pendingPreview?.name || ""}&quot; đã tồn tại. Bạn có muốn tiếp tục tạo mới không? Nếu tiếp tục, hệ thống sẽ thêm timestamp hiện tại vào cuối tên.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

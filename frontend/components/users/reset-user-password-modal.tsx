@@ -195,7 +195,7 @@ export function ResetUserPasswordModal({
               </button>
             </div>
             {confirmPassword && !passwordsMatch && (
-              <p className="text-xs text-red-500">Passwords don't match</p>
+              <p className="text-xs text-red-500">Passwords don&apos;t match</p>
             )}
           </div>
 

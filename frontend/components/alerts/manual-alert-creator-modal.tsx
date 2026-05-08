@@ -1802,7 +1802,7 @@ export function ManualAlertCreatorModal({
           <AlertDialogHeader>
             <AlertDialogTitle>Tên Alert đã tồn tại</AlertDialogTitle>
             <AlertDialogDescription>
-              Alert name `"{pendingDuplicateName}"` đã tồn tại. Bạn có muốn tiếp tục tạo mới không? Nếu tiếp tục, hệ thống sẽ thêm timestamp hiện tại vào cuối tên.
+              Alert name &quot;{pendingDuplicateName}&quot; đã tồn tại. Bạn có muốn tiếp tục tạo mới không? Nếu tiếp tục, hệ thống sẽ thêm timestamp hiện tại vào cuối tên.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -67,12 +67,9 @@ export function PermissionManagementContent() {
   const canChange = hasScreenFunction(SCREEN_PERMISSIONS, FN_CHANGE)
   const canDelete = hasScreenFunction(SCREEN_PERMISSIONS, FN_DELETE)
 
-  if (!canView) {
-    return <NoPermissionView />
-  }
-
   // Load roles and screens on mount
   useEffect(() => {
+    if (!canView) return
     let cancelled = false
     setError(null)
     setLoading(true)
@@ -108,6 +105,7 @@ export function PermissionManagementContent() {
 
   // When selectedRoleId or roles change, set selected role and load permissions for that role
   useEffect(() => {
+    if (!canView) return
     if (!selectedRoleId || roles.length === 0) return
     let cancelled = false
     setLoadingPermissions(true)
@@ -288,6 +286,10 @@ export function PermissionManagementContent() {
     },
     [selectedRoleId, roles],
   )
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
 
   if (loading) {
     return (

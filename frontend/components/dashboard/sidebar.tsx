@@ -48,6 +48,7 @@ import {
   Database,
   Sparkles,
   Apple,
+  Contact,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -110,6 +111,7 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
     href: "/data-sources/apple",
     isShow: () => hasScreenFunction("s-data-accounts", "view"),
   },
+  { icon: Contact, label: "vCard Generator", href: "/settings/vcard-generator", isShow: true, isNew: true },
   {
     icon: Sparkles,
     label: "AI Insight Templates",
