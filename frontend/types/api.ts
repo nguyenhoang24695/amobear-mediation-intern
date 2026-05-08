@@ -1169,6 +1169,60 @@ export interface InsightUserNotification {
   read: boolean
 }
 
+// ---- Commission ----
+
+export interface CommissionRateDto {
+  id: number
+  username: string
+  appId: string
+  /** null = không hưởng hoa hồng */
+  commissionRate: number | null
+  effectiveDate: string
+  expiryDate: string | null
+  createdOn: string | null
+  updatedOn: string | null
+}
+
+export interface CreateCommissionRateRequest {
+  username: string
+  appId: string
+  commissionRate: number | null
+  effectiveDate: string
+  expiryDate: string | null
+}
+
+export interface SetExpiryRequest {
+  expiryDate: string
+}
+
+export interface CommissionRevenueRow {
+  username: string
+  appId: string
+  appName: string
+  /** Tháng dạng yyyy-MM */
+  month: string
+  totalRevenue: number
+  commissionRate: number | null
+  commissionAmount: number
+}
+
+export interface CommissionRatePagedResult {
+  data: CommissionRateDto[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+}
+
+export interface PermittedAppListItem {
+  appId: string
+  name: string
+  displayName?: string | null
+  appStoreId?: string | null
+  iconUri?: string | null
+  platform?: string | null
+}
+
 
 
 

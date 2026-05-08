@@ -1,15 +1,28 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect } from "react"
+import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Shield, Users, Layers, Lock } from "lucide-react"
 import { RoleSelector } from "./role-selector"
 import { RoleEditor } from "./role-editor"
 import { PermissionList } from "./permission-list"
+import { QuickMappingGrid } from "./quick-mapping-grid"
 import { permissionApi } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const SCREEN_PERMISSIONS = "s-permissions"
 const FN_VIEW = "view"
@@ -59,6 +72,13 @@ export function PermissionManagementContent() {
   const [loadingPermissions, setLoadingPermissions] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSavedToast, setShowSavedToast] = useState(false)
+  const [activeTab, setActiveTab] = useState<"quick-mapping" | "role-configuration">(
+    "role-configuration",
+  )
+  const [quickMappingEditMode, setQuickMappingEditMode] = useState(false)
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
+  const [pendingTab, setPendingTab] = useState<null | "quick-mapping" | "role-configuration">(null)
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
 
   // Permission checks
   const canView = hasScreenFunction(SCREEN_PERMISSIONS, FN_VIEW)
@@ -101,7 +121,7 @@ export function PermissionManagementContent() {
         }
       })
     return () => { cancelled = true }
-  }, [])
+  }, [canView])
 
   // When selectedRoleId or roles change, set selected role and load permissions for that role
   useEffect(() => {
@@ -121,18 +141,57 @@ export function PermissionManagementContent() {
         if (!cancelled) setLoadingPermissions(false)
       })
     return () => { cancelled = true }
-  }, [selectedRoleId, roles.length])
+  }, [canView, selectedRoleId, roles.length])
+
+  // Load permissions for all roles when opening Quick Mapping (lazy)
+  useEffect(() => {
+    if (!canView) return
+    if (activeTab !== "quick-mapping") return
+    if (roles.length === 0) return
+    let cancelled = false
+
+    ;(async () => {
+      for (const r of roles) {
+        if (cancelled) return
+        if (permissions[r.id]) continue
+        try {
+          const res = await permissionApi.getRolePermissions(r.id)
+          if (cancelled) return
+          const perms = res.permissions ?? {}
+          setPermissions((prev) => ({ ...prev, [r.id]: perms }))
+          setSavedPermissions((prev) => ({ ...prev, [r.id]: { ...perms } }))
+        } catch {
+          // ignore; role can still be edited via Role Configuration tab
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [canView, activeTab, roles, permissions])
 
   const selectedRole = useMemo(
     () => roles.find((r) => r.id === selectedRoleId) ?? (roles.length === 0 ? { id: "", name: "", description: "", userCount: 0, isSystem: true } as Role : undefined),
     [roles, selectedRoleId],
   )
 
-  const hasUnsavedChanges = useMemo(() => {
-    const current = JSON.stringify(permissions[selectedRoleId] || {})
-    const saved = JSON.stringify(savedPermissions[selectedRoleId] || {})
-    return current !== saved
-  }, [permissions, savedPermissions, selectedRoleId])
+  const dirtyRoleIds = useMemo(() => {
+    const out: string[] = []
+    for (const r of roles) {
+      const current = JSON.stringify(permissions[r.id] || {})
+      const saved = JSON.stringify(savedPermissions[r.id] || {})
+      if (current !== saved) out.push(r.id)
+    }
+    return out
+  }, [permissions, roles, savedPermissions])
+
+  const hasUnsavedChangesSelected = useMemo(() => {
+    if (!selectedRoleId) return false
+    return dirtyRoleIds.includes(selectedRoleId)
+  }, [dirtyRoleIds, selectedRoleId])
+
+  const hasUnsavedChangesAnyRole = dirtyRoleIds.length > 0
 
   // Stats
   const totalRoles = roles.length
@@ -148,9 +207,10 @@ export function PermissionManagementContent() {
 
   // Toggle single function
   const handleToggleFunction = useCallback(
-    (screenId: string, functionId: string) => {
+    (screenId: string, functionId: string, roleId?: string) => {
       setPermissions((prev) => {
-        const rolePerms = { ...(prev[selectedRoleId] || {}) }
+        const targetRoleId = roleId ?? selectedRoleId
+        const rolePerms = { ...(prev[targetRoleId] || {}) }
         const screenFns = [...(rolePerms[screenId] || [])]
 
         if (screenFns.includes(functionId)) {
@@ -158,7 +218,7 @@ export function PermissionManagementContent() {
         } else {
           rolePerms[screenId] = [...screenFns, functionId]
         }
-        return { ...prev, [selectedRoleId]: rolePerms }
+        return { ...prev, [targetRoleId]: rolePerms }
       })
     },
     [selectedRoleId],
@@ -166,14 +226,15 @@ export function PermissionManagementContent() {
 
   // Toggle all functions for a screen
   const handleToggleScreen = useCallback(
-    (screen: Screen) => {
+    (screen: Screen, roleId?: string) => {
       setPermissions((prev) => {
-        const rolePerms = { ...(prev[selectedRoleId] || {}) }
+        const targetRoleId = roleId ?? selectedRoleId
+        const rolePerms = { ...(prev[targetRoleId] || {}) }
         const screenFns = rolePerms[screen.id] || []
         const allSelected = screenFns.length === screen.functions.length
 
         rolePerms[screen.id] = allSelected ? [] : screen.functions.map((f) => f.id)
-        return { ...prev, [selectedRoleId]: rolePerms }
+        return { ...prev, [targetRoleId]: rolePerms }
       })
     },
     [selectedRoleId],
@@ -198,7 +259,7 @@ export function PermissionManagementContent() {
   )
 
   // Save
-  const handleSave = useCallback(async () => {
+  const handleSaveSelected = useCallback(async () => {
     if (!selectedRoleId) return
     setSaving(true)
     setError(null)
@@ -218,12 +279,126 @@ export function PermissionManagementContent() {
   }, [permissions, selectedRoleId])
 
   // Discard
-  const handleDiscard = useCallback(() => {
+  const handleDiscardSelected = useCallback(() => {
     setPermissions((prev) => ({
       ...prev,
       [selectedRoleId]: JSON.parse(JSON.stringify(savedPermissions[selectedRoleId] || {})),
     }))
   }, [savedPermissions, selectedRoleId])
+
+  const handleSaveAllChanged = useCallback(async () => {
+    if (dirtyRoleIds.length === 0) return
+    setSaving(true)
+    setError(null)
+    try {
+      for (const roleId of dirtyRoleIds) {
+        await permissionApi.saveRolePermissions(roleId, permissions[roleId] ?? {})
+        setSavedPermissions((prev) => ({
+          ...prev,
+          [roleId]: JSON.parse(JSON.stringify(permissions[roleId] ?? {})),
+        }))
+      }
+      setShowSavedToast(true)
+      setTimeout(() => setShowSavedToast(false), 3000)
+    } catch (err) {
+      setError((err as Error)?.message ?? "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }, [dirtyRoleIds, permissions])
+
+  const handleDiscardAllChanged = useCallback(() => {
+    setPermissions((prev) => {
+      const next = { ...prev }
+      for (const roleId of dirtyRoleIds) {
+        next[roleId] = JSON.parse(JSON.stringify(savedPermissions[roleId] || {}))
+      }
+      return next
+    })
+  }, [dirtyRoleIds, savedPermissions])
+
+  const isQuickMappingDirty = quickMappingEditMode && hasUnsavedChangesAnyRole
+
+  const requestTabChange = useCallback(
+    (nextTab: "quick-mapping" | "role-configuration") => {
+      if (nextTab === activeTab) return
+      if (isQuickMappingDirty) {
+        setPendingTab(nextTab)
+        setConfirmLeaveOpen(true)
+        return
+      }
+      setActiveTab(nextTab)
+    },
+    [activeTab, isQuickMappingDirty],
+  )
+
+  // Warn on hard refresh/close when quick mapping has unsaved edits
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isQuickMappingDirty) return
+      e.preventDefault()
+      e.returnValue = ""
+    }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
+  }, [isQuickMappingDirty])
+
+  // Intercept in-app link navigation when quick mapping has unsaved edits
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!isQuickMappingDirty) return
+      if (e.defaultPrevented) return
+      if (e.button !== 0) return
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+
+      const target = e.target as HTMLElement | null
+      const a = target?.closest?.("a[href]") as HTMLAnchorElement | null
+      if (!a) return
+      const href = a.getAttribute("href")
+      if (!href) return
+      if (href.startsWith("#")) return
+      if (a.getAttribute("target") === "_blank") return
+
+      // block and ask
+      e.preventDefault()
+      e.stopPropagation()
+      setPendingHref(a.href)
+      setConfirmLeaveOpen(true)
+    }
+
+    document.addEventListener("click", onDocClick, true)
+    return () => document.removeEventListener("click", onDocClick, true)
+  }, [isQuickMappingDirty])
+
+  const resolvePendingLeave = useCallback(() => {
+    if (pendingTab) {
+      setActiveTab(pendingTab)
+    } else if (pendingHref) {
+      window.location.href = pendingHref
+    }
+    setPendingTab(null)
+    setPendingHref(null)
+  }, [pendingHref, pendingTab])
+
+  const handleConfirmDiscard = useCallback(() => {
+    handleDiscardAllChanged()
+    setQuickMappingEditMode(false)
+    setConfirmLeaveOpen(false)
+    resolvePendingLeave()
+  }, [handleDiscardAllChanged, resolvePendingLeave])
+
+  const handleConfirmSave = useCallback(async () => {
+    await handleSaveAllChanged()
+    setQuickMappingEditMode(false)
+    setConfirmLeaveOpen(false)
+    resolvePendingLeave()
+  }, [handleSaveAllChanged, resolvePendingLeave])
+
+  const handleConfirmCancel = useCallback(() => {
+    setConfirmLeaveOpen(false)
+    setPendingTab(null)
+    setPendingHref(null)
+  }, [])
 
   // Role CRUD
   const handleCreateRole = useCallback(
@@ -330,43 +505,7 @@ export function PermissionManagementContent() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {hasUnsavedChanges && (
-            <Button
-              variant="outline"
-              className="border-slate-300 text-slate-600 bg-transparent"
-              onClick={handleDiscard}
-            >
-              Discard
-            </Button>
-          )}
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={!hasUnsavedChanges || saving || loadingPermissions || !canChange}
-            onClick={handleSave}
-            title={!canChange ? "You don't have permission to change permissions" : undefined}
-          >
-            {saving ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
-        </div>
       </div>
-
-      {/* Unsaved changes banner */}
-      {hasUnsavedChanges && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200">
-          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-sm font-medium text-amber-700">
-            You have unsaved changes for the &quot;{selectedRole.name}&quot; role
-          </span>
-        </div>
-      )}
 
       {/* Success toast */}
       {showSavedToast && (
@@ -437,37 +576,201 @@ export function PermissionManagementContent() {
         </Card>
       </div>
 
-      {/* Main Content: Role Selector + Permission List */}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-        {/* Left Panel */}
-        <div className="space-y-4">
-          <RoleSelector
-            roles={roles}
-            selectedRoleId={selectedRoleId}
-            onSelectRole={setSelectedRoleId}
-          />
-          <RoleEditor
-            roles={roles}
-            selectedRole={selectedRole}
-            onCreateRole={handleCreateRole}
-            onRenameRole={handleRenameRole}
-            onDeleteRole={handleDeleteRole}
-            canCreate={canCreate}
-            canRename={canRename}
-            canDelete={canDelete}
-          />
-        </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => requestTabChange(v as typeof activeTab)}
+        className="gap-4"
+      >
+        <TabsList>
+          <TabsTrigger value="quick-mapping">Quick Mapping</TabsTrigger>
+          <TabsTrigger value="role-configuration">Role Configuration</TabsTrigger>
+        </TabsList>
 
-        {/* Right Panel: Permission List (accordion-style) */}
-        <PermissionList
-          screens={screens}
-          permissions={permissions[selectedRoleId] || {}}
-          onToggleFunction={handleToggleFunction}
-          onToggleScreen={handleToggleScreen}
-          onToggleAll={handleToggleAll}
-          disabled={!canChange}
-        />
-      </div>
+        <TabsContent value="quick-mapping">
+          <QuickMappingGrid
+            roles={roles}
+            screens={screens}
+            permissions={permissions}
+            disabled={!canChange || !quickMappingEditMode}
+            notice={
+              quickMappingEditMode && hasUnsavedChangesAnyRole ? (
+                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+                  <span className="text-sm font-medium text-amber-700">
+                    You have unsaved changes across {dirtyRoleIds.length} role(s)
+                  </span>
+                </div>
+              ) : null
+            }
+            toolbar={
+              <>
+                {!quickMappingEditMode ? (
+                  <Button
+                    variant="outline"
+                    className="bg-transparent"
+                    disabled={!canChange}
+                    onClick={() => setQuickMappingEditMode(true)}
+                    title={!canChange ? "You don't have permission to change permissions" : undefined}
+                  >
+                    Edit Mode
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="bg-transparent"
+                    onClick={() => {
+                      if (hasUnsavedChangesAnyRole) {
+                        setPendingTab("quick-mapping")
+                        setConfirmLeaveOpen(true)
+                        return
+                      }
+                      setQuickMappingEditMode(false)
+                    }}
+                  >
+                    Back to View Mode
+                  </Button>
+                )}
+
+                {quickMappingEditMode && hasUnsavedChangesAnyRole && (
+                  <Button
+                    variant="outline"
+                    className="border-slate-300 text-slate-600 bg-transparent"
+                    onClick={handleDiscardAllChanged}
+                  >
+                    Discard
+                  </Button>
+                )}
+                {quickMappingEditMode && (
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={!hasUnsavedChangesAnyRole || saving || loadingPermissions || !canChange}
+                    onClick={handleSaveAllChanged}
+                    title={!canChange ? "You don't have permission to change permissions" : undefined}
+                  >
+                    {saving ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                )}
+              </>
+            }
+            onToggleScreenForRole={(roleId, screen) => handleToggleScreen(screen, roleId)}
+            onToggleFunctionForRole={(roleId, screenId, functionId) =>
+              handleToggleFunction(screenId, functionId, roleId)
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="role-configuration">
+          {/* Role Configuration actions — sticky while scrolling */}
+          <div className="sticky top-0 z-30 -mx-1 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-white/95 py-3 px-1 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
+            {hasUnsavedChangesSelected && (
+              <Button
+                variant="outline"
+                className="border-slate-300 text-slate-600 bg-transparent"
+                onClick={handleDiscardSelected}
+              >
+                Discard
+              </Button>
+            )}
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!hasUnsavedChangesSelected || saving || loadingPermissions || !canChange}
+              onClick={handleSaveSelected}
+              title={!canChange ? "You don't have permission to change permissions" : undefined}
+            >
+              {saving ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
+
+          {hasUnsavedChangesSelected && (
+            <div className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-sm font-medium text-amber-700">
+                You have unsaved changes for the &quot;{selectedRole.name}&quot; role
+              </span>
+            </div>
+          )}
+
+          {/* Main Content: Role Selector + Permission List */}
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+            {/* Left Panel */}
+            <div className="space-y-4">
+              <RoleSelector
+                roles={roles}
+                selectedRoleId={selectedRoleId}
+                onSelectRole={setSelectedRoleId}
+              />
+              <RoleEditor
+                roles={roles}
+                selectedRole={selectedRole}
+                onCreateRole={handleCreateRole}
+                onRenameRole={handleRenameRole}
+                onDeleteRole={handleDeleteRole}
+                canCreate={canCreate}
+                canRename={canRename}
+                canDelete={canDelete}
+              />
+            </div>
+
+            {/* Right Panel: Permission List (accordion-style) */}
+            <PermissionList
+              screens={screens}
+              permissions={permissions[selectedRoleId] || {}}
+              onToggleFunction={(screenId, functionId) =>
+                handleToggleFunction(screenId, functionId)
+              }
+              onToggleScreen={(screen) => handleToggleScreen(screen)}
+              onToggleAll={handleToggleAll}
+              disabled={!canChange}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <AlertDialog open={confirmLeaveOpen} onOpenChange={setConfirmLeaveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in Quick Mapping (Edit Mode). Do you want to save before leaving?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleConfirmCancel}>
+              Keep editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-slate-900 hover:bg-slate-800"
+              onClick={handleConfirmDiscard}
+            >
+              Discard
+            </AlertDialogAction>
+            <AlertDialogAction
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={(e) => {
+                // prevent radix from closing instantly while async save runs
+                e.preventDefault()
+                void handleConfirmSave()
+              }}
+            >
+              Save changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

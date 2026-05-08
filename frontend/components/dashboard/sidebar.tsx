@@ -49,8 +49,10 @@ import {
   Sparkles,
   Apple,
   Contact,
+  BadgePercent,
 } from "lucide-react"
 import Link from "next/link"
+import { Logo } from "@/components/shared/logo"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
@@ -99,6 +101,12 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
   { icon: Layers, label: "Waterfall Automation", href: "/waterfall-apply", isShow: () => hasScreenFunction("s-waterfall-apply", "view"), isNew: true },
   { icon: Shield, label: "Permissions", href: "/permissions", isShow: () => hasScreenFunction("s-permissions", "view") },
   {
+    icon: BadgePercent,
+    label: "Commission",
+    href: "/commission",
+    isShow: () => hasScreenFunction("s-commission", "view") || hasScreenFunction("s-commission", "manage"),
+  },
+  {
     icon: KeyRound,
     label: "Data Accounts",
     href: "/data-accounts",
@@ -134,11 +142,11 @@ const navItems: NavItem[] = [
     href: "/apps",
     isShow: () => hasScreenFunction("s-apps", "view"),
   },
-  { 
-    icon: ListFilter, 
-    label: "Waterfall", 
-    href: "/waterfall", 
-    isShow: () => hasScreenFunction("s-waterfall", "view") 
+  {
+    icon: ListFilter,
+    label: "Waterfall",
+    href: "/waterfall",
+    isShow: () => hasScreenFunction("s-waterfall", "view")
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") },
@@ -155,7 +163,7 @@ const navItems: NavItem[] = [
     label: "Meta Ads",
     href: "#",
     hasSubmenu: true,
-    isNew: true,
+    isNew: false,
     isShow: () =>
       [
         ["s-meta-requests", "view"],
@@ -169,7 +177,7 @@ const navItems: NavItem[] = [
         icon: BarChart3,
         label: "Insights",
         href: "/meta-ads/insights",
-        isNew: true,
+        isNew: false,
         isShow: () => ["view"].some((fn) => hasScreenFunction("s-meta-campaigns", fn)),
       },
       {
@@ -293,9 +301,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
+            <Logo size={32} className="rounded-lg overflow-hidden" />
+
+
             {!collapsed && <span className="font-semibold text-slate-900">Mediation Pro</span>}
           </div>
           <Button

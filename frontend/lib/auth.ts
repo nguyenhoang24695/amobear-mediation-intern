@@ -14,6 +14,8 @@ export interface AuthUser {
   slackWebhookUrlRealtime?: string
   slackWebhookUrlHourly?: string
   slackWebhookUrlDaily?: string
+  /** JSON array: [{ id, name, chatId, messageThreadId? }, ...] */
+  telegramDestinationsJson?: string
   organization?: {
     id: string
     name: string
@@ -42,6 +44,7 @@ export function authUserFromMeDto(d: {
   slackWebhookUrlRealtime?: string
   slackWebhookUrlHourly?: string
   slackWebhookUrlDaily?: string
+  telegramDestinationsJson?: string
   organization?: AuthUser["organization"]
   teams?: AuthUser["teams"]
   rolePermissions?: AuthUser["rolePermissions"]
@@ -62,6 +65,7 @@ export function authUserFromMeDto(d: {
     slackWebhookUrlRealtime: d.slackWebhookUrlRealtime,
     slackWebhookUrlHourly: d.slackWebhookUrlHourly,
     slackWebhookUrlDaily: d.slackWebhookUrlDaily,
+    telegramDestinationsJson: d.telegramDestinationsJson,
     organization: d.organization,
     teams: d.teams,
     rolePermissions: d.rolePermissions,

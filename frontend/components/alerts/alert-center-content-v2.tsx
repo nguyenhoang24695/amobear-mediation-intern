@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AIAlertBuilderSheet } from "./ai-alert-builder-sheet"
 import { ManualAlertCreatorModal } from "./manual-alert-creator-modal"
 import { AlertRulesPanel } from "./alert-rules-panel"
+import { OrgRuleTemplatePicker } from "./org-rule-template-picker"
 import {
   AlertTriangle,
   AlertCircle,
@@ -31,12 +32,12 @@ import {
   MailCheck,
   Plus,
   Sparkles,
+  LayoutTemplate,
 } from "lucide-react"
 import { AlertSlackFinanceRow } from "./alert-slack-finance-row"
 import { AlertAppAvatar } from "./alert-app-avatar"
 import { alertsApi, organizationsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
-import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { toUiAlertList, toUiSeverity, computeAverageResponseMinutes } from "./alert-center-view-model"
 import type { AlertApiItem } from "./alert-center-view-model"
 import { useToast } from "@/hooks/use-toast"
@@ -90,6 +91,14 @@ function parseLocalYmdStart(ymd: string): Date {
 function parseLocalYmdEnd(ymd: string): Date {
   const [y, m, d] = ymd.split("-").map((x) => Number(x))
   return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999)
+}
+
+/** Active apps (APPROVED / chưa gán state) — cùng logic trang Apps; ≥100 thì làm tròn xuống hàng trăm + dấu +. */
+function formatMonitoringAppsPhrase(activeCount: number): string {
+  if (activeCount <= 0) return "your apps"
+  if (activeCount < 100) return `${activeCount} apps`
+  const roundedDown = Math.floor(activeCount / 100) * 100
+  return `${roundedDown}+ apps`
 }
 
 /** Initials for avatar; nếu chỉ có UUID thì lấy 2 ký tự đầu (bỏ dấu gạch). */
@@ -201,6 +210,8 @@ export function AlertCenterContentV2() {
   const [showAiBuilder, setShowAiBuilder] = useState(false)
   const [showManualCreator, setShowManualCreator] = useState(false)
   const [manualEditRule, setManualEditRule] = useState<AlertRule | null>(null)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [cloneFromRule, setCloneFromRule] = useState<AlertRule | null>(null)
   const [rulesOverviewAppQuery, setRulesOverviewAppQuery] = useState("")
   const [rulesOverviewMetric, setRulesOverviewMetric] = useState("all")
   const [rulesOverviewStatus, setRulesOverviewStatus] = useState<"all" | "enabled" | "disabled">("all")
@@ -293,6 +304,13 @@ export function AlertCenterContentV2() {
     enabled: centerTab === "my-alerts" && showMyAlertsTab,
     cacheKey: "alert_private_quota",
   })
+  const { data: orgRulesForTemplate } = useApi(
+    () => alertsApi.getAlertRules(true, "ORG"),
+    {
+      enabled: centerTab === "my-alerts" && showMyAlertsTab,
+      cacheKey: "alert_org_rules_templates",
+    },
+  )
   const privateSlotsFull = Boolean(isMyAlertsTab && privateQuota && privateQuota.used >= privateQuota.max)
   const { data: appsData } = useApi(() => structureApi.getApps(), {
     cacheKey: "alert_center_filter_apps",
@@ -318,17 +336,50 @@ export function AlertCenterContentV2() {
     return m
   }, [orgUsersPage])
 
-  const { alerts, loading, refetch } = useAlertNotifications({ inAppOnly: false })
   const [requiresAttentionPage, setRequiresAttentionPage] = useState(1)
   const [requiresAttentionPageSize, setRequiresAttentionPageSize] = useState(10)
   const [markReadLoading, setMarkReadLoading] = useState(false)
-  const uiAlerts = useMemo(() => toUiAlertList(alerts as AlertApiItem[]), [alerts])
+
+  const canViewAlertCenter = useMemo(
+    () => hasScreenFunction("s-alerts", "view") || hasScreenFunction("s-alerts", "setting-my-alerts"),
+    [],
+  )
+
+  const apiListSeverity = severity === "All" ? undefined : severity
+  const apiListAppId = appFilter.trim() || undefined
+
+  const { data: openAlertsPage, loading, refetch } = useApi(
+    () =>
+      alertsApi.getOpenAlerts({
+        page: requiresAttentionPage,
+        pageSize: requiresAttentionPageSize,
+        appId: apiListAppId,
+        severity: apiListSeverity,
+      }),
+    {
+      enabled: canViewAlertCenter && (centerTab === "alerts" || centerTab === "my-alerts"),
+      cacheKey: `alert_center_v2_open_${centerTab}_${requiresAttentionPage}_${requiresAttentionPageSize}_${apiListAppId ?? ""}_${apiListSeverity ?? "all"}`,
+    },
+  )
+
+  const uiAlerts = useMemo(
+    () => toUiAlertList((openAlertsPage?.Data ?? []) as AlertApiItem[]),
+    [openAlertsPage],
+  )
 
   const filterAppsOptions = useMemo(() => {
     return (appsData?.apps ?? []).map((app) => ({
       id: app.appId,
       label: app.displayName || app.name || app.appId,
     }))
+  }, [appsData])
+
+  const alertCenterMonitoringAppsPhrase = useMemo(() => {
+    const apps = appsData?.apps ?? []
+    const activeCount =
+      appsData?.summary?.totalApprovedApps ??
+      apps.filter((a) => a.approvalState === "APPROVED" || !a.approvalState).length
+    return formatMonitoringAppsPhrase(activeCount)
   }, [appsData])
 
   const timelineQueryParams = useMemo(() => {
@@ -405,12 +456,7 @@ export function AlertCenterContentV2() {
     privateRuleIdSet,
   ])
 
-  const requiresAttentionTotalPages = Math.max(1, Math.ceil(filteredAlerts.length / requiresAttentionPageSize))
-
-  const paginatedRequiresAttention = useMemo(() => {
-    const start = (requiresAttentionPage - 1) * requiresAttentionPageSize
-    return filteredAlerts.slice(start, start + requiresAttentionPageSize)
-  }, [filteredAlerts, requiresAttentionPage, requiresAttentionPageSize])
+  const requiresAttentionTotalPages = Math.max(1, openAlertsPage?.TotalPages ?? 1)
 
   useEffect(() => {
     setRequiresAttentionPage(1)
@@ -432,7 +478,6 @@ export function AlertCenterContentV2() {
         updatedTotal += res.updated ?? 0
       }
       invalidateAlertCaches()
-      await refetch()
       toast({
         title: "Marked as read",
         description:
@@ -451,7 +496,7 @@ export function AlertCenterContentV2() {
   const criticalCount = summary?.BySeverity?.HIGH ?? 0
   const warningCount = summary?.BySeverity?.MEDIUM ?? 0
   const infoCount = summary?.BySeverity?.LOW ?? 0
-  const totalOpen = summary?.Total ?? uiAlerts.length
+  const totalOpen = summary?.Total ?? 0
 
   const myAlertsSeverityCounts = useMemo(() => {
     if (!isMyAlertsTab) return null
@@ -532,10 +577,12 @@ export function AlertCenterContentV2() {
   )
 
   const invalidateAlertCaches = () => {
+    invalidateCache("notification_open_alerts_in_app")
     invalidateCache("notification_open_alerts_all")
     invalidateCache("alerts_open_summary")
     invalidateCache("alerts_open_summary_v2")
     void refetchOpenAlertsSummary()
+    void refetch()
   }
 
   const bumpTimeline = useCallback(() => setTimelineNonce((n) => n + 1), [])
@@ -762,7 +809,7 @@ export function AlertCenterContentV2() {
     ? privateQuota
       ? `Your personal alert rules — ${privateQuota.used} of ${privateQuota.max} slots used`
       : "Your personal alert rules"
-    : "Real-time monitoring across 200+ apps"
+    : `Real-time monitoring across ${alertCenterMonitoringAppsPhrase}`
 
   const handleCenterTabChange = useCallback(
     (value: string) => {
@@ -802,6 +849,22 @@ export function AlertCenterContentV2() {
               Create Alert via AI
             </Button>
           ) : null}
+          {isMyAlertsTab && canCreateAlertRule ? (
+            <Button
+              variant="outline"
+              className="h-9 gap-2 bg-transparent"
+              disabled={privateSlotsFull || (orgRulesForTemplate ?? []).length === 0}
+              title={
+                (orgRulesForTemplate ?? []).length === 0
+                  ? "No active org templates available"
+                  : "Pick an org alert rule as a starting point"
+              }
+              onClick={() => setShowTemplatePicker(true)}
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              Use a Template
+            </Button>
+          ) : null}
           {canCreateAlertRule ? (
             <Button
               variant="outline"
@@ -809,6 +872,7 @@ export function AlertCenterContentV2() {
               disabled={privateSlotsFull}
               onClick={() => {
                 setManualEditRule(null)
+                setCloneFromRule(null)
                 setShowManualCreator(true)
               }}
             >
@@ -1096,7 +1160,7 @@ export function AlertCenterContentV2() {
           <h2 className="text-xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
             Requires Attention
-            <Badge className="bg-red-100 text-red-700">{filteredAlerts.length}</Badge>
+            <Badge className="bg-red-100 text-red-700">{openAlertsPage?.TotalCount ?? filteredAlerts.length}</Badge>
           </h2>
           <Button
             type="button"
@@ -1156,7 +1220,7 @@ export function AlertCenterContentV2() {
         ) : (
           <div className="space-y-4">
             <div className="space-y-4">
-              {paginatedRequiresAttention.map((alert) => (
+              {filteredAlerts.map((alert) => (
                 <Card
                   key={alert.id}
                   className={`border-l-4 ${
@@ -1229,11 +1293,11 @@ export function AlertCenterContentV2() {
                 </Card>
               ))}
             </div>
-            {filteredAlerts.length > 0 ? (
+            {openAlertsPage && openAlertsPage.TotalCount > 0 ? (
               <Pagination
                 currentPage={requiresAttentionPage}
                 totalPages={requiresAttentionTotalPages}
-                totalItems={filteredAlerts.length}
+                totalItems={openAlertsPage.TotalCount}
                 pageSize={requiresAttentionPageSize}
                 onPageChange={setRequiresAttentionPage}
                 onPageSizeChange={(size) => {
@@ -1469,16 +1533,30 @@ export function AlertCenterContentV2() {
         onCreated={handleRuleCreated}
         ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
+      <OrgRuleTemplatePicker
+        open={showTemplatePicker}
+        onOpenChange={setShowTemplatePicker}
+        rules={orgRulesForTemplate ?? []}
+        onSelect={(rule) => {
+          setCloneFromRule(rule)
+          setManualEditRule(null)
+          setShowManualCreator(true)
+        }}
+      />
       <ManualAlertCreatorModal
         open={showManualCreator}
         onOpenChange={(open) => {
-          if (open && manualEditRule == null && !canCreateAlertRule) return
+          if (open && manualEditRule == null && cloneFromRule == null && !canCreateAlertRule) return
           if (open && manualEditRule != null && !canEditAlertRule) return
           setShowManualCreator(open)
-          if (!open) setManualEditRule(null)
+          if (!open) {
+            setManualEditRule(null)
+            setCloneFromRule(null)
+          }
         }}
         onCreated={handleRuleCreated}
         rule={manualEditRule}
+        cloneFrom={cloneFromRule}
         ruleVisibility={isMyAlertsTab && showMyAlertsTab ? "PRIVATE" : "ORG"}
       />
       <AlertRulesPanel open={alertRulesPanelOpen} onOpenChange={setAlertRulesPanelOpen} />
