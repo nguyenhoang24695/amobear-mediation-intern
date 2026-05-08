@@ -51,6 +51,7 @@ import {
   BadgePercent,
 } from "lucide-react"
 import Link from "next/link"
+import { Logo } from "@/components/shared/logo"
 import { usePathname, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
