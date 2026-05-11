@@ -26,8 +26,18 @@ import { getCurrentUser } from "@/lib/auth"
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { commissionApi, organizationsApi, teamMembersApi, type OrgUserItem } from "@/lib/api/services"
-import type { CreateCommissionRateRequest } from "@/types/api"
+import { getApiErrorMessage } from "@/lib/api/get-api-error-message"
+import { ApiErrorAlert } from "@/components/shared/api-error-alert"
+import type { CommissionRateDto, CreateCommissionRateRequest } from "@/types/api"
 import type { PermittedAppListItem } from "@/types/api"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Props {
   open: boolean
@@ -51,6 +61,15 @@ function getInitials(nameOrEmail: string): string {
   return s[0].toUpperCase()
 }
 
+function formatCommissionOverlapLine(r: CommissionRateDto): string {
+  const rate =
+    r.commissionRate === null || r.commissionRate === undefined
+      ? "Không hưởng"
+      : `${r.commissionRate}%`
+  const exp = r.expiryDate ?? "không hết hạn"
+  return `${r.effectiveDate} → ${exp} — ${rate}`
+}
+
 export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
   const [form, setForm] = useState<CreateCommissionRateRequest>(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -71,6 +90,10 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
   const [appsError, setAppsError] = useState<string | null>(null)
   const latestAppsReqIdRef = useRef(0)
   const [selectedAppItem, setSelectedAppItem] = useState<PermittedAppListItem | null>(null)
+  const [saveErrorOpen, setSaveErrorOpen] = useState(false)
+  const [saveErrorMessage, setSaveErrorMessage] = useState("")
+  const [overlapConfirmOpen, setOverlapConfirmOpen] = useState(false)
+  const [overlapRows, setOverlapRows] = useState<CommissionRateDto[]>([])
 
   const orgId = getCurrentUser()?.organization?.id
 
@@ -93,6 +116,10 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
       setAppsLoading(false)
       setAppsError(null)
       setSelectedAppItem(null)
+      setSaveErrorOpen(false)
+      setSaveErrorMessage("")
+      setOverlapConfirmOpen(false)
+      setOverlapRows([])
     }
   }, [open])
 
@@ -177,13 +204,39 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
     if (!validate()) return
     setSaving(true)
     try {
-      await commissionApi.createRate(form)
+      await commissionApi.createRate({ ...form })
       toast({ title: "Commission rate created" })
       onSaved()
       onOpenChange(false)
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? "Unable to create"
-      toast({ title: "Error", description: msg, variant: "destructive" })
+      const res = (err as { response?: { status?: number; data?: unknown } })?.response
+      const data = res?.data as {
+        code?: string
+        overlappingPeriods?: CommissionRateDto[]
+      } | null
+      if (res?.status === 409 && data?.code === "COMMISSION_OVERLAP" && Array.isArray(data.overlappingPeriods)) {
+        setOverlapRows(data.overlappingPeriods)
+        setOverlapConfirmOpen(true)
+        return
+      }
+      setSaveErrorMessage(getApiErrorMessage(err))
+      setSaveErrorOpen(true)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleConfirmOverlap() {
+    setSaving(true)
+    try {
+      await commissionApi.createRate({ ...form, confirmOverrideOverlappingPeriods: true })
+      setOverlapConfirmOpen(false)
+      toast({ title: "Commission rate created" })
+      onSaved()
+      onOpenChange(false)
+    } catch (err: unknown) {
+      setSaveErrorMessage(getApiErrorMessage(err))
+      setSaveErrorOpen(true)
     } finally {
       setSaving(false)
     }
@@ -197,14 +250,15 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] overflow-x-hidden sm:max-w-2xl">
+        <DialogHeader className="min-w-0 shrink-0">
           <DialogTitle>Add commission rate</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-2">
-          <div className="grid gap-1.5">
+        <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden py-2">
+          <div className="grid min-w-0 max-w-full gap-1.5">
             <Label>User *</Label>
             <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
               <PopoverTrigger asChild>
@@ -214,21 +268,24 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
                   role="combobox"
                   aria-expanded={userPopoverOpen}
                   disabled={usersLoading || !orgId}
-                  className={cn("h-10 w-full justify-between bg-white px-3 text-left font-normal", {
-                    "border-red-500 focus-visible:ring-red-200": !!errors.username,
-                  })}
+                  className={cn(
+                    "h-10 w-full min-w-0 max-w-full !shrink justify-between overflow-hidden bg-white px-3 text-left font-normal",
+                    {
+                      "border-red-500 focus-visible:ring-red-200": !!errors.username,
+                    },
+                  )}
                 >
-                  <span className="min-w-0 flex-1 truncate text-left">
+                  <span className="min-w-0 flex-1 overflow-hidden text-left">
                     {selectedUser ? (
-                      <span className="flex min-w-0 items-center gap-2">
-                        <Avatar className="h-7 w-7">
+                      <span className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
+                        <Avatar className="h-7 w-7 shrink-0">
                           {selectedUser.avatarUrl && <AvatarImage src={selectedUser.avatarUrl} />}
                           <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                             {getInitials(selectedUser.fullName || selectedUser.email)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="min-w-0 flex-1 truncate">
-                          <span className="truncate font-medium text-slate-900">
+                        <span className="min-w-0 flex-1 overflow-hidden">
+                          <span className="block truncate font-medium text-slate-900">
                             {selectedUser.fullName || selectedUser.email}
                           </span>
                           <span className="block truncate font-mono text-xs text-slate-500">
@@ -237,7 +294,7 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
                         </span>
                       </span>
                     ) : (
-                      <span className="text-slate-500">
+                      <span className="block truncate text-slate-500">
                         {!orgId ? "No organization" : "Select a user..."}
                       </span>
                     )}
@@ -245,7 +302,10 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] max-w-[min(100vw-2rem,24rem)] min-w-0 p-0"
+                align="start"
+              >
                 <Command>
                   <CommandInput
                     placeholder="Search by name or email..."
@@ -308,7 +368,7 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
           </div>
 
           {selectedUserId && (
-            <div className="grid gap-1.5">
+            <div className="grid min-w-0 max-w-full gap-1.5">
               <Label>App *</Label>
               <Popover open={appPopoverOpen} onOpenChange={setAppPopoverOpen}>
                 <PopoverTrigger asChild>
@@ -318,13 +378,16 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
                     role="combobox"
                     aria-expanded={appPopoverOpen}
                     disabled={!selectedUserId || appsLoading}
-                    className={cn("h-10 w-full justify-between bg-white px-3 text-left font-normal", {
-                      "border-red-500 focus-visible:ring-red-200": !!errors.appId,
-                    })}
+                    className={cn(
+                      "h-10 w-full min-w-0 max-w-full !shrink justify-between overflow-hidden bg-white px-3 text-left font-normal",
+                      {
+                        "border-red-500 focus-visible:ring-red-200": !!errors.appId,
+                      },
+                    )}
                   >
-                    <span className="min-w-0 flex-1 truncate text-left">
+                    <span className="min-w-0 flex-1 overflow-hidden text-left">
                       {selectedApp ? (
-                        <span className="flex min-w-0 items-center gap-2">
+                        <span className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
                           <Avatar className="h-7 w-7 shrink-0 rounded-lg">
                             {selectedApp.iconUri && (
                               <AvatarImage
@@ -337,8 +400,8 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
                               {getInitials(selectedApp.displayName || selectedApp.name || selectedApp.appId)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="min-w-0 flex-1 truncate">
-                            <span className="truncate font-medium text-slate-900">
+                          <span className="min-w-0 flex-1 overflow-hidden">
+                            <span className="block truncate font-medium text-slate-900">
                               {selectedApp.displayName || selectedApp.name || selectedApp.appId}
                             </span>
                             <span className="block truncate font-mono text-xs text-slate-500">
@@ -348,13 +411,16 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
                           </span>
                         </span>
                       ) : (
-                        <span className="text-slate-500">Select an app...</span>
+                        <span className="block truncate text-slate-500">Select an app...</span>
                       )}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] max-w-[min(100vw-2rem,24rem)] min-w-0 p-0"
+                  align="start"
+                >
                   <Command>
                     <CommandInput
                       placeholder="Search by name, App Store ID, or App ID..."
@@ -419,8 +485,11 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
             </div>
           )}
 
-          <div className="grid gap-1.5">
-            <Label>
+          <div className="grid min-w-0 max-w-full gap-1.5">
+            <Label
+              className="block min-w-0 max-w-full truncate"
+              title="Commission rate (%) — leave empty = NULL (no commission)"
+            >
               Commission rate (%) — leave empty = NULL (no commission)
             </Label>
             <Input
@@ -429,6 +498,7 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
               max={100}
               step={0.01}
               placeholder="Example: 15.5"
+              className="min-w-0 max-w-full"
               value={form.commissionRate ?? ""}
               onChange={(e) =>
                 set("commissionRate", e.target.value === "" ? null : parseFloat(e.target.value))
@@ -439,11 +509,12 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-1.5">
+          <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 max-w-full gap-1.5 overflow-hidden">
               <Label>Effective date *</Label>
               <Input
                 type="date"
+                className="box-border min-w-0 w-full max-w-full"
                 value={form.effectiveDate}
                 onChange={(e) => set("effectiveDate", e.target.value)}
               />
@@ -452,10 +523,11 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
               )}
             </div>
 
-            <div className="grid gap-1.5">
+            <div className="grid min-w-0 max-w-full gap-1.5 overflow-hidden">
               <Label>Expiry date (leave empty = no expiry)</Label>
               <Input
                 type="date"
+                className="box-border min-w-0 w-full max-w-full"
                 value={form.expiryDate ?? ""}
                 onChange={(e) => set("expiryDate", e.target.value || null)}
               />
@@ -466,7 +538,7 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="min-w-0 max-w-full shrink-0 gap-2 sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
@@ -477,5 +549,46 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={overlapConfirmOpen} onOpenChange={setOverlapConfirmOpen}>
+      <AlertDialogContent className="max-w-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Trùng khoảng thời gian</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 text-left text-sm text-muted-foreground">
+              <p>
+                Period mới chồng lấn với cấu hình hiện có. Nếu bạn chọn Ghi đè, phần giao nhau sẽ dùng period mới;
+                phần không giao nhau vẫn giữ hệ số cũ (tách đoạn hoặc cập nhật ngày kết thúc).
+              </p>
+              <ul className="list-disc space-y-1.5 pl-4">
+                {overlapRows.map((r) => (
+                  <li key={r.id}>{formatCommissionOverlapLine(r)}</li>
+                ))}
+              </ul>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOverlapConfirmOpen(false)}
+            disabled={saving}
+          >
+            Hủy
+          </Button>
+          <Button type="button" onClick={() => void handleConfirmOverlap()} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Ghi đè
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <ApiErrorAlert
+      open={saveErrorOpen}
+      onOpenChange={setSaveErrorOpen}
+      message={saveErrorMessage}
+      title="Không lưu được commission rate"
+    />
+    </>
   )
 }

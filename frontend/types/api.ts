@@ -1175,6 +1175,13 @@ export interface CommissionRateDto {
   id: number
   username: string
   appId: string
+  /** Tên hiển thị (PostgreSQL), có thể null nếu user không có first/last name */
+  userDisplayName?: string | null
+  userEmail?: string | null
+  userAvatarUrl?: string | null
+  appDisplayName?: string | null
+  appIconUri?: string | null
+  appStoreId?: string | null
   /** null = không hưởng hoa hồng */
   commissionRate: number | null
   effectiveDate: string
@@ -1189,6 +1196,8 @@ export interface CreateCommissionRateRequest {
   commissionRate: number | null
   effectiveDate: string
   expiryDate: string | null
+  /** Gửi true sau khi user xác nhận ghi đè period chồng lấn */
+  confirmOverrideOverlappingPeriods?: boolean
 }
 
 export interface SetExpiryRequest {

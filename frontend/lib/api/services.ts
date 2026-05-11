@@ -2367,8 +2367,18 @@ export const commissionApi = {
     getRates: async (params?: {
         username?: string
         appId?: string
+        /** JSON array: CommissionDateFilterRule */
+        dateRules?: string
+        effectiveFrom?: string
+        effectiveTo?: string
+        expiryFrom?: string
+        expiryTo?: string
         page?: number
         pageSize?: number
+        /** user | app | effectiveDate | expiryDate */
+        sortBy?: string
+        /** asc | desc */
+        sortDir?: string
     }): Promise<import('@/types/api').CommissionRatePagedResult> => {
         return apiClient.get('/api/v1/commission/rates', params as Record<string, string | number | undefined>)
     },
