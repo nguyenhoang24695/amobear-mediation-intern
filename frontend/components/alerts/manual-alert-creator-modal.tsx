@@ -64,6 +64,8 @@ type TelegramDestinationRow = {
   id: string
   chatId: string
   messageThreadId: string
+  /** Id preset trong profile — khi bấm chip hoặc sau khi lưu; Save cập nhật đúng preset này. */
+  linkedPresetId?: string
 }
 
 type TelegramDestinationPreset = {
@@ -267,22 +269,52 @@ function rowsFromTelegramTopics(topics: string[]): TelegramDestinationRow[] {
   })
 }
 
-function applyPresetToTelegramRows(preset: TelegramDestinationPreset, existing: TelegramDestinationRow[]) {
+function applyPresetToTelegramRows(
+  preset: TelegramDestinationPreset,
+  existing: TelegramDestinationRow[],
+): { rows: TelegramDestinationRow[]; addedRowId: string | null } {
   const token = telegramPresetToken(preset)
-  if (!token) return existing
+  if (!token) return { rows: existing, addedRowId: null }
 
   const has = existing.some((r) => telegramTopicTokenFromRow(r) === token)
-  if (has) return existing
+  if (has) return { rows: existing, addedRowId: null }
 
+  const addedRowId = newRowId()
   const next = existing.length === 1 && !existing[0]?.chatId.trim() ? [] : existing
-  return [
-    ...next,
-    {
-      id: newRowId(),
-      chatId: preset.chatId.trim(),
-      messageThreadId: preset.messageThreadId?.trim() ?? "",
-    },
-  ]
+  return {
+    rows: [
+      ...next,
+      {
+        id: addedRowId,
+        chatId: preset.chatId.trim(),
+        messageThreadId: preset.messageThreadId?.trim() ?? "",
+        linkedPresetId: preset.id,
+      },
+    ],
+    addedRowId,
+  }
+}
+
+function shouldShowTelegramPresetSaveButton(
+  row: TelegramDestinationRow,
+  nameByRowId: Record<string, string>,
+  presets: TelegramDestinationPreset[],
+): boolean {
+  const name = (nameByRowId[row.id] ?? "").trim()
+  const chat = row.chatId.trim()
+  const thread = row.messageThreadId.trim()
+  if (!chat || !name) return false
+
+  if (row.linkedPresetId) {
+    const base = presets.find((p) => p.id === row.linkedPresetId)
+    if (!base) return true
+    const baseName = (base.name ?? "").trim()
+    const baseThread = (base.messageThreadId ?? "").trim()
+    const baseChat = base.chatId.trim()
+    return chat !== baseChat || thread !== baseThread || name !== baseName
+  }
+
+  return true
 }
 
 function rowsFromSlackChannels(channels: string[]): SlackDestinationRow[] {
@@ -508,12 +540,13 @@ export function ManualAlertCreatorModal({
     setDuplicateConfirmOpen(false)
     setPendingDuplicateName("")
     setTelegramPresetSaveSuccessRowIds({})
+    setTelegramPresetNamesByRowId({})
+    // PRIVATE rules still persist telegramTopics per-rule; only Slack/Email come from profile in UI.
+    setTelegramRows(rowsFromTelegramTopics(parseJsonArray(sourceRule?.telegramTopics)))
     if (isPrivateFlow) {
-      setTelegramRows([emptyTelegramRow()])
       setSlackRows([emptySlackRow()])
       setEmailRows([emptyEmailRow()])
     } else {
-      setTelegramRows(rowsFromTelegramTopics(parseJsonArray(sourceRule?.telegramTopics)))
       setSlackRows(rowsFromSlackChannels(parseJsonArray(sourceRule?.slackChannels)))
       setEmailRows(rowsFromEmailRecipients(parseJsonArray(sourceRule?.emailRecipients)))
     }
@@ -972,29 +1005,56 @@ export function ManualAlertCreatorModal({
       const current = getCurrentUser() as { telegramDestinationsJson?: string } | null
       const existing = parseTelegramPresetsJson(current?.telegramDestinationsJson)
 
-      const token = messageThreadId ? `${chatId}|${messageThreadId}` : chatId
-      const already = existing.find((p) => {
-        const t = p.messageThreadId?.trim()
-          ? `${p.chatId.trim()}|${p.messageThreadId.trim()}`
-          : p.chatId.trim()
-        return t === token
-      })
+      let next: TelegramDestinationPreset[]
+      let presetIdToLink: string
 
-      const next: TelegramDestinationPreset[] = already
-        ? existing.map((p) =>
+      const linked =
+        row.linkedPresetId != null ? existing.find((p) => p.id === row.linkedPresetId) : undefined
+
+      if (linked && row.linkedPresetId) {
+        next = existing.map((p) =>
+          p.id === row.linkedPresetId
+            ? { ...p, name: presetNameRaw, chatId, messageThreadId: messageThreadId || undefined }
+            : p,
+        )
+        presetIdToLink = row.linkedPresetId
+      } else {
+        if (row.linkedPresetId) {
+          toast({
+            title: "Preset không còn",
+            description: "Preset đã xóa khỏi profile. Đang lưu theo Chat ID hiện tại.",
+            variant: "destructive",
+          })
+        }
+        const token = messageThreadId ? `${chatId}|${messageThreadId}` : chatId
+        const already = existing.find((p) => {
+          const t = p.messageThreadId?.trim()
+            ? `${p.chatId.trim()}|${p.messageThreadId.trim()}`
+            : p.chatId.trim()
+          return t === token
+        })
+
+        if (already) {
+          next = existing.map((p) =>
             p.id === already.id
               ? { ...p, name: presetNameRaw, chatId, messageThreadId: messageThreadId || undefined }
               : p,
           )
-        : [
+          presetIdToLink = already.id
+        } else {
+          const newId = newRowId()
+          next = [
             ...existing,
             {
-              id: newRowId(),
+              id: newId,
               name: presetNameRaw,
               chatId,
               messageThreadId: messageThreadId || undefined,
             },
           ]
+          presetIdToLink = newId
+        }
+      }
 
       const res = await authApi.updateMyProfile({
         telegramDestinationsJson: JSON.stringify(next),
@@ -1005,6 +1065,10 @@ export function ManualAlertCreatorModal({
       if (accessToken) {
         setAuthData(accessToken, getRefreshToken() ?? null, authUserFromMeDto(res.data))
       }
+
+      setTelegramRows((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, linkedPresetId: presetIdToLink } : r)),
+      )
 
       setTelegramPresetsRevision((n) => n + 1)
       toast({ title: "Đã lưu Telegram preset", description: `Saved: ${presetNameRaw}` })
@@ -1047,6 +1111,12 @@ export function ManualAlertCreatorModal({
 
   const removeTelegramRow = (id: string) => {
     setTelegramRows((prev) => (prev.length > 1 ? prev.filter((row) => row.id !== id) : [emptyTelegramRow()]))
+    setTelegramPresetNamesByRowId((prev) => {
+      if (!(id in prev)) return prev
+      const n = { ...prev }
+      delete n[id]
+      return n
+    })
     setTelegramPresetSaveSuccessRowIds((prev) => {
       if (!prev[id]) return prev
       const next = { ...prev }
@@ -1701,7 +1771,17 @@ export function ManualAlertCreatorModal({
                                         }
                                         onClick={() => {
                                           setStep3Errors((prev) => ({ ...prev, telegram: undefined }))
-                                          setTelegramRows((prev) => applyPresetToTelegramRows(p, prev))
+                                          setTelegramRows((prevRows) => {
+                                            const { rows, addedRowId } = applyPresetToTelegramRows(p, prevRows)
+                                            if (addedRowId) {
+                                              const nm = (p.name ?? "").trim()
+                                              setTelegramPresetNamesByRowId((n) => ({
+                                                ...n,
+                                                [addedRowId]: nm,
+                                              }))
+                                            }
+                                            return rows
+                                          })
                                         }}
                                         className={cn(
                                           "inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
@@ -1750,12 +1830,17 @@ export function ManualAlertCreatorModal({
                                     />
                                     {telegramPresetSaveSuccessRowIds[row.id] &&
                                     savingTelegramPresetRowId !== row.id ? (
-                                      <CheckCircle2
-                                        className="h-5 w-5 shrink-0 text-emerald-600"
-                                        aria-label="Đã lưu preset"
-                                        title="Đã lưu preset"
-                                      />
-                                    ) : (
+                                      <span title="Đã lưu preset">
+                                        <CheckCircle2
+                                          className="h-5 w-5 shrink-0 text-emerald-600"
+                                          aria-label="Đã lưu preset"
+                                        />
+                                      </span>
+                                    ) : shouldShowTelegramPresetSaveButton(
+                                        row,
+                                        telegramPresetNamesByRowId,
+                                        telegramPresets,
+                                      ) ? (
                                       <Button
                                         type="button"
                                         variant="outline"
@@ -1770,6 +1855,8 @@ export function ManualAlertCreatorModal({
                                           "Save"
                                         )}
                                       </Button>
+                                    ) : (
+                                      <span className="w-10 shrink-0" aria-hidden />
                                     )}
                                   </div>
                                   <Button
