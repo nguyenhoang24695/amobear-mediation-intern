@@ -49,6 +49,7 @@ import {
   Sparkles,
   Apple,
   BadgePercent,
+  Music2,
 } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/shared/logo"
@@ -109,7 +110,10 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
     icon: KeyRound,
     label: "Data Accounts",
     href: "/data-accounts",
-    isShow: () => hasScreenFunction("s-data-accounts", "view") || hasScreenFunction("s-meta-accounts", "view"),
+    isShow: () =>
+      hasScreenFunction("s-data-accounts", "view") ||
+      hasScreenFunction("s-meta-accounts", "view") ||
+      hasScreenFunction("s-tiktok-accounts", "view"),
   },
   { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },
   {
@@ -201,6 +205,54 @@ const navItems: NavItem[] = [
         label: "App Mappings",
         href: "/meta-ads/app-mappings",
         isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-meta-accounts", fn)),
+      },
+    ],
+  },
+  {
+    icon: Music2,
+    label: "TikTok Ads",
+    href: "#",
+    hasSubmenu: true,
+    isNew: true,
+    isShow: () =>
+      [
+        ["s-tiktok-accounts", "view"],
+        ["s-tiktok-campaigns", "view"],
+        ["s-tiktok-requests", "view"],
+        ["s-tiktok-requests", "create"],
+        ["s-tiktok-automation", "view"],
+      ].some(([screen, fn]) => hasScreenFunction(screen, fn)),
+    children: [
+      {
+        icon: BarChart3,
+        label: "Dashboard",
+        href: "/tiktok-ads/dashboard",
+        isNew: true,
+        isShow: () => hasScreenFunction("s-tiktok-campaigns", "view"),
+      },
+      {
+        icon: CreditCard,
+        label: "Ad Accounts",
+        href: "/tiktok-ads/ad-accounts",
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-tiktok-accounts", fn)),
+      },
+      {
+        icon: GitMerge,
+        label: "App Mappings",
+        href: "/tiktok-ads/app-mappings",
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-tiktok-accounts", fn)),
+      },
+      {
+        icon: FileText,
+        label: "Requests",
+        href: "/tiktok-ads/requests",
+        isShow: () => ["view", "create", "approve", "execute", "retry"].some((fn) => hasScreenFunction("s-tiktok-requests", fn)),
+      },
+      {
+        icon: Megaphone,
+        label: "Campaigns",
+        href: "/tiktok-ads/campaigns",
+        isShow: () => hasScreenFunction("s-tiktok-campaigns", "view"),
       },
     ],
   },

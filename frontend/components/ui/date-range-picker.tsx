@@ -30,6 +30,7 @@ interface DateRangePickerProps {
   value?: DateRange
   onChange?: (range: DateRange) => void
   presets?: DateRangePreset[]
+  defaultPreset?: DateRangePreset
   className?: string
 }
 
@@ -53,22 +54,44 @@ const getPresetRange = (preset: DateRangePreset): DateRange => {
   }
 }
 
+/** Detect xem DateRange có khớp với preset nào không (so sánh số ngày) */
+function detectPreset(range: DateRange): DateRangePreset {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const fromTime = new Date(range.from)
+  fromTime.setHours(0, 0, 0, 0)
+  const toTime = new Date(range.to)
+  toTime.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((toTime.getTime() - fromTime.getTime()) / 86_400_000)
+  const toIsToday = toTime.getTime() === today.getTime()
+  if (toIsToday && diffDays === 0) return "today"
+  if (toIsToday && diffDays === 6) return "7days"
+  if (toIsToday && diffDays === 29) return "30days"
+  return "custom"
+}
+
 export function DateRangePicker({
   value,
   onChange,
   presets = ["today", "7days", "30days", "custom"],
+  defaultPreset,
   className,
 }: DateRangePickerProps) {
-  const [selectedPreset, setSelectedPreset] = React.useState<DateRangePreset>("7days")
+  const initialPreset = React.useMemo(() => {
+    if (value) return detectPreset(value)
+    return defaultPreset ?? "7days"
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps — chỉ tính lần đầu
+
+  const [selectedPreset, setSelectedPreset] = React.useState<DateRangePreset>(initialPreset)
   const [isCustomOpen, setIsCustomOpen] = React.useState(false)
 
   // Initialize with default range if no value provided
   React.useEffect(() => {
     if (!value && onChange) {
-      const defaultRange = getPresetRange("7days")
-      onChange(defaultRange)
+      const preset = defaultPreset ?? "7days"
+      onChange(getPresetRange(preset))
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePresetChange = (preset: DateRangePreset) => {
     setSelectedPreset(preset)

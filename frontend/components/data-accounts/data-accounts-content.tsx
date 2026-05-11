@@ -11,6 +11,7 @@ import { Key, Search, Plus, Download, CheckCircle2, AlertTriangle, Smartphone, L
 import { DataAccountsTable } from "./data-accounts-table"
 import { AddEditAccountModal } from "./add-edit-account-modal"
 import { IntegrationsContent } from "@/components/meta-ads/integrations/integrations-content"
+import { TikTokIntegrationsContent } from "@/components/tiktok-ads/integrations/tiktok-integrations-content"
 import { useApi } from "@/hooks/use-api"
 import { dataAccountsApi, type DataAccountItem } from "@/lib/api/services"
 import { hasScreenFunction } from "@/lib/auth"
@@ -27,7 +28,7 @@ interface ActiveFilter {
   value: string
 }
 
-type DataAccountsTab = "accounts" | "meta-integrations"
+type DataAccountsTab = "accounts" | "meta-integrations" | "tiktok-integrations"
 
 function buildTabUrl(pathname: string, searchParamsKey: string, tab: DataAccountsTab) {
   const params = new URLSearchParams(searchParamsKey)
@@ -317,21 +318,26 @@ export function DataAccountsContent() {
 
   const canViewAccounts = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_VIEW)
   const canViewMetaIntegrations = hasScreenFunction("s-meta-accounts", FN_VIEW)
+  const canViewTikTokIntegrations = hasScreenFunction("s-tiktok-accounts", FN_VIEW)
 
   const availableTabs = useMemo(() => {
     const tabs: DataAccountsTab[] = []
     if (canViewAccounts) tabs.push("accounts")
     if (canViewMetaIntegrations) tabs.push("meta-integrations")
+    if (canViewTikTokIntegrations) tabs.push("tiktok-integrations")
     return tabs
-  }, [canViewAccounts, canViewMetaIntegrations])
+  }, [canViewAccounts, canViewMetaIntegrations, canViewTikTokIntegrations])
 
   const requestedTab = searchParams.get("tab")
   const activeTab = useMemo<DataAccountsTab | null>(() => {
     if (availableTabs.length === 0) return null
     if (requestedTab === "accounts" && canViewAccounts) return "accounts"
     if (requestedTab === "meta-integrations" && canViewMetaIntegrations) return "meta-integrations"
-    return canViewAccounts ? "accounts" : "meta-integrations"
-  }, [availableTabs.length, canViewAccounts, canViewMetaIntegrations, requestedTab])
+    if (requestedTab === "tiktok-integrations" && canViewTikTokIntegrations) return "tiktok-integrations"
+    if (canViewAccounts) return "accounts"
+    if (canViewMetaIntegrations) return "meta-integrations"
+    return "tiktok-integrations"
+  }, [availableTabs.length, canViewAccounts, canViewMetaIntegrations, canViewTikTokIntegrations, requestedTab])
 
   useEffect(() => {
     if (!activeTab || requestedTab === activeTab) return
@@ -348,15 +354,17 @@ export function DataAccountsContent() {
     <div className="space-y-6">
       {showTabs ? (
         <Tabs value={activeTab} onValueChange={(value) => router.push(buildTabUrl(pathname, searchParamsKey, value as DataAccountsTab))}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
             {canViewAccounts ? <TabsTrigger value="accounts">Accounts</TabsTrigger> : null}
             {canViewMetaIntegrations ? <TabsTrigger value="meta-integrations">Meta Integrations</TabsTrigger> : null}
+            {canViewTikTokIntegrations ? <TabsTrigger value="tiktok-integrations">TikTok Integrations</TabsTrigger> : null}
           </TabsList>
         </Tabs>
       ) : null}
 
       {activeTab === "accounts" ? <DataAccountsListPanel /> : null}
       {activeTab === "meta-integrations" ? <IntegrationsContent embedded /> : null}
+      {activeTab === "tiktok-integrations" ? <TikTokIntegrationsContent embedded /> : null}
     </div>
   )
 }
