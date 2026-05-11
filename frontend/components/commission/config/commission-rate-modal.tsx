@@ -26,8 +26,18 @@ import { getCurrentUser } from "@/lib/auth"
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { commissionApi, organizationsApi, teamMembersApi, type OrgUserItem } from "@/lib/api/services"
-import type { CreateCommissionRateRequest } from "@/types/api"
+import { getApiErrorMessage } from "@/lib/api/get-api-error-message"
+import { ApiErrorAlert } from "@/components/shared/api-error-alert"
+import type { CommissionRateDto, CreateCommissionRateRequest } from "@/types/api"
 import type { PermittedAppListItem } from "@/types/api"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Props {
   open: boolean
@@ -51,6 +61,15 @@ function getInitials(nameOrEmail: string): string {
   return s[0].toUpperCase()
 }
 
+function formatCommissionOverlapLine(r: CommissionRateDto): string {
+  const rate =
+    r.commissionRate === null || r.commissionRate === undefined
+      ? "Không hưởng"
+      : `${r.commissionRate}%`
+  const exp = r.expiryDate ?? "không hết hạn"
+  return `${r.effectiveDate} → ${exp} — ${rate}`
+}
+
 export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
   const [form, setForm] = useState<CreateCommissionRateRequest>(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -71,6 +90,10 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
   const [appsError, setAppsError] = useState<string | null>(null)
   const latestAppsReqIdRef = useRef(0)
   const [selectedAppItem, setSelectedAppItem] = useState<PermittedAppListItem | null>(null)
+  const [saveErrorOpen, setSaveErrorOpen] = useState(false)
+  const [saveErrorMessage, setSaveErrorMessage] = useState("")
+  const [overlapConfirmOpen, setOverlapConfirmOpen] = useState(false)
+  const [overlapRows, setOverlapRows] = useState<CommissionRateDto[]>([])
 
   const orgId = getCurrentUser()?.organization?.id
 
@@ -93,6 +116,10 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
       setAppsLoading(false)
       setAppsError(null)
       setSelectedAppItem(null)
+      setSaveErrorOpen(false)
+      setSaveErrorMessage("")
+      setOverlapConfirmOpen(false)
+      setOverlapRows([])
     }
   }, [open])
 
@@ -177,13 +204,39 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
     if (!validate()) return
     setSaving(true)
     try {
-      await commissionApi.createRate(form)
+      await commissionApi.createRate({ ...form })
       toast({ title: "Commission rate created" })
       onSaved()
       onOpenChange(false)
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? "Unable to create"
-      toast({ title: "Error", description: msg, variant: "destructive" })
+      const res = (err as { response?: { status?: number; data?: unknown } })?.response
+      const data = res?.data as {
+        code?: string
+        overlappingPeriods?: CommissionRateDto[]
+      } | null
+      if (res?.status === 409 && data?.code === "COMMISSION_OVERLAP" && Array.isArray(data.overlappingPeriods)) {
+        setOverlapRows(data.overlappingPeriods)
+        setOverlapConfirmOpen(true)
+        return
+      }
+      setSaveErrorMessage(getApiErrorMessage(err))
+      setSaveErrorOpen(true)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleConfirmOverlap() {
+    setSaving(true)
+    try {
+      await commissionApi.createRate({ ...form, confirmOverrideOverlappingPeriods: true })
+      setOverlapConfirmOpen(false)
+      toast({ title: "Commission rate created" })
+      onSaved()
+      onOpenChange(false)
+    } catch (err: unknown) {
+      setSaveErrorMessage(getApiErrorMessage(err))
+      setSaveErrorOpen(true)
     } finally {
       setSaving(false)
     }
@@ -197,6 +250,7 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-[calc(100vw-2rem)] overflow-x-hidden sm:max-w-2xl">
         <DialogHeader className="min-w-0 shrink-0">
@@ -495,5 +549,46 @@ export function CommissionRateModal({ open, onOpenChange, onSaved }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={overlapConfirmOpen} onOpenChange={setOverlapConfirmOpen}>
+      <AlertDialogContent className="max-w-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Trùng khoảng thời gian</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 text-left text-sm text-muted-foreground">
+              <p>
+                Period mới chồng lấn với cấu hình hiện có. Nếu bạn chọn Ghi đè, phần giao nhau sẽ dùng period mới;
+                phần không giao nhau vẫn giữ hệ số cũ (tách đoạn hoặc cập nhật ngày kết thúc).
+              </p>
+              <ul className="list-disc space-y-1.5 pl-4">
+                {overlapRows.map((r) => (
+                  <li key={r.id}>{formatCommissionOverlapLine(r)}</li>
+                ))}
+              </ul>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOverlapConfirmOpen(false)}
+            disabled={saving}
+          >
+            Hủy
+          </Button>
+          <Button type="button" onClick={() => void handleConfirmOverlap()} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Ghi đè
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <ApiErrorAlert
+      open={saveErrorOpen}
+      onOpenChange={setSaveErrorOpen}
+      message={saveErrorMessage}
+      title="Không lưu được commission rate"
+    />
+    </>
   )
 }

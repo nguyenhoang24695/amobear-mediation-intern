@@ -1189,6 +1189,8 @@ export interface CreateCommissionRateRequest {
   commissionRate: number | null
   effectiveDate: string
   expiryDate: string | null
+  /** Gửi true sau khi user xác nhận ghi đè period chồng lấn */
+  confirmOverrideOverlappingPeriods?: boolean
 }
 
 export interface SetExpiryRequest {

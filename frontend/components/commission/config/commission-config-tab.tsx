@@ -27,6 +27,8 @@ import { Plus, Trash2, Search, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { commissionApi } from "@/lib/api/services"
+import { getApiErrorMessage } from "@/lib/api/get-api-error-message"
+import { ApiErrorAlert } from "@/components/shared/api-error-alert"
 import { Pagination } from "@/components/shared/pagination"
 import { CommissionRateModal } from "./commission-rate-modal"
 import type { CommissionRateDto } from "@/types/api"
@@ -53,6 +55,8 @@ export function CommissionConfigTab() {
   const [addOpen, setAddOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CommissionRateDto | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteErrorOpen, setDeleteErrorOpen] = useState(false)
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState("")
 
   const cacheKey = `commission_rates_${page}_${PAGE_SIZE}_${usernameFilter}_${appIdFilter}`
 
@@ -81,8 +85,9 @@ export function CommissionConfigTab() {
       toast({ title: "Commission rate deleted" })
       invalidateCache(cacheKey)
       await refetch()
-    } catch {
-      toast({ title: "Failed to delete", variant: "destructive" })
+    } catch (err: unknown) {
+      setDeleteErrorMessage(getApiErrorMessage(err))
+      setDeleteErrorOpen(true)
     } finally {
       setDeleting(false)
       setDeleteTarget(null)
@@ -220,6 +225,13 @@ export function CommissionConfigTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ApiErrorAlert
+        open={deleteErrorOpen}
+        onOpenChange={setDeleteErrorOpen}
+        message={deleteErrorMessage}
+        title="Không xóa được commission rate"
+      />
     </div>
   )
 }
