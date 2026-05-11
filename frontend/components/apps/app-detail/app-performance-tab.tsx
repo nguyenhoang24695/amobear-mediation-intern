@@ -50,8 +50,8 @@ import {
 import { format, subDays, startOfDay, isSameDay, parseISO, addDays, isAfter } from "date-fns"
 import { useApi } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
-import { structureApi } from "@/lib/api/services"
-import type { AppHourlyPerformanceResponseDto } from "@/types/api"
+import { dashboardApi, structureApi } from "@/lib/api/services"
+import type { AppHourlyPerformanceResponseDto, RevenueOverview } from "@/types/api"
 
 /** yyyy-MM-dd theo lịch UTC từ bucket ISO (fallback khi parse lỗi). */
 function utcCalendarDateKeyFromBucketIso(iso: string): string {
@@ -318,6 +318,33 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
     cacheKey,
   })
 
+  /** Cùng nguồn revenue ngày với widget Performance (Overview): gold.fact_daily_app_metrics qua dashboard API. */
+  const fetchDashboardDailyRevenue = useMemo(
+    () => () =>
+      dashboardApi.getRevenueOverviewForApp(appId, {
+        range: "custom",
+        startDate: apiRange.start,
+        endDate: apiRange.end,
+        metric: "revenue",
+      }),
+    [appId, apiRange.start, apiRange.end],
+  )
+
+  const dashboardRevCacheKey = `app_perf_dashboard_rev_${appId}_${apiRange.start}_${apiRange.end}`
+  const { data: dashboardRevenueOverview } = useApi<RevenueOverview>(fetchDashboardDailyRevenue, {
+    enabled: !!appId,
+    cacheKey: dashboardRevCacheKey,
+  })
+
+  const overviewRevenueByDate = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const pt of dashboardRevenueOverview?.data ?? []) {
+      const k = String(pt.date).split("T")[0]
+      if (k) m.set(k, Number(pt.value))
+    }
+    return m
+  }, [dashboardRevenueOverview])
+
   const data: HourlyBucket[] = useMemo(() => {
     if (!perfResponse?.buckets?.length) return []
     return perfResponse.buckets.map((b) => ({
@@ -357,7 +384,13 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       const hasHourly = !!values && values.hourly.length > 0
       const align = alignMap.get(dateKey)
 
-      const revenue = hasHourly ? Math.round(values!.revenue * 100) / 100 : null
+      const overviewRevRaw = overviewRevenueByDate.get(dateKey)
+      const hasOverviewPoint = overviewRevenueByDate.has(dateKey)
+      const revenueFromHourly = hasHourly ? Math.round(values!.revenue * 100) / 100 : null
+      const revenue =
+        hasOverviewPoint
+          ? Math.round(Number(overviewRevRaw) * 100) / 100
+          : revenueFromHourly
       const hourlyCostRollup = hasHourly ? Math.round(values!.cost * 100) / 100 : null
 
       let cost: number | null = null
@@ -371,7 +404,10 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
         align != null &&
         (Math.abs(Number(align.goldHourlyUaCostSum)) > 1e-9 || Math.abs(Number(align.bronzeXmpReportCostSum)) > 1e-9)
       const hasData =
-        hasHourly || hasGoldDailyOrHourly || (revenue != null && Math.abs(revenue) > 1e-9)
+        hasOverviewPoint ||
+        hasHourly ||
+        hasGoldDailyOrHourly ||
+        (revenue != null && Math.abs(revenue) > 1e-9)
 
       const sumHourlyCostRounded = hasHourly
         ? Math.round(values!.hourly.reduce((s, h) => s + h.cost, 0) * 100) / 100
@@ -399,6 +435,23 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
       const net =
         revenue != null && cost != null ? Math.round((revenue - cost) * 100) / 100 : null
 
+      const sortedHourly =
+        hasHourly
+          ? [...values!.hourly].sort(
+              (a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime(),
+            )
+          : []
+
+      const sumHrRev = sortedHourly.reduce((s, h) => s + h.revenue, 0)
+      const scaleDayToOverview =
+        hasOverviewPoint && hasHourly && revenue != null
+          ? sumHrRev > 1e-9
+            ? revenue / sumHrRev
+            : sortedHourly.length > 0
+              ? revenue / sortedHourly.length
+              : null
+          : null
+
       return {
         date: dateKey,
         dateLabel: format(parseISO(dateKey), "MMM dd, yyyy"),
@@ -407,19 +460,25 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
         cost,
         net,
         uaCostDailyVsHourlyMismatch: mismatch,
-        hourlyData: hasHourly
-          ? values!.hourly
-              .sort((a, b) => new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime())
-              .map((h) => ({
-                hour: hourLabelInTimeZone(h.bucketStart, queryTimeZoneId),
-                revenue: h.revenue,
-                cost: h.cost,
-                net: Math.round((h.revenue - h.cost) * 100) / 100,
-              }))
-          : [],
+        hourlyData:
+          hasHourly
+            ? sortedHourly.map((h) => {
+                let hrRev = h.revenue
+                if (scaleDayToOverview != null) {
+                  hrRev = sumHrRev > 1e-9 ? h.revenue * scaleDayToOverview : scaleDayToOverview
+                }
+                const rRounded = Math.round(hrRev * 100) / 100
+                return {
+                  hour: hourLabelInTimeZone(h.bucketStart, queryTimeZoneId),
+                  revenue: rRounded,
+                  cost: h.cost,
+                  net: Math.round((rRounded - h.cost) * 100) / 100,
+                }
+              })
+            : [],
       }
     })
-  }, [data, apiRange.from, apiRange.to, perfResponse, queryTimeZoneId])
+  }, [data, apiRange.from, apiRange.to, perfResponse, queryTimeZoneId, overviewRevenueByDate])
 
   const filteredTableData = useMemo(() => {
     let filtered = [...dailyData]
