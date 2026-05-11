@@ -134,6 +134,7 @@ export interface TikTokAdAccountDto {
   advertiserId: string
   name: string
   currency?: string | null
+  country?: string | null
   timezone?: string | null
   timezoneOffsetMinutes?: number | null
   bcId?: string | null
@@ -144,11 +145,26 @@ export interface TikTokAdAccountDto {
   lastSyncedAt?: string | null
 }
 
+export interface TikTokAdAccountPageDto {
+  items: TikTokAdAccountDto[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface TikTokAdAccountFilterOptionsDto {
+  names: string[]
+  advertiserIds: string[]
+  countries: string[]
+}
+
 export interface UpsertTikTokAdAccountRequestDto {
   tikTokIntegrationId: number
   advertiserId: string
   name: string
   currency?: string
+  country?: string
   timezone?: string
   timezoneOffsetMinutes?: number
   status?: string
@@ -181,6 +197,60 @@ export interface CreateTikTokAppMappingRequestDto {
   deepLinkUrlOverride?: string
   storeUrlOverride?: string
   isActive?: boolean
+}
+
+export interface TikTokAppMappingCandidateAppDto {
+  appRowId: number
+  appId?: string | null
+  appDisplayName?: string | null
+  platform?: string | null
+}
+
+export interface TikTokAppMappingCandidateDto {
+  id: number
+  discoveryKey: string
+  source: string
+  tikTokAppId: string
+  downloadUrl?: string | null
+  packageName?: string | null
+  bundleId?: string | null
+  storeUrl?: string | null
+  sampleCampaignId?: string | null
+  sampleAdGroupId?: string | null
+  sourceAdvertiserIds: string[]
+  sourceCampaignIds: string[]
+  sourceAdGroupIds: string[]
+  identifiers: string[]
+  sourceAdvertiserCount: number
+  sourceCampaignCount: number
+  sourceAdGroupCount: number
+  firstDiscoveredAt: string
+  lastDiscoveredAt: string
+  matchQuality: string
+  reviewStatus: string
+  recommendedAppRowId?: number | null
+  recommendedApp?: TikTokAppMappingCandidateAppDto | null
+  suggestedApps: TikTokAppMappingCandidateAppDto[]
+  resolvedAppRowId?: number | null
+  resolvedApp?: TikTokAppMappingCandidateAppDto | null
+  resolvedTikTokAppMappingId?: number | null
+  resolutionType?: string | null
+  resolutionNote?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TikTokAppMappingCandidateQueryDto {
+  search?: string
+  reviewStatus?: string
+  matchQuality?: string
+  advertiserId?: string
+}
+
+export interface ResolveTikTokAppMappingCandidateRequestDto {
+  resolutionType: string
+  appRowId?: number | null
+  resolutionNote?: string | null
 }
 
 export interface TikTokReferenceResponseDto {

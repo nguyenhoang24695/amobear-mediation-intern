@@ -362,7 +362,7 @@ export function TikTokDashboard() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
-            <DateRangePicker value={range} onChange={setRange} className="flex-wrap" />
+            <DateRangePicker value={range} onChange={setRange} defaultPreset="30days" className="flex-wrap" />
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <Input value={advertiserId} onChange={(event) => setAdvertiserId(event.target.value)} placeholder="Advertiser ID" className="h-10 border-slate-200 md:w-[220px]" />

@@ -11,7 +11,11 @@ import type {
   TikTokIntegrationTestRequestDto,
   TikTokIntegrationTestResultDto,
   TikTokAdAccountDto,
+  TikTokAdAccountFilterOptionsDto,
+  TikTokAdAccountPageDto,
   TikTokAppMappingDto,
+  TikTokAppMappingCandidateDto,
+  TikTokAppMappingCandidateQueryDto,
   TikTokReferenceResponseDto,
   TikTokTokenStatusDto,
   TikTokValidationResultDto,
@@ -22,6 +26,7 @@ import type {
   UpdateTikTokCampaignRequestDto,
   UpdateTikTokIntegrationRequestDto,
   UpsertTikTokAdAccountRequestDto,
+  ResolveTikTokAppMappingCandidateRequestDto,
 } from "@/types/tiktok-ads"
 
 const DASHBOARD_PREFIX = "/api/v1/tiktok-dashboard"
@@ -69,7 +74,15 @@ export const tiktokAccountsApi = {
   enableIntegration: async (id: number) => apiClient.post<TikTokIntegrationDto>(`${ACCOUNTS_PREFIX}/integrations/${id}/enable`),
   disableIntegration: async (id: number) => apiClient.post<TikTokIntegrationDto>(`${ACCOUNTS_PREFIX}/integrations/${id}/disable`),
   syncAdAccounts: async (id: number) => apiClient.post<TikTokAdAccountDto[]>(`${ACCOUNTS_PREFIX}/integrations/${id}/sync-ad-accounts`),
-  getAdAccounts: async () => apiClient.get<TikTokAdAccountDto[]>(`${ACCOUNTS_PREFIX}/ad-accounts`),
+  getAdAccounts: async (params?: {
+    page?: number
+    pageSize?: number
+    name?: string
+    advertiserId?: string
+    country?: string
+  }) => apiClient.get<TikTokAdAccountPageDto>(`${ACCOUNTS_PREFIX}/ad-accounts`, params),
+  getAdAccountFilterOptions: async (params?: { search?: string }) =>
+    apiClient.get<TikTokAdAccountFilterOptionsDto>(`${ACCOUNTS_PREFIX}/ad-accounts/filter-options`, params),
   createAdAccount: async (data: UpsertTikTokAdAccountRequestDto) => apiClient.post<TikTokAdAccountDto>(`${ACCOUNTS_PREFIX}/ad-accounts`, data),
   updateAdAccount: async (id: number, data: UpsertTikTokAdAccountRequestDto) => apiClient.put<TikTokAdAccountDto>(`${ACCOUNTS_PREFIX}/ad-accounts/${id}`, data),
   enableAdAccount: async (id: number) => apiClient.post<TikTokAdAccountDto>(`${ACCOUNTS_PREFIX}/ad-accounts/${id}/enable`),
@@ -79,6 +92,10 @@ export const tiktokAccountsApi = {
   updateAppMapping: async (id: number, data: CreateTikTokAppMappingRequestDto) => apiClient.put<TikTokAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}`, data),
   enableAppMapping: async (id: number) => apiClient.post<TikTokAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/enable`),
   disableAppMapping: async (id: number) => apiClient.post<TikTokAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`),
+  listAppMappingCandidates: async (query?: TikTokAppMappingCandidateQueryDto) =>
+    apiClient.get<TikTokAppMappingCandidateDto[]>(`${ACCOUNTS_PREFIX}/app-mappings/candidates`, query),
+  resolveAppMappingCandidate: async (id: number, data: ResolveTikTokAppMappingCandidateRequestDto) =>
+    apiClient.post<TikTokAppMappingCandidateDto>(`${ACCOUNTS_PREFIX}/app-mappings/candidates/${id}/resolve`, data),
 }
 
 export const tiktokAuthApi = {
