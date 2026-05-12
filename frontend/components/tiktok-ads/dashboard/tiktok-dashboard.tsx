@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useDeferredValue } from "react"
 import { format } from "date-fns"
-import { AlertTriangle, BarChart3, ChevronRight, DollarSign, MousePointerClick, TrendingUp, WalletCards } from "lucide-react"
+import { AlertTriangle, BarChart3, ChevronRight, DollarSign, MousePointerClick, Search, TrendingUp, WalletCards } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import type { TikTokCampaignPerformanceDto, TikTokDashboardDailyDto, TikTokDashboardOverviewDto, TikTokInstallDiscrepancyDto } from "@/types/tiktok-ads"
 import { TikTokDashboardFilters } from "./tiktok-dashboard-filters"
 import type { DateRange } from "@/components/ui/date-range-picker"
+import { Input } from "@/components/ui/input"
 
 function getDefaultRange(): DateRange {
   const today = new Date()
