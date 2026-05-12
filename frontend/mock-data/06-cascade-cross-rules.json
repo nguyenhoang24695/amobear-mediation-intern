@@ -1,0 +1,1 @@
+{ "rules": [{ "id": "S1", "severity": "warning", "label": "Revenue + eCPM joint drop" }] }

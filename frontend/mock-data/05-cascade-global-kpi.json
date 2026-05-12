@@ -1,0 +1,1 @@
+{ "metrics": [{ "metricId": "d1_retention", "thresholds": { "warn": 0.25, "crit": 0.15 } }] }

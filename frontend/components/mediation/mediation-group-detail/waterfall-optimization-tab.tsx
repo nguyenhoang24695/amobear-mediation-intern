@@ -1327,7 +1327,7 @@ export function WaterfallOptimizationTab({
                         You have modified the optimized waterfall configuration
                       </p>
                       <p className="text-xs text-slate-500 mt-1">
-                        {changes.modifiedCount + changes.addedCount + changes.removedCount} changes pending • Don't forget
+                        {changes.modifiedCount + changes.addedCount + changes.removedCount} changes pending • Don&apos;t forget
                         to apply or test
                       </p>
                       <div className="flex items-center gap-3 mt-3">

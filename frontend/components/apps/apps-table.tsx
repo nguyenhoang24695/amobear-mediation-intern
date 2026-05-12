@@ -682,7 +682,7 @@ export function AppsTable({
           <DialogHeader>
             <DialogTitle>Delete App?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{getAppForAction()?.name}"? This action cannot be undone and all
+              Are you sure you want to delete &quot;{getAppForAction()?.name}&quot;? This action cannot be undone and all
               associated data will be permanently removed.
             </DialogDescription>
           </DialogHeader>

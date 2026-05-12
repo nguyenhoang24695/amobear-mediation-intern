@@ -48,6 +48,7 @@ import {
   Database,
   Sparkles,
   Apple,
+  Contact,
   BadgePercent,
   Music2,
 } from "lucide-react"
@@ -122,6 +123,7 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
     href: "/data-sources/apple",
     isShow: () => hasScreenFunction("s-data-accounts", "view"),
   },
+  { icon: Contact, label: "vCard Generator", href: "/settings/vcard-generator", isShow: true, isNew: true },
   {
     icon: Sparkles,
     label: "AI Insight Templates",

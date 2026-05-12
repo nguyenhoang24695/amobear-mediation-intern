@@ -65,10 +65,6 @@ export function MediationGroupsPageContent() {
   const canExport = hasScreenFunction(SCREEN_MEDIATION_GROUPS, FN_EXPORT)
 
   const [searchQuery, setSearchQuery] = useState("")
-
-  if (!canView) {
-    return <NoPermissionView />
-  }
   const [selectedApp, setSelectedApp] = useState("all")
   const [format, setFormat] = useState(ALL_FORMATS_VALUE)
   const [status, setStatus] = useState("All Status")
@@ -81,7 +77,7 @@ export function MediationGroupsPageContent() {
   const { data: mediationGroupsWithData, loading: groupsLoading } = useApi(
     () => structureApi.getMediationGroups(),
     { 
-      enabled: true,
+      enabled: canView,
       cacheKey: 'mediation_groups_all' // Cache key for frontend cache
     }
   )
@@ -137,7 +133,7 @@ export function MediationGroupsPageContent() {
   // Fetch apps for filter dropdown
   const { data: appsResponse } = useApi(
     () => structureApi.getApps(),
-    { enabled: true }
+    { enabled: canView }
   )
   
   const apps = appsResponse?.apps || []
@@ -163,7 +159,7 @@ export function MediationGroupsPageContent() {
   // Fetch active alerts summary
   const { data: alertsSummary } = useApi(
     () => alertsApi.getActiveAlertsSummary(),
-    { enabled: canViewAlertsCenter }
+    { enabled: canView && canViewAlertsCenter }
   )
 
   // Calculate summary stats
@@ -268,6 +264,10 @@ export function MediationGroupsPageContent() {
     setStatus("All Status")
     setOnlyShowIssues(false)
     setSearchQuery("")
+  }
+
+  if (!canView) {
+    return <NoPermissionView />
   }
 
   return (

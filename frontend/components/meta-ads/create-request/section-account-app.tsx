@@ -287,7 +287,7 @@ export function AccountAppSection({
             />
 
             {!form.adAccountId ? (
-              <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account's advertisable applications.</p>
+              <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account&apos;s advertisable applications.</p>
             ) : appMappingsLoading ? (
               <div className="flex items-center gap-2 text-[11px] text-slate-500">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

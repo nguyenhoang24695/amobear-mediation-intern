@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
               {/* Title */}
               <div className="space-y-1">
                 <h1 className="text-2xl font-bold text-slate-900">Forgot your password?</h1>
-                <p className="text-sm text-slate-500">No worries, we'll send you reset instructions.</p>
+                <p className="text-sm text-slate-500">No worries, we&apos;ll send you reset instructions.</p>
               </div>
             </>
           ) : (
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
               <div className="space-y-1">
                 <h1 className="text-2xl font-bold text-slate-900">Check your email</h1>
                 <p className="text-sm text-slate-500">
-                  We've sent a password reset link to <span className="font-medium text-slate-700">{email}</span>
+                  We&apos;ve sent a password reset link to <span className="font-medium text-slate-700">{email}</span>
                 </p>
               </div>
             </>
@@ -168,7 +168,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <div className="space-y-4 text-center">
               <p className="text-sm text-slate-500">
-                Didn't receive the email? Check your spam folder or{" "}
+                Didn&apos;t receive the email? Check your spam folder or{" "}
                 <button
                   onClick={handleResend}
                   className="font-medium text-blue-600 hover:text-blue-700"

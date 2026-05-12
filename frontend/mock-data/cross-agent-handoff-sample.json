@@ -1,0 +1,1 @@
+{ "from": "product_owner", "to": "data_analyst", "reason": "Need SQL evidence for funnel drop", "contextKeys": ["snapshot", "funnel"] }

@@ -6,6 +6,18 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Required by Next 16 when customizing webpack while Turbopack default is on.
+  turbopack: {},
+  /**
+   * Next 16 (Turbopack) đôi khi log "Invalid source map... sourceMapURL could not be parsed"
+   * trên SSR chunks ở Windows. Tắt dev sourcemap để dev overlay không bị noisy.
+   */
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.devtool = false
+    }
+    return config
+  },
   async redirects() {
     return [
       {
