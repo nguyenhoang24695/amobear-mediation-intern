@@ -1,13 +1,10 @@
 "use client"
 
-import { useDeferredValue, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
-import { AlertTriangle, BarChart3, ChevronRight, DollarSign, MousePointerClick, RefreshCw, Search, TrendingUp, WalletCards } from "lucide-react"
+import { AlertTriangle, BarChart3, ChevronRight, DollarSign, MousePointerClick, TrendingUp, WalletCards } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DateRangePicker, type DateRange } from "@/components/ui/date-range-picker"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Pagination } from "@/components/shared/pagination"
@@ -15,6 +12,8 @@ import { useApi } from "@/hooks/use-api"
 import { tiktokDashboardApi } from "@/lib/api/tiktok-ads"
 import { cn } from "@/lib/utils"
 import type { TikTokCampaignPerformanceDto, TikTokDashboardDailyDto, TikTokDashboardOverviewDto, TikTokInstallDiscrepancyDto } from "@/types/tiktok-ads"
+import { TikTokDashboardFilters } from "./tiktok-dashboard-filters"
+import type { DateRange } from "@/components/ui/date-range-picker"
 
 function getDefaultRange(): DateRange {
   const today = new Date()
@@ -310,24 +309,43 @@ function CampaignTable({
 
 export function TikTokDashboard() {
   const [range, setRange] = useState(getDefaultRange)
-  const [advertiserId, setAdvertiserId] = useState("")
-  const [campaignId, setCampaignId] = useState("")
+  const [advertiserId, setAdvertiserId] = useState("all")
+  const [campaignId, setCampaignId] = useState("all")
   const [refreshToken, setRefreshToken] = useState(0)
 
   const startDate = useMemo(() => formatDateForApi(range.from), [range.from])
   const endDate = useMemo(() => formatDateForApi(range.to), [range.to])
-  const selectedAdvertiserId = advertiserId.trim() || undefined
-  const selectedCampaignId = campaignId.trim() || undefined
+  const selectedAdvertiserId = advertiserId === "all" ? undefined : advertiserId
+  const selectedCampaignId = campaignId === "all" ? undefined : campaignId
   const params = { startDate, endDate, advertiserId: selectedAdvertiserId, campaignId: selectedCampaignId }
 
+  const filtersCacheKey = useMemo(
+    () => ["tiktok-filters", startDate, endDate, selectedAdvertiserId ?? "all", selectedCampaignId ?? "all"].join(":"),
+    [startDate, endDate, selectedAdvertiserId, selectedCampaignId],
+  )
   const overviewApi = useApi(() => tiktokDashboardApi.getOverview(params), { cacheKey: ["tiktok-overview", startDate, endDate, selectedAdvertiserId ?? "all", selectedCampaignId ?? "all", refreshToken].join(":") })
   const dailyApi = useApi(() => tiktokDashboardApi.getDaily(params), { cacheKey: ["tiktok-daily", startDate, endDate, selectedAdvertiserId ?? "all", selectedCampaignId ?? "all", refreshToken].join(":") })
   const discrepancyApi = useApi(() => tiktokDashboardApi.getDiscrepancy(params), { cacheKey: ["tiktok-discrepancy", startDate, endDate, selectedAdvertiserId ?? "all", selectedCampaignId ?? "all", refreshToken].join(":") })
+  const filtersApi = useApi(
+    () => tiktokDashboardApi.getFilters({ startDate, endDate, advertiserId: selectedAdvertiserId, campaignId: selectedCampaignId }),
+    { cacheKey: filtersCacheKey },
+  )
+
+  // Reset filters khi option không còn trong danh sách
+  useEffect(() => {
+    if (advertiserId !== "all" && !(filtersApi.data?.advertisers ?? []).some((item) => item.value === advertiserId)) {
+      setAdvertiserId("all")
+    }
+    if (campaignId !== "all" && !(filtersApi.data?.campaigns ?? []).some((item) => item.value === campaignId)) {
+      setCampaignId("all")
+    }
+  }, [filtersApi.data, advertiserId, campaignId])
 
   const refresh = () => {
     void overviewApi.refetch()
     void dailyApi.refetch()
     void discrepancyApi.refetch()
+    void filtersApi.refetch()
     setRefreshToken((value) => value + 1)
   }
 
@@ -352,24 +370,20 @@ export function TikTokDashboard() {
             </div>
           </div>
         </div>
-        <Button type="button" variant="outline" className="h-10 border-slate-200 bg-white text-slate-700" onClick={refresh} disabled={loading}>
-          <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-          Refresh
-        </Button>
       </div>
 
-      <Card className="border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
-            <DateRangePicker value={range} onChange={setRange} defaultPreset="30days" className="flex-wrap" />
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input value={advertiserId} onChange={(event) => setAdvertiserId(event.target.value)} placeholder="Advertiser ID" className="h-10 border-slate-200 md:w-[220px]" />
-            <Input value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Campaign ID" className="h-10 border-slate-200 md:w-[220px]" />
-          </div>
-        </div>
-      </Card>
+      <TikTokDashboardFilters
+        range={range}
+        advertiserId={advertiserId}
+        campaignId={campaignId}
+        filters={filtersApi.data ?? null}
+        loading={filtersApi.loading}
+        refreshing={loading || filtersApi.loading}
+        onRangeChange={setRange}
+        onAdvertiserChange={setAdvertiserId}
+        onCampaignChange={setCampaignId}
+        onRefresh={refresh}
+      />
 
       {overviewApi.error || dailyApi.error || discrepancyApi.error ? (
         <Card className="border-rose-200 bg-rose-50 shadow-sm">

@@ -4,6 +4,7 @@ import type {
   TikTokCampaignRequestDetailDto,
   TikTokCampaignRequestListItemDto,
   TikTokDashboardDailyDto,
+  TikTokDashboardFiltersResponseDto,
   TikTokDashboardOverviewDto,
   TikTokExecutionResultDto,
   TikTokIntegrationDto,
@@ -65,6 +66,13 @@ export const tiktokDashboardApi = {
     advertiserId?: string
     campaignId?: string
   }) => apiClient.get<TikTokInstallDiscrepancyDto[]>(`${DASHBOARD_PREFIX}/discrepancy`, params),
+
+  getFilters: async (params: {
+    startDate: string
+    endDate: string
+    advertiserId?: string
+    campaignId?: string
+  }) => apiClient.get<TikTokDashboardFiltersResponseDto>(`${DASHBOARD_PREFIX}/filters`, params),
 }
 
 export const tiktokAccountsApi = {

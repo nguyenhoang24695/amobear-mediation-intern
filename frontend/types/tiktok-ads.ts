@@ -49,6 +49,17 @@ export interface TikTokInstallDiscrepancyDto {
   driftPercent: number
 }
 
+export interface TikTokDashboardFilterOptionDto {
+  value: string
+  label: string
+}
+
+export interface TikTokDashboardFiltersResponseDto {
+  advertisers: TikTokDashboardFilterOptionDto[]
+  campaigns: TikTokDashboardFilterOptionDto[]
+}
+
+
 export interface TikTokIntegrationDto {
   id: number
   displayName: string
