@@ -51,6 +51,7 @@ import {
   Contact,
   BadgePercent,
   Music2,
+  Star,
 } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/shared/logo"
@@ -80,6 +81,8 @@ type NavItem = {
   badge?: number
   /** Show "New" badge for new features */
   isNew?: boolean
+  /** Star + flame marker (e.g. AI Assistant) — tiêu điểm cần chú ý */
+  spotlight?: boolean
   /** If false or returns false, item is hidden in sidebar. Default true. */
   isShow?: boolean | (() => boolean)
   children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean); isNew?: boolean }[]
@@ -263,7 +266,7 @@ const navItems: NavItem[] = [
     label: "AI Assistant",
     href: "#",
     hasSubmenu: true,
-    isNew: true,
+    spotlight: true,
     isShow: () =>
       [
         "chat",
@@ -402,6 +405,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">{item.label}</span>
+                    {item.spotlight && (
+                      <span className="flex shrink-0 cursor-default items-center gap-0"
+                      >
+                        <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-600" aria-hidden />
+                      </span>
+                    )}
                     {item.isNew && (
                       <Badge className="h-5 px-1.5 text-xs bg-green-500 hover:bg-green-600">
                         New
