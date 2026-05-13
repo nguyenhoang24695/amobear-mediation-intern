@@ -262,6 +262,51 @@ export function hasScreenFunction(screenKey: string, functionKey: string): boole
   return (user.rolePermissions[screenKey] ?? []).includes(functionKey)
 }
 
+// --- App Detail tab permissions ------------------------------------------------
+//
+// Quy uoc:
+//   - "view-details"          : shortcut "all-in-one". Co quyen nay = thay du 9 tab.
+//   - "view-details:<tab>"    : quyen per-tab doc lap (peer cua view-details).
+// Helper duoi day encapsulate logic OR (parent fallback + sub-perm) de tranh lap
+// `hasScreenFunction(...) || hasScreenFunction(...)` o 9 cho.
+
+export const APP_DETAIL_TABS = [
+  "overview",
+  "ad-units",
+  "waterfall-ad-units",
+  "mediation-groups",
+  "performance",
+  "ai-insight",
+  "insight-config",
+  "playbook",
+  "settings",
+] as const
+export type AppDetailTab = (typeof APP_DETAIL_TABS)[number]
+
+const SCREEN_APPS_KEY = "s-apps"
+const FN_VIEW_DETAILS_KEY = "view-details"
+
+/**
+ * Check user co quyen xem 1 tab cu the trong App Detail.
+ * Co "view-details" => full 9 tab. Khong thi check "view-details:<tab>".
+ */
+export function hasAppDetailTab(tab: AppDetailTab): boolean {
+  return (
+    hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY) ||
+    hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${tab}`)
+  )
+}
+
+/**
+ * Co vao duoc trang App Detail khong? (it nhat 1 tab duoc phep)
+ */
+export function canEnterAppDetail(): boolean {
+  if (hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY)) return true
+  return APP_DETAIL_TABS.some((t) =>
+    hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${t}`),
+  )
+}
+
 /**
  * Store auth session data.
  * Access token and user are always kept in localStorage for cross-tab access.
