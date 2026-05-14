@@ -2,7 +2,8 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
-import { Check, ChevronsUpDown, Loader2, RefreshCw, ShieldCheck, PlugZap, Play, CheckCircle2, XCircle, Send, Pencil, X } from "lucide-react"
+import Link from "next/link"
+import { Check, ChevronsUpDown, Loader2, RefreshCw, ShieldCheck, PlugZap, Play, CheckCircle2, XCircle, Send, Pencil, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -63,6 +64,33 @@ function getCandidateSuggestion(candidate: TikTokAppMappingCandidateDto) {
 
 function getCandidateDefaultAppRowId(candidate: TikTokAppMappingCandidateDto) {
   return candidate.resolvedAppRowId ?? candidate.recommendedAppRowId ?? candidate.suggestedApps[0]?.appRowId ?? null
+}
+
+function normalizePlatform(value?: string | null) {
+  return value?.toUpperCase() ?? ""
+}
+
+function getPlatformBadgeClass(platform?: string | null) {
+  switch (normalizePlatform(platform)) {
+    case "IOS":
+      return "bg-blue-100 text-blue-700"
+    case "ANDROID":
+      return "bg-green-100 text-green-700"
+    default:
+      return "bg-slate-100 text-slate-600"
+  }
+}
+
+function getTikTokMappingAppLabel(app?: App | null, mapping?: TikTokAppMappingDto | null) {
+  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? (mapping ? `App ${mapping.appRowId}` : "-")
+}
+
+function getTikTokMappingAdMobId(app?: App | null, mapping?: TikTokAppMappingDto | null) {
+  return mapping?.appId ?? app?.appId ?? null
+}
+
+function getTikTokMappingPlatform(app?: App | null, mapping?: TikTokAppMappingDto | null) {
+  return normalizePlatform(mapping?.appPlatform ?? app?.platform)
 }
 
 function PageShell({ title, subtitle, children, action }: { title: string; subtitle: string; children: ReactNode; action?: ReactNode }) {
@@ -544,6 +572,8 @@ export function TikTokAppMappingsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState<"mappings" | "candidates">("mappings")
+  const [mappingSearch, setMappingSearch] = useState("")
+  const [mappingPlatform, setMappingPlatform] = useState("all")
   const [candidateSearch, setCandidateSearch] = useState("")
   const [candidateStatus, setCandidateStatus] = useState("open")
   const [candidateMatch, setCandidateMatch] = useState("all")
@@ -553,6 +583,7 @@ export function TikTokAppMappingsPage() {
   const [resolvingId, setResolvingId] = useState<number | null>(null)
 
   const mappedAppRows = useMemo(() => new Set(items.map((item) => item.appRowId)), [items])
+  const appByRowId = useMemo(() => new Map(apps.map((app) => [app.id, app])), [apps])
 
   const load = async () => {
     setLoading(true)
@@ -571,6 +602,24 @@ export function TikTokAppMappingsPage() {
     finally { setLoading(false) }
   }
   useEffect(() => { void load() }, [])
+
+  const filteredMappings = useMemo(() => {
+    const search = mappingSearch.trim().toLowerCase()
+    return items.filter((item) => {
+      const app = appByRowId.get(item.appRowId)
+      const platform = getTikTokMappingPlatform(app, item)
+
+      if (mappingPlatform !== "all" && platform !== mappingPlatform) return false
+      if (!search) return true
+
+      return [
+        getTikTokMappingAppLabel(app, item),
+        getTikTokMappingAdMobId(app, item),
+        item.tikTokAppId,
+        item.downloadUrl,
+      ].filter(Boolean).some((value) => value!.toLowerCase().includes(search))
+    })
+  }, [appByRowId, items, mappingPlatform, mappingSearch])
 
   const filteredCandidates = useMemo(() => {
     const search = candidateSearch.trim().toLowerCase()
@@ -657,7 +706,7 @@ export function TikTokAppMappingsPage() {
       <div className="inline-flex rounded-md bg-slate-100 p-1">
         <Button size="sm" variant={activeTab === "mappings" ? "default" : "ghost"} onClick={() => setActiveTab("mappings")}>
           App Mappings
-          <Badge className="ml-2 bg-white text-slate-700">{items.length}</Badge>
+          <Badge className="ml-2 bg-white text-slate-700">{filteredMappings.length}</Badge>
         </Button>
         <Button size="sm" variant={activeTab === "candidates" ? "default" : "ghost"} onClick={() => setActiveTab("candidates")}>
           Mapping Candidates
@@ -680,15 +729,89 @@ export function TikTokAppMappingsPage() {
             </div>
             <Button className="mt-4" onClick={create} disabled={!form.appRowId || !form.tikTokAppId || !form.downloadUrl}>Create</Button>
           </div>
-          <div className="rounded-md border bg-white">
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-72">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Input
+                className="h-9 pl-8 text-sm"
+                placeholder="Search by app, AdMob ID, TikTok ID..."
+                value={mappingSearch}
+                onChange={(e) => setMappingSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={mappingPlatform}
+              onChange={(e) => setMappingPlatform(e.target.value)}
+            >
+              <option value="all">All Platforms</option>
+              <option value="ANDROID">Android</option>
+              <option value="IOS">iOS</option>
+            </select>
+            <span className="ml-auto text-xs text-slate-400">
+              {filteredMappings.length} mapping{filteredMappings.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto rounded-md border bg-white">
             <Table>
-              <TableHeader><TableRow><TableHead>App</TableHead><TableHead>App Row ID</TableHead><TableHead>TikTok App ID</TableHead><TableHead>Download URL</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="text-xs font-medium text-slate-500">App</TableHead>
+                  <TableHead className="w-36 text-xs font-medium text-slate-500">Operation System</TableHead>
+                  <TableHead className="text-xs font-medium text-slate-500">TikTok App ID</TableHead>
+                  <TableHead className="text-xs font-medium text-slate-500">Download URL</TableHead>
+                  <TableHead className="w-24 text-xs font-medium text-slate-500">Enabled</TableHead>
+                  <TableHead className="w-36 text-xs font-medium text-slate-500">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">Loading app mappings...</TableCell></TableRow>
-                ) : items.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
-                ) : items.map((item) => <TableRow key={item.id}><TableCell>{item.appDisplayName ?? item.appId}</TableCell><TableCell>{item.appRowId}</TableCell><TableCell>{item.tikTokAppId}</TableCell><TableCell className="max-w-md truncate">{item.downloadUrl}</TableCell><TableCell><Badge className={statusTone(item.isActive ? "active" : "disabled")}>{item.isActive ? "active" : "disabled"}</Badge></TableCell></TableRow>)}
+                  <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">Loading app mappings...</TableCell></TableRow>
+                ) : filteredMappings.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
+                ) : filteredMappings.map((item) => {
+                  const app = appByRowId.get(item.appRowId)
+                  const appLabel = getTikTokMappingAppLabel(app, item)
+                  const admobId = getTikTokMappingAdMobId(app, item)
+                  const platform = getTikTokMappingPlatform(app, item)
+
+                  return (
+                    <TableRow key={item.id} className="text-sm hover:bg-slate-50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {app?.iconUri ? (
+                            <img src={app.iconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover" />
+                          ) : (
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                              {appLabel.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 space-y-0.5">
+                            {admobId ? (
+                              <Link href={`/apps/${encodeURIComponent(admobId)}`} className="block truncate font-medium text-slate-900 transition-colors hover:text-blue-600 hover:underline">
+                                {appLabel}
+                              </Link>
+                            ) : (
+                              <p className="truncate font-medium text-slate-900">{appLabel}</p>
+                            )}
+                            <p className="truncate font-mono text-[11px] text-slate-400">{admobId ?? `row:${item.appRowId}`}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`text-[11px] ${getPlatformBadgeClass(platform)}`}>{platform || "UNKNOWN"}</Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-blue-700">{item.tikTokAppId}</TableCell>
+                      <TableCell>
+                        <span className="block max-w-[320px] truncate text-xs text-slate-600">{item.downloadUrl || "-"}</span>
+                      </TableCell>
+                      <TableCell><Badge className={statusTone(item.isActive ? "active" : "disabled")}>{item.isActive ? "active" : "disabled"}</Badge></TableCell>
+                      <TableCell className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

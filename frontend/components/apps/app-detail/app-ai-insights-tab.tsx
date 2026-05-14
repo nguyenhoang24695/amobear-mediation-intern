@@ -45,7 +45,9 @@ export function AppAiInsightsTab({ appId, appRowId, initialDateYmd }: Props) {
   const [insightHistory, setInsightHistory] = useState<AppInsightHistoryDay[]>([])
   const [feedbackGiven, setFeedbackGiven] = useState<"up" | "down" | null>(null)
 
-  const canView = hasScreenFunction("s-apps", "view-ai-insight") || hasScreenFunction("s-apps", "view-details")
+  const canView =
+    hasScreenFunction("s-apps", "view-details") ||
+    hasScreenFunction("s-apps", "view-details:ai-insight")
   const canRegenerate = hasScreenFunction("s-apps", "regenerate-insight")
 
   const dateStr = format(selectedDate, "yyyy-MM-dd")

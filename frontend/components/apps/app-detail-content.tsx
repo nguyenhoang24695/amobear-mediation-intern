@@ -30,7 +30,7 @@ import {
 } from "lucide-react"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
-import { hasScreenFunction } from "@/lib/auth"
+import { hasScreenFunction, hasAppDetailTab, canEnterAppDetail } from "@/lib/auth"
 import { copyTextToClipboard } from "@/lib/utils"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { App, MediationGroup, WaterfallAdUnit } from "@/types/api"
@@ -92,13 +92,50 @@ export function AppDetailContent() {
   const mediationGroupsCount = mediationGroups?.length ?? 0
   const waterfallAdUnitsCount = waterfallAdUnits?.length ?? 0
 
+  // --- Permissions ---------------------------------------------------------
+  const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
+
+  // Per-tab visibility: sub-perm `view-details:<tab>` la single source of truth
+  // (parent `view-details` la shortcut all-in-one, da xu ly trong hasAppDetailTab).
+  // Cac quyen action nhu `configure-insight` / `regenerate-insight` chi gate
+  // THAO TAC ben trong tab (da co check rieng trong cac tab component), khong
+  // anh huong viec hien thi tab.
+  const canViewOverview = hasAppDetailTab("overview")
+  const canViewAdUnits = hasAppDetailTab("ad-units")
+  const canViewWaterfallAdUnits = hasAppDetailTab("waterfall-ad-units")
+  const canViewMediationGroups = hasAppDetailTab("mediation-groups")
+  const canViewPerformance = hasAppDetailTab("performance")
+  const showAiInsightTab = hasAppDetailTab("ai-insight")
+  const showInsightConfigTab = hasAppDetailTab("insight-config")
+  const showPlaybookTab = hasAppDetailTab("playbook")
+  const canViewSettingsTab = hasAppDetailTab("settings")
+
+  // Danh sach tab duoc phep, theo dung thu tu render
+  const allowedTabs = [
+    canViewOverview && "overview",
+    canViewAdUnits && "ad-units",
+    canViewWaterfallAdUnits && "waterfall-ad-units",
+    canViewMediationGroups && "mediation-groups",
+    canViewPerformance && "performance",
+    showAiInsightTab && "ai-insight",
+    showInsightConfigTab && "insight-config",
+    showPlaybookTab && "playbook",
+    canViewSettingsTab && "settings",
+  ].filter(Boolean) as string[]
+  const fallbackTab = allowedTabs[0] ?? "overview"
+
   const normalizeTab = (tab: string | null) => {
-    if (!tab) return "overview"
+    if (!tab) return fallbackTab
     // Backward-compat: các tab AI-Specialize cũ đã được gom vào "ai-insight"
+    let resolved = tab
     if (["po-agent", "da-agent", "ua-agent", "med-agent", "dev-agent", "qa-agent"].includes(tab)) {
-      return "ai-insight"
+      resolved = "ai-insight"
     }
-    return tab
+    // Neu user khong co quyen tab nay -> fallback sang tab dau tien duoc phep
+    if (!allowedTabs.includes(resolved)) {
+      return fallbackTab
+    }
+    return resolved
   }
 
   const initialTab = normalizeTab(searchParams.get("tab"))
@@ -134,13 +171,7 @@ export function AppDetailContent() {
     }
   }
 
-  const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
-  const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
-  const canViewAiInsight =
-    hasScreenFunction(SCREEN_APPS, "view-ai-insight") || hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
-  const canConfigureInsight = hasScreenFunction(SCREEN_APPS, "configure-insight")
-
-  if (!canViewDetails) {
+  if (!canEnterAppDetail()) {
     return <NoPermissionView />
   }
 
@@ -283,96 +314,120 @@ export function AppDetailContent() {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="h-11 p-1 bg-slate-100 w-fit">
-            <TabsTrigger value="overview" className="px-4 data-[state=active]:bg-white">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="ad-units" className="px-4 data-[state=active]:bg-white">
-              Ad Units
-              <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {app?.adUnitsCount ?? 0}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="waterfall-ad-units" className="px-4 data-[state=active]:bg-white">
-              Waterfall Ad Units
-              <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {waterfallAdUnitsLoading ? "..." : waterfallAdUnitsCount}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
-              Mediation Groups
-              <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                {mediationGroupsLoading ? "..." : mediationGroupsCount}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">
-              Performance
-            </TabsTrigger>
-            {canViewAiInsight ? (
+            {canViewOverview ? (
+              <TabsTrigger value="overview" className="px-4 data-[state=active]:bg-white">
+                Overview
+              </TabsTrigger>
+            ) : null}
+            {canViewAdUnits ? (
+              <TabsTrigger value="ad-units" className="px-4 data-[state=active]:bg-white">
+                Ad Units
+                <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                  {app?.adUnitsCount ?? 0}
+                </Badge>
+              </TabsTrigger>
+            ) : null}
+            {canViewWaterfallAdUnits ? (
+              <TabsTrigger value="waterfall-ad-units" className="px-4 data-[state=active]:bg-white">
+                Waterfall Ad Units
+                <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                  {waterfallAdUnitsLoading ? "..." : waterfallAdUnitsCount}
+                </Badge>
+              </TabsTrigger>
+            ) : null}
+            {canViewMediationGroups ? (
+              <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
+                Mediation Groups
+                <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                  {mediationGroupsLoading ? "..." : mediationGroupsCount}
+                </Badge>
+              </TabsTrigger>
+            ) : null}
+            {canViewPerformance ? (
+              <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">
+                Performance
+              </TabsTrigger>
+            ) : null}
+            {showAiInsightTab ? (
               <TabsTrigger value="ai-insight" className="px-4 data-[state=active]:bg-white gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 AI Insight
               </TabsTrigger>
             ) : null}
-            {canConfigureInsight ? (
+            {showInsightConfigTab ? (
               <TabsTrigger value="insight-config" className="px-4 data-[state=active]:bg-white gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 Insight config
               </TabsTrigger>
             ) : null}
-            {canConfigureInsight ? (
+            {showPlaybookTab ? (
               <TabsTrigger value="playbook" className="px-4 data-[state=active]:bg-white gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 AI Playbook
               </TabsTrigger>
             ) : null}
-            <TabsTrigger value="settings" className="px-4 data-[state=active]:bg-white">
-              Settings
-            </TabsTrigger>
+            {canViewSettingsTab ? (
+              <TabsTrigger value="settings" className="px-4 data-[state=active]:bg-white">
+                Settings
+              </TabsTrigger>
+            ) : null}
           </TabsList>
 
-          <TabsContent value="overview" className="mt-6">
-            <AppOverviewTab onNavigateToTab={handleTabChange} />
-          </TabsContent>
-          <TabsContent value="ad-units" className="mt-6">
-            <AppAdUnitsTab />
-          </TabsContent>
-          <TabsContent value="waterfall-ad-units" className="mt-6">
-            <AppWaterfallAdUnitsTab
-              waterfallAdUnits={waterfallAdUnits ?? null}
-              loadingWaterfallAdUnits={waterfallAdUnitsLoading}
-            />
-          </TabsContent>
-          <TabsContent value="mediation-groups" className="mt-6">
-            <AppMediationGroupsTab
-              mediationGroups={mediationGroups ?? null}
-              loadingMediationGroups={mediationGroupsLoading}
-            />
-          </TabsContent>
-          <TabsContent value="performance" className="mt-6">
-            {appLoading ? (
-              <div className="flex items-center justify-center h-40 text-sm text-slate-500">Loading app…</div>
-            ) : app?.appId ? (
-              <AppPerformanceTab appId={app.appId} />
-            ) : null}
-          </TabsContent>
-          {canViewAiInsight && app?.appId ? (
+          {canViewOverview ? (
+            <TabsContent value="overview" className="mt-6">
+              <AppOverviewTab onNavigateToTab={handleTabChange} />
+            </TabsContent>
+          ) : null}
+          {canViewAdUnits ? (
+            <TabsContent value="ad-units" className="mt-6">
+              <AppAdUnitsTab />
+            </TabsContent>
+          ) : null}
+          {canViewWaterfallAdUnits ? (
+            <TabsContent value="waterfall-ad-units" className="mt-6">
+              <AppWaterfallAdUnitsTab
+                waterfallAdUnits={waterfallAdUnits ?? null}
+                loadingWaterfallAdUnits={waterfallAdUnitsLoading}
+              />
+            </TabsContent>
+          ) : null}
+          {canViewMediationGroups ? (
+            <TabsContent value="mediation-groups" className="mt-6">
+              <AppMediationGroupsTab
+                mediationGroups={mediationGroups ?? null}
+                loadingMediationGroups={mediationGroupsLoading}
+              />
+            </TabsContent>
+          ) : null}
+          {canViewPerformance ? (
+            <TabsContent value="performance" className="mt-6">
+              {appLoading ? (
+                <div className="flex items-center justify-center h-40 text-sm text-slate-500">Loading app…</div>
+              ) : app?.appId ? (
+                <AppPerformanceTab appId={app.appId} />
+              ) : null}
+            </TabsContent>
+          ) : null}
+          {showAiInsightTab && app?.appId ? (
             <TabsContent value="ai-insight" className="mt-6">
               <AppAiInsightsTab appId={app.appId} appRowId={app.id} initialDateYmd={searchParams.get("date")} />
             </TabsContent>
           ) : null}
-          {canConfigureInsight && app?.appId ? (
+          {showInsightConfigTab && app?.appId ? (
             <TabsContent value="insight-config" className="mt-6 w-full min-w-0">
               <AppInsightConfigTab appId={app.appId} />
             </TabsContent>
           ) : null}
-          {canConfigureInsight && app?.appId ? (
+          {showPlaybookTab && app?.appId ? (
             <TabsContent value="playbook" className="mt-6 w-full min-w-0">
               <AppPlaybookEditorPanel appId={app.appId} appRowId={app.id} />
             </TabsContent>
           ) : null}
-          <TabsContent value="settings" className="mt-6">
-            <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
-          </TabsContent>
+          {canViewSettingsTab ? (
+            <TabsContent value="settings" className="mt-6">
+              <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
+            </TabsContent>
+          ) : null}
         </Tabs>
 
         {app?.appId && (

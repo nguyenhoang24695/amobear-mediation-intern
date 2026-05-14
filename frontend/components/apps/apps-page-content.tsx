@@ -11,7 +11,7 @@ import { AppsTable } from "./apps-table"
 import { Card } from "@/components/ui/card"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
-import { hasScreenFunction } from "@/lib/auth"
+import { hasScreenFunction, canEnterAppDetail } from "@/lib/auth"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 
 const SCREEN_APPS = "s-apps"
@@ -186,7 +186,8 @@ export function AppsPageContent() {
   const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
   const canPause = hasScreenFunction(SCREEN_APPS, FN_PAUSE)
   const canResume = hasScreenFunction(SCREEN_APPS, FN_RESUME)
-  const canViewDetails = hasScreenFunction(SCREEN_APPS, FN_VIEW_DETAILS)
+  // Co the click sang trang detail neu co view-details HOAC bat ky view-details:<tab> nao
+  const canViewDetails = canEnterAppDetail()
   const canViewInAdmob = hasScreenFunction(SCREEN_APPS, FN_VIEW_IN_ADMOB)
   const canSetType = hasScreenFunction(SCREEN_APPS, FN_SET_TYPE)
 
