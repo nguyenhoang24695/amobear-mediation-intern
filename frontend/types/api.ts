@@ -460,8 +460,29 @@ export interface HangfireJobSchedule {
   timeZoneId: string
   enabled: boolean
   sortOrder: number
+  /** JSON: Job Management Run now (jobsTestPath, queryParams[], useAsyncRun). */
+  manualRunJson?: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** Parsed from <see cref="HangfireJobSchedule.ManualRunJson" /> */
+export type ManualRunQueryParamType = "string" | "boolean" | "date"
+
+export interface ManualRunQueryParamField {
+  key: string
+  label: string
+  type: ManualRunQueryParamType
+  required?: boolean
+  default?: string | boolean
+  placeholder?: string
+  help?: string
+}
+
+export interface ManualRunConfig {
+  jobsTestPath?: string | null
+  useAsyncRun?: boolean
+  queryParams?: ManualRunQueryParamField[]
 }
 
 export interface JobScheduleUpdateRequest {
