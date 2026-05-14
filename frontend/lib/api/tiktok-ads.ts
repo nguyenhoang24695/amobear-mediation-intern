@@ -1,6 +1,8 @@
 import { apiClient } from "./client"
 import type {
   TikTokCampaignPerformancePageDto,
+  TikTokCampaignDetailDto,
+  TikTokCampaignListResponseDto,
   TikTokCampaignRequestDetailDto,
   TikTokCampaignRequestListItemDto,
   TikTokDashboardDailyDto,
@@ -18,6 +20,8 @@ import type {
   TikTokAppMappingCandidateDto,
   TikTokAppMappingCandidateQueryDto,
   TikTokReferenceResponseDto,
+  TikTokRequestAssetDto,
+  TikTokTargetingOptionsResponseDto,
   TikTokTokenStatusDto,
   TikTokValidationResultDto,
   CreateTikTokAppMappingRequestDto,
@@ -28,12 +32,15 @@ import type {
   UpdateTikTokIntegrationRequestDto,
   UpsertTikTokAdAccountRequestDto,
   ResolveTikTokAppMappingCandidateRequestDto,
+  SyncTikTokCampaignsRequestDto,
+  TikTokSyncResultDto,
 } from "@/types/tiktok-ads"
 
 const DASHBOARD_PREFIX = "/api/v1/tiktok-dashboard"
 const ACCOUNTS_PREFIX = "/api/v1/tiktok-accounts"
 const AUTH_PREFIX = "/api/v1/tiktok-auth"
 const REQUESTS_PREFIX = "/api/v1/tiktok-campaign-requests"
+const CAMPAIGNS_PREFIX = "/api/v1/tiktok-campaigns"
 
 export const tiktokDashboardApi = {
   getOverview: async (params: {
@@ -101,7 +108,7 @@ export const tiktokAccountsApi = {
   enableAppMapping: async (id: number) => apiClient.post<TikTokAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/enable`),
   disableAppMapping: async (id: number) => apiClient.post<TikTokAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`),
   listAppMappingCandidates: async (query?: TikTokAppMappingCandidateQueryDto) =>
-    apiClient.get<TikTokAppMappingCandidateDto[]>(`${ACCOUNTS_PREFIX}/app-mappings/candidates`, query),
+    apiClient.get<TikTokAppMappingCandidateDto[]>(`${ACCOUNTS_PREFIX}/app-mappings/candidates`, query as Record<string, string | number | undefined> | undefined),
   resolveAppMappingCandidate: async (id: number, data: ResolveTikTokAppMappingCandidateRequestDto) =>
     apiClient.post<TikTokAppMappingCandidateDto>(`${ACCOUNTS_PREFIX}/app-mappings/candidates/${id}/resolve`, data),
 }
@@ -118,6 +125,8 @@ export const tiktokAuthApi = {
 
 export const tiktokReferenceApi = {
   getCreateCampaign: async () => apiClient.get<TikTokReferenceResponseDto>("/api/v1/tiktok-reference/create-campaign"),
+  getTargetingOptions: async (adAccountId: number) =>
+    apiClient.get<TikTokTargetingOptionsResponseDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/targeting-options`),
 }
 
 export const tiktokCampaignRequestsApi = {
@@ -132,4 +141,26 @@ export const tiktokCampaignRequestsApi = {
   reject: async (id: number, reason?: string) => apiClient.post<TikTokCampaignRequestDetailDto>(`${REQUESTS_PREFIX}/${id}/reject`, { reason }),
   execute: async (id: number, dryRun = true) => apiClient.post<TikTokExecutionResultDto>(`${REQUESTS_PREFIX}/${id}/execute`, { dryRun }),
   retry: async (id: number, dryRun = true) => apiClient.post<TikTokExecutionResultDto>(`${REQUESTS_PREFIX}/${id}/retry`, { dryRun }),
+  uploadAsset: async (file: File, kind: "image" | "video") => {
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("kind", kind)
+    return apiClient.post<TikTokRequestAssetDto>(`${REQUESTS_PREFIX}/assets`, formData)
+  },
+  getAsset: async (id: number) => apiClient.get<TikTokRequestAssetDto>(`${REQUESTS_PREFIX}/assets/${id}`),
+}
+
+export const tiktokCampaignsApi = {
+  list: async (params?: {
+    search?: string
+    tiktokAdAccountId?: number
+    appRowId?: number
+    objective?: string
+    status?: string
+    page?: number
+    pageSize?: number
+  }) => apiClient.get<TikTokCampaignListResponseDto>(CAMPAIGNS_PREFIX, params),
+  getById: async (id: number, params?: { startDate?: string; endDate?: string }) =>
+    apiClient.get<TikTokCampaignDetailDto>(`${CAMPAIGNS_PREFIX}/${id}`, params),
+  sync: async (request?: SyncTikTokCampaignsRequestDto) => apiClient.post<TikTokSyncResultDto>(`${CAMPAIGNS_PREFIX}/sync`, request ?? {}),
 }
