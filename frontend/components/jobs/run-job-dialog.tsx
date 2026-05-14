@@ -21,9 +21,9 @@ import type { Job } from "./job-management-content"
 import {
   buildInitialParamValues,
   buildJobsTestQueryParams,
+  defaultJobsTestPathFromJobId,
   manualRunFormIsValid,
   parseManualRunJson,
-  resolveJobsTestPath,
   type ParamValuesState,
 } from "@/lib/jobs/manual-run"
 
@@ -39,7 +39,7 @@ export function RunJobDialog({ open, onOpenChange, job, onSuccess }: RunJobDialo
   const { toast } = useToast()
 
   const manualConfig = useMemo(() => parseManualRunJson(job.manualRunJson), [job.manualRunJson])
-  const jobsTestPath = useMemo(() => resolveJobsTestPath(job.jobId, manualConfig), [job.jobId, manualConfig])
+  const jobsTestPath = useMemo(() => defaultJobsTestPathFromJobId(job.jobId), [job.jobId])
   const paramFields = manualConfig?.queryParams ?? []
 
   const [values, setValues] = useState<ParamValuesState>({})
@@ -120,7 +120,7 @@ export function RunJobDialog({ open, onOpenChange, job, onSuccess }: RunJobDialo
           <div className="space-y-4 py-2 text-left">
             {paramFields.map((f) => (
               <div key={f.key} className="space-y-2">
-                {f.type === "boolean" ? (
+                {f.inputType === "boolean" ? (
                   <div className="flex items-start gap-2">
                     <Checkbox
                       id={`run-param-${f.key}`}
@@ -134,23 +134,22 @@ export function RunJobDialog({ open, onOpenChange, job, onSuccess }: RunJobDialo
                       disabled={running}
                     />
                     <div className="grid gap-1.5 leading-none">
-                      <Label htmlFor={`run-param-${f.key}`} className="font-medium cursor-pointer">
-                        {f.label}
-                        {f.required ? <span className="text-destructive"> *</span> : null}
+                      <Label htmlFor={`run-param-${f.key}`} className="font-mono font-medium cursor-pointer">
+                        {f.key}
+                        {f.isRequired ? <span className="text-destructive"> *</span> : null}
                       </Label>
-                      {f.help ? <p className="text-sm text-muted-foreground">{f.help}</p> : null}
                     </div>
                   </div>
-                ) : (
+                ) : f.inputType === "integer" ? (
                   <>
-                    <Label htmlFor={`run-param-${f.key}`}>
-                      {f.label}
-                      {f.required ? <span className="text-destructive"> *</span> : null}
+                    <Label htmlFor={`run-param-${f.key}`} className="font-mono">
+                      {f.key}
+                      {f.isRequired ? <span className="text-destructive"> *</span> : null}
                     </Label>
                     <Input
                       id={`run-param-${f.key}`}
-                      type={f.type === "date" ? "date" : "text"}
-                      placeholder={f.placeholder}
+                      type="number"
+                      step={1}
                       value={String(values[f.key] ?? "")}
                       onChange={(e) =>
                         setValues((prev) => ({
@@ -160,7 +159,25 @@ export function RunJobDialog({ open, onOpenChange, job, onSuccess }: RunJobDialo
                       }
                       disabled={running}
                     />
-                    {f.help ? <p className="text-sm text-muted-foreground">{f.help}</p> : null}
+                  </>
+                ) : (
+                  <>
+                    <Label htmlFor={`run-param-${f.key}`} className="font-mono">
+                      {f.key}
+                      {f.isRequired ? <span className="text-destructive"> *</span> : null}
+                    </Label>
+                    <Input
+                      id={`run-param-${f.key}`}
+                      type={f.inputType === "date" ? "date" : f.inputType === "datetime" ? "datetime-local" : "text"}
+                      value={String(values[f.key] ?? "")}
+                      onChange={(e) =>
+                        setValues((prev) => ({
+                          ...prev,
+                          [f.key]: e.target.value,
+                        }))
+                      }
+                      disabled={running}
+                    />
                   </>
                 )}
               </div>

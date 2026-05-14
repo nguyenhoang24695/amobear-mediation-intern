@@ -37,6 +37,7 @@ import {
 import { JobsTable } from "./jobs-table"
 import { EditJobDialog } from "./edit-job-dialog"
 import { RunJobDialog } from "./run-job-dialog"
+import { JobManualRunSettingsDialog } from "./job-manual-run-settings-dialog"
 import { JobDetailsDialog } from "./job-details-dialog"
 import { useApi } from "@/hooks/use-api"
 import { jobSchedulesApi } from "@/lib/api/services"
@@ -79,6 +80,7 @@ export function JobManagementContent() {
   const [reloading, setReloading] = useState(false)
   const [editJob, setEditJob] = useState<Job | null>(null)
   const [runJob, setRunJob] = useState<Job | null>(null)
+  const [manualRunSettingsJob, setManualRunSettingsJob] = useState<Job | null>(null)
   const [detailsJob, setDetailsJob] = useState<Job | null>(null)
   const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null)
   const { toast } = useToast()
@@ -360,6 +362,7 @@ export function JobManagementContent() {
           sortBy={sortBy}
           onEdit={(job) => setEditJob(job)}
           onRunNow={(job) => setRunJob(job)}
+          onManualRunSettings={canEdit ? (job) => setManualRunSettingsJob(job) : undefined}
           onToggle={handleToggleJob}
           onViewDetails={(job) => setDetailsJob(job)}
           onClearFilters={() => {
@@ -403,6 +406,15 @@ export function JobManagementContent() {
           }}
         />
       )}
+
+      <JobManualRunSettingsDialog
+        open={!!manualRunSettingsJob}
+        onOpenChange={(open) => {
+          if (!open) setManualRunSettingsJob(null)
+        }}
+        job={manualRunSettingsJob}
+        onSaved={() => refetch()}
+      />
 
       {/* Reload Dialog */}
       <AlertDialog open={reloadOpen} onOpenChange={setReloadOpen}>

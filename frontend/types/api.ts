@@ -460,27 +460,22 @@ export interface HangfireJobSchedule {
   timeZoneId: string
   enabled: boolean
   sortOrder: number
-  /** JSON: Job Management Run now (jobsTestPath, queryParams[], useAsyncRun). */
+  /** JSON: Run now — useAsyncRun + queryParams (key, inputType, isRequired). */
   manualRunJson?: string | null
   createdAt: string
   updatedAt: string
 }
 
-/** Parsed from <see cref="HangfireJobSchedule.ManualRunJson" /> */
-export type ManualRunQueryParamType = "string" | "boolean" | "date"
+/** Parsed from <see cref="HangfireJobSchedule.ManualRunJson" />. */
+export type ManualRunInputType = "string" | "boolean" | "date" | "integer" | "datetime"
 
 export interface ManualRunQueryParamField {
   key: string
-  label: string
-  type: ManualRunQueryParamType
-  required?: boolean
-  default?: string | boolean
-  placeholder?: string
-  help?: string
+  inputType: ManualRunInputType
+  isRequired: boolean
 }
 
 export interface ManualRunConfig {
-  jobsTestPath?: string | null
   useAsyncRun?: boolean
   queryParams?: ManualRunQueryParamField[]
 }
@@ -492,6 +487,9 @@ export interface JobScheduleUpdateRequest {
   displayName?: string
   jobTypeName?: string
   jobMethodName?: string
+  /** Khi true, ghi đè manualRunJson (null/undefined = xóa cấu hình Run now). */
+  setManualRunJson?: boolean
+  manualRunJson?: string | null
 }
 
 // Data Sources (Nexus observability)
