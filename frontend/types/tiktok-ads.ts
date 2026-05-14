@@ -473,6 +473,8 @@ export interface TikTokTargetingOptionDto {
   label: string
   type: string
   countryCode?: string | null
+  level?: string | null
+  parentId?: string | null
   path?: string | null
 }
 

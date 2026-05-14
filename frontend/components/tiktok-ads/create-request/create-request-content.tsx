@@ -53,6 +53,20 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
 
+function getTargetingPlacementParam(form: TikTokRequestFormState) {
+  const placements = form.adGroup.placementType === "PLACEMENT_TYPE_NORMAL" && form.adGroup.placements.length > 0
+    ? form.adGroup.placements
+    : ["PLACEMENT_TIKTOK"]
+  return Array.from(new Set(placements.map((item) => item.trim().toUpperCase()).filter(Boolean))).join(",")
+}
+
+function getTargetingOperatingSystem(form: TikTokRequestFormState, selectedAppMapping?: { appPlatform?: string | null } | null) {
+  const fromForm = form.adGroup.operatingSystems.find((item) => item.trim())
+  const raw = fromForm || selectedAppMapping?.appPlatform || ""
+  const normalized = raw.trim().toUpperCase()
+  return normalized === "ANDROID" || normalized === "IOS" ? normalized : undefined
+}
+
 function mergeWithDefault(payload: Partial<TikTokRequestFormState>, reference: TikTokReferenceResponseDto): TikTokRequestFormState {
   const fallback = createDefaultTikTokRequestForm(reference)
   const normalized = normalizeTikTokRequestPayloadShape(payload)
@@ -106,6 +120,10 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     () => reference?.appMappings.find((mapping) => mapping.appRowId === form?.appRowId),
     [form?.appRowId, reference],
   )
+  const targetingAdAccountId = form?.tikTokAdAccountRowId ?? 0
+  const targetingObjectiveType = form?.campaign.objectiveType || "APP_PROMOTION"
+  const targetingPlacements = form ? getTargetingPlacementParam(form) : "PLACEMENT_TIKTOK"
+  const targetingOperatingSystem = form ? getTargetingOperatingSystem(form, selectedAppMapping) : undefined
   const accountScopedAppMappings = useMemo(() => {
     if (!reference || !selectedAdAccount) return []
     const advertiserId = selectedAdAccount.advertiserId
@@ -161,7 +179,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    const adAccountId = form?.tikTokAdAccountRowId
+    const adAccountId = targetingAdAccountId
     if (!adAccountId) {
       setTargetingOptions(null)
       setTargetingLoading(false)
@@ -172,7 +190,12 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     async function loadTargetingOptions() {
       setTargetingLoading(true)
       try {
-        const options = await tiktokReferenceApi.getTargetingOptions(selectedAdAccountId)
+        const options = await tiktokReferenceApi.getTargetingOptions(selectedAdAccountId, {
+          objectiveType: targetingObjectiveType,
+          placements: targetingPlacements,
+          operatingSystem: targetingOperatingSystem,
+          levelRange: "TO_PROVINCE",
+        })
         if (!cancelled) setTargetingOptions(options)
       } catch (error) {
         if (!cancelled) {
@@ -191,7 +214,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
 
     void loadTargetingOptions()
     return () => { cancelled = true }
-  }, [form?.tikTokAdAccountRowId])
+  }, [targetingAdAccountId, targetingObjectiveType, targetingOperatingSystem, targetingPlacements])
 
   const updateForm = useCallback((patch: Partial<TikTokRequestFormState>) => {
     setForm((current) => {

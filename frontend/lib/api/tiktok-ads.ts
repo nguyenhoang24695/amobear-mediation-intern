@@ -125,8 +125,8 @@ export const tiktokAuthApi = {
 
 export const tiktokReferenceApi = {
   getCreateCampaign: async () => apiClient.get<TikTokReferenceResponseDto>("/api/v1/tiktok-reference/create-campaign"),
-  getTargetingOptions: async (adAccountId: number) =>
-    apiClient.get<TikTokTargetingOptionsResponseDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/targeting-options`),
+  getTargetingOptions: async (adAccountId: number, params?: { objectiveType?: string; placements?: string; operatingSystem?: string; levelRange?: string }) =>
+    apiClient.get<TikTokTargetingOptionsResponseDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/targeting-options`, params),
 }
 
 export const tiktokCampaignRequestsApi = {
