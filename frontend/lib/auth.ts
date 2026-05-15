@@ -277,10 +277,18 @@ export function hasScreenFunction(screenKey: string, functionKey: string): boole
 // --- App Detail tab permissions ------------------------------------------------
 //
 // Quy uoc:
-//   - "view-details"          : shortcut "all-in-one". Co quyen nay = thay du 9 tab.
-//   - "view-details:<tab>"    : quyen per-tab doc lap (peer cua view-details).
-// Helper duoi day encapsulate logic OR (parent fallback + sub-perm) de tranh lap
-// `hasScreenFunction(...) || hasScreenFunction(...)` o 9 cho.
+//   - "view-details"          : shortcut "all-in-one".
+//   - "view-details:<suffix>" : quyen per-tab. Tab PG (Ad Units / Mediation Groups) dung suffix *-deprecated;
+//     tab Bronze (ad-units-mediation / mediation-groups-mediation) dung view-details:ad-units / :mediation-groups.
+
+/** Function keys on screen s-apps — giu sync voi PermissionScreensConstant backend. */
+export const APPS_VIEW_DETAILS_FUNCTIONS = {
+  viewDetails: "view-details",
+  adUnitsTab: "view-details:ad-units",
+  adUnitsTabDeprecated: "view-details:ad-units-deprecated",
+  mediationGroupsTab: "view-details:mediation-groups",
+  mediationGroupsTabDeprecated: "view-details:mediation-groups-deprecated",
+} as const
 
 export const APP_DETAIL_TABS = [
   "overview",
@@ -300,35 +308,44 @@ export type AppDetailTab = (typeof APP_DETAIL_TABS)[number]
 const SCREEN_APPS_KEY = "s-apps"
 const FN_VIEW_DETAILS_KEY = "view-details"
 
-/**
- * Check user co quyen xem 1 tab cu the trong App Detail.
- * Co "view-details" => full tab. Khong thi check "view-details:<tab>".
- * Tab *-mediation dong nhat quyen voi tab goc (ad-units / mediation-groups).
- */
-export function hasAppDetailTab(tab: AppDetailTab): boolean {
-  if (tab === "ad-units-mediation") {
-    return hasAppDetailTabForBaseTab("ad-units")
+function appDetailTabPermissionSuffix(tab: AppDetailTab): string {
+  switch (tab) {
+    case "ad-units":
+      return "ad-units-deprecated"
+    case "mediation-groups":
+      return "mediation-groups-deprecated"
+    case "ad-units-mediation":
+      return "ad-units"
+    case "mediation-groups-mediation":
+      return "mediation-groups"
+    default:
+      return tab
   }
-  if (tab === "mediation-groups-mediation") {
-    return hasAppDetailTabForBaseTab("mediation-groups")
-  }
-  return hasAppDetailTabForBaseTab(tab)
 }
 
-function hasAppDetailTabForBaseTab(tab: string): boolean {
+function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
+  const fnKey = `${FN_VIEW_DETAILS_KEY}:${suffix}`
   return (
-    hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY) ||
-    hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${tab}`)
+    hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.viewDetails) ||
+    hasScreenFunction(SCREEN_APPS_KEY, fnKey)
   )
+}
+
+/**
+ * Check user co quyen xem 1 tab cu the trong App Detail.
+ * Co "view-details" => full tab. Khong thi check "view-details:<suffix>" (xem appDetailTabPermissionSuffix).
+ */
+export function hasAppDetailTab(tab: AppDetailTab): boolean {
+  return hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(tab))
 }
 
 /**
  * Co vao duoc trang App Detail khong? (it nhat 1 tab duoc phep)
  */
 export function canEnterAppDetail(): boolean {
-  if (hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY)) return true
+  if (hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.viewDetails)) return true
   return APP_DETAIL_TABS.some((t) =>
-    hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${t}`),
+    hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(t)),
   )
 }
 

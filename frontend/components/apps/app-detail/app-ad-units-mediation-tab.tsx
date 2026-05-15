@@ -408,6 +408,10 @@ function MediationAdUnitRow({
     .join(" ")
   const fillRate = unit.fillRate ?? 0
   const detailRows = detailPayload?.rows ?? []
+  const imp = unit.impressions ?? 0
+  const req = unit.adRequests ?? 0
+  const rev = unit.revenue ?? 0
+  const hasBronzeMetrics = imp > 0 || req > 0 || rev > 0
   return (
     <>
       <tr className={cn("hover:bg-slate-50 transition-colors", expanded && "bg-slate-50/80")}>
@@ -453,15 +457,21 @@ function MediationAdUnitRow({
             </Button>
           </div>
         </td>
-        <td className="px-4 py-3 text-right text-sm">${unit.ecpm.toFixed(2)}</td>
-        <td className="px-4 py-3 text-right text-sm text-slate-700">
-          {unit.impressions.toLocaleString()}
+        <td className="px-4 py-3 text-right text-sm">
+          {imp > 0 ? `$${unit.ecpm.toFixed(2)}` : "—"}
         </td>
         <td className="px-4 py-3 text-right text-sm text-slate-700">
-          {(unit.adRequests ?? 0).toLocaleString()}
+          {hasBronzeMetrics ? imp.toLocaleString() : "—"}
         </td>
-        <td className="px-4 py-3 text-right text-sm font-medium">${unit.revenue.toFixed(2)}</td>
-        <td className="px-4 py-3 text-right text-sm">{fillRate > 0 ? `${fillRate.toFixed(1)}%` : "—"}</td>
+        <td className="px-4 py-3 text-right text-sm text-slate-700">
+          {hasBronzeMetrics ? req.toLocaleString() : "—"}
+        </td>
+        <td className="px-4 py-3 text-right text-sm font-medium">
+          {hasBronzeMetrics ? `$${rev.toFixed(2)}` : "—"}
+        </td>
+        <td className="px-4 py-3 text-right text-sm">
+          {hasBronzeMetrics && req > 0 ? `${fillRate.toFixed(1)}%` : "—"}
+        </td>
       </tr>
       {expanded ? (
         <tr className="bg-slate-200/90">

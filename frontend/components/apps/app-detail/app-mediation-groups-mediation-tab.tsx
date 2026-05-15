@@ -287,6 +287,10 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
   const fillRate = group.fillRate ?? 0
   const countries = group.countries ?? []
   const rawJson = JSON.stringify(group, null, 2)
+  const imp = group.impressions ?? 0
+  const req = group.adRequests ?? 0
+  const rev = group.revenue ?? 0
+  const hasBronzeMetrics = imp > 0 || req > 0 || rev > 0
   return (
     <>
       <tr className={cn("hover:bg-slate-50 transition-colors", expanded && "bg-slate-50/80")}>
@@ -325,16 +329,20 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
             ) : null}
           </div>
         </td>
-        <td className="px-4 py-3 text-right text-sm">${group.ecpm.toFixed(2)}</td>
-        <td className="px-4 py-3 text-right text-sm text-slate-700">
-          {group.impressions.toLocaleString()}
+        <td className="px-4 py-3 text-right text-sm">
+          {imp > 0 ? `$${group.ecpm.toFixed(2)}` : "—"}
         </td>
         <td className="px-4 py-3 text-right text-sm text-slate-700">
-          {(group.adRequests ?? 0).toLocaleString()}
+          {hasBronzeMetrics ? imp.toLocaleString() : "—"}
         </td>
-        <td className="px-4 py-3 text-right text-sm font-medium">${group.revenue.toFixed(2)}</td>
+        <td className="px-4 py-3 text-right text-sm text-slate-700">
+          {hasBronzeMetrics ? req.toLocaleString() : "—"}
+        </td>
+        <td className="px-4 py-3 text-right text-sm font-medium">
+          {hasBronzeMetrics ? `$${rev.toFixed(2)}` : "—"}
+        </td>
         <td className={cn("px-4 py-3 text-right text-sm", fillRate >= 90 ? "text-green-600" : "")}>
-          {fillRate > 0 ? `${fillRate.toFixed(1)}%` : "—"}
+          {hasBronzeMetrics && req > 0 ? `${fillRate.toFixed(1)}%` : "—"}
         </td>
         <td className="px-4 py-3 text-right">
           <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
