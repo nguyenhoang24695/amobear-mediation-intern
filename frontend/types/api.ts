@@ -108,8 +108,53 @@ export interface AppMediationBronzeAdUnitsResponse {
   country?: string | null
   appVersion?: string | null
   waterfallOnly?: boolean
+  search?: string | null
+  page?: number
+  pageSize?: number
+  totalCount?: number
   message?: string
   adUnits: AppMediationBronzeAdUnitRow[]
+}
+
+/** Một dòng đồng bộ StarRocks (bronze.mediation_table), không rollup. */
+export interface AppMediationBronzeAdUnitDetailRow {
+  hashKey: string
+  date: string
+  adUnitName?: string
+  adUnitId: string
+  appVersionName?: string
+  country?: string
+  adSourceName?: string
+  adSourceId?: string
+  adSourceInstanceId?: string
+  adSourceInstanceName?: string
+  mediationGroupName?: string
+  mediationGroupId?: string
+  format?: string
+  platform?: string
+  adRequests: number
+  clicks: number
+  estimatedEarnings: number
+  impressions: number
+  impressionCtr?: number | null
+  matchedRequests: number
+  matchRate?: number | null
+  showRate?: number | null
+  observedEcpm?: number | null
+}
+
+export interface AppMediationBronzeAdUnitDetailRowsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  adUnitId: string
+  country?: string | null
+  appVersion?: string | null
+  waterfallOnly?: boolean
+  limit?: number
+  truncated?: boolean
+  message?: string
+  rows: AppMediationBronzeAdUnitDetailRow[]
 }
 
 export interface AppMediationBronzeMediationGroupRow {
@@ -130,6 +175,10 @@ export interface AppMediationBronzeMediationGroupsResponse {
   endDate?: string
   country?: string | null
   appVersion?: string | null
+  search?: string | null
+  page?: number
+  pageSize?: number
+  totalCount?: number
   message?: string
   mediationGroups: AppMediationBronzeMediationGroupRow[]
 }

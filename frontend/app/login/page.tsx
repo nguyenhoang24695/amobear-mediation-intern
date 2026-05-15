@@ -14,7 +14,6 @@ import { authApi } from "@/lib/api/services"
 import {
   clearRememberedLoginPrefs,
   getRememberedEmail,
-  getRememberedOrganization,
   isRememberMeEnabled,
   setAuthData,
   setRememberedEmail,
@@ -27,6 +26,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
+const DEFAULT_ORGANIZATION_SLUG = "amobear"
+
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -35,29 +36,25 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [rememberMe, setRememberMe] = useState(true)
   const [formData, setFormData] = useState({
-    organization: "",
     email: "",
     password: "",
   })
 
-  // Khôi phục Remember me, Organization và Email đã lưu (khi user từng đăng nhập với Remember me).
+  // Khôi phục Remember me và Email đã lưu (khi user từng đăng nhập với Remember me).
   useEffect(() => {
     if (typeof window === "undefined") return
     const savedRememberMe = isRememberMeEnabled()
     if (savedRememberMe) {
       setRememberMe(true)
-      const savedOrg = getRememberedOrganization()
       const savedEmail = getRememberedEmail()
       setFormData((prev) => ({
         ...prev,
-        ...(savedOrg ? { organization: savedOrg } : {}),
         ...(savedEmail ? { email: savedEmail } : {}),
       }))
     }
   }, [])
 
   const [validationErrors, setValidationErrors] = useState<{
-    organization?: string
     email?: string
     password?: string
   }>({})
@@ -71,10 +68,6 @@ export default function LoginPage() {
 
   const validateForm = () => {
     const errors: typeof validationErrors = {}
-
-    if (!formData.organization.trim()) {
-      errors.organization = "This field is required"
-    }
 
     if (!formData.email.trim()) {
       errors.email = "This field is required"
@@ -104,7 +97,7 @@ export default function LoginPage() {
       const response = await authApi.login({
         email: formData.email,
         password: formData.password,
-        organizationSlug: formData.organization || undefined,
+        organizationSlug: DEFAULT_ORGANIZATION_SLUG,
         deviceInfo: typeof window !== 'undefined' ? navigator.userAgent : undefined,
         rememberMe,
       })
@@ -112,7 +105,7 @@ export default function LoginPage() {
       if (response.success && response.data) {
         if (rememberMe) {
           setRememberMeEnabled(true)
-          setRememberedOrganization(formData.organization.trim())
+          setRememberedOrganization(DEFAULT_ORGANIZATION_SLUG)
           setRememberedEmail(formData.email.trim())
         } else {
           clearRememberedLoginPrefs()
@@ -206,7 +199,7 @@ export default function LoginPage() {
             <div className="flex justify-center">
               <div className="flex items-center gap-2">
                 <Logo size={40} className="rounded-xl overflow-hidden" />
-                <span className="text-xl font-bold text-slate-900">Mediation Pro</span>
+                <span className="text-xl font-bold text-slate-900">Nexus</span>
               </div>
             </div>
 
@@ -227,29 +220,6 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Organization Field */}
-              <div className="space-y-2">
-                <Label htmlFor="organization">Organization</Label>
-                <div className="relative">
-                  <Input
-                    id="organization"
-                    type="text"
-                    placeholder="your-company"
-                    className={`pr-32 ${validationErrors.organization ? "border-red-500" : ""}`}
-                    value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                    .mediationpro.io
-                  </span>
-                </div>
-                {validationErrors.organization ? (
-                  <p className="text-xs text-red-500">{validationErrors.organization}</p>
-                ) : (
-                  <p className="text-xs text-slate-500">Enter your organization identifier</p>
-                )}
-              </div>
-
               {/* Email Field */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
@@ -386,7 +356,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="py-4 text-center">
-        <p className="text-xs text-slate-400">© 2026 Mediation Pro. All rights reserved.</p>
+        <p className="text-xs text-slate-400">© 2026 Nexus. All rights reserved.</p>
       </footer>
     </div>
   )

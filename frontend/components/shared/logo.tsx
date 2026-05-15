@@ -14,7 +14,7 @@ export function Logo({ size = 32, className }: LogoProps) {
     >
       <Image
         src="/logo/logo.png"
-        alt="Mediation Pro"
+        alt="Nexus"
         width={size}
         height={size}
         className="object-contain"

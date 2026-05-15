@@ -207,7 +207,8 @@ export async function refreshAuthSession(baseUrl: string = API_BASE_URL): Promis
   if (!refreshSessionPromise) {
     refreshSessionPromise = (async () => {
       try {
-        const refreshRes = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh`, {
+        const refreshUrl = `${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh`
+        const refreshRes = await fetch(refreshUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -228,7 +229,15 @@ export async function refreshAuthSession(baseUrl: string = API_BASE_URL): Promis
           return refreshData.data.accessToken as string
         }
       } catch (e) {
-        console.error("Refresh token failed", e)
+        const msg = e instanceof Error ? e.message : String(e)
+        if (msg === "Failed to fetch" || (e instanceof TypeError && msg.includes("fetch"))) {
+          console.error(
+            "Refresh token: không kết nối được API. Kiểm tra: (1) backend đang chạy, (2) NEXT_PUBLIC_API_URL đúng với URL thực tế của API, (3) CORS — thêm origin trình duyệt (vd. http://127.0.0.1:3000) vào Cors:AllowedOrigins hoặc CORS_ALLOWED_ORIGINS, (4) trang HTTPS không gọi API HTTP khác host (mixed content).",
+            { attemptedUrl: `${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh` },
+          )
+        } else {
+          console.error("Refresh token failed", e)
+        }
       }
 
       return null
