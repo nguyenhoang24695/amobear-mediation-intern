@@ -1230,6 +1230,7 @@ export function TikTokRequestsPage() {
     campaign: { campaignName: "", objectiveType: "APP_PROMOTION", budget: 50, budgetMode: "BUDGET_MODE_DAY" },
     adGroup: { adGroupName: "", placementType: "PLACEMENT_TYPE_AUTOMATIC", placements: [], budget: 50, budgetMode: "BUDGET_MODE_DAY", scheduleType: "SCHEDULE_FROM_NOW", optimizationGoal: "INSTALL", bidType: "BID_TYPE_NO_BID", billingEvent: "OCPM", appId: reference?.appMappings[0]?.tikTokAppId, appDownloadUrl: reference?.appMappings[0]?.downloadUrl, operatingSystems: [], locationIds: ["6252001"], ageGroups: [], gender: "GENDER_UNLIMITED", languages: [] },
     ad: { adName: "", adFormat: "SINGLE_VIDEO", videoId: "", imageIds: [], imageAssetIds: [] },
+    ads: [{ adName: "", adFormat: "SINGLE_VIDEO", videoId: "", imageIds: [], imageAssetIds: [] }],
   }), [reference])
 
   const load = async () => {

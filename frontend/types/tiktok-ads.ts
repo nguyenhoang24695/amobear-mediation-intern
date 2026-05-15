@@ -499,6 +499,7 @@ export interface CreateTikTokCampaignRequestDto {
   campaign: TikTokCampaignDraftDto
   adGroup: TikTokAdGroupDraftDto
   ad: TikTokAdDraftDto
+  ads: TikTokAdDraftDto[]
 }
 
 export interface UpdateTikTokCampaignRequestDto extends Omit<CreateTikTokCampaignRequestDto, "idempotencyKey"> {}

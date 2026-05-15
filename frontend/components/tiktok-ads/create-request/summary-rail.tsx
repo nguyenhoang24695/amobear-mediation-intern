@@ -24,7 +24,7 @@ export function TikTokRequestSummaryRail({ form, reference, validationErrors, se
   const audienceReady = form.adGroup.locationIds.length > 0
   const biddingReady = !!(form.adGroup.budgetMode && form.adGroup.scheduleType && form.adGroup.optimizationGoal && form.adGroup.bidType && form.adGroup.billingEvent)
   const creativeReady = hasCreativeMedia(form)
-  const adReady = !!(form.ad.adName.trim() && form.ad.adText?.trim() && form.ad.callToAction && form.ad.landingPageUrl?.trim())
+  const adReady = form.ads.length > 0 && form.ads.every((ad) => !!(ad.adName.trim() && ad.adText?.trim() && ad.callToAction && ad.landingPageUrl?.trim()))
 
   return (
     <aside className="space-y-3">
@@ -41,7 +41,7 @@ export function TikTokRequestSummaryRail({ form, reference, validationErrors, se
           <CheckRow state={audienceReady ? "ok" : "error"} label="Audience locations ready" onClick={() => onNavigateToSection?.("adgroup-audience")} />
           <CheckRow state={biddingReady ? "ok" : "error"} label="Budget/bidding/schedule ready" onClick={() => onNavigateToSection?.("adgroup-budget")} />
           <CheckRow state={creativeReady ? "ok" : "error"} label="Creative media ready" onClick={() => onNavigateToSection?.("creative")} />
-          <CheckRow state={adReady ? "ok" : "error"} label="Ad copy and URL ready" onClick={() => onNavigateToSection?.("ad")} />
+          <CheckRow state={adReady ? "ok" : "error"} label="Ad copy and URL ready" onClick={() => onNavigateToSection?.("creative")} />
         </div>
         {validationErrors.length > 0 ? (
           <div className="mt-3 rounded-md bg-rose-50 p-2 text-xs text-rose-700">
@@ -57,7 +57,7 @@ export function TikTokRequestSummaryRail({ form, reference, validationErrors, se
         <SummaryLine label="Budget" value={form.campaign.budget ? `${form.campaign.budget}` : form.adGroup.budget ? `${form.adGroup.budget}` : "-"} />
         <SummaryLine label="Optimization" value={optionLabel(reference.optimizationGoals, form.adGroup.optimizationGoal)} />
         <SummaryLine label="Format" value={optionLabel(reference.adFormats, form.ad.adFormat)} />
-        <SummaryLine label="CTA" value={optionLabel(reference.callToActions, form.ad.callToAction)} />
+        <SummaryLine label="Creatives" value={form.ads.length} />
       </div>
     </aside>
   )

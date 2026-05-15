@@ -116,7 +116,8 @@ function parseRequestPayload(detail: TikTokCampaignRequestDetailDto | null): Tik
       idempotencyKey: parsed.idempotencyKey ?? detail.idempotencyKey ?? fallback.idempotencyKey,
       campaign: { ...fallback.campaign, ...parsed.campaign },
       adGroup: { ...fallback.adGroup, ...parsed.adGroup },
-      ad: { ...fallback.ad, ...parsed.ad },
+      ad: { ...fallback.ad, ...(parsed.ads?.[0] ?? parsed.ad) },
+      ads: parsed.ads?.length ? parsed.ads.map((ad) => ({ ...fallback.ad, ...ad })) : [{ ...fallback.ad, ...parsed.ad }],
     })
   } catch {
     return sanitizeTikTokRequestForm({
@@ -127,15 +128,18 @@ function parseRequestPayload(detail: TikTokCampaignRequestDetailDto | null): Tik
 }
 
 function getMediaLabel(payload: TikTokRequestFormState): string {
-  const imageLabel = payload.ad.imageAssetIds.length
-    ? `cover image asset #${payload.ad.imageAssetIds.join(", ")}`
-    : payload.ad.imageIds.length
-      ? `cover image ${payload.ad.imageIds.join(", ")}`
+  const ads = payload.ads.length ? payload.ads : [payload.ad]
+  if (ads.length > 1) return `${ads.length} video creatives`
+  const ad = ads[0]
+  const imageLabel = ad.imageAssetIds.length
+    ? `cover image asset #${ad.imageAssetIds.join(", ")}`
+    : ad.imageIds.length
+      ? `cover image ${ad.imageIds.join(", ")}`
       : null
-  if (payload.ad.videoAssetId) return imageLabel ? `Uploaded video asset #${payload.ad.videoAssetId} + ${imageLabel}` : `Uploaded video asset #${payload.ad.videoAssetId}`
-  if (payload.ad.videoId) return imageLabel ? `TikTok video ${payload.ad.videoId} + ${imageLabel}` : `TikTok video ${payload.ad.videoId}`
-  if (payload.ad.imageAssetIds.length) return `Uploaded image asset #${payload.ad.imageAssetIds.join(", ")}`
-  if (payload.ad.imageIds.length) return `TikTok images ${payload.ad.imageIds.join(", ")}`
+  if (ad.videoAssetId) return imageLabel ? `Uploaded video asset #${ad.videoAssetId} + ${imageLabel}` : `Uploaded video asset #${ad.videoAssetId}`
+  if (ad.videoId) return imageLabel ? `TikTok video ${ad.videoId} + ${imageLabel}` : `TikTok video ${ad.videoId}`
+  if (ad.imageAssetIds.length) return `Uploaded image asset #${ad.imageAssetIds.join(", ")}`
+  if (ad.imageIds.length) return `TikTok images ${ad.imageIds.join(", ")}`
   return "No creative media"
 }
 
@@ -350,7 +354,7 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-md border bg-white p-4 lg:col-span-2"><h2 className="mb-3 font-semibold">Request Summary</h2><div className="grid gap-3 text-sm md:grid-cols-2"><Info label="Status" value={<Badge className={tone(detail.status)}>{detail.status}</Badge>} /><Info label="Account" value={detail.tikTokAdAccountName ?? detail.tikTokAdAccountRowId} /><Info label="App" value={detail.appDisplayName ?? detail.appId ?? detail.appRowId} /><Info label="Created" value={formatDate(detail.createdAt)} /><Info label="Campaign budget" value={payload.campaign.budget ?? "-"} /><Info label="Ad group budget" value={payload.adGroup.budget ?? "-"} /><Info label="Creative" value={mediaLabel} /><Info label="Ad text" value={payload.ad.adText ?? "-"} /></div></section>
+          <section className="rounded-md border bg-white p-4 lg:col-span-2"><h2 className="mb-3 font-semibold">Request Summary</h2><div className="grid gap-3 text-sm md:grid-cols-2"><Info label="Status" value={<Badge className={tone(detail.status)}>{detail.status}</Badge>} /><Info label="Account" value={detail.tikTokAdAccountName ?? detail.tikTokAdAccountRowId} /><Info label="App" value={detail.appDisplayName ?? detail.appId ?? detail.appRowId} /><Info label="Created" value={formatDate(detail.createdAt)} /><Info label="Campaign budget" value={payload.campaign.budget ?? "-"} /><Info label="Ad group budget" value={payload.adGroup.budget ?? "-"} /><Info label="Creative" value={mediaLabel} /><Info label="Ad text" value={payload.ads.length > 1 ? `${payload.ads.length} creative texts` : payload.ad.adText ?? "-"} /></div></section>
         <section className="rounded-md border bg-white p-4"><h2 className="mb-3 font-semibold">Lifecycle</h2><div className="space-y-2 text-sm"><Info label="Submitted" value={formatDate(detail.submittedAt)} /><Info label="Approved" value={formatDate(detail.approvedAt)} /><Info label="Executed" value={formatDate(detail.executedAt)} /><Info label="Failed" value={formatDate(detail.failedAt)} /></div></section>
       </div>
 

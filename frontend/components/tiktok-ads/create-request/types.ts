@@ -90,6 +90,7 @@ export function createDefaultTikTokRequestForm(reference: TikTokReferenceRespons
       displayName: "",
       appName: "",
     },
+    ads: [],
   })
 }
 
@@ -144,6 +145,7 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
   const campaignSource = asRecord(pick(root, "campaign", "Campaign"))
   const adGroupSource = asRecord(pick(root, "adGroup", "AdGroup"))
   const adSource = asRecord(pick(root, "ad", "Ad"))
+  const adsSource = pick(root, "ads", "Ads")
 
   const campaign: PayloadRecord = {}
   setIfDefined(campaign, "campaignName", stringValue(pick(campaignSource, "campaignName", "CampaignName")))
@@ -192,6 +194,10 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
   setIfDefined(ad, "appName", stringValue(pick(adSource, "appName", "AppName")))
   setIfDefined(ad, "avatarIconWebUri", stringValue(pick(adSource, "avatarIconWebUri", "AvatarIconWebUri")))
 
+  const ads = Array.isArray(adsSource)
+    ? adsSource.map((item) => normalizeTikTokRequestPayloadShape({ ad: item }).ad).filter(Boolean)
+    : undefined
+
   return {
     tikTokAdAccountRowId: numberValue(pick(root, "tikTokAdAccountRowId", "TikTokAdAccountRowId")),
     appRowId: numberValue(pick(root, "appRowId", "AppRowId")),
@@ -199,12 +205,12 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
     campaign,
     adGroup,
     ad,
+    ads,
   } as unknown as Partial<TikTokRequestFormState>
 }
 
 export function sanitizeTikTokRequestForm(state: TikTokRequestFormState): TikTokRequestFormState {
   const next = structuredClone(state) as TikTokRequestFormState
-  const wasCustomIdentity = isDeprecatedCustomIdentity(next.ad.identityType)
   next.campaign.campaignName = next.campaign.campaignName ?? ""
   next.campaign.objectiveType = next.campaign.objectiveType || "APP_PROMOTION"
   next.campaign.campaignType = next.campaign.campaignType || "REGULAR_CAMPAIGN"
@@ -223,16 +229,25 @@ export function sanitizeTikTokRequestForm(state: TikTokRequestFormState): TikTok
   next.adGroup.ageGroups = Array.isArray(next.adGroup.ageGroups) ? next.adGroup.ageGroups : []
   next.adGroup.languages = Array.isArray(next.adGroup.languages) ? next.adGroup.languages : []
   next.adGroup.gender = next.adGroup.gender || "GENDER_UNLIMITED"
-  next.ad.adName = next.ad.adName ?? ""
-  next.ad.adFormat = "SINGLE_VIDEO"
-  next.ad.callToAction = normalizeCallToAction(next.ad.callToAction)
-  next.ad.identityType = normalizeIdentityType(next.ad.identityType)
+  const rawAds = Array.isArray(next.ads) && next.ads.length > 0 ? next.ads : [next.ad]
+  next.ads = rawAds.map(sanitizeTikTokCreative)
+  next.ad = next.ads[0] ?? sanitizeTikTokCreative(next.ad)
+  return next
+}
+
+export function sanitizeTikTokCreative(ad: TikTokRequestFormState["ad"]): TikTokRequestFormState["ad"] {
+  const next = structuredClone(ad) as TikTokRequestFormState["ad"]
+  const wasCustomIdentity = isDeprecatedCustomIdentity(next.identityType)
+  next.adName = next.adName ?? ""
+  next.adFormat = "SINGLE_VIDEO"
+  next.callToAction = normalizeCallToAction(next.callToAction)
+  next.identityType = normalizeIdentityType(next.identityType)
   if (wasCustomIdentity) {
-    next.ad.identityId = undefined
-    next.ad.identityAuthorizedBcId = undefined
+    next.identityId = undefined
+    next.identityAuthorizedBcId = undefined
   }
-  next.ad.imageIds = Array.isArray(next.ad.imageIds) ? next.ad.imageIds : []
-  next.ad.imageAssetIds = Array.isArray(next.ad.imageAssetIds) ? next.ad.imageAssetIds : []
+  next.imageIds = Array.isArray(next.imageIds) ? next.imageIds : []
+  next.imageAssetIds = Array.isArray(next.imageAssetIds) ? next.imageAssetIds : []
   return next
 }
 
@@ -255,11 +270,19 @@ function normalizeCallToAction(value?: string | null) {
 }
 
 export function hasCreativeMedia(form: TikTokRequestFormState) {
-  const hasVideo = !!(form.ad.videoId?.trim() || form.ad.videoAssetId)
-  const hasImage = form.ad.imageIds.length > 0 || form.ad.imageAssetIds.length > 0
-  return hasVideo && hasImage
+  return form.ads.length > 0 && form.ads.every((ad) => {
+    const hasVideo = !!(ad.videoId?.trim() || ad.videoAssetId)
+    const hasImage = ad.imageIds.length > 0 || ad.imageAssetIds.length > 0
+    return hasVideo && hasImage
+  })
 }
 
 export function getMediaMode(form: TikTokRequestFormState): TikTokMediaMode {
-  return form.ad.videoAssetId || form.ad.imageAssetIds.length > 0 ? "upload" : "existing"
+  return form.ads.some((ad) => ad.videoAssetId || ad.imageAssetIds.length > 0) ? "upload" : "existing"
+}
+
+export function getCreativeMediaMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
+  if (creative.videoAssetId || creative.imageAssetIds.length > 0) return "upload"
+  if (creative.videoId?.trim() || creative.imageIds.length > 0) return "existing"
+  return "upload"
 }

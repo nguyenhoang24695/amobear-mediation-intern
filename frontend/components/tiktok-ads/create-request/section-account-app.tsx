@@ -56,6 +56,7 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
               appRowId: 0,
               adGroup: { ...form.adGroup, appId: undefined, appDownloadUrl: undefined, operatingSystems: [] },
               ad: { ...form.ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined },
+              ads: form.ads.map((ad) => ({ ...ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined })),
             })}
             getValue={(account) => String(account.id)}
             getSearchText={(account) => `${account.name} ${account.advertiserId} ${account.currency ?? ""} ${account.timezone ?? ""} ${account.country ?? ""}`}
@@ -110,6 +111,12 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
                   displayName: mapping?.appDisplayName ?? form.ad.displayName,
                   appName: mapping?.appDisplayName ?? form.ad.appName,
                 },
+                ads: form.ads.map((ad) => ({
+                  ...ad,
+                  landingPageUrl: mapping?.downloadUrl ?? ad.landingPageUrl,
+                  displayName: mapping?.appDisplayName ?? ad.displayName,
+                  appName: mapping?.appDisplayName ?? ad.appName,
+                })),
               })
             }}
             getValue={(mapping) => String(mapping.appRowId)}
