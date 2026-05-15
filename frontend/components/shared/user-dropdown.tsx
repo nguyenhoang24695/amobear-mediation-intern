@@ -11,6 +11,7 @@ import {
   hasScreenFunction,
   type AuthUser,
 } from "@/lib/auth"
+import { getRoleDisplayName } from "@/lib/enums/user-role"
 import { logoutUser } from "@/lib/logout"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -126,7 +127,7 @@ export function UserDropdown() {
                 <span className="font-medium text-slate-900">{getUserDisplayName(user)}</span>
                 <span className="text-xs font-normal text-slate-500 truncate">{user?.email || "No email"}</span>
                 <Badge variant="secondary" className="w-fit mt-1 text-xs bg-blue-100 text-blue-700">
-                  {user?.role || "User"}
+                  {user?.roleName || (user?.role ? getRoleDisplayName(user.role) : "User")}
                 </Badge>
               </div>
             </div>

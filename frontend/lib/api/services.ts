@@ -989,6 +989,7 @@ export const dashboardApi = {
 
     getRecentActivities: async (params: {
         limit?: number
+        userId?: string
     }): Promise<RecentActivities> => {
         return apiClient.get('/api/v1/dashboard/recent-activities', params)
     },

@@ -7,13 +7,16 @@ import { Check, ChevronsUpDown, Loader2, RefreshCw, ShieldCheck, PlugZap, Play, 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Pagination } from "@/components/shared/pagination"
+import { TikTokCampaignsContent } from "@/components/tiktok-ads/campaigns/tiktok-campaigns-content"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import {
@@ -66,6 +69,23 @@ function getCandidateDefaultAppRowId(candidate: TikTokAppMappingCandidateDto) {
   return candidate.resolvedAppRowId ?? candidate.recommendedAppRowId ?? candidate.suggestedApps[0]?.appRowId ?? null
 }
 
+function getCandidatePlatforms(candidate: TikTokAppMappingCandidateDto) {
+  const platforms = [
+    candidate.resolvedApp?.platform,
+    candidate.recommendedApp?.platform,
+    ...candidate.suggestedApps.map((app) => app.platform),
+  ].map(normalizePlatform).filter(Boolean)
+
+  return platforms.length > 0 ? Array.from(new Set(platforms)) : ["UNKNOWN"]
+}
+
+function getCandidateStoreIdentifier(candidate: TikTokAppMappingCandidateDto) {
+  if (candidate.packageName) return { value: candidate.packageName, label: "Package name" }
+  if (candidate.bundleId) return { value: candidate.bundleId, label: "Bundle ID" }
+  if (candidate.identifiers.length > 0) return { value: candidate.identifiers[0], label: "Identifier" }
+  return { value: "-", label: "No store identifier" }
+}
+
 function normalizePlatform(value?: string | null) {
   return value?.toUpperCase() ?? ""
 }
@@ -91,6 +111,21 @@ function getTikTokMappingAdMobId(app?: App | null, mapping?: TikTokAppMappingDto
 
 function getTikTokMappingPlatform(app?: App | null, mapping?: TikTokAppMappingDto | null) {
   return normalizePlatform(mapping?.appPlatform ?? app?.platform)
+}
+
+function getDisplayAppName(app?: App | null) {
+  return app?.displayName ?? app?.name ?? "-"
+}
+
+function getResolveSelectableApps(apps: App[], mappedAppRows: Set<number>, resolutionType: string) {
+  switch (resolutionType) {
+    case "update_mapping":
+      return apps.filter((app) => mappedAppRows.has(app.id))
+    case "create_mapping":
+      return apps.filter((app) => !mappedAppRows.has(app.id))
+    default:
+      return apps
+  }
 }
 
 function PageShell({ title, subtitle, children, action }: { title: string; subtitle: string; children: ReactNode; action?: ReactNode }) {
@@ -573,17 +608,26 @@ export function TikTokAppMappingsPage() {
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState<"mappings" | "candidates">("mappings")
   const [mappingSearch, setMappingSearch] = useState("")
-  const [mappingPlatform, setMappingPlatform] = useState("all")
+  const [mappingPage, setMappingPage] = useState(1)
+  const [mappingPageSize, setMappingPageSize] = useState(10)
   const [candidateSearch, setCandidateSearch] = useState("")
-  const [candidateStatus, setCandidateStatus] = useState("open")
-  const [candidateMatch, setCandidateMatch] = useState("all")
-  const [form, setForm] = useState({ appRowId: "", tikTokAppId: "", downloadUrl: "" })
+  const [candidateMatchFilter, setCandidateMatchFilter] = useState("all")
+  const [candidateOsFilter, setCandidateOsFilter] = useState("all")
+  const [candidatePage, setCandidatePage] = useState(1)
+  const [candidatePageSize, setCandidatePageSize] = useState(10)
   const [resolveTarget, setResolveTarget] = useState<TikTokAppMappingCandidateDto | null>(null)
   const [resolveForm, setResolveForm] = useState({ resolutionType: "create_mapping", appRowId: "", resolutionNote: "" })
+  const [resolveDialogOpen, setResolveDialogOpen] = useState(false)
+  const [resolveAppSelectOpen, setResolveAppSelectOpen] = useState(false)
   const [resolvingId, setResolvingId] = useState<number | null>(null)
 
   const mappedAppRows = useMemo(() => new Set(items.map((item) => item.appRowId)), [items])
   const appByRowId = useMemo(() => new Map(apps.map((app) => [app.id, app])), [apps])
+  const resolveSelectableApps = useMemo(
+    () => getResolveSelectableApps(apps, mappedAppRows, resolveForm.resolutionType),
+    [apps, mappedAppRows, resolveForm.resolutionType]
+  )
+  const selectedResolveApp = resolveForm.appRowId ? appByRowId.get(Number(resolveForm.appRowId)) ?? null : null
 
   const load = async () => {
     setLoading(true)
@@ -609,27 +653,31 @@ export function TikTokAppMappingsPage() {
       const app = appByRowId.get(item.appRowId)
       const platform = getTikTokMappingPlatform(app, item)
 
-      if (mappingPlatform !== "all" && platform !== mappingPlatform) return false
       if (!search) return true
 
       return [
         getTikTokMappingAppLabel(app, item),
         getTikTokMappingAdMobId(app, item),
+        platform,
         item.tikTokAppId,
         item.downloadUrl,
       ].filter(Boolean).some((value) => value!.toLowerCase().includes(search))
     })
-  }, [appByRowId, items, mappingPlatform, mappingSearch])
+  }, [appByRowId, items, mappingSearch])
 
   const filteredCandidates = useMemo(() => {
     const search = candidateSearch.trim().toLowerCase()
     return candidates.filter((candidate) => {
-      if (candidateStatus !== "all" && candidate.reviewStatus !== candidateStatus) return false
-      if (candidateMatch !== "all" && candidate.matchQuality !== candidateMatch) return false
+      const platforms = getCandidatePlatforms(candidate)
+      if (candidateMatchFilter !== "all" && candidate.matchQuality !== candidateMatchFilter) return false
+      if (candidateOsFilter !== "all" && !platforms.includes(candidateOsFilter)) return false
       if (!search) return true
       return [
         candidate.tikTokAppId,
         candidate.source,
+        candidate.matchQuality,
+        candidate.reviewStatus,
+        ...platforms,
         candidate.downloadUrl,
         candidate.packageName,
         candidate.bundleId,
@@ -643,18 +691,36 @@ export function TikTokAppMappingsPage() {
         ...candidate.suggestedApps.flatMap((app) => [app.appDisplayName, app.appId]),
       ].filter(Boolean).some((value) => value!.toLowerCase().includes(search))
     })
-  }, [candidateMatch, candidateSearch, candidateStatus, candidates])
+  }, [candidateMatchFilter, candidateOsFilter, candidateSearch, candidates])
 
-  const create = async () => {
-    try {
-      await tiktokAccountsApi.createAppMapping({ appRowId: Number(form.appRowId), tikTokAppId: form.tikTokAppId, downloadUrl: form.downloadUrl, isActive: true })
-      setForm({ appRowId: "", tikTokAppId: "", downloadUrl: "" })
-      await load()
-      toast({ title: "TikTok app mapping created" })
-    } catch (ex: any) {
-      toast({ title: "Create failed", description: ex.message, variant: "destructive" })
-    }
-  }
+  useEffect(() => {
+    setMappingPage(1)
+  }, [mappingSearch])
+
+  useEffect(() => {
+    setCandidatePage(1)
+  }, [candidateMatchFilter, candidateOsFilter, candidateSearch])
+
+  const mappingTotalPages = Math.max(1, Math.ceil(filteredMappings.length / mappingPageSize))
+  const candidateTotalPages = Math.max(1, Math.ceil(filteredCandidates.length / candidatePageSize))
+
+  useEffect(() => {
+    if (mappingPage > mappingTotalPages) setMappingPage(mappingTotalPages)
+  }, [mappingPage, mappingTotalPages])
+
+  useEffect(() => {
+    if (candidatePage > candidateTotalPages) setCandidatePage(candidateTotalPages)
+  }, [candidatePage, candidateTotalPages])
+
+  const paginatedMappings = useMemo(() => {
+    const start = (mappingPage - 1) * mappingPageSize
+    return filteredMappings.slice(start, start + mappingPageSize)
+  }, [filteredMappings, mappingPage, mappingPageSize])
+
+  const paginatedCandidates = useMemo(() => {
+    const start = (candidatePage - 1) * candidatePageSize
+    return filteredCandidates.slice(start, start + candidatePageSize)
+  }, [candidatePage, candidatePageSize, filteredCandidates])
 
   const openResolve = (candidate: TikTokAppMappingCandidateDto) => {
     const appRowId = getCandidateDefaultAppRowId(candidate)
@@ -664,6 +730,37 @@ export function TikTokAppMappingsPage() {
       resolutionType,
       appRowId: appRowId?.toString() ?? "",
       resolutionNote: "",
+    })
+    setResolveAppSelectOpen(false)
+    setResolveDialogOpen(true)
+  }
+
+  const handleResolveDialogOpenChange = (open: boolean) => {
+    setResolveDialogOpen(open)
+    if (!open) {
+      setResolveAppSelectOpen(false)
+      setResolveTarget(null)
+      setResolveForm({ resolutionType: "create_mapping", appRowId: "", resolutionNote: "" })
+    }
+  }
+
+  const handleResolveResolutionTypeChange = (value: string) => {
+    setResolveAppSelectOpen(false)
+    setResolveForm((current) => {
+      const nextSelectableApps = getResolveSelectableApps(apps, mappedAppRows, value)
+      const hasCurrentSelection = current.appRowId
+        ? nextSelectableApps.some((app) => app.id === Number(current.appRowId))
+        : false
+
+      return {
+        ...current,
+        resolutionType: value,
+        appRowId: value === "dismiss"
+          ? current.appRowId
+          : hasCurrentSelection
+            ? current.appRowId
+            : nextSelectableApps[0]?.id.toString() ?? "",
+      }
     })
   }
 
@@ -677,7 +774,7 @@ export function TikTokAppMappingsPage() {
         resolutionNote: resolveForm.resolutionNote.trim() || null,
       }
       await tiktokAccountsApi.resolveAppMappingCandidate(resolveTarget.id, payload)
-      setResolveTarget(null)
+      handleResolveDialogOpenChange(false)
       await load()
       toast({ title: "TikTok mapping candidate resolved" })
     } catch (ex: any) {
@@ -715,40 +812,16 @@ export function TikTokAppMappingsPage() {
       </div>
       {activeTab === "mappings" ? (
         <>
-          <div className="rounded-md border bg-white p-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div>
-                <Label>App</Label>
-                <select className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.appRowId} onChange={(e) => setForm({ ...form, appRowId: e.target.value })}>
-                  <option value="">Select app...</option>
-                  {apps.map((app) => <option key={app.id} value={app.id}>{app.displayName ?? app.name} ({app.appId})</option>)}
-                </select>
-              </div>
-              <div><Label>TikTok App ID</Label><Input value={form.tikTokAppId} onChange={(e) => setForm({ ...form, tikTokAppId: e.target.value })} /></div>
-              <div><Label>Download URL</Label><Input value={form.downloadUrl} onChange={(e) => setForm({ ...form, downloadUrl: e.target.value })} /></div>
-            </div>
-            <Button className="mt-4" onClick={create} disabled={!form.appRowId || !form.tikTokAppId || !form.downloadUrl}>Create</Button>
-          </div>
-
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative w-72">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <Input
                 className="h-9 pl-8 text-sm"
-                placeholder="Search by app, AdMob ID, TikTok ID..."
+                placeholder="Search by app, app ID, TikTok app ID..."
                 value={mappingSearch}
                 onChange={(e) => setMappingSearch(e.target.value)}
               />
             </div>
-            <select
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              value={mappingPlatform}
-              onChange={(e) => setMappingPlatform(e.target.value)}
-            >
-              <option value="all">All Platforms</option>
-              <option value="ANDROID">Android</option>
-              <option value="IOS">iOS</option>
-            </select>
             <span className="ml-auto text-xs text-slate-400">
               {filteredMappings.length} mapping{filteredMappings.length !== 1 ? "s" : ""}
             </span>
@@ -771,7 +844,7 @@ export function TikTokAppMappingsPage() {
                   <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">Loading app mappings...</TableCell></TableRow>
                 ) : filteredMappings.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
-                ) : filteredMappings.map((item) => {
+                ) : paginatedMappings.map((item) => {
                   const app = appByRowId.get(item.appRowId)
                   const appLabel = getTikTokMappingAppLabel(app, item)
                   const admobId = getTikTokMappingAdMobId(app, item)
@@ -814,81 +887,82 @@ export function TikTokAppMappingsPage() {
                 })}
               </TableBody>
             </Table>
+            {filteredMappings.length > 0 ? (
+              <Pagination
+                currentPage={mappingPage}
+                totalPages={mappingTotalPages}
+                totalItems={filteredMappings.length}
+                pageSize={mappingPageSize}
+                onPageChange={setMappingPage}
+                onPageSizeChange={(size) => {
+                  setMappingPageSize(size)
+                  setMappingPage(1)
+                }}
+                itemName="mappings"
+              />
+            ) : null}
           </div>
         </>
       ) : (
         <>
-          {resolveTarget ? (
-            <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-slate-900">Resolve TikTok App {resolveTarget.tikTokAppId}</h3>
-                  <p className="text-sm text-slate-600">Suggested app: {getCandidateSuggestion(resolveTarget)}</p>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => setResolveTarget(null)}><X className="h-4 w-4" /></Button>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div>
-                  <Label>Resolution</Label>
-                  <select className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={resolveForm.resolutionType} onChange={(e) => setResolveForm({ ...resolveForm, resolutionType: e.target.value })}>
-                    <option value="create_mapping">Create Mapping</option>
-                    <option value="update_mapping">Update Existing Mapping</option>
-                    <option value="dismiss">Dismiss</option>
-                  </select>
-                </div>
-                {resolveForm.resolutionType !== "dismiss" ? (
-                  <div>
-                    <Label>App</Label>
-                    <select className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={resolveForm.appRowId} onChange={(e) => setResolveForm({ ...resolveForm, appRowId: e.target.value })}>
-                      <option value="">Select app...</option>
-                      {apps
-                        .filter((app) => resolveForm.resolutionType === "update_mapping" ? mappedAppRows.has(app.id) : !mappedAppRows.has(app.id))
-                        .map((app) => <option key={app.id} value={app.id}>{app.displayName ?? app.name} ({app.appId})</option>)}
-                    </select>
-                  </div>
-                ) : null}
-                <div><Label>Note</Label><Input value={resolveForm.resolutionNote} onChange={(e) => setResolveForm({ ...resolveForm, resolutionNote: e.target.value })} /></div>
-              </div>
-              <Button className="mt-4" onClick={resolveCandidate} disabled={resolvingId === resolveTarget.id || (resolveForm.resolutionType !== "dismiss" && !resolveForm.appRowId)}>
-                {resolvingId === resolveTarget.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                Resolve Candidate
-              </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-72">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Input
+                className="h-9 pl-8 text-sm"
+                placeholder="Search by app, TikTok app ID, status..."
+                value={candidateSearch}
+                onChange={(e) => setCandidateSearch(e.target.value)}
+              />
             </div>
-          ) : null}
-          <div className="flex flex-wrap gap-3">
-            <Input className="w-72" placeholder="Search TikTok app, advertiser, internal app..." value={candidateSearch} onChange={(e) => setCandidateSearch(e.target.value)} />
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={candidateStatus} onChange={(e) => setCandidateStatus(e.target.value)}>
-              <option value="all">All Statuses</option>
-              <option value="open">Open</option>
-              <option value="auto_created">Auto Created</option>
-              <option value="resolved">Resolved</option>
-              <option value="dismissed">Dismissed</option>
-              <option value="stale">Stale</option>
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={candidateMatch} onChange={(e) => setCandidateMatch(e.target.value)}>
-              <option value="all">All Matches</option>
-              <option value="exact">Exact</option>
-              <option value="already_mapped">Already Mapped</option>
-              <option value="conflict">Conflict</option>
-              <option value="ambiguous">Ambiguous</option>
-              <option value="none">No Match</option>
-            </select>
+            <Select value={candidateMatchFilter} onValueChange={setCandidateMatchFilter}>
+              <SelectTrigger className="h-9 w-44 bg-white text-sm">
+                <SelectValue placeholder="Match status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Match Statuses</SelectItem>
+                <SelectItem value="exact">Exact</SelectItem>
+                <SelectItem value="already_mapped">Already Mapped</SelectItem>
+                <SelectItem value="ambiguous">Ambiguous</SelectItem>
+                <SelectItem value="conflict">Conflict</SelectItem>
+                <SelectItem value="none">Unmapped</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={candidateOsFilter} onValueChange={setCandidateOsFilter}>
+              <SelectTrigger className="h-9 w-36 bg-white text-sm">
+                <SelectValue placeholder="OS" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All OS</SelectItem>
+                <SelectItem value="ANDROID">Android</SelectItem>
+                <SelectItem value="IOS">iOS</SelectItem>
+                <SelectItem value="UNKNOWN">Unknown</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="ml-auto text-xs text-slate-400">
+              {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="overflow-x-auto rounded-md border bg-white">
             <Table>
-              <TableHeader><TableRow><TableHead>TikTok App</TableHead><TableHead>Suggested App</TableHead><TableHead>Match</TableHead><TableHead>Status</TableHead><TableHead>Evidence</TableHead><TableHead>Last Seen</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>TikTok App</TableHead><TableHead>Store Identifier</TableHead><TableHead>Suggested App</TableHead><TableHead>Match</TableHead><TableHead>Status</TableHead><TableHead>Evidence</TableHead><TableHead>Last Seen</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">Loading mapping candidates...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">Loading mapping candidates...</TableCell></TableRow>
                 ) : filteredCandidates.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">No mapping candidates found.</TableCell></TableRow>
-                ) : filteredCandidates.map((candidate) => {
+                  <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">No mapping candidates found.</TableCell></TableRow>
+                ) : paginatedCandidates.map((candidate) => {
                   const isBusy = resolvingId === candidate.id
+                  const storeIdentifier = getCandidateStoreIdentifier(candidate)
                   return (
                     <TableRow key={candidate.id}>
                       <TableCell>
                         <div className="font-mono text-xs text-blue-700">{candidate.tikTokAppId || "-"}</div>
                         <div className="text-xs text-slate-500">{candidate.source}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[240px] truncate font-mono text-xs text-slate-700">{storeIdentifier.value}</div>
+                        <div className="text-xs text-slate-400">{storeIdentifier.label}</div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">{getCandidateSuggestion(candidate)}</div>
@@ -907,9 +981,238 @@ export function TikTokAppMappingsPage() {
                 })}
               </TableBody>
             </Table>
+            {filteredCandidates.length > 0 ? (
+              <Pagination
+                currentPage={candidatePage}
+                totalPages={candidateTotalPages}
+                totalItems={filteredCandidates.length}
+                pageSize={candidatePageSize}
+                onPageChange={setCandidatePage}
+                onPageSizeChange={(size) => {
+                  setCandidatePageSize(size)
+                  setCandidatePage(1)
+                }}
+                itemName="candidates"
+              />
+            ) : null}
           </div>
         </>
       )}
+      <Dialog open={resolveDialogOpen} onOpenChange={handleResolveDialogOpenChange}>
+        <DialogContent className="flex max-h-[90vh] w-full max-w-[640px] flex-col gap-0 overflow-hidden rounded-xl p-0">
+          <DialogHeader className="flex-shrink-0 border-b border-slate-100 px-6 pb-4 pt-6">
+            <DialogTitle className="text-base font-semibold text-slate-900">Resolve Mapping Candidate</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            {resolveTarget ? (
+              <>
+                <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={`text-[11px] ${statusTone(resolveTarget.matchQuality)}`}>
+                      {formatCandidateLabel(resolveTarget.matchQuality)}
+                    </Badge>
+                    <Badge className={`text-[11px] ${statusTone(resolveTarget.reviewStatus)}`}>
+                      {formatCandidateLabel(resolveTarget.reviewStatus)}
+                    </Badge>
+                    {(() => {
+                      const suggestedPlatform = resolveTarget.resolvedApp?.platform ?? resolveTarget.recommendedApp?.platform ?? resolveTarget.suggestedApps[0]?.platform
+                      return suggestedPlatform ? (
+                        <Badge className={`text-[11px] ${getPlatformBadgeClass(suggestedPlatform)}`}>
+                          {normalizePlatform(suggestedPlatform)}
+                        </Badge>
+                      ) : null
+                    })()}
+                  </div>
+                  <div className="space-y-1 text-sm text-slate-700">
+                    <p><span className="font-medium">TikTok App ID:</span> <span className="font-mono">{resolveTarget.tikTokAppId || "-"}</span></p>
+                    <p><span className="font-medium">Download URL:</span> {resolveTarget.downloadUrl || resolveTarget.storeUrl || "-"}</p>
+                    <p><span className="font-medium">Suggested App:</span> {getCandidateSuggestion(resolveTarget)}</p>
+                    <p><span className="font-medium">Evidence:</span> {resolveTarget.sourceAdvertiserCount} advertiser(s), {resolveTarget.sourceAdGroupCount} ad group(s)</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Resolution</Label>
+                  <Select value={resolveForm.resolutionType} onValueChange={handleResolveResolutionTypeChange}>
+                    <SelectTrigger className="h-9 w-full text-sm">
+                      <SelectValue placeholder="Select resolution..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="create_mapping">Create Mapping</SelectItem>
+                      <SelectItem value="update_mapping">Update Existing Mapping</SelectItem>
+                      <SelectItem value="dismiss">Dismiss</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {resolveForm.resolutionType !== "dismiss" ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">
+                      App <span className="text-red-500">*</span>
+                    </Label>
+                    <Popover open={resolveAppSelectOpen} onOpenChange={setResolveAppSelectOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={resolveAppSelectOpen}
+                          className="h-auto min-h-14 w-full justify-between px-3 py-2 font-normal"
+                        >
+                          {selectedResolveApp ? (
+                            <div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
+                              {selectedResolveApp.iconUri ? (
+                                <img
+                                  src={selectedResolveApp.iconUri}
+                                  alt={getDisplayAppName(selectedResolveApp)}
+                                  className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                                  {getDisplayAppName(selectedResolveApp).charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate font-medium text-slate-900">{getDisplayAppName(selectedResolveApp)}</span>
+                                  <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedResolveApp.platform)}`}>
+                                    {normalizePlatform(selectedResolveApp.platform) || "APP"}
+                                  </Badge>
+                                </div>
+                                <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedResolveApp.appId}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-slate-500">Search and select app...</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" onWheel={(event) => event.stopPropagation()}>
+                        <Command shouldFilter className="flex max-h-[360px] flex-col">
+                          <CommandInput placeholder="Search by app name, AdMob App ID, store ID..." />
+                          <CommandList className="min-h-0 max-h-[320px] overscroll-contain">
+                            <CommandEmpty>
+                              {resolveForm.resolutionType === "update_mapping"
+                                ? "No mapped app found."
+                                : "No unmapped app found."}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {resolveSelectableApps.map((app) => {
+                                const isSelected = resolveForm.appRowId === app.id.toString()
+                                return (
+                                  <CommandItem
+                                    key={app.id}
+                                    value={`${getDisplayAppName(app)} ${app.appId} ${app.appStoreId ?? ""} ${normalizePlatform(app.platform)}`}
+                                    onSelect={() => {
+                                      setResolveForm((current) => ({ ...current, appRowId: app.id.toString() }))
+                                      setResolveAppSelectOpen(false)
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex min-w-0 items-center gap-3 py-0.5">
+                                      {app.iconUri ? (
+                                        <img
+                                          src={app.iconUri}
+                                          alt={getDisplayAppName(app)}
+                                          className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
+                                        />
+                                      ) : (
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                                          {getDisplayAppName(app).charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(app)}</span>
+                                          <Badge className={`text-[10px] ${getPlatformBadgeClass(app.platform)}`}>
+                                            {normalizePlatform(app.platform) || "APP"}
+                                          </Badge>
+                                        </div>
+                                        <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {app.appId}</p>
+                                        <p className="truncate text-[11px] text-slate-400">Store ID - {app.appStoreId || "-"}</p>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                )
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {resolveSelectableApps.length === 0 ? (
+                      <p className="text-[11px] text-amber-700">
+                        {resolveForm.resolutionType === "update_mapping"
+                          ? "No accessible app with an existing TikTok mapping is available for update."
+                          : "All accessible apps already have a TikTok app mapping."}
+                      </p>
+                    ) : null}
+                    {selectedResolveApp ? (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Selected App</p>
+                        <div className="flex items-center gap-3">
+                          {selectedResolveApp.iconUri ? (
+                            <img
+                              src={selectedResolveApp.iconUri}
+                              alt={getDisplayAppName(selectedResolveApp)}
+                              className="h-11 w-11 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                              {getDisplayAppName(selectedResolveApp).charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(selectedResolveApp)}</span>
+                              <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedResolveApp.platform)}`}>
+                                {normalizePlatform(selectedResolveApp.platform) || "APP"}
+                              </Badge>
+                            </div>
+                            <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedResolveApp.appId}</p>
+                            <p className="truncate text-xs text-slate-500">App Store ID - {selectedResolveApp.appStoreId || "-"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700">Resolution Note</Label>
+                  <Textarea
+                    className="min-h-[88px] text-sm"
+                    value={resolveForm.resolutionNote}
+                    onChange={(event) => setResolveForm((current) => ({ ...current, resolutionNote: event.target.value }))}
+                    placeholder="Optional note for operations context"
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+          <DialogFooter className="flex-shrink-0 items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
+            <Button
+              variant="ghost"
+              className="text-slate-600"
+              onClick={() => handleResolveDialogOpenChange(false)}
+              disabled={resolvingId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => void resolveCandidate()}
+              disabled={
+                resolvingId !== null ||
+                !resolveTarget ||
+                (resolveForm.resolutionType !== "dismiss" && !resolveForm.appRowId)
+              }
+            >
+              {resolvingId !== null ? "Saving..." : "Apply Resolution"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
 }
@@ -984,11 +1287,5 @@ export function TikTokRequestsPage() {
 }
 
 export function TikTokCampaignsPage() {
-  return (
-    <PageShell title="TikTok Campaigns" subtitle="Local mirror campaigns from sync and approved execution flow.">
-      <div className="rounded-md border bg-white p-6 text-sm text-slate-600">
-        Campaign mirror detail uses the Phase 1 dashboard data today. Request-created objects appear on each request detail through backend `createdObjects`; a richer campaign detail view can now be layered on top of the same mirror tables.
-      </div>
-    </PageShell>
-  )
+  return <TikTokCampaignsContent />
 }

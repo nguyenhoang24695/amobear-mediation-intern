@@ -1,12 +1,12 @@
 import { ScreenFunctionGuard } from "@/components/auth/screen-function-guard"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { TikTokCampaignsContent } from "@/components/tiktok-ads/campaigns/tiktok-campaigns-content"
+import { TikTokRequestFormContent } from "@/components/tiktok-ads/requests/tiktok-request-content"
 
 export default function Page() {
   return (
     <DashboardLayout>
-      <ScreenFunctionGuard screenKey="s-tiktok-campaigns" functionKey="view">
-        <TikTokCampaignsContent />
+      <ScreenFunctionGuard screenKey="s-tiktok-requests" functionKey="create">
+        <TikTokRequestFormContent />
       </ScreenFunctionGuard>
     </DashboardLayout>
   )
