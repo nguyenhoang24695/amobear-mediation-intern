@@ -9,6 +9,7 @@ export interface AuthUser {
   fullName?: string
   avatarUrl?: string
   role: string
+  roleName?: string
   /** Direct Message — webhook mặc định khi URL theo tần suất trống */
   slackWebhookUrl?: string
   slackWebhookUrlRealtime?: string
@@ -40,6 +41,7 @@ export function authUserFromMeDto(d: {
   fullName?: string
   avatarUrl?: string
   role: string
+  roleName?: string
   slackWebhookUrl?: string
   slackWebhookUrlRealtime?: string
   slackWebhookUrlHourly?: string
@@ -61,6 +63,7 @@ export function authUserFromMeDto(d: {
     fullName,
     avatarUrl: d.avatarUrl,
     role: d.role,
+    roleName: d.roleName,
     slackWebhookUrl: d.slackWebhookUrl,
     slackWebhookUrlRealtime: d.slackWebhookUrlRealtime,
     slackWebhookUrlHourly: d.slackWebhookUrlHourly,

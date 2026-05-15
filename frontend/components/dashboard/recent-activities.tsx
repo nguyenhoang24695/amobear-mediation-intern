@@ -1,13 +1,13 @@
 "use client"
 
-import { useMemo, useEffect } from "react"
+import { useMemo, useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Settings, AlertTriangle, RefreshCw, Zap, CheckCircle, Loader2, ArrowRight } from "lucide-react"
 import { useApi } from "@/hooks/use-api"
 import { dashboardApi } from "@/lib/api/services"
-import { hasScreenFunction } from "@/lib/auth"
+import { hasScreenFunction, getCurrentUser, type AuthUser } from "@/lib/auth"
 import { useDashboardDate } from "@/contexts/dashboard-date-context"
 
 // Map activity type to icon and colors
@@ -42,25 +42,42 @@ const getActivityConfig = (type: string, severity: string) => {
 export function RecentActivities() {
   const { refreshKey } = useDashboardDate()
   const canViewActivityLogs = hasScreenFunction("s-activity-logs", "view")
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [authLoaded, setAuthLoaded] = useState(false)
+
+  useEffect(() => {
+    setUser(getCurrentUser())
+    setAuthLoaded(true)
+  }, [])
+
+  const isSuperAdminOrAdmin = user?.role === "super_admin" || user?.role === "admin"
+
+  const queryParams = useMemo(() => {
+    const params: any = { limit: 5 }
+    if (authLoaded && !isSuperAdminOrAdmin && user?.id) {
+      params.userId = user.id
+    }
+    return params
+  }, [authLoaded, isSuperAdminOrAdmin, user?.id])
 
   const { data, loading, error, refetch } = useApi(
-    () => dashboardApi.getRecentActivities({ limit: 5 }),
+    () => dashboardApi.getRecentActivities(queryParams),
     {
-      enabled: true,
-      cacheKey: "dashboard_recent_activities_5",
+      enabled: authLoaded,
+      cacheKey: `dashboard_recent_activities_5_${authLoaded ? (isSuperAdminOrAdmin ? 'all' : user?.id) : 'wait'}`,
     }
   )
 
   useEffect(() => {
-    if (refreshKey > 0) {
+    if (refreshKey > 0 && authLoaded) {
       refetch()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when dashboard refresh is triggered
-  }, [refreshKey])
+  }, [refreshKey, authLoaded])
 
   const activities = useMemo(() => data?.activities?.slice(0, 5) ?? [], [data])
 
-  if (loading) {
+  if (loading || !authLoaded) {
     return (
       <Card className="bg-white border-slate-200 shadow-sm h-full">
         <CardHeader className="pb-3">

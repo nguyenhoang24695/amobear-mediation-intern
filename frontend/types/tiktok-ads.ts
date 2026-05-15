@@ -59,6 +59,181 @@ export interface TikTokDashboardFiltersResponseDto {
   campaigns: TikTokDashboardFilterOptionDto[]
 }
 
+export interface TikTokCampaignListSummaryDto {
+  total: number
+  active: number
+  paused: number
+  issues: number
+  unmapped: number
+  staleSync: number
+  lastSyncedAt?: string | null
+}
+
+export interface TikTokCampaignListItemDto {
+  id: number
+  tikTokCampaignId: string
+  name: string
+  objective?: string | null
+  status: string
+  secondaryStatus?: string | null
+  budget?: number | null
+  budgetMode?: string | null
+  appPromotionType?: string | null
+  tikTokCreatedAt?: string | null
+  tikTokModifiedAt?: string | null
+  tikTokAdAccountRowId: number
+  advertiserId: string
+  tikTokAdAccountName?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  appIconUri?: string | null
+  platform?: string | null
+  isUnmapped: boolean
+  isSyncStale: boolean
+  source: string
+  createdFromRequestId?: number | null
+  adGroupCount: number
+  adCount: number
+  lastSyncedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TikTokCampaignListResponseDto {
+  items: TikTokCampaignListItemDto[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+  summary: TikTokCampaignListSummaryDto
+}
+
+export interface TikTokCampaignAdGroupSummaryDto {
+  id: number
+  tikTokAdGroupId: string
+  name: string
+  status: string
+  budget?: number | null
+  budgetMode?: string | null
+  placementType?: string | null
+  optimizationGoal?: string | null
+  bidType?: string | null
+  bid?: number | null
+  billingEvent?: string | null
+  scheduleType?: string | null
+  scheduleStartTime?: string | null
+  scheduleEndTime?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  platform?: string | null
+  createdFromRequestId?: number | null
+  lastSyncedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TikTokCampaignAdSummaryDto {
+  id: number
+  tikTokAdId: string
+  name: string
+  status: string
+  adFormat?: string | null
+  videoId?: string | null
+  imageIds: string[]
+  adText?: string | null
+  callToAction?: string | null
+  landingPageUrl?: string | null
+  trackingUrl?: string | null
+  creativeMedia: TikTokCreativeMediaDto
+  tikTokAdGroupRowId: number
+  tikTokAdGroupId?: string | null
+  tikTokAdGroupName?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  platform?: string | null
+  createdFromRequestId?: number | null
+  lastSyncedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TikTokCreativeMediaDto {
+  images: TikTokCreativeImageDto[]
+  videos: TikTokCreativeVideoDto[]
+  errorMessage?: string | null
+}
+
+export interface TikTokCreativeImageDto {
+  imageId: string
+  imageUrl?: string | null
+  fileName?: string | null
+  format?: string | null
+  width?: number | null
+  height?: number | null
+  size?: number | null
+  displayable?: boolean | null
+  materialId?: string | null
+  createTime?: string | null
+  modifyTime?: string | null
+}
+
+export interface TikTokCreativeVideoDto {
+  videoId: string
+  previewUrl?: string | null
+  previewUrlExpireTime?: string | null
+  videoCoverUrl?: string | null
+  fileName?: string | null
+  format?: string | null
+  duration?: number | null
+  width?: number | null
+  height?: number | null
+  size?: number | null
+  displayable?: boolean | null
+  allowDownload?: boolean | null
+  materialId?: string | null
+  createTime?: string | null
+  modifyTime?: string | null
+}
+
+export interface TikTokCampaignDetailDto extends TikTokCampaignListItemDto {
+  configJson?: string | null
+  performanceStartDate: string
+  performanceEndDate: string
+  performance: TikTokCampaignPerformanceSummaryDto
+  adGroups: TikTokCampaignAdGroupSummaryDto[]
+  ads: TikTokCampaignAdSummaryDto[]
+}
+
+export interface TikTokCampaignPerformanceSummaryDto {
+  spend: number
+  impressions: number
+  clicks: number
+  conversions: number
+  tikTokReportedInstalls: number
+  mmpInstalls: number
+  cpi: number
+  cpc: number
+  cpm: number
+  ctr: number
+  costPerConversion: number
+}
+
+export interface SyncTikTokCampaignsRequestDto {
+  tikTokAdAccountIds?: number[] | null
+}
+
+export interface TikTokSyncResultDto {
+  syncedAt: string
+  accountsScanned: number
+  rawObjectsSaved: number
+  rowsWritten: number
+  failedAccounts: number
+  messages: string[]
+}
+
 
 export interface TikTokIntegrationDto {
   id: number
@@ -195,6 +370,7 @@ export interface TikTokAppMappingDto {
   deepLinkUrlOverride?: string | null
   storeUrlOverride?: string | null
   isActive: boolean
+  advertiserIds: string[]
   createdAt: string
   updatedAt: string
 }
@@ -271,6 +447,44 @@ export interface TikTokReferenceResponseDto {
   placementTypes: TikTokOptionDto[]
   bidTypes: TikTokOptionDto[]
   optimizationGoals: TikTokOptionDto[]
+  budgetModes: TikTokOptionDto[]
+  scheduleTypes: TikTokOptionDto[]
+  billingEvents: TikTokOptionDto[]
+  genders: TikTokOptionDto[]
+  ageGroups: TikTokOptionDto[]
+  operatingSystems: TikTokOptionDto[]
+  callToActions: TikTokOptionDto[]
+  adFormats: TikTokOptionDto[]
+  identityTypes: TikTokOptionDto[]
+  placements: TikTokOptionDto[]
+  defaultLocationIds: string[]
+}
+
+export interface TikTokTargetingOptionsResponseDto {
+  locations: TikTokTargetingOptionDto[]
+  languages: TikTokTargetingOptionDto[]
+  source: string
+  loadedAt: string
+  errorMessage?: string | null
+}
+
+export interface TikTokTargetingOptionDto {
+  key: string
+  label: string
+  type: string
+  countryCode?: string | null
+  level?: string | null
+  parentId?: string | null
+  path?: string | null
+}
+
+export interface TikTokIdentityOptionDto {
+  key: string
+  label: string
+  identityId: string
+  identityType: string
+  identityAuthorizedBcId?: string | null
+  displayName?: string | null
 }
 
 export interface TikTokOptionDto {
@@ -292,6 +506,8 @@ export interface UpdateTikTokCampaignRequestDto extends Omit<CreateTikTokCampaig
 export interface TikTokCampaignDraftDto {
   campaignName: string
   objectiveType: string
+  campaignType?: string
+  appPromotionType?: string
   budget?: number
   budgetMode: string
 }
@@ -329,6 +545,22 @@ export interface TikTokAdDraftDto {
   callToAction?: string
   landingPageUrl?: string
   trackingUrl?: string
+  identityId?: string
+  identityType?: string
+  identityAuthorizedBcId?: string
+  displayName?: string
+  appName?: string
+  avatarIconWebUri?: string
+}
+
+export interface TikTokRequestAssetDto {
+  id: number
+  kind: "image" | "video" | string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  previewUrl: string
+  createdAt: string
 }
 
 export interface TikTokValidationResultDto {
