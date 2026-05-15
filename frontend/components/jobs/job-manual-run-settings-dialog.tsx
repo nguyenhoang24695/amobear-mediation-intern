@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select"
 import { Plus, Trash2, Loader2, Settings2 } from "lucide-react"
 import type { Job } from "./job-management-content"
-import type { ManualRunInputType, ManualRunQueryParamField } from "@/types/api"
+import type { HangfireJobSchedule, ManualRunInputType, ManualRunQueryParamField } from "@/types/api"
 import { parseManualRunJson } from "@/lib/jobs/manual-run"
 import { jobSchedulesApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
@@ -80,7 +80,10 @@ interface JobManualRunSettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   job: Job | null
-  onSaved?: () => void
+  /** Gọi sau khi lưu thành công; nhận bản ghi mới từ API (có manualRunJson cập nhật). */
+  onSaved?: (schedule: HangfireJobSchedule) => void
+  /** Gọi sau khi xóa cấu hình manual_run_json. */
+  onCleared?: () => void
 }
 
 export function JobManualRunSettingsDialog({
@@ -88,6 +91,7 @@ export function JobManualRunSettingsDialog({
   onOpenChange,
   job,
   onSaved,
+  onCleared,
 }: JobManualRunSettingsDialogProps) {
   const { toast } = useToast()
   const [useAsyncRun, setUseAsyncRun] = useState(false)
@@ -139,7 +143,7 @@ export function JobManualRunSettingsDialog({
 
     setSaving(true)
     try {
-      await jobSchedulesApi.update(job.jobId, {
+      const updated = await jobSchedulesApi.update(job.jobId, {
         setManualRunJson: true,
         manualRunJson,
       })
@@ -148,7 +152,7 @@ export function JobManualRunSettingsDialog({
         description: "Cấu hình Run now (manual_run_json) đã ghi vào database.",
       })
       onOpenChange(false)
-      onSaved?.()
+      onSaved?.(updated)
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Lưu thất bại"
       toast({ title: "Lỗi", description: message, variant: "destructive" })
@@ -170,7 +174,7 @@ export function JobManualRunSettingsDialog({
         description: "manual_run_json đã được xóa cho job này.",
       })
       onOpenChange(false)
-      onSaved?.()
+      onCleared?.()
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Xóa thất bại"
       toast({ title: "Lỗi", description: message, variant: "destructive" })

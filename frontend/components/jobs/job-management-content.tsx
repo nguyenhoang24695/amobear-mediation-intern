@@ -81,6 +81,7 @@ export function JobManagementContent() {
   const [editJob, setEditJob] = useState<Job | null>(null)
   const [runJob, setRunJob] = useState<Job | null>(null)
   const [manualRunSettingsJob, setManualRunSettingsJob] = useState<Job | null>(null)
+  const [confirmRunAfterSaveJob, setConfirmRunAfterSaveJob] = useState<Job | null>(null)
   const [detailsJob, setDetailsJob] = useState<Job | null>(null)
   const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null)
   const { toast } = useToast()
@@ -114,6 +115,15 @@ export function JobManagementContent() {
       }
     })
   }, [jobSchedules])
+
+  const scheduleToJob = (s: HangfireJobSchedule): Job => {
+    const updatedAt = new Date(s.updatedAt)
+    return {
+      ...s,
+      updatedAtLabel: formatDistanceToNow(updatedAt, { addSuffix: true }),
+      nextRun: s.enabled ? "Next run calculated from cron" : "Disabled",
+    }
+  }
 
   const enabledCount = jobs.filter((j) => j.enabled).length
   const disabledCount = jobs.filter((j) => !j.enabled).length
@@ -413,8 +423,55 @@ export function JobManagementContent() {
           if (!open) setManualRunSettingsJob(null)
         }}
         job={manualRunSettingsJob}
-        onSaved={() => refetch()}
+        onSaved={(schedule) => {
+          refetch()
+          setConfirmRunAfterSaveJob(scheduleToJob(schedule))
+        }}
+        onCleared={() => {
+          refetch()
+        }}
       />
+
+      <AlertDialog
+        open={!!confirmRunAfterSaveJob}
+        onOpenChange={(open) => {
+          if (!open) setConfirmRunAfterSaveJob(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Đã lưu cấu hình</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmRunAfterSaveJob
+                ? !canRun
+                  ? `Đã cập nhật Run now cho "${confirmRunAfterSaveJob.displayName || confirmRunAfterSaveJob.jobId}". Bạn không có quyền chạy job từ đây.`
+                  : `Đã cập nhật Run now cho "${confirmRunAfterSaveJob.displayName || confirmRunAfterSaveJob.jobId}". Bạn có muốn chạy job ngay bây giờ?`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {canRun ? (
+              <>
+                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (!confirmRunAfterSaveJob) return
+                    const j = confirmRunAfterSaveJob
+                    setConfirmRunAfterSaveJob(null)
+                    setRunJob(j)
+                  }}
+                >
+                  Run now
+                </AlertDialogAction>
+              </>
+            ) : (
+              <AlertDialogCancel>Đóng</AlertDialogCancel>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reload Dialog */}
       <AlertDialog open={reloadOpen} onOpenChange={setReloadOpen}>

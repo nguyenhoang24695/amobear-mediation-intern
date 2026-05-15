@@ -474,7 +474,7 @@ export function JobsTable({
                               onClick={() => onManualRunSettings(job)}
                             >
                               <Settings2 className="w-4 h-4 mr-2" />
-                              Run now — cấu hình
+                              Param Setting
                             </DropdownMenuItem>
                           )}
                           {canEnableDisable && (
@@ -572,7 +572,7 @@ export function JobsTable({
                     {canEdit && onManualRunSettings && (
                       <DropdownMenuItem onClick={() => onManualRunSettings(job)}>
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Run now — cấu hình
+                        Param Setting
                       </DropdownMenuItem>
                     )}
                     {canEnableDisable && (
