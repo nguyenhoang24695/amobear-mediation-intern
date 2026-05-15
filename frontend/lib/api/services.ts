@@ -48,6 +48,9 @@ import type {
     AppDailyInsight,
     AppHourlyPerformanceResponseDto,
     AppInsightHistoryDay,
+    AppMediationBronzeAdUnitsResponse,
+    AppMediationBronzeFilterOptionsResponse,
+    AppMediationBronzeMediationGroupsResponse,
     AppInsightSettings,
     InsightTemplate,
     InsightContextTemplate,
@@ -337,6 +340,44 @@ export const structureApi = {
 
     getAppMediationGroups: async (id: number): Promise<MediationGroup[]> => {
         return apiClient.get<MediationGroup[]>(`/api/Structure/apps/${id}/mediationgroups`)
+    },
+
+    getAppMediationBronzeFilterOptions: async (
+        id: number,
+        startDate: string,
+        endDate: string,
+    ): Promise<AppMediationBronzeFilterOptionsResponse> => {
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/filter-options`, { startDate, endDate })
+    },
+
+    getAppMediationBronzeAdUnits: async (
+        id: number,
+        params: {
+            startDate: string
+            endDate: string
+            country?: string
+            appVersion?: string
+            waterfallOnly?: boolean
+        },
+    ): Promise<AppMediationBronzeAdUnitsResponse> => {
+        const q: Record<string, string | number | undefined> = {
+            startDate: params.startDate,
+            endDate: params.endDate,
+        }
+        if (params.country) q.country = params.country
+        if (params.appVersion) q.appVersion = params.appVersion
+        if (params.waterfallOnly === false) q.waterfallOnly = "false"
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/ad-units`, q)
+    },
+
+    getAppMediationBronzeMediationGroups: async (
+        id: number,
+        params: { startDate: string; endDate: string; country?: string; appVersion?: string },
+    ): Promise<AppMediationBronzeMediationGroupsResponse> => {
+        const q: Record<string, string> = { startDate: params.startDate, endDate: params.endDate }
+        if (params.country) q.country = params.country
+        if (params.appVersion) q.appVersion = params.appVersion
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/mediation-groups`, q)
     },
 
     getAppWaterfallAdUnits: async (id: number): Promise<WaterfallAdUnit[]> => {

@@ -42,6 +42,8 @@ import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
+import { AppAdUnitsMediationTab } from "./app-detail/app-ad-units-mediation-tab"
+import { AppMediationGroupsMediationTab } from "./app-detail/app-mediation-groups-mediation-tab"
 import { AppSettingsTab } from "./app-detail/app-settings-tab"
 import { AppAiInsightsTab } from "./app-detail/app-ai-insights-tab"
 import { AppInsightConfigTab } from "./app-detail/app-insight-config-tab"
@@ -102,8 +104,10 @@ export function AppDetailContent() {
   // anh huong viec hien thi tab.
   const canViewOverview = hasAppDetailTab("overview")
   const canViewAdUnits = hasAppDetailTab("ad-units")
+  const canViewAdUnitsMediation = hasAppDetailTab("ad-units-mediation")
   const canViewWaterfallAdUnits = hasAppDetailTab("waterfall-ad-units")
   const canViewMediationGroups = hasAppDetailTab("mediation-groups")
+  const canViewMediationGroupsMediation = hasAppDetailTab("mediation-groups-mediation")
   const canViewPerformance = hasAppDetailTab("performance")
   const showAiInsightTab = hasAppDetailTab("ai-insight")
   const showInsightConfigTab = hasAppDetailTab("insight-config")
@@ -114,8 +118,10 @@ export function AppDetailContent() {
   const allowedTabs = [
     canViewOverview && "overview",
     canViewAdUnits && "ad-units",
+    canViewAdUnitsMediation && "ad-units-mediation",
     canViewWaterfallAdUnits && "waterfall-ad-units",
     canViewMediationGroups && "mediation-groups",
+    canViewMediationGroupsMediation && "mediation-groups-mediation",
     canViewPerformance && "performance",
     showAiInsightTab && "ai-insight",
     showInsightConfigTab && "insight-config",
@@ -322,9 +328,17 @@ export function AppDetailContent() {
             {canViewAdUnits ? (
               <TabsTrigger value="ad-units" className="px-4 data-[state=active]:bg-white">
                 Ad Units
+                <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                  deprecated
+                </Badge>
                 <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
                   {app?.adUnitsCount ?? 0}
                 </Badge>
+              </TabsTrigger>
+            ) : null}
+            {canViewAdUnitsMediation ? (
+              <TabsTrigger value="ad-units-mediation" className="px-4 data-[state=active]:bg-white">
+                Ad Units (Bronze)
               </TabsTrigger>
             ) : null}
             {canViewWaterfallAdUnits ? (
@@ -338,9 +352,17 @@ export function AppDetailContent() {
             {canViewMediationGroups ? (
               <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
                 Mediation Groups
+                <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                  deprecated
+                </Badge>
                 <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
                   {mediationGroupsLoading ? "..." : mediationGroupsCount}
                 </Badge>
+              </TabsTrigger>
+            ) : null}
+            {canViewMediationGroupsMediation ? (
+              <TabsTrigger value="mediation-groups-mediation" className="px-4 data-[state=active]:bg-white">
+                Mediation Groups (Bronze)
               </TabsTrigger>
             ) : null}
             {canViewPerformance ? (
@@ -383,6 +405,11 @@ export function AppDetailContent() {
               <AppAdUnitsTab />
             </TabsContent>
           ) : null}
+          {canViewAdUnitsMediation ? (
+            <TabsContent value="ad-units-mediation" className="mt-6">
+              <AppAdUnitsMediationTab appRowId={app?.id} />
+            </TabsContent>
+          ) : null}
           {canViewWaterfallAdUnits ? (
             <TabsContent value="waterfall-ad-units" className="mt-6">
               <AppWaterfallAdUnitsTab
@@ -397,6 +424,11 @@ export function AppDetailContent() {
                 mediationGroups={mediationGroups ?? null}
                 loadingMediationGroups={mediationGroupsLoading}
               />
+            </TabsContent>
+          ) : null}
+          {canViewMediationGroupsMediation ? (
+            <TabsContent value="mediation-groups-mediation" className="mt-6">
+              <AppMediationGroupsMediationTab appRowId={app?.id} />
             </TabsContent>
           ) : null}
           {canViewPerformance ? (

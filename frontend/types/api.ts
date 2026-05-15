@@ -73,6 +73,67 @@ export interface AppHourlyPerformanceResponseDto {
   lastUpdatedUtc: string
 }
 
+/** GET .../mediation-bronze/* — dữ liệu từ StarRocks bronze.mediation_table. */
+export interface AppMediationBronzeFilterOptionsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  countries: string[]
+  appVersionNames: string[]
+}
+
+export interface AppMediationBronzeAdUnitRow {
+  id: number
+  name?: string
+  adUnitId: string
+  adFormat?: string
+  displayName?: string
+  publisherId?: string
+  createdAt?: string
+  updatedAt?: string
+  lastSyncedAt?: string
+  revenue: number
+  impressions: number
+  ecpm: number
+  fillRate: number
+  adRequests: number
+  matchedRequests: number
+  status?: string
+}
+
+export interface AppMediationBronzeAdUnitsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  country?: string | null
+  appVersion?: string | null
+  waterfallOnly?: boolean
+  message?: string
+  adUnits: AppMediationBronzeAdUnitRow[]
+}
+
+export interface AppMediationBronzeMediationGroupRow {
+  mediationGroupId: string
+  displayName: string
+  revenue: number
+  impressions: number
+  ecpm: number
+  fillRate: number
+  countries: string[]
+  adRequests: number
+  matchedRequests: number
+}
+
+export interface AppMediationBronzeMediationGroupsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  country?: string | null
+  appVersion?: string | null
+  message?: string
+  mediationGroups: AppMediationBronzeMediationGroupRow[]
+}
+
 export interface AdUnit {
   id: number
   name: string

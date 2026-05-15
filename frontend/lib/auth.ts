@@ -273,8 +273,10 @@ export function hasScreenFunction(screenKey: string, functionKey: string): boole
 export const APP_DETAIL_TABS = [
   "overview",
   "ad-units",
+  "ad-units-mediation",
   "waterfall-ad-units",
   "mediation-groups",
+  "mediation-groups-mediation",
   "performance",
   "ai-insight",
   "insight-config",
@@ -288,9 +290,20 @@ const FN_VIEW_DETAILS_KEY = "view-details"
 
 /**
  * Check user co quyen xem 1 tab cu the trong App Detail.
- * Co "view-details" => full 9 tab. Khong thi check "view-details:<tab>".
+ * Co "view-details" => full tab. Khong thi check "view-details:<tab>".
+ * Tab *-mediation dong nhat quyen voi tab goc (ad-units / mediation-groups).
  */
 export function hasAppDetailTab(tab: AppDetailTab): boolean {
+  if (tab === "ad-units-mediation") {
+    return hasAppDetailTabForBaseTab("ad-units")
+  }
+  if (tab === "mediation-groups-mediation") {
+    return hasAppDetailTabForBaseTab("mediation-groups")
+  }
+  return hasAppDetailTabForBaseTab(tab)
+}
+
+function hasAppDetailTabForBaseTab(tab: string): boolean {
   return (
     hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY) ||
     hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${tab}`)
