@@ -86,6 +86,7 @@ export function createDefaultTikTokRequestForm(reference: TikTokReferenceRespons
       callToAction: reference?.callToActions[0]?.key ?? "INSTALL_NOW",
       landingPageUrl: "",
       identityType: reference?.identityTypes.find((option) => !isDeprecatedCustomIdentity(option.key))?.key ?? AUTHORIZED_IDENTITY_TYPE,
+      identityAuthorizedBcId: "",
       displayName: "",
       appName: "",
     },
@@ -186,6 +187,7 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
   setIfDefined(ad, "trackingUrl", stringValue(pick(adSource, "trackingUrl", "TrackingUrl")))
   setIfDefined(ad, "identityId", stringValue(pick(adSource, "identityId", "IdentityId")))
   setIfDefined(ad, "identityType", stringValue(pick(adSource, "identityType", "IdentityType")))
+  setIfDefined(ad, "identityAuthorizedBcId", stringValue(pick(adSource, "identityAuthorizedBcId", "IdentityAuthorizedBcId")))
   setIfDefined(ad, "displayName", stringValue(pick(adSource, "displayName", "DisplayName")))
   setIfDefined(ad, "appName", stringValue(pick(adSource, "appName", "AppName")))
   setIfDefined(ad, "avatarIconWebUri", stringValue(pick(adSource, "avatarIconWebUri", "AvatarIconWebUri")))
@@ -222,20 +224,15 @@ export function sanitizeTikTokRequestForm(state: TikTokRequestFormState): TikTok
   next.adGroup.languages = Array.isArray(next.adGroup.languages) ? next.adGroup.languages : []
   next.adGroup.gender = next.adGroup.gender || "GENDER_UNLIMITED"
   next.ad.adName = next.ad.adName ?? ""
-  next.ad.adFormat = next.ad.adFormat || "SINGLE_VIDEO"
+  next.ad.adFormat = "SINGLE_VIDEO"
   next.ad.callToAction = normalizeCallToAction(next.ad.callToAction)
   next.ad.identityType = normalizeIdentityType(next.ad.identityType)
-  if (wasCustomIdentity) next.ad.identityId = undefined
+  if (wasCustomIdentity) {
+    next.ad.identityId = undefined
+    next.ad.identityAuthorizedBcId = undefined
+  }
   next.ad.imageIds = Array.isArray(next.ad.imageIds) ? next.ad.imageIds : []
   next.ad.imageAssetIds = Array.isArray(next.ad.imageAssetIds) ? next.ad.imageAssetIds : []
-  if (next.ad.adFormat === "SINGLE_VIDEO") {
-    next.ad.imageIds = []
-    next.ad.imageAssetIds = []
-  }
-  if (next.ad.adFormat === "SINGLE_IMAGE") {
-    next.ad.videoId = ""
-    next.ad.videoAssetId = undefined
-  }
   return next
 }
 
@@ -258,9 +255,9 @@ function normalizeCallToAction(value?: string | null) {
 }
 
 export function hasCreativeMedia(form: TikTokRequestFormState) {
-  return form.ad.adFormat === "SINGLE_VIDEO"
-    ? !!(form.ad.videoId?.trim() || form.ad.videoAssetId)
-    : form.ad.imageIds.length > 0 || form.ad.imageAssetIds.length > 0
+  const hasVideo = !!(form.ad.videoId?.trim() || form.ad.videoAssetId)
+  const hasImage = form.ad.imageIds.length > 0 || form.ad.imageAssetIds.length > 0
+  return hasVideo && hasImage
 }
 
 export function getMediaMode(form: TikTokRequestFormState): TikTokMediaMode {

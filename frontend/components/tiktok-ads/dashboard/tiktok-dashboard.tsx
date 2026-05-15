@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useDeferredValue } from "react"
 import { format } from "date-fns"
-import { AlertTriangle, BarChart3, ChevronRight, DollarSign, MousePointerClick, Search, TrendingUp, WalletCards } from "lucide-react"
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, ChevronRight, DollarSign, MousePointerClick, Search, Target, TrendingUp, WalletCards } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -11,10 +11,13 @@ import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { tiktokDashboardApi } from "@/lib/api/tiktok-ads"
 import { cn } from "@/lib/utils"
-import type { TikTokCampaignPerformanceDto, TikTokDashboardDailyDto, TikTokDashboardOverviewDto, TikTokInstallDiscrepancyDto } from "@/types/tiktok-ads"
-import { TikTokDashboardFilters } from "./tiktok-dashboard-filters"
+import type { TikTokCampaignPerformanceDto, TikTokDashboardDailyDto, TikTokDashboardFilterOptionDto, TikTokDashboardOverviewDto, TikTokInstallDiscrepancyDto } from "@/types/tiktok-ads"
+import { SearchableFilterSelect, TikTokDashboardFilters } from "./tiktok-dashboard-filters"
 import type { DateRange } from "@/components/ui/date-range-picker"
 import { Input } from "@/components/ui/input"
+
+type CampaignSortBy = "spend" | "installs" | "cpi" | "roas"
+type SortDir = "asc" | "desc"
 
 function getDefaultRange(): DateRange {
   const today = new Date()
@@ -46,6 +49,10 @@ function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
+function formatRoas(value?: number | null): string {
+  return value == null ? "--" : `${value.toFixed(2)}x`
+}
+
 function chartDate(value: string): string {
   return format(new Date(value), "MMM d")
 }
@@ -55,6 +62,30 @@ function buildTikTokCampaignUrl(advertiserId?: string | null, campaignId?: strin
   const campaign = campaignId?.trim()
   if (!adv || !campaign) return null
   return `https://ads.tiktok.com/i18n/perf/campaign?aadvid=${encodeURIComponent(adv)}&campaign_id=${encodeURIComponent(campaign)}`
+}
+
+function SortButton({
+  label,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  dir: SortDir
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="ml-auto inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-900"
+      aria-label={`Sort by ${label}`}
+    >
+      <span>{label}</span>
+      {active ? (dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5" />}
+    </button>
+  )
 }
 
 function KpiCard({
@@ -100,10 +131,11 @@ function KpiCard({
 
 function KpiGrid({ overview, loading }: { overview: TikTokDashboardOverviewDto | null; loading: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
       <KpiCard title="Spend" value={formatCurrency(overview?.totalSpend ?? 0)} helper={`CPI ${formatCurrency(overview?.avgCpi ?? 0)}`} icon={DollarSign} loading={loading} tone="bg-cyan-50 text-cyan-700" />
       <KpiCard title="MMP Installs" value={formatNumber(overview?.totalInstalls ?? 0)} helper="Gold installs come from MMP attribution" icon={TrendingUp} loading={loading} tone="bg-emerald-50 text-emerald-700" />
       <KpiCard title="Clicks / CTR" value={`${formatCompact(overview?.totalClicks ?? 0)} / ${formatPercent(overview?.avgCtr ?? 0)}`} helper={`${formatCompact(overview?.totalImpressions ?? 0)} impressions`} icon={MousePointerClick} loading={loading} tone="bg-violet-50 text-violet-700" />
+      <KpiCard title="ROAS D7" value={formatRoas(overview?.avgRoasD7)} helper="Adjust cohort attribution" icon={Target} loading={loading} tone="bg-rose-50 text-rose-700" />
       <KpiCard title="Balance" value={formatCurrency(overview?.accountBalance ?? 0)} helper={`${formatNumber(overview?.activeCampaigns ?? 0)} active campaigns`} icon={WalletCards} loading={loading} tone="bg-amber-50 text-amber-700" />
     </div>
   )
@@ -117,6 +149,7 @@ function TrendChart({ daily, loading }: { daily: TikTokDashboardDailyDto[]; load
       installs: item.installs,
       cpi: item.installs > 0 ? item.spend / item.installs : 0,
       ctr: item.impressions > 0 ? (item.clicks / item.impressions) * 100 : 0,
+      roasD7: item.roasD7,
     })),
     [daily],
   )
@@ -134,7 +167,7 @@ function TrendChart({ daily, loading }: { daily: TikTokDashboardDailyDto[]; load
     <Card className="border-slate-200 bg-white shadow-sm">
       <CardHeader>
         <CardTitle className="text-base font-semibold text-slate-900">30 Day Trend</CardTitle>
-        <CardDescription className="text-sm text-slate-500">TikTok spend, MMP installs, CPI, and CTR grouped by report date.</CardDescription>
+        <CardDescription className="text-sm text-slate-500">TikTok spend, MMP installs, CPI, CTR, and Adjust-attributed ROAS D7 grouped by report date.</CardDescription>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
@@ -147,12 +180,14 @@ function TrendChart({ daily, loading }: { daily: TikTokDashboardDailyDto[]; load
                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748B" }} />
                 <YAxis yAxisId="left" axisLine={false} tickLine={false} width={58} tick={{ fontSize: 12, fill: "#64748B" }} tickFormatter={(value) => formatCompact(Number(value))} />
                 <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} width={58} tick={{ fontSize: 12, fill: "#64748B" }} tickFormatter={(value) => `$${Number(value).toFixed(1)}`} />
-                <Tooltip formatter={(value: number, name: string) => [name === "spend" || name === "cpi" ? formatCurrency(Number(value)) : name === "ctr" ? formatPercent(Number(value)) : formatNumber(Number(value)), name]} />
+                <YAxis yAxisId="roas" orientation="right" axisLine={false} tickLine={false} width={52} tick={{ fontSize: 12, fill: "#64748B" }} tickFormatter={(value) => `${Number(value).toFixed(1)}x`} />
+                <Tooltip formatter={(value: number, name: string) => [name === "Spend" || name === "CPI" ? formatCurrency(Number(value)) : name === "CTR %" ? formatPercent(Number(value)) : name === "ROAS D7" ? formatRoas(Number(value)) : formatNumber(Number(value)), name]} />
                 <Legend />
                 <Bar yAxisId="left" dataKey="spend" name="Spend" fill="#06B6D4" radius={[4, 4, 0, 0]} />
                 <Line yAxisId="left" type="monotone" dataKey="installs" name="MMP installs" stroke="#10B981" strokeWidth={2.5} dot={false} />
                 <Line yAxisId="right" type="monotone" dataKey="cpi" name="CPI" stroke="#F97316" strokeWidth={2.5} dot={false} />
                 <Line yAxisId="right" type="monotone" dataKey="ctr" name="CTR %" stroke="#8B5CF6" strokeWidth={2.5} dot={false} />
+                <Line yAxisId="roas" type="monotone" dataKey="roasD7" name="ROAS D7" stroke="#E11D48" strokeWidth={2.5} dot={false} connectNulls={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -213,42 +248,78 @@ function CampaignTable({
   endDate,
   advertiserId,
   campaignId,
+  advertiserOptions,
   refreshToken,
 }: {
   startDate: string
   endDate: string
   advertiserId?: string
   campaignId?: string
+  advertiserOptions: TikTokDashboardFilterOptionDto[]
   refreshToken: number
 }) {
   const [search, setSearch] = useState("")
+  const [tableAdvertiserId, setTableAdvertiserId] = useState("all")
+  const [sortBy, setSortBy] = useState<CampaignSortBy>("spend")
+  const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const deferredSearch = useDeferredValue(search)
+  const effectiveAdvertiserId = tableAdvertiserId === "all" ? advertiserId : tableAdvertiserId
+
+  useEffect(() => {
+    setPage(1)
+  }, [startDate, endDate, advertiserId, campaignId, effectiveAdvertiserId, deferredSearch, sortBy, sortDir])
+
+  useEffect(() => {
+    if (tableAdvertiserId !== "all" && !advertiserOptions.some((item) => item.value === tableAdvertiserId)) {
+      setTableAdvertiserId("all")
+    }
+  }, [advertiserOptions, tableAdvertiserId])
 
   const cacheKey = useMemo(
-    () => ["tiktok-campaigns", startDate, endDate, advertiserId ?? "all", campaignId ?? "all", deferredSearch, page, pageSize, refreshToken].join(":"),
-    [startDate, endDate, advertiserId, campaignId, deferredSearch, page, pageSize, refreshToken],
+    () => ["tiktok-campaigns", startDate, endDate, effectiveAdvertiserId ?? "all", campaignId ?? "all", deferredSearch, sortBy, sortDir, page, pageSize, refreshToken].join(":"),
+    [startDate, endDate, effectiveAdvertiserId, campaignId, deferredSearch, sortBy, sortDir, page, pageSize, refreshToken],
   )
 
   const { data, loading, error } = useApi(
-    () => tiktokDashboardApi.getCampaigns({ startDate, endDate, advertiserId, campaignId, search: deferredSearch.trim() || undefined, page, pageSize }),
+    () => tiktokDashboardApi.getCampaigns({ startDate, endDate, advertiserId: effectiveAdvertiserId, campaignId, search: deferredSearch.trim() || undefined, sortBy, sortDir, page, pageSize }),
     { cacheKey },
   )
 
   const rows = data?.items ?? []
   const totalPages = Math.max(1, Math.ceil((data?.total ?? rows.length) / pageSize))
+  const handleSort = (column: CampaignSortBy) => {
+    if (sortBy === column) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"))
+      return
+    }
+
+    setSortBy(column)
+    setSortDir("desc")
+  }
 
   return (
     <Card className="border-slate-200 bg-white shadow-sm">
       <CardHeader className="gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <CardTitle className="text-base font-semibold text-slate-900">Campaign Performance</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">Read-only TikTok campaign metrics with MMP-attributed installs.</p>
+          <p className="mt-1 text-sm text-slate-500">Read-only TikTok campaign metrics with MMP-attributed installs and ROAS.</p>
         </div>
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign" className="h-10 border-slate-200 pl-9" />
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-2xl">
+          <SearchableFilterSelect
+            value={tableAdvertiserId}
+            options={advertiserOptions}
+            allLabel={advertiserId ? "Use dashboard advertiser" : "All advertisers"}
+            searchPlaceholder="Search advertisers..."
+            emptyMessage="No advertisers found."
+            onValueChange={setTableAdvertiserId}
+            className="min-w-[220px] text-sm"
+          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign" className="h-10 border-slate-200 pl-9" />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-0 pb-0">
@@ -258,10 +329,10 @@ function CampaignTable({
               <TableRow className="bg-slate-50 hover:bg-slate-50">
                 <TableHead className="px-4">Campaign</TableHead>
                 <TableHead className="px-4">Advertiser</TableHead>
-                <TableHead className="px-4 text-right">Spend</TableHead>
-                <TableHead className="px-4 text-right">Installs</TableHead>
-                <TableHead className="px-4 text-right">CPI</TableHead>
-                <TableHead className="px-4 text-right">ROAS</TableHead>
+                <TableHead className="px-4 text-right"><SortButton label="Spend" active={sortBy === "spend"} dir={sortDir} onClick={() => handleSort("spend")} /></TableHead>
+                <TableHead className="px-4 text-right"><SortButton label="Installs" active={sortBy === "installs"} dir={sortDir} onClick={() => handleSort("installs")} /></TableHead>
+                <TableHead className="px-4 text-right"><SortButton label="CPI" active={sortBy === "cpi"} dir={sortDir} onClick={() => handleSort("cpi")} /></TableHead>
+                <TableHead className="px-4 text-right"><SortButton label="ROAS" active={sortBy === "roas"} dir={sortDir} onClick={() => handleSort("roas")} /></TableHead>
                 <TableHead className="px-4">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -291,7 +362,7 @@ function CampaignTable({
                       <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatCurrency(item.spend)}</TableCell>
                       <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatNumber(item.installs)}</TableCell>
                       <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatCurrency(item.cpi)}</TableCell>
-                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{item.roas == null ? "--" : `${item.roas.toFixed(2)}x`}</TableCell>
+                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatRoas(item.roas)}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-slate-600">{item.status || "UNKNOWN"}</TableCell>
                     </TableRow>
                   )
@@ -367,7 +438,7 @@ export function TikTokDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">TikTok Ads Dashboard</h1>
-              <p className="text-sm text-slate-500">Read-only spend, campaign performance, MMP installs, and discrepancy monitoring.</p>
+              <p className="text-sm text-slate-500">Read-only spend, campaign performance, MMP installs, attribution ROAS, and discrepancy monitoring.</p>
             </div>
           </div>
         </div>
@@ -395,7 +466,7 @@ export function TikTokDashboard() {
       <KpiGrid overview={overviewApi.data} loading={overviewApi.loading} />
       <TrendChart daily={dailyApi.data ?? []} loading={dailyApi.loading} />
       <DiscrepancyChart rows={discrepancyApi.data ?? []} loading={discrepancyApi.loading} />
-      <CampaignTable startDate={startDate} endDate={endDate} advertiserId={selectedAdvertiserId} campaignId={selectedCampaignId} refreshToken={refreshToken} />
+      <CampaignTable startDate={startDate} endDate={endDate} advertiserId={selectedAdvertiserId} campaignId={selectedCampaignId} advertiserOptions={filtersApi.data?.advertisers ?? []} refreshToken={refreshToken} />
     </div>
   )
 }

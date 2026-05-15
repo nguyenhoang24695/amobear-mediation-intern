@@ -71,9 +71,9 @@ function buildTikTokCampaignUrl(advertiserId?: string | null, campaignId?: strin
 
 function InfoItem({ label, value }: { label: string; value?: string | number | null }) {
   return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-900">{value ?? "-"}</p>
+    <div className="min-w-0">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">{label}</p>
+      <p className="mt-1 text-sm font-medium text-slate-900 break-words">{value ?? "-"}</p>
     </div>
   )
 }

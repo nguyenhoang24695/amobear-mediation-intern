@@ -55,7 +55,7 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
               tikTokAdAccountRowId: Number(value),
               appRowId: 0,
               adGroup: { ...form.adGroup, appId: undefined, appDownloadUrl: undefined, operatingSystems: [] },
-              ad: { ...form.ad, landingPageUrl: "", displayName: "", appName: "" },
+              ad: { ...form.ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined },
             })}
             getValue={(account) => String(account.id)}
             getSearchText={(account) => `${account.name} ${account.advertiserId} ${account.currency ?? ""} ${account.timezone ?? ""} ${account.country ?? ""}`}

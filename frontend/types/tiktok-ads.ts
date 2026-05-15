@@ -478,6 +478,15 @@ export interface TikTokTargetingOptionDto {
   path?: string | null
 }
 
+export interface TikTokIdentityOptionDto {
+  key: string
+  label: string
+  identityId: string
+  identityType: string
+  identityAuthorizedBcId?: string | null
+  displayName?: string | null
+}
+
 export interface TikTokOptionDto {
   key: string
   label: string
@@ -538,6 +547,7 @@ export interface TikTokAdDraftDto {
   trackingUrl?: string
   identityId?: string
   identityType?: string
+  identityAuthorizedBcId?: string
   displayName?: string
   appName?: string
   avatarIconWebUri?: string

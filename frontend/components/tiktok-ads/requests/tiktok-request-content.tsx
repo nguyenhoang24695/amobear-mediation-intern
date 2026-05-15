@@ -127,8 +127,13 @@ function parseRequestPayload(detail: TikTokCampaignRequestDetailDto | null): Tik
 }
 
 function getMediaLabel(payload: TikTokRequestFormState): string {
-  if (payload.ad.videoAssetId) return `Uploaded video asset #${payload.ad.videoAssetId}`
-  if (payload.ad.videoId) return `TikTok video ${payload.ad.videoId}`
+  const imageLabel = payload.ad.imageAssetIds.length
+    ? `cover image asset #${payload.ad.imageAssetIds.join(", ")}`
+    : payload.ad.imageIds.length
+      ? `cover image ${payload.ad.imageIds.join(", ")}`
+      : null
+  if (payload.ad.videoAssetId) return imageLabel ? `Uploaded video asset #${payload.ad.videoAssetId} + ${imageLabel}` : `Uploaded video asset #${payload.ad.videoAssetId}`
+  if (payload.ad.videoId) return imageLabel ? `TikTok video ${payload.ad.videoId} + ${imageLabel}` : `TikTok video ${payload.ad.videoId}`
   if (payload.ad.imageAssetIds.length) return `Uploaded image asset #${payload.ad.imageAssetIds.join(", ")}`
   if (payload.ad.imageIds.length) return `TikTok images ${payload.ad.imageIds.join(", ")}`
   return "No creative media"

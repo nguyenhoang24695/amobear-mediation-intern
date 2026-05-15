@@ -513,9 +513,11 @@ export function TikTokCampaignsContent() {
                 ) : rows.map((item: TikTokCampaignListItemDto) => (
                   <TableRow key={item.id}>
                     <TableCell className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{item.name || item.tikTokCampaignId}</div>
-                      <div className="font-mono text-xs text-slate-500">{item.tikTokCampaignId}</div>
-                      {item.createdFromRequestId ? <div className="text-xs text-cyan-700">Request #{item.createdFromRequestId}</div> : null}
+                      <Link href={`/tiktok-ads/campaigns/${item.id}`} className="block group">
+                        <div className="font-medium text-slate-900 group-hover:underline">{item.name || item.tikTokCampaignId}</div>
+                        <div className="font-mono text-xs text-slate-500">{item.tikTokCampaignId}</div>
+                        {item.createdFromRequestId ? <div className="text-xs text-cyan-700 mt-0.5">Request #{item.createdFromRequestId}</div> : null}
+                      </Link>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="text-sm text-slate-700">{item.tikTokAdAccountName || item.advertiserId}</div>

@@ -13,6 +13,7 @@ import type {
   TikTokAuthorizeUrlResponseDto,
   TikTokIntegrationTestRequestDto,
   TikTokIntegrationTestResultDto,
+  TikTokIdentityOptionDto,
   TikTokAdAccountDto,
   TikTokAdAccountFilterOptionsDto,
   TikTokAdAccountPageDto,
@@ -63,6 +64,8 @@ export const tiktokDashboardApi = {
     advertiserId?: string
     campaignId?: string
     search?: string
+    sortBy?: "spend" | "installs" | "cpi" | "roas"
+    sortDir?: "asc" | "desc"
     page?: number
     pageSize?: number
   }) => apiClient.get<TikTokCampaignPerformancePageDto>(`${DASHBOARD_PREFIX}/campaigns`, params),
@@ -127,6 +130,8 @@ export const tiktokReferenceApi = {
   getCreateCampaign: async () => apiClient.get<TikTokReferenceResponseDto>("/api/v1/tiktok-reference/create-campaign"),
   getTargetingOptions: async (adAccountId: number, params?: { objectiveType?: string; placements?: string; operatingSystem?: string; levelRange?: string }) =>
     apiClient.get<TikTokTargetingOptionsResponseDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/targeting-options`, params),
+  getIdentities: async (adAccountId: number) =>
+    apiClient.get<TikTokIdentityOptionDto[]>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/identities`),
 }
 
 export const tiktokCampaignRequestsApi = {
@@ -148,6 +153,7 @@ export const tiktokCampaignRequestsApi = {
     return apiClient.post<TikTokRequestAssetDto>(`${REQUESTS_PREFIX}/assets`, formData)
   },
   getAsset: async (id: number) => apiClient.get<TikTokRequestAssetDto>(`${REQUESTS_PREFIX}/assets/${id}`),
+  getAssetContentBlob: async (id: number) => apiClient.getBlob(`${REQUESTS_PREFIX}/assets/${id}/content`),
 }
 
 export const tiktokCampaignsApi = {

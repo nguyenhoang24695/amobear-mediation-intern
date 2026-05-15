@@ -20,7 +20,7 @@ interface SearchableFilterSelectProps {
   className?: string
 }
 
-function SearchableFilterSelect({
+export function SearchableFilterSelect({
   value,
   options,
   allLabel,

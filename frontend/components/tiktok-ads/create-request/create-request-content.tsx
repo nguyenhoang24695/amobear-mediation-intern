@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { tiktokCampaignRequestsApi, tiktokReferenceApi } from "@/lib/api/tiktok-ads"
 import { cn } from "@/lib/utils"
-import type { TikTokCampaignRequestDetailDto, TikTokReferenceResponseDto, TikTokRequestAssetDto, TikTokTargetingOptionsResponseDto, TikTokValidationResultDto } from "@/types/tiktok-ads"
+import type { TikTokCampaignRequestDetailDto, TikTokIdentityOptionDto, TikTokReferenceResponseDto, TikTokRequestAssetDto, TikTokTargetingOptionsResponseDto, TikTokValidationResultDto } from "@/types/tiktok-ads"
 import { AccountAppSection } from "./section-account-app"
 import { AdGroupAudienceSection } from "./section-adgroup-audience"
 import { AdGroupBudgetSection } from "./section-adgroup-budget"
@@ -43,6 +43,14 @@ interface Props {
   requestId?: number
 }
 
+const THUMBNAIL_RATIO_TOLERANCE = 0.01
+
+interface MediaDimensions {
+  width: number
+  height: number
+  ratio: number
+}
+
 function getSectionWrapperClass(target: TikTokRequestSectionTarget, highlightedSection: TikTokRequestSectionTarget | null): string {
   const base = "-m-2 rounded-2xl p-2 scroll-mt-24 transition-all duration-500"
   if (highlightedSection !== target) return base
@@ -51,6 +59,83 @@ function getSectionWrapperClass(target: TikTokRequestSectionTarget, highlightedS
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
+}
+
+function toMediaDimensions(width: number, height: number): MediaDimensions {
+  if (!width || !height) throw new Error("Unable to read media dimensions.")
+  return { width, height, ratio: width / height }
+}
+
+function readVideoDimensions(blob: Blob): Promise<MediaDimensions> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob)
+    const video = document.createElement("video")
+    const cleanup = () => URL.revokeObjectURL(url)
+    video.preload = "metadata"
+    video.onloadedmetadata = () => {
+      try {
+        resolve(toMediaDimensions(video.videoWidth, video.videoHeight))
+      } catch (error) {
+        reject(error)
+      } finally {
+        cleanup()
+      }
+    }
+    video.onerror = () => {
+      cleanup()
+      reject(new Error("Unable to read video dimensions."))
+    }
+    video.src = url
+    video.load()
+  })
+}
+
+function readImageDimensions(blob: Blob): Promise<MediaDimensions> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob)
+    const image = new window.Image()
+    const cleanup = () => URL.revokeObjectURL(url)
+    image.onload = () => {
+      try {
+        resolve(toMediaDimensions(image.naturalWidth, image.naturalHeight))
+      } catch (error) {
+        reject(error)
+      } finally {
+        cleanup()
+      }
+    }
+    image.onerror = () => {
+      cleanup()
+      reject(new Error("Unable to read image dimensions."))
+    }
+    image.src = url
+  })
+}
+
+function ratiosMatch(expectedRatio: number, actualRatio: number): boolean {
+  return Math.abs(expectedRatio - actualRatio) / expectedRatio <= THUMBNAIL_RATIO_TOLERANCE
+}
+
+function formatRatio(ratio: number): string {
+  return ratio.toFixed(3)
+}
+
+function greatestCommonDivisor(a: number, b: number): number {
+  let x = Math.abs(a)
+  let y = Math.abs(b)
+  while (y) {
+    const next = x % y
+    x = y
+    y = next
+  }
+  return x || 1
+}
+
+function formatAspectRatio(dimensions: MediaDimensions): string {
+  const width = Math.round(dimensions.width)
+  const height = Math.round(dimensions.height)
+  const divisor = greatestCommonDivisor(width, height)
+  return `${width / divisor}:${height / divisor}`
 }
 
 function getTargetingPlacementParam(form: TikTokRequestFormState) {
@@ -65,6 +150,16 @@ function getTargetingOperatingSystem(form: TikTokRequestFormState, selectedAppMa
   const raw = fromForm || selectedAppMapping?.appPlatform || ""
   const normalized = raw.trim().toUpperCase()
   return normalized === "ANDROID" || normalized === "IOS" ? normalized : undefined
+}
+
+function normalizeIdentityType(value?: string | null) {
+  const normalized = value?.trim().toUpperCase()
+  return !normalized || normalized === "CUSTOMIZED_USER" ? "AUTH_CODE" : normalized
+}
+
+function identityOptionKey(identityId?: string | null, identityType?: string | null, identityAuthorizedBcId?: string | null) {
+  if (!identityId?.trim()) return ""
+  return `${normalizeIdentityType(identityType)}:${identityId.trim()}:${identityAuthorizedBcId?.trim() ?? ""}`
 }
 
 function mergeWithDefault(payload: Partial<TikTokRequestFormState>, reference: TikTokReferenceResponseDto): TikTokRequestFormState {
@@ -99,13 +194,21 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   const [serverStatus, setServerStatus] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [mediaMode, setMediaMode] = useState<TikTokMediaMode>("upload")
-  const [uploadedAsset, setUploadedAsset] = useState<TikTokRequestAssetDto | null>(null)
+  const [uploadedVideoAsset, setUploadedVideoAsset] = useState<TikTokRequestAssetDto | null>(null)
+  const [uploadedImageAsset, setUploadedImageAsset] = useState<TikTokRequestAssetDto | null>(null)
+  const [videoRatio, setVideoRatio] = useState<number | null>(null)
+  const [videoRatioLabel, setVideoRatioLabel] = useState<string | null>(null)
+  const [creativeValidationMessage, setCreativeValidationMessage] = useState<string | null>(null)
+  const [identityOptions, setIdentityOptions] = useState<TikTokIdentityOptionDto[]>([])
+  const [identityLoading, setIdentityLoading] = useState(false)
+  const [identityLoadError, setIdentityLoadError] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [validating, setValidating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [targetingOptions, setTargetingOptions] = useState<TikTokTargetingOptionsResponseDto | null>(null)
   const [targetingLoading, setTargetingLoading] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
@@ -137,6 +240,45 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   useEffect(() => {
     let cancelled = false
 
+    async function hydrateUploadedAssets(payload: TikTokRequestFormState) {
+      setUploadedVideoAsset(null)
+      setUploadedImageAsset(null)
+      setVideoRatio(null)
+      setVideoRatioLabel(null)
+      setCreativeValidationMessage(null)
+
+      if (payload.ad.videoAssetId) {
+        try {
+          const videoAsset = await tiktokCampaignRequestsApi.getAsset(payload.ad.videoAssetId)
+          if (cancelled) return
+          setUploadedVideoAsset(videoAsset)
+
+          const { blob } = await tiktokCampaignRequestsApi.getAssetContentBlob(payload.ad.videoAssetId)
+          const dimensions = await readVideoDimensions(blob)
+          if (!cancelled) {
+            setVideoRatio(dimensions.ratio)
+            setVideoRatioLabel(formatAspectRatio(dimensions))
+          }
+        } catch (error) {
+          if (!cancelled) {
+            toast({ title: "Read video dimensions failed", description: errorMessage(error), variant: "destructive" })
+          }
+        }
+      }
+
+      const imageAssetId = payload.ad.imageAssetIds[0]
+      if (imageAssetId) {
+        try {
+          const imageAsset = await tiktokCampaignRequestsApi.getAsset(imageAssetId)
+          if (!cancelled) setUploadedImageAsset(imageAsset)
+        } catch (error) {
+          if (!cancelled) {
+            toast({ title: "Load cover image failed", description: errorMessage(error), variant: "destructive" })
+          }
+        }
+      }
+    }
+
     async function load() {
       setLoading(true)
       try {
@@ -153,6 +295,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
           setServerStatus(detail.status)
           setValidationErrors(detail.validationErrors ?? [])
           setMediaMode(getMediaMode(parsed))
+          await hydrateUploadedAssets(parsed)
         } else {
           const next = createDefaultTikTokRequestForm(ref)
           setForm(next)
@@ -160,6 +303,11 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
           setServerStatus("draft")
           setValidationErrors([])
           setMediaMode(getMediaMode(next))
+          setUploadedVideoAsset(null)
+          setUploadedImageAsset(null)
+          setVideoRatio(null)
+          setVideoRatioLabel(null)
+          setCreativeValidationMessage(null)
         }
 
         setIsDirty(false)
@@ -215,6 +363,36 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     void loadTargetingOptions()
     return () => { cancelled = true }
   }, [targetingAdAccountId, targetingObjectiveType, targetingOperatingSystem, targetingPlacements])
+
+  useEffect(() => {
+    let cancelled = false
+    const adAccountId = targetingAdAccountId
+    if (!adAccountId) {
+      setIdentityOptions([])
+      setIdentityLoading(false)
+      setIdentityLoadError(null)
+      return
+    }
+
+    async function loadIdentities() {
+      setIdentityLoading(true)
+      setIdentityLoadError(null)
+      try {
+        const identities = await tiktokReferenceApi.getIdentities(adAccountId)
+        if (!cancelled) setIdentityOptions(identities)
+      } catch (error) {
+        if (!cancelled) {
+          setIdentityOptions([])
+          setIdentityLoadError(errorMessage(error))
+        }
+      } finally {
+        if (!cancelled) setIdentityLoading(false)
+      }
+    }
+
+    void loadIdentities()
+    return () => { cancelled = true }
+  }, [targetingAdAccountId])
 
   const updateForm = useCallback((patch: Partial<TikTokRequestFormState>) => {
     setForm((current) => {
@@ -279,6 +457,17 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     return result
   }, [toast])
 
+  function getIdentitySelectionIssue() {
+    if (!form?.tikTokAdAccountRowId) return null
+    const selectedKey = identityOptionKey(form.ad.identityId, form.ad.identityType, form.ad.identityAuthorizedBcId)
+    if (identityLoading) return "TikTok identities are still loading for the selected ad account."
+    if (identityLoadError) return `Unable to load TikTok identities: ${identityLoadError}`
+    if (identityOptions.length === 0) return "Selected TikTok ad account has no usable identities."
+    if (!selectedKey) return "TikTok identity is required."
+    if (!identityOptions.some((option) => option.key === selectedKey)) return "Selected TikTok identity is no longer available. Choose a current identity."
+    return null
+  }
+
   async function handleSaveDraft() {
     setSaving(true)
     try {
@@ -294,6 +483,12 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   async function handleValidate() {
     setValidating(true)
     try {
+      const identityIssue = getIdentitySelectionIssue()
+      if (identityIssue) {
+        setValidationErrors([identityIssue])
+        toast({ title: "Validation failed", description: identityIssue, variant: "destructive" })
+        return
+      }
       const detail = !draftId || isDirty ? await persistDraft({ silent: true }) : null
       await runValidation(detail?.id ?? draftId!)
     } catch (error) {
@@ -309,6 +504,12 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       const detail = !draftId || isDirty ? await persistDraft({ silent: true }) : null
       const currentId = detail?.id ?? draftId
       if (!currentId) throw new Error("Draft is not saved")
+      const identityIssue = getIdentitySelectionIssue()
+      if (identityIssue) {
+        setValidationErrors([identityIssue])
+        toast({ title: "Submit request failed", description: identityIssue, variant: "destructive" })
+        return
+      }
       const validation = await runValidation(currentId)
       if (!validation.isValid) return
       const submitted = await tiktokCampaignRequestsApi.submit(currentId)
@@ -322,51 +523,87 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     }
   }
 
-  async function handleUpload(file: File | null) {
+  async function handleUpload(kind: "image" | "video", file: File | null) {
     if (!file || !form) return
-    setUploading(true)
+    if (kind === "image") {
+      if (!form.ad.videoAssetId) {
+        const message = "Video ads require a video before uploading the cover image."
+        setCreativeValidationMessage(message)
+        console.warn("TikTok creative validation:", message)
+        toast({ title: "Upload video first", description: message, variant: "destructive" })
+        return
+      }
+      if (videoRatio == null) {
+        const message = "Wait for the uploaded video dimensions to load, then upload the cover image."
+        setCreativeValidationMessage(message)
+        console.warn("TikTok creative validation:", message)
+        toast({ title: "Video dimensions unavailable", description: message, variant: "destructive" })
+        return
+      }
+    }
+
+    if (kind === "video") setUploadingVideo(true)
+    else setUploadingImage(true)
     try {
-      const isImage = form.ad.adFormat === "SINGLE_IMAGE"
-      const asset = await tiktokCampaignRequestsApi.uploadAsset(file, isImage ? "image" : "video")
-      setUploadedAsset(asset)
+      let nextVideoRatio = videoRatio
+      let nextVideoRatioLabel = videoRatioLabel
+      if (kind === "video") {
+        setCreativeValidationMessage(null)
+        const dimensions = await readVideoDimensions(file)
+        nextVideoRatio = dimensions.ratio
+        nextVideoRatioLabel = formatAspectRatio(dimensions)
+      } else if (videoRatio != null) {
+        const dimensions = await readImageDimensions(file)
+        if (!ratiosMatch(videoRatio, dimensions.ratio)) {
+          const message = `Cover image ratio ${formatAspectRatio(dimensions)} must match video ratio ${videoRatioLabel ?? formatRatio(videoRatio)}.`
+          setCreativeValidationMessage(message)
+          console.warn("TikTok creative validation:", message, { videoRatio, imageRatio: dimensions.ratio })
+          toast({ title: "Thumbnail ratio mismatch", description: message, variant: "destructive" })
+          return
+        }
+      }
+
+      const asset = await tiktokCampaignRequestsApi.uploadAsset(file, kind)
+      if (kind === "video") {
+        setUploadedVideoAsset(asset)
+        setUploadedImageAsset(null)
+        setVideoRatio(nextVideoRatio)
+        setVideoRatioLabel(nextVideoRatioLabel)
+      } else {
+        setUploadedImageAsset(asset)
+      }
+      setCreativeValidationMessage(null)
       updateForm({
         ad: {
           ...form.ad,
-          videoId: "",
-          imageIds: [],
-          videoAssetId: isImage ? undefined : asset.id,
-          imageAssetIds: isImage ? [asset.id] : [],
+          videoId: kind === "video" ? "" : form.ad.videoId,
+          imageIds: kind === "image" || kind === "video" ? [] : form.ad.imageIds,
+          videoAssetId: kind === "video" ? asset.id : form.ad.videoAssetId,
+          imageAssetIds: kind === "image" ? [asset.id] : (kind === "video" ? [] : form.ad.imageAssetIds),
         },
       })
       toast({ title: "Creative uploaded", description: asset.fileName })
     } catch (error) {
-      toast({ title: "Upload creative failed", description: errorMessage(error), variant: "destructive" })
+      const message = errorMessage(error)
+      setCreativeValidationMessage(message)
+      console.warn("TikTok creative upload failed:", message)
+      toast({ title: "Upload creative failed", description: message, variant: "destructive" })
     } finally {
-      setUploading(false)
+      if (kind === "video") setUploadingVideo(false)
+      else setUploadingImage(false)
     }
-  }
-
-  function handleAdFormatChange(format: string) {
-    if (!form) return
-    if (format === "CAROUSEL") return
-    setUploadedAsset(null)
-    setMediaMode("upload")
-    updateForm({
-      ad: {
-        ...form.ad,
-        adFormat: format,
-        videoId: "",
-        imageIds: [],
-        videoAssetId: undefined,
-        imageAssetIds: [],
-      },
-    })
   }
 
   function handleMediaModeChange(mode: TikTokMediaMode) {
     if (!form) return
     setMediaMode(mode)
-    if (mode === "existing") setUploadedAsset(null)
+    if (mode === "existing") {
+      setUploadedVideoAsset(null)
+      setUploadedImageAsset(null)
+      setVideoRatio(null)
+      setVideoRatioLabel(null)
+      setCreativeValidationMessage(null)
+    }
     updateForm({
       ad: mode === "existing"
         ? { ...form.ad, videoAssetId: undefined, imageAssetIds: [] }
@@ -388,7 +625,13 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   }
 
   const title = requestId ? "Edit TikTok Request" : "New TikTok Request"
-  const saveDisabled = saving || validating || submitting
+  const saveDisabled = saving || validating || submitting || uploadingVideo || uploadingImage
+  const videoCoverUploadBlocked = mediaMode === "upload" && (!form.ad.videoAssetId || videoRatio == null)
+  const videoCoverUploadBlockedReason = !form.ad.videoAssetId
+    ? "Upload video before uploading the cover image."
+    : "Video dimensions are loading before cover image validation."
+  const selectedIdentityKey = identityOptionKey(form.ad.identityId, form.ad.identityType, form.ad.identityAuthorizedBcId)
+  const identityConfirmed = Boolean(selectedIdentityKey && identityOptions.some((option) => option.key === selectedIdentityKey))
 
   return (
     <div className="space-y-5">
@@ -451,14 +694,21 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
           <div id={requestSectionIds.creative} className={cn(getSectionWrapperClass("creative", highlightedSection))}>
             <CreativeSection
               form={form}
-              reference={reference}
               mediaMode={mediaMode}
-              uploadedAsset={uploadedAsset}
-              uploading={uploading}
+              uploadedVideoAsset={uploadedVideoAsset}
+              uploadedImageAsset={uploadedImageAsset}
+              uploadingVideo={uploadingVideo}
+              uploadingImage={uploadingImage}
+              identityOptions={identityOptions}
+              identityLoading={identityLoading}
+              identityLoadError={identityLoadError}
+              identityConfirmed={identityConfirmed}
+              imageUploadDisabled={videoCoverUploadBlocked}
+              imageUploadDisabledReason={videoCoverUploadBlocked ? videoCoverUploadBlockedReason : undefined}
+              creativeValidationMessage={creativeValidationMessage}
               onChange={updateForm}
-              onAdFormatChange={handleAdFormatChange}
               onMediaModeChange={handleMediaModeChange}
-              onUpload={(file) => void handleUpload(file)}
+              onUpload={(kind, file) => void handleUpload(kind, file)}
             />
           </div>
           <div id={requestSectionIds.ad} className={cn(getSectionWrapperClass("ad", highlightedSection))}>

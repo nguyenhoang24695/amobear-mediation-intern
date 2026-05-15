@@ -1,29 +1,38 @@
 "use client"
 
-import { useEffect } from "react"
-import { ImageIcon, Loader2, Play, Upload } from "lucide-react"
+import { Loader2, Play, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getTikTokRequestAssetPreviewSource } from "@/lib/tiktok-ads/media-preview"
-import type { TikTokReferenceResponseDto, TikTokRequestAssetDto } from "@/types/tiktok-ads"
+import type { TikTokIdentityOptionDto, TikTokRequestAssetDto } from "@/types/tiktok-ads"
 import { ProtectedMediaImage, ProtectedMediaVideo } from "../shared/protected-media"
+import { SearchableSelect } from "./searchable-select"
 import { SectionShell } from "./section-shell"
 import type { TikTokMediaMode, TikTokRequestFormState } from "./types"
-import { hasCreativeMedia, optionLabel } from "./types"
+import { hasCreativeMedia } from "./types"
+
+type TikTokUploadKind = "image" | "video"
 
 interface Props {
   form: TikTokRequestFormState
-  reference: TikTokReferenceResponseDto
   mediaMode: TikTokMediaMode
-  uploadedAsset: TikTokRequestAssetDto | null
-  uploading: boolean
+  uploadedVideoAsset: TikTokRequestAssetDto | null
+  uploadedImageAsset: TikTokRequestAssetDto | null
+  uploadingVideo: boolean
+  uploadingImage: boolean
+  identityOptions: TikTokIdentityOptionDto[]
+  identityLoading: boolean
+  identityLoadError?: string | null
+  identityConfirmed: boolean
+  imageUploadDisabled?: boolean
+  imageUploadDisabledReason?: string
+  creativeValidationMessage?: string | null
   onChange: (patch: Partial<TikTokRequestFormState>) => void
-  onAdFormatChange: (format: string) => void
   onMediaModeChange: (mode: TikTokMediaMode) => void
-  onUpload: (file: File | null) => void
+  onUpload: (kind: TikTokUploadKind, file: File | null) => void
 }
 
 function splitCsv(value: string) {
@@ -35,46 +44,93 @@ function normalizeIdentityType(value?: string | null) {
   return !normalized || normalized === "CUSTOMIZED_USER" ? "AUTH_CODE" : normalized
 }
 
-function isDeprecatedCustomIdentity(value?: string | null) {
-  return value?.trim().toUpperCase() === "CUSTOMIZED_USER"
-}
-
-function assetLabel(asset: TikTokRequestAssetDto | null) {
-  if (!asset) return "No uploaded asset"
+function assetLabel(asset: TikTokRequestAssetDto | null, fallback?: string) {
+  if (!asset) return fallback ?? "No uploaded asset"
   const sizeMb = asset.sizeBytes > 0 ? `${(asset.sizeBytes / 1024 / 1024).toFixed(2)} MB` : "unknown size"
-  return `${asset.fileName} · ${sizeMb}`
+  return `${asset.fileName} - ${sizeMb}`
 }
 
-export function CreativeSection({ form, reference, mediaMode, uploadedAsset, uploading, onChange, onAdFormatChange, onMediaModeChange, onUpload }: Props) {
-  const isImage = form.ad.adFormat === "SINGLE_IMAGE"
-  const isVideo = form.ad.adFormat === "SINGLE_VIDEO"
-  const allowedIdentityTypes = reference.identityTypes.filter((option) => !isDeprecatedCustomIdentity(option.key))
-  const identityTypes = allowedIdentityTypes.length > 0
-    ? allowedIdentityTypes
-    : [{ key: "AUTH_CODE", label: "Authorized TikTok identity" }]
-  const normalizedIdentityType = normalizeIdentityType(form.ad.identityType)
-  const selectedIdentityType = identityTypes.some((option) => option.key === form.ad.identityType)
-    ? form.ad.identityType
-    : identityTypes.find((option) => option.key === normalizedIdentityType)?.key ?? identityTypes[0]?.key ?? "AUTH_CODE"
+function identityOptionKey(identityId?: string | null, identityType?: string | null, identityAuthorizedBcId?: string | null) {
+  if (!identityId?.trim()) return ""
+  return `${normalizeIdentityType(identityType)}:${identityId.trim()}:${identityAuthorizedBcId?.trim() ?? ""}`
+}
+
+export function CreativeSection({
+  form,
+  mediaMode,
+  uploadedVideoAsset,
+  uploadedImageAsset,
+  uploadingVideo,
+  uploadingImage,
+  identityOptions,
+  identityLoading,
+  identityLoadError,
+  identityConfirmed,
+  imageUploadDisabled = false,
+  imageUploadDisabledReason,
+  creativeValidationMessage,
+  onChange,
+  onMediaModeChange,
+  onUpload,
+}: Props) {
   const ready = hasCreativeMedia(form)
-  const uploadedPreview = getTikTokRequestAssetPreviewSource(uploadedAsset)
+  const uploadedVideoPreview = getTikTokRequestAssetPreviewSource(uploadedVideoAsset)
+  const uploadedImagePreview = getTikTokRequestAssetPreviewSource(uploadedImageAsset)
+  const videoAssetFallback = form.ad.videoAssetId ? `Uploaded video asset #${form.ad.videoAssetId}` : undefined
+  const imageAssetFallback = form.ad.imageAssetIds.length ? `Uploaded image asset #${form.ad.imageAssetIds.join(", ")}` : undefined
+  const selectedIdentityKey = identityOptionKey(form.ad.identityId, form.ad.identityType, form.ad.identityAuthorizedBcId)
+  const selectedIdentityKnown = identityOptions.some((option) => option.key === selectedIdentityKey)
+  const identityEmptyMessage = form.tikTokAdAccountRowId
+    ? identityLoadError || "No usable identities found for this ad account."
+    : "Select an ad account first."
+  const identitySelectOptions = selectedIdentityKey && !selectedIdentityKnown
+    ? [
+        {
+          key: selectedIdentityKey,
+          label: `${form.ad.identityId} (${normalizeIdentityType(form.ad.identityType)}, previously selected)`,
+          identityId: form.ad.identityId ?? "",
+          identityType: normalizeIdentityType(form.ad.identityType),
+          identityAuthorizedBcId: form.ad.identityAuthorizedBcId,
+          displayName: null,
+        } satisfies TikTokIdentityOptionDto,
+        ...identityOptions,
+      ]
+    : identityOptions
   const previewFallback = (
     <div className="flex flex-col items-center gap-2 text-slate-400">
-      {isImage ? <ImageIcon className="h-10 w-10" /> : <Play className="h-10 w-10" />}
-      <p className="max-w-[180px] truncate text-xs">{ready ? (isImage ? form.ad.imageIds[0] : form.ad.videoId) : "Media preview"}</p>
+      <Play className="h-10 w-10" />
+      <p className="max-w-[180px] truncate text-xs">{ready ? form.ad.videoId || videoAssetFallback : "Media preview"}</p>
     </div>
   )
 
-  useEffect(() => {
-    if (form.ad.identityType === selectedIdentityType) return
-    onChange({
-      ad: {
-        ...form.ad,
-        identityType: selectedIdentityType,
-        identityId: isDeprecatedCustomIdentity(form.ad.identityType) ? undefined : form.ad.identityId,
-      },
-    })
-  }, [form.ad, normalizedIdentityType, onChange, selectedIdentityType])
+  const uploadBox = (kind: TikTokUploadKind, label: string, asset: TikTokRequestAssetDto | null, fallback: string | undefined, uploading: boolean, disabled = false, disabledReason?: string) => (
+    <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <Label className="text-sm font-semibold">{label}</Label>
+          <p className="mt-1 text-xs text-slate-500">{assetLabel(asset, fallback)}</p>
+          {disabled && disabledReason ? <p className="mt-1 text-xs text-amber-700">{disabledReason}</p> : null}
+        </div>
+        <Badge variant="outline">{kind}</Badge>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Input
+          className="max-w-md"
+          type="file"
+          accept={kind === "image" ? "image/png,image/jpeg,image/webp" : "video/mp4,video/quicktime,video/x-m4v"}
+          disabled={uploading || disabled}
+          onChange={(event) => {
+            onUpload(kind, event.target.files?.[0] ?? null)
+            event.currentTarget.value = ""
+          }}
+        />
+        <Button type="button" variant="outline" disabled={uploading || disabled}>
+          {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+          {uploading ? "Uploading" : "Stored asset"}
+        </Button>
+      </div>
+    </div>
+  )
 
   return (
     <SectionShell
@@ -88,18 +144,9 @@ export function CreativeSection({ form, reference, mediaMode, uploadedAsset, upl
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Ad format</Label>
-              <Select value={form.ad.adFormat} onValueChange={onAdFormatChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reference.adFormats.map((option) => (
-                    <SelectItem key={option.key} value={option.key} disabled={option.key === "CAROUSEL"}>
-                      {optionLabel(option)}{option.key === "CAROUSEL" ? " (soon)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex h-10 items-center rounded-md border bg-slate-50 px-3 text-sm font-medium text-slate-700">
+                Single video
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -116,55 +163,81 @@ export function CreativeSection({ form, reference, mediaMode, uploadedAsset, upl
             </div>
 
             <div className="space-y-2">
-              <Label>Identity type</Label>
-              <Select value={selectedIdentityType} onValueChange={(value) => onChange({ ad: { ...form.ad, identityType: value } })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {identityTypes.map((option) => (
-                    <SelectItem key={option.key} value={option.key}>{optionLabel(option)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>TikTok identity</Label>
+              <SearchableSelect
+                value={selectedIdentityKey}
+                options={identitySelectOptions}
+                placeholder={identityLoading ? "Loading identities..." : "Select identity..."}
+                searchPlaceholder="Search by identity name, ID, type, BC ID..."
+                emptyMessage={identityEmptyMessage}
+                disabled={!form.tikTokAdAccountRowId || identityLoading || identityOptions.length === 0}
+                onValueChange={(value) => {
+                  const identity = identitySelectOptions.find((option) => option.key === value)
+                  if (!identity) return
+                  onChange({
+                    ad: {
+                      ...form.ad,
+                      identityId: identity.identityId,
+                      identityType: identity.identityType,
+                      identityAuthorizedBcId: identity.identityAuthorizedBcId ?? undefined,
+                    },
+                  })
+                }}
+                getValue={(option) => option.key}
+                getSearchText={(option) => `${option.label} ${option.identityId} ${option.identityType} ${option.identityAuthorizedBcId ?? ""}`}
+                renderValue={(option) => (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium text-slate-900">{option.displayName || option.identityId}</span>
+                    <span className="truncate font-mono text-xs text-slate-500">{option.identityType}</span>
+                  </span>
+                )}
+                renderOption={(option) => (
+                  <div className="min-w-0 py-0.5">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{option.identityType}</Badge>
+                      {option.identityAuthorizedBcId ? <span className="truncate font-mono text-xs text-slate-500">BC {option.identityAuthorizedBcId}</span> : null}
+                    </div>
+                    <div className="truncate text-sm font-medium text-slate-900">{option.displayName || option.identityId}</div>
+                    <div className="truncate font-mono text-xs text-slate-400">{option.identityId}</div>
+                  </div>
+                )}
+              />
+              {form.tikTokAdAccountRowId && !identityLoading && identityOptions.length === 0 ? (
+                <p className="text-xs text-amber-700">{identityEmptyMessage}</p>
+              ) : selectedIdentityKey && !identityConfirmed ? (
+                <p className="text-xs text-amber-700">This identity is not available from TikTok anymore. Choose a current identity before submit.</p>
+              ) : null}
             </div>
           </div>
 
           {mediaMode === "upload" ? (
-            <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <Label className="text-sm font-semibold">{isImage ? "Upload image" : "Upload video"}</Label>
-                  <p className="mt-1 text-xs text-slate-500">{assetLabel(uploadedAsset)}</p>
+            <div className="space-y-3">
+              {uploadBox("video", "Upload video", uploadedVideoAsset, videoAssetFallback, uploadingVideo)}
+              {uploadBox("image", "Upload cover image", uploadedImageAsset, imageAssetFallback, uploadingImage, imageUploadDisabled, imageUploadDisabledReason)}
+              {creativeValidationMessage ? (
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  {creativeValidationMessage}
                 </div>
-                <Badge variant="outline">{isImage ? "image" : "video"}</Badge>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Input
-                  className="max-w-md"
-                  type="file"
-                  accept={isImage ? "image/png,image/jpeg,image/webp" : "video/mp4,video/quicktime,video/x-m4v"}
-                  disabled={uploading}
-                  onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
-                />
-                <Button type="button" variant="outline" disabled={uploading}>
-                  {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                  {uploading ? "Uploading" : "Stored asset"}
-                </Button>
-              </div>
+              ) : null}
             </div>
           ) : (
-            <div className="space-y-2">
-              <Label>{isVideo ? "TikTok video_id" : "TikTok image_ids"}</Label>
-              <Input
-                value={isVideo ? form.ad.videoId ?? "" : form.ad.imageIds.join(", ")}
-                onChange={(event) => onChange({
-                  ad: isVideo
-                    ? { ...form.ad, videoId: event.target.value.trim(), videoAssetId: undefined, imageIds: [], imageAssetIds: [] }
-                    : { ...form.ad, imageIds: splitCsv(event.target.value), imageAssetIds: [], videoId: "", videoAssetId: undefined },
-                })}
-                placeholder={isVideo ? "v10033..." : "ad-site-i18n-sg/..., ad-site-i18n-sg/..."}
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>TikTok video_id</Label>
+                <Input
+                  value={form.ad.videoId ?? ""}
+                  onChange={(event) => onChange({ ad: { ...form.ad, videoId: event.target.value.trim(), videoAssetId: undefined } })}
+                  placeholder="v10033..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>TikTok cover image_ids</Label>
+                <Input
+                  value={form.ad.imageIds.join(", ")}
+                  onChange={(event) => onChange({ ad: { ...form.ad, imageIds: splitCsv(event.target.value), imageAssetIds: [] } })}
+                  placeholder="ad-site-i18n-sg/..."
+                />
+              </div>
             </div>
           )}
 
@@ -176,10 +249,6 @@ export function CreativeSection({ form, reference, mediaMode, uploadedAsset, upl
             <div className="space-y-2">
               <Label>App name</Label>
               <Input value={form.ad.appName ?? ""} onChange={(event) => onChange({ ad: { ...form.ad, appName: event.target.value } })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Identity ID</Label>
-              <Input value={form.ad.identityId ?? ""} onChange={(event) => onChange({ ad: { ...form.ad, identityId: event.target.value } })} />
             </div>
             <div className="space-y-2">
               <Label>Avatar icon web URI</Label>
@@ -198,10 +267,10 @@ export function CreativeSection({ form, reference, mediaMode, uploadedAsset, upl
               </div>
             </div>
             <div className="flex aspect-[9/16] items-center justify-center bg-slate-100">
-              {uploadedPreview.url && mediaMode === "upload" && isImage ? (
-                <ProtectedMediaImage alt={uploadedAsset?.fileName ?? "Uploaded TikTok image"} className="h-full w-full object-cover" fallback={previewFallback} requiresAuth={uploadedPreview.requiresAuth} src={uploadedPreview.url} />
-              ) : uploadedPreview.url && mediaMode === "upload" && isVideo ? (
-                <ProtectedMediaVideo className="h-full w-full object-cover" controls fallback={previewFallback} requiresAuth={uploadedPreview.requiresAuth} src={uploadedPreview.url} />
+              {uploadedVideoPreview.url && mediaMode === "upload" ? (
+                <ProtectedMediaVideo className="h-full w-full object-cover" controls fallback={previewFallback} requiresAuth={uploadedVideoPreview.requiresAuth} src={uploadedVideoPreview.url} />
+              ) : uploadedImagePreview.url && mediaMode === "upload" ? (
+                <ProtectedMediaImage alt={uploadedImageAsset?.fileName ?? "Uploaded TikTok image"} className="h-full w-full object-cover" fallback={previewFallback} requiresAuth={uploadedImagePreview.requiresAuth} src={uploadedImagePreview.url} />
               ) : (
                 previewFallback
               )}
