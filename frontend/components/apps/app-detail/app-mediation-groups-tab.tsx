@@ -45,6 +45,7 @@ import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
 import type { MediationGroup } from "@/types/api"
 import { DEPRECATED_METRICS_MAX_YMD } from "@/lib/constants/deprecated-app-metrics"
+import { CountryFlagTooltipCell } from "@/components/shared/country-display"
 
 // Network logos/images - map ad source IDs to image URLs or emoji
 const networkLogos: Record<string, { image?: string; emoji?: string; color: string }> = {
@@ -112,41 +113,6 @@ const networkColors: Record<string, string> = {
   vungle: "bg-blue-500",
   meta: "bg-blue-600",
   facebook: "bg-blue-600",
-}
-
-// Country flags
-const countryFlags: Record<string, string> = {
-  US: "🇺🇸",
-  UK: "🇬🇧",
-  GB: "🇬🇧",
-  DE: "🇩🇪",
-  FR: "🇫🇷",
-  JP: "🇯🇵",
-  CA: "🇨🇦",
-  AU: "🇦🇺",
-  IN: "🇮🇳",
-  CN: "🇨🇳",
-  KR: "🇰🇷",
-  BR: "🇧🇷",
-  MX: "🇲🇽",
-  ES: "🇪🇸",
-  IT: "🇮🇹",
-  NL: "🇳🇱",
-  SE: "🇸🇪",
-  NO: "🇳🇴",
-  DK: "🇩🇰",
-  FI: "🇫🇮",
-  PL: "🇵🇱",
-  RU: "🇷🇺",
-  TR: "🇹🇷",
-  SA: "🇸🇦",
-  AE: "🇦🇪",
-  SG: "🇸🇬",
-  MY: "🇲🇾",
-  TH: "🇹🇭",
-  ID: "🇮🇩",
-  PH: "🇵🇭",
-  VN: "🇻🇳",
 }
 
 const formatIcons: Record<string, React.ElementType> = {
@@ -611,15 +577,13 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                               Global
                             </div>
                           ) : countries.length > 0 ? (
-                            <div className="flex items-center gap-0.5">
-                              {countries.slice(0, 3).map((country, idx) => (
-                                <span key={idx} className="text-base" title={country}>
-                                  {countryFlags[country] || country}
-                                </span>
+                            <div className="flex flex-wrap items-center gap-0.5">
+                              {countries.slice(0, 8).map((countryCode, idx) => (
+                                <CountryFlagTooltipCell key={`${countryCode}-${idx}`} code={countryCode} />
                               ))}
-                              {countries.length > 3 && (
-                                <span className="text-xs text-slate-500 ml-1">+{countries.length - 3}</span>
-                              )}
+                              {countries.length > 8 ? (
+                                <span className="ml-0.5 text-xs text-slate-500">+{countries.length - 8}</span>
+                              ) : null}
                             </div>
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
