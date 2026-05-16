@@ -20,7 +20,8 @@ import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import type { AppMediationBronzeAdUnitRow, AppMediationBronzeAdUnitDetailRow } from "@/types/api"
-import { iso3166Alpha2ToFlagEmoji } from "@/lib/utils/country-flag"
+import { CountryFilterOption, CountryFlagTooltipCell } from "@/components/shared/country-display"
+import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
 
 function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -174,7 +175,7 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
             className="w-[160px]"
           />
         </div>
-        <div className="flex flex-row items-center gap-2 min-w-[180px]">
+        <div className="flex min-w-[220px] flex-row items-center gap-2 lg:min-w-[260px]">
           <Label htmlFor="bronze-adu-country" className="shrink-0 text-sm">
             Country
           </Label>
@@ -183,14 +184,14 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
             onValueChange={(v) => setCountry(v === "__all__" ? "" : v)}
             disabled={loadingOpts}
           >
-            <SelectTrigger id="bronze-adu-country" className="flex-1 min-w-0">
+            <SelectTrigger id="bronze-adu-country" className="min-w-0 flex-1">
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Tất cả</SelectItem>
               {(filterOpts?.countries ?? []).map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+                <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
+                  <CountryFilterOption code={c} />
                 </SelectItem>
               ))}
             </SelectContent>
@@ -327,28 +328,6 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
         ) : null}
       </Card>
     </div>
-  )
-}
-
-function BronzeDetailCountryCell({ code }: { code?: string | null }) {
-  const raw = code?.trim()
-  if (!raw) return <span className="text-slate-500">—</span>
-  const flag = iso3166Alpha2ToFlagEmoji(raw)
-  if (flag) {
-    return (
-      <span
-        className="inline-flex items-center justify-center text-base leading-none tabular-nums"
-        title={raw}
-        aria-label={`Quốc gia ${raw}`}
-      >
-        {flag}
-      </span>
-    )
-  }
-  return (
-    <span className="text-slate-600 font-mono text-[11px]" title={raw}>
-      {raw}
-    </span>
   )
 }
 
@@ -541,7 +520,7 @@ function MediationAdUnitRow({
                           <td className="px-2 py-1.5 text-center text-slate-600 tabular-nums w-10">{idx + 1}</td>
                           <td className="px-2 py-1.5 whitespace-nowrap text-slate-800">{ymdFromDetailDate(r.date)}</td>
                           <td className="px-2 py-1.5 text-center w-10">
-                            <BronzeDetailCountryCell code={r.country} />
+                            <CountryFlagTooltipCell code={r.country} />
                           </td>
                           <td className="px-2 py-1.5 text-slate-700 max-w-[120px] truncate" title={r.appVersionName}>
                             {r.appVersionName || "—"}
