@@ -73,6 +73,116 @@ export interface AppHourlyPerformanceResponseDto {
   lastUpdatedUtc: string
 }
 
+/** GET .../mediation-bronze/* — dữ liệu từ StarRocks bronze.mediation_table. */
+export interface AppMediationBronzeFilterOptionsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  countries: string[]
+  appVersionNames: string[]
+}
+
+export interface AppMediationBronzeAdUnitRow {
+  id: number
+  name?: string
+  adUnitId: string
+  adFormat?: string
+  displayName?: string
+  publisherId?: string
+  createdAt?: string
+  updatedAt?: string
+  lastSyncedAt?: string
+  revenue: number
+  impressions: number
+  ecpm: number
+  fillRate: number
+  adRequests: number
+  matchedRequests: number
+  status?: string
+}
+
+export interface AppMediationBronzeAdUnitsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  country?: string | null
+  appVersion?: string | null
+  waterfallOnly?: boolean
+  search?: string | null
+  page?: number
+  pageSize?: number
+  totalCount?: number
+  message?: string
+  adUnits: AppMediationBronzeAdUnitRow[]
+}
+
+/** Một dòng đồng bộ StarRocks (bronze.mediation_table), không rollup. */
+export interface AppMediationBronzeAdUnitDetailRow {
+  hashKey: string
+  date: string
+  adUnitName?: string
+  adUnitId: string
+  appVersionName?: string
+  country?: string
+  adSourceName?: string
+  adSourceId?: string
+  adSourceInstanceId?: string
+  adSourceInstanceName?: string
+  mediationGroupName?: string
+  mediationGroupId?: string
+  format?: string
+  platform?: string
+  adRequests: number
+  clicks: number
+  estimatedEarnings: number
+  impressions: number
+  impressionCtr?: number | null
+  matchedRequests: number
+  matchRate?: number | null
+  showRate?: number | null
+  observedEcpm?: number | null
+}
+
+export interface AppMediationBronzeAdUnitDetailRowsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  adUnitId: string
+  country?: string | null
+  appVersion?: string | null
+  waterfallOnly?: boolean
+  limit?: number
+  truncated?: boolean
+  message?: string
+  rows: AppMediationBronzeAdUnitDetailRow[]
+}
+
+export interface AppMediationBronzeMediationGroupRow {
+  mediationGroupId: string
+  displayName: string
+  revenue: number
+  impressions: number
+  ecpm: number
+  fillRate: number
+  countries: string[]
+  adRequests: number
+  matchedRequests: number
+}
+
+export interface AppMediationBronzeMediationGroupsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  country?: string | null
+  appVersion?: string | null
+  search?: string | null
+  page?: number
+  pageSize?: number
+  totalCount?: number
+  message?: string
+  mediationGroups: AppMediationBronzeMediationGroupRow[]
+}
+
 export interface AdUnit {
   id: number
   name: string
@@ -460,8 +570,24 @@ export interface HangfireJobSchedule {
   timeZoneId: string
   enabled: boolean
   sortOrder: number
+  /** JSON: Run now — useAsyncRun + queryParams (key, inputType, isRequired). */
+  manualRunJson?: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** Parsed from <see cref="HangfireJobSchedule.ManualRunJson" />. */
+export type ManualRunInputType = "string" | "boolean" | "date" | "integer" | "datetime"
+
+export interface ManualRunQueryParamField {
+  key: string
+  inputType: ManualRunInputType
+  isRequired: boolean
+}
+
+export interface ManualRunConfig {
+  useAsyncRun?: boolean
+  queryParams?: ManualRunQueryParamField[]
 }
 
 export interface JobScheduleUpdateRequest {
@@ -471,6 +597,9 @@ export interface JobScheduleUpdateRequest {
   displayName?: string
   jobTypeName?: string
   jobMethodName?: string
+  /** Khi true, ghi đè manualRunJson (null/undefined = xóa cấu hình Run now). */
+  setManualRunJson?: boolean
+  manualRunJson?: string | null
 }
 
 // Data Sources (Nexus observability)

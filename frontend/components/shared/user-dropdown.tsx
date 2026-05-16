@@ -242,7 +242,7 @@ export function UserDropdown() {
             <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
               <LogOut className="w-6 h-6 text-red-600" />
             </div>
-            <DialogTitle>Log out of Mediation Pro?</DialogTitle>
+            <DialogTitle>Log out of Nexus?</DialogTitle>
             <DialogDescription>You will need to sign in again to access your account.</DialogDescription>
           </DialogHeader>
 

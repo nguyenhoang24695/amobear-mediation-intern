@@ -207,7 +207,8 @@ export async function refreshAuthSession(baseUrl: string = API_BASE_URL): Promis
   if (!refreshSessionPromise) {
     refreshSessionPromise = (async () => {
       try {
-        const refreshRes = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh`, {
+        const refreshUrl = `${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh`
+        const refreshRes = await fetch(refreshUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -228,7 +229,15 @@ export async function refreshAuthSession(baseUrl: string = API_BASE_URL): Promis
           return refreshData.data.accessToken as string
         }
       } catch (e) {
-        console.error("Refresh token failed", e)
+        const msg = e instanceof Error ? e.message : String(e)
+        if (msg === "Failed to fetch" || (e instanceof TypeError && msg.includes("fetch"))) {
+          console.error(
+            "Refresh token: không kết nối được API. Kiểm tra: (1) backend đang chạy, (2) NEXT_PUBLIC_API_URL đúng với URL thực tế của API, (3) CORS — thêm origin trình duyệt (vd. http://127.0.0.1:3000) vào Cors:AllowedOrigins hoặc CORS_ALLOWED_ORIGINS, (4) trang HTTPS không gọi API HTTP khác host (mixed content).",
+            { attemptedUrl: `${baseUrl.replace(/\/$/, "")}/api/v1/auth/refresh` },
+          )
+        } else {
+          console.error("Refresh token failed", e)
+        }
       }
 
       return null
@@ -268,16 +277,26 @@ export function hasScreenFunction(screenKey: string, functionKey: string): boole
 // --- App Detail tab permissions ------------------------------------------------
 //
 // Quy uoc:
-//   - "view-details"          : shortcut "all-in-one". Co quyen nay = thay du 9 tab.
-//   - "view-details:<tab>"    : quyen per-tab doc lap (peer cua view-details).
-// Helper duoi day encapsulate logic OR (parent fallback + sub-perm) de tranh lap
-// `hasScreenFunction(...) || hasScreenFunction(...)` o 9 cho.
+//   - "view-details"          : shortcut "all-in-one".
+//   - "view-details:<suffix>" : quyen per-tab. Tab PG (Ad Units / Mediation Groups) dung suffix *-deprecated;
+//     tab Bronze (ad-units-mediation / mediation-groups-mediation) dung view-details:ad-units / :mediation-groups.
+
+/** Function keys on screen s-apps — giu sync voi PermissionScreensConstant backend. */
+export const APPS_VIEW_DETAILS_FUNCTIONS = {
+  viewDetails: "view-details",
+  adUnitsTab: "view-details:ad-units",
+  adUnitsTabDeprecated: "view-details:ad-units-deprecated",
+  mediationGroupsTab: "view-details:mediation-groups",
+  mediationGroupsTabDeprecated: "view-details:mediation-groups-deprecated",
+} as const
 
 export const APP_DETAIL_TABS = [
   "overview",
   "ad-units",
+  "ad-units-mediation",
   "waterfall-ad-units",
   "mediation-groups",
+  "mediation-groups-mediation",
   "performance",
   "ai-insight",
   "insight-config",
@@ -289,24 +308,44 @@ export type AppDetailTab = (typeof APP_DETAIL_TABS)[number]
 const SCREEN_APPS_KEY = "s-apps"
 const FN_VIEW_DETAILS_KEY = "view-details"
 
+function appDetailTabPermissionSuffix(tab: AppDetailTab): string {
+  switch (tab) {
+    case "ad-units":
+      return "ad-units-deprecated"
+    case "mediation-groups":
+      return "mediation-groups-deprecated"
+    case "ad-units-mediation":
+      return "ad-units"
+    case "mediation-groups-mediation":
+      return "mediation-groups"
+    default:
+      return tab
+  }
+}
+
+function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
+  const fnKey = `${FN_VIEW_DETAILS_KEY}:${suffix}`
+  return (
+    hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.viewDetails) ||
+    hasScreenFunction(SCREEN_APPS_KEY, fnKey)
+  )
+}
+
 /**
  * Check user co quyen xem 1 tab cu the trong App Detail.
- * Co "view-details" => full 9 tab. Khong thi check "view-details:<tab>".
+ * Co "view-details" => full tab. Khong thi check "view-details:<suffix>" (xem appDetailTabPermissionSuffix).
  */
 export function hasAppDetailTab(tab: AppDetailTab): boolean {
-  return (
-    hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY) ||
-    hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${tab}`)
-  )
+  return hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(tab))
 }
 
 /**
  * Co vao duoc trang App Detail khong? (it nhat 1 tab duoc phep)
  */
 export function canEnterAppDetail(): boolean {
-  if (hasScreenFunction(SCREEN_APPS_KEY, FN_VIEW_DETAILS_KEY)) return true
+  if (hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.viewDetails)) return true
   return APP_DETAIL_TABS.some((t) =>
-    hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${t}`),
+    hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(t)),
   )
 }
 

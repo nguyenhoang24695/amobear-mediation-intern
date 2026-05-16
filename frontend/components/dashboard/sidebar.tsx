@@ -359,7 +359,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <Logo size={32} className="rounded-lg overflow-hidden" />
 
 
-            {!collapsed && <span className="font-semibold text-slate-900">Mediation Pro</span>}
+            {!collapsed && <span className="font-semibold text-slate-900">Nexus</span>}
           </div>
           <Button
             variant="ghost"
@@ -589,7 +589,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
               <LogOut className="w-6 h-6 text-red-600" />
             </div>
-            <DialogTitle>Log out of Mediation Pro?</DialogTitle>
+            <DialogTitle>Log out of Nexus?</DialogTitle>
             <DialogDescription>You will need to sign in again to access your account.</DialogDescription>
           </DialogHeader>
 

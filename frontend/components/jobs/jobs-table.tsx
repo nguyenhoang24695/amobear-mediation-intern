@@ -39,6 +39,7 @@ import {
   ArrowDown,
   Search,
   Loader2,
+  Settings2,
 } from "lucide-react"
 import { Pagination } from "@/components/shared/pagination"
 import type { Job } from "./job-management-content"
@@ -50,6 +51,7 @@ interface JobsTableProps {
   sortBy: string
   onEdit: (job: Job) => void
   onRunNow: (job: Job) => void
+  onManualRunSettings?: (job: Job) => void
   onToggle: (jobId: string) => void
   onViewDetails: (job: Job) => void
   onClearFilters: () => void
@@ -69,6 +71,7 @@ export function JobsTable({
   sortBy,
   onEdit,
   onRunNow,
+  onManualRunSettings,
   onToggle,
   onViewDetails,
   onClearFilters,
@@ -466,6 +469,14 @@ export function JobsTable({
                               Run Now
                             </DropdownMenuItem>
                           )}
+                          {canEdit && onManualRunSettings && (
+                            <DropdownMenuItem
+                              onClick={() => onManualRunSettings(job)}
+                            >
+                              <Settings2 className="w-4 h-4 mr-2" />
+                              Param Setting
+                            </DropdownMenuItem>
+                          )}
                           {canEnableDisable && (
                             <DropdownMenuItem onClick={() => onToggle(job.jobId)}>
                               {job.enabled ? (
@@ -558,6 +569,12 @@ export function JobsTable({
                         Run Now
                       </DropdownMenuItem>
                     )}
+                    {canEdit && onManualRunSettings && (
+                      <DropdownMenuItem onClick={() => onManualRunSettings(job)}>
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Param Setting
+                      </DropdownMenuItem>
+                    )}
                     {canEnableDisable && (
                       <DropdownMenuItem onClick={() => onToggle(job.jobId)}>
                         {job.enabled ? (
@@ -574,7 +591,7 @@ export function JobsTable({
                       </DropdownMenuItem>
                     )}
                     {(canEdit || canRun || canEnableDisable) && <DropdownMenuSeparator />}
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewDetails(job)}>
                       <Info className="w-4 h-4 mr-2" />
                       View Details
                     </DropdownMenuItem>

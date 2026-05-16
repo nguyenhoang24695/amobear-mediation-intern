@@ -48,6 +48,10 @@ import type {
     AppDailyInsight,
     AppHourlyPerformanceResponseDto,
     AppInsightHistoryDay,
+    AppMediationBronzeAdUnitsResponse,
+    AppMediationBronzeAdUnitDetailRowsResponse,
+    AppMediationBronzeFilterOptionsResponse,
+    AppMediationBronzeMediationGroupsResponse,
     AppInsightSettings,
     InsightTemplate,
     InsightContextTemplate,
@@ -337,6 +341,85 @@ export const structureApi = {
 
     getAppMediationGroups: async (id: number): Promise<MediationGroup[]> => {
         return apiClient.get<MediationGroup[]>(`/api/Structure/apps/${id}/mediationgroups`)
+    },
+
+    getAppMediationBronzeFilterOptions: async (
+        id: number,
+        startDate: string,
+        endDate: string,
+    ): Promise<AppMediationBronzeFilterOptionsResponse> => {
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/filter-options`, { startDate, endDate })
+    },
+
+    getAppMediationBronzeAdUnits: async (
+        id: number,
+        params: {
+            startDate: string
+            endDate: string
+            country?: string
+            appVersion?: string
+            waterfallOnly?: boolean
+            search?: string
+            page?: number
+            pageSize?: number
+        },
+    ): Promise<AppMediationBronzeAdUnitsResponse> => {
+        const q: Record<string, string | number | undefined> = {
+            startDate: params.startDate,
+            endDate: params.endDate,
+        }
+        if (params.country) q.country = params.country
+        if (params.appVersion) q.appVersion = params.appVersion
+        if (params.waterfallOnly === false) q.waterfallOnly = "false"
+        if (params.search?.trim()) q.search = params.search.trim()
+        if (params.page != null) q.page = params.page
+        if (params.pageSize != null) q.pageSize = params.pageSize
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/ad-units`, q)
+    },
+
+    getAppMediationBronzeAdUnitDetailRows: async (
+        id: number,
+        params: {
+            adUnitId: string
+            startDate: string
+            endDate: string
+            country?: string
+            appVersion?: string
+            waterfallOnly?: boolean
+            limit?: number
+        },
+    ): Promise<AppMediationBronzeAdUnitDetailRowsResponse> => {
+        const q: Record<string, string | number | undefined> = {
+            adUnitId: params.adUnitId,
+            startDate: params.startDate,
+            endDate: params.endDate,
+        }
+        if (params.country) q.country = params.country
+        if (params.appVersion) q.appVersion = params.appVersion
+        if (params.waterfallOnly === false) q.waterfallOnly = "false"
+        if (params.limit != null) q.limit = params.limit
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/ad-units/detail-rows`, q)
+    },
+
+    getAppMediationBronzeMediationGroups: async (
+        id: number,
+        params: {
+            startDate: string
+            endDate: string
+            country?: string
+            appVersion?: string
+            search?: string
+            page?: number
+            pageSize?: number
+        },
+    ): Promise<AppMediationBronzeMediationGroupsResponse> => {
+        const q: Record<string, string | number | undefined> = { startDate: params.startDate, endDate: params.endDate }
+        if (params.country) q.country = params.country
+        if (params.appVersion) q.appVersion = params.appVersion
+        if (params.search?.trim()) q.search = params.search.trim()
+        if (params.page != null) q.page = params.page
+        if (params.pageSize != null) q.pageSize = params.pageSize
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/mediation-groups`, q)
     },
 
     getAppWaterfallAdUnits: async (id: number): Promise<WaterfallAdUnit[]> => {
