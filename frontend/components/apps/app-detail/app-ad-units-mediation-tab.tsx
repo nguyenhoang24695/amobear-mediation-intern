@@ -22,6 +22,7 @@ import { structureApi } from "@/lib/api/services"
 import type { AppMediationBronzeAdUnitRow, AppMediationBronzeAdUnitDetailRow } from "@/types/api"
 import { CountryFilterOption, CountryFlagTooltipCell } from "@/components/shared/country-display"
 import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
+import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
 
 function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -35,13 +36,16 @@ function ymdFromDetailDate(iso: string): string {
 }
 
 function defaultEndYmd(): string {
-  return ymdUtc(new Date())
+  return clampYmdLowerBound(ymdUtc(new Date()))
 }
 
 function defaultStartYmd(): string {
+  const end = defaultEndYmd()
   const s = new Date()
   s.setUTCDate(s.getUTCDate() - 6)
-  return ymdUtc(s)
+  let start = clampYmdLowerBound(ymdUtc(s))
+  if (start > end) start = end
+  return start
 }
 
 const formatColors: Record<string, string> = {
@@ -130,6 +134,10 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
     <div className="flex flex-col gap-4">
       <p className="text-sm text-slate-600">
         Metrics từ <code className="text-xs bg-slate-100 px-1 rounded">bronze.mediation_table</code>
+        <span className="text-slate-500">
+          {" "}
+          · chỉ tra cứu từ {BRONZE_MEDIATION_MIN_YMD} (UTC) trở đi
+        </span>
         {payload?.startDate && payload?.endDate ? (
           <span className="text-slate-500">
             {" "}
@@ -158,8 +166,13 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
           <Input
             id="bronze-adu-start"
             type="date"
+            min={BRONZE_MEDIATION_MIN_YMD}
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e) => {
+              const v = clampYmdLowerBound(e.target.value)
+              setStartDate(v)
+              if (v > endDate) setEndDate(v)
+            }}
             className="w-[160px]"
           />
         </div>
@@ -170,8 +183,13 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
           <Input
             id="bronze-adu-end"
             type="date"
+            min={BRONZE_MEDIATION_MIN_YMD}
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              let v = clampYmdLowerBound(e.target.value)
+              if (v < startDate) v = startDate
+              setEndDate(v)
+            }}
             className="w-[160px]"
           />
         </div>

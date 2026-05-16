@@ -1,4 +1,4 @@
-/** Alias phổ biến → ISO alpha-2 (emoji cờ chuẩn). */
+/** Alias phổ biến → ISO alpha-2 (chuẩn hóa mã quốc gia). */
 const COUNTRY_CODE_ALIASES: Record<string, string> = {
   UK: "GB",
 }
@@ -15,6 +15,19 @@ export function normalizeIso3166Alpha2(code: string | null | undefined): string 
   const iso = COUNTRY_CODE_ALIASES[upper] ?? upper
   if (iso.length !== 2 || !/^[A-Z]{2}$/.test(iso)) return null
   return iso
+}
+
+const FLAG_CDN_BASE = "https://flagcdn.com"
+
+/**
+ * URL SVG cờ trên FlagCDN: `/{code}.svg` (mã ISO lowercase, UK → gb).
+ * Kích thước hiển thị dùng width/height trên thẻ img, không nhét vào path.
+ * @see https://flagcdn.com/
+ */
+export function iso3166Alpha2ToFlagCdnSvgUrl(code: string | null | undefined): string | null {
+  const normalized = normalizeIso3166Alpha2(code)
+  if (!normalized) return null
+  return `${FLAG_CDN_BASE}/${normalized.toLowerCase()}.svg`
 }
 
 /**
