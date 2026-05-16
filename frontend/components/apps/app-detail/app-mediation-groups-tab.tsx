@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -43,6 +44,7 @@ import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
 import type { MediationGroup } from "@/types/api"
+import { DEPRECATED_METRICS_MAX_YMD } from "@/lib/constants/deprecated-app-metrics"
 
 // Network logos/images - map ad source IDs to image URLs or emoji
 const networkLogos: Record<string, { image?: string; emoji?: string; color: string }> = {
@@ -227,6 +229,19 @@ const getNetworkName = (adSourceId?: string, title?: string): string => {
   return adSourceId
 }
 
+function ymdUtc(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function getDefaultDeprecatedMetricRange(): { startDate: string; endDate: string } {
+  let end = ymdUtc(new Date())
+  if (end > DEPRECATED_METRICS_MAX_YMD) end = DEPRECATED_METRICS_MAX_YMD
+  const endD = new Date(`${end}T00:00:00.000Z`)
+  const startD = new Date(endD)
+  startD.setUTCDate(startD.getUTCDate() - 6)
+  return { startDate: ymdUtc(startD), endDate: end }
+}
+
 type SortField = "name" | "ecpm" | "revenue"
 type SortDirection = "asc" | "desc"
 
@@ -242,6 +257,11 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
   const appIdFromParams = (params as any)?.id as string | undefined
   const hasValidAppId = !!appIdFromParams
 
+  const useOwnFetch = mediationGroupsFromParent === undefined
+  const initialMetricRange = useMemo(() => getDefaultDeprecatedMetricRange(), [])
+  const [startDate, setStartDate] = useState(initialMetricRange.startDate)
+  const [endDate, setEndDate] = useState(initialMetricRange.endDate)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [sortField, setSortField] = useState<SortField>("revenue")
@@ -249,16 +269,15 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  const useOwnFetch = mediationGroupsFromParent === undefined
   const { data: app } = useApi(
     () => structureApi.getAppByAppId(appIdFromParams!),
     { enabled: useOwnFetch && hasValidAppId, cacheKey: useOwnFetch && hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
   )
   const { data: mediationGroupsFetched, loading: loadingFetched } = useApi<MediationGroup[]>(
-    () => structureApi.getAppMediationGroups(app!.id),
+    () => structureApi.getAppMediationGroups(app!.id, { startDate, endDate }),
     {
       enabled: useOwnFetch && !!app?.id,
-      cacheKey: useOwnFetch && app ? `app_mediation_groups_${app.appId}` : undefined,
+      cacheKey: useOwnFetch && app ? `app_mediation_groups_${app.appId}_${startDate}_${endDate}` : undefined,
     },
   )
 
@@ -307,10 +326,10 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
     return sortedGroups.slice(startIndex, endIndex)
   }, [sortedGroups, currentPage, pageSize])
 
-  // Reset to page 1 when search or sort changes
+  // Reset to page 1 when search, sort, or metrics date range changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, sortField, sortDirection])
+  }, [searchQuery, sortField, sortDirection, startDate, endDate])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -371,21 +390,70 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-4">
+        {useOwnFetch ? (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            Metrics từ <strong>bronze.mediation_table_bk</strong>, khoảng ngày đến <strong>{DEPRECATED_METRICS_MAX_YMD}</strong>.
+          </p>
+        ) : null}
         {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search mediation groups..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 bg-white border-slate-200"
-            />
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          {useOwnFetch ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="deprecated-mg-start" className="text-xs text-slate-600">
+                  Start date
+                </Label>
+                <Input
+                  id="deprecated-mg-start"
+                  type="date"
+                  max={DEPRECATED_METRICS_MAX_YMD}
+                  value={startDate}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    const c = v > DEPRECATED_METRICS_MAX_YMD ? DEPRECATED_METRICS_MAX_YMD : v
+                    setStartDate(c)
+                    if (c > endDate) setEndDate(c)
+                  }}
+                  className="h-10 w-[158px] bg-white border-slate-200"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="deprecated-mg-end" className="text-xs text-slate-600">
+                  End date
+                </Label>
+                <Input
+                  id="deprecated-mg-end"
+                  type="date"
+                  max={DEPRECATED_METRICS_MAX_YMD}
+                  value={endDate}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    const c = v > DEPRECATED_METRICS_MAX_YMD ? DEPRECATED_METRICS_MAX_YMD : v
+                    setEndDate(c)
+                    if (startDate > c) setStartDate(c)
+                  }}
+                  className="h-10 w-[158px] bg-white border-slate-200"
+                />
+              </div>
+            </div>
+          ) : (
+            <div />
+          )}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-end">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search mediation groups..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 bg-white border-slate-200"
+              />
+            </div>
+            <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4" />
+              Create Mediation Group
+            </Button>
           </div>
-          <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" />
-            Create Mediation Group
-          </Button>
         </div>
 
         {/* Table */}

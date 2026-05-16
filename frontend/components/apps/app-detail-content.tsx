@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef, type PointerEvent } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter, useParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -16,6 +16,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   ExternalLink,
   MoreHorizontal,
@@ -31,9 +33,9 @@ import {
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { hasScreenFunction, hasAppDetailTab, canEnterAppDetail } from "@/lib/auth"
-import { copyTextToClipboard } from "@/lib/utils"
+import { copyTextToClipboard, cn } from "@/lib/utils"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
-import type { App, MediationGroup, WaterfallAdUnit } from "@/types/api"
+import type { App, WaterfallAdUnit } from "@/types/api"
 
 const SCREEN_APPS = "s-apps"
 const FN_VIEW_DETAILS = "view-details"
@@ -76,13 +78,6 @@ export function AppDetailContent() {
     refetchApp()
   }, [appCacheKey, refetchApp])
 
-  const { data: mediationGroups, loading: mediationGroupsLoading } = useApi<MediationGroup[]>(
-    () => structureApi.getAppMediationGroups(app!.id),
-    {
-      enabled: hasValidAppId && !!app?.id,
-      cacheKey: app?.id != null ? `app_mediation_groups_${app.id}` : undefined,
-    },
-  )
   const { data: waterfallAdUnits, loading: waterfallAdUnitsLoading } = useApi<WaterfallAdUnit[]>(
     () => structureApi.getAppWaterfallAdUnits(app!.id),
     {
@@ -91,7 +86,7 @@ export function AppDetailContent() {
     },
   )
 
-  const mediationGroupsCount = mediationGroups?.length ?? 0
+  const mediationGroupsCount = app?.mediationGroupsCount ?? 0
   const waterfallAdUnitsCount = waterfallAdUnits?.length ?? 0
 
   // --- Permissions ---------------------------------------------------------
@@ -117,16 +112,16 @@ export function AppDetailContent() {
   // Danh sach tab duoc phep, theo dung thu tu render
   const allowedTabs = [
     canViewOverview && "overview",
-    canViewAdUnits && "ad-units",
     canViewAdUnitsMediation && "ad-units-mediation",
     canViewWaterfallAdUnits && "waterfall-ad-units",
-    canViewMediationGroups && "mediation-groups",
     canViewMediationGroupsMediation && "mediation-groups-mediation",
     canViewPerformance && "performance",
     showAiInsightTab && "ai-insight",
     showInsightConfigTab && "insight-config",
     showPlaybookTab && "playbook",
     canViewSettingsTab && "settings",
+    canViewAdUnits && "ad-units",
+    canViewMediationGroups && "mediation-groups",
   ].filter(Boolean) as string[]
   const fallbackTab = allowedTabs[0] ?? "overview"
 
@@ -149,6 +144,89 @@ export function AppDetailContent() {
   const [copied, setCopied] = useState(false)
   const [syncPerformanceModalOpen, setSyncPerformanceModalOpen] = useState(false)
 
+  const tabScrollRef = useRef<HTMLDivElement>(null)
+  const tabPointerDragRef = useRef<{ id: number; startX: number; startScrollLeft: number; dragged: boolean }>({
+    id: -1,
+    startX: 0,
+    startScrollLeft: 0,
+    dragged: false,
+  })
+  const [tabScrollEdges, setTabScrollEdges] = useState({ canLeft: false, canRight: false })
+
+  const updateTabScrollEdges = useCallback(() => {
+    const el = tabScrollRef.current
+    if (!el) return
+    const eps = 2
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setTabScrollEdges({
+      canLeft: scrollLeft > eps,
+      canRight: scrollLeft + clientWidth < scrollWidth - eps,
+    })
+  }, [])
+
+  useEffect(() => {
+    updateTabScrollEdges()
+    const el = tabScrollRef.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    const ro = new ResizeObserver(() => updateTabScrollEdges())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [allowedTabs.join(","), updateTabScrollEdges])
+
+  useEffect(() => {
+    const root = tabScrollRef.current
+    if (!root) return
+    const active = root.querySelector('[data-state="active"]') as HTMLElement | null
+    active?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" })
+    requestAnimationFrame(() => updateTabScrollEdges())
+  }, [activeTab, updateTabScrollEdges])
+
+  const onTabStripPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "touch") return
+    if (e.button !== 0) return
+    const el = e.currentTarget
+    tabPointerDragRef.current = {
+      id: e.pointerId,
+      startX: e.clientX,
+      startScrollLeft: el.scrollLeft,
+      dragged: false,
+    }
+    el.setPointerCapture(e.pointerId)
+  }, [])
+
+  const onTabStripPointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    const s = tabPointerDragRef.current
+    if (s.id !== e.pointerId) return
+    const el = tabScrollRef.current
+    if (!el) return
+    const dx = e.clientX - s.startX
+    el.scrollLeft = s.startScrollLeft - dx
+    if (Math.abs(dx) > 6) s.dragged = true
+    updateTabScrollEdges()
+  }, [updateTabScrollEdges])
+
+  const finishTabStripPointer = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const s = tabPointerDragRef.current
+      if (s.id !== e.pointerId) return
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      } catch {
+        /* already released */
+      }
+      if (s.dragged) {
+        const block = (ev: Event) => {
+          ev.preventDefault()
+          ev.stopImmediatePropagation()
+        }
+        document.addEventListener("click", block, { capture: true, once: true })
+      }
+      s.id = -1
+      s.dragged = false
+      updateTabScrollEdges()
+    },
+    [updateTabScrollEdges],
+  )
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
@@ -318,91 +396,133 @@ export function AppDetailContent() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="h-11 p-1 bg-slate-100 w-fit">
-            {canViewOverview ? (
-              <TabsTrigger value="overview" className="px-4 data-[state=active]:bg-white">
-                Overview
-              </TabsTrigger>
-            ) : null}
-            {canViewAdUnits ? (
-              <TabsTrigger value="ad-units" className="px-4 data-[state=active]:bg-white">
-                Ad Units
-                <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
-                  deprecated
-                </Badge>
-                <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                  {app?.adUnitsCount ?? 0}
-                </Badge>
-              </TabsTrigger>
-            ) : null}
-            {canViewAdUnitsMediation ? (
-              <TabsTrigger value="ad-units-mediation" className="px-4 data-[state=active]:bg-white">
-                Ad Units (Bronze)
-              </TabsTrigger>
-            ) : null}
-            {canViewWaterfallAdUnits ? (
-              <TabsTrigger value="waterfall-ad-units" className="px-4 data-[state=active]:bg-white">
-                Waterfall Ad Units
-                <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                  {waterfallAdUnitsLoading ? "..." : waterfallAdUnitsCount}
-                </Badge>
-              </TabsTrigger>
-            ) : null}
-            {canViewMediationGroups ? (
-              <TabsTrigger value="mediation-groups" className="px-4 data-[state=active]:bg-white">
-                Mediation Groups
-                <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
-                  deprecated
-                </Badge>
-                <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                  {mediationGroupsLoading ? "..." : mediationGroupsCount}
-                </Badge>
-              </TabsTrigger>
-            ) : null}
-            {canViewMediationGroupsMediation ? (
-              <TabsTrigger value="mediation-groups-mediation" className="px-4 data-[state=active]:bg-white">
-                Mediation Groups (Bronze)
-              </TabsTrigger>
-            ) : null}
-            {canViewPerformance ? (
-              <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">
-                Performance
-              </TabsTrigger>
-            ) : null}
-            {showAiInsightTab ? (
-              <TabsTrigger value="ai-insight" className="px-4 data-[state=active]:bg-white gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                AI Insight
-              </TabsTrigger>
-            ) : null}
-            {showInsightConfigTab ? (
-              <TabsTrigger value="insight-config" className="px-4 data-[state=active]:bg-white gap-1.5">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                Insight config
-              </TabsTrigger>
-            ) : null}
-            {showPlaybookTab ? (
-              <TabsTrigger value="playbook" className="px-4 data-[state=active]:bg-white gap-1.5">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                AI Playbook
-              </TabsTrigger>
-            ) : null}
-            {canViewSettingsTab ? (
-              <TabsTrigger value="settings" className="px-4 data-[state=active]:bg-white">
-                Settings
-              </TabsTrigger>
-            ) : null}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
+          <div className="flex w-full max-w-full min-w-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-lg border-slate-200 bg-white shadow-sm"
+              disabled={!tabScrollEdges.canLeft}
+              aria-label="Cuộn tab sang trái"
+              onClick={() => {
+                tabScrollRef.current?.scrollBy({ left: -260, behavior: "smooth" })
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div
+              ref={tabScrollRef}
+              onScroll={updateTabScrollEdges}
+              onPointerDown={onTabStripPointerDown}
+              onPointerMove={onTabStripPointerMove}
+              onPointerUp={finishTabStripPointer}
+              onPointerCancel={finishTabStripPointer}
+              onLostPointerCapture={() => {
+                tabPointerDragRef.current.id = -1
+                tabPointerDragRef.current.dragged = false
+                updateTabScrollEdges()
+              }}
+              className={cn(
+                "min-w-0 flex-1 cursor-grab overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth active:cursor-grabbing",
+                "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+                "select-none",
+              )}
+            >
+              <TabsList className="inline-flex h-11 w-max flex-nowrap items-center justify-start gap-0 rounded-lg bg-slate-100 p-1">
+                {canViewOverview ? (
+                  <TabsTrigger value="overview" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Overview
+                  </TabsTrigger>
+                ) : null}
+                {canViewAdUnitsMediation ? (
+                  <TabsTrigger value="ad-units-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Ad Units
+                  </TabsTrigger>
+                ) : null}
+                {canViewWaterfallAdUnits ? (
+                  <TabsTrigger value="waterfall-ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Waterfall Ad Units
+                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                      {waterfallAdUnitsLoading ? "..." : waterfallAdUnitsCount}
+                    </Badge>
+                  </TabsTrigger>
+                ) : null}
+                {canViewMediationGroupsMediation ? (
+                  <TabsTrigger value="mediation-groups-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Mediation Groups
+                  </TabsTrigger>
+                ) : null}
+                {canViewPerformance ? (
+                  <TabsTrigger value="performance" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Performance
+                  </TabsTrigger>
+                ) : null}
+                {showAiInsightTab ? (
+                  <TabsTrigger value="ai-insight" className="shrink-0 flex-none gap-1.5 px-4 data-[state=active]:bg-white">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    AI Insight
+                  </TabsTrigger>
+                ) : null}
+                {showInsightConfigTab ? (
+                  <TabsTrigger value="insight-config" className="shrink-0 flex-none gap-1.5 px-4 data-[state=active]:bg-white">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    Insight config
+                  </TabsTrigger>
+                ) : null}
+                {showPlaybookTab ? (
+                  <TabsTrigger value="playbook" className="shrink-0 flex-none gap-1.5 px-4 data-[state=active]:bg-white">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    AI Playbook
+                  </TabsTrigger>
+                ) : null}
+                {canViewSettingsTab ? (
+                  <TabsTrigger value="settings" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Settings
+                  </TabsTrigger>
+                ) : null}
+                {canViewAdUnits ? (
+                  <TabsTrigger value="ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Ad Units
+                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                      deprecated
+                    </Badge>
+                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                      {app?.adUnitsCount ?? 0}
+                    </Badge>
+                  </TabsTrigger>
+                ) : null}
+                {canViewMediationGroups ? (
+                  <TabsTrigger value="mediation-groups" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Mediation Groups
+                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                      deprecated
+                    </Badge>
+                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                      {appLoading ? "..." : mediationGroupsCount}
+                    </Badge>
+                  </TabsTrigger>
+                ) : null}
+              </TabsList>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-lg border-slate-200 bg-white shadow-sm"
+              disabled={!tabScrollEdges.canRight}
+              aria-label="Cuộn tab sang phải"
+              onClick={() => {
+                tabScrollRef.current?.scrollBy({ left: 260, behavior: "smooth" })
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
 
           {canViewOverview ? (
             <TabsContent value="overview" className="mt-6">
               <AppOverviewTab onNavigateToTab={handleTabChange} />
-            </TabsContent>
-          ) : null}
-          {canViewAdUnits ? (
-            <TabsContent value="ad-units" className="mt-6">
-              <AppAdUnitsTab />
             </TabsContent>
           ) : null}
           {canViewAdUnitsMediation ? (
@@ -415,14 +535,6 @@ export function AppDetailContent() {
               <AppWaterfallAdUnitsTab
                 waterfallAdUnits={waterfallAdUnits ?? null}
                 loadingWaterfallAdUnits={waterfallAdUnitsLoading}
-              />
-            </TabsContent>
-          ) : null}
-          {canViewMediationGroups ? (
-            <TabsContent value="mediation-groups" className="mt-6">
-              <AppMediationGroupsTab
-                mediationGroups={mediationGroups ?? null}
-                loadingMediationGroups={mediationGroupsLoading}
               />
             </TabsContent>
           ) : null}
@@ -458,6 +570,16 @@ export function AppDetailContent() {
           {canViewSettingsTab ? (
             <TabsContent value="settings" className="mt-6">
               <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
+            </TabsContent>
+          ) : null}
+          {canViewAdUnits ? (
+            <TabsContent value="ad-units" className="mt-6">
+              <AppAdUnitsTab />
+            </TabsContent>
+          ) : null}
+          {canViewMediationGroups ? (
+            <TabsContent value="mediation-groups" className="mt-6">
+              <AppMediationGroupsTab />
             </TabsContent>
           ) : null}
         </Tabs>
