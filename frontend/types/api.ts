@@ -11,6 +11,8 @@ export interface App {
   iconUri?: string
   approvalState?: string
   publisherId: string
+  /** admob_accounts.timezone_offset_hours (publisher) — FE Performance tab default timezone query. Null nếu không có account enabled khớp. */
+  publisherTimezoneOffsetHours?: number | null
   createdAt: string
   updatedAt: string
   lastSyncedAt?: string
