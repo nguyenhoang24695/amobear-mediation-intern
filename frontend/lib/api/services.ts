@@ -331,16 +331,28 @@ export const structureApi = {
         return apiClient.post(`/api/Structure/apps/performance/day/reprocess-cost?${q}`)
     },
 
-    getAppAdUnits: async (id: number): Promise<AdUnit[]> => {
-        return apiClient.get<AdUnit[]>(`/api/Structure/apps/${id}/adunits`)
+    getAppAdUnits: async (
+        id: number,
+        params?: { startDate: string; endDate: string },
+    ): Promise<AdUnit[]> => {
+        return apiClient.get<AdUnit[]>(`/api/Structure/apps/${id}/adunits`, {
+            startDate: params?.startDate,
+            endDate: params?.endDate,
+        })
     },
 
     getAppAdUnitsCount: async (id: number): Promise<{ appId: number; adUnitsCount: number }> => {
         return apiClient.get(`/api/Structure/apps/${id}/adunits/count`)
     },
 
-    getAppMediationGroups: async (id: number): Promise<MediationGroup[]> => {
-        return apiClient.get<MediationGroup[]>(`/api/Structure/apps/${id}/mediationgroups`)
+    getAppMediationGroups: async (
+        id: number,
+        params?: { startDate: string; endDate: string },
+    ): Promise<MediationGroup[]> => {
+        return apiClient.get<MediationGroup[]>(`/api/Structure/apps/${id}/mediationgroups`, {
+            startDate: params?.startDate,
+            endDate: params?.endDate,
+        })
     },
 
     getAppMediationBronzeFilterOptions: async (

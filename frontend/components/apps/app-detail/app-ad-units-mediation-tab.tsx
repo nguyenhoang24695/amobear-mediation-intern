@@ -20,6 +20,9 @@ import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import type { AppMediationBronzeAdUnitRow, AppMediationBronzeAdUnitDetailRow } from "@/types/api"
+import { CountryFilterOption, CountryFlagTooltipCell } from "@/components/shared/country-display"
+import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
+import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
 
 function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -33,13 +36,16 @@ function ymdFromDetailDate(iso: string): string {
 }
 
 function defaultEndYmd(): string {
-  return ymdUtc(new Date())
+  return clampYmdLowerBound(ymdUtc(new Date()))
 }
 
 function defaultStartYmd(): string {
+  const end = defaultEndYmd()
   const s = new Date()
   s.setUTCDate(s.getUTCDate() - 6)
-  return ymdUtc(s)
+  let start = clampYmdLowerBound(ymdUtc(s))
+  if (start > end) start = end
+  return start
 }
 
 const formatColors: Record<string, string> = {
@@ -128,6 +134,10 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
     <div className="flex flex-col gap-4">
       <p className="text-sm text-slate-600">
         Metrics từ <code className="text-xs bg-slate-100 px-1 rounded">bronze.mediation_table</code>
+        <span className="text-slate-500">
+          {" "}
+          · chỉ tra cứu từ {BRONZE_MEDIATION_MIN_YMD} (UTC) trở đi
+        </span>
         {payload?.startDate && payload?.endDate ? (
           <span className="text-slate-500">
             {" "}
@@ -156,8 +166,13 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
           <Input
             id="bronze-adu-start"
             type="date"
+            min={BRONZE_MEDIATION_MIN_YMD}
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e) => {
+              const v = clampYmdLowerBound(e.target.value)
+              setStartDate(v)
+              if (v > endDate) setEndDate(v)
+            }}
             className="w-[160px]"
           />
         </div>
@@ -168,12 +183,17 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
           <Input
             id="bronze-adu-end"
             type="date"
+            min={BRONZE_MEDIATION_MIN_YMD}
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              let v = clampYmdLowerBound(e.target.value)
+              if (v < startDate) v = startDate
+              setEndDate(v)
+            }}
             className="w-[160px]"
           />
         </div>
-        <div className="flex flex-row items-center gap-2 min-w-[180px]">
+        <div className="flex min-w-[220px] flex-row items-center gap-2 lg:min-w-[260px]">
           <Label htmlFor="bronze-adu-country" className="shrink-0 text-sm">
             Country
           </Label>
@@ -182,14 +202,14 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
             onValueChange={(v) => setCountry(v === "__all__" ? "" : v)}
             disabled={loadingOpts}
           >
-            <SelectTrigger id="bronze-adu-country" className="flex-1 min-w-0">
+            <SelectTrigger id="bronze-adu-country" className="min-w-0 flex-1">
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Tất cả</SelectItem>
               {(filterOpts?.countries ?? []).map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+                <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
+                  <CountryFilterOption code={c} />
                 </SelectItem>
               ))}
             </SelectContent>
@@ -498,8 +518,11 @@ function MediationAdUnitRow({
                   <table className="w-full text-xs">
                     <thead className="bg-slate-200/90 sticky top-0 z-10">
                       <tr className="text-slate-600 font-medium text-left">
+                        <th className="px-2 py-2 w-10 text-center whitespace-nowrap">STT</th>
                         <th className="px-2 py-2 whitespace-nowrap">Ngày (UTC)</th>
-                        <th className="px-2 py-2">Country</th>
+                        <th className="px-2 py-2">
+                          Country
+                        </th>
                         <th className="px-2 py-2">App ver</th>
                         <th className="px-2 py-2 min-w-[140px]">Mediation group</th>
                         <th className="px-2 py-2 min-w-[160px]">Network / line</th>
@@ -507,14 +530,16 @@ function MediationAdUnitRow({
                         <th className="px-2 py-2 text-right whitespace-nowrap">Ad req.</th>
                         <th className="px-2 py-2 text-right whitespace-nowrap">Matched</th>
                         <th className="px-2 py-2 text-right whitespace-nowrap">Revenue</th>
-                        <th className="px-2 py-2 font-mono text-[10px] text-slate-500">hash_key</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/90">
-                      {detailRows.map((r: AppMediationBronzeAdUnitDetailRow) => (
+                      {detailRows.map((r: AppMediationBronzeAdUnitDetailRow, idx: number) => (
                         <tr key={`${r.hashKey}_${r.date}`} className="bg-white/90 hover:bg-white">
+                          <td className="px-2 py-1.5 text-center text-slate-600 tabular-nums w-10">{idx + 1}</td>
                           <td className="px-2 py-1.5 whitespace-nowrap text-slate-800">{ymdFromDetailDate(r.date)}</td>
-                          <td className="px-2 py-1.5 text-slate-700">{r.country || "—"}</td>
+                          <td className="px-2 py-1.5 text-center w-10">
+                            <CountryFlagTooltipCell code={r.country} />
+                          </td>
                           <td className="px-2 py-1.5 text-slate-700 max-w-[120px] truncate" title={r.appVersionName}>
                             {r.appVersionName || "—"}
                           </td>
@@ -538,9 +563,6 @@ function MediationAdUnitRow({
                           <td className="px-2 py-1.5 text-right tabular-nums">{r.adRequests.toLocaleString()}</td>
                           <td className="px-2 py-1.5 text-right tabular-nums">{r.matchedRequests.toLocaleString()}</td>
                           <td className="px-2 py-1.5 text-right tabular-nums font-medium">${r.estimatedEarnings.toFixed(4)}</td>
-                          <td className="px-2 py-1.5 font-mono text-[10px] text-slate-500 max-w-[100px] truncate" title={r.hashKey}>
-                            {r.hashKey}
-                          </td>
                         </tr>
                       ))}
                     </tbody>

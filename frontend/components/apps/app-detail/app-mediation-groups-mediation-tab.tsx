@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,19 +19,25 @@ import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import type { AppMediationBronzeMediationGroupRow } from "@/types/api"
+import { CountryFilterOption, CountryFlagTooltipCell } from "@/components/shared/country-display"
+import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
+import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
 
 function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
 function defaultEndYmd(): string {
-  return ymdUtc(new Date())
+  return clampYmdLowerBound(ymdUtc(new Date()))
 }
 
 function defaultStartYmd(): string {
+  const end = defaultEndYmd()
   const s = new Date()
   s.setUTCDate(s.getUTCDate() - 6)
-  return ymdUtc(s)
+  let start = clampYmdLowerBound(ymdUtc(s))
+  if (start > end) start = end
+  return start
 }
 
 export interface AppMediationGroupsMediationTabProps {
@@ -111,6 +116,10 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
     <div className="flex flex-col gap-4">
       <p className="text-sm text-slate-600">
         Rollup từ <code className="text-xs bg-slate-100 px-1 rounded">bronze.mediation_table</code>
+        <span className="text-slate-500">
+          {" "}
+          · chỉ tra cứu từ {BRONZE_MEDIATION_MIN_YMD} (UTC) trở đi
+        </span>
         {payload?.startDate && payload?.endDate ? (
           <span className="text-slate-500">
             {" "}
@@ -134,8 +143,13 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
           <Input
             id="bronze-mg-start"
             type="date"
+            min={BRONZE_MEDIATION_MIN_YMD}
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e) => {
+              const v = clampYmdLowerBound(e.target.value)
+              setStartDate(v)
+              if (v > endDate) setEndDate(v)
+            }}
             className="w-[160px]"
           />
         </div>
@@ -146,12 +160,17 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
           <Input
             id="bronze-mg-end"
             type="date"
+            min={BRONZE_MEDIATION_MIN_YMD}
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              let v = clampYmdLowerBound(e.target.value)
+              if (v < startDate) v = startDate
+              setEndDate(v)
+            }}
             className="w-[160px]"
           />
         </div>
-        <div className="flex flex-row items-center gap-2 min-w-[180px]">
+        <div className="flex min-w-[220px] flex-row items-center gap-2 lg:min-w-[260px]">
           <Label htmlFor="bronze-mg-country" className="shrink-0 text-sm">
             Country
           </Label>
@@ -160,14 +179,14 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
             onValueChange={(v) => setCountry(v === "__all__" ? "" : v)}
             disabled={loadingOpts}
           >
-            <SelectTrigger id="bronze-mg-country" className="flex-1 min-w-0">
+            <SelectTrigger id="bronze-mg-country" className="min-w-0 flex-1">
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Tất cả</SelectItem>
               {(filterOpts?.countries ?? []).map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+                <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
+                  <CountryFilterOption code={c} />
                 </SelectItem>
               ))}
             </SelectContent>
@@ -314,18 +333,16 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
           </div>
         </td>
         <td className="px-4 py-3 max-w-[220px]">
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             {countries.length === 0 ? (
               <span className="text-xs text-slate-400">—</span>
             ) : (
-              countries.slice(0, 6).map((c) => (
-                <Badge key={c} variant="secondary" className="text-[10px] font-normal">
-                  {c}
-                </Badge>
+              countries.slice(0, 10).map((c, idx) => (
+                <CountryFlagTooltipCell key={`${c}-${idx}`} code={c} />
               ))
             )}
-            {countries.length > 6 ? (
-              <span className="text-xs text-slate-500">+{countries.length - 6}</span>
+            {countries.length > 10 ? (
+              <span className="text-xs text-slate-500">+{countries.length - 10}</span>
             ) : null}
           </div>
         </td>

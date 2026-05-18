@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -42,6 +43,7 @@ import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
 import type { AdUnit } from "@/types/api"
+import { DEPRECATED_METRICS_MAX_YMD } from "@/lib/constants/deprecated-app-metrics"
 
 const formatIcons: Record<string, React.ElementType> = {
   BANNER: RectangleHorizontal,
@@ -81,6 +83,19 @@ const formatAdFormat = (format?: string): string => {
     .join(" ")
 }
 
+function ymdUtc(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function getDefaultDeprecatedMetricRange(): { startDate: string; endDate: string } {
+  let end = ymdUtc(new Date())
+  if (end > DEPRECATED_METRICS_MAX_YMD) end = DEPRECATED_METRICS_MAX_YMD
+  const endD = new Date(`${end}T00:00:00.000Z`)
+  const startD = new Date(endD)
+  startD.setUTCDate(startD.getUTCDate() - 6)
+  return { startDate: ymdUtc(startD), endDate: end }
+}
+
 type SortField = "name" | "ecpm" | "impressions" | "revenue" | "fillRate"
 type SortDirection = "asc" | "desc"
 
@@ -88,6 +103,10 @@ export function AppAdUnitsTab() {
   const params = useParams()
   const appIdFromParams = (params as any)?.id as string | undefined
   const hasValidAppId = !!appIdFromParams
+
+  const initialMetricRange = useMemo(() => getDefaultDeprecatedMetricRange(), [])
+  const [startDate, setStartDate] = useState(initialMetricRange.startDate)
+  const [endDate, setEndDate] = useState(initialMetricRange.endDate)
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUnits, setSelectedUnits] = useState<string[]>([])
@@ -97,16 +116,16 @@ export function AppAdUnitsTab() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  // Load app by AdMob app_id, then load ad units from cached backend metrics.
+  // Load app by AdMob app_id, then ad units + StarRocks metrics (date range, deprecated cap 2026-03-31).
   const { data: app } = useApi(
     () => structureApi.getAppByAppId(appIdFromParams!),
     { enabled: hasValidAppId, cacheKey: hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
   )
   const { data: adUnits, loading } = useApi<AdUnit[]>(
-    () => structureApi.getAppAdUnits(app!.id),
+    () => structureApi.getAppAdUnits(app!.id, { startDate, endDate }),
     {
       enabled: !!app,
-      cacheKey: app ? `app_ad_units_${app.appId}` : undefined,
+      cacheKey: app ? `app_ad_units_${app.appId}_${startDate}_${endDate}` : undefined,
     },
   )
 
@@ -155,10 +174,10 @@ export function AppAdUnitsTab() {
     return sortedUnits.slice(startIndex, endIndex)
   }, [sortedUnits, currentPage, pageSize])
 
-  // Reset to page 1 when search or sort changes
+  // Reset to page 1 when search, sort, or metrics date range changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, sortField, sortDirection])
+  }, [searchQuery, sortField, sortDirection, startDate, endDate])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -230,21 +249,64 @@ export function AppAdUnitsTab() {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-4">
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          Metrics trong khoảng ngày đến <strong>{DEPRECATED_METRICS_MAX_YMD}</strong> (tra cứu dữ liệu trước tháng 4/2026).
+        </p>
         {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search ad units..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 bg-white border-slate-200"
-            />
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="deprecated-adu-start" className="text-xs text-slate-600">
+                Start date
+              </Label>
+              <Input
+                id="deprecated-adu-start"
+                type="date"
+                max={DEPRECATED_METRICS_MAX_YMD}
+                value={startDate}
+                onChange={(e) => {
+                  const v = e.target.value
+                  const c = v > DEPRECATED_METRICS_MAX_YMD ? DEPRECATED_METRICS_MAX_YMD : v
+                  setStartDate(c)
+                  if (c > endDate) setEndDate(c)
+                }}
+                className="h-10 w-[158px] bg-white border-slate-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="deprecated-adu-end" className="text-xs text-slate-600">
+                End date
+              </Label>
+              <Input
+                id="deprecated-adu-end"
+                type="date"
+                max={DEPRECATED_METRICS_MAX_YMD}
+                value={endDate}
+                onChange={(e) => {
+                  const v = e.target.value
+                  const c = v > DEPRECATED_METRICS_MAX_YMD ? DEPRECATED_METRICS_MAX_YMD : v
+                  setEndDate(c)
+                  if (startDate > c) setStartDate(c)
+                }}
+                className="h-10 w-[158px] bg-white border-slate-200"
+              />
+            </div>
           </div>
-          <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" />
-            Create Ad Unit
-          </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-end">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search ad units..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 bg-white border-slate-200"
+              />
+            </div>
+            <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4" />
+              Create Ad Unit
+            </Button>
+          </div>
         </div>
 
         {/* Table */}
