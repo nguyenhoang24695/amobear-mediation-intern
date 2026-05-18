@@ -159,10 +159,16 @@ export interface UpsertMetaAdAccountRequestDto {
 
 export interface MetaAppMappingDto {
   id: number
-  appRowId: number
+  appRowId?: number | null
+  linkedAppRowId?: number | null
   appId?: string | null
   appDisplayName?: string | null
   platform?: string | null
+  packageName?: string | null
+  bundleId?: string | null
+  appStoreId?: string | null
+  normalizedStoreIdentifier?: string | null
+  storeIdentifierType?: string | null
   metaApplicationId: string
   objectStoreUrl?: string | null
   packageNameOverride?: string | null
@@ -175,9 +181,14 @@ export interface MetaAppMappingDto {
 }
 
 export interface CreateMetaAppMappingRequestDto {
-  appRowId: number
+  appRowId?: number | null
+  linkedAppRowId?: number | null
   metaApplicationId: string
   objectStoreUrl?: string | null
+  platform?: string | null
+  packageName?: string | null
+  bundleId?: string | null
+  appStoreId?: string | null
   packageNameOverride?: string | null
   bundleIdOverride?: string | null
   deepLinkUrlOverride?: string | null
@@ -186,8 +197,14 @@ export interface CreateMetaAppMappingRequestDto {
 }
 
 export interface UpdateMetaAppMappingRequestDto {
+  appRowId?: number | null
+  linkedAppRowId?: number | null
   metaApplicationId?: string | null
   objectStoreUrl?: string | null
+  platform?: string | null
+  packageName?: string | null
+  bundleId?: string | null
+  appStoreId?: string | null
   packageNameOverride?: string | null
   bundleIdOverride?: string | null
   deepLinkUrlOverride?: string | null

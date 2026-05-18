@@ -258,8 +258,8 @@ export function RequestListContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Apps</SelectItem>
-            {(referenceData?.appMappings ?? []).map((mapping) => (
-              <SelectItem key={mapping.id} value={mapping.appRowId.toString()}>
+            {(referenceData?.appMappings ?? []).filter((mapping) => mapping.appRowId != null).map((mapping) => (
+              <SelectItem key={mapping.id} value={mapping.appRowId!.toString()}>
                 {mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}
               </SelectItem>
             ))}

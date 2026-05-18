@@ -373,10 +373,17 @@ export interface UpsertTikTokAdAccountRequestDto {
 
 export interface TikTokAppMappingDto {
   id: number
-  appRowId: number
+  appRowId?: number | null
+  linkedAppRowId?: number | null
   appId?: string | null
   appDisplayName?: string | null
   appPlatform?: string | null
+  platform?: string | null
+  packageName?: string | null
+  bundleId?: string | null
+  appStoreId?: string | null
+  normalizedStoreIdentifier?: string | null
+  storeIdentifierType?: string | null
   tikTokAppId: string
   downloadUrl: string
   packageNameOverride?: string | null
@@ -390,9 +397,14 @@ export interface TikTokAppMappingDto {
 }
 
 export interface CreateTikTokAppMappingRequestDto {
-  appRowId: number
+  appRowId?: number | null
+  linkedAppRowId?: number | null
   tikTokAppId: string
   downloadUrl: string
+  platform?: string | null
+  packageName?: string | null
+  bundleId?: string | null
+  appStoreId?: string | null
   packageNameOverride?: string
   bundleIdOverride?: string
   deepLinkUrlOverride?: string

@@ -492,6 +492,7 @@ export function CampaignListContent() {
     uniqueOptions.set("all", { value: "all", label: "All Apps", searchText: "all apps" })
 
     for (const mapping of referenceData?.appMappings ?? []) {
+      if (mapping.appRowId == null) continue
       const value = mapping.appRowId.toString()
       if (uniqueOptions.has(value)) continue
 

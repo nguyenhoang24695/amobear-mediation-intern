@@ -257,12 +257,12 @@ export function AccountAppSection({
               emptyMessage="No apps found."
               disabled={appSelectDisabled}
               onValueChange={(value) => onChange({ appRowId: value })}
-              getValue={(mapping) => mapping.appRowId.toString()}
+              getValue={(mapping) => mapping.appRowId?.toString() ?? `store:${mapping.id}`}
               getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.platform ?? ""} ${mapping.metaApplicationId ?? ""}`}
               renderValue={(mapping) => (
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate font-medium text-slate-900">{mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}</span>
-                  <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? `row:${mapping.appRowId}`}</span>
+                  <span className="truncate font-medium text-slate-900">{mapping.appDisplayName ?? mapping.appId ?? mapping.packageName ?? mapping.normalizedStoreIdentifier ?? `Store ${mapping.id}`}</span>
+                  <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `store:${mapping.id}`}</span>
                 </span>
               )}
               renderOption={(mapping) => (
@@ -403,5 +403,4 @@ export function AccountAppSection({
     </Card>
   )
 }
-
 

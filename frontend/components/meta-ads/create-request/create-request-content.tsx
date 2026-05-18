@@ -400,8 +400,8 @@ export function CreateRequestContent({ requestId }: Props) {
   )
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
-  const selectedAppMapping = availableAppMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
-    ?? referenceData?.appMappings.find((mapping) => mapping.appRowId.toString() === form.appRowId)
+  const selectedAppMapping = availableAppMappings.find((mapping) => mapping.appRowId != null && mapping.appRowId.toString() === form.appRowId)
+    ?? referenceData?.appMappings.find((mapping) => mapping.appRowId != null && mapping.appRowId.toString() === form.appRowId)
   const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
   const tokenState = deriveTokenState({

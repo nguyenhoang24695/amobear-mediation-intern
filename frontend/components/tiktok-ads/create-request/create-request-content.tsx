@@ -226,7 +226,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     [form?.tikTokAdAccountRowId, reference],
   )
   const selectedAppMapping = useMemo(
-    () => reference?.appMappings.find((mapping) => mapping.appRowId === form?.appRowId),
+    () => reference?.appMappings.find((mapping) => mapping.appRowId === form?.appRowId) ?? reference?.appMappings.find((mapping) => mapping.tikTokAppId === form?.adGroup.appId),
     [form?.appRowId, reference],
   )
   const targetingAdAccountId = form?.tikTokAdAccountRowId ?? 0
@@ -237,7 +237,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     if (!reference || !selectedAdAccount) return []
     const advertiserId = selectedAdAccount.advertiserId
     const matched = reference.appMappings.filter((mapping) => mapping.advertiserIds?.some((id) => id === advertiserId))
-    if (selectedAppMapping && !matched.some((mapping) => mapping.appRowId === selectedAppMapping.appRowId)) {
+    if (selectedAppMapping && !matched.some((mapping) => mapping.id === selectedAppMapping.id)) {
       return [selectedAppMapping, ...matched]
     }
     return matched
