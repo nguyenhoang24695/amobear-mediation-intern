@@ -148,6 +148,15 @@ function defaultPerformanceTimeZoneId(): string {
   }
 }
 
+/** Khớp query StarRocks / XmpReportDayUtcWindow: offset trong [-14,14], chuỗi UTC hoặc ±N. */
+function performanceQueryTimeZoneIdFromPublisherOffsetHours(publisherTzHours?: number | null): string | null {
+  if (publisherTzHours == null || !Number.isFinite(publisherTzHours)) return null
+  const h = Math.round(Number(publisherTzHours))
+  if (h < -14 || h > 14) return null
+  if (h === 0) return "UTC"
+  return `${h > 0 ? "+" : ""}${h}`
+}
+
 /** So cost ngày (sau làm tròn 2 số) với tổng cost các giờ hiển thị — bắt lệch do sync / làm tròn. */
 const dailyVsHourlyDisplayEpsilonUsd = 0.02
 
@@ -183,6 +192,8 @@ interface DateRange {
 
 interface AppPerformanceTabProps {
   appId: string
+  /** admob_accounts.timezone_offset_hours (qua API app detail); ưu tiên làm mặc định ô Timezone Performance. */
+  publisherTimezoneOffsetHours?: number | null
 }
 
 type PresetKey = "24h" | "7d" | "30d" | "custom"
@@ -223,7 +234,7 @@ function dayReprocessKey(reportDate: string, kind: "revenue" | "cost") {
   return `${reportDate}:${kind}`
 }
 
-export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
+export function AppPerformanceTab({ appId, publisherTimezoneOffsetHours }: AppPerformanceTabProps) {
   const { toast } = useToast()
   const [preset, setPreset] = useState<PresetKey>("7d")
   const [customRange, setCustomRange] = useState<DateRange>({
@@ -239,7 +250,10 @@ export function AppPerformanceTab({ appId }: AppPerformanceTabProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
   /** Offset (+7) hoặc UTC — gửi API; ngày trong range là lịch tại offset đó */
-  const [queryTimeZoneId, setQueryTimeZoneId] = useState(defaultPerformanceTimeZoneId)
+  const [queryTimeZoneId, setQueryTimeZoneId] = useState(() => {
+    const fromAccount = performanceQueryTimeZoneIdFromPublisherOffsetHours(publisherTimezoneOffsetHours)
+    return fromAccount ?? defaultPerformanceTimeZoneId()
+  })
   /** `${yyyy-MM-dd}:revenue` | `:cost` → true while POST in flight */
   const [dayReprocessBusy, setDayReprocessBusy] = useState<Record<string, true>>({})
 
