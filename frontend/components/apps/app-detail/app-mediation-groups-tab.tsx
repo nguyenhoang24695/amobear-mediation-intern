@@ -21,7 +21,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Search,
-  Plus,
   MoreHorizontal,
   Eye,
   Pencil,
@@ -415,10 +414,6 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                 className="pl-9 h-10 bg-white border-slate-200"
               />
             </div>
-            <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4" />
-              Create Mediation Group
-            </Button>
           </div>
         </div>
 

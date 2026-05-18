@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, ExternalLink, Eye } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Search, ExternalLink, Eye, ListFilter, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
@@ -45,50 +46,81 @@ export interface AppMediationGroupsMediationTabProps {
 }
 
 export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsMediationTabProps) {
-  const [startDate, setStartDate] = useState(defaultStartYmd)
-  const [endDate, setEndDate] = useState(defaultEndYmd)
-  const [country, setCountry] = useState("")
-  const [appVersion, setAppVersion] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const initStart = defaultStartYmd()
+  const initEnd = defaultEndYmd()
+
+  const [startDraft, setStartDraft] = useState(initStart)
+  const [endDraft, setEndDraft] = useState(initEnd)
+  const [countryDraft, setCountryDraft] = useState("")
+  const [appVersionDraft, setAppVersionDraft] = useState("")
+  const [searchDraft, setSearchDraft] = useState("")
+
+  const [startApplied, setStartApplied] = useState(initStart)
+  const [endApplied, setEndApplied] = useState(initEnd)
+  const [countryApplied, setCountryApplied] = useState("")
+  const [appVersionApplied, setAppVersionApplied] = useState("")
+  const [searchApplied, setSearchApplied] = useState("")
+
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [filtersOpen, setFiltersOpen] = useState(true)
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300)
-    return () => window.clearTimeout(t)
-  }, [searchQuery])
+  const filtersDirty = useMemo(
+    () =>
+      startDraft !== startApplied ||
+      endDraft !== endApplied ||
+      countryDraft !== countryApplied ||
+      appVersionDraft !== appVersionApplied ||
+      searchDraft.trim() !== searchApplied,
+    [
+      startDraft,
+      endDraft,
+      countryDraft,
+      appVersionDraft,
+      searchDraft,
+      startApplied,
+      endApplied,
+      countryApplied,
+      appVersionApplied,
+      searchApplied,
+    ],
+  )
 
-  useEffect(() => {
+  function applyBronzeFilters() {
+    setStartApplied(startDraft)
+    setEndApplied(endDraft)
+    setCountryApplied(countryDraft)
+    setAppVersionApplied(appVersionDraft)
+    setSearchApplied(searchDraft.trim())
     setPage(1)
-  }, [startDate, endDate, country, appVersion, debouncedSearch])
+  }
 
   const filterOptsKey = useMemo(
-    () => (appRowId ? `bronze_mg_filter_${appRowId}_${startDate}_${endDate}` : undefined),
-    [appRowId, startDate, endDate],
+    () => (appRowId ? `bronze_mg_filter_${appRowId}_${startDraft}_${endDraft}` : undefined),
+    [appRowId, startDraft, endDraft],
   )
 
   const { data: filterOpts, loading: loadingOpts } = useApi(
-    () => structureApi.getAppMediationBronzeFilterOptions(appRowId!, startDate, endDate),
+    () => structureApi.getAppMediationBronzeFilterOptions(appRowId!, startDraft, endDraft),
     { enabled: !!appRowId, cacheKey: filterOptsKey },
   )
 
   const dataKey = useMemo(
     () =>
       appRowId
-        ? `bronze_mg_${appRowId}_${startDate}_${endDate}_${country}_${appVersion}_${debouncedSearch}_${page}_${pageSize}`
+        ? `bronze_mg_${appRowId}_${startApplied}_${endApplied}_${countryApplied}_${appVersionApplied}_${searchApplied}_${page}_${pageSize}`
         : undefined,
-    [appRowId, startDate, endDate, country, appVersion, debouncedSearch, page, pageSize],
+    [appRowId, startApplied, endApplied, countryApplied, appVersionApplied, searchApplied, page, pageSize],
   )
 
   const { data: payload, loading, error } = useApi(
     () =>
       structureApi.getAppMediationBronzeMediationGroups(appRowId!, {
-        startDate,
-        endDate,
-        country: country || undefined,
-        appVersion: appVersion || undefined,
-        search: debouncedSearch || undefined,
+        startDate: startApplied,
+        endDate: endApplied,
+        country: countryApplied || undefined,
+        appVersion: appVersionApplied || undefined,
+        search: searchApplied || undefined,
         page,
         pageSize,
       }),
@@ -134,116 +166,155 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
         </Card>
       )}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center">
-        <div className="flex flex-row items-center gap-2">
-          <Label htmlFor="bronze-mg-start" className="shrink-0 text-sm">
-            Từ ngày (UTC)
-          </Label>
-          <Input
-            id="bronze-mg-start"
-            type="date"
-            min={BRONZE_MEDIATION_MIN_YMD}
-            value={startDate}
-            onChange={(e) => {
-              const v = clampYmdLowerBound(e.target.value)
-              setStartDate(v)
-              if (v > endDate) setEndDate(v)
-            }}
-            className="w-[160px]"
-          />
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="w-full">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 gap-2 w-full shrink-0 sm:w-auto sm:min-w-[7.5rem] justify-between sm:justify-center"
+                aria-expanded={filtersOpen}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <ListFilter className="h-4 w-4 shrink-0" aria-hidden />
+                  Filter
+                </span>
+                <ChevronDown
+                  className={cn("h-4 w-4 shrink-0 transition-transform duration-200", filtersOpen && "rotate-180")}
+                  aria-hidden
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <div className="relative w-full sm:flex-1 sm:min-w-0 max-w-2xl">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input
+                id="bronze-mg-search"
+                placeholder="Tìm theo tên hoặc Mediation Group ID (bấm Áp dụng để lọc)"
+                aria-label="Tìm theo tên hoặc Mediation Group ID — cần bấm Áp dụng bộ lọc"
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+                className="pl-9 h-10 bg-white border-slate-200 w-full"
+              />
+            </div>
+          </div>
+          <CollapsibleContent>
+            <div className="flex flex-col gap-4 border-t border-slate-200 pt-3 lg:flex-row lg:flex-wrap lg:items-center">
+              <div className="flex flex-row items-center gap-2">
+                <Label htmlFor="bronze-mg-start" className="shrink-0 text-sm">
+                  Từ ngày (UTC)
+                </Label>
+                <Input
+                  id="bronze-mg-start"
+                  type="date"
+                  min={BRONZE_MEDIATION_MIN_YMD}
+                  value={startDraft}
+                  onChange={(e) => {
+                    const v = clampYmdLowerBound(e.target.value)
+                    setStartDraft(v)
+                    if (v > endDraft) setEndDraft(v)
+                  }}
+                  className="w-[160px]"
+                />
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Label htmlFor="bronze-mg-end" className="shrink-0 text-sm">
+                  Đến ngày (UTC)
+                </Label>
+                <Input
+                  id="bronze-mg-end"
+                  type="date"
+                  min={BRONZE_MEDIATION_MIN_YMD}
+                  value={endDraft}
+                  onChange={(e) => {
+                    let v = clampYmdLowerBound(e.target.value)
+                    if (v < startDraft) v = startDraft
+                    setEndDraft(v)
+                  }}
+                  className="w-[160px]"
+                />
+              </div>
+              <div className="flex min-w-[220px] flex-row items-center gap-2 lg:min-w-[260px]">
+                <Label htmlFor="bronze-mg-country" className="shrink-0 text-sm">
+                  Country
+                </Label>
+                <Select
+                  value={countryDraft || "__all__"}
+                  onValueChange={(v) => setCountryDraft(v === "__all__" ? "" : v)}
+                  disabled={loadingOpts}
+                >
+                  <SelectTrigger id="bronze-mg-country" className="min-w-0 flex-1">
+                    <SelectValue placeholder="Tất cả" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Tất cả</SelectItem>
+                    {(filterOpts?.countries ?? []).map((c) => (
+                      <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
+                        <CountryFilterOption code={c} />
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-[200px] flex-row items-center gap-2">
+                <Label htmlFor="bronze-mg-appver" className="shrink-0 text-sm">
+                  App version
+                </Label>
+                <Select
+                  value={appVersionDraft || "__all__"}
+                  onValueChange={(v) => setAppVersionDraft(v === "__all__" ? "" : v)}
+                  disabled={loadingOpts}
+                >
+                  <SelectTrigger id="bronze-mg-appver" className="min-w-0 flex-1">
+                    <SelectValue placeholder="Tất cả" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Tất cả</SelectItem>
+                    {(filterOpts?.appVersionNames ?? []).map((v) => (
+                      <SelectItem key={v} value={v}>
+                        {v}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  className="h-10 shrink-0 bg-blue-600 hover:bg-blue-700"
+                  disabled={!filtersDirty}
+                  onClick={applyBronzeFilters}
+                >
+                  Áp dụng
+                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 shrink-0"
+                onClick={() => {
+                  const s = defaultStartYmd()
+                  const e = defaultEndYmd()
+                  setStartDraft(s)
+                  setEndDraft(e)
+                  setCountryDraft("")
+                  setAppVersionDraft("")
+                  setSearchDraft("")
+                  setStartApplied(s)
+                  setEndApplied(e)
+                  setCountryApplied("")
+                  setAppVersionApplied("")
+                  setSearchApplied("")
+                  setPage(1)
+                  setPageSize(20)
+                }}
+              >
+                Reset Filter
+              </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
         </div>
-        <div className="flex flex-row items-center gap-2">
-          <Label htmlFor="bronze-mg-end" className="shrink-0 text-sm">
-            Đến ngày (UTC)
-          </Label>
-          <Input
-            id="bronze-mg-end"
-            type="date"
-            min={BRONZE_MEDIATION_MIN_YMD}
-            value={endDate}
-            onChange={(e) => {
-              let v = clampYmdLowerBound(e.target.value)
-              if (v < startDate) v = startDate
-              setEndDate(v)
-            }}
-            className="w-[160px]"
-          />
-        </div>
-        <div className="flex min-w-[220px] flex-row items-center gap-2 lg:min-w-[260px]">
-          <Label htmlFor="bronze-mg-country" className="shrink-0 text-sm">
-            Country
-          </Label>
-          <Select
-            value={country || "__all__"}
-            onValueChange={(v) => setCountry(v === "__all__" ? "" : v)}
-            disabled={loadingOpts}
-          >
-            <SelectTrigger id="bronze-mg-country" className="min-w-0 flex-1">
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Tất cả</SelectItem>
-              {(filterOpts?.countries ?? []).map((c) => (
-                <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
-                  <CountryFilterOption code={c} />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-row items-center gap-2 min-w-[200px]">
-          <Label htmlFor="bronze-mg-appver" className="shrink-0 text-sm">
-            App version
-          </Label>
-          <Select
-            value={appVersion || "__all__"}
-            onValueChange={(v) => setAppVersion(v === "__all__" ? "" : v)}
-            disabled={loadingOpts}
-          >
-            <SelectTrigger id="bronze-mg-appver" className="flex-1 min-w-0">
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Tất cả</SelectItem>
-              {(filterOpts?.appVersionNames ?? []).map((v) => (
-                <SelectItem key={v} value={v}>
-                  {v}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-10 shrink-0"
-          onClick={() => {
-            setStartDate(defaultStartYmd())
-            setEndDate(defaultEndYmd())
-            setCountry("")
-            setAppVersion("")
-            setSearchQuery("")
-            setDebouncedSearch("")
-            setPage(1)
-            setPageSize(20)
-          }}
-        >
-          Reset Filter
-        </Button>
-        </div>
-        <div className="relative w-full max-w-2xl">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          <Input
-            id="bronze-mg-search"
-            placeholder="Tìm theo tên hoặc Mediation Group ID"
-            aria-label="Tìm theo tên hoặc Mediation Group ID"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-10 bg-white border-slate-200 w-full"
-          />
-        </div>
-      </div>
+      </Collapsible>
 
       {error && <p className="text-sm text-red-600">{error.message || "Lỗi tải dữ liệu"}</p>}
 
