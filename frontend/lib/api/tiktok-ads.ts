@@ -14,6 +14,8 @@ import type {
   TikTokIntegrationTestRequestDto,
   TikTokIntegrationTestResultDto,
   TikTokIdentityOptionDto,
+  TikTokLibraryImagePageDto,
+  TikTokLibraryVideoPageDto,
   TikTokAdAccountDto,
   TikTokAdAccountFilterOptionsDto,
   TikTokAdAccountPageDto,
@@ -132,6 +134,10 @@ export const tiktokReferenceApi = {
     apiClient.get<TikTokTargetingOptionsResponseDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/targeting-options`, params),
   getIdentities: async (adAccountId: number) =>
     apiClient.get<TikTokIdentityOptionDto[]>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/identities`),
+  getLibraryVideos: async (adAccountId: number, params?: { search?: string; page?: number; pageSize?: number }) =>
+    apiClient.get<TikTokLibraryVideoPageDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/library/videos`, params),
+  getLibraryImages: async (adAccountId: number, params?: { search?: string; page?: number; pageSize?: number }) =>
+    apiClient.get<TikTokLibraryImagePageDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/library/images`, params),
 }
 
 export const tiktokCampaignRequestsApi = {

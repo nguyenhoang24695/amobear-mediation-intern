@@ -2,7 +2,7 @@ import type { CreateTikTokCampaignRequestDto, TikTokOptionDto, TikTokReferenceRe
 
 export type TikTokRequestFormState = CreateTikTokCampaignRequestDto
 export type TikTokRequestSectionTarget = "account-app" | "campaign-settings" | "adgroup-audience" | "adgroup-budget" | "creative" | "ad"
-export type TikTokMediaMode = "upload" | "existing"
+export type TikTokMediaMode = "upload" | "existing" | "library"
 
 const AUTHORIZED_IDENTITY_TYPE = "AUTH_CODE"
 const DEPRECATED_CUSTOM_IDENTITY_TYPE = "CUSTOMIZED_USER"
@@ -284,5 +284,17 @@ export function getMediaMode(form: TikTokRequestFormState): TikTokMediaMode {
 export function getCreativeMediaMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
   if (creative.videoAssetId || creative.imageAssetIds.length > 0) return "upload"
   if (creative.videoId?.trim() || creative.imageIds.length > 0) return "existing"
+  return "upload"
+}
+
+export function getCreativeVideoMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
+  if (creative.videoAssetId) return "upload"
+  if (creative.videoId?.trim()) return "existing"
+  return "upload"
+}
+
+export function getCreativeImageMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
+  if (creative.imageAssetIds.length > 0) return "upload"
+  if (creative.imageIds.length > 0) return "existing"
   return "upload"
 }
