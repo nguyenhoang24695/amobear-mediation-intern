@@ -554,7 +554,11 @@ export function AppDetailContent() {
               {appLoading ? (
                 <div className="flex items-center justify-center h-40 text-sm text-slate-500">Loading app…</div>
               ) : app?.appId ? (
-                <AppPerformanceTab appId={app.appId} />
+                <AppPerformanceTab
+                  key={app.appId}
+                  appId={app.appId}
+                  publisherTimezoneOffsetHours={app.publisherTimezoneOffsetHours ?? null}
+                />
               ) : null}
             </TabsContent>
           ) : null}
