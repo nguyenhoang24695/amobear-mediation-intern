@@ -10,13 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { getTikTokRequestAssetPreviewSource } from "@/lib/tiktok-ads/media-preview"
-import type { TikTokIdentityOptionDto, TikTokReferenceResponseDto, TikTokRequestAssetDto } from "@/types/tiktok-ads"
+import type { TikTokCreativeImageDto, TikTokCreativeVideoDto, TikTokIdentityOptionDto, TikTokReferenceResponseDto, TikTokRequestAssetDto } from "@/types/tiktok-ads"
 import { ProtectedMediaImage, ProtectedMediaVideo } from "../shared/protected-media"
 import { SearchableSelect } from "./searchable-select"
 import { SectionShell } from "./section-shell"
 import { buildCreativeAdName } from "./naming"
 import type { TikTokMediaMode, TikTokRequestFormState } from "./types"
-import { getCreativeMediaMode, hasCreativeMedia, optionLabel } from "./types"
+import { getCreativeImageMode, getCreativeVideoMode, hasCreativeMedia, optionLabel } from "./types"
 
 type TikTokUploadKind = "image" | "video"
 type TikTokCreativeDraft = TikTokRequestFormState["ad"]
@@ -36,6 +36,12 @@ interface Props {
   identityLoading: boolean
   identityLoadError?: string | null
   creativeValidationMessages: Record<number, string | null | undefined>
+  libraryVideos: TikTokCreativeVideoDto[]
+  libraryImages: TikTokCreativeImageDto[]
+  libraryLoading: boolean
+  libraryLoadError?: string | null
+  onLibrarySearch: (kind: "video" | "image", query: string) => void
+  onLibraryEnabledChange: (enabled: boolean) => void
   onCreativeChange: (index: number, creative: TikTokCreativeDraft) => void
   onAddCreative: () => void
   onDuplicateCreative: (index: number) => void
@@ -76,6 +82,10 @@ function creativeTabIndex(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
 }
 
+function mediaModeLabel(mode: TikTokMediaMode) {
+  return mode === "upload" ? "Upload" : mode === "library" ? "TikTok library" : "Existing ID"
+}
+
 function isCreativeReady(creative: TikTokCreativeDraft) {
   const hasVideo = Boolean(creative.videoId?.trim() || creative.videoAssetId)
   const hasImage = creative.imageIds.length > 0 || creative.imageAssetIds.length > 0
@@ -94,6 +104,12 @@ export function CreativeSection({
   identityLoading,
   identityLoadError,
   creativeValidationMessages,
+  libraryVideos,
+  libraryImages,
+  libraryLoading,
+  libraryLoadError,
+  onLibrarySearch,
+  onLibraryEnabledChange,
   onCreativeChange,
   onAddCreative,
   onDuplicateCreative,
@@ -103,7 +119,17 @@ export function CreativeSection({
   const ready = hasCreativeMedia(form)
   const creatives = form.ads.length ? form.ads : [form.ad]
   const [activeCreativeTab, setActiveCreativeTab] = useState(creativeTabValue(0))
+  const [videoModeOverrides, setVideoModeOverrides] = useState<Record<number, TikTokMediaMode>>({})
+  const [imageModeOverrides, setImageModeOverrides] = useState<Record<number, TikTokMediaMode>>({})
   const lastGeneratedNamesRef = useRef<Record<number, string>>({})
+
+  function resolveVideoMode(index: number, creative: TikTokCreativeDraft): TikTokMediaMode {
+    return videoModeOverrides[index] ?? getCreativeVideoMode(creative)
+  }
+
+  function resolveImageMode(index: number, creative: TikTokCreativeDraft): TikTokMediaMode {
+    return imageModeOverrides[index] ?? getCreativeImageMode(creative)
+  }
 
   useEffect(() => {
     if (creativeTabIndex(activeCreativeTab) >= creatives.length) {
@@ -144,10 +170,16 @@ export function CreativeSection({
     setActiveCreativeTab(creativeTabValue(nextIndex))
   }
 
-  function handleCreativeMediaModeChange(index: number, creative: TikTokCreativeDraft, mode: TikTokMediaMode) {
-    onCreativeChange(index, mode === "existing"
-      ? { ...creative, videoAssetId: undefined, imageAssetIds: [] }
-      : { ...creative, videoId: "", imageIds: [] })
+  function handleVideoModeChange(index: number, creative: TikTokCreativeDraft, mode: TikTokMediaMode) {
+    setVideoModeOverrides((prev) => ({ ...prev, [index]: mode }))
+    if (mode === "library") onLibraryEnabledChange(true)
+    onCreativeChange(index, { ...creative, videoId: "", videoAssetId: undefined })
+  }
+
+  function handleImageModeChange(index: number, creative: TikTokCreativeDraft, mode: TikTokMediaMode) {
+    setImageModeOverrides((prev) => ({ ...prev, [index]: mode }))
+    if (mode === "library") onLibraryEnabledChange(true)
+    onCreativeChange(index, { ...creative, imageIds: [], imageAssetIds: [] })
   }
 
   function applyGeneratedAdName(index: number, creative: TikTokCreativeDraft) {
@@ -211,12 +243,25 @@ export function CreativeSection({
           </div>
 
           {creatives.map((creative, index) => {
-            const mediaMode = getCreativeMediaMode(creative)
+            const videoMode = resolveVideoMode(index, creative)
+            const imageMode = resolveImageMode(index, creative)
             const videoAsset = creative.videoAssetId ? uploadedAssetsById[creative.videoAssetId] ?? null : null
             const imageAssetId = creative.imageAssetIds[0]
             const imageAsset = imageAssetId ? uploadedAssetsById[imageAssetId] ?? null : null
+            const libraryVideoId = videoMode === "library" ? creative.videoId?.trim() ?? "" : ""
+            const libraryImageId = imageMode === "library" ? creative.imageIds[0] ?? "" : ""
+            const selectedLibraryVideo = libraryVideoId ? libraryVideos.find((v) => v.videoId === libraryVideoId) ?? null : null
+            const selectedLibraryImage = libraryImageId ? libraryImages.find((i) => i.imageId === libraryImageId) ?? null : null
+            const libraryEmptyMessage = libraryLoadError
+              ? libraryLoadError
+              : libraryLoading
+                ? "Loading TikTok library..."
+                : form.tikTokAdAccountRowId
+                  ? "No matching asset in TikTok library."
+                  : "Select an ad account first."
             const videoRatio = creative.videoAssetId ? videoRatiosByAssetId[creative.videoAssetId] : undefined
-            const imageUploadDisabled = !creative.videoAssetId || !videoRatio
+            const imageUploadGatedByVideo = videoMode === "upload" && (!creative.videoAssetId || !videoRatio)
+            const imageUploadDisabled = imageMode === "upload" && imageUploadGatedByVideo
             const imageUploadDisabledReason = !creative.videoAssetId
               ? "Upload video before uploading the cover image."
               : "Video dimensions are loading before cover image validation."
@@ -259,7 +304,8 @@ export function CreativeSection({
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <Badge className="bg-slate-100 text-slate-700">Creative #{index + 1}</Badge>
-                      <Badge variant="outline">{mediaMode === "upload" ? "Upload asset" : "Existing TikTok ID"}</Badge>
+                      <Badge variant="outline">Video: {mediaModeLabel(videoMode)}</Badge>
+                      <Badge variant="outline">Thumbnail: {mediaModeLabel(imageMode)}</Badge>
                       {videoRatio ? <Badge variant="outline">Video {videoRatio.label}</Badge> : null}
                     </div>
                     <div className="flex gap-2">
@@ -276,60 +322,159 @@ export function CreativeSection({
 
                   <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
                     <div className="space-y-4">
-                      <div className="max-w-xs space-y-2">
-                        <Label>Media source</Label>
-                        <Select value={mediaMode} onValueChange={(value) => handleCreativeMediaModeChange(index, creative, value as TikTokMediaMode)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="upload">Upload asset</SelectItem>
-                            <SelectItem value="existing">Existing TikTok ID</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-3 rounded-md border bg-slate-50 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <Label className="text-sm font-semibold">Video</Label>
+                            <Select value={videoMode} onValueChange={(value) => handleVideoModeChange(index, creative, value as TikTokMediaMode)}>
+                              <SelectTrigger className="h-8 w-[160px] bg-white text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="upload">Upload</SelectItem>
+                                <SelectItem value="existing">Existing ID</SelectItem>
+                                <SelectItem value="library">TikTok library</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {videoMode === "upload" ? (
+                            <UploadBox
+                              kind="video"
+                              label="Upload video"
+                              asset={videoAsset}
+                              fallback={videoAssetFallback}
+                              uploading={uploadingVideo}
+                              onUpload={(file) => onUpload(index, "video", file)}
+                            />
+                          ) : videoMode === "library" ? (
+                            <div className="space-y-2">
+                              <SearchableSelect
+                                value={libraryVideoId}
+                                options={libraryVideos}
+                                placeholder={libraryLoading ? "Loading videos..." : "Select a video from library..."}
+                                searchPlaceholder="Search by file name..."
+                                emptyMessage={libraryEmptyMessage}
+                                disabled={!form.tikTokAdAccountRowId}
+                                shouldFilter={false}
+                                onSearchChange={(query) => onLibrarySearch("video", query)}
+                                getValue={(option) => option.videoId}
+                                getSearchText={(option) => `${option.fileName ?? ""} ${option.videoId} ${option.materialId ?? ""}`}
+                                onValueChange={(value) => {
+                                  const picked = libraryVideos.find((v) => v.videoId === value)
+                                  if (!picked) return
+                                  onCreativeChange(index, { ...creative, videoId: picked.videoId, videoAssetId: undefined })
+                                }}
+                                renderValue={(option) => (
+                                  <span className="flex min-w-0 items-center gap-2">
+                                    {option.videoCoverUrl ? <img src={option.videoCoverUrl} alt="" className="h-8 w-8 shrink-0 rounded object-cover" /> : null}
+                                    <span className="min-w-0 truncate font-medium text-slate-900">{option.fileName || option.videoId}</span>
+                                  </span>
+                                )}
+                                renderOption={(option) => (
+                                  <div className="flex min-w-0 items-center gap-2 py-0.5">
+                                    {option.videoCoverUrl ? <img src={option.videoCoverUrl} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : null}
+                                    <div className="min-w-0">
+                                      <div className="truncate text-sm font-medium text-slate-900">{option.fileName || option.videoId}</div>
+                                      <div className="truncate font-mono text-xs text-slate-400">
+                                        {option.width && option.height ? `${option.width}x${option.height}` : ""}{option.duration ? ` · ${Number(option.duration).toFixed(1)}s` : ""}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              />
+                              {selectedLibraryVideo && !selectedLibraryVideo.displayable ? (
+                                <p className="text-xs text-amber-700">This video is not displayable on TikTok anymore.</p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-slate-600">TikTok video_id</Label>
+                              <Input
+                                value={creative.videoId ?? ""}
+                                onChange={(event) => onCreativeChange(index, { ...creative, videoId: event.target.value.trim(), videoAssetId: undefined })}
+                                placeholder="v10033..."
+                              />
+                            </div>
+                          )}
+                        </div>
 
-                      {mediaMode === "upload" ? (
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <UploadBox
-                            kind="video"
-                            label="Upload video"
-                            asset={videoAsset}
-                            fallback={videoAssetFallback}
-                            uploading={uploadingVideo}
-                            onUpload={(file) => onUpload(index, "video", file)}
-                          />
-                          <UploadBox
-                            kind="image"
-                            label="Upload cover image"
-                            asset={imageAsset}
-                            fallback={imageAssetFallback}
-                            uploading={uploadingImage}
-                            disabled={imageUploadDisabled}
-                            disabledReason={imageUploadDisabled ? imageUploadDisabledReason : undefined}
-                            onUpload={(file) => onUpload(index, "image", file)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label>TikTok video_id</Label>
-                            <Input
-                              value={creative.videoId ?? ""}
-                              onChange={(event) => onCreativeChange(index, { ...creative, videoId: event.target.value.trim(), videoAssetId: undefined })}
-                              placeholder="v10033..."
-                            />
+                        <div className="space-y-3 rounded-md border bg-slate-50 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <Label className="text-sm font-semibold">Cover image</Label>
+                            <Select value={imageMode} onValueChange={(value) => handleImageModeChange(index, creative, value as TikTokMediaMode)}>
+                              <SelectTrigger className="h-8 w-[160px] bg-white text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="upload">Upload</SelectItem>
+                                <SelectItem value="existing">Existing ID</SelectItem>
+                                <SelectItem value="library">TikTok library</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label>TikTok cover image_ids</Label>
-                            <Input
-                              value={creative.imageIds.join(", ")}
-                              onChange={(event) => onCreativeChange(index, { ...creative, imageIds: splitCsv(event.target.value), imageAssetIds: [] })}
-                              placeholder="ad-site-i18n-sg/..."
+                          {imageMode === "upload" ? (
+                            <UploadBox
+                              kind="image"
+                              label="Upload cover image"
+                              asset={imageAsset}
+                              fallback={imageAssetFallback}
+                              uploading={uploadingImage}
+                              disabled={imageUploadDisabled}
+                              disabledReason={imageUploadDisabled ? imageUploadDisabledReason : undefined}
+                              onUpload={(file) => onUpload(index, "image", file)}
                             />
-                          </div>
+                          ) : imageMode === "library" ? (
+                            <div className="space-y-2">
+                              <SearchableSelect
+                                value={libraryImageId}
+                                options={libraryImages}
+                                placeholder={libraryLoading ? "Loading images..." : "Select a cover image..."}
+                                searchPlaceholder="Search by file name..."
+                                emptyMessage={libraryEmptyMessage}
+                                disabled={!form.tikTokAdAccountRowId}
+                                shouldFilter={false}
+                                onSearchChange={(query) => onLibrarySearch("image", query)}
+                                getValue={(option) => option.imageId}
+                                getSearchText={(option) => `${option.fileName ?? ""} ${option.imageId} ${option.materialId ?? ""}`}
+                                onValueChange={(value) => {
+                                  const picked = libraryImages.find((i) => i.imageId === value)
+                                  if (!picked) return
+                                  onCreativeChange(index, { ...creative, imageIds: [picked.imageId], imageAssetIds: [] })
+                                }}
+                                renderValue={(option) => (
+                                  <span className="flex min-w-0 items-center gap-2">
+                                    {option.imageUrl ? <img src={option.imageUrl} alt="" className="h-8 w-8 shrink-0 rounded object-cover" /> : null}
+                                    <span className="min-w-0 truncate font-medium text-slate-900">{option.fileName || option.imageId}</span>
+                                  </span>
+                                )}
+                                renderOption={(option) => (
+                                  <div className="flex min-w-0 items-center gap-2 py-0.5">
+                                    {option.imageUrl ? <img src={option.imageUrl} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : null}
+                                    <div className="min-w-0">
+                                      <div className="truncate text-sm font-medium text-slate-900">{option.fileName || option.imageId}</div>
+                                      <div className="truncate font-mono text-xs text-slate-400">
+                                        {option.width && option.height ? `${option.width}x${option.height}` : ""}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              />
+                              {selectedLibraryImage && !selectedLibraryImage.displayable ? (
+                                <p className="text-xs text-amber-700">This image is not displayable on TikTok anymore.</p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-slate-600">TikTok cover image_ids</Label>
+                              <Input
+                                value={creative.imageIds.join(", ")}
+                                onChange={(event) => onCreativeChange(index, { ...creative, imageIds: splitCsv(event.target.value), imageAssetIds: [] })}
+                                placeholder="ad-site-i18n-sg/..."
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
 
                       {validationMessage ? (
                         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
@@ -446,10 +591,16 @@ export function CreativeSection({
                           </div>
                         </div>
                         <div className="flex aspect-[9/16] items-center justify-center bg-slate-100">
-                          {videoPreview.url && mediaMode === "upload" ? (
+                          {videoMode === "upload" && videoPreview.url ? (
                             <ProtectedMediaVideo className="h-full w-full object-cover" controls fallback={previewFallback} requiresAuth={videoPreview.requiresAuth} src={videoPreview.url} />
-                          ) : imagePreview.url && mediaMode === "upload" ? (
+                          ) : videoMode === "library" && selectedLibraryVideo?.previewUrl ? (
+                            <video className="h-full w-full object-cover" controls src={selectedLibraryVideo.previewUrl} poster={selectedLibraryVideo.videoCoverUrl ?? undefined} />
+                          ) : videoMode === "library" && selectedLibraryVideo?.videoCoverUrl ? (
+                            <img alt={selectedLibraryVideo.fileName ?? "TikTok library video"} className="h-full w-full object-cover" src={selectedLibraryVideo.videoCoverUrl} />
+                          ) : imageMode === "upload" && imagePreview.url ? (
                             <ProtectedMediaImage alt={imageAsset?.fileName ?? "Uploaded TikTok image"} className="h-full w-full object-cover" fallback={previewFallback} requiresAuth={imagePreview.requiresAuth} src={imagePreview.url} />
+                          ) : imageMode === "library" && selectedLibraryImage?.imageUrl ? (
+                            <img alt={selectedLibraryImage.fileName ?? "TikTok library image"} className="h-full w-full object-cover" src={selectedLibraryImage.imageUrl} />
                           ) : (
                             previewFallback
                           )}

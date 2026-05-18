@@ -21,6 +21,8 @@ interface SearchableSelectProps<T> {
   getSearchText: (option: T) => string
   renderOption: (option: T) => ReactNode
   renderValue: (option: T) => ReactNode
+  onSearchChange?: (query: string) => void
+  shouldFilter?: boolean
 }
 
 export function SearchableSelect<T>({
@@ -35,6 +37,8 @@ export function SearchableSelect<T>({
   getSearchText,
   renderOption,
   renderValue,
+  onSearchChange,
+  shouldFilter = true,
 }: SearchableSelectProps<T>) {
   const [open, setOpen] = useState(false)
   const selectedOption = options.find((option) => getValue(option) === value)
@@ -57,8 +61,8 @@ export function SearchableSelect<T>({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[320px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+        <Command shouldFilter={shouldFilter}>
+          <CommandInput placeholder={searchPlaceholder} onValueChange={onSearchChange} />
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
