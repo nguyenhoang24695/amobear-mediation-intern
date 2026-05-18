@@ -198,6 +198,20 @@ export interface TikTokCreativeVideoDto {
   modifyTime?: string | null
 }
 
+export interface TikTokLibraryVideoPageDto {
+  items: TikTokCreativeVideoDto[]
+  page: number
+  pageSize: number
+  totalNumber?: number | null
+}
+
+export interface TikTokLibraryImagePageDto {
+  items: TikTokCreativeImageDto[]
+  page: number
+  pageSize: number
+  totalNumber?: number | null
+}
+
 export interface TikTokCampaignDetailDto extends TikTokCampaignListItemDto {
   configJson?: string | null
   performanceStartDate: string

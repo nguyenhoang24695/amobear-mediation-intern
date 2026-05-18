@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { tiktokCampaignRequestsApi, tiktokReferenceApi } from "@/lib/api/tiktok-ads"
 import { cn } from "@/lib/utils"
-import type { TikTokCampaignRequestDetailDto, TikTokIdentityOptionDto, TikTokReferenceResponseDto, TikTokRequestAssetDto, TikTokTargetingOptionsResponseDto, TikTokValidationResultDto } from "@/types/tiktok-ads"
+import type { TikTokCampaignRequestDetailDto, TikTokCreativeImageDto, TikTokCreativeVideoDto, TikTokIdentityOptionDto, TikTokReferenceResponseDto, TikTokRequestAssetDto, TikTokTargetingOptionsResponseDto, TikTokValidationResultDto } from "@/types/tiktok-ads"
 import { AccountAppSection } from "./section-account-app"
 import { AdGroupAudienceSection } from "./section-adgroup-audience"
 import { AdGroupBudgetSection } from "./section-adgroup-budget"
@@ -203,6 +203,12 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   const [identityOptions, setIdentityOptions] = useState<TikTokIdentityOptionDto[]>([])
   const [identityLoading, setIdentityLoading] = useState(false)
   const [identityLoadError, setIdentityLoadError] = useState<string | null>(null)
+  const [libraryVideos, setLibraryVideos] = useState<TikTokCreativeVideoDto[]>([])
+  const [libraryImages, setLibraryImages] = useState<TikTokCreativeImageDto[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [libraryLoadError, setLibraryLoadError] = useState<string | null>(null)
+  const [librarySearch, setLibrarySearch] = useState<{ video: string; image: string }>({ video: "", image: "" })
+  const [libraryEnabled, setLibraryEnabled] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -385,6 +391,54 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     void loadIdentities()
     return () => { cancelled = true }
   }, [targetingAdAccountId])
+
+  useEffect(() => {
+    let cancelled = false
+    const adAccountId = targetingAdAccountId
+    if (!adAccountId || !libraryEnabled) {
+      if (!libraryEnabled) {
+        setLibraryVideos([])
+        setLibraryImages([])
+        setLibraryLoadError(null)
+      }
+      return
+    }
+
+    const handle = window.setTimeout(async () => {
+      setLibraryLoading(true)
+      setLibraryLoadError(null)
+      try {
+        const [videoPage, imagePage] = await Promise.all([
+          tiktokReferenceApi.getLibraryVideos(adAccountId, { search: librarySearch.video || undefined, pageSize: 50 }),
+          tiktokReferenceApi.getLibraryImages(adAccountId, { search: librarySearch.image || undefined, pageSize: 50 }),
+        ])
+        if (cancelled) return
+        setLibraryVideos(videoPage.items)
+        setLibraryImages(imagePage.items)
+      } catch (error) {
+        if (!cancelled) {
+          setLibraryVideos([])
+          setLibraryImages([])
+          setLibraryLoadError(errorMessage(error))
+        }
+      } finally {
+        if (!cancelled) setLibraryLoading(false)
+      }
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(handle)
+    }
+  }, [targetingAdAccountId, libraryEnabled, librarySearch.video, librarySearch.image])
+
+  const handleLibrarySearch = useCallback((kind: "video" | "image", query: string) => {
+    setLibrarySearch((prev) => prev[kind] === query ? prev : { ...prev, [kind]: query })
+  }, [])
+
+  const handleLibraryEnabledChange = useCallback((enabled: boolean) => {
+    setLibraryEnabled((prev) => prev || enabled)
+  }, [])
 
   const updateForm = useCallback((patch: Partial<TikTokRequestFormState>) => {
     setForm((current) => {
@@ -723,6 +777,12 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
               identityLoading={identityLoading}
               identityLoadError={identityLoadError}
               creativeValidationMessages={creativeValidationMessages}
+              libraryVideos={libraryVideos}
+              libraryImages={libraryImages}
+              libraryLoading={libraryLoading}
+              libraryLoadError={libraryLoadError}
+              onLibrarySearch={handleLibrarySearch}
+              onLibraryEnabledChange={handleLibraryEnabledChange}
               onCreativeChange={handleCreativeChange}
               onAddCreative={handleAddCreative}
               onDuplicateCreative={handleDuplicateCreative}
