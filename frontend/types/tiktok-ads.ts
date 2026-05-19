@@ -122,6 +122,7 @@ export interface TikTokCampaignAdGroupSummaryDto {
   bid?: number | null
   billingEvent?: string | null
   scheduleType?: string | null
+  adTexts: string[]
   scheduleStartTime?: string | null
   scheduleEndTime?: string | null
   appRowId?: number | null
@@ -141,8 +142,10 @@ export interface TikTokCampaignAdSummaryDto {
   status: string
   adFormat?: string | null
   videoId?: string | null
+  videoIds: string[]
   imageIds: string[]
   adText?: string | null
+  adTexts: string[]
   callToAction?: string | null
   landingPageUrl?: string | null
   trackingUrl?: string | null
@@ -249,6 +252,37 @@ export interface TikTokSyncResultDto {
 }
 
 
+export interface TikTokCampaignDuplicateReadinessCheckDto {
+  key: string
+  label: string
+  isReady: boolean
+  message: string
+}
+
+export interface TikTokCampaignDuplicateReadinessResultDto {
+  isReady: boolean
+  summary: string
+  checkedAt: string
+  checks: TikTokCampaignDuplicateReadinessCheckDto[]
+}
+
+export interface TikTokCampaignDuplicateResponseDto {
+  success: boolean
+  message: string
+  newCampaignId?: string | null
+  newLocalCampaignId?: number | null
+  createdAdGroupCount: number
+  createdAdCount: number
+}
+
+export interface TikTokCampaignDuplicateToRequestResponseDto {
+  success: boolean
+  message: string
+  requestId: number
+  requestUrl: string
+  copiedAdGroupCount: number
+  copiedAdCount: number
+}
 export interface TikTokIntegrationDto {
   id: number
   displayName: string
@@ -514,6 +548,7 @@ export interface CreateTikTokCampaignRequestDto {
   adGroup: TikTokAdGroupDraftDto
   ad: TikTokAdDraftDto
   ads: TikTokAdDraftDto[]
+  adGroups: TikTokAdGroupDraftWithAdsDto[]
 }
 
 export interface UpdateTikTokCampaignRequestDto extends Omit<CreateTikTokCampaignRequestDto, "idempotencyKey"> {}
@@ -547,16 +582,25 @@ export interface TikTokAdGroupDraftDto {
   ageGroups: string[]
   gender: string
   languages: string[]
+  adTexts: string[]
+}
+
+export interface TikTokAdGroupDraftWithAdsDto {
+  adGroup: TikTokAdGroupDraftDto
+  ads: TikTokAdDraftDto[]
 }
 
 export interface TikTokAdDraftDto {
   adName: string
   adFormat: string
   videoId?: string
+  videoIds: string[]
   imageIds: string[]
   videoAssetId?: number
+  videoAssetIds: number[]
   imageAssetIds: number[]
   adText?: string
+  adTexts: string[]
   callToAction?: string
   landingPageUrl?: string
   trackingUrl?: string
@@ -651,3 +695,7 @@ export interface TikTokExecutionResultDto {
   payloadPreview?: unknown
   detail?: TikTokCampaignRequestDetailDto | null
 }
+
+
+
+

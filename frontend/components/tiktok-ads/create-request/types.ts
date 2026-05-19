@@ -75,14 +75,19 @@ export function createDefaultTikTokRequestForm(reference: TikTokReferenceRespons
       ageGroups: [],
       gender: reference?.genders[0]?.key ?? "GENDER_UNLIMITED",
       languages: [],
+      adTexts: [""],
     },
     ad: {
       adName: "",
       adFormat: "SINGLE_VIDEO",
       videoId: "",
+      videoIds: [],
       imageIds: [],
+      videoAssetId: undefined,
+      videoAssetIds: [],
       imageAssetIds: [],
       adText: "",
+      adTexts: [""],
       callToAction: reference?.callToActions[0]?.key ?? "INSTALL_NOW",
       landingPageUrl: "",
       identityType: reference?.identityTypes.find((option) => !isDeprecatedCustomIdentity(option.key))?.key ?? AUTHORIZED_IDENTITY_TYPE,
@@ -91,6 +96,7 @@ export function createDefaultTikTokRequestForm(reference: TikTokReferenceRespons
       appName: "",
     },
     ads: [],
+    adGroups: [],
   })
 }
 
@@ -175,15 +181,19 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
   setIfDefined(adGroup, "ageGroups", stringArrayValue(pick(adGroupSource, "ageGroups", "AgeGroups")))
   setIfDefined(adGroup, "gender", stringValue(pick(adGroupSource, "gender", "Gender")))
   setIfDefined(adGroup, "languages", stringArrayValue(pick(adGroupSource, "languages", "Languages")))
+  setIfDefined(adGroup, "adTexts", stringArrayValue(pick(adGroupSource, "adTexts", "AdTexts")))
 
   const ad: PayloadRecord = {}
   setIfDefined(ad, "adName", stringValue(pick(adSource, "adName", "AdName")))
   setIfDefined(ad, "adFormat", stringValue(pick(adSource, "adFormat", "AdFormat")))
   setIfDefined(ad, "videoId", stringValue(pick(adSource, "videoId", "VideoId")))
+  setIfDefined(ad, "videoIds", stringArrayValue(pick(adSource, "videoIds", "VideoIds")))
   setIfDefined(ad, "imageIds", stringArrayValue(pick(adSource, "imageIds", "ImageIds")))
   setIfDefined(ad, "videoAssetId", numberValue(pick(adSource, "videoAssetId", "VideoAssetId")))
+  setIfDefined(ad, "videoAssetIds", numberArrayValue(pick(adSource, "videoAssetIds", "VideoAssetIds")))
   setIfDefined(ad, "imageAssetIds", numberArrayValue(pick(adSource, "imageAssetIds", "ImageAssetIds")))
   setIfDefined(ad, "adText", stringValue(pick(adSource, "adText", "AdText")))
+  setIfDefined(ad, "adTexts", stringArrayValue(pick(adSource, "adTexts", "AdTexts")))
   setIfDefined(ad, "callToAction", stringValue(pick(adSource, "callToAction", "CallToAction")))
   setIfDefined(ad, "landingPageUrl", stringValue(pick(adSource, "landingPageUrl", "LandingPageUrl")))
   setIfDefined(ad, "trackingUrl", stringValue(pick(adSource, "trackingUrl", "TrackingUrl")))
@@ -198,6 +208,20 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
     ? adsSource.map((item) => normalizeTikTokRequestPayloadShape({ ad: item }).ad).filter(Boolean)
     : undefined
 
+  const adGroupsSource = pick(root, "adGroups", "AdGroups")
+  const adGroups = Array.isArray(adGroupsSource)
+    ? adGroupsSource.map((item) => {
+        const itemRecord = asRecord(item)
+        const itemAdGroupSource = asRecord(pick(itemRecord, "adGroup", "AdGroup"))
+        const itemAdsSource = pick(itemRecord, "ads", "Ads")
+        const itemAdGroup = normalizeTikTokRequestPayloadShape({ adGroup: itemAdGroupSource }).adGroup ?? adGroup
+        const itemAds = Array.isArray(itemAdsSource)
+          ? itemAdsSource.map((adItem) => normalizeTikTokRequestPayloadShape({ ad: adItem }).ad).filter(Boolean)
+          : []
+        return { adGroup: itemAdGroup, ads: itemAds }
+      })
+    : []
+
   return {
     tikTokAdAccountRowId: numberValue(pick(root, "tikTokAdAccountRowId", "TikTokAdAccountRowId")),
     appRowId: numberValue(pick(root, "appRowId", "AppRowId")),
@@ -206,6 +230,7 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
     adGroup,
     ad,
     ads,
+    adGroups,
   } as unknown as Partial<TikTokRequestFormState>
 }
 
@@ -229,9 +254,35 @@ export function sanitizeTikTokRequestForm(state: TikTokRequestFormState): TikTok
   next.adGroup.ageGroups = Array.isArray(next.adGroup.ageGroups) ? next.adGroup.ageGroups : []
   next.adGroup.languages = Array.isArray(next.adGroup.languages) ? next.adGroup.languages : []
   next.adGroup.gender = next.adGroup.gender || "GENDER_UNLIMITED"
-  const rawAds = Array.isArray(next.ads) && next.ads.length > 0 ? next.ads : [next.ad]
-  next.ads = rawAds.map(sanitizeTikTokCreative)
+  const rawGroups = Array.isArray(next.adGroups) && next.adGroups.length > 0
+    ? next.adGroups
+    : [{ adGroup: next.adGroup, ads: Array.isArray(next.ads) && next.ads.length > 0 ? next.ads : [next.ad] }]
+  next.adGroups = rawGroups.map((group) => ({
+    adGroup: sanitizeTikTokAdGroup({ ...(group.adGroup ?? next.adGroup), adTexts: Array.isArray(group.adGroup?.adTexts) ? group.adGroup.adTexts : (Array.isArray(group.ads) ? group.ads.flatMap((ad) => Array.isArray(ad.adTexts) ? ad.adTexts : ad.adText ? [ad.adText] : []) : []) }),
+    ads: (Array.isArray(group.ads) && group.ads.length > 0 ? group.ads : [next.ad]).map(sanitizeTikTokCreative),
+  }))
+  next.adGroup = next.adGroups[0]?.adGroup ?? sanitizeTikTokAdGroup(next.adGroup)
+  next.ads = next.adGroups[0]?.ads ?? []
   next.ad = next.ads[0] ?? sanitizeTikTokCreative(next.ad)
+  return next
+}
+
+export function sanitizeTikTokAdGroup(adGroup: TikTokRequestFormState["adGroup"]): TikTokRequestFormState["adGroup"] {
+  const next = structuredClone(adGroup) as TikTokRequestFormState["adGroup"]
+  next.adGroupName = next.adGroupName ?? ""
+  next.placementType = next.placementType || "PLACEMENT_TYPE_AUTOMATIC"
+  next.placements = Array.isArray(next.placements) ? next.placements : []
+  next.budgetMode = next.budgetMode || "BUDGET_MODE_DAY"
+  next.scheduleType = next.scheduleType || "SCHEDULE_FROM_NOW"
+  next.optimizationGoal = next.optimizationGoal || "INSTALL"
+  next.bidType = next.bidType || "BID_TYPE_NO_BID"
+  next.billingEvent = next.billingEvent || "OCPM"
+  next.operatingSystems = Array.isArray(next.operatingSystems) ? next.operatingSystems : []
+  next.locationIds = Array.isArray(next.locationIds) ? next.locationIds : []
+  next.ageGroups = Array.isArray(next.ageGroups) ? next.ageGroups : []
+  next.languages = Array.isArray(next.languages) ? next.languages : []
+  next.gender = next.gender || "GENDER_UNLIMITED"
+  next.adTexts = Array.isArray(next.adTexts) ? next.adTexts.map((item) => item ?? "").slice(0, 5) : [""]
   return next
 }
 
@@ -246,8 +297,19 @@ export function sanitizeTikTokCreative(ad: TikTokRequestFormState["ad"]): TikTok
     next.identityId = undefined
     next.identityAuthorizedBcId = undefined
   }
+  next.videoIds = Array.isArray(next.videoIds) ? next.videoIds.filter((item) => item?.trim()) : []
+  if (next.videoId?.trim() && !next.videoIds.includes(next.videoId.trim())) next.videoIds = [...next.videoIds, next.videoId.trim()]
+  next.videoId = next.videoIds[0] ?? ""
   next.imageIds = Array.isArray(next.imageIds) ? next.imageIds : []
+  next.videoAssetIds = Array.isArray(next.videoAssetIds) ? next.videoAssetIds.filter((item) => Number.isFinite(item)) : []
+  if (next.videoAssetId && !next.videoAssetIds.includes(next.videoAssetId)) next.videoAssetIds = [...next.videoAssetIds, next.videoAssetId]
+  if (next.videoIds.length > 0) next.videoAssetIds = []
+  next.videoAssetId = next.videoAssetIds[0]
   next.imageAssetIds = Array.isArray(next.imageAssetIds) ? next.imageAssetIds : []
+  if (next.imageIds.length > 0) next.imageAssetIds = []
+  next.adTexts = Array.isArray(next.adTexts) ? next.adTexts.map((item) => item ?? "").slice(0, 5) : []
+  if (next.adText?.trim() && !next.adTexts.some((item) => item.trim() === next.adText?.trim())) next.adTexts = [...next.adTexts, next.adText.trim()].slice(0, 5)
+  next.adText = next.adTexts.find((item) => item.trim())?.trim() ?? ""
   return next
 }
 
@@ -270,31 +332,34 @@ function normalizeCallToAction(value?: string | null) {
 }
 
 export function hasCreativeMedia(form: TikTokRequestFormState) {
-  return form.ads.length > 0 && form.ads.every((ad) => {
-    const hasVideo = !!(ad.videoId?.trim() || ad.videoAssetId)
+  const ads = form.adGroups?.length ? form.adGroups.flatMap((group) => group.ads) : form.ads
+  return ads.length > 0 && ads.every((ad) => {
+    const hasVideo = (ad.videoIds?.length ?? 0) > 0 || (ad.videoAssetIds?.length ?? 0) > 0
     const hasImage = ad.imageIds.length > 0 || ad.imageAssetIds.length > 0
     return hasVideo && hasImage
   })
 }
 
 export function getMediaMode(form: TikTokRequestFormState): TikTokMediaMode {
-  return form.ads.some((ad) => ad.videoAssetId || ad.imageAssetIds.length > 0) ? "upload" : "existing"
+  const ads = form.adGroups?.length ? form.adGroups.flatMap((group) => group.ads) : form.ads
+  return ads.some((ad) => (ad.videoAssetIds?.length ?? 0) > 0 || ad.imageAssetIds.length > 0) ? "upload" : "existing"
 }
 
 export function getCreativeMediaMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
-  if (creative.videoAssetId || creative.imageAssetIds.length > 0) return "upload"
-  if (creative.videoId?.trim() || creative.imageIds.length > 0) return "existing"
+  if ((creative.videoIds?.length ?? 0) > 0 || creative.imageIds.length > 0) return "library"
+  if ((creative.videoAssetIds?.length ?? 0) > 0 || creative.imageAssetIds.length > 0) return "upload"
   return "upload"
 }
 
 export function getCreativeVideoMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
-  if (creative.videoAssetId) return "upload"
-  if (creative.videoId?.trim()) return "existing"
+  if ((creative.videoIds?.length ?? 0) > 0) return "library"
+  if ((creative.videoAssetIds?.length ?? 0) > 0) return "upload"
   return "upload"
 }
 
 export function getCreativeImageMode(creative: TikTokRequestFormState["ad"]): TikTokMediaMode {
+  if (creative.imageIds.length > 0) return "library"
   if (creative.imageAssetIds.length > 0) return "upload"
-  if (creative.imageIds.length > 0) return "existing"
   return "upload"
 }
+

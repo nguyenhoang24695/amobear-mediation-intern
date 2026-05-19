@@ -23,9 +23,10 @@ function numberOrUndefined(value: string) {
 }
 
 export function AdGroupBudgetSection({ form, reference, selectedAdAccount, selectedAppMapping, onChange }: Props) {
+  const isInfiniteBudget = form.adGroup.budgetMode === "BUDGET_MODE_INFINITE"
   const ready = Boolean(
     form.adGroup.budgetMode &&
-    Number(form.adGroup.budget ?? 0) > 0 &&
+    (isInfiniteBudget || Number(form.adGroup.budget ?? 0) > 0) &&
     form.adGroup.optimizationGoal &&
     form.adGroup.bidType &&
     form.adGroup.billingEvent &&
@@ -117,7 +118,7 @@ export function AdGroupBudgetSection({ form, reference, selectedAdAccount, selec
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Ad group budget mode</Label>
-              <Select value={form.adGroup.budgetMode} onValueChange={(value) => onChange({ adGroup: { ...form.adGroup, budgetMode: value } })}>
+              <Select value={form.adGroup.budgetMode} onValueChange={(value) => onChange({ adGroup: { ...form.adGroup, budgetMode: value, budget: value === "BUDGET_MODE_INFINITE" ? 0 : form.adGroup.budget } })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -131,7 +132,8 @@ export function AdGroupBudgetSection({ form, reference, selectedAdAccount, selec
 
             <div className="space-y-2">
               <Label>Ad group budget</Label>
-              <Input min={0} step="0.01" type="number" value={form.adGroup.budget ?? ""} onChange={(event) => onChange({ adGroup: { ...form.adGroup, budget: numberOrUndefined(event.target.value) } })} />
+              <Input min={isInfiniteBudget ? 0 : 50} step="0.01" type="number" disabled={isInfiniteBudget} value={form.adGroup.budget ?? ""} onChange={(event) => onChange({ adGroup: { ...form.adGroup, budget: numberOrUndefined(event.target.value) } })} />
+              <p className="text-xs text-slate-500">{isInfiniteBudget ? "Ad group uses campaign-level budget; ad group budget remains 0." : "TikTok requires a minimum budget of $50."}</p>
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -171,3 +173,4 @@ export function AdGroupBudgetSection({ form, reference, selectedAdAccount, selec
     </SectionShell>
   )
 }
+

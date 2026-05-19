@@ -91,14 +91,16 @@ export function CampaignSettingsSection({ form, reference, selectedAppMapping, l
         <div className="space-y-2">
           <Label>Campaign budget</Label>
           <Input
-            min={0}
+            min={50}
             step="0.01"
             type="number"
             value={form.campaign.budget ?? ""}
             onChange={(event) => onChange({ campaign: { ...form.campaign, budget: numberOrUndefined(event.target.value) } })}
           />
+          <p className="text-xs text-slate-500">TikTok requires a minimum budget of $50.</p>
         </div>
       </div>
     </SectionShell>
   )
 }
+
