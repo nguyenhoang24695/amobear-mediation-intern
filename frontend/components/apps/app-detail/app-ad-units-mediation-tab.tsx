@@ -21,7 +21,8 @@ import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import type { AppMediationBronzeAdUnitRow, AppMediationBronzeAdUnitDetailRow } from "@/types/api"
-import { CountryFilterOption, CountryFlagTooltipCell } from "@/components/shared/country-display"
+import { CountryFlagTooltipCell } from "@/components/shared/country-display"
+import { CountryBronzeFilterCombobox } from "@/components/shared/country-bronze-filter-combobox"
 import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
 import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
 
@@ -181,6 +182,12 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
             · {payload.startDate} → {payload.endDate}
           </span>
         ) : null}
+        {countryApplied.trim() ? (
+          <span className="text-slate-500">
+            {" "}
+            · Country: {iso3166Alpha2ToCountryName(countryApplied) || countryApplied} ({countryApplied.trim().toUpperCase()})
+          </span>
+        ) : null}
         {waterfallApplied ? (
           <span className="text-slate-500"> · chỉ dòng waterfall AdMob</span>
         ) : (
@@ -266,23 +273,13 @@ export function AppAdUnitsMediationTab({ appRowId }: AppAdUnitsMediationTabProps
                 <Label htmlFor="bronze-adu-country" className="shrink-0 text-sm">
                   Country
                 </Label>
-                <Select
-                  value={countryDraft || "__all__"}
-                  onValueChange={(v) => setCountryDraft(v === "__all__" ? "" : v)}
+                <CountryBronzeFilterCombobox
+                  id="bronze-adu-country"
+                  codes={filterOpts?.countries ?? []}
+                  value={countryDraft}
+                  onChange={setCountryDraft}
                   disabled={loadingOpts}
-                >
-                  <SelectTrigger id="bronze-adu-country" className="min-w-0 flex-1">
-                    <SelectValue placeholder="Tất cả" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Tất cả</SelectItem>
-                    {(filterOpts?.countries ?? []).map((c) => (
-                      <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
-                        <CountryFilterOption code={c} />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div className="flex min-w-[200px] flex-row items-center gap-2">
                 <Label htmlFor="bronze-adu-appver" className="shrink-0 text-sm">
