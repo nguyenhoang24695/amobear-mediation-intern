@@ -8,19 +8,27 @@ import { TopApps } from "@/components/dashboard/top-apps"
 import { NetworkPerformance } from "@/components/dashboard/network-performance"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { AuthGuard } from "@/components/auth/auth-guard"
-import { getCurrentUser, getUserDisplayName } from "@/lib/auth"
+import { getCurrentUser, getUserDisplayName, hasScreenFunction } from "@/lib/auth"
 
 const SCREEN_DASHBOARD = "s-dashboard"
 const FUNCTION_VIEW = "view"
+const FUNCTION_DASHBOARD_METRICS = "view-metrics"
+const FUNCTION_VIEW_ALERT_SUMMARY = "view-alert-summary"
+const FUNCTION_VIEW_REVENUE_TOP_APPS = "view-revenue-top-apps"
+const FUNCTION_NETWORK_PERFORMANCE_ACTIVITIES = "view-network-performance-activities"
 
 function canViewDashboard(): boolean {
-  const user = getCurrentUser()
-  if (!user?.rolePermissions) return false
-  return (user.rolePermissions[SCREEN_DASHBOARD] ?? []).includes(FUNCTION_VIEW)
+  return hasScreenFunction(SCREEN_DASHBOARD, FUNCTION_VIEW)
 }
 
 export default function DashboardPage() {
   const showCards = canViewDashboard()
+  const canViewMetrics = hasScreenFunction(SCREEN_DASHBOARD, FUNCTION_DASHBOARD_METRICS)
+  const canViewAlertSummary = hasScreenFunction(SCREEN_DASHBOARD, FUNCTION_VIEW_ALERT_SUMMARY)
+  const canViewRevenueTopApps = hasScreenFunction(SCREEN_DASHBOARD, FUNCTION_VIEW_REVENUE_TOP_APPS)
+  const canViewNetworkActivities = hasScreenFunction(SCREEN_DASHBOARD, FUNCTION_NETWORK_PERFORMANCE_ACTIVITIES)
+  const hasAnyDashboardSection =
+    canViewMetrics || canViewAlertSummary || canViewRevenueTopApps || canViewNetworkActivities
   const user = getCurrentUser()
   const displayName = getUserDisplayName(user ?? null)
 
@@ -35,27 +43,37 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
+            {!hasAnyDashboardSection && (
+              <p className="text-base text-muted-foreground">
+                You currently do not have permission to view dashboard sections.
+              </p>
+            )}
+
             {/* Section 1: Key Metrics */}
-            <MetricsRow />
+            {canViewMetrics && <MetricsRow />}
 
             {/* Section 2: Alert Summary */}
-            <AlertSummary />
+            {canViewAlertSummary && <AlertSummary />}
 
             {/* Section 3: Revenue & Top Apps (60/40) */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <div className="lg:col-span-3">
-                <RevenueChart />
+            {canViewRevenueTopApps && (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-3">
+                  <RevenueChart />
+                </div>
+                <div className="lg:col-span-2">
+                  <TopApps />
+                </div>
               </div>
-              <div className="lg:col-span-2">
-                <TopApps />
-              </div>
-            </div>
+            )}
 
             {/* Section 4: Network Performance & Activities (50/50) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <NetworkPerformance />
-              <RecentActivities />
-            </div>
+            {canViewNetworkActivities && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <NetworkPerformance />
+                <RecentActivities />
+              </div>
+            )}
           </div>
         )}
       </DashboardLayout>

@@ -17,7 +17,12 @@ import { AlertAppAvatar } from "@/components/alerts/alert-app-avatar"
 import { hasScreenFunction } from "@/lib/auth"
 
 export function AlertSummary() {
-  const canViewAlerts = useMemo(() => hasScreenFunction("s-alerts", "view"), [])
+  const canViewAlerts = useMemo(
+    () =>
+      hasScreenFunction("s-dashboard", "view-alert-summary")
+      && hasScreenFunction("s-alerts", "view"),
+    []
+  )
   const [expanded, setExpanded] = useState(false)
   const prevActiveTotalRef = useRef<number | null>(null)
   const { refreshKey } = useDashboardDate()
