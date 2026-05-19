@@ -18,6 +18,7 @@ import { InsightGeneratingState } from "./ai-insights/insight-generating-state"
 import { HealthRadarChart } from "./ai-insights/health-radar-chart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SpecializedRoleInsightTab } from "./ai-insights/specialized-role-tab"
+import { AutoGenerationSettings } from "./ai-insights/auto-generation-settings"
 
 interface Props {
   /** Canonical AdMob app id (same as `/apps/[id]` route). */
@@ -49,6 +50,7 @@ export function AppAiInsightsTab({ appId, appRowId, initialDateYmd }: Props) {
     hasScreenFunction("s-apps", "view-details") ||
     hasScreenFunction("s-apps", "view-details:ai-insight")
   const canRegenerate = hasScreenFunction("s-apps", "regenerate-insight")
+  const canConfigureAuto = hasScreenFunction("s-apps", "configure-insight")
 
   const dateStr = format(selectedDate, "yyyy-MM-dd")
 
@@ -133,8 +135,10 @@ export function AppAiInsightsTab({ appId, appRowId, initialDateYmd }: Props) {
     return <p className="text-sm text-slate-500">Bạn không có quyền xem AI Insight.</p>
   }
 
-  // Tabs wrapper so PO/DA… reuse same daily UX.
   return (
+    <div className="flex flex-col gap-6">
+      {canConfigureAuto ? <AutoGenerationSettings appId={appId} /> : null}
+
     <Tabs value={activeSubTab} onValueChange={(v) => setActiveSubTab(v as any)} className="w-full">
       <TabsList className="h-10 p-1 bg-slate-100 w-fit">
         <TabsTrigger value="summary" className="px-3 data-[state=active]:bg-white">
@@ -272,6 +276,7 @@ export function AppAiInsightsTab({ appId, appRowId, initialDateYmd }: Props) {
         <SpecializedRoleInsightTab personaId="qa" personaLabel="QA insight" appRowId={appRowId} initialDate={selectedDate} />
       </TabsContent>
     </Tabs>
+    </div>
   )
 
 }
