@@ -194,6 +194,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
 
   const [reference, setReference] = useState<TikTokReferenceResponseDto | null>(null)
   const [form, setForm] = useState<TikTokRequestFormState | null>(null)
+  const [activeAdGroupIndex, setActiveAdGroupIndex] = useState(0)
   const [draftId, setDraftId] = useState<number | null>(requestId ?? null)
   const [serverStatus, setServerStatus] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -252,7 +253,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       setCreativeValidationMessages({})
 
       const ads = payload.ads.length ? payload.ads : [payload.ad]
-      const assetIds = Array.from(new Set(ads.flatMap((ad) => [ad.videoAssetId, ...ad.imageAssetIds]).filter((id): id is number => Boolean(id))))
+      const assetIds = Array.from(new Set(ads.flatMap((ad) => [...(ad.videoAssetIds ?? []), ...ad.imageAssetIds]).filter((id): id is number => Boolean(id))))
       const nextAssets: Record<number, TikTokRequestAssetDto> = {}
       const nextRatios: Record<number, { ratio: number; label: string }> = {}
 
@@ -296,6 +297,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
           setDraftId(detail.id)
           setServerStatus(detail.status)
           setValidationErrors(detail.validationErrors ?? [])
+          if (parsed.adGroups.some((group) => group.ads.some((ad) => (ad.videoIds?.length ?? 0) > 0 || ad.videoId?.trim()))) setLibraryEnabled(true)
           await hydrateUploadedAssets(parsed)
         } else {
           const next = createDefaultTikTokRequestForm(ref)
@@ -322,6 +324,15 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current)
     }
   }, [requestId, toast])
+
+  const requestedLibraryVideoIds = useMemo(
+    () => form?.ads.flatMap((ad) => ad.videoIds?.length ? ad.videoIds : ad.videoId ? [ad.videoId] : []) ?? [],
+    [form?.ads],
+  )
+  const requestedLibraryImageIds = useMemo(
+    () => form?.ads.flatMap((ad) => ad.imageIds ?? []) ?? [],
+    [form?.ads],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -409,8 +420,8 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       setLibraryLoadError(null)
       try {
         const [videoPage, imagePage] = await Promise.all([
-          tiktokReferenceApi.getLibraryVideos(adAccountId, { search: librarySearch.video || undefined, pageSize: 50 }),
-          tiktokReferenceApi.getLibraryImages(adAccountId, { search: librarySearch.image || undefined, pageSize: 50 }),
+          tiktokReferenceApi.getLibraryVideos(adAccountId, { search: librarySearch.video || undefined, videoIds: requestedLibraryVideoIds, pageSize: 50 }),
+          tiktokReferenceApi.getLibraryImages(adAccountId, { search: librarySearch.image || undefined, imageIds: requestedLibraryImageIds, pageSize: 50 }),
         ])
         if (cancelled) return
         setLibraryVideos(videoPage.items)
@@ -430,7 +441,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       cancelled = true
       window.clearTimeout(handle)
     }
-  }, [targetingAdAccountId, libraryEnabled, librarySearch.video, librarySearch.image])
+  }, [targetingAdAccountId, libraryEnabled, librarySearch.video, librarySearch.image, requestedLibraryVideoIds, requestedLibraryImageIds])
 
   const handleLibrarySearch = useCallback((kind: "video" | "image", query: string) => {
     setLibrarySearch((prev) => prev[kind] === query ? prev : { ...prev, [kind]: query })
@@ -443,9 +454,28 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   const updateForm = useCallback((patch: Partial<TikTokRequestFormState>) => {
     setForm((current) => {
       if (!current) return current
-      return sanitizeTikTokRequestForm({ ...current, ...patch })
+      const groups = current.adGroups?.length ? [...current.adGroups] : [{ adGroup: current.adGroup, ads: current.ads }]
+      const safeIndex = Math.min(activeAdGroupIndex, Math.max(groups.length - 1, 0))
+      if (patch.adGroup || patch.ads || patch.ad) {
+        const currentGroup = groups[safeIndex] ?? { adGroup: current.adGroup, ads: current.ads }
+        groups[safeIndex] = {
+          adGroup: patch.adGroup ?? currentGroup.adGroup,
+          ads: patch.ads ?? currentGroup.ads,
+        }
+      }
+      return sanitizeTikTokRequestForm({ ...current, ...patch, adGroups: groups })
     })
     setIsDirty(true)
+  }, [activeAdGroupIndex])
+
+  const selectAdGroup = useCallback((index: number) => {
+    setActiveAdGroupIndex(index)
+    setForm((current) => {
+      if (!current) return current
+      const group = current.adGroups?.[index]
+      if (!group) return current
+      return sanitizeTikTokRequestForm({ ...current, adGroup: group.adGroup, ads: group.ads, ad: group.ads[0] })
+    })
   }, [])
 
   const navigateToSection = useCallback((target: TikTokRequestSectionTarget) => {
@@ -472,6 +502,17 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       ads: form.ads.map((ad) => ({
         ...ad,
         landingPageUrl: ad.landingPageUrl || selectedAppMapping?.downloadUrl || "",
+      })),
+      adGroups: (form.adGroups?.length ? form.adGroups : [{ adGroup: form.adGroup, ads: form.ads }]).map((group) => ({
+        adGroup: {
+          ...group.adGroup,
+          appId: selectedAppMapping?.tikTokAppId ?? group.adGroup.appId,
+          appDownloadUrl: selectedAppMapping?.downloadUrl ?? group.adGroup.appDownloadUrl,
+        },
+        ads: group.ads.map((ad) => ({
+          ...ad,
+          landingPageUrl: ad.landingPageUrl || selectedAppMapping?.downloadUrl || "",
+        })),
       })),
     })
 
@@ -581,14 +622,14 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       setCreativeValidationMessages((current) => ({ ...current, [index]: message }))
     }
     if (kind === "image") {
-      if (!creative.videoAssetId) {
+      if ((creative.videoAssetIds?.length ?? 0) === 0) {
         const message = "Video ads require a video before uploading the cover image."
         setCreativeMessage(message)
         console.warn("TikTok creative validation:", message)
         toast({ title: "Upload video first", description: message, variant: "destructive" })
         return
       }
-      const videoRatioInfo = videoRatiosByAssetId[creative.videoAssetId]
+      const videoRatioInfo = videoRatiosByAssetId[creative.videoAssetIds[0]]
       if (!videoRatioInfo) {
         const message = "Wait for the uploaded video dimensions to load, then upload the cover image."
         setCreativeMessage(message)
@@ -605,8 +646,8 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
         setCreativeMessage(null)
         const dimensions = await readVideoDimensions(file)
         nextVideoRatioInfo = { ratio: dimensions.ratio, label: formatAspectRatio(dimensions) }
-      } else if (creative.videoAssetId) {
-        const videoRatioInfo = videoRatiosByAssetId[creative.videoAssetId]
+      } else if ((creative.videoAssetIds?.length ?? 0) > 0) {
+        const videoRatioInfo = videoRatiosByAssetId[creative.videoAssetIds[0]]
         const dimensions = await readImageDimensions(file)
         if (videoRatioInfo && !ratiosMatch(videoRatioInfo.ratio, dimensions.ratio)) {
           const message = `Cover image ratio ${formatAspectRatio(dimensions)} must match video ratio ${videoRatioInfo.label ?? formatRatio(videoRatioInfo.ratio)}.`
@@ -627,9 +668,11 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
         ? {
             ...item,
             videoId: kind === "video" ? "" : item.videoId,
-            imageIds: kind === "image" || kind === "video" ? [] : item.imageIds,
+            videoIds: kind === "video" ? [] : item.videoIds,
+            imageIds: kind === "image" ? [] : item.imageIds,
             videoAssetId: kind === "video" ? asset.id : item.videoAssetId,
-            imageAssetIds: kind === "image" ? [asset.id] : (kind === "video" ? [] : item.imageAssetIds),
+            videoAssetIds: kind === "video" ? [...(item.videoAssetIds ?? []), asset.id] : item.videoAssetIds,
+            imageAssetIds: kind === "image" ? [asset.id] : item.imageAssetIds,
           }
         : item)
       updateForm({
@@ -661,8 +704,10 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       ...base,
       adName: "",
       videoId: "",
+      videoIds: [],
       imageIds: [],
       videoAssetId: undefined,
+      videoAssetIds: [],
       imageAssetIds: [],
     })
     const nextAds = [...form.ads, nextCreative]
@@ -760,6 +805,24 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
           <div id={requestSectionIds["campaign-settings"]} className={cn(getSectionWrapperClass("campaign-settings", highlightedSection))}>
             <CampaignSettingsSection form={form} reference={reference} selectedAppMapping={selectedAppMapping} locations={targetingOptions?.locations} onChange={updateForm} />
           </div>
+          {form.adGroups.length > 1 ? (
+            <div className="rounded-xl border bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Adsets copied from source campaign</h3>
+                  <p className="text-xs text-slate-500">Choose an adset to edit its targeting, budget, and creatives.</p>
+                </div>
+                <Badge variant="secondary">{form.adGroups.length} adsets</Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {form.adGroups.map((group, index) => (
+                  <Button key={`${group.adGroup.adGroupName}-${index}`} type="button" size="sm" variant={index === activeAdGroupIndex ? "default" : "outline"} onClick={() => selectAdGroup(index)}>
+                    Adset #{index + 1}: {group.adGroup.adGroupName || "Untitled"} ({group.ads.length} ads)
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div id={requestSectionIds["adgroup-audience"]} className={cn(getSectionWrapperClass("adgroup-audience", highlightedSection))}>
             <AdGroupAudienceSection form={form} reference={reference} targetingOptions={targetingOptions} targetingLoading={targetingLoading} onChange={updateForm} />
           </div>
@@ -784,6 +847,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
               onLibrarySearch={handleLibrarySearch}
               onLibraryEnabledChange={handleLibraryEnabledChange}
               onCreativeChange={handleCreativeChange}
+              onAdGroupChange={(adGroup) => updateForm({ adGroup })}
               onAddCreative={handleAddCreative}
               onDuplicateCreative={handleDuplicateCreative}
               onRemoveCreative={handleRemoveCreative}
@@ -834,3 +898,5 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     </div>
   )
 }
+
+
