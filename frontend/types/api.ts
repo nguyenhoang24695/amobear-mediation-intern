@@ -169,6 +169,12 @@ export interface AppMediationBronzeMediationGroupRow {
   countries: string[]
   adRequests: number
   matchedRequests: number
+  /** Format từ PostgreSQL (AdMob) — có thể null nếu group chưa sync vào PG. */
+  adFormat?: string | null
+  /** State PG (ENABLED / …) — có thể null. */
+  status?: string | null
+  /** Nguồn quảng cáo trong waterfall (từ <c>mediation_group_lines_json</c>). */
+  adSourcesInfo?: AdSourceInfo[]
 }
 
 export interface AppMediationBronzeMediationGroupsResponse {

@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   Search,
   MoreHorizontal,
@@ -30,12 +30,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  RectangleHorizontal,
-  Square,
-  Gift,
-  LayoutGrid,
-  Smartphone,
-  Globe,
   Layers,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -44,155 +38,11 @@ import { structureApi } from "@/lib/api/services"
 import { Pagination } from "@/components/shared/pagination"
 import type { MediationGroup } from "@/types/api"
 import { DEPRECATED_METRICS_MAX_YMD } from "@/lib/constants/deprecated-app-metrics"
-import { CountryFlagTooltipCell } from "@/components/shared/country-display"
-
-// Network logos/images - map ad source IDs to image URLs or emoji
-const networkLogos: Record<string, { image?: string; emoji?: string; color: string }> = {
-  admob: {
-    emoji: "📱",
-    color: "bg-yellow-400",
-  },
-  "ca-app-pub": {
-    emoji: "📱",
-    color: "bg-yellow-400",
-  },
-  unity: {
-    emoji: "🎮",
-    color: "bg-slate-800",
-  },
-  ironsource: {
-    emoji: "⚡",
-    color: "bg-purple-600",
-  },
-  applovin: {
-    emoji: "🔴",
-    color: "bg-red-500",
-  },
-  vungle: {
-    emoji: "💎",
-    color: "bg-blue-500",
-  },
-  meta: {
-    emoji: "📘",
-    color: "bg-blue-600",
-  },
-  facebook: {
-    emoji: "📘",
-    color: "bg-blue-600",
-  },
-  chartboost: {
-    emoji: "📊",
-    color: "bg-green-500",
-  },
-  mintegral: {
-    emoji: "🌐",
-    color: "bg-orange-500",
-  },
-  pangle: {
-    emoji: "🇨🇳",
-    color: "bg-red-600",
-  },
-  adcolony: {
-    emoji: "🏢",
-    color: "bg-indigo-500",
-  },
-  tapjoy: {
-    emoji: "🎯",
-    color: "bg-pink-500",
-  },
-}
-
-// Network colors - map ad source IDs to colors (fallback)
-const networkColors: Record<string, string> = {
-  admob: "bg-yellow-400",
-  "ca-app-pub": "bg-yellow-400",
-  unity: "bg-slate-800",
-  ironsource: "bg-purple-600",
-  applovin: "bg-red-500",
-  vungle: "bg-blue-500",
-  meta: "bg-blue-600",
-  facebook: "bg-blue-600",
-}
-
-const formatIcons: Record<string, React.ElementType> = {
-  BANNER: RectangleHorizontal,
-  INTERSTITIAL: Square,
-  REWARDED: Gift,
-  REWARDED_INTERSTITIAL: Gift,
-  NATIVE: LayoutGrid,
-  APP_OPEN: Smartphone,
-  Banner: RectangleHorizontal, // Fallback
-  Interstitial: Square,
-  Rewarded: Gift,
-  Native: LayoutGrid,
-  "App Open": Smartphone,
-}
-
-const formatColors: Record<string, string> = {
-  BANNER: "bg-blue-50 text-blue-700 border-blue-200",
-  INTERSTITIAL: "bg-purple-50 text-purple-700 border-purple-200",
-  REWARDED: "bg-amber-50 text-amber-700 border-amber-200",
-  REWARDED_INTERSTITIAL: "bg-amber-50 text-amber-700 border-amber-200",
-  NATIVE: "bg-green-50 text-green-700 border-green-200",
-  APP_OPEN: "bg-cyan-50 text-cyan-700 border-cyan-200",
-  Banner: "bg-blue-50 text-blue-700 border-blue-200", // Fallback
-  Interstitial: "bg-purple-50 text-purple-700 border-purple-200",
-  Rewarded: "bg-amber-50 text-amber-700 border-amber-200",
-  Native: "bg-green-50 text-green-700 border-green-200",
-  "App Open": "bg-cyan-50 text-cyan-700 border-cyan-200",
-}
-
-// Helper to format ad format for display
-const formatAdFormat = (format?: string): string => {
-  if (!format) return "Unknown"
-  return format
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ")
-}
-
-// Helper to get network info from ad source ID
-const getNetworkInfo = (adSourceId?: string): { emoji?: string; color: string; name: string } => {
-  if (!adSourceId) {
-    return { color: "bg-slate-400", name: "Unknown" }
-  }
-  const idLower = adSourceId.toLowerCase()
-  for (const [key, info] of Object.entries(networkLogos)) {
-    if (idLower.includes(key.toLowerCase())) {
-      return {
-        emoji: info.emoji,
-        color: info.color,
-        name: getNetworkName(adSourceId),
-      }
-    }
-  }
-  // Fallback to color-based lookup
-  for (const [key, color] of Object.entries(networkColors)) {
-    if (idLower.includes(key.toLowerCase())) {
-      return {
-        color,
-        name: getNetworkName(adSourceId),
-      }
-    }
-  }
-  return { color: "bg-slate-400", name: "Unknown" }
-}
-
-// Helper to get network name from ad source ID or title
-const getNetworkName = (adSourceId?: string, title?: string): string => {
-  // Use title from database if available
-  if (title) return title
-  
-  if (!adSourceId) return "Unknown"
-  const idLower = adSourceId.toLowerCase()
-  if (idLower.includes("admob") || idLower.includes("ca-app-pub")) return "AdMob"
-  if (idLower.includes("unity")) return "Unity Ads"
-  if (idLower.includes("ironsource")) return "ironSource"
-  if (idLower.includes("applovin")) return "AppLovin"
-  if (idLower.includes("vungle")) return "Vungle"
-  if (idLower.includes("meta") || idLower.includes("facebook")) return "Meta AN"
-  return adSourceId
-}
+import {
+  MediationGroupAdSourcesCell,
+  MediationGroupFormatBadge,
+  MediationGroupTargetingCell,
+} from "@/components/mediation/mediation-group-table-cells"
 
 function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -451,13 +301,13 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
                       Loading mediation groups...
                     </td>
                   </tr>
                 ) : paginatedGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
                       {searchQuery
                         ? "No mediation groups found matching your search."
                         : "No mediation groups found for this app."}
@@ -465,14 +315,10 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                   </tr>
                 ) : (
                   paginatedGroups.map((group) => {
-                    const format = group.adFormat || "Unknown"
-                    const FormatIcon = formatIcons[format] || RectangleHorizontal
-                    const formatDisplay = formatAdFormat(format)
                     const groupIdStr = group.id.toString()
-                    // Use adSourcesInfo if available, otherwise fallback to adSources
-                    const adSourcesInfo = group.adSourcesInfo || (group.adSources || []).map(id => ({ adSourceId: id, title: id }))
+                    const adSourcesInfo =
+                      group.adSourcesInfo || (group.adSources || []).map((id) => ({ adSourceId: id, title: id }))
                     const countries = group.countries || []
-                    const isGlobal = countries.length === 0 || countries.length > 10
 
                     return (
                       <tr
@@ -498,91 +344,13 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                           </Link>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant="outline" className={cn("gap-1", formatColors[format] || formatColors.BANNER)}>
-                            <FormatIcon className="w-3 h-3" />
-                            {formatDisplay}
-                          </Badge>
+                          <MediationGroupFormatBadge format={group.adFormat} />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm text-slate-600">{adSourcesInfo.length}</span>
-                            {adSourcesInfo.length > 0 && (
-                              <div className="flex items-center -space-x-1 ml-1">
-                                {adSourcesInfo.slice(0, 4).map((adSource, idx) => {
-                                  const networkInfo = getNetworkInfo(adSource.adSourceId)
-                                  const displayName = getNetworkName(adSource.adSourceId, adSource.title)
-                                  return (
-                                    <Tooltip key={idx}>
-                                      <TooltipTrigger asChild>
-                                        <div
-                                          className={cn(
-                                            "w-6 h-6 rounded-sm border-2 border-white flex items-center justify-center text-xs",
-                                            networkInfo.color,
-                                            !networkInfo.emoji && "bg-slate-400",
-                                          )}
-                                          title={displayName}
-                                        >
-                                          {networkInfo.emoji ? (
-                                            <span>{networkInfo.emoji}</span>
-                                          ) : (
-                                            <span className="text-white font-semibold text-[10px]">
-                                              {displayName.charAt(0).toUpperCase()}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">
-                                        <p className="font-medium">{displayName}</p>
-                                        <p className="text-xs text-slate-400">{adSource.adSourceId}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )
-                                })}
-                                {adSourcesInfo.length > 4 && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="w-6 h-6 rounded-sm bg-slate-200 border-2 border-white flex items-center justify-center">
-                                        <span className="text-[10px] font-semibold text-slate-600">
-                                          +{adSourcesInfo.length - 4}
-                                        </span>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                      <div className="space-y-1">
-                                        {adSourcesInfo.slice(4).map((adSource, idx) => {
-                                          const displayName = getNetworkName(adSource.adSourceId, adSource.title)
-                                          return (
-                                            <p key={idx} className="text-sm">
-                                              {displayName}
-                                            </p>
-                                          )
-                                        })}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          <MediationGroupAdSourcesCell adSourcesInfo={adSourcesInfo} />
                         </td>
                         <td className="px-4 py-3">
-                          {isGlobal ? (
-                            <div className="flex items-center gap-1 text-sm text-slate-600">
-                              <Globe className="w-4 h-4" />
-                              Global
-                            </div>
-                          ) : countries.length > 0 ? (
-                            <div className="flex flex-wrap items-center gap-0.5">
-                              {countries.slice(0, 8).map((countryCode, idx) => (
-                                <CountryFlagTooltipCell key={`${countryCode}-${idx}`} code={countryCode} />
-                              ))}
-                              {countries.length > 8 ? (
-                                <span className="ml-0.5 text-xs text-slate-500">+{countries.length - 8}</span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-400">-</span>
-                          )}
+                          <MediationGroupTargetingCell countries={countries} />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className="text-sm font-medium text-slate-900">
