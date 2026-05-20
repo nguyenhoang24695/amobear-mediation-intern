@@ -20,11 +20,17 @@ type CheckState = "ok" | "error" | "warning" | "neutral"
 
 export function TikTokRequestSummaryRail({ form, reference, validationErrors, serverStatus, selectedAppMapping, isPersisted, onNavigateToSection }: Props) {
   const selectedAdAccount = reference.adAccounts.find((account) => account.id === form.tikTokAdAccountRowId)
-  const budgetReady = !!((form.campaign.budget ?? 0) > 0 || (form.adGroup.budget ?? 0) > 0)
+  const minimumBudget = 50
+  const isInfiniteAdGroupBudget = form.adGroup.budgetMode === "BUDGET_MODE_INFINITE"
+  const campaignBudgetReady = !form.campaign.budget || form.campaign.budget >= minimumBudget || form.campaign.budgetMode === "BUDGET_MODE_DYNAMIC_DAILY_BUDGET"
+  const adGroupBudgetReady = isInfiniteAdGroupBudget || !form.adGroup.budget || form.adGroup.budget >= minimumBudget
+  const budgetReady = !!(isInfiniteAdGroupBudget || (form.campaign.budget ?? 0) >= minimumBudget || (form.adGroup.budget ?? 0) >= minimumBudget || form.campaign.budgetMode === "BUDGET_MODE_DYNAMIC_DAILY_BUDGET") && campaignBudgetReady && adGroupBudgetReady
   const audienceReady = form.adGroup.locationIds.length > 0
   const biddingReady = !!(form.adGroup.budgetMode && form.adGroup.scheduleType && form.adGroup.optimizationGoal && form.adGroup.bidType && form.adGroup.billingEvent)
   const creativeReady = hasCreativeMedia(form)
-  const adReady = form.ads.length > 0 && form.ads.every((ad) => !!(ad.adName.trim() && ad.adText?.trim() && ad.callToAction && ad.landingPageUrl?.trim()))
+  const adsetTextReady = form.adGroup.adTexts?.some((item) => item.trim())
+  const identityReady = form.ads.length > 0 && form.ads.every((ad) => Boolean(ad.identityId?.trim()))
+  const adReady = form.ads.length > 0 && Boolean(adsetTextReady) && form.ads.every((ad) => !!(ad.adName.trim() && ad.callToAction && ad.landingPageUrl?.trim())) && identityReady
 
   return (
     <aside className="space-y-3">
@@ -41,11 +47,17 @@ export function TikTokRequestSummaryRail({ form, reference, validationErrors, se
           <CheckRow state={audienceReady ? "ok" : "error"} label="Audience locations ready" onClick={() => onNavigateToSection?.("adgroup-audience")} />
           <CheckRow state={biddingReady ? "ok" : "error"} label="Budget/bidding/schedule ready" onClick={() => onNavigateToSection?.("adgroup-budget")} />
           <CheckRow state={creativeReady ? "ok" : "error"} label="Creative media ready" onClick={() => onNavigateToSection?.("creative")} />
-          <CheckRow state={adReady ? "ok" : "error"} label="Ad copy and URL ready" onClick={() => onNavigateToSection?.("creative")} />
+          <CheckRow state={identityReady ? "ok" : "error"} label="TikTok identity selected" onClick={() => onNavigateToSection?.("creative")} />
+          <CheckRow state={adReady ? "ok" : "error"} label="Ad copy, URL, and identity ready" onClick={() => onNavigateToSection?.("creative")} />
         </div>
         {validationErrors.length > 0 ? (
           <div className="mt-3 rounded-md bg-rose-50 p-2 text-xs text-rose-700">
-            {validationErrors.length} backend validation issue{validationErrors.length === 1 ? "" : "s"} found.
+            <p className="font-medium">{validationErrors.length} backend validation issue{validationErrors.length === 1 ? "" : "s"} found.</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {validationErrors.map((message, index) => (
+                <li key={`${index}-${message}`}>{message}</li>
+              ))}
+            </ul>
           </div>
         ) : null}
       </div>
@@ -54,7 +66,7 @@ export function TikTokRequestSummaryRail({ form, reference, validationErrors, se
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Request Summary</p>
         <SummaryLine label="Status" value={serverStatus ?? "draft"} />
         <SummaryLine label="Objective" value={optionLabel(reference.objectives, form.campaign.objectiveType)} />
-        <SummaryLine label="Budget" value={form.campaign.budget ? `${form.campaign.budget}` : form.adGroup.budget ? `${form.adGroup.budget}` : "-"} />
+        <SummaryLine label="Budget" value={isInfiniteAdGroupBudget ? `${optionLabel(reference.budgetModes, form.adGroup.budgetMode)} (${form.adGroup.budget ?? 0})` : form.campaign.budget ? `${form.campaign.budget}` : form.adGroup.budget ? `${form.adGroup.budget}` : "-"} />
         <SummaryLine label="Optimization" value={optionLabel(reference.optimizationGoals, form.adGroup.optimizationGoal)} />
         <SummaryLine label="Format" value={optionLabel(reference.adFormats, form.ad.adFormat)} />
         <SummaryLine label="Creatives" value={form.ads.length} />
@@ -81,3 +93,6 @@ function SummaryLine({ label, value }: { label: string; value: string | number |
     </div>
   )
 }
+
+
+

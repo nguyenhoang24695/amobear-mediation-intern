@@ -225,7 +225,7 @@ export function TikTokRequestListContent() {
       <div className="grid gap-3 rounded-md border bg-white p-3 md:grid-cols-3">
         <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent>{["all", "draft", "pending_approval", "approved", "executing", "completed", "failed", "rejected"].map(x => <SelectItem key={x} value={x}>{x === "all" ? "All statuses" : x}</SelectItem>)}</SelectContent></Select>
         <Select value={accountId} onValueChange={setAccountId}><SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{reference?.adAccounts.map(x => <SelectItem key={x.id} value={String(x.id)}>{x.name ?? x.advertiserId}</SelectItem>)}</SelectContent></Select>
-        <Select value={appRowId} onValueChange={setAppRowId}><SelectTrigger><SelectValue placeholder="App" /></SelectTrigger><SelectContent><SelectItem value="all">All apps</SelectItem>{reference?.appMappings.map(x => <SelectItem key={x.appRowId} value={String(x.appRowId)}>{x.appDisplayName ?? x.appId ?? x.tikTokAppId}</SelectItem>)}</SelectContent></Select>
+        <Select value={appRowId} onValueChange={setAppRowId}><SelectTrigger><SelectValue placeholder="App" /></SelectTrigger><SelectContent><SelectItem value="all">All apps</SelectItem>{reference?.appMappings.filter(x => x.appRowId != null).map(x => <SelectItem key={x.id} value={String(x.appRowId)}>{x.appDisplayName ?? x.appId ?? x.packageName ?? x.normalizedStoreIdentifier ?? x.tikTokAppId}</SelectItem>)}</SelectContent></Select>
       </div>
 
       <div className="rounded-md border bg-white">

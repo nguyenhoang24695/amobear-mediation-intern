@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, ExternalLink, ImageIcon, Megaphone, PlayCircle, RefreshCw } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, CheckCircle2, Copy, ExternalLink, FilePlus2, ImageIcon, Loader2, Megaphone, PlayCircle, RefreshCw, XCircle } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast"
 import { hasScreenFunction } from "@/lib/auth"
 import { tiktokCampaignsApi } from "@/lib/api/tiktok-ads"
-import type { TikTokCampaignAdGroupSummaryDto, TikTokCampaignAdSummaryDto, TikTokCampaignDetailDto } from "@/types/tiktok-ads"
+import type { TikTokCampaignAdGroupSummaryDto, TikTokCampaignAdSummaryDto, TikTokCampaignDetailDto, TikTokCampaignDuplicateReadinessResultDto } from "@/types/tiktok-ads"
 
 function statusTone(value?: string | null) {
   const normalized = (value || "").toUpperCase()
@@ -110,6 +112,19 @@ function AppCell({ appDisplayName, appId, platform, appIconUri }: { appDisplayNa
   )
 }
 
+function AdGroupTextList({ texts }: { texts?: string[] | null }) {
+  const rows = (texts ?? []).map((item) => item.trim()).filter(Boolean)
+  if (rows.length === 0) return <span className="text-sm text-slate-400">No ad texts synced</span>
+  return (
+    <div className="space-y-1">
+      {rows.map((text, index) => (
+        <div key={`${index}-${text}`} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+          <span className="mr-1 font-semibold text-slate-500">#{index + 1}</span>{text}
+        </div>
+      ))}
+    </div>
+  )
+}
 function AdGroupsTable({ rows }: { rows: TikTokCampaignAdGroupSummaryDto[] }) {
   return (
     <Table>
@@ -118,6 +133,7 @@ function AdGroupsTable({ rows }: { rows: TikTokCampaignAdGroupSummaryDto[] }) {
           <TableHead>Name</TableHead>
           <TableHead>Ad Group ID</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Ad Texts</TableHead>
           <TableHead>Budget</TableHead>
           <TableHead>Optimization</TableHead>
           <TableHead>Schedule</TableHead>
@@ -127,23 +143,24 @@ function AdGroupsTable({ rows }: { rows: TikTokCampaignAdGroupSummaryDto[] }) {
       </TableHeader>
       <TableBody>
         {rows.length === 0 ? (
-          <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">No ad groups synced for this campaign.</TableCell></TableRow>
+          <TableRow><TableCell colSpan={9} className="py-10 text-center text-sm text-slate-500">No ad groups synced for this campaign.</TableCell></TableRow>
         ) : rows.map((item) => (
           <TableRow key={item.id}>
             <TableCell className="font-medium text-slate-900">{item.name || item.tikTokAdGroupId}</TableCell>
             <TableCell className="font-mono text-xs text-slate-500">{item.tikTokAdGroupId}</TableCell>
             <TableCell><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
+            <TableCell className="min-w-[280px]"><AdGroupTextList texts={item.adTexts} /></TableCell>
             <TableCell>
               <div className="text-sm text-slate-700">{formatMoney(item.budget)}</div>
               <div className="text-xs text-slate-500">{item.budgetMode ?? "-"}</div>
             </TableCell>
             <TableCell>
               <div className="text-sm text-slate-700">{item.optimizationGoal ?? "-"}</div>
-              <div className="text-xs text-slate-500">{[item.bidType, item.bid ? formatMoney(item.bid) : null, item.billingEvent].filter(Boolean).join(" · ")}</div>
+              <div className="text-xs text-slate-500">{[item.bidType, item.bid ? formatMoney(item.bid) : null, item.billingEvent].filter(Boolean).join(" / ")}</div>
             </TableCell>
             <TableCell>
               <div className="text-sm text-slate-700">{item.scheduleType ?? "-"}</div>
-              <div className="text-xs text-slate-500">{[formatDateTime(item.scheduleStartTime), formatDateTime(item.scheduleEndTime)].filter((value) => value !== "-").join(" → ") || "-"}</div>
+              <div className="text-xs text-slate-500">{[formatDateTime(item.scheduleStartTime), formatDateTime(item.scheduleEndTime)].filter((value) => value !== "-").join(" -> ") || "-"}</div>
             </TableCell>
             <TableCell><AppCell appDisplayName={item.appDisplayName} appId={item.appId} platform={item.platform} /></TableCell>
             <TableCell className="text-sm text-slate-600">{formatDateTime(item.lastSyncedAt)}</TableCell>
@@ -165,7 +182,7 @@ function formatDuration(value?: number | null) {
 function CreativePreview({ item, onPreviewVideo }: { item: TikTokCampaignAdSummaryDto; onPreviewVideo: (item: TikTokCampaignAdSummaryDto) => void }) {
   const image = item.creativeMedia?.images?.[0]
   const video = item.creativeMedia?.videos?.[0]
-  const hasIds = Boolean(item.videoId) || item.imageIds.length > 0
+  const hasIds = (item.videoIds?.length ?? 0) > 0 || Boolean(item.videoId) || item.imageIds.length > 0
 
   if (!image && !video && !hasIds) return <span className="text-sm text-slate-400">No media</span>
 
@@ -189,8 +206,8 @@ function CreativePreview({ item, onPreviewVideo }: { item: TikTokCampaignAdSumma
           {item.adFormat ? <Badge variant="outline" className="text-[10px]">{item.adFormat}</Badge> : null}
           {video?.displayable === false || image?.displayable === false ? <Badge className="bg-amber-50 text-amber-700">Not displayable</Badge> : null}
         </div>
-        <div className="truncate text-sm font-medium text-slate-900">{video?.fileName || image?.fileName || item.videoId || item.imageIds[0] || "-"}</div>
-        <div className="truncate font-mono text-xs text-slate-500">{video?.videoId || image?.imageId || item.videoId || item.imageIds[0]}</div>
+        <div className="truncate text-sm font-medium text-slate-900">{video?.fileName || image?.fileName || item.videoIds?.[0] || item.videoId || item.imageIds[0] || "-"}</div>
+        <div className="truncate font-mono text-xs text-slate-500">{video?.videoId || image?.imageId || item.videoIds?.[0] || item.videoId || item.imageIds[0]}</div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           {video ? <span>{formatDuration(video.duration)}</span> : null}
           <span>{formatDimensions(video?.width ?? image?.width, video?.height ?? image?.height)}</span>
@@ -219,46 +236,80 @@ function CreativePreview({ item, onPreviewVideo }: { item: TikTokCampaignAdSumma
   )
 }
 
-function AdsTable({ rows }: { rows: TikTokCampaignAdSummaryDto[] }) {
+function AdsTable({ rows, adGroups }: { rows: TikTokCampaignAdSummaryDto[]; adGroups: TikTokCampaignAdGroupSummaryDto[] }) {
   const [previewAd, setPreviewAd] = useState<TikTokCampaignAdSummaryDto | null>(null)
   const previewVideo = previewAd?.creativeMedia?.videos?.[0]
+  const adsByAdGroup = rows.reduce<Record<number, TikTokCampaignAdSummaryDto[]>>((acc, item) => {
+    acc[item.tikTokAdGroupRowId] ??= []
+    acc[item.tikTokAdGroupRowId].push(item)
+    return acc
+  }, {})
+  const adGroupsWithAds = adGroups.filter((group) => (adsByAdGroup[group.id]?.length ?? 0) > 0)
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-slate-50 hover:bg-slate-50">
-            <TableHead>Name</TableHead>
-            <TableHead>Creative</TableHead>
-            <TableHead>Ad ID</TableHead>
-            <TableHead>Ad Group</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>App</TableHead>
-            <TableHead>Last Synced</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">No ads synced for this campaign.</TableCell></TableRow>
-          ) : rows.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell>
-                <div className="font-medium text-slate-900">{item.name || item.tikTokAdId}</div>
-                {item.adText ? <div className="mt-1 max-w-[260px] text-xs text-slate-500 line-clamp-2">{item.adText}</div> : null}
-              </TableCell>
-              <TableCell><CreativePreview item={item} onPreviewVideo={setPreviewAd} /></TableCell>
-              <TableCell className="font-mono text-xs text-slate-500">{item.tikTokAdId}</TableCell>
-              <TableCell>
-                <div className="text-sm text-slate-700">{item.tikTokAdGroupName ?? "-"}</div>
-                <div className="font-mono text-xs text-slate-500">{item.tikTokAdGroupId ?? "-"}</div>
-              </TableCell>
-              <TableCell><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
-              <TableCell><AppCell appDisplayName={item.appDisplayName} appId={item.appId} platform={item.platform} /></TableCell>
-              <TableCell className="text-sm text-slate-600">{formatDateTime(item.lastSyncedAt)}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      {rows.length === 0 ? (
+        <div className="py-10 text-center text-sm text-slate-500">No ads synced for this campaign.</div>
+      ) : (
+        <div className="space-y-4 p-4">
+          {adGroupsWithAds.map((group) => {
+            const groupAds = adsByAdGroup[group.id] ?? []
+            return (
+              <Card key={group.id} className="border-slate-200 shadow-sm">
+                <CardHeader className="space-y-3 pb-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="truncate text-base">{group.name || group.tikTokAdGroupId}</CardTitle>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <Badge className={statusTone(group.status)}>{group.status || "UNKNOWN"}</Badge>
+                        <span className="font-mono">{group.tikTokAdGroupId}</span>
+                        <span>{groupAds.length} video/image assets</span>
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-slate-500">
+                      <div>{group.optimizationGoal ?? "-"}</div>
+                      <div>{[group.bidType, group.billingEvent].filter(Boolean).join(" / ") || "-"}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ad texts shared by this ad set</p>
+                    <AdGroupTextList texts={group.adTexts} />
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50 hover:bg-slate-50">
+                        <TableHead>Video / Image Asset</TableHead>
+                        <TableHead>Ad ID</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>App</TableHead>
+                        <TableHead>Last Synced</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groupAds.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium text-slate-900">{item.name || item.tikTokAdId}</div>
+                              <CreativePreview item={item} onPreviewVideo={setPreviewAd} />
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-slate-500">{item.tikTokAdId}</TableCell>
+                          <TableCell><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
+                          <TableCell><AppCell appDisplayName={item.appDisplayName} appId={item.appId} platform={item.platform} /></TableCell>
+                          <TableCell className="text-sm text-slate-600">{formatDateTime(item.lastSyncedAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       <Dialog open={Boolean(previewVideo?.previewUrl)} onOpenChange={(open) => { if (!open) setPreviewAd(null) }}>
         <DialogContent className="max-w-3xl">
@@ -278,19 +329,28 @@ function AdsTable({ rows }: { rows: TikTokCampaignAdSummaryDto[] }) {
 }
 
 export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string }) {
+  const router = useRouter()
   const { toast } = useToast()
   const canSync = hasScreenFunction("s-tiktok-campaigns", "edit")
+  const canDuplicate = hasScreenFunction("s-tiktok-campaigns", "edit")
   const numericCampaignId = Number(campaignId)
   const [detail, setDetail] = useState<TikTokCampaignDetailDto | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [checkingReadiness, setCheckingReadiness] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [duplicatingToRequest, setDuplicatingToRequest] = useState(false)
+  const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
+  const [readiness, setReadiness] = useState<TikTokCampaignDuplicateReadinessResultDto | null>(null)
+  const [duplicateError, setDuplicateError] = useState("")
   const [error, setError] = useState("")
 
   const load = async () => {
     setLoading(true)
     setError("")
     try {
-      setDetail(await tiktokCampaignsApi.getById(numericCampaignId))
+      const nextDetail = await tiktokCampaignsApi.getById(numericCampaignId)
+      setDetail(nextDetail)
     } catch (ex: any) {
       setError(ex.message ?? "Failed to load TikTok campaign.")
     } finally {
@@ -304,6 +364,9 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
       setLoading(false)
       return
     }
+    setReadiness(null)
+    setDuplicateError("")
+    setDuplicateConfirmOpen(false)
     void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numericCampaignId])
@@ -323,6 +386,77 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
       toast({ title: "Sync failed", description: ex.message ?? "TikTok campaign sync failed.", variant: "destructive" })
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const checkDuplicateReadiness = async () => {
+    if (!detail) return
+    try {
+      setCheckingReadiness(true)
+      setDuplicateError("")
+      const result = await tiktokCampaignsApi.checkDuplicateReadiness(numericCampaignId)
+      setReadiness(result)
+      toast({
+        title: result.isReady ? "Ready to duplicate" : "Duplicate readiness failed",
+        description: result.summary,
+        variant: result.isReady ? "default" : "destructive",
+      })
+    } catch (ex: any) {
+      toast({ title: "Readiness check failed", description: ex.message ?? "Failed to check TikTok duplicate readiness.", variant: "destructive" })
+      setReadiness(null)
+    } finally {
+      setCheckingReadiness(false)
+    }
+  }
+
+  const duplicate = async () => {
+    if (!detail || readiness?.isReady !== true) return
+    try {
+      setDuplicating(true)
+      setDuplicateError("")
+      const result = await tiktokCampaignsApi.duplicate(numericCampaignId)
+      if (!result.success) {
+        const message = result.message || "TikTok campaign duplicate failed."
+        setDuplicateError(message)
+        toast({ title: "Duplicate failed", description: message, variant: "destructive" })
+        return
+      }
+      toast({
+        title: "Campaign duplicated",
+        description: `${result.createdAdGroupCount} ad group(s), ${result.createdAdCount} ad(s) created as disabled.`,
+      })
+      setDuplicateConfirmOpen(false)
+      if (result.newLocalCampaignId) {
+        router.push(`/tiktok-ads/campaigns/${result.newLocalCampaignId}`)
+      } else {
+        await load()
+      }
+    } catch (ex: any) {
+      const message = ex.message ?? "TikTok campaign duplicate failed."
+      setDuplicateError(message)
+      toast({ title: "Duplicate failed", description: message, variant: "destructive" })
+    } finally {
+      setDuplicating(false)
+    }
+  }
+  const duplicateToRequest = async () => {
+    if (!detail) return
+    try {
+      setDuplicatingToRequest(true)
+      const result = await tiktokCampaignsApi.duplicateToRequest(numericCampaignId)
+      if (!result.success) {
+        toast({ title: "Create request failed", description: result.message || "TikTok campaign duplicate to request failed.", variant: "destructive" })
+        return
+      }
+      toast({
+        title: "Request draft created",
+        description: `${result.copiedAdGroupCount} adset(s), ${result.copiedAdCount} ad(s) copied to request #${result.requestId}.`,
+      })
+      router.push(result.requestUrl || `/tiktok-ads/requests/${result.requestId}/edit`)
+    } catch (ex: any) {
+      toast({ title: "Create request failed", description: ex.message ?? "TikTok campaign duplicate to request failed.", variant: "destructive" })
+    } finally {
+      setDuplicatingToRequest(false)
     }
   }
 
@@ -354,14 +488,30 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {tiktokUrl ? (
             <Button asChild variant="outline">
               <a href={tiktokUrl} target="_blank" rel="noreferrer noopener"><ExternalLink className="mr-2 h-4 w-4" />Open in TikTok</a>
             </Button>
           ) : null}
+          {canDuplicate ? (
+            <>
+              <Button variant="outline" onClick={() => void checkDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing}>
+                {checkingReadiness ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                Check Duplicate Readiness
+              </Button>
+              <Button variant="outline" onClick={() => void duplicateToRequest()} disabled={duplicatingToRequest || duplicating || syncing}>
+                {duplicatingToRequest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FilePlus2 className="mr-2 h-4 w-4" />}
+                Duplicate To Request
+              </Button>
+              <Button variant="outline" onClick={() => setDuplicateConfirmOpen(true)} disabled={duplicating || syncing || readiness?.isReady !== true}>
+                {duplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+                Duplicate Campaign
+              </Button>
+            </>
+          ) : null}
           {canSync ? (
-            <Button className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={sync} disabled={syncing}>
+            <Button className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={sync} disabled={syncing || duplicating}>
               {syncing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Sync Account
             </Button>
@@ -369,6 +519,30 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
         </div>
       </div>
 
+      {readiness ? (
+        <Card className={readiness.isReady ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+              {readiness.isReady ? <CheckCircle2 className="h-4 w-4 text-emerald-700" /> : <XCircle className="h-4 w-4 text-rose-700" />}
+              Duplicate Readiness
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-700">{readiness.summary}</p>
+            <div className="grid gap-2 md:grid-cols-2">
+              {readiness.checks.map((check) => (
+                <div key={check.key} className="flex items-start gap-2 rounded-md border border-white/70 bg-white/70 p-2 text-sm">
+                  {check.isReady ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-700" />}
+                  <div>
+                    <div className="font-medium text-slate-900">{check.label}</div>
+                    <div className="text-xs text-slate-600">{check.message}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="border-slate-200 xl:col-span-2">
           <CardHeader>
@@ -470,9 +644,48 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
           <AdGroupsTable rows={detail.adGroups} />
         </TabsContent>
         <TabsContent value="ads" className="rounded-md border bg-white">
-          <AdsTable rows={detail.ads} />
+          <AdsTable rows={detail.ads} adGroups={detail.adGroups} />
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg overflow-hidden">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate TikTok Campaign?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-slate-600">
+                <p>This will create a disabled copy of this campaign in TikTok, including synced ad groups and ads.</p>
+                <div className="min-w-0 max-w-full overflow-hidden rounded-md bg-slate-50 px-3 py-2">
+                  <span className="block text-xs font-medium uppercase tracking-wide text-slate-500">Campaign name</span>
+                  <span className="block max-h-20 max-w-full overflow-auto break-all font-semibold text-slate-700">{detail.name}</span>
+                </div>
+                <p>Only campaigns that passed readiness check can be duplicated.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {readiness ? <p className="min-w-0 break-words text-sm text-slate-600">{readiness.summary}</p> : null}
+          {duplicateError ? <div className="min-w-0 break-words rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{duplicateError}</div> : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={duplicating || readiness?.isReady !== true} onClick={(event) => { event.preventDefault(); void duplicate() }}>
+              {duplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+              Duplicate Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+

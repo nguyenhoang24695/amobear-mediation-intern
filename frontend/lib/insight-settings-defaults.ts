@@ -25,6 +25,15 @@ export const RECOMMENDED_INSIGHT_SETTINGS = {
     contextItems: [] as unknown[],
   },
   sectionOverrides: {} as Record<string, string>,
+  personaGeneration: {
+    product_owner: false,
+    data_analyst: false,
+    ua_marketing: false,
+    mediation: false,
+    devops: false,
+    qa: false,
+    bod: false,
+  } as Record<string, boolean>,
   generationOverride: {
     enabled: false,
     provider: "openai",

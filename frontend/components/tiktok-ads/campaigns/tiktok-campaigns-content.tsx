@@ -77,7 +77,7 @@ function formatAppIdDisplay(value?: string | null) {
 }
 
 function appLabel(mapping: TikTokAppMappingDto) {
-  return mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`
+  return mapping.appDisplayName ?? mapping.appId ?? mapping.packageName ?? mapping.normalizedStoreIdentifier ?? mapping.tikTokAppId
 }
 
 interface SearchableFilterOption {
@@ -363,19 +363,21 @@ export function TikTokCampaignsContent() {
     const appsByRowId = new Map(apps.map((app) => [app.id, app]))
     return [
       { value: "all", label: "All apps", searchText: "all" },
-      ...appMappings.map((mapping) => {
-        const app = appsByRowId.get(mapping.appRowId)
+      ...appMappings.flatMap((mapping) => {
+        if (mapping.appRowId == null) return []
+        const appRowId = mapping.appRowId
+        const app = appsByRowId.get(appRowId)
         const label = app?.displayName ?? app?.name ?? appLabel(mapping)
         const appId = app?.appId ?? mapping.appId
         const platform = app?.platform ?? mapping.appPlatform
-        return {
-          value: mapping.appRowId.toString(),
+        return [{
+          value: appRowId.toString(),
           label,
           appId,
           platform,
           iconUri: app?.iconUri,
           searchText: [label, appId, platform, mapping.tikTokAppId].filter(Boolean).join(" "),
-        }
+        }]
       }),
     ]
   }, [appMappings, apps])

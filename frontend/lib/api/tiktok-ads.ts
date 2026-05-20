@@ -1,6 +1,9 @@
 import { apiClient } from "./client"
 import type {
   TikTokCampaignPerformancePageDto,
+  TikTokCampaignDuplicateReadinessResultDto,
+  TikTokCampaignDuplicateResponseDto,
+  TikTokCampaignDuplicateToRequestResponseDto,
   TikTokCampaignDetailDto,
   TikTokCampaignListResponseDto,
   TikTokCampaignRequestDetailDto,
@@ -134,9 +137,9 @@ export const tiktokReferenceApi = {
     apiClient.get<TikTokTargetingOptionsResponseDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/targeting-options`, params),
   getIdentities: async (adAccountId: number) =>
     apiClient.get<TikTokIdentityOptionDto[]>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/identities`),
-  getLibraryVideos: async (adAccountId: number, params?: { search?: string; page?: number; pageSize?: number }) =>
+  getLibraryVideos: async (adAccountId: number, params?: { search?: string; videoIds?: string[]; page?: number; pageSize?: number }) =>
     apiClient.get<TikTokLibraryVideoPageDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/library/videos`, params),
-  getLibraryImages: async (adAccountId: number, params?: { search?: string; page?: number; pageSize?: number }) =>
+  getLibraryImages: async (adAccountId: number, params?: { search?: string; imageIds?: string[]; page?: number; pageSize?: number }) =>
     apiClient.get<TikTokLibraryImagePageDto>(`/api/v1/tiktok-reference/ad-accounts/${adAccountId}/library/images`, params),
 }
 
@@ -174,5 +177,10 @@ export const tiktokCampaignsApi = {
   }) => apiClient.get<TikTokCampaignListResponseDto>(CAMPAIGNS_PREFIX, params),
   getById: async (id: number, params?: { startDate?: string; endDate?: string }) =>
     apiClient.get<TikTokCampaignDetailDto>(`${CAMPAIGNS_PREFIX}/${id}`, params),
+  checkDuplicateReadiness: async (id: number) => apiClient.post<TikTokCampaignDuplicateReadinessResultDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate-readiness-check`, {}),
+  duplicate: async (id: number) => apiClient.post<TikTokCampaignDuplicateResponseDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate`, {}),
+  duplicateToRequest: async (id: number) => apiClient.post<TikTokCampaignDuplicateToRequestResponseDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate-to-request`, {}),
   sync: async (request?: SyncTikTokCampaignsRequestDto) => apiClient.post<TikTokSyncResultDto>(`${CAMPAIGNS_PREFIX}/sync`, request ?? {}),
 }
+
+

@@ -21,6 +21,8 @@ import { getCreativeImageMode, getCreativeVideoMode, hasCreativeMedia, optionLab
 type TikTokUploadKind = "image" | "video"
 type TikTokCreativeDraft = TikTokRequestFormState["ad"]
 
+const maxTikTokAdTexts = 5
+
 interface VideoRatioInfo {
   ratio: number
   label: string
@@ -43,6 +45,7 @@ interface Props {
   onLibrarySearch: (kind: "video" | "image", query: string) => void
   onLibraryEnabledChange: (enabled: boolean) => void
   onCreativeChange: (index: number, creative: TikTokCreativeDraft) => void
+  onAdGroupChange: (adGroup: TikTokRequestFormState["adGroup"]) => void
   onAddCreative: () => void
   onDuplicateCreative: (index: number) => void
   onRemoveCreative: (index: number) => void
@@ -86,10 +89,25 @@ function mediaModeLabel(mode: TikTokMediaMode) {
   return mode === "upload" ? "Upload" : mode === "library" ? "TikTok library" : "Existing ID"
 }
 
+function dimensionsLabel(width?: number | null, height?: number | null) {
+  return width && height ? `${width}x${height}` : "unknown"
+}
+
+function mediaRatio(width?: number | null, height?: number | null) {
+  return width && height && height > 0 ? width / height : null
+}
+
+function libraryRatioMismatchMessage(video: TikTokCreativeVideoDto | null, image: TikTokCreativeImageDto | null) {
+  const videoRatio = mediaRatio(video?.width, video?.height)
+  const imageRatio = mediaRatio(image?.width, image?.height)
+  if (!videoRatio || !imageRatio || Math.abs(videoRatio - imageRatio) <= 0.01) return null
+  return `Cover image ratio must match selected video ratio. Video is ${dimensionsLabel(video?.width, video?.height)}, image is ${dimensionsLabel(image?.width, image?.height)}.`
+}
+
 function isCreativeReady(creative: TikTokCreativeDraft) {
-  const hasVideo = Boolean(creative.videoId?.trim() || creative.videoAssetId)
+  const hasVideo = (creative.videoIds?.length ?? 0) > 0 || (creative.videoAssetIds?.length ?? 0) > 0
   const hasImage = creative.imageIds.length > 0 || creative.imageAssetIds.length > 0
-  const hasCopy = Boolean(creative.adName.trim() && creative.adText?.trim() && creative.callToAction && creative.landingPageUrl?.trim())
+  const hasCopy = Boolean(creative.adName.trim() && creative.callToAction && creative.landingPageUrl?.trim())
   const hasIdentity = Boolean(creative.identityId?.trim())
   return hasVideo && hasImage && hasCopy && hasIdentity
 }
@@ -111,6 +129,7 @@ export function CreativeSection({
   onLibrarySearch,
   onLibraryEnabledChange,
   onCreativeChange,
+  onAdGroupChange,
   onAddCreative,
   onDuplicateCreative,
   onRemoveCreative,
@@ -124,11 +143,21 @@ export function CreativeSection({
   const lastGeneratedNamesRef = useRef<Record<number, string>>({})
 
   function resolveVideoMode(index: number, creative: TikTokCreativeDraft): TikTokMediaMode {
-    return videoModeOverrides[index] ?? getCreativeVideoMode(creative)
+    const computed = getCreativeVideoMode(creative)
+    const override = videoModeOverrides[index]
+    if (process.env.NODE_ENV !== "production" && override === "upload" && (creative.videoIds?.length ?? 0) > 0) {
+      console.debug("TikTok creative video mode override keeps upload while videoIds exist", { index, videoIds: creative.videoIds, videoAssetIds: creative.videoAssetIds })
+    }
+    return override ?? computed
   }
 
   function resolveImageMode(index: number, creative: TikTokCreativeDraft): TikTokMediaMode {
-    return imageModeOverrides[index] ?? getCreativeImageMode(creative)
+    const computed = getCreativeImageMode(creative)
+    const override = imageModeOverrides[index]
+    if (process.env.NODE_ENV !== "production" && override === "upload" && creative.imageIds.length > 0) {
+      console.debug("TikTok creative image mode override keeps upload while imageIds exist", { index, imageIds: creative.imageIds, imageAssetIds: creative.imageAssetIds })
+    }
+    return override ?? computed
   }
 
   useEffect(() => {
@@ -173,7 +202,7 @@ export function CreativeSection({
   function handleVideoModeChange(index: number, creative: TikTokCreativeDraft, mode: TikTokMediaMode) {
     setVideoModeOverrides((prev) => ({ ...prev, [index]: mode }))
     if (mode === "library") onLibraryEnabledChange(true)
-    onCreativeChange(index, { ...creative, videoId: "", videoAssetId: undefined })
+    onCreativeChange(index, { ...creative, videoId: "", videoIds: [], videoAssetId: undefined, videoAssetIds: [] })
   }
 
   function handleImageModeChange(index: number, creative: TikTokCreativeDraft, mode: TikTokMediaMode) {
@@ -203,7 +232,7 @@ export function CreativeSection({
     <SectionShell
       eyebrow="Creative"
       title="TikTok Creatives"
-      description="Create one or more video ads under the same TikTok campaign and ad group."
+      description="Select video assets and define up to 5 ad texts for this ad set. TikTok combines them automatically."
       ready={ready}
     >
       <div className="space-y-4">
@@ -215,6 +244,11 @@ export function CreativeSection({
             </div>
           </div>
         </div>
+
+        <TikTokAdTextVariationEditor
+          values={form.adGroup.adTexts?.length ? form.adGroup.adTexts : form.ads.flatMap((creative) => creative.adTexts?.length ? creative.adTexts : creative.adText ? [creative.adText] : []).slice(0, maxTikTokAdTexts)}
+          onChange={(adTexts) => onAdGroupChange({ ...form.adGroup, adTexts })}
+        />
 
         <Tabs value={activeCreativeTab} onValueChange={setActiveCreativeTab} className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-slate-50 p-2">
@@ -238,19 +272,21 @@ export function CreativeSection({
             </TabsList>
             <Button type="button" variant="outline" size="sm" onClick={handleAddCreative}>
               <Plus className="mr-2 h-4 w-4" />
-              Add creative
+              Add video asset
             </Button>
           </div>
 
           {creatives.map((creative, index) => {
             const videoMode = resolveVideoMode(index, creative)
             const imageMode = resolveImageMode(index, creative)
-            const videoAsset = creative.videoAssetId ? uploadedAssetsById[creative.videoAssetId] ?? null : null
+            const videoAssetId = creative.videoAssetIds?.[0] ?? creative.videoAssetId
+            const videoAsset = videoAssetId ? uploadedAssetsById[videoAssetId] ?? null : null
             const imageAssetId = creative.imageAssetIds[0]
             const imageAsset = imageAssetId ? uploadedAssetsById[imageAssetId] ?? null : null
-            const libraryVideoId = videoMode === "library" ? creative.videoId?.trim() ?? "" : ""
+            const primaryVideoId = creative.videoIds?.[0]?.trim() ?? creative.videoId?.trim() ?? ""
+            const libraryVideoId = videoMode === "library" ? primaryVideoId : ""
             const libraryImageId = imageMode === "library" ? creative.imageIds[0] ?? "" : ""
-            const selectedLibraryVideo = libraryVideoId ? libraryVideos.find((v) => v.videoId === libraryVideoId) ?? null : null
+            const selectedLibraryVideo = primaryVideoId ? libraryVideos.find((v) => v.videoId === primaryVideoId) ?? null : null
             const selectedLibraryImage = libraryImageId ? libraryImages.find((i) => i.imageId === libraryImageId) ?? null : null
             const libraryEmptyMessage = libraryLoadError
               ? libraryLoadError
@@ -259,10 +295,10 @@ export function CreativeSection({
                 : form.tikTokAdAccountRowId
                   ? "No matching asset in TikTok library."
                   : "Select an ad account first."
-            const videoRatio = creative.videoAssetId ? videoRatiosByAssetId[creative.videoAssetId] : undefined
-            const imageUploadGatedByVideo = videoMode === "upload" && (!creative.videoAssetId || !videoRatio)
+            const videoRatio = videoAssetId ? videoRatiosByAssetId[videoAssetId] : undefined
+            const imageUploadGatedByVideo = videoMode === "upload" && (!videoAssetId || !videoRatio)
             const imageUploadDisabled = imageMode === "upload" && imageUploadGatedByVideo
-            const imageUploadDisabledReason = !creative.videoAssetId
+            const imageUploadDisabledReason = !videoAssetId
               ? "Upload video before uploading the cover image."
               : "Video dimensions are loading before cover image validation."
             const selectedIdentityKey = identityOptionKey(creative.identityId, creative.identityType, creative.identityAuthorizedBcId)
@@ -285,16 +321,17 @@ export function CreativeSection({
               : identityOptions
             const videoPreview = getTikTokRequestAssetPreviewSource(videoAsset)
             const imagePreview = getTikTokRequestAssetPreviewSource(imageAsset)
-            const validationMessage = creativeValidationMessages[index]
+            const libraryRatioMessage = videoMode === "library" && imageMode === "library" ? libraryRatioMismatchMessage(selectedLibraryVideo, selectedLibraryImage) : null
+            const validationMessage = libraryRatioMessage ?? creativeValidationMessages[index]
             const uploadingVideo = Boolean(uploadingKeys[uploadKey(index, "video")])
             const uploadingImage = Boolean(uploadingKeys[uploadKey(index, "image")])
-            const videoAssetFallback = creative.videoAssetId ? `Uploaded video asset #${creative.videoAssetId}` : undefined
+            const videoAssetFallback = videoAssetId ? `Uploaded video asset #${videoAssetId}` : undefined
             const imageAssetFallback = creative.imageAssetIds.length ? `Uploaded image asset #${creative.imageAssetIds.join(", ")}` : undefined
             const generatedAdName = buildCreativeAdName(form, creative, index)
             const previewFallback = (
               <div className="flex flex-col items-center gap-2 text-slate-400">
                 <Play className="h-8 w-8" />
-                <p className="max-w-[160px] truncate text-xs">{creative.videoId || videoAssetFallback || "Media preview"}</p>
+                <p className="max-w-[160px] truncate text-xs">{creative.videoIds?.[0] || creative.videoId || videoAssetFallback || "Media preview"}</p>
               </div>
             )
 
@@ -303,7 +340,7 @@ export function CreativeSection({
                 <div className="rounded-lg border bg-white p-4 shadow-sm">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Badge className="bg-slate-100 text-slate-700">Creative #{index + 1}</Badge>
+                      <Badge className="bg-slate-100 text-slate-700">Video asset #{index + 1}</Badge>
                       <Badge variant="outline">Video: {mediaModeLabel(videoMode)}</Badge>
                       <Badge variant="outline">Thumbnail: {mediaModeLabel(imageMode)}</Badge>
                       {videoRatio ? <Badge variant="outline">Video {videoRatio.label}</Badge> : null}
@@ -362,7 +399,7 @@ export function CreativeSection({
                                 onValueChange={(value) => {
                                   const picked = libraryVideos.find((v) => v.videoId === value)
                                   if (!picked) return
-                                  onCreativeChange(index, { ...creative, videoId: picked.videoId, videoAssetId: undefined })
+                                  onCreativeChange(index, { ...creative, videoId: picked.videoId, videoIds: Array.from(new Set([...(creative.videoIds ?? []), picked.videoId])), videoAssetId: undefined, videoAssetIds: [] })
                                 }}
                                 renderValue={(option) => (
                                   <span className="flex min-w-0 items-center gap-2">
@@ -376,23 +413,23 @@ export function CreativeSection({
                                     <div className="min-w-0">
                                       <div className="truncate text-sm font-medium text-slate-900">{option.fileName || option.videoId}</div>
                                       <div className="truncate font-mono text-xs text-slate-400">
-                                        {option.width && option.height ? `${option.width}x${option.height}` : ""}{option.duration ? ` · ${Number(option.duration).toFixed(1)}s` : ""}
+                                        {option.width && option.height ? `${option.width}x${option.height}` : ""}{option.duration ? ` / ${option.duration}s` : ""}
                                       </div>
                                     </div>
                                   </div>
                                 )}
                               />
                               {selectedLibraryVideo && !selectedLibraryVideo.displayable ? (
-                                <p className="text-xs text-amber-700">This video is not displayable on TikTok anymore.</p>
+                                <p className="text-xs text-amber-700">Preview unavailable because the current TikTok account has no permission to read this video. The video_id is still retained for submit.</p>
                               ) : null}
                             </div>
                           ) : (
                             <div className="space-y-2">
                               <Label className="text-xs text-slate-600">TikTok video_id</Label>
                               <Input
-                                value={creative.videoId ?? ""}
-                                onChange={(event) => onCreativeChange(index, { ...creative, videoId: event.target.value.trim(), videoAssetId: undefined })}
-                                placeholder="v10033..."
+                                value={(creative.videoIds?.length ? creative.videoIds : creative.videoId ? [creative.videoId] : []).join("\n")}
+                                onChange={(event) => { const videoIds = event.target.value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean).slice(0, 50); onCreativeChange(index, { ...creative, videoId: videoIds[0] ?? "", videoIds, videoAssetId: undefined, videoAssetIds: [] }) }}
+                                placeholder="One TikTok video_id per line, max 50"
                               />
                             </div>
                           )}
@@ -460,7 +497,7 @@ export function CreativeSection({
                                 )}
                               />
                               {selectedLibraryImage && !selectedLibraryImage.displayable ? (
-                                <p className="text-xs text-amber-700">This image is not displayable on TikTok anymore.</p>
+                                <p className="text-xs text-amber-700">Preview unavailable because the current TikTok account has no permission to read this image. The image_id is still retained for submit.</p>
                               ) : null}
                             </div>
                           ) : (
@@ -554,10 +591,6 @@ export function CreativeSection({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label>Ad text</Label>
-                          <Textarea rows={3} value={creative.adText ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, adText: event.target.value })} />
-                        </div>
                         <div className="space-y-2">
                           <Label>Landing page URL</Label>
                           <Input value={creative.landingPageUrl ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, landingPageUrl: event.target.value })} />
@@ -591,12 +624,12 @@ export function CreativeSection({
                           </div>
                         </div>
                         <div className="flex aspect-[9/16] items-center justify-center bg-slate-100">
-                          {videoMode === "upload" && videoPreview.url ? (
-                            <ProtectedMediaVideo className="h-full w-full object-cover" controls fallback={previewFallback} requiresAuth={videoPreview.requiresAuth} src={videoPreview.url} />
-                          ) : videoMode === "library" && selectedLibraryVideo?.previewUrl ? (
+                          {selectedLibraryVideo?.previewUrl ? (
                             <video className="h-full w-full object-cover" controls src={selectedLibraryVideo.previewUrl} poster={selectedLibraryVideo.videoCoverUrl ?? undefined} />
-                          ) : videoMode === "library" && selectedLibraryVideo?.videoCoverUrl ? (
+                          ) : selectedLibraryVideo?.videoCoverUrl ? (
                             <img alt={selectedLibraryVideo.fileName ?? "TikTok library video"} className="h-full w-full object-cover" src={selectedLibraryVideo.videoCoverUrl} />
+                          ) : videoMode === "upload" && videoPreview.url ? (
+                            <ProtectedMediaVideo className="h-full w-full object-cover" controls fallback={previewFallback} requiresAuth={videoPreview.requiresAuth} src={videoPreview.url} />
                           ) : imageMode === "upload" && imagePreview.url ? (
                             <ProtectedMediaImage alt={imageAsset?.fileName ?? "Uploaded TikTok image"} className="h-full w-full object-cover" fallback={previewFallback} requiresAuth={imagePreview.requiresAuth} src={imagePreview.url} />
                           ) : imageMode === "library" && selectedLibraryImage?.imageUrl ? (
@@ -606,7 +639,7 @@ export function CreativeSection({
                           )}
                         </div>
                         <div className="space-y-2 p-3">
-                          <p className="line-clamp-3 text-xs text-slate-800">{creative.adText || "Ad text preview"}</p>
+                          <p className="line-clamp-3 text-xs text-slate-800">{form.adGroup.adTexts?.find((item) => item.trim()) || "Ad text preview"}</p>
                           <div className="rounded bg-slate-900 px-3 py-2 text-center text-xs font-semibold text-white">{creative.callToAction || "INSTALL_NOW"}</div>
                         </div>
                       </div>
@@ -619,6 +652,69 @@ export function CreativeSection({
         </Tabs>
       </div>
     </SectionShell>
+  )
+}
+
+function normalizeTextRows(values?: string[] | null) {
+  const rows = values?.length ? values.slice(0, maxTikTokAdTexts) : [""]
+  return rows.length ? rows : [""]
+}
+
+function TikTokAdTextVariationEditor({
+  values,
+  onChange,
+}: {
+  values: string[]
+  onChange: (values: string[]) => void
+}) {
+  const rows = normalizeTextRows(values)
+
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label className="text-xs font-medium text-slate-700">Ad texts <span className="text-red-500">*</span></Label>
+          <p className="text-[11px] text-slate-400">Add up to {maxTikTokAdTexts} texts. TikTok rotates these texts with all videos in this ad set.</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => onChange([...rows, ""])}
+          disabled={rows.length >= maxTikTokAdTexts}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />Add text
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {rows.map((value, textIndex) => (
+          <div key={`tiktok-ad-text-${textIndex}`} className="flex items-start gap-2">
+            <Textarea
+              rows={3}
+              value={value}
+              placeholder={`Ad text ${textIndex + 1}`}
+              onChange={(event) => {
+                const nextValues = [...rows]
+                nextValues[textIndex] = event.target.value
+                onChange(nextValues)
+              }}
+              className="resize-none bg-white text-sm"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-1 h-8 px-2 text-red-600"
+              onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== textIndex))}
+              disabled={rows.length <= 1}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

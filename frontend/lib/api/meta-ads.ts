@@ -275,7 +275,7 @@ export const metaAdAccountsApi = {
 
 export const metaAppMappingsApi = {
   list: async () => {
-    return apiClient.get<MetaAppMappingDto[]>(`${ACCOUNTS_PREFIX}/app-mappings`)
+    return apiClient.get<MetaAppMappingDto[]>(`${ACCOUNTS_PREFIX}/store-app-mappings`)
   },
 
   listCandidates: async (query?: MetaAppMappingCandidateQueryDto) => {
@@ -298,19 +298,19 @@ export const metaAppMappingsApi = {
   },
 
   create: async (request: CreateMetaAppMappingRequestDto) => {
-    return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings`, request)
+    return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/store-app-mappings`, request)
   },
 
   update: async (id: number, request: UpdateMetaAppMappingRequestDto) => {
-    return apiClient.put<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}`, request)
+    return apiClient.put<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/store-app-mappings/${id}`, request)
   },
 
   enable: async (id: number) => {
-    return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/enable`, {})
+    return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/store-app-mappings/${id}/enable`, {})
   },
 
   disable: async (id: number) => {
-    return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/app-mappings/${id}/disable`, {})
+    return apiClient.post<MetaAppMappingDto>(`${ACCOUNTS_PREFIX}/store-app-mappings/${id}/disable`, {})
   },
 }
 
