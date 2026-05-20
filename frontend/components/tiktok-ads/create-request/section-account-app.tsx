@@ -53,7 +53,8 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
             emptyMessage="No TikTok ad accounts found."
             onValueChange={(value) => onChange({
               tikTokAdAccountRowId: Number(value),
-              appRowId: 0,
+              appRowId: null,
+              paidMediaAppBindingId: null,
               adGroup: { ...form.adGroup, appId: undefined, appDownloadUrl: undefined, operatingSystems: [] },
               ad: { ...form.ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined },
               ads: form.ads.map((ad) => ({ ...ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined })),
@@ -88,7 +89,7 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
         <div className="space-y-2">
           <Label>App mapping</Label>
           <SearchableSelect
-            value={form.appRowId ? String(form.appRowId) : ""}
+            value={form.paidMediaAppBindingId ? String(form.paidMediaAppBindingId) : ""}
             options={appMappings}
             placeholder={form.tikTokAdAccountRowId ? "Select app..." : "Select ad account first..."}
             searchPlaceholder="Search by app name, app ID, platform, TikTok app ID..."
@@ -98,7 +99,8 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
               const mappingId = Number(value)
               const mapping = appMappings.find((item) => item.id === mappingId)
               onChange({
-                appRowId: mapping?.appRowId ?? 0,
+                appRowId: mapping?.appRowId ?? null,
+                paidMediaAppBindingId: mapping?.id ?? null,
                 adGroup: {
                   ...form.adGroup,
                   appId: mapping?.tikTokAppId ?? form.adGroup.appId,

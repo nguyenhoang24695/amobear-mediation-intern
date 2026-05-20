@@ -354,7 +354,8 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
 
   return {
     metaAdAccountId: Number(form.adAccountId),
-    appRowId: Number(form.appRowId),
+    appRowId: form.appRowId ? Number(form.appRowId) : null,
+    paidMediaAppBindingId: form.paidMediaAppBindingId ? Number(form.paidMediaAppBindingId) : null,
     idempotencyKey,
     campaign: {
       name: form.campaignName.trim(),
@@ -416,6 +417,7 @@ export function formStateToUpdateDto(form: MetaRequestFormState): UpdateMetaCamp
   return {
     metaAdAccountId: createDto.metaAdAccountId,
     appRowId: createDto.appRowId,
+    paidMediaAppBindingId: createDto.paidMediaAppBindingId,
     campaign: createDto.campaign,
     adSet: createDto.adSet,
     creative: createDto.creative,
@@ -444,7 +446,8 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
 
   return {
     adAccountId: detail.metaAdAccountId.toString(),
-    appRowId: detail.appRowId.toString(),
+    appRowId: detail.appRowId?.toString() ?? "",
+    paidMediaAppBindingId: detail.paidMediaAppBindingId?.toString() ?? detail.payload.paidMediaAppBindingId?.toString() ?? "",
     objective: payload.campaign.objective,
     budgetStrategy: payload.campaign.dailyBudget || payload.campaign.lifetimeBudget ? "CBO" : "ABO",
     campaignName: payload.campaign.name ?? "",

@@ -164,6 +164,7 @@ function createDefaultFormState(): RequestFormState {
   return sanitizeRequestFormState({
     adAccountId: "",
     appRowId: "",
+    paidMediaAppBindingId: "",
     objective: "OUTCOME_APP_PROMOTION",
     budgetStrategy: "CBO",
     campaignName: "",
@@ -386,7 +387,7 @@ export function CreateRequestContent({ requestId }: Props) {
   } = useApi<MetaPerformanceGoalReferenceDto>(
     () => metaReferenceApi.getAppPerformanceGoals(Number(form.appRowId)),
     {
-      enabled: !!form.appRowId,
+      enabled: !!form.appRowId && !Number.isNaN(Number(form.appRowId)),
       cacheKey: form.appRowId ? `meta-reference:app:${form.appRowId}:performance-goals` : "meta-reference:app:none:performance-goals",
     }
   )
@@ -400,8 +401,8 @@ export function CreateRequestContent({ requestId }: Props) {
   )
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
-  const selectedAppMapping = availableAppMappings.find((mapping) => mapping.appRowId != null && mapping.appRowId.toString() === form.appRowId)
-    ?? referenceData?.appMappings.find((mapping) => mapping.appRowId != null && mapping.appRowId.toString() === form.appRowId)
+  const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
+    ?? referenceData?.appMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
   const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
   const tokenState = deriveTokenState({

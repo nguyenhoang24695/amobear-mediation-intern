@@ -765,7 +765,8 @@ export interface MetaAdDraftDto {
 
 export interface CreateMetaCampaignRequestDto {
   metaAdAccountId: number
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   idempotencyKey?: string | null
   campaign: MetaCampaignDraftDto
   adSet: MetaAdSetDraftDto
@@ -775,7 +776,8 @@ export interface CreateMetaCampaignRequestDto {
 
 export interface UpdateMetaCampaignRequestDto {
   metaAdAccountId: number
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   campaign: MetaCampaignDraftDto
   adSet: MetaAdSetDraftDto
   creative: MetaCreativeDraftDto
@@ -835,7 +837,8 @@ export interface MetaCampaignRequestListItemDto {
   status: MetaRequestStatus
   metaAdAccountId: number
   metaAdAccountName?: string | null
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   appId?: string | null
   appDisplayName?: string | null
   idempotencyKey: string
@@ -856,7 +859,8 @@ export interface MetaCampaignRequestDetailDto {
   status: MetaRequestStatus
   metaAdAccountId: number
   metaAdAccountName?: string | null
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   appId?: string | null
   appDisplayName?: string | null
   metaAppMappingId?: number | null
@@ -995,6 +999,7 @@ export interface MetaFlexibleAssetFormState {
 export interface MetaRequestFormState {
   adAccountId: string
   appRowId: string
+  paidMediaAppBindingId: string
   objective: string
   budgetStrategy: "CBO" | "ABO"
   campaignName: string

@@ -227,8 +227,8 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     [form?.tikTokAdAccountRowId, reference],
   )
   const selectedAppMapping = useMemo(
-    () => reference?.appMappings.find((mapping) => mapping.appRowId === form?.appRowId) ?? reference?.appMappings.find((mapping) => mapping.tikTokAppId === form?.adGroup.appId),
-    [form?.appRowId, reference],
+    () => reference?.appMappings.find((mapping) => mapping.id === form?.paidMediaAppBindingId) ?? reference?.appMappings.find((mapping) => mapping.tikTokAppId === form?.adGroup.appId),
+    [form?.paidMediaAppBindingId, form?.adGroup.appId, reference],
   )
   const targetingAdAccountId = form?.tikTokAdAccountRowId ?? 0
   const targetingObjectiveType = form?.campaign.objectiveType || "APP_PROMOTION"
@@ -489,7 +489,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   const persistDraft = useCallback(async (options?: { silent?: boolean }) => {
     if (!form) throw new Error("Form is not ready")
     if (!form.tikTokAdAccountRowId) throw new Error("Select a TikTok ad account before saving.")
-    if (!form.appRowId) throw new Error("Select an app mapping before saving.")
+    if (!form.paidMediaAppBindingId) throw new Error("Select an app mapping before saving.")
 
     const payload = sanitizeTikTokRequestForm({
       ...form,

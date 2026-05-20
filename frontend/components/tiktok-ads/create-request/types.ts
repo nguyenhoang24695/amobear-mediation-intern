@@ -47,7 +47,8 @@ export function createDefaultTikTokRequestForm(reference: TikTokReferenceRespons
   const start = new Date()
   return sanitizeTikTokRequestForm({
     tikTokAdAccountRowId: 0,
-    appRowId: 0,
+    appRowId: null,
+    paidMediaAppBindingId: null,
     idempotencyKey: buildIdempotencyKey(),
     campaign: {
       campaignName: "",
@@ -224,7 +225,8 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
 
   return {
     tikTokAdAccountRowId: numberValue(pick(root, "tikTokAdAccountRowId", "TikTokAdAccountRowId")),
-    appRowId: numberValue(pick(root, "appRowId", "AppRowId")),
+    appRowId: numberValue(pick(root, "appRowId", "AppRowId")) ?? null,
+    paidMediaAppBindingId: numberValue(pick(root, "paidMediaAppBindingId", "PaidMediaAppBindingId")) ?? null,
     idempotencyKey: stringValue(pick(root, "idempotencyKey", "IdempotencyKey")),
     campaign,
     adGroup,

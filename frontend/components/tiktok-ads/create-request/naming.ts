@@ -21,7 +21,7 @@ function buildDateToken() {
   return `${year}${month}${day}`
 }
 
-function buildAppToken(selectedAppMapping?: TikTokAppMappingDto | null, appRowId?: number) {
+function buildAppToken(selectedAppMapping?: TikTokAppMappingDto | null, appRowId?: number | null) {
   const rawValue =
     selectedAppMapping?.appDisplayName?.trim()
     || selectedAppMapping?.appId?.trim()

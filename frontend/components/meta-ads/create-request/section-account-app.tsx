@@ -250,14 +250,17 @@ export function AccountAppSection({
               App <span className="text-red-500">*</span>
             </Label>
             <SearchableSelect
-              value={form.appRowId}
+              value={form.paidMediaAppBindingId}
               options={appMappings}
               placeholder={form.adAccountId ? (appMappingsLoading ? "Loading apps for this ad account..." : "Select app...") : "Select ad account first..."}
               searchPlaceholder="Search by app name, app ID, platform..."
               emptyMessage="No apps found."
               disabled={appSelectDisabled}
-              onValueChange={(value) => onChange({ appRowId: value })}
-              getValue={(mapping) => mapping.appRowId?.toString() ?? `store:${mapping.id}`}
+              onValueChange={(value) => {
+                const mapping = appMappings.find((item) => item.id.toString() === value)
+                onChange({ paidMediaAppBindingId: value, appRowId: mapping?.appRowId?.toString() ?? "" })
+              }}
+              getValue={(mapping) => mapping.id.toString()}
               getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.platform ?? ""} ${mapping.metaApplicationId ?? ""}`}
               renderValue={(mapping) => (
                 <span className="flex min-w-0 items-center gap-2">
@@ -275,12 +278,12 @@ export function AccountAppSection({
                   </Badge>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `App ${mapping.appRowId}`}</span>
+                      <span className="truncate text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `Store ${mapping.id}`}</span>
                       {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.deepLinkUrlOverride)) ? (
                         <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Missing Mapping</Badge>
                       ) : null}
                     </div>
-                    <div className="truncate text-xs text-slate-400 font-mono">{mapping.appId ?? `row:${mapping.appRowId}`}</div>
+                    <div className="truncate text-xs text-slate-400 font-mono">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `binding:${mapping.id}`}</div>
                   </div>
                 </div>
               )}
@@ -355,12 +358,12 @@ export function AccountAppSection({
           <div className="bg-slate-50 rounded-md border border-slate-200 p-3 space-y-1.5">
             <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">App Mapping</p>
             <StatusRow
-              ok={form.appRowId ? (selectedAppMapping?.metaApplicationId ? true : false) : null}
-              label={!form.appRowId ? "Select an app" : selectedAppMapping?.metaApplicationId ? "Meta App ID set" : "Meta App ID missing"}
+              ok={form.paidMediaAppBindingId ? (selectedAppMapping?.metaApplicationId ? true : false) : null}
+              label={!form.paidMediaAppBindingId ? "Select an app" : selectedAppMapping?.metaApplicationId ? "Meta App ID set" : "Meta App ID missing"}
             />
             <StatusRow
-              ok={form.appRowId ? (!!mappingUrl) : null}
-              label={!form.appRowId ? "Store URL" : mappingUrl ? "Store URL set" : "Store URL missing"}
+              ok={form.paidMediaAppBindingId ? (!!mappingUrl) : null}
+              label={!form.paidMediaAppBindingId ? "Store URL" : mappingUrl ? "Store URL set" : "Store URL missing"}
             />
           </div>
           <div className="bg-slate-50 rounded-md border border-slate-200 p-3 space-y-1.5">

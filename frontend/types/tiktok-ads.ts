@@ -447,7 +447,8 @@ export interface CreateTikTokAppMappingRequestDto {
 }
 
 export interface TikTokAppMappingCandidateAppDto {
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   appId?: string | null
   appDisplayName?: string | null
   platform?: string | null
@@ -554,7 +555,8 @@ export interface TikTokOptionDto {
 
 export interface CreateTikTokCampaignRequestDto {
   tikTokAdAccountRowId: number
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   idempotencyKey?: string
   campaign: TikTokCampaignDraftDto
   adGroup: TikTokAdGroupDraftDto
@@ -646,7 +648,8 @@ export interface TikTokCampaignRequestListItemDto {
   status: string
   tikTokAdAccountRowId: number
   tikTokAdAccountName?: string | null
-  appRowId: number
+  appRowId?: number | null
+  paidMediaAppBindingId?: number | null
   appId?: string | null
   appDisplayName?: string | null
   idempotencyKey: string
@@ -662,6 +665,7 @@ export interface TikTokCampaignRequestListItemDto {
 
 export interface TikTokCampaignRequestDetailDto extends TikTokCampaignRequestListItemDto {
   tikTokAppMappingId?: number | null
+  paidMediaAppBindingId?: number | null
   payloadJson: string
   validationErrors: string[]
   correlationId?: string | null
