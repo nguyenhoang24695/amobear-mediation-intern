@@ -52,8 +52,6 @@ import { AppInsightConfigTab } from "./app-detail/app-insight-config-tab"
 import { AppPerformanceTab } from "./app-detail/app-performance-tab"
 import { SyncAppPerformanceModal } from "./app-detail/sync-app-performance-modal"
 import { AppPlaybookEditorPanel } from "./app-detail/playbook/app-playbook-editor-panel"
-import { PersonaSwitcherDropdown } from "@/components/ai-specialized/persona-switcher-dropdown"
-
 export function AppDetailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -350,8 +348,6 @@ export function AppDetailContent() {
               <Apple className="w-4 h-4" />
               View in App Store
             </Button>
-            <PersonaSwitcherDropdown appId={String(app?.id ?? "")} />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-9 w-9 p-0 bg-transparent">

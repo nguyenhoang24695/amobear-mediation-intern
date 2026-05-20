@@ -102,7 +102,7 @@ function getPlatformBadgeClass(platform?: string | null) {
 }
 
 function getTikTokMappingAppLabel(app?: App | null, mapping?: TikTokAppMappingDto | null) {
-  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? (mapping ? `App ${mapping.appRowId}` : "-")
+  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? mapping?.packageName ?? mapping?.normalizedStoreIdentifier ?? (mapping ? `Binding ${mapping.id}` : "-")
 }
 
 function getTikTokMappingAdMobId(app?: App | null, mapping?: TikTokAppMappingDto | null) {
@@ -621,7 +621,7 @@ export function TikTokAppMappingsPage() {
   const [resolveAppSelectOpen, setResolveAppSelectOpen] = useState(false)
   const [resolvingId, setResolvingId] = useState<number | null>(null)
 
-  const mappedAppRows = useMemo(() => new Set(items.map((item) => item.appRowId)), [items])
+  const mappedAppRows = useMemo(() => new Set(items.map((item) => item.appRowId).filter((value): value is number => typeof value === "number")), [items])
   const appByRowId = useMemo(() => new Map(apps.map((app) => [app.id, app])), [apps])
   const resolveSelectableApps = useMemo(
     () => getResolveSelectableApps(apps, mappedAppRows, resolveForm.resolutionType),
@@ -650,7 +650,7 @@ export function TikTokAppMappingsPage() {
   const filteredMappings = useMemo(() => {
     const search = mappingSearch.trim().toLowerCase()
     return items.filter((item) => {
-      const app = appByRowId.get(item.appRowId)
+      const app = item.appRowId ? appByRowId.get(item.appRowId) : undefined
       const platform = getTikTokMappingPlatform(app, item)
 
       if (!search) return true
@@ -845,7 +845,7 @@ export function TikTokAppMappingsPage() {
                 ) : filteredMappings.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
                 ) : paginatedMappings.map((item) => {
-                  const app = appByRowId.get(item.appRowId)
+                  const app = item.appRowId ? appByRowId.get(item.appRowId) : undefined
                   const appLabel = getTikTokMappingAppLabel(app, item)
                   const admobId = getTikTokMappingAdMobId(app, item)
                   const platform = getTikTokMappingPlatform(app, item)
@@ -869,7 +869,7 @@ export function TikTokAppMappingsPage() {
                             ) : (
                               <p className="truncate font-medium text-slate-900">{appLabel}</p>
                             )}
-                            <p className="truncate font-mono text-[11px] text-slate-400">{admobId ?? `row:${item.appRowId}`}</p>
+                            <p className="truncate font-mono text-[11px] text-slate-400">{admobId ?? item.normalizedStoreIdentifier ?? `binding:${item.id}`}</p>
                           </div>
                         </div>
                       </TableCell>

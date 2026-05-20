@@ -53,7 +53,8 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
             emptyMessage="No TikTok ad accounts found."
             onValueChange={(value) => onChange({
               tikTokAdAccountRowId: Number(value),
-              appRowId: 0,
+              appRowId: null,
+              paidMediaAppBindingId: null,
               adGroup: { ...form.adGroup, appId: undefined, appDownloadUrl: undefined, operatingSystems: [] },
               ad: { ...form.ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined },
               ads: form.ads.map((ad) => ({ ...ad, landingPageUrl: "", displayName: "", appName: "", identityId: undefined, identityAuthorizedBcId: undefined })),
@@ -88,22 +89,23 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
         <div className="space-y-2">
           <Label>App mapping</Label>
           <SearchableSelect
-            value={form.appRowId ? String(form.appRowId) : ""}
+            value={form.paidMediaAppBindingId ? String(form.paidMediaAppBindingId) : ""}
             options={appMappings}
             placeholder={form.tikTokAdAccountRowId ? "Select app..." : "Select ad account first..."}
             searchPlaceholder="Search by app name, app ID, platform, TikTok app ID..."
             emptyMessage="No app mappings found for this account."
             disabled={!form.tikTokAdAccountRowId}
             onValueChange={(value) => {
-              const appRowId = Number(value)
-              const mapping = appMappings.find((item) => item.appRowId === appRowId)
+              const mappingId = Number(value)
+              const mapping = appMappings.find((item) => item.id === mappingId)
               onChange({
-                appRowId,
+                appRowId: mapping?.appRowId ?? null,
+                paidMediaAppBindingId: mapping?.id ?? null,
                 adGroup: {
                   ...form.adGroup,
                   appId: mapping?.tikTokAppId ?? form.adGroup.appId,
                   appDownloadUrl: mapping?.downloadUrl ?? form.adGroup.appDownloadUrl,
-                  operatingSystems: mapping?.appPlatform ? [mapping.appPlatform.toUpperCase()] : form.adGroup.operatingSystems,
+                  operatingSystems: (mapping?.appPlatform ?? mapping?.platform) ? [(mapping.appPlatform ?? mapping.platform)!.toUpperCase()] : form.adGroup.operatingSystems,
                 },
                 ad: {
                   ...form.ad,
@@ -119,19 +121,19 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
                 })),
               })
             }}
-            getValue={(mapping) => String(mapping.appRowId)}
-            getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.appPlatform ?? ""} ${mapping.tikTokAppId}`}
+            getValue={(mapping) => String(mapping.id)}
+            getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.appPlatform ?? mapping.platform ?? ""} ${mapping.tikTokAppId} ${mapping.normalizedStoreIdentifier ?? ""}`}
             renderValue={(mapping) => (
               <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.tikTokAppId}</span>
-                <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? `row:${mapping.appRowId}`}</span>
+                <span className="truncate font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</span>
+                <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `binding:${mapping.id}`}</span>
               </span>
             )}
             renderOption={(mapping) => (
               <div className="flex min-w-0 items-center gap-2 py-0.5">
-                <Badge variant="outline" className={mapping.appPlatform === "IOS" ? "border-blue-200 text-blue-700" : "border-emerald-200 text-emerald-700"}>{mapping.appPlatform ?? "APP"}</Badge>
+                <Badge variant="outline" className={(mapping.appPlatform ?? mapping.platform) === "IOS" ? "border-blue-200 text-blue-700" : "border-emerald-200 text-emerald-700"}>{mapping.appPlatform ?? mapping.platform ?? "APP"}</Badge>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.tikTokAppId}</div>
+                  <div className="truncate text-sm font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</div>
                   <div className="truncate font-mono text-xs text-slate-400">{mapping.tikTokAppId}</div>
                 </div>
               </div>

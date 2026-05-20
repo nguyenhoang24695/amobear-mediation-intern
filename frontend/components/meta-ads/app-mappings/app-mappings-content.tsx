@@ -72,8 +72,9 @@ type MappingFormState = {
   appRowId: string
   metaApplicationId: string
   objectStoreUrl: string
-  packageNameOverride: string
-  bundleIdOverride: string
+  packageName: string
+  bundleId: string
+  appStoreId: string
   deepLinkUrlOverride: string
   storeUrlOverride: string
   isActive: boolean
@@ -89,8 +90,9 @@ const emptyForm: MappingFormState = {
   appRowId: "",
   metaApplicationId: "",
   objectStoreUrl: "",
-  packageNameOverride: "",
-  bundleIdOverride: "",
+  packageName: "",
+  bundleId: "",
+  appStoreId: "",
   deepLinkUrlOverride: "",
   storeUrlOverride: "",
   isActive: true,
@@ -125,11 +127,11 @@ function getPlatformBadgeClass(platform?: string | null) {
 }
 
 function getAppLabel(app?: App | null, mapping?: MetaAppMappingDto | null) {
-  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? (mapping ? `App ${mapping.appRowId}` : "-")
+  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? (mapping ? "Unlinked app" : "-")
 }
 
 function getAppKey(app?: App | null, mapping?: MetaAppMappingDto | null) {
-  return mapping?.appId ?? app?.appId ?? (mapping ? `row:${mapping.appRowId}` : "-")
+  return mapping?.appId ?? app?.appId ?? mapping?.normalizedStoreIdentifier ?? "-"
 }
 
 function getAppRouteId(app?: App | null, mapping?: MetaAppMappingDto | null) {
@@ -137,7 +139,7 @@ function getAppRouteId(app?: App | null, mapping?: MetaAppMappingDto | null) {
 }
 
 function getPrimaryStoreUrl(mapping: MetaAppMappingDto) {
-  return mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.deepLinkUrlOverride || "-"
+  return mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.normalizedStoreIdentifier || mapping.deepLinkUrlOverride || "-"
 }
 
 function getCandidateMatchBadgeClass(value?: string | null) {
@@ -269,15 +271,15 @@ export function AppMappingsContent() {
   }, [apps])
 
   const mappedAppRowIds = useMemo(() => {
-    return new Set((mappings ?? []).map((mapping) => mapping.appRowId))
+    return new Set((mappings ?? []).map((mapping) => mapping.appRowId).filter((value): value is number => typeof value === "number"))
   }, [mappings])
 
   const selectableApps = useMemo(() => {
     if (editTarget) {
-      return apps.filter((app) => app.id === editTarget.appRowId)
+      return editTarget.appRowId ? apps.filter((app) => app.id === editTarget.appRowId) : apps
     }
 
-    return apps.filter((app) => !mappedAppRowIds.has(app.id))
+    return apps
   }, [apps, editTarget, mappedAppRowIds])
 
   const resolveSelectableApps = useMemo(() => {
@@ -323,7 +325,7 @@ export function AppMappingsContent() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return (mappings ?? []).filter((mapping) => {
-      const app = appByRowId.get(mapping.appRowId)
+      const app = mapping.appRowId ? appByRowId.get(mapping.appRowId) : undefined
       const platform = normalizePlatform(mapping.platform ?? app?.platform)
 
       if (platformFilter !== "all" && platform !== platformFilter) {
@@ -380,11 +382,12 @@ export function AppMappingsContent() {
   const openEdit = (mapping: MetaAppMappingDto) => {
     setEditTarget(mapping)
     setForm({
-      appRowId: mapping.appRowId.toString(),
+      appRowId: mapping.appRowId?.toString() ?? "",
       metaApplicationId: mapping.metaApplicationId,
       objectStoreUrl: mapping.objectStoreUrl ?? "",
-      packageNameOverride: mapping.packageNameOverride ?? "",
-      bundleIdOverride: mapping.bundleIdOverride ?? "",
+      packageName: mapping.packageName ?? mapping.packageNameOverride ?? "",
+      bundleId: mapping.bundleId ?? mapping.bundleIdOverride ?? "",
+      appStoreId: mapping.appStoreId ?? "",
       deepLinkUrlOverride: mapping.deepLinkUrlOverride ?? "",
       storeUrlOverride: mapping.storeUrlOverride ?? "",
       isActive: mapping.isActive,
@@ -398,10 +401,12 @@ export function AppMappingsContent() {
 
       if (editTarget) {
         const request: UpdateMetaAppMappingRequestDto = {
+          appRowId: form.appRowId ? Number(form.appRowId) : null,
           metaApplicationId: form.metaApplicationId.trim() || null,
           objectStoreUrl: form.objectStoreUrl.trim() || null,
-          packageNameOverride: form.packageNameOverride.trim() || null,
-          bundleIdOverride: form.bundleIdOverride.trim() || null,
+          packageName: form.packageName.trim() || null,
+          bundleId: form.bundleId.trim() || null,
+          appStoreId: form.appStoreId.trim() || null,
           deepLinkUrlOverride: form.deepLinkUrlOverride.trim() || null,
           storeUrlOverride: form.storeUrlOverride.trim() || null,
           isActive: form.isActive,
@@ -409,11 +414,12 @@ export function AppMappingsContent() {
         await metaAppMappingsApi.update(editTarget.id, request)
       } else {
         const request: CreateMetaAppMappingRequestDto = {
-          appRowId: Number(form.appRowId),
+          appRowId: form.appRowId ? Number(form.appRowId) : null,
           metaApplicationId: form.metaApplicationId.trim(),
           objectStoreUrl: form.objectStoreUrl.trim() || null,
-          packageNameOverride: form.packageNameOverride.trim() || null,
-          bundleIdOverride: form.bundleIdOverride.trim() || null,
+          packageName: form.packageName.trim() || null,
+          bundleId: form.bundleId.trim() || null,
+          appStoreId: form.appStoreId.trim() || null,
           deepLinkUrlOverride: form.deepLinkUrlOverride.trim() || null,
           storeUrlOverride: form.storeUrlOverride.trim() || null,
           isActive: form.isActive,
@@ -425,7 +431,7 @@ export function AppMappingsContent() {
       invalidateCache("meta-reference:create-campaign")
       await refetch()
       setDrawerOpen(false)
-      toast({ title: editTarget ? "App mapping updated" : "App mapping created" })
+      toast({ title: editTarget ? "Store mapping updated" : "Store mapping created" })
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to save app mapping."
       toast({ title: "Save failed", description: message, variant: "destructive" })
@@ -446,7 +452,7 @@ export function AppMappingsContent() {
       invalidateCache("meta-app-mappings:list")
       invalidateCache("meta-reference:create-campaign")
       await refetch()
-      toast({ title: mapping.isActive ? "App mapping disabled" : "App mapping enabled" })
+      toast({ title: mapping.isActive ? "Store mapping disabled" : "Store mapping enabled" })
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to update app mapping."
       toast({ title: "Update failed", description: message, variant: "destructive" })
@@ -559,15 +565,15 @@ export function AppMappingsContent() {
           <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
             <span>Meta Ads</span>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">App Mappings</span>
+            <span className="text-slate-900 font-medium">Store Mappings</span>
           </nav>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-50">
               <GitMerge className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">App Mappings</h1>
-              <p className="text-sm text-slate-500">Map internal apps to Meta application IDs and promoted object settings</p>
+              <h1 className="text-xl font-bold text-slate-900">Meta Store Mappings</h1>
+              <p className="text-sm text-slate-500">Map Meta application IDs to package/store identities, with optional internal app links</p>
             </div>
           </div>
       </div>
@@ -586,7 +592,7 @@ export function AppMappingsContent() {
           {canCreate && activeTab === "mappings" ? (
             <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Mapping
+              Add Store Mapping
             </Button>
           ) : null}
         </div>
@@ -595,7 +601,7 @@ export function AppMappingsContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="h-11 bg-slate-100 p-1 w-fit">
           <TabsTrigger value="mappings" className="px-4 data-[state=active]:bg-white gap-2">
-            <span>App Mappings</span>
+            <span>Store Mappings</span>
             <Badge className="bg-white text-slate-700 border border-slate-200">{filtered.length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="candidates" className="px-4 data-[state=active]:bg-white gap-2">
@@ -668,11 +674,12 @@ export function AppMappingsContent() {
               </TableRow>
             ) : (
               filtered.map((mapping) => {
-                const app = appByRowId.get(mapping.appRowId)
+                const app = mapping.appRowId ? appByRowId.get(mapping.appRowId) : undefined
                 const platform = normalizePlatform(mapping.platform ?? app?.platform) || "APP"
                 const overrideCount = [
-                  mapping.packageNameOverride,
-                  mapping.bundleIdOverride,
+                  mapping.packageName,
+                  mapping.bundleId,
+                  mapping.appStoreId,
                   mapping.deepLinkUrlOverride,
                   mapping.storeUrlOverride,
                 ].filter(Boolean).length
@@ -972,23 +979,21 @@ export function AppMappingsContent() {
         <DialogContent className="w-full max-w-[640px] p-0 gap-0 rounded-xl overflow-hidden max-h-[90vh] flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
             <DialogTitle className="text-base font-semibold text-slate-900">
-              {editTarget ? "Edit App Mapping" : "Add App Mapping"}
+              {editTarget ? "Edit Store Mapping" : "Add Store Mapping"}
             </DialogTitle>
           </DialogHeader>
           <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
             {editTarget ? (
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">App</Label>
+                <Label className="text-xs font-medium text-slate-700">Linked Internal App</Label>
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-sm font-medium text-slate-900">{getAppLabel(appByRowId.get(editTarget.appRowId), editTarget)}</p>
-                  <p className="text-[11px] text-slate-400 font-mono">{getAppKey(appByRowId.get(editTarget.appRowId), editTarget)}</p>
+                  <p className="text-sm font-medium text-slate-900">{getAppLabel(editTarget.appRowId ? appByRowId.get(editTarget.appRowId) : null, editTarget)}</p>
+                  <p className="text-[11px] text-slate-400 font-mono">{getAppKey(editTarget.appRowId ? appByRowId.get(editTarget.appRowId) : null, editTarget)}</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">
-                  App <span className="text-red-500">*</span>
-                </Label>
+                <Label className="text-xs font-medium text-slate-700">Linked Internal App</Label>
                 <Select value={form.appRowId} onValueChange={(value) => setForm((current) => ({ ...current, appRowId: value }))}>
                   <SelectTrigger className="h-auto min-h-14 py-2 text-sm">
                     {selectedFormApp ? (
@@ -1089,28 +1094,38 @@ export function AppMappingsContent() {
                 onChange={(event) => setForm((current) => ({ ...current, objectStoreUrl: event.target.value }))}
                 placeholder="https://play.google.com/store/apps/details?id=..."
               />
-              <p className="text-[11px] text-slate-400">Used for promoted_object store URL in app promotion flows.</p>
+              <p className="text-[11px] text-slate-400">Preferred source for package/store identity. If empty, provide package or app store ID below.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Package Name Override</Label>
+                <Label className="text-xs font-medium text-slate-700">Package Name</Label>
                 <Input
                   className="h-9 text-sm"
-                  value={form.packageNameOverride}
-                  onChange={(event) => setForm((current) => ({ ...current, packageNameOverride: event.target.value }))}
+                  value={form.packageName}
+                  onChange={(event) => setForm((current) => ({ ...current, packageName: event.target.value }))}
                   placeholder="com.example.app"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Bundle ID Override</Label>
+                <Label className="text-xs font-medium text-slate-700">Bundle ID</Label>
                 <Input
                   className="h-9 text-sm"
-                  value={form.bundleIdOverride}
-                  onChange={(event) => setForm((current) => ({ ...current, bundleIdOverride: event.target.value }))}
+                  value={form.bundleId}
+                  onChange={(event) => setForm((current) => ({ ...current, bundleId: event.target.value }))}
                   placeholder="com.example.ios"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-700">App Store ID</Label>
+              <Input
+                className="h-9 text-sm"
+                value={form.appStoreId}
+                onChange={(event) => setForm((current) => ({ ...current, appStoreId: event.target.value }))}
+                placeholder="1234567890"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1146,9 +1161,9 @@ export function AppMappingsContent() {
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={() => void handleSubmit()}
-              disabled={submitting || !form.metaApplicationId.trim() || (!editTarget && !form.appRowId)}
+              disabled={submitting || !form.metaApplicationId.trim() || (!form.objectStoreUrl.trim() && !form.packageName.trim() && !form.appStoreId.trim())}
             >
-              {submitting ? "Saving..." : editTarget ? "Save Changes" : "Add Mapping"}
+              {submitting ? "Saving..." : editTarget ? "Save Changes" : "Add Store Mapping"}
             </Button>
           </DialogFooter>
         </DialogContent>

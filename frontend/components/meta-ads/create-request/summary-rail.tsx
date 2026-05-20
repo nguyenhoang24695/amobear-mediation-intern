@@ -54,7 +54,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
         <CardContent className="px-3 pb-3 space-y-1.5">
           <CheckRow state={form.adAccountId ? "ok" : "error"} label="Account selected" onClick={() => onNavigateToSection?.("account-app")} />
           <CheckRow state={tokenOk ? "ok" : tokenState === "not_tested" ? "warning" : form.adAccountId ? "error" : "neutral"} label={tokenState === "not_tested" ? "Integration token not tested" : "Integration token valid"} onClick={() => onNavigateToSection?.("account-app")} />
-          <CheckRow state={form.appRowId ? (selectedAppMapping?.metaApplicationId && mappingUrl ? "ok" : "error") : "neutral"} label="Promoted object valid" onClick={() => onNavigateToSection?.("account-app")} />
+          <CheckRow state={form.paidMediaAppBindingId ? (selectedAppMapping?.metaApplicationId && mappingUrl ? "ok" : "error") : "neutral"} label="Promoted object valid" onClick={() => onNavigateToSection?.("account-app")} />
           <CheckRow state={form.budgetStrategy ? "ok" : "error"} label={`Budget strategy (${form.budgetStrategy})`} onClick={() => onNavigateToSection?.("campaign-settings")} />
           <CheckRow state={hasBudget ? "ok" : "error"} label="Budget provided" onClick={() => onNavigateToSection?.(isCBO ? "campaign-settings" : "adset-budget")} />
           <CheckRow state={form.campaignObjective ? "ok" : "neutral"} label="Objective set" onClick={() => onNavigateToSection?.("campaign-settings")} />
