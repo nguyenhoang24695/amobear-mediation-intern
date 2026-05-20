@@ -121,7 +121,7 @@ export function AppInsightConfigTab({ appId }: Props) {
   const [templates, setTemplates] = useState<InsightTemplate[]>([])
   const [settings, setSettings] = useState<AppInsightSettings | null>(null)
   const [templateId, setTemplateId] = useState<string>("default")
-  const [generationEnabled, setGenerationEnabled] = useState(true)
+  const [generationEnabled, setGenerationEnabled] = useState(false)
   const [appSummary, setAppSummary] = useState("")
   const [contextItems, setContextItems] = useState<InsightContextItem[]>([])
 
@@ -160,7 +160,7 @@ export function AppInsightConfigTab({ appId }: Props) {
       setTemplates(tList)
       setContextLibrary(lib)
       setSettings(s)
-      setGenerationEnabled(s.generationEnabled)
+      setGenerationEnabled(s.generationEnabled === true)
       setTemplateId(s.insightTemplateId != null ? String(s.insightTemplateId) : "default")
       const raw = (s.settings as Record<string, unknown>) ?? {}
       const ac = getAiContextObject(raw)

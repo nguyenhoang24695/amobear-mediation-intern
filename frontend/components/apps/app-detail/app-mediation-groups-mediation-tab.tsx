@@ -20,7 +20,12 @@ import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
 import type { AppMediationBronzeMediationGroupRow } from "@/types/api"
-import { CountryFilterOption, CountryFlagTooltipCell } from "@/components/shared/country-display"
+import {
+  MediationGroupAdSourcesCell,
+  MediationGroupFormatBadge,
+  MediationGroupTargetingCell,
+} from "@/components/mediation/mediation-group-table-cells"
+import { CountryBronzeFilterCombobox } from "@/components/shared/country-bronze-filter-combobox"
 import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
 import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
 
@@ -158,6 +163,12 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
             · {payload.startDate} → {payload.endDate}
           </span>
         ) : null}
+        {countryApplied.trim() ? (
+          <span className="text-slate-500">
+            {" "}
+            · Country: {iso3166Alpha2ToCountryName(countryApplied) || countryApplied} ({countryApplied.trim().toUpperCase()})
+          </span>
+        ) : null}
       </p>
 
       {!starRocksEnabled && (
@@ -238,23 +249,13 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
                 <Label htmlFor="bronze-mg-country" className="shrink-0 text-sm">
                   Country
                 </Label>
-                <Select
-                  value={countryDraft || "__all__"}
-                  onValueChange={(v) => setCountryDraft(v === "__all__" ? "" : v)}
+                <CountryBronzeFilterCombobox
+                  id="bronze-mg-country"
+                  codes={filterOpts?.countries ?? []}
+                  value={countryDraft}
+                  onChange={setCountryDraft}
                   disabled={loadingOpts}
-                >
-                  <SelectTrigger id="bronze-mg-country" className="min-w-0 flex-1">
-                    <SelectValue placeholder="Tất cả" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Tất cả</SelectItem>
-                    {(filterOpts?.countries ?? []).map((c) => (
-                      <SelectItem key={c} value={c} textValue={`${iso3166Alpha2ToCountryName(c)} ${c}`}>
-                        <CountryFilterOption code={c} />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div className="flex min-w-[200px] flex-row items-center gap-2">
                 <Label htmlFor="bronze-mg-appver" className="shrink-0 text-sm">
@@ -325,7 +326,9 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
               <tr className="text-xs text-slate-500 font-medium">
                 <th className="w-10 px-2 py-3 text-left" aria-label="Chi tiết raw" />
                 <th className="px-4 py-3 text-left min-w-[200px]">Mediation group</th>
-                <th className="px-4 py-3 text-left">Countries</th>
+                <th className="px-4 py-3 text-left min-w-[120px]">Format</th>
+                <th className="px-4 py-3 text-left min-w-[140px]">Ad Sources</th>
+                <th className="px-4 py-3 text-left min-w-[120px]">Targeting</th>
                 <th className="px-4 py-3 text-right">eCPM</th>
                 <th className="px-4 py-3 text-right">Impressions</th>
                 <th className="px-4 py-3 text-right">Ad requests</th>
@@ -337,13 +340,13 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-slate-500">
                     Đang tải…
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-slate-500">
                     Không có nhóm có dữ liệu trong khoảng lọc (hoặc chưa sync `mediation_table`).
                   </td>
                 </tr>
@@ -403,19 +406,14 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
             <code className="text-xs text-slate-500 font-mono">{group.mediationGroupId}</code>
           </div>
         </td>
-        <td className="px-4 py-3 max-w-[220px]">
-          <div className="flex flex-wrap items-center gap-1">
-            {countries.length === 0 ? (
-              <span className="text-xs text-slate-400">—</span>
-            ) : (
-              countries.slice(0, 10).map((c, idx) => (
-                <CountryFlagTooltipCell key={`${c}-${idx}`} code={c} />
-              ))
-            )}
-            {countries.length > 10 ? (
-              <span className="text-xs text-slate-500">+{countries.length - 10}</span>
-            ) : null}
-          </div>
+        <td className="px-4 py-3 align-middle">
+          <MediationGroupFormatBadge format={group.adFormat} />
+        </td>
+        <td className="px-4 py-3 align-middle">
+          <MediationGroupAdSourcesCell adSourcesInfo={group.adSourcesInfo ?? []} />
+        </td>
+        <td className="px-4 py-3 max-w-[220px] align-middle">
+          <MediationGroupTargetingCell countries={countries} />
         </td>
         <td className="px-4 py-3 text-right text-sm">
           {imp > 0 ? `$${group.ecpm.toFixed(2)}` : "—"}
@@ -443,7 +441,7 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
       </tr>
       {expanded ? (
         <tr className="bg-slate-200/90">
-          <td colSpan={9} className="px-4 py-3 border-t border-slate-300">
+          <td colSpan={11} className="px-4 py-3 border-t border-slate-300">
             <p className="text-xs font-medium text-slate-600 mb-2">Raw (JSON) — phản hồi API cho dòng này</p>
             <pre className="text-xs font-mono text-slate-800 whitespace-pre-wrap break-all max-h-[min(24rem,70vh)] overflow-auto rounded border border-slate-300/80 bg-slate-100 p-3">
               {rawJson}
