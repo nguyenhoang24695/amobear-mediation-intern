@@ -561,12 +561,12 @@ export function TikTokAdAccountsPage() {
       </div>
       <div className="overflow-x-auto rounded-md border bg-white">
         <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Advertiser ID</TableHead><TableHead>Country</TableHead><TableHead>Currency</TableHead><TableHead>Timezone</TableHead><TableHead>Balance</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Advertiser ID</TableHead><TableHead>Country</TableHead><TableHead>Currency</TableHead><TableHead>Timezone</TableHead><TableHead>Balance</TableHead><TableHead>Grant Balance</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">Loading ad accounts...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">Loading ad accounts...</TableCell></TableRow>
             ) : data.items.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">No ad accounts found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">No ad accounts found.</TableCell></TableRow>
             ) : data.items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
@@ -575,6 +575,7 @@ export function TikTokAdAccountsPage() {
                 <TableCell>{item.currency ?? "-"}</TableCell>
                 <TableCell>{item.timezone ?? "-"}</TableCell>
                 <TableCell>{item.balance ?? "-"}</TableCell>
+                <TableCell>{item.grantBalance ?? "-"}</TableCell>
                 <TableCell><Badge className={statusTone(item.isActive ? "active" : "disabled")}>{item.isActive ? "active" : "disabled"}</Badge></TableCell>
               </TableRow>
             ))}

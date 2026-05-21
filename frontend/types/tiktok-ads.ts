@@ -374,6 +374,7 @@ export interface TikTokAdAccountDto {
   bcId?: string | null
   bcName?: string | null
   balance?: number | null
+  grantBalance?: number | null
   status: string
   isActive: boolean
   lastSyncedAt?: string | null
