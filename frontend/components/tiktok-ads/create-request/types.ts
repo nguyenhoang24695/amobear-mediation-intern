@@ -73,6 +73,7 @@ export function createDefaultTikTokRequestForm(reference: TikTokReferenceRespons
       appDownloadUrl: undefined,
       operatingSystems: [],
       locationIds: reference?.defaultLocationIds?.length ? reference.defaultLocationIds : ["6252001"],
+      countryGroupIds: [],
       ageGroups: [],
       gender: reference?.genders[0]?.key ?? "GENDER_UNLIMITED",
       languages: [],
@@ -179,6 +180,7 @@ export function normalizeTikTokRequestPayloadShape(payload: unknown): Partial<Ti
   setIfDefined(adGroup, "appDownloadUrl", stringValue(pick(adGroupSource, "appDownloadUrl", "AppDownloadUrl")))
   setIfDefined(adGroup, "operatingSystems", stringArrayValue(pick(adGroupSource, "operatingSystems", "OperatingSystems")))
   setIfDefined(adGroup, "locationIds", stringArrayValue(pick(adGroupSource, "locationIds", "LocationIds")))
+  setIfDefined(adGroup, "countryGroupIds", numberArrayValue(pick(adGroupSource, "countryGroupIds", "CountryGroupIds")))
   setIfDefined(adGroup, "ageGroups", stringArrayValue(pick(adGroupSource, "ageGroups", "AgeGroups")))
   setIfDefined(adGroup, "gender", stringValue(pick(adGroupSource, "gender", "Gender")))
   setIfDefined(adGroup, "languages", stringArrayValue(pick(adGroupSource, "languages", "Languages")))
@@ -253,6 +255,7 @@ export function sanitizeTikTokRequestForm(state: TikTokRequestFormState): TikTok
   next.adGroup.billingEvent = next.adGroup.billingEvent || "OCPM"
   next.adGroup.operatingSystems = Array.isArray(next.adGroup.operatingSystems) ? next.adGroup.operatingSystems : []
   next.adGroup.locationIds = Array.isArray(next.adGroup.locationIds) ? next.adGroup.locationIds : []
+  next.adGroup.countryGroupIds = Array.isArray(next.adGroup.countryGroupIds) ? next.adGroup.countryGroupIds : []
   next.adGroup.ageGroups = Array.isArray(next.adGroup.ageGroups) ? next.adGroup.ageGroups : []
   next.adGroup.languages = Array.isArray(next.adGroup.languages) ? next.adGroup.languages : []
   next.adGroup.gender = next.adGroup.gender || "GENDER_UNLIMITED"
@@ -281,6 +284,7 @@ export function sanitizeTikTokAdGroup(adGroup: TikTokRequestFormState["adGroup"]
   next.billingEvent = next.billingEvent || "OCPM"
   next.operatingSystems = Array.isArray(next.operatingSystems) ? next.operatingSystems : []
   next.locationIds = Array.isArray(next.locationIds) ? next.locationIds : []
+  next.countryGroupIds = Array.isArray(next.countryGroupIds) ? next.countryGroupIds : []
   next.ageGroups = Array.isArray(next.ageGroups) ? next.ageGroups : []
   next.languages = Array.isArray(next.languages) ? next.languages : []
   next.gender = next.gender || "GENDER_UNLIMITED"

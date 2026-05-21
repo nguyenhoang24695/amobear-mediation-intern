@@ -17,8 +17,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { geoCountryGroupsApi } from "@/lib/api/geo"
 import { tiktokCampaignRequestsApi, tiktokReferenceApi } from "@/lib/api/tiktok-ads"
 import { cn } from "@/lib/utils"
+import type { GeoCountryGroupDto } from "@/types/meta-ads"
 import type { TikTokCampaignRequestDetailDto, TikTokCreativeImageDto, TikTokCreativeVideoDto, TikTokIdentityOptionDto, TikTokReferenceResponseDto, TikTokRequestAssetDto, TikTokTargetingOptionsResponseDto, TikTokValidationResultDto } from "@/types/tiktok-ads"
 import { AccountAppSection } from "./section-account-app"
 import { AdGroupAudienceSection } from "./section-adgroup-audience"
@@ -219,6 +221,9 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   const [uploadingKeys, setUploadingKeys] = useState<Record<string, boolean>>({})
   const [targetingOptions, setTargetingOptions] = useState<TikTokTargetingOptionsResponseDto | null>(null)
   const [targetingLoading, setTargetingLoading] = useState(false)
+  const [geoCountryGroups, setGeoCountryGroups] = useState<GeoCountryGroupDto[]>([])
+  const [geoCountryGroupsLoading, setGeoCountryGroupsLoading] = useState(false)
+  const [geoCountryGroupsError, setGeoCountryGroupsError] = useState<string | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [highlightedSection, setHighlightedSection] = useState<TikTokRequestSectionTarget | null>(null)
@@ -244,6 +249,30 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     }
     return matched
   }, [reference, selectedAdAccount, selectedAppMapping])
+
+  const loadGeoCountryGroups = useCallback(async () => {
+    setGeoCountryGroupsLoading(true)
+    setGeoCountryGroupsError(null)
+    try {
+      const groups = await geoCountryGroupsApi.list()
+      setGeoCountryGroups(groups)
+    } catch (error) {
+      setGeoCountryGroupsError(errorMessage(error))
+    } finally {
+      setGeoCountryGroupsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!cancelled) await loadGeoCountryGroups()
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [loadGeoCountryGroups])
 
   useEffect(() => {
     let cancelled = false
@@ -856,7 +885,17 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
             </div>
           ) : null}
           <div id={requestSectionIds["adgroup-audience"]} className={cn(getSectionWrapperClass("adgroup-audience", highlightedSection))}>
-            <AdGroupAudienceSection form={form} reference={reference} targetingOptions={targetingOptions} targetingLoading={targetingLoading} onChange={updateForm} />
+            <AdGroupAudienceSection
+              form={form}
+              reference={reference}
+              targetingOptions={targetingOptions}
+              targetingLoading={targetingLoading}
+              countryGroups={geoCountryGroups}
+              countryGroupsLoading={geoCountryGroupsLoading}
+              countryGroupsMessage={geoCountryGroupsError}
+              onCountryGroupsChanged={() => void loadGeoCountryGroups()}
+              onChange={updateForm}
+            />
           </div>
           <div id={requestSectionIds["adgroup-budget"]} className={cn(getSectionWrapperClass("adgroup-budget", highlightedSection))}>
             <AdGroupBudgetSection form={form} reference={reference} selectedAdAccount={selectedAdAccount} selectedAppMapping={selectedAppMapping} onChange={updateForm} />
@@ -931,5 +970,3 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
-

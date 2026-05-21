@@ -50,6 +50,7 @@ import type {
     AppInsightHistoryDay,
     AppMediationBronzeAdUnitsResponse,
     AppMediationBronzeAdUnitDetailRowsResponse,
+    AppMediationBronzeMediationGroupDetailRowsResponse,
     AppMediationBronzeFilterOptionsResponse,
     AppMediationBronzeMediationGroupsResponse,
     AppInsightSettings,
@@ -411,6 +412,30 @@ export const structureApi = {
         if (params.waterfallOnly === false) q.waterfallOnly = "false"
         if (params.limit != null) q.limit = params.limit
         return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/ad-units/detail-rows`, q)
+    },
+
+    getAppMediationBronzeMediationGroupDetailRows: async (
+        id: number,
+        params: {
+            mediationGroupId: string
+            startDate: string
+            endDate: string
+            country?: string
+            appVersion?: string
+            waterfallOnly?: boolean
+            limit?: number
+        },
+    ): Promise<AppMediationBronzeMediationGroupDetailRowsResponse> => {
+        const q: Record<string, string | number | undefined> = {
+            mediationGroupId: params.mediationGroupId,
+            startDate: params.startDate,
+            endDate: params.endDate,
+        }
+        if (params.country) q.country = params.country
+        if (params.appVersion) q.appVersion = params.appVersion
+        if (params.waterfallOnly === true) q.waterfallOnly = "true"
+        if (params.limit != null) q.limit = params.limit
+        return apiClient.get(`/api/Structure/apps/${id}/mediation-bronze/mediation-groups/detail-rows`, q)
     },
 
     getAppMediationBronzeMediationGroups: async (

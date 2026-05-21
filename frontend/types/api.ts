@@ -159,6 +159,21 @@ export interface AppMediationBronzeAdUnitDetailRowsResponse {
   rows: AppMediationBronzeAdUnitDetailRow[]
 }
 
+/** Cùng shape dòng Bronze như ad unit detail; filter theo mediation group. */
+export interface AppMediationBronzeMediationGroupDetailRowsResponse {
+  starRocksEnabled: boolean
+  startDate?: string
+  endDate?: string
+  mediationGroupId: string
+  country?: string | null
+  appVersion?: string | null
+  waterfallOnly?: boolean
+  limit?: number
+  truncated?: boolean
+  message?: string
+  rows: AppMediationBronzeAdUnitDetailRow[]
+}
+
 export interface AppMediationBronzeMediationGroupRow {
   mediationGroupId: string
   displayName: string

@@ -1,3 +1,8 @@
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -6,8 +11,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Required by Next 16 when customizing webpack while Turbopack default is on.
-  turbopack: {},
+  // Set turbopack root to the workspace root (one level up from frontend)
+  // This helps Next.js resolve the next/package.json correctly in pnpm workspaces
+  turbopack: {
+    root: path.join(__dirname, "../"),
+  },
   /**
    * Next 16 (Turbopack) đôi khi log "Invalid source map... sourceMapURL could not be parsed"
    * trên SSR chunks ở Windows. Tắt dev sourcemap để dev overlay không bị noisy.

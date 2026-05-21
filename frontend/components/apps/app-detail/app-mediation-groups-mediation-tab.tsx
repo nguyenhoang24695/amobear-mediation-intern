@@ -19,18 +19,25 @@ import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
 import { useApi } from "@/hooks/use-api"
 import { structureApi } from "@/lib/api/services"
-import type { AppMediationBronzeMediationGroupRow } from "@/types/api"
+import type { AppMediationBronzeAdUnitDetailRow, AppMediationBronzeMediationGroupRow } from "@/types/api"
 import {
   MediationGroupAdSourcesCell,
   MediationGroupFormatBadge,
   MediationGroupTargetingCell,
 } from "@/components/mediation/mediation-group-table-cells"
 import { CountryBronzeFilterCombobox } from "@/components/shared/country-bronze-filter-combobox"
+import { CountryFlagTooltipCell } from "@/components/shared/country-display"
 import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
 import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
 
 function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10)
+}
+
+function ymdFromDetailDate(iso: string): string {
+  if (!iso) return "—"
+  const s = iso.slice(0, 10)
+  return s.length === 10 ? s : iso
 }
 
 function defaultEndYmd(): string {
@@ -324,7 +331,7 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr className="text-xs text-slate-500 font-medium">
-                <th className="w-10 px-2 py-3 text-left" aria-label="Chi tiết raw" />
+                <th className="w-10 px-2 py-3 text-left" aria-label="Mở bảng chi tiết Bronze" />
                 <th className="px-4 py-3 text-left min-w-[200px]">Mediation group</th>
                 <th className="px-4 py-3 text-left min-w-[120px]">Format</th>
                 <th className="px-4 py-3 text-left min-w-[140px]">Ad Sources</th>
@@ -351,7 +358,18 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
                   </td>
                 </tr>
               ) : (
-                rows.map((g) => <MediationGroupRow key={g.mediationGroupId} group={g} />)
+                rows.map((g) => (
+                  <MediationGroupRow
+                    key={g.mediationGroupId}
+                    group={g}
+                    appRowId={appRowId}
+                    startDate={startApplied}
+                    endDate={endApplied}
+                    country={countryApplied}
+                    appVersion={appVersionApplied}
+                    starRocksEnabled={starRocksEnabled}
+                  />
+                ))
               )}
             </tbody>
           </table>
@@ -375,11 +393,58 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
   )
 }
 
-function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupRow }) {
+function MediationGroupRow({
+  group,
+  appRowId,
+  startDate,
+  endDate,
+  country,
+  appVersion,
+  starRocksEnabled,
+}: {
+  group: AppMediationBronzeMediationGroupRow
+  appRowId: number
+  startDate: string
+  endDate: string
+  country: string
+  appVersion: string
+  starRocksEnabled: boolean
+}) {
   const [expanded, setExpanded] = useState(false)
+
+  const detailKey = useMemo(
+    () =>
+      expanded && starRocksEnabled
+        ? `bronze_mg_detail_${appRowId}_${group.mediationGroupId}_${startDate}_${endDate}_${country}_${appVersion}`
+        : undefined,
+    [
+      expanded,
+      starRocksEnabled,
+      appRowId,
+      group.mediationGroupId,
+      startDate,
+      endDate,
+      country,
+      appVersion,
+    ],
+  )
+
+  const { data: detailPayload, loading: detailLoading, error: detailError } = useApi(
+    () =>
+      structureApi.getAppMediationBronzeMediationGroupDetailRows(appRowId, {
+        mediationGroupId: group.mediationGroupId,
+        startDate,
+        endDate,
+        country: country || undefined,
+        appVersion: appVersion || undefined,
+        limit: 500,
+      }),
+    { enabled: expanded && starRocksEnabled, cacheKey: detailKey },
+  )
+
   const fillRate = group.fillRate ?? 0
   const countries = group.countries ?? []
-  const rawJson = JSON.stringify(group, null, 2)
+  const detailRows = detailPayload?.rows ?? []
   const imp = group.impressions ?? 0
   const req = group.adRequests ?? 0
   const rev = group.revenue ?? 0
@@ -394,7 +459,9 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
             size="icon"
             className={cn("h-8 w-8 text-slate-600", expanded && "bg-slate-200 text-slate-900")}
             aria-expanded={expanded}
-            aria-label={expanded ? "Thu gọn dữ liệu raw" : "Xem dữ liệu raw dòng này"}
+            aria-label={
+              expanded ? "Thu gọn bảng chi tiết Bronze" : "Mở bảng chi tiết Bronze (từng dòng hash_key + ngày)"
+            }
             onClick={() => setExpanded((e) => !e)}
           >
             <Eye className="h-4 w-4" />
@@ -402,7 +469,12 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
         </td>
         <td className="px-4 py-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium text-slate-900">{group.displayName}</span>
+            <Link
+              href={`/mediation/${encodeURIComponent(group.mediationGroupId)}`}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              {group.displayName}
+            </Link>
             <code className="text-xs text-slate-500 font-mono">{group.mediationGroupId}</code>
           </div>
         </td>
@@ -442,10 +514,93 @@ function MediationGroupRow({ group }: { group: AppMediationBronzeMediationGroupR
       {expanded ? (
         <tr className="bg-slate-200/90">
           <td colSpan={11} className="px-4 py-3 border-t border-slate-300">
-            <p className="text-xs font-medium text-slate-600 mb-2">Raw (JSON) — phản hồi API cho dòng này</p>
-            <pre className="text-xs font-mono text-slate-800 whitespace-pre-wrap break-all max-h-[min(24rem,70vh)] overflow-auto rounded border border-slate-300/80 bg-slate-100 p-3">
-              {rawJson}
-            </pre>
+            <p className="text-xs font-medium text-slate-600 mb-2">
+              Chi tiết <code className="text-[11px] bg-slate-100 px-1 rounded">bronze.mediation_table</code>
+              {" · "}
+              tất cả network (waterfall + bidding)
+              {country ? ` · country=${country}` : null}
+              {appVersion ? ` · app_version=${appVersion}` : null}
+            </p>
+            {!starRocksEnabled ? (
+              <p className="text-sm text-slate-600">StarRocks chưa bật — không tải được dòng chi tiết.</p>
+            ) : detailLoading ? (
+              <p className="text-sm text-slate-600 py-4 text-center">Đang tải các dòng đồng bộ gốc…</p>
+            ) : detailError ? (
+              <p className="text-sm text-red-600">{detailError.message || "Lỗi tải chi tiết"}</p>
+            ) : detailPayload && !detailPayload.starRocksEnabled ? (
+              <p className="text-sm text-slate-600">{detailPayload.message || "Không tải được chi tiết."}</p>
+            ) : detailRows.length === 0 ? (
+              <p className="text-sm text-slate-600">
+                Không có dòng nào trong khoảng lọc (hoặc nhóm chưa có bản ghi Bronze).
+              </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto rounded border border-slate-300/80 bg-slate-100 max-h-[min(28rem,75vh)]">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-200/90 sticky top-0 z-10">
+                      <tr className="text-slate-600 font-medium text-left">
+                        <th className="px-2 py-2 w-10 text-center whitespace-nowrap">STT</th>
+                        <th className="px-2 py-2 whitespace-nowrap">Ngày (UTC)</th>
+                        <th className="px-2 py-2">Country</th>
+                        <th className="px-2 py-2">App ver</th>
+                        <th className="px-2 py-2 min-w-[160px]">Ad unit</th>
+                        <th className="px-2 py-2 min-w-[160px]">Network / line</th>
+                        <th className="px-2 py-2 text-right whitespace-nowrap">Impr.</th>
+                        <th className="px-2 py-2 text-right whitespace-nowrap">Ad req.</th>
+                        <th className="px-2 py-2 text-right whitespace-nowrap">Matched</th>
+                        <th className="px-2 py-2 text-right whitespace-nowrap">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200/90">
+                      {detailRows.map((r: AppMediationBronzeAdUnitDetailRow, idx: number) => (
+                        <tr key={`${r.hashKey}_${r.date}`} className="bg-white/90 hover:bg-white">
+                          <td className="px-2 py-1.5 text-center text-slate-600 tabular-nums w-10">{idx + 1}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap text-slate-800">
+                            {ymdFromDetailDate(r.date)}
+                          </td>
+                          <td className="px-2 py-1.5 text-center w-10">
+                            <CountryFlagTooltipCell code={r.country} />
+                          </td>
+                          <td className="px-2 py-1.5 text-slate-700 max-w-[120px] truncate" title={r.appVersionName}>
+                            {r.appVersionName || "—"}
+                          </td>
+                          <td className="px-2 py-1.5 text-slate-700 max-w-[220px]">
+                            <span className="truncate block" title={r.adUnitId}>
+                              {r.adUnitName || r.adUnitId || "—"}
+                            </span>
+                            {r.adUnitName ? (
+                              <code className="text-[10px] text-slate-500 font-mono truncate block">{r.adUnitId}</code>
+                            ) : null}
+                          </td>
+                          <td className="px-2 py-1.5 text-slate-700 max-w-[220px]">
+                            <span
+                              className="truncate block"
+                              title={[r.adSourceName, r.adSourceInstanceName].filter(Boolean).join(" · ") || ""}
+                            >
+                              {r.adSourceName || r.adSourceId || "—"}
+                              {r.adSourceInstanceName ? (
+                                <span className="text-slate-500"> · {r.adSourceInstanceName}</span>
+                              ) : null}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5 text-right tabular-nums">{r.impressions.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums">{r.adRequests.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums">{r.matchedRequests.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums font-medium">
+                            ${r.estimatedEarnings.toFixed(4)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {detailPayload?.truncated ? (
+                  <p className="text-xs text-amber-800 mt-2">
+                    Chỉ hiển thị tối đa {detailPayload.limit} dòng. Thu hẹp khoảng ngày hoặc bộ lọc nếu cần xem thêm.
+                  </p>
+                ) : null}
+              </>
+            )}
           </td>
         </tr>
       ) : null}
