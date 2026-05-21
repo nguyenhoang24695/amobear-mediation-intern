@@ -63,6 +63,7 @@ import {
   getCurrentUser,
   getUserInitials,
   getUserDisplayName,
+  getUserRoleDisplayName,
   hasScreenFunction,
   type AuthUser,
 } from "@/lib/auth"
@@ -556,7 +557,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-600">
                     {getUserDisplayName(user)}
                   </p>
-                  <p className="text-xs text-slate-500 truncate">{user?.role || "User"}</p>
+                  <p className="text-xs text-slate-500 truncate">{getUserRoleDisplayName(user)}</p>
                 </div>
               )}
             </Link>

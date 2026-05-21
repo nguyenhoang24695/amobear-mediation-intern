@@ -1,6 +1,8 @@
 // Authentication utilities
 // Helper functions for managing authentication state
 
+import { getRoleDisplayName } from "@/lib/enums/user-role"
+
 export interface AuthUser {
   id: string
   email: string
@@ -220,10 +222,28 @@ export async function refreshAuthSession(baseUrl: string = API_BASE_URL): Promis
 
         const refreshData = await refreshRes.json()
         if (refreshData.success && refreshData.data?.accessToken && refreshData.data?.user) {
+          const u = refreshData.data.user as AuthUser
           setAuthData(
             refreshData.data.accessToken,
             refreshData.data.refreshToken ?? null,
-            refreshData.data.user as AuthUser
+            authUserFromMeDto({
+              id: u.id,
+              email: u.email,
+              firstName: u.firstName,
+              lastName: u.lastName,
+              fullName: u.fullName,
+              avatarUrl: u.avatarUrl,
+              role: u.role,
+              roleName: u.roleName,
+              slackWebhookUrl: u.slackWebhookUrl,
+              slackWebhookUrlRealtime: u.slackWebhookUrlRealtime,
+              slackWebhookUrlHourly: u.slackWebhookUrlHourly,
+              slackWebhookUrlDaily: u.slackWebhookUrlDaily,
+              telegramDestinationsJson: u.telegramDestinationsJson,
+              organization: u.organization,
+              teams: u.teams,
+              rolePermissions: u.rolePermissions,
+            }),
           )
           setLastRefreshAt(Date.now())
           return refreshData.data.accessToken as string
@@ -495,5 +515,14 @@ export function getUserDisplayName(user: AuthUser | null): string {
   if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`
   if (user.firstName) return user.firstName
   if (user.lastName) return user.lastName
+  return "User"
+}
+
+/** Tên hiển thị role: ưu tiên permission_roles.name (roleName), fallback enum cũ. */
+export function getUserRoleDisplayName(user: AuthUser | null): string {
+  if (!user) return "User"
+  const name = user.roleName?.trim()
+  if (name) return name
+  if (user.role) return getRoleDisplayName(user.role)
   return "User"
 }

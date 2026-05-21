@@ -88,6 +88,9 @@ export interface AuthResponse {
             fullName?: string
             avatarUrl?: string
             role: string
+            /** permission_roles.name */
+            roleName?: string
+            rolePermissions?: Record<string, string[]>
             organization?: {
                 id: string
                 name: string
@@ -145,6 +148,8 @@ export interface CurrentUser {
     fullName?: string
     avatarUrl?: string
     role: string
+    /** permission_roles.name */
+    roleName?: string
     organizationId?: string
     emailVerified?: boolean
     slackWebhookUrl?: string
