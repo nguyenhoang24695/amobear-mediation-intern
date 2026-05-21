@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { OrganizationLogoMark } from "./organization-logo-mark"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   DropdownMenu,
@@ -31,7 +31,7 @@ import {
 import { Pagination } from "@/components/shared/pagination"
 import Link from "next/link"
 import type { OrganizationListItem } from "@/lib/api/services"
-import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
+import { formatDate } from "./org-utils"
 
 interface OrganizationsTableProps {
   organizations: OrganizationListItem[]
@@ -237,11 +237,7 @@ export function OrganizationsTable({
                       <TableCell>
                         {canViewDetails ? (
                           <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 rounded-lg">
-                              <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
-                                {getOrgInitials(org.name)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                             <div>
                               <p className="font-semibold text-slate-900">{org.name}</p>
                               <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
@@ -249,11 +245,7 @@ export function OrganizationsTable({
                           </Link>
                         ) : (
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 rounded-lg">
-                              <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
-                                {getOrgInitials(org.name)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                             <div>
                               <p className="font-semibold text-slate-900">{org.name}</p>
                               <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
@@ -358,11 +350,7 @@ export function OrganizationsTable({
                 <div className="flex items-start justify-between">
                   {canViewDetails ? (
                     <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 rounded-lg">
-                        <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
-                          {getOrgInitials(org.name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                       <div>
                         <p className="font-semibold text-slate-900">{org.name}</p>
                         <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
@@ -370,11 +358,7 @@ export function OrganizationsTable({
                     </Link>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 rounded-lg">
-                        <AvatarFallback className={`rounded-lg text-sm font-semibold ${getOrgColor(org.name)}`}>
-                          {getOrgInitials(org.name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                       <div>
                         <p className="font-semibold text-slate-900">{org.name}</p>
                         <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>

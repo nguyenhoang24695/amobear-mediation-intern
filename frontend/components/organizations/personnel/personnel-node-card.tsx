@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { OrganizationLogoMark } from "../organization-logo-mark"
 import { Badge } from "@/components/ui/badge"
 import type { PersonnelNode } from "@/lib/mock/org-personnel-mock"
 import { Trash2 } from "lucide-react"
@@ -40,6 +41,7 @@ interface PersonnelNodeCardProps {
   onToggleCollapse?: () => void
   showRemove?: boolean
   onRemove?: (node: PersonnelNode) => void
+  organizationLogoUrl?: string | null
 }
 
 export function PersonnelNodeCard({
@@ -52,6 +54,7 @@ export function PersonnelNodeCard({
   onToggleCollapse,
   showRemove = false,
   onRemove,
+  organizationLogoUrl,
 }: PersonnelNodeCardProps) {
   const displayName = node.type === "organization" ? node.name : node.name
   const subtitle =
@@ -99,11 +102,19 @@ export function PersonnelNodeCard({
             {collapsed ? "+" : "−"}
           </span>
         )}
-        <Avatar className="h-10 w-10">
-          <AvatarFallback className={cn("text-sm font-semibold", avatarStyles[node.type])}>
-            {getInitials(displayName)}
-          </AvatarFallback>
-        </Avatar>
+        {node.type === "organization" ? (
+          <OrganizationLogoMark
+            orgName={displayName}
+            logoUrl={organizationLogoUrl}
+            size="chart"
+          />
+        ) : (
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className={cn("text-sm font-semibold", avatarStyles[node.type])}>
+              {getInitials(displayName)}
+            </AvatarFallback>
+          </Avatar>
+        )}
         <div className="w-full text-center">
           <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
           {node.type !== "organization" && subtitle && (

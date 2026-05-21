@@ -16,6 +16,7 @@ interface OrgChartTreeProps {
   onToggleCollapse: (id: string) => void
   isEditMode?: boolean
   onRemoveNode?: (node: PersonnelNode) => void
+  organizationLogoUrl?: string | null
 }
 
 function nodeMatchesSearch(node: PersonnelNode, query: string): boolean {
@@ -68,6 +69,7 @@ function OrgChartNode({
   onToggleCollapse,
   isEditMode = false,
   onRemoveNode,
+  organizationLogoUrl,
   siblingIndex = 0,
   siblingCount = 1,
   isRoot = false,
@@ -80,6 +82,7 @@ function OrgChartNode({
   onToggleCollapse: (id: string) => void
   isEditMode?: boolean
   onRemoveNode?: (node: PersonnelNode) => void
+  organizationLogoUrl?: string | null
   siblingIndex?: number
   siblingCount?: number
   isRoot?: boolean
@@ -108,6 +111,7 @@ function OrgChartNode({
         onClick={() => onSelect(node)}
         onToggleCollapse={hasChildren ? () => onToggleCollapse(node.id) : undefined}
         onRemove={onRemoveNode}
+        organizationLogoUrl={organizationLogoUrl}
       />
 
       {hasChildren && !collapsed && (
@@ -125,6 +129,7 @@ function OrgChartNode({
                 onToggleCollapse={onToggleCollapse}
                 isEditMode={isEditMode}
                 onRemoveNode={onRemoveNode}
+                organizationLogoUrl={organizationLogoUrl}
                 siblingIndex={index}
                 siblingCount={children.length}
               />
@@ -146,6 +151,7 @@ export function OrgChartTree({
   onToggleCollapse,
   isEditMode = false,
   onRemoveNode,
+  organizationLogoUrl,
 }: OrgChartTreeProps) {
   const flat = flattenPersonnelTree(root)
   const hasVisibleMatch =
@@ -178,6 +184,7 @@ export function OrgChartTree({
             onToggleCollapse={onToggleCollapse}
             isEditMode={isEditMode}
             onRemoveNode={onRemoveNode}
+            organizationLogoUrl={organizationLogoUrl}
             isRoot
           />
         </ul>

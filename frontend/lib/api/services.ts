@@ -2582,6 +2582,18 @@ export const commissionApi = {
     },
 }
 
+export const reportsApi = {
+    getCatalog: async (): Promise<import('@/types/reports').CustomReportCatalogResponse> => {
+        return apiClient.get('/api/v1/reports/catalog')
+    },
+
+    query: async (
+        request: import('@/types/reports').CustomReportQueryRequest,
+    ): Promise<import('@/types/reports').CustomReportQueryResponse> => {
+        return apiClient.post('/api/v1/reports/query', request)
+    },
+}
+
 
 
 
