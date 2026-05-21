@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
 import {
+  authUserFromMeDto,
   clearRememberedLoginPrefs,
   getRememberedEmail,
   isRememberMeEnabled,
@@ -111,11 +112,24 @@ export default function LoginPage() {
           clearRememberedLoginPrefs()
         }
 
-        // Store authentication data
+        // Store authentication data (roleName = permission_roles.name)
+        const u = response.data.user
         setAuthData(
           response.data.accessToken,
           response.data.refreshToken ?? null,
-          response.data.user
+          authUserFromMeDto({
+            id: u.id,
+            email: u.email,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            fullName: u.fullName,
+            avatarUrl: u.avatarUrl,
+            role: u.role,
+            roleName: u.roleName,
+            organization: u.organization,
+            teams: u.teams,
+            rolePermissions: u.rolePermissions,
+          }),
         )
 
         toast({
