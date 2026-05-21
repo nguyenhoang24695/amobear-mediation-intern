@@ -8,7 +8,7 @@ export type MetaRequestStatus =
   | "failed"
 
 export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE"
-export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "CITY"
+export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "COUNTRY_GROUP" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
 
@@ -648,6 +648,7 @@ export interface MetaAdSetDraftDto {
   geoMode?: MetaGeoMode | null
   countries: string[]
   regionKeys: string[]
+  countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
   ageMin?: number | null
   ageMax?: number | null
@@ -954,6 +955,21 @@ export interface MetaGeoRegionDto {
   countryCount: number
 }
 
+export interface GeoCountryGroupDto {
+  id: number
+  name: string
+  description?: string | null
+  countryCodes: string[]
+  countryCount: number
+  isActive: boolean
+}
+
+export interface UpsertGeoCountryGroupDto {
+  name: string
+  description?: string | null
+  countryCodes: string[]
+}
+
 export interface MetaGeoCityReferenceDto extends MetaGeoCityTargetDto {}
 
 export interface MetaExecuteResponseDto {
@@ -1014,6 +1030,7 @@ export interface MetaRequestFormState {
   geoMode: MetaGeoMode
   countries: string[]
   regionKeys: string[]
+  countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
   ageMin: number
   ageMax: number

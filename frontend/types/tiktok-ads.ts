@@ -593,6 +593,7 @@ export interface TikTokAdGroupDraftDto {
   appDownloadUrl?: string
   operatingSystems: string[]
   locationIds: string[]
+  countryGroupIds: number[]
   ageGroups: string[]
   gender: string
   languages: string[]

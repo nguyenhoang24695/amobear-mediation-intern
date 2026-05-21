@@ -33,6 +33,7 @@ import type {
   MetaFacebookPostReferencePageDto,
   MetaFacebookPostReferenceQueryDto,
   MetaGeoCityReferenceDto,
+  GeoCountryGroupDto,
   MetaGeoRegionDto,
   MetaReferenceMediaPageDto,
   MetaReferenceMediaQueryDto,
@@ -50,6 +51,7 @@ import type {
   UpdateMetaAppMappingRequestDto,
   UpdateMetaCampaignRequestDto,
   UpdateMetaIntegrationRequestDto,
+  UpsertGeoCountryGroupDto,
   UpsertMetaAdAccountRequestDto,
 } from "@/types/meta-ads"
 
@@ -184,6 +186,22 @@ export const metaReferenceApi = {
 
   getGeoRegions: async () => {
     return apiClient.get<MetaGeoRegionDto[]>(`${REFERENCE_PREFIX}/geo/regions`)
+  },
+
+  getGeoCountryGroups: async () => {
+    return apiClient.get<GeoCountryGroupDto[]>(`${REFERENCE_PREFIX}/geo/country-groups`)
+  },
+
+  createGeoCountryGroup: async (request: UpsertGeoCountryGroupDto) => {
+    return apiClient.post<GeoCountryGroupDto>(`${REFERENCE_PREFIX}/geo/country-groups`, request)
+  },
+
+  updateGeoCountryGroup: async (id: number, request: UpsertGeoCountryGroupDto) => {
+    return apiClient.put<GeoCountryGroupDto>(`${REFERENCE_PREFIX}/geo/country-groups/${id}`, request)
+  },
+
+  deleteGeoCountryGroup: async (id: number) => {
+    return apiClient.delete<void>(`${REFERENCE_PREFIX}/geo/country-groups/${id}`)
   },
 
   searchGeoCities: async (metaAdAccountId: number, q: string) => {
