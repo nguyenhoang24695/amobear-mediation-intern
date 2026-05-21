@@ -420,7 +420,7 @@ export function TikTokIntegrationsPage() {
         </div>
         <div className="grid gap-3 md:grid-cols-5">
           <div><Label>Name</Label><Input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></div>
-          <div><Label>App ID</Label><Input value={form.tikTokAppId} onChange={(e) => setForm({ ...form, tikTokAppId: e.target.value })} /></div>
+          <div><Label>Developer App ID</Label><Input value={form.tikTokAppId} onChange={(e) => setForm({ ...form, tikTokAppId: e.target.value })} /></div>
           <div><Label>{editingId ? "New Secret" : "Secret"}</Label><Input type="password" value={form.appSecret} onChange={(e) => setForm({ ...form, appSecret: e.target.value, clearAppSecret: false })} /></div>
           <div><Label>{editingId ? "New Access Token" : "Access Token"}</Label><Input type="password" value={form.accessToken} onChange={(e) => setForm({ ...form, accessToken: e.target.value, clearAccessToken: false })} /></div>
           <div><Label>Scopes</Label><Input value={form.scopes} onChange={(e) => setForm({ ...form, scopes: e.target.value })} /></div>
@@ -454,7 +454,7 @@ export function TikTokIntegrationsPage() {
       </div>
       <div className="rounded-md border bg-white">
         <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>App ID</TableHead><TableHead>Secret</TableHead><TableHead>Token</TableHead><TableHead>Status</TableHead><TableHead>Enabled</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Developer App ID</TableHead><TableHead>Secret</TableHead><TableHead>Token</TableHead><TableHead>Status</TableHead><TableHead>Enabled</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {loading ? <TableRow><TableCell colSpan={7}>Loading...</TableCell></TableRow> : items.map((item) => (
               <TableRow key={item.id}>
@@ -798,7 +798,7 @@ export function TikTokAppMappingsPage() {
   }
 
   return (
-    <PageShell title="TikTok App Mappings" subtitle="Map internal apps to TikTok App IDs and store URLs." action={<Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}>
+    <PageShell title="TikTok App Mappings" subtitle="Map internal apps to TikTok mobile app IDs and store URLs." action={<Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}>
       <ErrorBox message={error} />
       <div className="inline-flex rounded-md bg-slate-100 p-1">
         <Button size="sm" variant={activeTab === "mappings" ? "default" : "ghost"} onClick={() => setActiveTab("mappings")}>
@@ -817,7 +817,7 @@ export function TikTokAppMappingsPage() {
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <Input
                 className="h-9 pl-8 text-sm"
-                placeholder="Search by app, app ID, TikTok app ID..."
+                placeholder="Search by app, store ID, TikTok mobile app ID..."
                 value={mappingSearch}
                 onChange={(e) => setMappingSearch(e.target.value)}
               />
@@ -833,7 +833,7 @@ export function TikTokAppMappingsPage() {
                 <TableRow className="bg-slate-50">
                   <TableHead className="text-xs font-medium text-slate-500">App</TableHead>
                   <TableHead className="w-36 text-xs font-medium text-slate-500">Operation System</TableHead>
-                  <TableHead className="text-xs font-medium text-slate-500">TikTok App ID</TableHead>
+                  <TableHead className="text-xs font-medium text-slate-500">TikTok Mobile App ID</TableHead>
                   <TableHead className="text-xs font-medium text-slate-500">Download URL</TableHead>
                   <TableHead className="w-24 text-xs font-medium text-slate-500">Enabled</TableHead>
                   <TableHead className="w-36 text-xs font-medium text-slate-500">Updated</TableHead>
@@ -910,7 +910,7 @@ export function TikTokAppMappingsPage() {
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <Input
                 className="h-9 pl-8 text-sm"
-                placeholder="Search by app, TikTok app ID, status..."
+                placeholder="Search by app, TikTok mobile app ID, status..."
                 value={candidateSearch}
                 onChange={(e) => setCandidateSearch(e.target.value)}
               />
@@ -1024,7 +1024,7 @@ export function TikTokAppMappingsPage() {
                     })()}
                   </div>
                   <div className="space-y-1 text-sm text-slate-700">
-                    <p><span className="font-medium">TikTok App ID:</span> <span className="font-mono">{resolveTarget.tikTokAppId || "-"}</span></p>
+                    <p><span className="font-medium">TikTok Mobile App ID:</span> <span className="font-mono">{resolveTarget.tikTokAppId || "-"}</span></p>
                     <p><span className="font-medium">Download URL:</span> {resolveTarget.downloadUrl || resolveTarget.storeUrl || "-"}</p>
                     <p><span className="font-medium">Suggested App:</span> {getCandidateSuggestion(resolveTarget)}</p>
                     <p><span className="font-medium">Evidence:</span> {resolveTarget.sourceAdvertiserCount} advertiser(s), {resolveTarget.sourceAdGroupCount} ad group(s)</p>

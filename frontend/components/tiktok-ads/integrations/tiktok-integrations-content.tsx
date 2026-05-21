@@ -294,7 +294,7 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
   const validateForm = () => {
     const errors: string[] = []
     if (!form.displayName.trim()) errors.push("Display Name is required.")
-    if (!form.tikTokAppId.trim()) errors.push("TikTok App ID is required.")
+    if (!form.tikTokAppId.trim()) errors.push("TikTok Developer App ID is required.")
     if (!form.appSecret?.trim() && !editTarget?.hasAppSecret) errors.push("App Secret is required.")
     return errors
   }
@@ -461,7 +461,7 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
           <TableHeader>
             <TableRow className="bg-slate-50">
               <TableHead className="text-xs font-medium text-slate-500">Name</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">TikTok App ID</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500">TikTok Developer App ID</TableHead>
               <TableHead className="text-xs font-medium text-slate-500">Secret</TableHead>
               <TableHead className="text-xs font-medium text-slate-500">Token</TableHead>
               <TableHead className="w-36 text-xs font-medium text-slate-500">Token Status</TableHead>
@@ -601,10 +601,10 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-700">
-                    TikTok App ID <span className="text-red-500">*</span>
+                    TikTok Developer App ID <span className="text-red-500">*</span>
                   </Label>
                   <Input className="h-9 font-mono text-sm" value={form.tikTokAppId} onChange={(event) => updateConnectionForm({ tikTokAppId: event.target.value })} />
-                  <p className="text-[11px] text-slate-400">App ID from TikTok Business Developer settings.</p>
+                  <p className="text-[11px] text-slate-400">Developer App ID from TikTok Business Developer settings.</p>
                 </div>
                 <div className="space-y-1.5">
                   <MaskedInput
