@@ -23,11 +23,13 @@ interface PersonnelDroppableNodeProps {
   hasChildren?: boolean
   onClick?: () => void
   onToggleCollapse?: () => void
+  onRemove?: (node: PersonnelNode) => void
 }
 
 export function PersonnelDroppableNode({
   node,
   isEditMode,
+  onRemove,
   ...cardProps
 }: PersonnelDroppableNodeProps) {
   const canDrop = isEditMode && isChartDropTarget(node)
@@ -65,6 +67,7 @@ export function PersonnelDroppableNode({
   return (
     <div
       ref={setRefs}
+      data-chart-no-pan
       style={style}
       className={cn(
         "rounded-lg transition-all",
@@ -85,7 +88,12 @@ export function PersonnelDroppableNode({
           Drag to reassign
         </button>
       )}
-      <PersonnelNodeCard node={node} {...cardProps} />
+      <PersonnelNodeCard
+        node={node}
+        {...cardProps}
+        showRemove={isEditMode}
+        onRemove={onRemove}
+      />
       {canDrop && isOver && (
         <p className="mt-1 text-center text-[10px] font-medium text-green-700">
           Drop to add report

@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
+import { OrgChartPanViewport } from "./org-chart-pan-viewport"
 import { PersonnelDroppableNode } from "./personnel-droppable-node"
 import type { PersonnelNode } from "@/lib/mock/org-personnel-mock"
 import { flattenPersonnelTree } from "@/lib/mock/org-personnel-mock"
@@ -15,6 +15,7 @@ interface OrgChartTreeProps {
   onSelect: (node: PersonnelNode) => void
   onToggleCollapse: (id: string) => void
   isEditMode?: boolean
+  onRemoveNode?: (node: PersonnelNode) => void
 }
 
 function nodeMatchesSearch(node: PersonnelNode, query: string): boolean {
@@ -66,6 +67,7 @@ function OrgChartNode({
   onSelect,
   onToggleCollapse,
   isEditMode = false,
+  onRemoveNode,
   siblingIndex = 0,
   siblingCount = 1,
   isRoot = false,
@@ -77,6 +79,7 @@ function OrgChartNode({
   onSelect: (node: PersonnelNode) => void
   onToggleCollapse: (id: string) => void
   isEditMode?: boolean
+  onRemoveNode?: (node: PersonnelNode) => void
   siblingIndex?: number
   siblingCount?: number
   isRoot?: boolean
@@ -104,6 +107,7 @@ function OrgChartNode({
         hasChildren={hasChildren}
         onClick={() => onSelect(node)}
         onToggleCollapse={hasChildren ? () => onToggleCollapse(node.id) : undefined}
+        onRemove={onRemoveNode}
       />
 
       {hasChildren && !collapsed && (
@@ -120,6 +124,7 @@ function OrgChartNode({
                 onSelect={onSelect}
                 onToggleCollapse={onToggleCollapse}
                 isEditMode={isEditMode}
+                onRemoveNode={onRemoveNode}
                 siblingIndex={index}
                 siblingCount={children.length}
               />
@@ -140,6 +145,7 @@ export function OrgChartTree({
   onSelect,
   onToggleCollapse,
   isEditMode = false,
+  onRemoveNode,
 }: OrgChartTreeProps) {
   const flat = flattenPersonnelTree(root)
   const hasVisibleMatch =
@@ -154,9 +160,12 @@ export function OrgChartTree({
   }
 
   return (
-    <ScrollArea className={cn("w-full rounded-lg border border-slate-200 bg-slate-50/50", isEditMode && "flex-1")}>
+    <OrgChartPanViewport className="h-full min-h-0 w-full flex-1">
       <div
-        className={cn("inline-block min-w-full p-8 origin-top transition-transform duration-200")}
+        data-chart-pan-surface
+        className={cn(
+          "inline-block min-h-full min-w-full cursor-grab p-8 pt-10 origin-top transition-transform duration-200",
+        )}
         style={{ transform: `scale(${zoom})` }}
       >
         <ul className="mx-auto flex min-w-max justify-center">
@@ -168,12 +177,11 @@ export function OrgChartTree({
             onSelect={onSelect}
             onToggleCollapse={onToggleCollapse}
             isEditMode={isEditMode}
+            onRemoveNode={onRemoveNode}
             isRoot
           />
         </ul>
       </div>
-      <ScrollBar orientation="horizontal" />
-      <ScrollBar orientation="vertical" />
-    </ScrollArea>
+    </OrgChartPanViewport>
   )
 }

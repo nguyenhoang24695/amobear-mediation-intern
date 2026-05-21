@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { OrganizationLogoAvatar } from "./organization-logo-avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DropdownMenu,
@@ -22,7 +22,7 @@ import { OrgTeamsTab } from "./tabs/org-teams-tab"
 import { OrgSettingsTab } from "./tabs/org-settings-tab"
 import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
-import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
+import { formatDate } from "./org-utils"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 
@@ -121,6 +121,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   const orgTabData = {
     name: org.name,
     slug: org.slug,
+    logoUrl: org.logoUrl,
     status: status as "active" | "inactive",
     createdAt: org.createdAt,
     updatedAt: org.updatedAt,
@@ -144,11 +145,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
       {/* Organization Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 rounded-xl">
-            <AvatarFallback className={`rounded-xl text-lg font-bold ${getOrgColor(org.name)}`}>
-              {getOrgInitials(org.name)}
-            </AvatarFallback>
-          </Avatar>
+          <OrganizationLogoAvatar orgId={orgId} orgName={org.name} logoUrl={org.logoUrl} size="lg" />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{org.name}</h1>
@@ -268,17 +265,24 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
 
         {canEdit && (
           <TabsContent value="settings">
-            <OrgSettingsTab org={orgTabData} orgId={orgId} canEdit={canEdit} onStatusChange={() => {
-              const refetch = async () => {
-                try {
-                  const data = await organizationsApi.getById(orgId)
-                  setOrg(data)
-                } catch (err) {
-                  console.error("Failed to refresh organization:", err)
-                }
-              }
-              refetch()
-            }} />
+            <OrgSettingsTab
+              org={orgTabData}
+              orgId={orgId}
+              canEdit={canEdit}
+              onStatusChange={() => {
+                void (async () => {
+                  try {
+                    const data = await organizationsApi.getById(orgId)
+                    setOrg(data)
+                  } catch (err) {
+                    console.error("Failed to refresh organization:", err)
+                  }
+                })()
+              }}
+              onLogoChange={(nextLogoUrl) => {
+                setOrg((prev) => (prev ? { ...prev, logoUrl: nextLogoUrl ?? undefined } : prev))
+              }}
+            />
           </TabsContent>
         )}
       </Tabs>

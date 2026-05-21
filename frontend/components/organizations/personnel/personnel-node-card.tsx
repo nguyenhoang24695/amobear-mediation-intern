@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import type { PersonnelNode } from "@/lib/mock/org-personnel-mock"
+import { Trash2 } from "lucide-react"
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -37,6 +38,8 @@ interface PersonnelNodeCardProps {
   hasChildren?: boolean
   onClick?: () => void
   onToggleCollapse?: () => void
+  showRemove?: boolean
+  onRemove?: (node: PersonnelNode) => void
 }
 
 export function PersonnelNodeCard({
@@ -47,61 +50,86 @@ export function PersonnelNodeCard({
   hasChildren = false,
   onClick,
   onToggleCollapse,
+  showRemove = false,
+  onRemove,
 }: PersonnelNodeCardProps) {
   const displayName = node.type === "organization" ? node.name : node.name
   const subtitle =
     node.type === "department" ? "Department" : node.title ?? node.department ?? ""
+  const hasRemovableContent =
+    node.type === "member" ||
+    (node.type === "organization" && (node.children?.length ?? 0) > 0)
+  const canRemove = showRemove && hasRemovableContent && onRemove
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "relative flex w-[200px] flex-col items-center gap-2 rounded-lg border px-3 py-3 text-left transition-all",
-        typeStyles[node.type],
-        selected && "ring-2 ring-blue-500 border-blue-400 shadow-md",
-        highlighted && !selected && "ring-2 ring-amber-300",
-      )}
-    >
-      {hasChildren && onToggleCollapse && (
-        <span
-          role="presentation"
+    <div className="relative">
+      {canRemove && (
+        <button
+          type="button"
+          title="Remove from chart"
+          className="absolute -right-1 -top-1 z-30 flex h-6 w-6 items-center justify-center rounded-md border border-red-200 bg-white text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
           onClick={(e) => {
             e.stopPropagation()
-            onToggleCollapse()
+            onRemove(node)
           }}
-          className="absolute -bottom-3 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50"
-          title={collapsed ? "Expand" : "Collapse"}
         >
-          {collapsed ? "+" : "−"}
-        </span>
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       )}
-      <Avatar className="h-10 w-10">
-        <AvatarFallback className={cn("text-sm font-semibold", avatarStyles[node.type])}>
-          {getInitials(displayName)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="w-full text-center">
-        <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
-        {subtitle && <p className="truncate text-xs text-slate-500">{subtitle}</p>}
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-1">
-        {node.department && node.type === "member" && (
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-            {node.department}
-          </Badge>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "relative flex w-[200px] flex-col items-center gap-2 rounded-lg border px-3 py-3 text-left transition-all",
+          typeStyles[node.type],
+          selected && "ring-2 ring-blue-500 border-blue-400 shadow-md",
+          highlighted && !selected && "ring-2 ring-amber-300",
         )}
-        {node.status && node.type === "member" && (
-          <Badge className={cn("text-[10px] px-1.5 py-0 capitalize", statusBadge[node.status])}>
-            {node.status}
-          </Badge>
+      >
+        {hasChildren && onToggleCollapse && (
+          <span
+            role="presentation"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleCollapse()
+            }}
+            className="absolute -bottom-3 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50"
+            title={collapsed ? "Expand" : "Collapse"}
+          >
+            {collapsed ? "+" : "−"}
+          </span>
         )}
-        {typeof node.directReports === "number" && node.directReports > 0 && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-            {node.directReports} reports
-          </Badge>
+        <Avatar className="h-10 w-10">
+          <AvatarFallback className={cn("text-sm font-semibold", avatarStyles[node.type])}>
+            {getInitials(displayName)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="w-full text-center">
+          <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+          {node.type !== "organization" && subtitle && (
+            <p className="truncate text-xs text-slate-500">{subtitle}</p>
+          )}
+        </div>
+        {node.type !== "organization" && (
+          <div className="flex flex-wrap items-center justify-center gap-1">
+            {node.department && node.type === "member" && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                {node.department}
+              </Badge>
+            )}
+            {node.status && node.type === "member" && (
+              <Badge className={cn("text-[10px] px-1.5 py-0 capitalize", statusBadge[node.status])}>
+                {node.status}
+              </Badge>
+            )}
+            {typeof node.directReports === "number" && node.directReports > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                {node.directReports} reports
+              </Badge>
+            )}
+          </div>
         )}
-      </div>
-    </button>
+      </button>
+    </div>
   )
 }

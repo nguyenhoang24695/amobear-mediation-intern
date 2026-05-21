@@ -20,8 +20,11 @@ export function collectDescendantIds(node: PersonnelNode): Set<string> {
   return ids
 }
 
+/** Valid drop parent when dragging users from palette or reparenting chart nodes. */
 export function isChartDropTarget(node: PersonnelNode): boolean {
-  return node.type === "member" || node.type === "department"
+  return (
+    node.type === "organization" || node.type === "member" || node.type === "department"
+  )
 }
 
 /** Strip volatile fields for dirty comparison */
@@ -100,7 +103,9 @@ function attachUnderParent(
 
   if (root.id === parentId) {
     const nextChildren = [...(root.children ?? []), updatedChild]
-    const reportCount = nextChildren.filter((c) => c.type === "member").length
+    const reportCount = nextChildren.filter(
+      (c) => c.type === "member" || c.type === "department",
+    ).length
     return {
       ...root,
       children: nextChildren,
@@ -126,10 +131,12 @@ function attachUnderParent(
 function refreshDirectReports(node: PersonnelNode): PersonnelNode {
   const children = (node.children ?? []).map(refreshDirectReports)
   const memberReports = children.filter((c) => c.type === "member").length
+  const departmentReports = children.filter((c) => c.type === "department").length
+  const reportCount = memberReports + departmentReports
   return {
     ...node,
     children: children.length > 0 ? children : undefined,
-    directReports: memberReports > 0 ? memberReports : node.directReports,
+    directReports: reportCount > 0 ? reportCount : undefined,
   }
 }
 
@@ -163,4 +170,41 @@ export function movePersonnelNode(
   if (!attached) return null
 
   return refreshDirectReports(attached)
+}
+
+/** All member names in the subtree below this node (not including the node itself). */
+export function getMemberDescendantNames(node: PersonnelNode): string[] {
+  const names: string[] = []
+  const walk = (n: PersonnelNode) => {
+    for (const child of n.children ?? []) {
+      if (child.type === "member") names.push(child.name)
+      walk(child)
+    }
+  }
+  walk(node)
+  return names
+}
+
+/** Clear all personnel under the organization root (keeps the org node). */
+export function clearOrganizationPersonnelChildren(root: PersonnelNode): PersonnelNode | null {
+  if (root.type !== "organization") return null
+  return refreshDirectReports({
+    ...root,
+    children: undefined,
+    directReports: 0,
+  })
+}
+
+/** Remove a member node and its entire subtree from the chart. */
+export function removePersonnelNodeFromTree(
+  root: PersonnelNode,
+  nodeId: string,
+): PersonnelNode | null {
+  const target = flattenPersonnelTree(root).find((n) => n.id === nodeId)
+  if (!target || target.type !== "member") return null
+
+  const { tree, subtree } = detachSubtree(root, nodeId)
+  if (!subtree) return null
+
+  return refreshDirectReports(tree)
 }

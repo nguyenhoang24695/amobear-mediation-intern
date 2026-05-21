@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback, useEffect } from "react"
+import { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -34,6 +34,10 @@ import {
   getManagerCandidates,
   addOrgUserUnderNode,
   movePersonnelNode,
+  removePersonnelNodeFromTree,
+  clearOrganizationPersonnelChildren,
+  getMemberDescendantNames,
+  collectDescendantIds,
   type PersonnelNode,
   type PersonnelMemberPatch,
 } from "@/lib/mock/org-personnel-mock"
@@ -108,6 +112,14 @@ export function OrgPersonnelTab({
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
   const [pendingExitEdit, setPendingExitEdit] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState<PersonnelNode | null>(null)
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
+  const removeTargetRef = useRef<PersonnelNode | null>(null)
+
+  const removeDescendantNames = useMemo(
+    () => (removeTarget ? getMemberDescendantNames(removeTarget) : []),
+    [removeTarget],
+  )
 
   const isDirty = useMemo(
     () => !personnelTreesEqual(draftTree, savedTree),
@@ -316,6 +328,50 @@ export function OrgPersonnelTab({
     setDiscardDialogOpen(true)
   }, [isDirty, applyDiscard])
 
+  const handleRemoveRequest = useCallback((node: PersonnelNode) => {
+    removeTargetRef.current = node
+    setRemoveTarget(node)
+    setRemoveDialogOpen(true)
+  }, [])
+
+  const handleConfirmRemove = useCallback(() => {
+    const target = removeTargetRef.current
+    if (!target) return
+
+    const removedIds = new Set(
+      target.type === "organization"
+        ? flattenPersonnelTree(target)
+            .filter((n) => n.type === "member")
+            .map((n) => n.id)
+        : [target.id, ...collectDescendantIds(target)],
+    )
+
+    setDraftTree((prev) => {
+      const next =
+        target.type === "organization"
+          ? clearOrganizationPersonnelChildren(prev)
+          : removePersonnelNodeFromTree(prev, target.id)
+      if (!next) return prev
+      syncSelectedNode(next)
+      setDropFeedback(
+        target.type === "organization"
+          ? `Removed all people from under ${target.name}.`
+          : `Removed ${target.name} from the chart.`,
+      )
+      setTimeout(() => setDropFeedback(null), 4000)
+      return next
+    })
+
+    if (selectedNode && removedIds.has(selectedNode.id)) {
+      setSheetOpen(false)
+      setSelectedNode(null)
+    }
+
+    removeTargetRef.current = null
+    setRemoveTarget(null)
+    setRemoveDialogOpen(false)
+  }, [selectedNode, syncSelectedNode])
+
   const handleToggleEditMode = useCallback(() => {
     if (isEditMode) {
       if (isDirty) {
@@ -372,6 +428,7 @@ export function OrgPersonnelTab({
       onSelect={handleSelect}
       onToggleCollapse={handleToggleCollapse}
       isEditMode={isEditMode && canManage}
+      onRemoveNode={isEditMode && canManage ? handleRemoveRequest : undefined}
     />
   )
 
@@ -394,6 +451,75 @@ export function OrgPersonnelTab({
               Keep editing
             </AlertDialogCancel>
             <AlertDialogAction onClick={applyDiscard}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={removeDialogOpen}
+        onOpenChange={(open) => {
+          setRemoveDialogOpen(open)
+          if (!open) {
+            removeTargetRef.current = null
+            setRemoveTarget(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from chart?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  {removeTarget?.type === "organization" ? (
+                    <>
+                      Remove all people from under{" "}
+                      <span className="font-medium text-slate-900">{removeTarget.name}</span> on the
+                      organizational chart? The organization node will remain. This change is not saved
+                      until you click Save.
+                    </>
+                  ) : (
+                    <>
+                      Remove <span className="font-medium text-slate-900">{removeTarget?.name}</span>{" "}
+                      from the organizational chart? This change is not saved until you click Save.
+                    </>
+                  )}
+                </p>
+                {removeDescendantNames.length > 0 && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                    <p className="font-medium">Warning</p>
+                    <p className="mt-1">
+                      This person has direct or indirect reports on the chart. The following people
+                      assigned under them will also be removed from the chart:
+                    </p>
+                    <ul className="mt-2 list-inside list-disc text-xs">
+                      {removeDescendantNames.map((name, index) => (
+                        <li key={`${name}-${index}`}>{name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                removeTargetRef.current = null
+                setRemoveTarget(null)
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmRemove()
+              }}
+            >
+              Remove
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -434,8 +560,8 @@ export function OrgPersonnelTab({
         </Card>
       </div>
 
-      <Card className="border-slate-200">
-        <CardHeader>
+      <Card className="flex h-[95vh] min-h-0 flex-col border-slate-200">
+        <CardHeader className="shrink-0">
           <CardTitle className="text-base font-semibold text-slate-900">Organizational Chart</CardTitle>
           <CardDescription>
             {isEditMode
@@ -443,7 +569,8 @@ export function OrgPersonnelTab({
               : "Hierarchical view of reporting structure. Open edit mode to make changes."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="shrink-0 space-y-4">
           <OrgPersonnelToolbar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -474,25 +601,28 @@ export function OrgPersonnelTab({
               {dropFeedback}
             </p>
           )}
+          </div>
 
           <div
             className={cn(
-              "flex min-h-[360px] overflow-hidden rounded-lg border border-slate-200",
+              "flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200",
               isEditMode && canManage && "ring-2 ring-blue-200 ring-offset-2",
             )}
           >
-            <PersonnelSidePanel
-              orgId={orgId}
-              tree={isEditMode ? draftTree : savedTree}
-              isEditMode={isEditMode}
-              canManage={canManage}
-              expanded={paletteExpanded}
-              onExpandedChange={setPaletteExpanded}
-              historyRefreshKey={historyRefreshKey}
-            />
             {isEditMode && canManage ? (
               <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                <div className="min-w-0 flex-1">{chartBlock}</div>
+                <div className="flex h-full min-h-0 w-full flex-1">
+                  <PersonnelSidePanel
+                    orgId={orgId}
+                    tree={draftTree}
+                    isEditMode={isEditMode}
+                    canManage={canManage}
+                    expanded={paletteExpanded}
+                    onExpandedChange={setPaletteExpanded}
+                    historyRefreshKey={historyRefreshKey}
+                  />
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">{chartBlock}</div>
+                </div>
                 <DragOverlay dropAnimation={null}>
                   {dragOverlayLabel ? (
                     <div className="rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium shadow-lg">
@@ -502,7 +632,18 @@ export function OrgPersonnelTab({
                 </DragOverlay>
               </DndContext>
             ) : (
-              <div className="min-w-0 flex-1">{chartBlock}</div>
+              <>
+                <PersonnelSidePanel
+                  orgId={orgId}
+                  tree={savedTree}
+                  isEditMode={isEditMode}
+                  canManage={canManage}
+                  expanded={paletteExpanded}
+                  onExpandedChange={setPaletteExpanded}
+                  historyRefreshKey={historyRefreshKey}
+                />
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">{chartBlock}</div>
+              </>
             )}
           </div>
         </CardContent>

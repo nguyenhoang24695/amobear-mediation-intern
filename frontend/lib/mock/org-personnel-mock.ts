@@ -18,7 +18,15 @@ import {
   isChartDropTarget,
 } from "@/lib/organizations/personnel-chart-tree-utils"
 
-export { flattenPersonnelTree, collectDescendantIds, isChartDropTarget, movePersonnelNode } from "@/lib/organizations/personnel-chart-tree-utils"
+export {
+  flattenPersonnelTree,
+  collectDescendantIds,
+  isChartDropTarget,
+  movePersonnelNode,
+  removePersonnelNodeFromTree,
+  getMemberDescendantNames,
+  clearOrganizationPersonnelChildren,
+} from "@/lib/organizations/personnel-chart-tree-utils"
 
 export function chartNodeIdForOrgUser(userId: string): string {
   return `user-${userId}`
@@ -67,7 +75,9 @@ function appendChildToNode(
 ): PersonnelNode | null {
   if (root.id === parentId) {
     const nextChildren = [...(root.children ?? []), child]
-    const reportCount = nextChildren.filter((c) => c.type === "member").length
+    const reportCount = nextChildren.filter(
+      (c) => c.type === "member" || c.type === "department",
+    ).length
     return {
       ...root,
       children: nextChildren,

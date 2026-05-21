@@ -130,7 +130,7 @@ export function PersonnelSidePanel({
   }
 
   return (
-    <div className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-50/80">
+    <div className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-50/80">
       <div className="flex items-center justify-end border-b border-slate-200 px-1 py-1">
         <Button
           variant="ghost"
@@ -142,7 +142,7 @@ export function PersonnelSidePanel({
           <ChevronLeft className="h-4 w-4" />
         </Button>
       </div>
-      <Tabs key={defaultTab} defaultValue={defaultTab} className="flex flex-1 flex-col min-h-0">
+      <Tabs key={defaultTab} defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
         <TabsList className={cn("mx-2 grid w-auto", canManage ? "grid-cols-2" : "grid-cols-1")}>
           {canManage && (
             <TabsTrigger value="users" className="text-xs gap-1" disabled={!isEditMode}>
@@ -157,7 +157,7 @@ export function PersonnelSidePanel({
         </TabsList>
 
         {canManage && (
-          <TabsContent value="users" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
+          <TabsContent value="users" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
             {isEditMode ? (
               <PersonnelUsersPalette orgId={orgId} tree={tree} embedded />
             ) : (
@@ -166,8 +166,8 @@ export function PersonnelSidePanel({
           </TabsContent>
         )}
 
-        <TabsContent value="history" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
-          <ScrollArea className="h-[min(420px,50vh)]">
+          <TabsContent value="history" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-2 p-2">
               {historyLoading && historyItems.length === 0 ? (
                 <div className="flex justify-center py-8">

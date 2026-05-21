@@ -1700,6 +1700,16 @@ export const organizationsApi = {
         return apiClient.put<OrganizationDetail>(`/api/v1/organizations/${id}`, request)
     },
 
+    uploadLogo: async (id: string, file: File): Promise<OrganizationDetail> => {
+        const fd = new FormData()
+        fd.append("file", file)
+        return apiClient.post<OrganizationDetail>(`/api/v1/organizations/${id}/logo`, fd)
+    },
+
+    deleteLogo: async (id: string): Promise<OrganizationDetail> => {
+        return apiClient.delete<OrganizationDetail>(`/api/v1/organizations/${id}/logo`)
+    },
+
     // Delete organization
     delete: async (id: string): Promise<void> => {
         return apiClient.delete(`/api/v1/organizations/${id}`)
