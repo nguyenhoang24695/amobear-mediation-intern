@@ -117,11 +117,12 @@ function parseOptionalDate(value: string): string | null {
 
 function inferGeoModeFromDraft(adSet: CreateMetaCampaignRequestDto["adSet"]): MetaRequestFormState["geoMode"] {
   const normalized = (adSet.geoMode ?? "").trim().toUpperCase()
-  if (normalized === "GLOBAL" || normalized === "REGION" || normalized === "CITY" || normalized === "COUNTRY") {
+  if (normalized === "GLOBAL" || normalized === "REGION" || normalized === "COUNTRY_GROUP" || normalized === "CITY" || normalized === "COUNTRY") {
     return normalized as MetaRequestFormState["geoMode"]
   }
 
   if ((adSet.cityTargets?.length ?? 0) > 0) return "CITY"
+  if ((adSet.countryGroupIds?.length ?? 0) > 0) return "COUNTRY_GROUP"
   if ((adSet.regionKeys?.length ?? 0) > 0) return "REGION"
   if ((adSet.countries?.length ?? 0) > 0) return "COUNTRY"
   return "GLOBAL"
@@ -383,6 +384,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       geoMode: form.geoMode,
       countries: form.geoMode === "COUNTRY" ? form.countries : [],
       regionKeys: form.geoMode === "REGION" ? form.regionKeys : [],
+      countryGroupIds: form.geoMode === "COUNTRY_GROUP" ? form.countryGroupIds : [],
       cityTargets: form.geoMode === "CITY"
         ? form.cityTargets.map((city) => ({
             key: city.key,
@@ -462,6 +464,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     geoMode,
     countries: payload.adSet.countries ?? [],
     regionKeys: payload.adSet.regionKeys ?? [],
+    countryGroupIds: payload.adSet.countryGroupIds ?? [],
     cityTargets: (payload.adSet.cityTargets ?? []).map((city) => ({
       key: city.key ?? "",
       name: city.name ?? "",

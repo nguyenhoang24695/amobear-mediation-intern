@@ -1093,14 +1093,14 @@ export function CampaignDetailContent({ campaignId }: Props) {
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Duplicate Campaign?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will create a direct PAUSED copy of <strong>{detail.name}</strong> on Meta Ad Manager, including its synced ad sets and ads. Only campaigns that passed readiness check on this screen can be duplicated.
+            <AlertDialogDescription className="break-words">
+              This action will create a direct PAUSED copy of <strong className="break-all">{detail.name}</strong> on Meta Ad Manager, including its synced ad sets and ads. Only campaigns that passed readiness check on this screen can be duplicated.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-wrap">
             <AlertDialogCancel disabled={duplicating}>Cancel</AlertDialogCancel>
             <Button
               className="bg-blue-600 text-white hover:bg-blue-700"

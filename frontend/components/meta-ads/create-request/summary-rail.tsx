@@ -145,6 +145,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
 function getGeoStatus(form: RequestFormState): CheckState {
   if (form.geoMode === "GLOBAL") return "ok"
   if (form.geoMode === "REGION") return form.regionKeys.length > 0 ? "ok" : "error"
+  if (form.geoMode === "COUNTRY_GROUP") return form.countryGroupIds.length > 0 ? "ok" : "error"
   if (form.geoMode === "CITY") return form.cityTargets.length > 0 ? "ok" : "error"
   return form.countries.length > 0 ? "ok" : "error"
 }
@@ -154,6 +155,10 @@ function getGeoSummary(form: RequestFormState): string {
   if (form.geoMode === "REGION") {
     if (form.regionKeys.length === 0) return "-"
     return `${form.regionKeys.length} region(s): ${form.regionKeys.slice(0, 3).join(", ")}${form.regionKeys.length > 3 ? "..." : ""}`
+  }
+  if (form.geoMode === "COUNTRY_GROUP") {
+    if (form.countryGroupIds.length === 0) return "-"
+    return `${form.countryGroupIds.length} country group(s)`
   }
   if (form.geoMode === "CITY") {
     if (form.cityTargets.length === 0) return "-"

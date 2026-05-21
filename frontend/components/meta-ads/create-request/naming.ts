@@ -26,6 +26,13 @@ function buildRegionToken(regionKeys: string[]) {
   return `REGION${normalized.length}`
 }
 
+function buildCountryGroupToken(countryGroupIds: number[]) {
+  const normalized = Array.from(new Set(countryGroupIds.filter((id) => Number.isFinite(id) && id > 0)))
+  if (normalized.length === 0) return ""
+  if (normalized.length === 1) return `CG${normalized[0]}`
+  return `CGROUP${normalized.length}`
+}
+
 function buildCityToken(cityTargets: MetaRequestFormState["cityTargets"]) {
   if (cityTargets.length === 0) return ""
   if (cityTargets.length === 1) {
@@ -41,6 +48,8 @@ export function buildGeoToken(form: MetaRequestFormState) {
       return "GLOBAL"
     case "REGION":
       return buildRegionToken(form.regionKeys)
+    case "COUNTRY_GROUP":
+      return buildCountryGroupToken(form.countryGroupIds)
     case "CITY":
       return buildCityToken(form.cityTargets)
     default:

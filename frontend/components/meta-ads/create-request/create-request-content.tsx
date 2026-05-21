@@ -32,6 +32,7 @@ import type {
   MetaCampaignRequestDetailDto,
   MetaCreateCampaignReferenceDto,
   MetaFacebookPageReferenceDto,
+  GeoCountryGroupDto,
   MetaGeoRegionDto,
   MetaIntegrationDto,
   MetaPerformanceGoalReferenceDto,
@@ -115,6 +116,10 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
     next.bidAmount = ""
   }
 
+  next.countryGroupIds = Array.isArray(next.countryGroupIds)
+    ? next.countryGroupIds.filter((id) => Number.isFinite(id) && id > 0)
+    : []
+
   if (!Array.isArray(next.flexiblePrimaryTexts) || next.flexiblePrimaryTexts.length === 0) next.flexiblePrimaryTexts = [""]
   if (!Array.isArray(next.flexibleHeadlines) || next.flexibleHeadlines.length === 0) next.flexibleHeadlines = [""]
   if (!Array.isArray(next.flexibleAssets) || next.flexibleAssets.length === 0) next.flexibleAssets = [createEmptyFlexibleAsset()]
@@ -179,6 +184,7 @@ function createDefaultFormState(): RequestFormState {
     geoMode: "GLOBAL",
     countries: [],
     regionKeys: [],
+    countryGroupIds: [],
     cityTargets: [],
     ageMin: 18,
     ageMax: 65,
@@ -398,6 +404,15 @@ export function CreateRequestContent({ requestId }: Props) {
   } = useApi<MetaGeoRegionDto[]>(
     () => metaReferenceApi.getGeoRegions(),
     { cacheKey: "meta-reference:geo:regions" }
+  )
+  const {
+    data: geoCountryGroups,
+    loading: geoCountryGroupsLoading,
+    error: geoCountryGroupsError,
+    refetch: refetchGeoCountryGroups,
+  } = useApi<GeoCountryGroupDto[]>(
+    () => metaReferenceApi.getGeoCountryGroups(),
+    { cacheKey: "meta-reference:geo:country-groups" }
   )
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
@@ -689,6 +704,10 @@ export function CreateRequestContent({ requestId }: Props) {
               regions={geoRegions ?? []}
               regionsLoading={geoRegionsLoading}
               regionsMessage={geoRegionsError?.message ?? null}
+              countryGroups={geoCountryGroups ?? []}
+              countryGroupsLoading={geoCountryGroupsLoading}
+              countryGroupsMessage={geoCountryGroupsError?.message ?? null}
+              onCountryGroupsChanged={() => void refetchGeoCountryGroups()}
               metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
             />
           </div>
