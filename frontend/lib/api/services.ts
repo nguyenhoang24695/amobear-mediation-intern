@@ -1616,6 +1616,13 @@ export const helpDocumentsApi = {
 }
 
 // Organization Types
+export type {
+    PersonnelNode as PersonnelChartNode,
+    OrganizationPersonnelChartResponse,
+    PersonnelChartHistoryPagedResult,
+    PersonnelChartHistoryItem,
+} from "@/lib/organizations/personnel-chart-types"
+
 export interface OrganizationListItem {
     id: string
     name: string
@@ -1693,6 +1700,16 @@ export const organizationsApi = {
         return apiClient.put<OrganizationDetail>(`/api/v1/organizations/${id}`, request)
     },
 
+    uploadLogo: async (id: string, file: File): Promise<OrganizationDetail> => {
+        const fd = new FormData()
+        fd.append("file", file)
+        return apiClient.post<OrganizationDetail>(`/api/v1/organizations/${id}/logo`, fd)
+    },
+
+    deleteLogo: async (id: string): Promise<OrganizationDetail> => {
+        return apiClient.delete<OrganizationDetail>(`/api/v1/organizations/${id}/logo`)
+    },
+
     // Delete organization
     delete: async (id: string): Promise<void> => {
         return apiClient.delete(`/api/v1/organizations/${id}`)
@@ -1737,6 +1754,38 @@ export const organizationsApi = {
     // Delete a team
     deleteTeam: async (orgId: string, teamId: string): Promise<void> => {
         await apiClient.delete(`/api/v1/organizations/${orgId}/teams/${teamId}`)
+    },
+
+    getPersonnelChart: async (orgId: string): Promise<OrganizationPersonnelChartResponse | null> => {
+        const data = await apiClient.get<OrganizationPersonnelChartResponse>(
+            `/api/v1/organizations/${orgId}/personnel-chart`,
+        )
+        if (!data?.root) return { ...data, root: null }
+        return data
+    },
+
+    savePersonnelChart: async (
+        orgId: string,
+        body: { root: PersonnelChartNode },
+    ): Promise<OrganizationPersonnelChartResponse> => {
+        return apiClient.put<OrganizationPersonnelChartResponse>(
+            `/api/v1/organizations/${orgId}/personnel-chart`,
+            body,
+        )
+    },
+
+    getPersonnelChartHistory: async (
+        orgId: string,
+        params?: { page?: number; pageSize?: number },
+    ): Promise<PersonnelChartHistoryPagedResult> => {
+        const queryParams: Record<string, string | number | undefined> = {
+            page: params?.page ?? 1,
+            pageSize: params?.pageSize ?? 10,
+        }
+        return apiClient.get<PersonnelChartHistoryPagedResult>(
+            `/api/v1/organizations/${orgId}/personnel-chart/history`,
+            queryParams,
+        )
     },
 
     // Create a user directly in the organization

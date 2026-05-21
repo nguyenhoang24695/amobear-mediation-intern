@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { organizationsApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { OrganizationActionModal, type OrganizationActionType } from "../modals/organization-action-modal"
+import { OrganizationLogoAvatar } from "../organization-logo-avatar"
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024
 
 interface OrgSettingsTabProps {
   org: {
@@ -18,23 +21,36 @@ interface OrgSettingsTabProps {
     status: "active" | "inactive"
     users: number
     teams: number
+    logoUrl?: string | null
   }
   orgId: string
   onStatusChange?: () => void
+  onLogoChange?: (logoUrl?: string | null) => void
   canEdit?: boolean
 }
 
-export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: OrgSettingsTabProps) {
+export function OrgSettingsTab({
+  org,
+  orgId,
+  onStatusChange,
+  onLogoChange,
+  canEdit = false,
+}: OrgSettingsTabProps) {
   const router = useRouter()
   const { toast } = useToast()
-  // Profile
   const [orgName, setOrgName] = useState(org.name)
+  const [logoUrl, setLogoUrl] = useState<string | null | undefined>(org.logoUrl)
   const [profileSaving, setProfileSaving] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
   const [profileDirty, setProfileDirty] = useState(false)
 
-  // Danger Zone
   const [activeAction, setActiveAction] = useState<OrganizationActionType | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+
+  useEffect(() => {
+    setOrgName(org.name)
+    setLogoUrl(org.logoUrl)
+  }, [org.name, org.logoUrl])
 
   const handleSaveProfile = async () => {
     setProfileSaving(true)
@@ -55,6 +71,59 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
       })
     } finally {
       setProfileSaving(false)
+    }
+  }
+
+  const handleUploadLogo = async (file: File) => {
+    if (file.size > MAX_LOGO_BYTES) {
+      toast({
+        title: "File too large",
+        description: "Logo must be 2 MB or smaller.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setLogoUploading(true)
+    try {
+      const updated = await organizationsApi.uploadLogo(orgId, file)
+      setLogoUrl(updated.logoUrl)
+      onLogoChange?.(updated.logoUrl)
+      toast({
+        title: "Avatar updated",
+        description: "Organization avatar has been uploaded.",
+      })
+    } catch (error) {
+      console.error("Failed to upload organization logo:", error)
+      toast({
+        title: "Upload failed",
+        description: "Could not upload organization avatar. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    setLogoUploading(true)
+    try {
+      const updated = await organizationsApi.deleteLogo(orgId)
+      setLogoUrl(updated.logoUrl)
+      onLogoChange?.(updated.logoUrl)
+      toast({
+        title: "Avatar removed",
+        description: "Organization avatar has been removed.",
+      })
+    } catch (error) {
+      console.error("Failed to remove organization logo:", error)
+      toast({
+        title: "Remove failed",
+        description: "Could not remove organization avatar. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLogoUploading(false)
     }
   }
 
@@ -84,7 +153,7 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
       toast({
         title: "Error",
         description: `Failed to ${activeAction} organization. Please try again.`,
-        variant: "destructive"
+        variant: "destructive",
       })
     } finally {
       setActionLoading(false)
@@ -93,13 +162,24 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Section 1: Organization Profile */}
       <Card className="border-slate-200">
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-semibold text-slate-900">Organization Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Organization Name */}
+          <div className="space-y-2">
+            <Label>Organization Avatar</Label>
+            <OrganizationLogoAvatar
+              orgId={orgId}
+              orgName={orgName}
+              logoUrl={logoUrl}
+              editable={canEdit}
+              uploading={logoUploading}
+              onUpload={handleUploadLogo}
+              onRemove={handleRemoveLogo}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="settingsOrgName">Organization Name</Label>
             <Input
@@ -109,10 +189,11 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
                 setOrgName(e.target.value)
                 setProfileDirty(true)
               }}
+              disabled={!canEdit}
             />
           </div>
 
-          {profileDirty && (
+          {canEdit && profileDirty && (
             <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSaveProfile} disabled={profileSaving}>
               {profileSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Changes
@@ -121,14 +202,12 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
         </CardContent>
       </Card>
 
-      {/* Section 2: Danger Zone — only for users with edit permission */}
       {canEdit && (
         <Card className="border-red-200">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold text-red-700">Danger Zone</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Deactivate */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-900">
@@ -149,7 +228,6 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
               </Button>
             </div>
 
-            {/* Delete */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-900">Delete Organization</p>
@@ -169,7 +247,6 @@ export function OrgSettingsTab({ org, orgId, onStatusChange, canEdit = false }: 
         </Card>
       )}
 
-      {/* Shared Action Modal */}
       {activeAction && (
         <OrganizationActionModal
           open={!!activeAction}

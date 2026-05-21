@@ -88,6 +88,7 @@ const EVENT_TYPE_OPTIONS = [
   { value: "organization.deleted", label: "Organization Deleted", domain: "organization" },
   { value: "organization.activated", label: "Organization Activated", domain: "organization" },
   { value: "organization.deactivated", label: "Organization Deactivated", domain: "organization" },
+  { value: "organization.personnel_chart.saved", label: "Organization Chart Saved", domain: "organization" },
   { value: "user.created", label: "User Created", domain: "user" },
   { value: "user.invited", label: "User Invited", domain: "user" },
   { value: "user.updated", label: "User Updated", domain: "user" },

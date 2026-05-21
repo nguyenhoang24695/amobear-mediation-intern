@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { OrganizationLogoAvatar } from "./organization-logo-avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DropdownMenu,
@@ -17,11 +17,12 @@ import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { OrgOverviewTab } from "./tabs/org-overview-tab"
 import { OrgUsersTab } from "./tabs/org-users-tab"
+import { OrgPersonnelTab } from "./tabs/org-personnel-tab"
 import { OrgTeamsTab } from "./tabs/org-teams-tab"
 import { OrgSettingsTab } from "./tabs/org-settings-tab"
 import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
-import { getOrgInitials, getOrgColor, formatDate } from "./org-utils"
+import { formatDate } from "./org-utils"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 
@@ -31,6 +32,8 @@ const FN_EDIT = "edit"
 const FN_DELETE = "delete"
 const FN_VIEW_USERS = "view-users"
 const FN_VIEW_TEAMS = "view-teams"
+const FN_VIEW_PERSONNEL_CHART = "view-personnel-chart"
+const FN_MANAGE_PERSONNEL_CHART = "manage-personnel-chart"
 const FN_MANAGE_USERS = "manage-users"
 const FN_MANAGE_TEAMS = "manage-teams"
 
@@ -57,6 +60,8 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   const canDelete = hasScreenFunction(SCREEN_ORGS, FN_DELETE)
   const canViewUsers = hasScreenFunction(SCREEN_ORGS, FN_VIEW_USERS)
   const canViewTeams = hasScreenFunction(SCREEN_ORGS, FN_VIEW_TEAMS)
+  const canViewPersonnelChart = hasScreenFunction(SCREEN_ORGS, FN_VIEW_PERSONNEL_CHART)
+  const canManagePersonnelChart = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_PERSONNEL_CHART)
   const canManageUsers = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_USERS)
   const canManageTeams = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_TEAMS)
 
@@ -116,6 +121,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   const orgTabData = {
     name: org.name,
     slug: org.slug,
+    logoUrl: org.logoUrl,
     status: status as "active" | "inactive",
     createdAt: org.createdAt,
     updatedAt: org.updatedAt,
@@ -139,11 +145,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
       {/* Organization Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 rounded-xl">
-            <AvatarFallback className={`rounded-xl text-lg font-bold ${getOrgColor(org.name)}`}>
-              {getOrgInitials(org.name)}
-            </AvatarFallback>
-          </Avatar>
+          <OrganizationLogoAvatar orgId={orgId} orgName={org.name} logoUrl={org.logoUrl} size="lg" />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{org.name}</h1>
@@ -229,6 +231,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
         <TabsList className="bg-slate-100">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
+          {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
           {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
           {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
@@ -243,6 +246,17 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           </TabsContent>
         )}
 
+        {canViewPersonnelChart && (
+          <TabsContent value="org-chart">
+            <OrgPersonnelTab
+              orgId={orgId}
+              orgName={orgTabData.name}
+              canView={canViewPersonnelChart}
+              canManage={canManagePersonnelChart}
+            />
+          </TabsContent>
+        )}
+
         {canViewTeams && (
           <TabsContent value="teams">
             <OrgTeamsTab orgId={orgId} orgName={orgTabData.name} canManage={canManageTeams} />
@@ -251,17 +265,24 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
 
         {canEdit && (
           <TabsContent value="settings">
-            <OrgSettingsTab org={orgTabData} orgId={orgId} canEdit={canEdit} onStatusChange={() => {
-              const refetch = async () => {
-                try {
-                  const data = await organizationsApi.getById(orgId)
-                  setOrg(data)
-                } catch (err) {
-                  console.error("Failed to refresh organization:", err)
-                }
-              }
-              refetch()
-            }} />
+            <OrgSettingsTab
+              org={orgTabData}
+              orgId={orgId}
+              canEdit={canEdit}
+              onStatusChange={() => {
+                void (async () => {
+                  try {
+                    const data = await organizationsApi.getById(orgId)
+                    setOrg(data)
+                  } catch (err) {
+                    console.error("Failed to refresh organization:", err)
+                  }
+                })()
+              }}
+              onLogoChange={(nextLogoUrl) => {
+                setOrg((prev) => (prev ? { ...prev, logoUrl: nextLogoUrl ?? undefined } : prev))
+              }}
+            />
           </TabsContent>
         )}
       </Tabs>
