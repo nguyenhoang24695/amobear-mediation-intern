@@ -3,7 +3,8 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
-import { isChartDropTarget, type PersonnelNode } from "@/lib/organizations/personnel-chart-types"
+import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
+import { isChartDropTarget } from "@/lib/organizations/personnel-chart-tree-utils"
 import {
   chartDropId,
   chartNodeDraggableId,

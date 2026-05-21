@@ -1768,9 +1768,10 @@ export const organizationsApi = {
         orgId: string,
         params?: { page?: number; pageSize?: number },
     ): Promise<PersonnelChartHistoryPagedResult> => {
-        const queryParams: Record<string, string | number | undefined> = {}
-        if (params?.page) queryParams.page = params.page
-        if (params?.pageSize) queryParams.pageSize = params.pageSize
+        const queryParams: Record<string, string | number | undefined> = {
+            page: params?.page ?? 1,
+            pageSize: params?.pageSize ?? 10,
+        }
         return apiClient.get<PersonnelChartHistoryPagedResult>(
             `/api/v1/organizations/${orgId}/personnel-chart/history`,
             queryParams,
