@@ -17,6 +17,7 @@ import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { OrgOverviewTab } from "./tabs/org-overview-tab"
 import { OrgUsersTab } from "./tabs/org-users-tab"
+import { OrgPersonnelTab } from "./tabs/org-personnel-tab"
 import { OrgTeamsTab } from "./tabs/org-teams-tab"
 import { OrgSettingsTab } from "./tabs/org-settings-tab"
 import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
@@ -31,6 +32,8 @@ const FN_EDIT = "edit"
 const FN_DELETE = "delete"
 const FN_VIEW_USERS = "view-users"
 const FN_VIEW_TEAMS = "view-teams"
+const FN_VIEW_PERSONNEL_CHART = "view-personnel-chart"
+const FN_MANAGE_PERSONNEL_CHART = "manage-personnel-chart"
 const FN_MANAGE_USERS = "manage-users"
 const FN_MANAGE_TEAMS = "manage-teams"
 
@@ -57,6 +60,8 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   const canDelete = hasScreenFunction(SCREEN_ORGS, FN_DELETE)
   const canViewUsers = hasScreenFunction(SCREEN_ORGS, FN_VIEW_USERS)
   const canViewTeams = hasScreenFunction(SCREEN_ORGS, FN_VIEW_TEAMS)
+  const canViewPersonnelChart = hasScreenFunction(SCREEN_ORGS, FN_VIEW_PERSONNEL_CHART)
+  const canManagePersonnelChart = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_PERSONNEL_CHART)
   const canManageUsers = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_USERS)
   const canManageTeams = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_TEAMS)
 
@@ -229,6 +234,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
         <TabsList className="bg-slate-100">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
+          {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
           {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
           {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
@@ -240,6 +246,17 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
         {canViewUsers && (
           <TabsContent value="users">
             <OrgUsersTab org={orgTabData} orgId={orgId} canManage={canManageUsers} />
+          </TabsContent>
+        )}
+
+        {canViewPersonnelChart && (
+          <TabsContent value="org-chart">
+            <OrgPersonnelTab
+              orgId={orgId}
+              orgName={orgTabData.name}
+              canView={canViewPersonnelChart}
+              canManage={canManagePersonnelChart}
+            />
           </TabsContent>
         )}
 
