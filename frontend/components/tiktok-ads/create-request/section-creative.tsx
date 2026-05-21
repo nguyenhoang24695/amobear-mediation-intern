@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Copy, ImageIcon, Loader2, Play, Plus, Trash2, Upload, Wand2 } from "lucide-react"
+import { Camera, Copy, ImageIcon, Loader2, Play, Plus, Trash2, Upload, Wand2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,7 @@ import { SectionShell } from "./section-shell"
 import { buildCreativeAdName } from "./naming"
 import type { TikTokMediaMode, TikTokRequestFormState } from "./types"
 import { getCreativeImageMode, getCreativeVideoMode, hasCreativeMedia, optionLabel } from "./types"
+import { VideoFrameThumbnailDialog } from "./video-frame-thumbnail-dialog"
 
 type TikTokUploadKind = "image" | "video"
 type TikTokCreativeDraft = TikTokRequestFormState["ad"]
@@ -33,6 +34,7 @@ interface Props {
   reference: TikTokReferenceResponseDto
   uploadedAssetsById: Record<number, TikTokRequestAssetDto>
   videoRatiosByAssetId: Record<number, VideoRatioInfo>
+  localVideoFilesByCreativeIndex: Record<number, File>
   uploadingKeys: Record<string, boolean>
   identityOptions: TikTokIdentityOptionDto[]
   identityLoading: boolean
@@ -117,6 +119,7 @@ export function CreativeSection({
   reference,
   uploadedAssetsById,
   videoRatiosByAssetId,
+  localVideoFilesByCreativeIndex,
   uploadingKeys,
   identityOptions,
   identityLoading,
@@ -140,6 +143,7 @@ export function CreativeSection({
   const [activeCreativeTab, setActiveCreativeTab] = useState(creativeTabValue(0))
   const [videoModeOverrides, setVideoModeOverrides] = useState<Record<number, TikTokMediaMode>>({})
   const [imageModeOverrides, setImageModeOverrides] = useState<Record<number, TikTokMediaMode>>({})
+  const [thumbnailEditorIndex, setThumbnailEditorIndex] = useState<number | null>(null)
   const lastGeneratedNamesRef = useRef<Record<number, string>>({})
 
   function resolveVideoMode(index: number, creative: TikTokCreativeDraft): TikTokMediaMode {
@@ -281,6 +285,7 @@ export function CreativeSection({
             const imageMode = resolveImageMode(index, creative)
             const videoAssetId = creative.videoAssetIds?.[0] ?? creative.videoAssetId
             const videoAsset = videoAssetId ? uploadedAssetsById[videoAssetId] ?? null : null
+            const localVideoFile = localVideoFilesByCreativeIndex[index] ?? null
             const imageAssetId = creative.imageAssetIds[0]
             const imageAsset = imageAssetId ? uploadedAssetsById[imageAssetId] ?? null : null
             const primaryVideoId = creative.videoIds?.[0]?.trim() ?? creative.videoId?.trim() ?? ""
@@ -450,16 +455,46 @@ export function CreativeSection({
                             </Select>
                           </div>
                           {imageMode === "upload" ? (
-                            <UploadBox
-                              kind="image"
-                              label="Upload cover image"
-                              asset={imageAsset}
-                              fallback={imageAssetFallback}
-                              uploading={uploadingImage}
-                              disabled={imageUploadDisabled}
-                              disabledReason={imageUploadDisabled ? imageUploadDisabledReason : undefined}
-                              onUpload={(file) => onUpload(index, "image", file)}
-                            />
+                            <div className="space-y-3">
+                              <UploadBox
+                                kind="image"
+                                label="Upload cover image"
+                                asset={imageAsset}
+                                fallback={imageAssetFallback}
+                                uploading={uploadingImage}
+                                disabled={imageUploadDisabled}
+                                disabledReason={imageUploadDisabled ? imageUploadDisabledReason : undefined}
+                                onUpload={(file) => onUpload(index, "image", file)}
+                              />
+                              <div className="rounded-md border bg-white px-3 py-2">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-xs font-medium text-slate-700">Create thumbnail from video frame</p>
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                      {localVideoFile && videoMode === "upload"
+                                        ? "Open editor to capture any frame from the uploaded local video."
+                                        : "Upload a local video first to extract a thumbnail frame."}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={uploadingImage || videoMode !== "upload" || !localVideoFile || imageUploadDisabled}
+                                    onClick={() => setThumbnailEditorIndex(index)}
+                                  >
+                                    <Camera className="mr-2 h-4 w-4" />
+                                    Create from video frame
+                                  </Button>
+                                </div>
+                              </div>
+                              <VideoFrameThumbnailDialog
+                                videoFile={localVideoFile}
+                                open={thumbnailEditorIndex === index}
+                                onOpenChange={(open) => setThumbnailEditorIndex(open ? index : null)}
+                                onUseFrame={(file) => onUpload(index, "image", file)}
+                              />
+                            </div>
                           ) : imageMode === "library" ? (
                             <div className="space-y-2">
                               <SearchableSelect

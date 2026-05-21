@@ -200,6 +200,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [uploadedAssetsById, setUploadedAssetsById] = useState<Record<number, TikTokRequestAssetDto>>({})
   const [videoRatiosByAssetId, setVideoRatiosByAssetId] = useState<Record<number, { ratio: number; label: string }>>({})
+  const [localVideoFilesByCreativeIndex, setLocalVideoFilesByCreativeIndex] = useState<Record<number, File>>({})
   const [creativeValidationMessages, setCreativeValidationMessages] = useState<Record<number, string | null>>({})
   const [identityOptions, setIdentityOptions] = useState<TikTokIdentityOptionDto[]>([])
   const [identityLoading, setIdentityLoading] = useState(false)
@@ -662,6 +663,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       setUploadedAssetsById((current) => ({ ...current, [asset.id]: asset }))
       if (kind === "video") {
         setVideoRatiosByAssetId((current) => nextVideoRatioInfo ? ({ ...current, [asset.id]: nextVideoRatioInfo }) : current)
+        setLocalVideoFilesByCreativeIndex((current) => ({ ...current, [index]: file }))
       }
       setCreativeMessage(null)
       const nextAds = form.ads.map((item, itemIndex) => itemIndex === index
@@ -692,7 +694,19 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
 
   function handleCreativeChange(index: number, creative: TikTokRequestFormState["ad"]) {
     if (!form) return
+    const currentCreative = form.ads[index]
     const nextAds = form.ads.map((item, itemIndex) => itemIndex === index ? sanitizeTikTokCreative(creative) : item)
+    const nextCreative = nextAds[index]
+    const currentVideoAssetIds = currentCreative?.videoAssetIds ?? []
+    const nextVideoAssetIds = nextCreative?.videoAssetIds ?? []
+    if (currentVideoAssetIds.join("|") !== nextVideoAssetIds.join("|")) {
+      setLocalVideoFilesByCreativeIndex((current) => {
+        if (!current[index]) return current
+        const next = { ...current }
+        delete next[index]
+        return next
+      })
+    }
     setCreativeValidationMessages((current) => ({ ...current, [index]: null }))
     updateForm({ ad: nextAds[0], ads: nextAds })
   }
@@ -720,12 +734,30 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     if (!source) return
     const duplicate = sanitizeTikTokCreative({ ...source, adName: source.adName ? `${source.adName}_COPY` : "" })
     const nextAds = [...form.ads.slice(0, index + 1), duplicate, ...form.ads.slice(index + 1)]
+    setLocalVideoFilesByCreativeIndex((current) => {
+      const next: Record<number, File> = {}
+      Object.entries(current).forEach(([key, file]) => {
+        const itemIndex = Number(key)
+        if (!Number.isFinite(itemIndex)) return
+        next[itemIndex > index ? itemIndex + 1 : itemIndex] = file
+      })
+      return next
+    })
     updateForm({ ad: nextAds[0], ads: nextAds })
   }
 
   function handleRemoveCreative(index: number) {
     if (!form || form.ads.length <= 1) return
     const nextAds = form.ads.filter((_, itemIndex) => itemIndex !== index)
+    setLocalVideoFilesByCreativeIndex((current) => {
+      const next: Record<number, File> = {}
+      Object.entries(current).forEach(([key, file]) => {
+        const itemIndex = Number(key)
+        if (!Number.isFinite(itemIndex) || itemIndex === index) return
+        next[itemIndex > index ? itemIndex - 1 : itemIndex] = file
+      })
+      return next
+    })
     updateForm({ ad: nextAds[0], ads: nextAds })
     setCreativeValidationMessages((current) => {
       const next: Record<number, string | null> = {}
@@ -835,6 +867,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
               reference={reference}
               uploadedAssetsById={uploadedAssetsById}
               videoRatiosByAssetId={videoRatiosByAssetId}
+              localVideoFilesByCreativeIndex={localVideoFilesByCreativeIndex}
               uploadingKeys={uploadingKeys}
               identityOptions={identityOptions}
               identityLoading={identityLoading}
