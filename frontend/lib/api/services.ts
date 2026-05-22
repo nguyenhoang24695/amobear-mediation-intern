@@ -62,6 +62,11 @@ import type {
 } from '@/types/api'
 import { apiClient, APP_INSIGHT_REGENERATE_TIMEOUT_MS } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
+import type {
+    OrganizationPersonnelChartResponse,
+    PersonnelChartHistoryPagedResult,
+    PersonnelNode as PersonnelChartNode,
+} from "@/lib/organizations/personnel-chart-types"
 
 // Auth Types
 export interface LoginRequest {
@@ -1840,6 +1845,10 @@ export interface OrgTeam {
     id: string
     name: string
     description?: string
+    userId?: string | null
+    teamLeadName?: string | null
+    teamLeadEmail?: string | null
+    teamLeadAvatarUrl?: string | null
     isActive: boolean
     memberCount: number
     createdAt: string
@@ -1871,11 +1880,13 @@ export interface UserTeamWithMembers {
 export interface CreateTeamRequest {
     name: string
     description?: string
+    userId?: string | null
 }
 
 export interface UpdateTeamRequest {
     name: string
     description?: string
+    userId?: string | null
     isActive: boolean
 }
 

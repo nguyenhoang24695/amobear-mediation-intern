@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { format } from "date-fns"
 import { reportsApi } from "@/lib/api/services"
-import type { CustomReportQueryResponse } from "@/types/reports"
+import type { CustomReportMetricFilter, CustomReportQueryResponse } from "@/types/reports"
 
 export function useCustomReportQuery(options: {
   startDate: Date
@@ -12,6 +12,7 @@ export function useCustomReportQuery(options: {
   dimensions: string[]
   metrics: string[]
   revenueSource: string
+  metricFilters?: CustomReportMetricFilter[]
   commissionUsernames: string[] | null
   sortBy: string
   sortDir: "asc" | "desc"
@@ -24,6 +25,7 @@ export function useCustomReportQuery(options: {
     dimensions,
     metrics,
     revenueSource,
+    metricFilters = [],
     commissionUsernames,
     sortBy,
     sortDir,
@@ -36,8 +38,9 @@ export function useCustomReportQuery(options: {
   const requestIdRef = useRef(0)
 
   const appIdsKey = selectedAppIds.join(",")
-  const dimensionsKey = dimensions.join(",")
-  const metricsKey = metrics.join(",")
+  const dimensionsKey = [...dimensions].sort().join(",")
+  const metricsKey = [...metrics].sort().join(",")
+  const metricFiltersKey = JSON.stringify(metricFilters)
   const commissionKey = commissionUsernames?.join(",") ?? ""
 
   useEffect(() => {
@@ -58,9 +61,10 @@ export function useCustomReportQuery(options: {
           from: format(startDate, "yyyy-MM-dd"),
           to: format(endDate, "yyyy-MM-dd"),
           appIds: selectedAppIds,
-          dimensions,
-          metrics,
+          dimensions: dimensionsKey ? dimensionsKey.split(",") : [],
+          metrics: metricsKey ? metricsKey.split(",") : [],
           revenueSource,
+          metricFilters,
           commissionUsernames,
           sortBy,
           sortDir,
@@ -84,14 +88,18 @@ export function useCustomReportQuery(options: {
     appIdsKey,
     dimensionsKey,
     metricsKey,
+    metricFiltersKey,
     revenueSource,
     commissionKey,
     sortBy,
     sortDir,
-    selectedAppIds,
-    dimensions,
-    metrics,
-    commissionUsernames,
+    // Keep dependency array length stable across Fast Refresh while using canonical keys,
+    // so reordering columns does not trigger a fresh API call.
+    appIdsKey,
+    dimensionsKey,
+    metricsKey,
+    metricFiltersKey,
+    commissionKey,
   ])
 
   return { data, loading, error }

@@ -12,21 +12,26 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
-import { organizationsApi } from "@/lib/api/services"
+import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
+
+const NO_TEAM_LEAD_VALUE = "__none__"
 
 interface CreateTeamModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     orgId: string
     orgName: string
+    users?: OrgUserItem[]
     onSuccess?: () => void
 }
 
-export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess }: CreateTeamModalProps) {
+export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = [], onSuccess }: CreateTeamModalProps) {
     const [name, setName] = useState("")
     const [description, setDescription] = useState("")
+    const [teamLeadUserId, setTeamLeadUserId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState("")
 
@@ -34,6 +39,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess 
         if (!open) {
             setName("")
             setDescription("")
+            setTeamLeadUserId(null)
             setError("")
             setSaving(false)
         }
@@ -52,6 +58,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess 
             await organizationsApi.createTeam(orgId, {
                 name: name.trim(),
                 description: description.trim() || undefined,
+                userId: teamLeadUserId,
             })
             handleOpenChange(false)
             onSuccess?.()
@@ -103,6 +110,28 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess 
                             maxLength={500}
                         />
                         <p className="text-xs text-slate-400 text-right">{description.length}/500</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="team-lead">
+                            Team Lead <span className="text-slate-400">(optional)</span>
+                        </Label>
+                        <Select
+                            value={teamLeadUserId ?? NO_TEAM_LEAD_VALUE}
+                            onValueChange={(value) => setTeamLeadUserId(value === NO_TEAM_LEAD_VALUE ? null : value)}
+                        >
+                            <SelectTrigger id="team-lead" className="bg-white">
+                                <SelectValue placeholder="Select team lead" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={NO_TEAM_LEAD_VALUE}>No team lead</SelectItem>
+                                {users.map((user) => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                        {user.fullName || user.email} ({user.email})
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {error && <p className="text-sm text-red-500">{error}</p>}

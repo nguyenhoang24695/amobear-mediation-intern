@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -35,8 +37,10 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { organizationsApi, type OrgTeam } from "@/lib/api/services"
+import { organizationsApi, type OrgTeam, type OrgUserItem } from "@/lib/api/services"
 import { CreateTeamModal } from "../create-team-modal"
+
+const NO_TEAM_LEAD_VALUE = "__none__"
 
 interface OrgTeamsTabProps {
     orgId: string
@@ -48,10 +52,18 @@ function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
+function getInitials(name?: string | null, email?: string | null): string {
+    const source = (name || email || "U").trim()
+    const parts = source.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    return source.slice(0, 2).toUpperCase()
+}
+
 export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false }: OrgTeamsTabProps) {
     const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
     const [teams, setTeams] = useState<OrgTeam[]>([])
+    const [users, setUsers] = useState<OrgUserItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
@@ -60,6 +72,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const [editTeam, setEditTeam] = useState<OrgTeam | null>(null)
     const [editName, setEditName] = useState("")
     const [editDescription, setEditDescription] = useState("")
+    const [editTeamLeadUserId, setEditTeamLeadUserId] = useState<string | null>(null)
     const [editIsActive, setEditIsActive] = useState(true)
     const [editSaving, setEditSaving] = useState(false)
     const [editError, setEditError] = useState("")
@@ -82,9 +95,20 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }, [orgId])
 
+    const fetchUsers = useCallback(async () => {
+        try {
+            const result = await organizationsApi.getUsers(orgId, { page: 1, pageSize: 500 })
+            setUsers(result.items ?? [])
+        } catch (err) {
+            console.error("Failed to fetch organization users:", err)
+            setUsers([])
+        }
+    }, [orgId])
+
     useEffect(() => {
         fetchTeams()
-    }, [fetchTeams])
+        fetchUsers()
+    }, [fetchTeams, fetchUsers])
 
     // Client-side search filter
     const filteredTeams = teams.filter((team) => {
@@ -101,6 +125,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         setEditTeam(team)
         setEditName(team.name)
         setEditDescription(team.description || "")
+        setEditTeamLeadUserId(team.userId ?? null)
         setEditIsActive(team.isActive)
         setEditError("")
     }
@@ -113,6 +138,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
             await organizationsApi.updateTeam(orgId, editTeam.id, {
                 name: editName.trim(),
                 description: editDescription.trim() || undefined,
+                userId: editTeamLeadUserId,
                 isActive: editIsActive,
             })
             setEditTeam(null)
@@ -246,6 +272,9 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                                         <TableHead>
                                             <span className="text-xs font-medium uppercase tracking-wide">Description</span>
                                         </TableHead>
+                                        <TableHead>
+                                            <span className="text-xs font-medium uppercase tracking-wide">Team Lead</span>
+                                        </TableHead>
                                         <TableHead className="text-center">
                                             <span className="text-xs font-medium uppercase tracking-wide">Members</span>
                                         </TableHead>
@@ -277,6 +306,30 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                                             </TableCell>
                                             <TableCell className="text-sm text-slate-500 max-w-xs truncate">
                                                 {team.description || "—"}
+                                            </TableCell>
+                                            <TableCell>
+                                                {team.userId ? (
+                                                    <div className="flex items-center gap-2 min-w-[180px]">
+                                                        <Avatar className="h-8 w-8">
+                                                            {team.teamLeadAvatarUrl ? (
+                                                                <AvatarImage src={team.teamLeadAvatarUrl} alt={team.teamLeadName || team.teamLeadEmail || "Team lead"} />
+                                                            ) : null}
+                                                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                                                                {getInitials(team.teamLeadName, team.teamLeadEmail)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-medium text-slate-900 truncate">
+                                                                {team.teamLeadName || team.teamLeadEmail || "Unknown user"}
+                                                            </div>
+                                                            {team.teamLeadEmail && (
+                                                                <div className="text-xs text-slate-500 truncate">{team.teamLeadEmail}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-sm text-slate-400">—</span>
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Badge variant="secondary" className="rounded-full">
@@ -327,6 +380,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 onOpenChange={setCreateOpen}
                 orgId={orgId}
                 orgName={orgName}
+                users={users}
                 onSuccess={fetchTeams}
             />
 
@@ -357,6 +411,25 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                                 maxLength={500}
                             />
                             <p className="text-xs text-slate-400 text-right">{editDescription.length}/500</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-team-lead">Team Lead <span className="text-slate-400">(optional)</span></Label>
+                            <Select
+                                value={editTeamLeadUserId ?? NO_TEAM_LEAD_VALUE}
+                                onValueChange={(value) => setEditTeamLeadUserId(value === NO_TEAM_LEAD_VALUE ? null : value)}
+                            >
+                                <SelectTrigger id="edit-team-lead" className="bg-white">
+                                    <SelectValue placeholder="Select team lead" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={NO_TEAM_LEAD_VALUE}>No team lead</SelectItem>
+                                    {users.map((user) => (
+                                        <SelectItem key={user.id} value={user.id}>
+                                            {user.fullName || user.email} ({user.email})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex items-center justify-between">
                             <Label htmlFor="edit-active">Active</Label>
