@@ -1862,6 +1862,67 @@ export interface OrgTeam {
     updatedAt: string
 }
 
+export interface TeamMonthlyProfitPlan {
+    id: string
+    organizationId: string
+    teamId: string
+    teamName: string
+    month: string
+    plannedProfit: number
+    actualProfit: number
+    completionPercent?: number | null
+    appIds: string[]
+    createdAt: string
+    updatedAt: string
+}
+
+export interface UpsertTeamMonthlyProfitPlanRequest {
+    plannedProfit: number
+    appIds: string[]
+}
+
+export interface TeamProfitAppOption {
+    appId: string
+    label: string
+    displayName?: string | null
+    name?: string | null
+    platform?: string | null
+    iconUri?: string | null
+    appStoreId?: string | null
+}
+
+export const teamProfitApi = {
+    getPlans: async (
+        teamId: string,
+        params?: { from?: string; to?: string },
+    ): Promise<TeamMonthlyProfitPlan[]> => {
+        return apiClient.get<TeamMonthlyProfitPlan[]>(
+            `/api/v1/teams/${teamId}/profit-plans`,
+            params as Record<string, string | number | undefined>,
+        )
+    },
+
+    getPlan: async (teamId: string, month: string): Promise<TeamMonthlyProfitPlan | null> => {
+        return apiClient.get<TeamMonthlyProfitPlan | null>(`/api/v1/teams/${teamId}/profit-plans/${month}`)
+    },
+
+    upsertPlan: async (
+        teamId: string,
+        month: string,
+        body: UpsertTeamMonthlyProfitPlanRequest,
+    ): Promise<TeamMonthlyProfitPlan> => {
+        return apiClient.put<TeamMonthlyProfitPlan>(`/api/v1/teams/${teamId}/profit-plans/${month}`, body)
+    },
+
+    deletePlan: async (teamId: string, month: string): Promise<void> => {
+        await apiClient.delete(`/api/v1/teams/${teamId}/profit-plans/${month}`)
+    },
+
+    getAppOptions: async (teamId: string): Promise<TeamProfitAppOption[]> => {
+        return apiClient.get<TeamProfitAppOption[]>(`/api/v1/teams/${teamId}/profit-app-options`)
+    },
+}
+
 // User Teams API types
 export interface UserTeamMember {
     id: string

@@ -29,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -115,6 +122,7 @@ const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
+const MAX_SELECTED_APPS = 20
 
 interface ActiveFilter {
   type: string
@@ -367,6 +375,14 @@ function getMetricFilterLabel(filter: CustomReportMetricFilter, metrics: CustomR
   return `${metricLabel} ${conditionLabel} ${filter.value}`
 }
 
+function escapeExcelHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
 export function CustomReportBuilderContent() {
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const currentUser = getCurrentUser()
@@ -384,6 +400,7 @@ export function CustomReportBuilderContent() {
   const [selectedApps, setSelectedApps] = useState<string[]>([])
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
   const [appsInitialized, setAppsInitialized] = useState(false)
+  const [appLimitDialogOpen, setAppLimitDialogOpen] = useState(false)
 
   const [selectedParameters, setSelectedParameters] = useState<string[]>(["app", "date"])
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
@@ -433,10 +450,13 @@ export function CustomReportBuilderContent() {
 
   useEffect(() => {
     if (appsInitialized || appsLoading || availableApps.length === 0) return
-    const firstId = availableApps[0]?.appId
-    if (firstId) {
-      setSelectedApps([firstId])
-      syncAppsActiveFilter([firstId], availableApps)
+    const initialIds =
+      availableApps.length <= MAX_SELECTED_APPS
+        ? availableApps.map((app) => app.appId)
+        : availableApps.slice(0, MAX_SELECTED_APPS).map((app) => app.appId)
+    if (initialIds.length > 0) {
+      setSelectedApps(initialIds)
+      syncAppsActiveFilter(initialIds, availableApps)
     }
     setAppsInitialized(true)
   }, [appsInitialized, appsLoading, availableApps])
@@ -673,6 +693,10 @@ export function CustomReportBuilderContent() {
   const toggleAppWithFilter = (appId: string) => {
     setSelectedApps((prev) => {
       const next = prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]
+      if (next.length > MAX_SELECTED_APPS) {
+        setAppLimitDialogOpen(true)
+        return prev
+      }
       syncAppsActiveFilter(next, availableApps)
       return next
     })
@@ -682,12 +706,17 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => prev.filter((f) => f.type !== type))
     switch (type) {
       case FILTER_DATE_RANGE:
-        applyDatePreset(30)
+        setEndDate(new Date())
+        setStartDate(subDays(new Date(), 30))
+        setActivePresetDays(30)
+        setDatePopoverOpen(false)
         break
       case FILTER_APPS:
-        if (availableApps[0]?.appId) {
-          setSelectedApps([availableApps[0].appId])
-          syncAppsActiveFilter([availableApps[0].appId], availableApps)
+        if (availableApps.length <= MAX_SELECTED_APPS) {
+          setSelectedApps(availableApps.map((app) => app.appId))
+        } else {
+          setSelectedApps(availableApps.slice(0, MAX_SELECTED_APPS).map((app) => app.appId))
+          setAppLimitDialogOpen(true)
         }
         break
       case FILTER_COMMISSION_USER:
@@ -722,6 +751,79 @@ export function CustomReportBuilderContent() {
   const tableRows = reportData?.rows ?? []
   const tableTotals = reportData?.totals ?? {}
 
+  const handleExportExcel = () => {
+    if (tableRows.length === 0) return
+
+    const parameterHeaders = selectedParameters.map((paramId) => {
+      const param = catalogParameters.find((p) => p.id === paramId)
+      return param?.label ?? paramId
+    })
+    const metricHeaders = selectedMetrics.map((metricId) => {
+      const metric = catalogMetrics.find((m) => m.id === metricId)
+      return metric?.label ?? metricId
+    })
+
+    const getParameterDisplayValue = (paramId: string, row: Record<string, string | number | null>) => {
+      if (paramId === "app") return row.app_display_name ?? row.app ?? ""
+      return row[paramId] ?? ""
+    }
+
+    const headerHtml = [...parameterHeaders, ...metricHeaders]
+      .map((header) => `<th>${escapeExcelHtml(header)}</th>`)
+      .join("")
+
+    const totalHtml = [
+      ...selectedParameters.map((_, index) => (index === 0 ? "Total" : "")),
+      ...selectedMetrics.map((metricId) => formatMetricValue(tableTotals[metricId], metricId, catalogMetrics)),
+    ]
+      .map((value) => `<td>${escapeExcelHtml(value)}</td>`)
+      .join("")
+
+    const rowsHtml = tableRows
+      .map((row) => {
+        const parameterCells = selectedParameters.map((paramId) =>
+          escapeExcelHtml(getParameterDisplayValue(paramId, row)),
+        )
+        const metricCells = selectedMetrics.map((metricId) =>
+          escapeExcelHtml(formatMetricValue(row[metricId], metricId, catalogMetrics)),
+        )
+        return `<tr>${[...parameterCells, ...metricCells].map((value) => `<td>${value}</td>`).join("")}</tr>`
+      })
+      .join("")
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px 10px; white-space: nowrap; }
+    th { background: #f1f5f9; font-weight: 700; }
+    .total td { background: #f8fafc; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <table>
+    <thead><tr>${headerHtml}</tr></thead>
+    <tbody>
+      <tr class="total">${totalHtml}</tr>
+      ${rowsHtml}
+    </tbody>
+  </table>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `custom-report-${format(new Date(), "yyyyMMdd-HHmm")}.xls`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   const tableContent = reportLoading ? (
     <div className="p-4 space-y-2">
       {[1, 2, 3, 4, 5].map((i) => (
@@ -744,8 +846,8 @@ export function CustomReportBuilderContent() {
       <p className="text-sm text-slate-600">No data for the selected filters.</p>
     </div>
   ) : (
-    <Table className="min-w-max border-separate border-spacing-0">
-      <TableHeader className="sticky top-0 z-30 bg-white">
+    <table className="w-max min-w-full caption-bottom border-separate border-spacing-0 text-sm">
+      <TableHeader>
         <TableRow className="border-b-0">
           {selectedParameters.map((paramId, index) => {
             const param = catalogParameters.find((p) => p.id === paramId)
@@ -753,10 +855,11 @@ export function CustomReportBuilderContent() {
               <TableHead
                 key={paramId}
                 className={cn(
-                  "sticky z-40 bg-white text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 whitespace-nowrap",
+                  "sticky top-0 z-50 bg-white text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 whitespace-nowrap",
+                  index === 0 && "pl-5",
                   index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
-                style={getParameterStickyStyle(selectedParameters, index)}
+                style={{ ...getParameterStickyStyle(selectedParameters, index), top: 0 }}
                 onClick={() => handleSort(paramId)}
               >
                 <div className="flex items-center gap-1">
@@ -767,13 +870,16 @@ export function CustomReportBuilderContent() {
               </TableHead>
             )
           })}
-          {selectedMetrics.map((metricId) => {
+          {selectedMetrics.map((metricId, index) => {
             const metric = catalogMetrics.find((m) => m.id === metricId)
             return (
               <TableHead
                 key={metricId}
-                className="text-xs font-medium text-slate-600 text-right cursor-pointer hover:bg-slate-50 whitespace-nowrap"
-                style={getMetricColumnStyle()}
+                className={cn(
+                  "sticky top-0 z-40 bg-white text-xs font-medium text-slate-600 text-right cursor-pointer hover:bg-slate-50 whitespace-nowrap",
+                  index === selectedMetrics.length - 1 && "pr-5",
+                )}
+                style={{ ...getMetricColumnStyle(), top: 0 }}
                 onClick={() => handleSort(metricId)}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -790,10 +896,11 @@ export function CustomReportBuilderContent() {
             <TableHead
               key={`total-p-${paramId}`}
               className={cn(
-                "sticky z-40 bg-slate-100 py-3",
+                "sticky top-10 z-50 bg-slate-100 py-3",
+                index === 0 && "pl-5",
                 index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={getParameterStickyStyle(selectedParameters, index)}
+              style={{ ...getParameterStickyStyle(selectedParameters, index), top: "2.5rem" }}
             >
               {index === 0 ? (
                 <span className="text-sm font-bold text-slate-900">Total</span>
@@ -802,11 +909,14 @@ export function CustomReportBuilderContent() {
               )}
             </TableHead>
           ))}
-          {selectedMetrics.map((metricId) => (
+          {selectedMetrics.map((metricId, index) => (
             <TableHead
               key={`total-${metricId}`}
-              className="bg-slate-100 py-3 text-right text-sm font-bold text-slate-900 whitespace-nowrap"
-              style={getMetricColumnStyle()}
+              className={cn(
+                "sticky top-10 z-40 bg-slate-100 py-3 text-right text-sm font-bold text-slate-900 whitespace-nowrap",
+                index === selectedMetrics.length - 1 && "pr-5",
+              )}
+              style={{ ...getMetricColumnStyle(), top: "2.5rem" }}
             >
               {formatMetricValue(tableTotals[metricId], metricId, catalogMetrics)}
             </TableHead>
@@ -817,16 +927,20 @@ export function CustomReportBuilderContent() {
             <TableHead
               key={`bar-p-${paramId}`}
               className={cn(
-                "sticky z-40 h-1 bg-white p-0",
+                "sticky top-20 z-50 h-1 bg-white p-0",
                 index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={getParameterStickyStyle(selectedParameters, index)}
+              style={{ ...getParameterStickyStyle(selectedParameters, index), top: "5rem" }}
             >
               <div className="h-1 bg-emerald-500" />
             </TableHead>
           ))}
           {selectedMetrics.map((metricId) => (
-            <TableHead key={`bar-m-${metricId}`} className="h-1 p-0" style={getMetricColumnStyle()}>
+            <TableHead
+              key={`bar-m-${metricId}`}
+              className="sticky top-20 z-40 h-1 bg-white p-0"
+              style={{ ...getMetricColumnStyle(), top: "5rem" }}
+            >
               <div className="h-1 bg-blue-500" />
             </TableHead>
           ))}
@@ -841,6 +955,7 @@ export function CustomReportBuilderContent() {
                 className={cn(
                   "sticky z-20 py-2",
                   idx % 2 === 0 ? "bg-white" : "bg-slate-50",
+                  index === 0 && "pl-5",
                   index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
                 style={getParameterStickyStyle(selectedParameters, index)}
@@ -848,10 +963,13 @@ export function CustomReportBuilderContent() {
                 {renderParameterCell(paramId, row, selectedParameters)}
               </TableCell>
             ))}
-            {selectedMetrics.map((metricId) => (
+            {selectedMetrics.map((metricId, index) => (
               <TableCell
                 key={metricId}
-                className="text-sm text-right text-slate-700 py-2 whitespace-nowrap"
+                className={cn(
+                  "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
+                  index === selectedMetrics.length - 1 && "pr-5",
+                )}
                 style={getMetricColumnStyle()}
               >
                 {formatMetricValue(row[metricId], metricId, catalogMetrics)}
@@ -860,11 +978,27 @@ export function CustomReportBuilderContent() {
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </table>
   )
 
   return (
     <div className="flex flex-col gap-6">
+      <Dialog open={appLimitDialogOpen} onOpenChange={setAppLimitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Too many apps selected</DialogTitle>
+            <DialogDescription>
+              Select fewer than 20 apps to ensure the system loads reliably.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setAppLimitDialogOpen(false)}>
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Custom Report</h1>
@@ -873,10 +1007,6 @@ export function CustomReportBuilderContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-10 gap-2 bg-transparent" type="button">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
           <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700" type="button">
             <Save className="w-4 h-4" />
             Save report
@@ -969,10 +1099,15 @@ export function CustomReportBuilderContent() {
                           size="sm"
                           className="h-7 text-xs"
                           onClick={() => {
+                            if (availableApps.length > MAX_SELECTED_APPS) {
+                              setAppLimitDialogOpen(true)
+                              return
+                            }
                             const ids = availableApps.map((a) => a.appId)
                             setSelectedApps(ids)
                             syncAppsActiveFilter(ids, availableApps)
                           }}
+                          disabled={availableApps.length > MAX_SELECTED_APPS}
                         >
                           Select all
                         </Button>
@@ -1171,14 +1306,30 @@ export function CustomReportBuilderContent() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_18rem] gap-6">
         <Card className="border-slate-200 overflow-hidden">
           <CardHeader className="pb-3 border-b border-slate-100">
-            <CardTitle className="text-base font-medium">Report results</CardTitle>
-            <CardDescription>
-              {dateRangeLabel}
-              {selectedAppLabels.length > 0 && ` · ${appsTriggerLabel}`}
-            </CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base font-medium">Report results</CardTitle>
+                <CardDescription>
+                  {dateRangeLabel}
+                  {selectedAppLabels.length > 0 && ` · ${appsTriggerLabel}`}
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                className="h-10 gap-2 bg-transparent sm:self-start"
+                type="button"
+                onClick={handleExportExcel}
+                disabled={reportLoading || tableRows.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="p-0 overflow-auto max-h-[min(70vh,720px)]">
-            {tableContent}
+          <CardContent className="p-0">
+            <div className="max-h-[min(70vh,720px)] overflow-auto">
+              {tableContent}
+            </div>
           </CardContent>
         </Card>
 
