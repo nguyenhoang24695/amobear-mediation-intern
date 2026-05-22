@@ -420,6 +420,7 @@ export interface TikTokAppMappingDto {
   normalizedStoreIdentifier?: string | null
   storeIdentifierType?: string | null
   tikTokAppId: string
+  externalAppName?: string | null
   downloadUrl: string
   packageNameOverride?: string | null
   bundleIdOverride?: string | null
@@ -713,7 +714,6 @@ export interface TikTokExecutionResultDto {
   payloadPreview?: unknown
   detail?: TikTokCampaignRequestDetailDto | null
 }
-
 
 
 

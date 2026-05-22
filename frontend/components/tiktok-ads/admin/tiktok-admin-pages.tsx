@@ -102,15 +102,26 @@ function getPlatformBadgeClass(platform?: string | null) {
 }
 
 function getTikTokMappingAppLabel(app?: App | null, mapping?: TikTokAppMappingDto | null) {
-  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? mapping?.packageName ?? mapping?.normalizedStoreIdentifier ?? (mapping ? `Binding ${mapping.id}` : "-")
+  return mapping?.appDisplayName ?? mapping?.externalAppName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? mapping?.packageName ?? mapping?.normalizedStoreIdentifier ?? (mapping ? `Binding ${mapping.id}` : "-")
 }
 
 function getTikTokMappingAdMobId(app?: App | null, mapping?: TikTokAppMappingDto | null) {
   return mapping?.appId ?? app?.appId ?? null
 }
 
+function firstNonEmpty(...values: Array<string | null | undefined>) {
+  return values.find((value) => value && value.trim()) ?? null
+}
+
+function getTikTokMappingStoreIdentifier(app?: App | null, mapping?: TikTokAppMappingDto | null) {
+  const platform = normalizePlatform(mapping?.appPlatform ?? mapping?.platform ?? app?.platform)
+  if (platform === "ANDROID") return firstNonEmpty(mapping?.packageName, mapping?.normalizedStoreIdentifier)
+  if (platform === "IOS") return firstNonEmpty(mapping?.appStoreId, app?.appStoreId, mapping?.normalizedStoreIdentifier)
+  return firstNonEmpty(mapping?.packageName, mapping?.appStoreId, mapping?.normalizedStoreIdentifier, app?.appStoreId)
+}
+
 function getTikTokMappingPlatform(app?: App | null, mapping?: TikTokAppMappingDto | null) {
-  return normalizePlatform(mapping?.appPlatform ?? app?.platform)
+  return normalizePlatform(mapping?.appPlatform ?? mapping?.platform ?? app?.platform)
 }
 
 function getDisplayAppName(app?: App | null) {
@@ -849,6 +860,7 @@ export function TikTokAppMappingsPage() {
                   const app = item.appRowId ? appByRowId.get(item.appRowId) : undefined
                   const appLabel = getTikTokMappingAppLabel(app, item)
                   const admobId = getTikTokMappingAdMobId(app, item)
+                  const storeIdentifier = getTikTokMappingStoreIdentifier(app, item)
                   const platform = getTikTokMappingPlatform(app, item)
 
                   return (
@@ -870,7 +882,14 @@ export function TikTokAppMappingsPage() {
                             ) : (
                               <p className="truncate font-medium text-slate-900">{appLabel}</p>
                             )}
-                            <p className="truncate font-mono text-[11px] text-slate-400">{admobId ?? item.normalizedStoreIdentifier ?? `binding:${item.id}`}</p>
+                            {storeIdentifier ? (
+                              <p className="truncate font-mono text-[11px] text-slate-400">{storeIdentifier}</p>
+                            ) : null}
+                            {admobId ? (
+                              <p className="truncate font-mono text-[11px] text-slate-400">{admobId}</p>
+                            ) : !storeIdentifier ? (
+                              <p className="truncate font-mono text-[11px] text-slate-400">{item.normalizedStoreIdentifier ?? `binding:${item.id}`}</p>
+                            ) : null}
                           </div>
                         </div>
                       </TableCell>

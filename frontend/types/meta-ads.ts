@@ -170,6 +170,7 @@ export interface MetaAppMappingDto {
   normalizedStoreIdentifier?: string | null
   storeIdentifierType?: string | null
   metaApplicationId: string
+  externalAppName?: string | null
   objectStoreUrl?: string | null
   packageNameOverride?: string | null
   bundleIdOverride?: string | null
@@ -1184,6 +1185,5 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
-
 
 

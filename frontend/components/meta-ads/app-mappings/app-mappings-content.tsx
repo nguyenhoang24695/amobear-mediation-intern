@@ -127,15 +127,30 @@ function getPlatformBadgeClass(platform?: string | null) {
 }
 
 function getAppLabel(app?: App | null, mapping?: MetaAppMappingDto | null) {
-  return mapping?.appDisplayName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? (mapping ? "Unlinked app" : "-")
+  return mapping?.appDisplayName ?? mapping?.externalAppName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? (mapping ? "Unlinked app" : "-")
 }
 
 function getAppKey(app?: App | null, mapping?: MetaAppMappingDto | null) {
   return mapping?.appId ?? app?.appId ?? mapping?.normalizedStoreIdentifier ?? "-"
 }
 
+function getAdMobAppId(app?: App | null, mapping?: MetaAppMappingDto | null) {
+  return mapping?.appId ?? app?.appId ?? null
+}
+
+function firstNonEmpty(...values: Array<string | null | undefined>) {
+  return values.find((value) => value && value.trim()) ?? null
+}
+
 function getAppRouteId(app?: App | null, mapping?: MetaAppMappingDto | null) {
   return app?.appId ?? mapping?.appId ?? null
+}
+
+function getStoreIdentifier(app?: App | null, mapping?: MetaAppMappingDto | null) {
+  const platform = normalizePlatform(mapping?.platform ?? app?.platform)
+  if (platform === "ANDROID") return firstNonEmpty(mapping?.packageName, mapping?.normalizedStoreIdentifier)
+  if (platform === "IOS") return firstNonEmpty(mapping?.appStoreId, app?.appStoreId, mapping?.normalizedStoreIdentifier)
+  return firstNonEmpty(mapping?.packageName, mapping?.appStoreId, mapping?.normalizedStoreIdentifier, app?.appStoreId)
 }
 
 function getPrimaryStoreUrl(mapping: MetaAppMappingDto) {
@@ -676,6 +691,8 @@ export function AppMappingsContent() {
               filtered.map((mapping) => {
                 const app = mapping.appRowId ? appByRowId.get(mapping.appRowId) : undefined
                 const platform = normalizePlatform(mapping.platform ?? app?.platform) || "APP"
+                const storeIdentifier = getStoreIdentifier(app, mapping)
+                const admobAppId = getAdMobAppId(app, mapping)
                 const overrideCount = [
                   mapping.packageName,
                   mapping.bundleId,
@@ -704,7 +721,14 @@ export function AppMappingsContent() {
                           ) : (
                             <p className="font-medium text-slate-900">{getAppLabel(app, mapping)}</p>
                           )}
-                          <p className="text-[11px] text-slate-400 font-mono">{getAppKey(app, mapping)}</p>
+                          {storeIdentifier ? (
+                            <p className="truncate text-[11px] text-slate-400 font-mono">{storeIdentifier}</p>
+                          ) : null}
+                          {admobAppId ? (
+                            <p className="truncate text-[11px] text-slate-400 font-mono">{admobAppId}</p>
+                          ) : !storeIdentifier ? (
+                            <p className="truncate text-[11px] text-slate-400 font-mono">{mapping.normalizedStoreIdentifier ?? "-"}</p>
+                          ) : null}
                         </div>
                       </div>
                     </TableCell>
@@ -1397,4 +1421,3 @@ export function AppMappingsContent() {
     </div>
   )
 }
-
