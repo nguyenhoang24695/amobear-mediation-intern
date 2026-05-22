@@ -63,6 +63,7 @@ const ZOOM_STEP = 0.1
 interface OrgPersonnelTabProps {
   orgId: string
   orgName?: string
+  organizationLogoUrl?: string | null
   canManage?: boolean
   canView?: boolean
 }
@@ -90,6 +91,7 @@ function findNodeById(root: PersonnelNode, id: string): PersonnelNode | null {
 export function OrgPersonnelTab({
   orgId,
   orgName = "Organization",
+  organizationLogoUrl,
   canManage = false,
   canView = true,
 }: OrgPersonnelTabProps) {
@@ -429,6 +431,7 @@ export function OrgPersonnelTab({
       onToggleCollapse={handleToggleCollapse}
       isEditMode={isEditMode && canManage}
       onRemoveNode={isEditMode && canManage ? handleRemoveRequest : undefined}
+      organizationLogoUrl={organizationLogoUrl}
     />
   )
 

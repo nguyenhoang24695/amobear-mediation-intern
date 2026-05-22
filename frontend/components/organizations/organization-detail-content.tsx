@@ -251,6 +251,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
             <OrgPersonnelTab
               orgId={orgId}
               orgName={orgTabData.name}
+              organizationLogoUrl={org.logoUrl}
               canView={canViewPersonnelChart}
               canManage={canManagePersonnelChart}
             />

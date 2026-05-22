@@ -24,12 +24,14 @@ interface PersonnelDroppableNodeProps {
   onClick?: () => void
   onToggleCollapse?: () => void
   onRemove?: (node: PersonnelNode) => void
+  organizationLogoUrl?: string | null
 }
 
 export function PersonnelDroppableNode({
   node,
   isEditMode,
   onRemove,
+  organizationLogoUrl,
   ...cardProps
 }: PersonnelDroppableNodeProps) {
   const canDrop = isEditMode && isChartDropTarget(node)
@@ -93,6 +95,7 @@ export function PersonnelDroppableNode({
         {...cardProps}
         showRemove={isEditMode}
         onRemove={onRemove}
+        organizationLogoUrl={organizationLogoUrl}
       />
       {canDrop && isOver && (
         <p className="mt-1 text-center text-[10px] font-medium text-green-700">
