@@ -108,7 +108,7 @@ export function OrgPersonnelTab({
   const [selectedNode, setSelectedNode] = useState<PersonnelNode | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
-  const [paletteExpanded, setPaletteExpanded] = useState(true)
+  const [paletteExpanded, setPaletteExpanded] = useState(false)
   const [dragOverlayLabel, setDragOverlayLabel] = useState<string | null>(null)
   const [dropFeedback, setDropFeedback] = useState<string | null>(null)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)

@@ -32,6 +32,10 @@ export function chartNodeIdForOrgUser(userId: string): string {
   return `user-${userId}`
 }
 
+function statusFromDropPayload(status?: string): PersonnelStatus {
+  return (status === "inactive" || status === "invited" ? status : "active") as PersonnelStatus
+}
+
 export function isOrgUserPlacedInTree(root: PersonnelNode, userId: string, email?: string): boolean {
   const normEmail = email?.trim().toLowerCase()
   return flattenPersonnelTree(root).some(
@@ -49,15 +53,74 @@ export function addOrgUserUnderNode(
   const parent = flattenPersonnelTree(root).find((n) => n.id === parentId)
   if (!parent || !isChartDropTarget(parent)) return null
 
+  if (user.isTeamGroup && user.teamId) {
+    const members = user.teamMembers ?? []
+    const lead = members.find((member) => member.isTeamLead) ?? members[0]
+    const nonLeadMembers = lead ? members.filter((member) => member.id !== lead.id) : members
+
+    const leadNode: PersonnelNode | null = lead
+      ? {
+          id: `team-${user.teamId}-lead-${lead.id}`,
+          parentId: chartNodeIdForOrgUser(user.id),
+          type: "member",
+          name: lead.name,
+          email: lead.email,
+          status: statusFromDropPayload(lead.status),
+          title: lead.title ?? "Team Lead",
+          department: user.name,
+          linkedUserId: lead.id,
+          managerId: parent.linkedUserId ?? parent.id,
+          managerName: parent.name,
+          teamId: user.teamId,
+          teamName: user.name,
+          isTeamLead: true,
+          children: nonLeadMembers.map((member) => ({
+            id: `team-${user.teamId}-member-${member.id}`,
+            parentId: `team-${user.teamId}-lead-${lead.id}`,
+            type: "member",
+            name: member.name,
+            email: member.email,
+            status: statusFromDropPayload(member.status),
+            title: member.title ?? "Team member",
+            department: user.name,
+            linkedUserId: member.id,
+            managerId: lead.id,
+            managerName: lead.name,
+            teamId: user.teamId,
+            teamName: user.name,
+          })),
+        }
+      : null
+
+    const teamNode: PersonnelNode = {
+      id: chartNodeIdForOrgUser(user.id),
+      parentId,
+      type: "member",
+      name: user.name,
+      email: "",
+      status: "active",
+      title: user.title ?? `${members.length} members`,
+      department: parent.department ?? parent.name,
+      linkedUserId: user.id,
+      managerId: parent.linkedUserId ?? parent.id,
+      managerName: parent.name,
+      isTeamGroup: true,
+      teamId: user.teamId,
+      teamName: user.name,
+      directReports: leadNode ? 1 : undefined,
+      children: leadNode ? [leadNode] : undefined,
+    }
+
+    return appendChildToNode(root, parentId, teamNode)
+  }
+
   const newChild: PersonnelNode = {
     id: chartNodeIdForOrgUser(user.id),
     parentId,
     type: "member",
     name: user.name,
     email: user.email,
-    status: (user.status === "inactive" || user.status === "invited"
-      ? user.status
-      : "active") as PersonnelStatus,
+    status: statusFromDropPayload(user.status),
     title: user.title ?? "Team member",
     department: parent.department ?? parent.name,
     linkedUserId: user.id,

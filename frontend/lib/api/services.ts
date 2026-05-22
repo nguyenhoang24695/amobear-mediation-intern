@@ -62,6 +62,11 @@ import type {
 } from '@/types/api'
 import { apiClient, APP_INSIGHT_REGENERATE_TIMEOUT_MS } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
+import type {
+    OrganizationPersonnelChartResponse,
+    PersonnelChartHistoryPagedResult,
+    PersonnelNode as PersonnelChartNode,
+} from "@/lib/organizations/personnel-chart-types"
 
 // Auth Types
 export interface LoginRequest {
@@ -1023,6 +1028,13 @@ export const teamMembersApi = {
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/remove-from-team`, { userId, teamId })
     },
+
+    setTeamLead: async (
+        teamId: string,
+        userId: string,
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/set-team-lead`, { teamId, userId })
+    },
 }
 
 // Dashboard API Service
@@ -1840,10 +1852,75 @@ export interface OrgTeam {
     id: string
     name: string
     description?: string
+    userId?: string | null
+    teamLeadName?: string | null
+    teamLeadEmail?: string | null
+    teamLeadAvatarUrl?: string | null
     isActive: boolean
     memberCount: number
     createdAt: string
     updatedAt: string
+}
+
+export interface TeamMonthlyProfitPlan {
+    id: string
+    organizationId: string
+    teamId: string
+    teamName: string
+    month: string
+    plannedProfit: number
+    actualProfit: number
+    completionPercent?: number | null
+    appIds: string[]
+    createdAt: string
+    updatedAt: string
+}
+
+export interface UpsertTeamMonthlyProfitPlanRequest {
+    plannedProfit: number
+    appIds: string[]
+}
+
+export interface TeamProfitAppOption {
+    appId: string
+    label: string
+    displayName?: string | null
+    name?: string | null
+    platform?: string | null
+    iconUri?: string | null
+    appStoreId?: string | null
+}
+
+export const teamProfitApi = {
+    getPlans: async (
+        teamId: string,
+        params?: { from?: string; to?: string },
+    ): Promise<TeamMonthlyProfitPlan[]> => {
+        return apiClient.get<TeamMonthlyProfitPlan[]>(
+            `/api/v1/teams/${teamId}/profit-plans`,
+            params as Record<string, string | number | undefined>,
+        )
+    },
+
+    getPlan: async (teamId: string, month: string): Promise<TeamMonthlyProfitPlan | null> => {
+        return apiClient.get<TeamMonthlyProfitPlan | null>(`/api/v1/teams/${teamId}/profit-plans/${month}`)
+    },
+
+    upsertPlan: async (
+        teamId: string,
+        month: string,
+        body: UpsertTeamMonthlyProfitPlanRequest,
+    ): Promise<TeamMonthlyProfitPlan> => {
+        return apiClient.put<TeamMonthlyProfitPlan>(`/api/v1/teams/${teamId}/profit-plans/${month}`, body)
+    },
+
+    deletePlan: async (teamId: string, month: string): Promise<void> => {
+        await apiClient.delete(`/api/v1/teams/${teamId}/profit-plans/${month}`)
+    },
+
+    getAppOptions: async (teamId: string): Promise<TeamProfitAppOption[]> => {
+        return apiClient.get<TeamProfitAppOption[]>(`/api/v1/teams/${teamId}/profit-app-options`)
+    },
 }
 
 // User Teams API types
@@ -1855,6 +1932,7 @@ export interface UserTeamMember {
     role: string
     status: string
     avatarUrl?: string
+  isTeamLead?: boolean
 }
 
 export interface UserTeamWithMembers {
@@ -1862,6 +1940,7 @@ export interface UserTeamWithMembers {
     name: string
     description?: string
     isActive: boolean
+    teamLeadUserId?: string | null
     memberCount: number
     createdAt: string
     updatedAt: string
@@ -1871,11 +1950,13 @@ export interface UserTeamWithMembers {
 export interface CreateTeamRequest {
     name: string
     description?: string
+    userId?: string | null
 }
 
 export interface UpdateTeamRequest {
     name: string
     description?: string
+    userId?: string | null
     isActive: boolean
 }
 

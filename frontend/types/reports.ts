@@ -5,9 +5,16 @@ export interface CustomReportQueryRequest {
   dimensions: string[]
   metrics: string[]
   revenueSource: string
+  metricFilters?: CustomReportMetricFilter[]
   commissionUsernames?: string[] | null
   sortBy?: string | null
   sortDir?: string
+}
+
+export interface CustomReportMetricFilter {
+  metric: string
+  condition: "gt" | "gte" | "lt" | "lte" | "eq" | "neq"
+  value: number
 }
 
 export interface CustomReportQueryMeta {

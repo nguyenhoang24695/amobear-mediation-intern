@@ -35,6 +35,7 @@ import {
   ArrowUp,
   ArrowDown,
   Database,
+  Crown,
 } from "lucide-react"
 import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
@@ -181,6 +182,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         status: displayStatus,
         lastActive: "N/A", // TODO: Get lastActive from API if available
         joinedAt: teamJoinedAt, // JoinedAt from team membership
+        isTeamLead: teamId ? Boolean(user.teams.find((t) => t.id === teamId)?.isTeamLead) : false,
         permissions: user.permissions, // Store permissions for modal
       }
     })
@@ -357,6 +359,29 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       })
     } finally {
       setRemoving(false)
+    }
+  }
+
+  const handleSetTeamLead = async (userId: string, userName: string) => {
+    if (!teamId) return
+
+    try {
+      const response = await teamMembersApi.setTeamLead(teamId, userId)
+      if (!response.success) {
+        throw new Error(response.message || "Failed to set team lead")
+      }
+
+      toast({
+        title: "Team lead updated",
+        description: `${userName} is now the team lead.`,
+      })
+      refetch()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.error?.message || err?.message || "Failed to set team lead",
+        variant: "destructive",
+      })
     }
   }
 
@@ -537,7 +562,15 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900 group-hover:text-blue-600">{user.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 group-hover:text-blue-600">{user.name}</p>
+                          {user.isTeamLead && (
+                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 gap-1">
+                              <Crown className="w-3 h-3" />
+                              Team Lead
+                            </Badge>
+                          )}
+                        </div>
                         <p
                           className={`text-xs ${user.status === "invited" ? "italic text-amber-600" : "text-slate-500"}`}
                         >
@@ -692,6 +725,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           <Database className="w-4 h-4 mr-2" />
                           History Permission
                         </DropdownMenuItem>
+                        {teamId && !user.isTeamLead && (
+                          <DropdownMenuItem onClick={() => handleSetTeamLead(user.id, user.name)}>
+                            <Crown className="w-4 h-4 mr-2" />
+                            Set as Team Lead
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         {user.status === "invited" && (
                           <DropdownMenuItem>
