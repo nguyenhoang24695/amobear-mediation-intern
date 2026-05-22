@@ -49,6 +49,7 @@ import { AdSetBudgetSection } from "./section-adset-budget"
 import { CreativeSection } from "./section-creative"
 import { AdSection } from "./section-ad"
 import { RequestSummaryRail } from "./summary-rail"
+import { resolveMetaAppMappingPlatform } from "./platform"
 export type RequestFormState = MetaRequestFormState
 
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
@@ -418,6 +419,7 @@ export function CreateRequestContent({ requestId }: Props) {
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
     ?? referenceData?.appMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
+  const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
   const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
   const tokenState = deriveTokenState({
@@ -712,7 +714,7 @@ export function CreateRequestContent({ requestId }: Props) {
             />
           </div>
           <div id={requestSectionIds["adset-budget"]} className={getSectionWrapperClass("adset-budget", highlightedSection)}>
-            <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
+                <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppPlatform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
           </div>
           <div id={requestSectionIds["creative"]} className={getSectionWrapperClass("creative", highlightedSection)}>
             <CreativeSection
@@ -793,8 +795,6 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
-
 
 
 
