@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -37,10 +36,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { organizationsApi, type OrgTeam, type OrgUserItem } from "@/lib/api/services"
-import { CreateTeamModal } from "../create-team-modal"
-
-const NO_TEAM_LEAD_VALUE = "__none__"
+import { organizationsApi, teamMembersApi, type OrgTeam, type OrgUserItem } from "@/lib/api/services"
+import { CreateTeamModal, TeamLeadCombobox } from "../create-team-modal"
 
 interface OrgTeamsTabProps {
     orgId: string
@@ -63,7 +60,6 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
     const [teams, setTeams] = useState<OrgTeam[]>([])
-    const [users, setUsers] = useState<OrgUserItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
@@ -73,6 +69,8 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const [editName, setEditName] = useState("")
     const [editDescription, setEditDescription] = useState("")
     const [editTeamLeadUserId, setEditTeamLeadUserId] = useState<string | null>(null)
+    const [editTeamLeadCandidates, setEditTeamLeadCandidates] = useState<OrgUserItem[]>([])
+    const [editTeamLeadLoading, setEditTeamLeadLoading] = useState(false)
     const [editIsActive, setEditIsActive] = useState(true)
     const [editSaving, setEditSaving] = useState(false)
     const [editError, setEditError] = useState("")
@@ -95,20 +93,9 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }, [orgId])
 
-    const fetchUsers = useCallback(async () => {
-        try {
-            const result = await organizationsApi.getUsers(orgId, { page: 1, pageSize: 500 })
-            setUsers(result.items ?? [])
-        } catch (err) {
-            console.error("Failed to fetch organization users:", err)
-            setUsers([])
-        }
-    }, [orgId])
-
     useEffect(() => {
         fetchTeams()
-        fetchUsers()
-    }, [fetchTeams, fetchUsers])
+    }, [fetchTeams])
 
     // Client-side search filter
     const filteredTeams = teams.filter((team) => {
@@ -126,8 +113,34 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         setEditName(team.name)
         setEditDescription(team.description || "")
         setEditTeamLeadUserId(team.userId ?? null)
+        setEditTeamLeadCandidates([])
+        void fetchTeamLeadCandidates(team.id)
         setEditIsActive(team.isActive)
         setEditError("")
+    }
+
+    const fetchTeamLeadCandidates = async (teamId: string) => {
+        setEditTeamLeadLoading(true)
+        try {
+            const response = await teamMembersApi.filterTeamMembers({ teamId, page: 1, pageSize: 500 })
+            const candidates = (response.data?.items ?? []).map((user) => ({
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                fullName: user.fullName || [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+                avatarUrl: user.avatarUrl,
+                role: user.role,
+                status: user.status || "active",
+                createdAt: "",
+            }))
+            setEditTeamLeadCandidates(candidates)
+        } catch (err) {
+            console.error("Failed to load team members for team lead selection:", err)
+            setEditTeamLeadCandidates([])
+        } finally {
+            setEditTeamLeadLoading(false)
+        }
     }
 
     const handleUpdate = async () => {
@@ -380,7 +393,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 onOpenChange={setCreateOpen}
                 orgId={orgId}
                 orgName={orgName}
-                users={users}
+                users={[]}
                 onSuccess={fetchTeams}
             />
 
@@ -414,22 +427,14 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-team-lead">Team Lead <span className="text-slate-400">(optional)</span></Label>
-                            <Select
-                                value={editTeamLeadUserId ?? NO_TEAM_LEAD_VALUE}
-                                onValueChange={(value) => setEditTeamLeadUserId(value === NO_TEAM_LEAD_VALUE ? null : value)}
-                            >
-                                <SelectTrigger id="edit-team-lead" className="bg-white">
-                                    <SelectValue placeholder="Select team lead" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={NO_TEAM_LEAD_VALUE}>No team lead</SelectItem>
-                                    {users.map((user) => (
-                                        <SelectItem key={user.id} value={user.id}>
-                                            {user.fullName || user.email} ({user.email})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <TeamLeadCombobox
+                                users={editTeamLeadCandidates}
+                                value={editTeamLeadUserId}
+                                onChange={setEditTeamLeadUserId}
+                                disabled={editTeamLeadLoading || editTeamLeadCandidates.length === 0}
+                                emptyMessage={editTeamLeadLoading ? "Loading team members..." : "No team members found."}
+                            />
+                            <p className="text-xs text-slate-500">Only current team members can be selected.</p>
                         </div>
                         <div className="flex items-center justify-between">
                             <Label htmlFor="edit-active">Active</Label>

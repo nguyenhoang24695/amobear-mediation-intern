@@ -1028,6 +1028,13 @@ export const teamMembersApi = {
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/remove-from-team`, { userId, teamId })
     },
+
+    setTeamLead: async (
+        teamId: string,
+        userId: string,
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/set-team-lead`, { teamId, userId })
+    },
 }
 
 // Dashboard API Service
@@ -1864,6 +1871,7 @@ export interface UserTeamMember {
     role: string
     status: string
     avatarUrl?: string
+  isTeamLead?: boolean
 }
 
 export interface UserTeamWithMembers {
@@ -1871,6 +1879,7 @@ export interface UserTeamWithMembers {
     name: string
     description?: string
     isActive: boolean
+    teamLeadUserId?: string | null
     memberCount: number
     createdAt: string
     updatedAt: string
