@@ -14,6 +14,10 @@ export interface PersonnelNode {
   managerId?: string | null
   managerName?: string | null
   linkedUserId?: string
+  isTeamGroup?: boolean
+  teamId?: string
+  teamName?: string
+  isTeamLead?: boolean
   children?: PersonnelNode[]
 }
 
@@ -23,6 +27,16 @@ export interface OrgUserDropPayload {
   email: string
   status: string
   title?: string
+  isTeamGroup?: boolean
+  teamId?: string
+  teamMembers?: Array<{
+    id: string
+    name: string
+    email: string
+    status?: string
+    title?: string
+    isTeamLead?: boolean
+  }>
 }
 
 export type PersonnelMemberPatch = Pick<

@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { OrganizationLogoMark } from "../organization-logo-mark"
 import { Badge } from "@/components/ui/badge"
 import type { PersonnelNode } from "@/lib/mock/org-personnel-mock"
-import { Trash2 } from "lucide-react"
+import { Crown, Trash2 } from "lucide-react"
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -58,7 +58,7 @@ export function PersonnelNodeCard({
 }: PersonnelNodeCardProps) {
   const displayName = node.type === "organization" ? node.name : node.name
   const subtitle =
-    node.type === "department" ? "Department" : node.title ?? node.department ?? ""
+    node.isTeamGroup ? node.title ?? "" : node.type === "department" ? "Department" : node.title ?? node.department ?? ""
   const hasRemovableContent =
     node.type === "member" ||
     (node.type === "organization" && (node.children?.length ?? 0) > 0)
@@ -84,7 +84,7 @@ export function PersonnelNodeCard({
         onClick={onClick}
         className={cn(
           "relative flex w-[200px] flex-col items-center gap-2 rounded-lg border px-3 py-3 text-left transition-all",
-          typeStyles[node.type],
+          node.isTeamGroup ? "border-blue-300 bg-blue-50/80 hover:border-blue-400 hover:shadow-md" : typeStyles[node.type],
           selected && "ring-2 ring-blue-500 border-blue-400 shadow-md",
           highlighted && !selected && "ring-2 ring-amber-300",
         )}
@@ -110,7 +110,7 @@ export function PersonnelNodeCard({
           />
         ) : (
           <Avatar className="h-10 w-10">
-            <AvatarFallback className={cn("text-sm font-semibold", avatarStyles[node.type])}>
+            <AvatarFallback className={cn("text-sm font-semibold", node.isTeamGroup ? "bg-blue-600 text-white" : avatarStyles[node.type])}>
               {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
@@ -123,6 +123,12 @@ export function PersonnelNodeCard({
         </div>
         {node.type !== "organization" && (
           <div className="flex flex-wrap items-center justify-center gap-1">
+            {node.isTeamLead && (
+              <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 gap-1">
+                <Crown className="h-3 w-3" />
+                Lead
+              </Badge>
+            )}
             {node.department && node.type === "member" && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 {node.department}

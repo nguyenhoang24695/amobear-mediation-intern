@@ -41,6 +41,10 @@ export function normalizePersonnelTreeForCompare(node: PersonnelNode): Personnel
     managerId: node.managerId ?? undefined,
     managerName: node.managerName ?? undefined,
     linkedUserId: node.linkedUserId ?? undefined,
+    isTeamGroup: node.isTeamGroup ?? undefined,
+    teamId: node.teamId ?? undefined,
+    teamName: node.teamName ?? undefined,
+    isTeamLead: node.isTeamLead ?? undefined,
     children: (node.children ?? []).map(normalizePersonnelTreeForCompare),
   }
 }
@@ -68,9 +72,7 @@ function detachSubtree(root: PersonnelNode, nodeId: string): { tree: PersonnelNo
     const result = detachSubtree(child, nodeId)
     if (result.subtree) {
       detached = result.subtree
-      if (result.tree.id !== child.id) {
-        children.push(result.tree)
-      }
+      children.push(result.tree)
     } else {
       children.push(child)
     }
