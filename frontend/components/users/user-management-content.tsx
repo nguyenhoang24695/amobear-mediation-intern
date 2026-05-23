@@ -20,7 +20,7 @@ const statsData = [
 ]
 
 interface UserManagementContentProps {
-  teamId?: string
+  teamId: string
 }
 
 export function UserManagementContent({ teamId }: UserManagementContentProps) {
@@ -52,7 +52,7 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
         </p>
       </div>
 
-      {teamId && <TeamProfitPlanCard teamId={teamId} />}
+      <TeamProfitPlanCard teamId={teamId} />
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">

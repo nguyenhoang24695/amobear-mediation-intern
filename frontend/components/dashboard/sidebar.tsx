@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -52,10 +52,17 @@ import {
   BadgePercent,
   Music2,
   Star,
+  Plus,
 } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/shared/logo"
-import { usePathname, useRouter } from "next/navigation"
+import { Suspense } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { reportsApi } from "@/lib/api/services"
+import {
+  PINNED_CUSTOM_REPORTS_CHANGED_EVENT,
+} from "@/lib/reports/pinned-custom-reports"
+import type { CustomReportListItem } from "@/types/reports"
 import { useToast } from "@/hooks/use-toast"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { formatAlertBadgeCount } from "@/lib/alert-notification-state"
@@ -86,7 +93,17 @@ type NavItem = {
   spotlight?: boolean
   /** If false or returns false, item is hidden in sidebar. Default true. */
   isShow?: boolean | (() => boolean)
-  children?: { icon: any; label: string; href: string; isShow?: boolean | (() => boolean); isNew?: boolean }[]
+  children?: {
+    icon: any
+    label: string
+    href: string
+    isShow?: boolean | (() => boolean)
+    isNew?: boolean
+    /** Match ?reportId= for /reports saved-report links */
+    reportId?: string | null
+    /** Distinguish /reports index vs ?new=1 when reportId is null */
+    reportsView?: "index" | "new"
+  }[]
 }
 
 function isNavChildVisible(child: { isShow?: boolean | (() => boolean) }): boolean {
@@ -303,8 +320,28 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar(props: SidebarProps) {
+  return (
+    <Suspense
+      fallback={
+        <aside
+          className={cn(
+            "fixed left-0 top-0 z-40 h-screen bg-white border-r border-slate-200",
+            props.collapsed ? "w-16" : "w-60",
+          )}
+        />
+      }
+    >
+      <SidebarInner {...props} />
+    </Suspense>
+  )
+}
+
+function SidebarInner({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const reportIdParam = pathname === "/reports" ? searchParams.get("reportId") : null
+  const isNewReportParam = pathname === "/reports" && searchParams.get("new") === "1"
   const router = useRouter()
   const { toast } = useToast()
   const { unseenCount: alertNotificationCount, openAlertIds, markAlertsViewed } = useAlertNotifications()
@@ -313,6 +350,60 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [logoutAllDevices, setLogoutAllDevices] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [pinnedReports, setPinnedReports] = useState<CustomReportListItem[]>([])
+
+  const loadPinnedReports = useCallback(async () => {
+    if (!hasScreenFunction("s-reports", "view")) {
+      setPinnedReports([])
+      return
+    }
+    try {
+      const items = await reportsApi.listPinned()
+      setPinnedReports(items)
+    } catch {
+      setPinnedReports([])
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadPinnedReports()
+    const onPinnedChanged = () => void loadPinnedReports()
+    window.addEventListener(PINNED_CUSTOM_REPORTS_CHANGED_EVENT, onPinnedChanged)
+    return () => window.removeEventListener(PINNED_CUSTOM_REPORTS_CHANGED_EVENT, onPinnedChanged)
+  }, [loadPinnedReports])
+
+  const sidebarNavItems = useMemo((): NavItem[] => {
+    return navItems.map((item) => {
+      if (item.label !== "Reports" || pinnedReports.length === 0) return item
+      return {
+        ...item,
+        href: "#",
+        hasSubmenu: true,
+        children: [
+          {
+            icon: BarChart3,
+            label: "All reports",
+            href: "/reports",
+            reportId: null,
+            reportsView: "index",
+          },
+          {
+            icon: Plus,
+            label: "New report",
+            href: "/reports?new=1",
+            reportId: null,
+            reportsView: "new",
+          },
+          ...pinnedReports.map((report) => ({
+            icon: FileText,
+            label: report.name,
+            href: `/reports?reportId=${report.id}`,
+            reportId: report.id,
+          })),
+        ],
+      }
+    })
+  }, [pinnedReports])
 
   useEffect(() => {
     setOpenMenus({})
@@ -374,7 +465,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
-          {navItems.map((item) => {
+          {sidebarNavItems.map((item) => {
             const isVisible =
               item.isShow === undefined
                 ? true
@@ -482,7 +573,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       if (!isNavChildVisible(child)) return null
 
                       const childActive =
-                        pathname === child.href || (child.href !== "/" && pathname.startsWith(child.href))
+                        pathname === "/reports" && child.reportId !== undefined
+                          ? child.reportId === null
+                            ? child.reportsView === "new"
+                              ? isNewReportParam && !reportIdParam
+                              : !reportIdParam && !isNewReportParam
+                            : reportIdParam === child.reportId
+                          : pathname === child.href ||
+                            (child.href !== "/" && pathname.startsWith(child.href.split("?")[0]))
 
                       return (
                         <Link

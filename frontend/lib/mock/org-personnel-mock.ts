@@ -32,11 +32,28 @@ export function chartNodeIdForOrgUser(userId: string): string {
   return `user-${userId}`
 }
 
+export function chartNodeIdForTeam(teamId: string): string {
+  return `team-${teamId}`
+}
+
+function parseTeamPaletteId(userId: string): string | null {
+  if (!userId.startsWith("team:")) return null
+  const teamId = userId.slice("team:".length).trim()
+  return teamId.length > 0 ? teamId : null
+}
+
 function statusFromDropPayload(status?: string): PersonnelStatus {
   return (status === "inactive" || status === "invited" ? status : "active") as PersonnelStatus
 }
 
 export function isOrgUserPlacedInTree(root: PersonnelNode, userId: string, email?: string): boolean {
+  const paletteTeamId = parseTeamPaletteId(userId)
+  if (paletteTeamId) {
+    return flattenPersonnelTree(root).some(
+      (n) => n.isTeamGroup && n.teamId === paletteTeamId,
+    )
+  }
+
   const normEmail = email?.trim().toLowerCase()
   return flattenPersonnelTree(root).some(
     (n) => n.linkedUserId === userId || (normEmail && n.email?.trim().toLowerCase() === normEmail),
@@ -54,61 +71,23 @@ export function addOrgUserUnderNode(
   if (!parent || !isChartDropTarget(parent)) return null
 
   if (user.isTeamGroup && user.teamId) {
-    const members = user.teamMembers ?? []
-    const lead = members.find((member) => member.isTeamLead) ?? members[0]
-    const nonLeadMembers = lead ? members.filter((member) => member.id !== lead.id) : members
-
-    const leadNode: PersonnelNode | null = lead
-      ? {
-          id: `team-${user.teamId}-lead-${lead.id}`,
-          parentId: chartNodeIdForOrgUser(user.id),
-          type: "member",
-          name: lead.name,
-          email: lead.email,
-          status: statusFromDropPayload(lead.status),
-          title: lead.title ?? "Team Lead",
-          department: user.name,
-          linkedUserId: lead.id,
-          managerId: parent.linkedUserId ?? parent.id,
-          managerName: parent.name,
-          teamId: user.teamId,
-          teamName: user.name,
-          isTeamLead: true,
-          children: nonLeadMembers.map((member) => ({
-            id: `team-${user.teamId}-member-${member.id}`,
-            parentId: `team-${user.teamId}-lead-${lead.id}`,
-            type: "member",
-            name: member.name,
-            email: member.email,
-            status: statusFromDropPayload(member.status),
-            title: member.title ?? "Team member",
-            department: user.name,
-            linkedUserId: member.id,
-            managerId: lead.id,
-            managerName: lead.name,
-            teamId: user.teamId,
-            teamName: user.name,
-          })),
-        }
-      : null
+    const teamChartId = chartNodeIdForTeam(user.teamId)
+    const memberCount = user.teamMembers?.length ?? 0
 
     const teamNode: PersonnelNode = {
-      id: chartNodeIdForOrgUser(user.id),
+      id: teamChartId,
       parentId,
       type: "member",
       name: user.name,
       email: "",
       status: "active",
-      title: user.title ?? `${members.length} members`,
+      title: user.title ?? (memberCount > 0 ? `${memberCount} members` : "Team"),
       department: parent.department ?? parent.name,
-      linkedUserId: user.id,
       managerId: parent.linkedUserId ?? parent.id,
       managerName: parent.name,
       isTeamGroup: true,
       teamId: user.teamId,
       teamName: user.name,
-      directReports: leadNode ? 1 : undefined,
-      children: leadNode ? [leadNode] : undefined,
     }
 
     return appendChildToNode(root, parentId, teamNode)

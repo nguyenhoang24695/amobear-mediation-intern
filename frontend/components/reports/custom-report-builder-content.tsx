@@ -1,6 +1,7 @@
 "use client"
 
-import { type CSSProperties, useEffect, useMemo, useState } from "react"
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   closestCenter,
   DndContext,
@@ -33,9 +34,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -72,16 +75,36 @@ import {
   AlertCircle,
   Plus,
   GripVertical,
+  Pin,
+  PinOff,
 } from "lucide-react"
-import { format, subDays } from "date-fns"
+import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
-import { useApi } from "@/hooks/use-api"
+import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
-import { organizationsApi, reportsApi, structureApi } from "@/lib/api/services"
+import { organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
-import type { CustomReportCatalogItem, CustomReportMetricFilter } from "@/types/reports"
+import type {
+  CustomReportCatalogItem,
+  CustomReportFilters,
+  CustomReportMetricFilter,
+  CustomReportSaved,
+  SaveCustomReportRequest,
+} from "@/types/reports"
+import { applySavedCustomReport } from "@/lib/reports/apply-saved-custom-report"
+import {
+  collectTeamLeadTeamsFromChart,
+  collectTeamLeadTeamsFromOrgTeams,
+  collectTeamsUnderPersonnelNode,
+  mergeCommissionTeamOptions,
+  mapTeamMembersToCommissionUsers,
+  type CommissionTeamOption,
+  type CommissionUserOption,
+} from "@/lib/reports/commission-team-utils"
+import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
+import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
 
 const datePresets = [
@@ -90,12 +113,16 @@ const datePresets = [
   { id: "last90", label: "Last 90 days", days: 90 },
 ] as const
 
+type DateFilterMode = "preset" | "month" | "custom"
+
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
 const FILTER_COMMISSION_USER = "Commission User"
+const FILTER_COMMISSION_TEAM = "Team"
 
 const DEFAULT_PARAMETERS: CustomReportCatalogItem[] = [
   { id: "app", label: "App", category: "Core" },
+  { id: "app_store_id", label: "App Store ID", category: "Core" },
   { id: "date", label: "Date", category: "Time" },
   { id: "platform", label: "Platform", category: "Core" },
 ]
@@ -112,26 +139,22 @@ const DEFAULT_METRICS: CustomReportCatalogItem[] = [
   { id: "ua_cost", label: "UA cost", category: "Cost", format: "currency" },
   { id: "iap_net_revenue", label: "IAP net revenue", category: "Revenue", format: "currency" },
   { id: "total_revenue_usd", label: "Total revenue (IAA + IAP)", category: "Revenue", format: "currency" },
+  { id: "profit", label: "Profit", category: "Revenue", format: "currency" },
 ]
 
 const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
   app: 280,
+  app_store_id: 280,
   date: 140,
   platform: 140,
 }
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
-const MAX_SELECTED_APPS = 20
 
 interface ActiveFilter {
   type: string
   value: string
-}
-
-interface CommissionUserOption {
-  email: string
-  label: string
 }
 
 interface SortableReportFieldItemProps {
@@ -275,7 +298,11 @@ function renderParameterCell(
   if (paramId === "app") {
     const appName = String(row.app_display_name ?? row.app ?? "")
     const appIconUri = typeof row.app_icon_uri === "string" ? row.app_icon_uri : ""
-    const shouldShowAppSub = !selectedParameters.includes("platform") && Boolean(row.app_sub)
+    const appSub = String(row.app_sub ?? "").trim()
+    const shouldShowAppSub =
+      !selectedParameters.includes("platform") &&
+      appSub.length > 0 &&
+      appSub.toLowerCase() !== appName.trim().toLowerCase()
     return (
       <div className="flex items-center gap-2 min-w-[180px]">
         <Avatar className="h-10 w-10 rounded-lg shrink-0">
@@ -287,7 +314,7 @@ function renderParameterCell(
         <div className="min-w-0">
           <div className="text-sm font-medium text-slate-900 truncate">{appName}</div>
           {shouldShowAppSub ? (
-            <div className="text-xs text-slate-500">{String(row.app_sub ?? "")}</div>
+            <div className="text-xs text-slate-500">{appSub}</div>
           ) : null}
         </div>
       </div>
@@ -296,6 +323,35 @@ function renderParameterCell(
 
   if (paramId === "platform") {
     return renderPlatformBadge(String(row.platform ?? ""))
+  }
+
+  if (paramId === "app_store_id") {
+    const displayName = String(row.app_store_display_name ?? row.app_store_id ?? "")
+    const storeId = String(row.app_store_id ?? "")
+    const appIconUri = typeof row.app_icon_uri === "string" ? row.app_icon_uri : ""
+    const storeSub = String(row.app_store_sub ?? "").trim()
+    const shouldShowStoreSub =
+      !selectedParameters.includes("platform") &&
+      storeSub.length > 0 &&
+      storeSub.toLowerCase() !== displayName.trim().toLowerCase()
+    return (
+      <div className="flex items-center gap-2 min-w-[180px]">
+        <Avatar className="h-10 w-10 rounded-lg shrink-0">
+          {appIconUri ? <AvatarImage src={appIconUri} alt={displayName} className="rounded-lg object-cover" /> : null}
+          <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
+            <Smartphone className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
+          {shouldShowStoreSub ? (
+            <div className="text-xs text-slate-500 truncate">{storeSub}</div>
+          ) : storeId && storeId.toLowerCase() !== displayName.trim().toLowerCase() ? (
+            <div className="text-xs text-slate-500 font-mono truncate">{storeId}</div>
+          ) : null}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -375,6 +431,21 @@ function getMetricFilterLabel(filter: CustomReportMetricFilter, metrics: CustomR
   return `${metricLabel} ${conditionLabel} ${filter.value}`
 }
 
+function defaultCustomReportName(): string {
+  return `Custom Report - ${format(new Date(), "yyyyMMdd")}`
+}
+
+function getMonthDateRange(month: Date): { start: Date; end: Date } {
+  const start = startOfMonth(month)
+  const endOfSelected = endOfMonth(month)
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  return {
+    start,
+    end: endOfSelected > today ? today : endOfSelected,
+  }
+}
+
 function escapeExcelHtml(value: unknown): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -384,6 +455,10 @@ function escapeExcelHtml(value: unknown): string {
 }
 
 export function CustomReportBuilderContent() {
+  const searchParams = useSearchParams()
+  const reportIdFromUrl = searchParams.get("reportId")
+  const folderFromUrl = searchParams.get("folder")
+
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const currentUser = getCurrentUser()
   const orgId = currentUser?.organization?.id
@@ -395,12 +470,14 @@ export function CustomReportBuilderContent() {
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30))
   const [endDate, setEndDate] = useState<Date>(new Date())
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>("preset")
   const [activePresetDays, setActivePresetDays] = useState(30)
+  const [selectedMonth, setSelectedMonth] = useState<Date>(() => startOfMonth(new Date()))
+  const [monthPopoverOpen, setMonthPopoverOpen] = useState(false)
 
   const [selectedApps, setSelectedApps] = useState<string[]>([])
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
   const [appsInitialized, setAppsInitialized] = useState(false)
-  const [appLimitDialogOpen, setAppLimitDialogOpen] = useState(false)
 
   const [selectedParameters, setSelectedParameters] = useState<string[]>(["app", "date"])
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
@@ -427,7 +504,23 @@ export function CustomReportBuilderContent() {
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
-  const [commissionUsers, setCommissionUsers] = useState<CommissionUserOption[]>([])
+  const [subordinateUsers, setSubordinateUsers] = useState<CommissionUserOption[]>([])
+  const [teamMemberUsers, setTeamMemberUsers] = useState<CommissionUserOption[]>([])
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false)
+  const [commissionTeam, setCommissionTeam] = useState("All")
+  const [commissionTeams, setCommissionTeams] = useState<CommissionTeamOption[]>([])
+  const [teamPlanAppIds, setTeamPlanAppIds] = useState<string[] | null>(null)
+  const [teamPlansLoading, setTeamPlansLoading] = useState(false)
+
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [saveReportName, setSaveReportName] = useState(defaultCustomReportName)
+  const [saveReportFolder, setSaveReportFolder] = useState("")
+  const [savedReportId, setSavedReportId] = useState<string | null>(null)
+  const [isPinned, setIsPinned] = useState(false)
+  const [pinningReport, setPinningReport] = useState(false)
+  const [loadingSavedReport, setLoadingSavedReport] = useState(false)
+  const [savingReport, setSavingReport] = useState(false)
+  const loadedReportIdRef = useRef<string | null>(null)
 
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
@@ -438,6 +531,19 @@ export function CustomReportBuilderContent() {
     const apps = appsResponse?.apps ?? []
     return apps.filter((a) => a.appId && (a.approvalState === "APPROVED" || !a.approvalState))
   }, [appsResponse])
+
+  const appsForSelection = useMemo(() => {
+    if (!canManageCommission || commissionTeam === "All" || teamPlanAppIds === null) {
+      return availableApps
+    }
+    const allowed = new Set(teamPlanAppIds)
+    return availableApps.filter((app) => allowed.has(app.appId))
+  }, [availableApps, canManageCommission, commissionTeam, teamPlanAppIds])
+
+  const commissionUsersForFilter = useMemo(
+    () => (commissionTeam === "All" ? subordinateUsers : teamMemberUsers),
+    [commissionTeam, subordinateUsers, teamMemberUsers],
+  )
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -450,51 +556,207 @@ export function CustomReportBuilderContent() {
 
   useEffect(() => {
     if (appsInitialized || appsLoading || availableApps.length === 0) return
-    const initialIds =
-      availableApps.length <= MAX_SELECTED_APPS
-        ? availableApps.map((app) => app.appId)
-        : availableApps.slice(0, MAX_SELECTED_APPS).map((app) => app.appId)
+    if (reportIdFromUrl) return
+    const initialIds = appsForSelection.map((app) => app.appId)
     if (initialIds.length > 0) {
       setSelectedApps(initialIds)
-      syncAppsActiveFilter(initialIds, availableApps)
+      syncAppsActiveFilter(initialIds, appsForSelection)
     }
     setAppsInitialized(true)
-  }, [appsInitialized, appsLoading, availableApps])
+  }, [appsInitialized, appsLoading, appsForSelection, reportIdFromUrl])
+
+  useEffect(() => {
+    if (reportIdFromUrl || !folderFromUrl?.trim()) return
+    setSaveReportFolder(folderFromUrl.trim())
+  }, [reportIdFromUrl, folderFromUrl])
+
+  const applyLoadedSavedReport = useCallback(
+    (report: CustomReportSaved) => {
+      applySavedCustomReport({
+        report,
+        availableApps,
+        setSaveReportName,
+        setSaveReportFolder,
+        setSavedReportId,
+        setIsPinned,
+        setSelectedParameters,
+        setSelectedMetrics,
+        setSelectedApps,
+        setMetricFilters,
+        setCommissionUser,
+        setCommissionTeam,
+        setSortColumn,
+        setSortDirection,
+        setDateFilterMode,
+        setActivePresetDays,
+        setStartDate,
+        setEndDate,
+        setSelectedMonth,
+        setActiveFilters,
+        upsertActiveFilter,
+        syncAppsActiveFilter,
+      })
+      setAppsInitialized(true)
+    },
+    [availableApps],
+  )
+
+  useEffect(() => {
+    if (!reportIdFromUrl || appsLoading) return
+    if (loadedReportIdRef.current === reportIdFromUrl) return
+
+    let cancelled = false
+    const load = async () => {
+      setLoadingSavedReport(true)
+      try {
+        const report = await reportsApi.getSaved(reportIdFromUrl)
+        if (cancelled) return
+        loadedReportIdRef.current = reportIdFromUrl
+        applyLoadedSavedReport(report)
+      } catch (err) {
+        console.error("Failed to load saved report:", err)
+        if (!cancelled) toast.error("Could not load saved report")
+      } finally {
+        if (!cancelled) setLoadingSavedReport(false)
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [reportIdFromUrl, appsLoading, applyLoadedSavedReport])
 
   useEffect(() => {
     if (appsLoading || availableApps.length === 0) return
 
-    const permittedAppIds = new Set(availableApps.map((app) => app.appId))
+    const permittedAppIds = new Set(appsForSelection.map((app) => app.appId))
     setSelectedApps((prev) => {
       const next = prev.filter((appId) => permittedAppIds.has(appId))
       if (next.length === prev.length) return prev
-      syncAppsActiveFilter(next, availableApps)
+      syncAppsActiveFilter(next, appsForSelection)
       return next
     })
-  }, [appsLoading, availableApps])
+  }, [appsLoading, appsForSelection])
 
   useEffect(() => {
     if (!canManageCommission || !orgId) return
-    organizationsApi
-      .getPersonnelChart(orgId)
-      .then((chart) => {
+    Promise.all([organizationsApi.getPersonnelChart(orgId), organizationsApi.getTeams(orgId)])
+      .then(([chart, orgTeams]) => {
         if (!chart?.root) {
-          setCommissionUsers([])
+          setSubordinateUsers([])
+          setCommissionTeams([])
           return
         }
 
         const currentNode = findCurrentPersonnelNode(chart.root, currentUser?.id, currentUser?.email)
-        setCommissionUsers(currentNode ? getSubordinateCommissionUsers(currentNode) : [])
+        setSubordinateUsers(currentNode ? getSubordinateCommissionUsers(currentNode) : [])
+
+        const underManager = currentNode ? collectTeamsUnderPersonnelNode(currentNode) : []
+        const leadFromChart = currentUser?.id
+          ? collectTeamLeadTeamsFromChart(chart.root, currentUser.id)
+          : []
+        const leadFromOrg = collectTeamLeadTeamsFromOrgTeams(orgTeams, currentUser?.id)
+        setCommissionTeams(mergeCommissionTeamOptions(underManager, leadFromChart, leadFromOrg))
       })
-      .catch(() => setCommissionUsers([]))
+      .catch(() => {
+        setSubordinateUsers([])
+        setCommissionTeams([])
+      })
   }, [canManageCommission, orgId, currentUser?.id, currentUser?.email])
 
   useEffect(() => {
+    if (!canManageCommission || commissionTeam === "All") {
+      setTeamMemberUsers([])
+      setTeamMembersLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setTeamMembersLoading(true)
+    teamMembersApi
+      .filterTeamMembers({
+        teamId: commissionTeam,
+        page: 1,
+        pageSize: 500,
+        status: "active",
+      })
+      .then((response) => {
+        if (cancelled) return
+        const members = response.data?.items ?? []
+        setTeamMemberUsers(mapTeamMembersToCommissionUsers(members))
+      })
+      .catch(() => {
+        if (!cancelled) setTeamMemberUsers([])
+      })
+      .finally(() => {
+        if (!cancelled) setTeamMembersLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [canManageCommission, commissionTeam])
+
+  useEffect(() => {
+    if (commissionTeam === "All") return
+    if (commissionTeams.some((team) => team.teamId === commissionTeam)) return
+    setCommissionTeam("All")
+    setTeamPlanAppIds(null)
+    setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_TEAM))
+  }, [commissionTeam, commissionTeams])
+
+  useEffect(() => {
+    if (!canManageCommission || !orgId || commissionTeam === "All") {
+      setTeamPlanAppIds(null)
+      setTeamPlansLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setTeamPlansLoading(true)
+    organizationsApi
+      .getProfitPlans(orgId, {
+        from: format(startOfMonth(startDate), "yyyy-MM"),
+        to: format(startOfMonth(endDate), "yyyy-MM"),
+        teamId: commissionTeam,
+      })
+      .then((plans) => {
+        if (cancelled) return
+        const uniqueAppIds = [...new Set(plans.map((plan) => plan.appId).filter(Boolean))]
+        setTeamPlanAppIds(uniqueAppIds)
+      })
+      .catch(() => {
+        if (!cancelled) setTeamPlanAppIds([])
+      })
+      .finally(() => {
+        if (!cancelled) setTeamPlansLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [canManageCommission, orgId, commissionTeam, startDate, endDate])
+
+  useEffect(() => {
+    if (!canManageCommission || commissionTeam === "All" || teamPlanAppIds === null) return
+    const permitted = appsForSelection.map((app) => app.appId)
+    setSelectedApps(permitted)
+    syncAppsActiveFilter(permitted, appsForSelection)
+  }, [canManageCommission, commissionTeam, teamPlanAppIds, appsForSelection])
+
+  useEffect(() => {
+    if (commissionTeam === "All") return
+    const label = commissionTeams.find((team) => team.teamId === commissionTeam)?.label
+    if (!label) return
+    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
+  }, [commissionTeam, commissionTeams])
+
+  useEffect(() => {
     if (commissionUser === "All") return
-    if (commissionUsers.some((user) => user.email === commissionUser)) return
+    if (commissionUsersForFilter.some((user) => user.email === commissionUser)) return
     setCommissionUser("All")
     setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_USER))
-  }, [commissionUser, commissionUsers])
+  }, [commissionUser, commissionUsersForFilter])
 
   const commissionUsernamesForQuery = useMemo((): string[] | null => {
     if (!canManageCommission) return null
@@ -517,7 +779,17 @@ export function CustomReportBuilderContent() {
   })
 
   const dateSelectValue =
-    activePresetDays === 7 ? "7" : activePresetDays === 30 ? "30" : activePresetDays === 90 ? "90" : "custom"
+    dateFilterMode === "month"
+      ? "month"
+      : dateFilterMode === "custom"
+        ? "custom"
+        : activePresetDays === 7
+          ? "7"
+          : activePresetDays === 30
+            ? "30"
+            : activePresetDays === 90
+              ? "90"
+              : "30"
 
   const toggleParameter = (paramId: string) => {
     setSelectedParameters((prev) =>
@@ -540,14 +812,18 @@ export function CustomReportBuilderContent() {
     }
   }
 
-  const selectedAppLabels = availableApps
+  const selectedAppLabels = appsForSelection
     .filter((a) => selectedApps.includes(a.appId))
     .map((a) => a.displayName || a.name)
 
   const dateRangeLabel =
-    activePresetDays > 0
-      ? `Last ${activePresetDays} days`
-      : `${format(startDate, "M/d/yyyy", { locale: enUS })} – ${format(endDate, "M/d/yyyy", { locale: enUS })}`
+    dateFilterMode === "month"
+      ? format(selectedMonth, "MMMM yyyy", { locale: enUS })
+      : dateFilterMode === "preset" && activePresetDays > 0
+        ? `Last ${activePresetDays} days`
+        : `${format(startDate, "M/d/yyyy", { locale: enUS })} – ${format(endDate, "M/d/yyyy", { locale: enUS })}`
+
+  const maxSelectableMonth = format(new Date(), "yyyy-MM")
 
   const filteredParameters = useMemo(() => {
     if (!sidebarSearch.trim()) return catalogParameters
@@ -604,6 +880,100 @@ export function CustomReportBuilderContent() {
     })
   }
 
+  const buildSaveReportPayload = (name: string): SaveCustomReportRequest => {
+    const filters: CustomReportFilters = {
+      from: format(startDate, "yyyy-MM-dd"),
+      to: format(endDate, "yyyy-MM-dd"),
+      appIds: selectedApps,
+      revenueSource: "All",
+      metricFilters,
+      commissionUser,
+      commissionUsernames: commissionUsernamesForQuery,
+      commissionTeamId: canManageCommission && commissionTeam !== "All" ? commissionTeam : null,
+      sortBy: sortColumn,
+      sortDir: sortDirection,
+      activePresetDays: dateFilterMode === "preset" && activePresetDays > 0 ? activePresetDays : null,
+      selectedMonth: dateFilterMode === "month" ? format(selectedMonth, "yyyy-MM") : null,
+    }
+    return {
+      name: name.trim(),
+      folder: saveReportFolder.trim() || null,
+      filters,
+      dimensions: [...selectedParameters],
+      metrics: [...selectedMetrics],
+    }
+  }
+
+  const persistSavedReport = async (name: string) => {
+    const payload = buildSaveReportPayload(name)
+    if (savedReportId) {
+      return reportsApi.updateSaved(savedReportId, payload)
+    }
+    return reportsApi.createSaved(payload)
+  }
+
+  const handleSaveReportClick = () => {
+    if (selectedParameters.length === 0 || selectedMetrics.length === 0) {
+      toast.error("Select at least one parameter and one metric before saving.")
+      return
+    }
+    if (selectedApps.length === 0) {
+      toast.error("Select at least one app before saving.")
+      return
+    }
+    if (savedReportId) {
+      void handleConfirmSaveReport(saveReportName)
+      return
+    }
+    setSaveReportName(defaultCustomReportName())
+    setSaveDialogOpen(true)
+  }
+
+  const handleConfirmSaveReport = async (nameOverride?: string) => {
+    const name = (nameOverride ?? saveReportName).trim()
+    if (!name) {
+      toast.error("Report name is required.")
+      return
+    }
+
+    const isUpdate = Boolean(savedReportId)
+    setSavingReport(true)
+    try {
+      const saved = await persistSavedReport(name)
+      setSavedReportId(saved.id)
+      setSaveReportName(saved.name)
+      setSaveReportFolder(saved.folder ?? "")
+      setIsPinned(Boolean(saved.isPinned))
+      loadedReportIdRef.current = saved.id
+      setSaveDialogOpen(false)
+      invalidateCache("custom_reports_saved_list")
+      invalidateCache("custom_reports_folders_list")
+      toast.success(isUpdate ? "Report updated" : "Report saved")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save report"
+      toast.error(message)
+    } finally {
+      setSavingReport(false)
+    }
+  }
+
+  const handleTogglePin = async () => {
+    if (!savedReportId) return
+    setPinningReport(true)
+    try {
+      const nextPinned = !isPinned
+      const updated = await reportsApi.setPinned(savedReportId, nextPinned)
+      setIsPinned(updated.isPinned)
+      notifyPinnedCustomReportsChanged()
+      toast.success(updated.isPinned ? "Pinned to sidebar" : "Unpinned from sidebar")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update pin"
+      toast.error(message)
+    } finally {
+      setPinningReport(false)
+    }
+  }
+
   const handleMetricDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -621,30 +991,58 @@ export function CustomReportBuilderContent() {
   }
 
   const applyDatePreset = (days: number) => {
+    setDateFilterMode("preset")
     setEndDate(new Date())
     setStartDate(subDays(new Date(), days))
     setActivePresetDays(days)
     setDatePopoverOpen(false)
+    setMonthPopoverOpen(false)
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_DATE_RANGE, `Last ${days} days`))
+  }
+
+  const applySelectedMonth = (month: Date) => {
+    const normalized = startOfMonth(month)
+    const { start, end } = getMonthDateRange(normalized)
+    setDateFilterMode("month")
+    setSelectedMonth(normalized)
+    setStartDate(start)
+    setEndDate(end)
+    setMonthPopoverOpen(false)
+    setDatePopoverOpen(false)
+    setActiveFilters((prev) =>
+      upsertActiveFilter(prev, FILTER_DATE_RANGE, format(normalized, "MMMM yyyy", { locale: enUS })),
+    )
   }
 
   const onCustomDateSelect = (range: DateRange | undefined) => {
     if (range?.from) setStartDate(range.from)
     if (range?.to) setEndDate(range.to)
     if (range?.from && range?.to) {
-      setActivePresetDays(0)
+      setDateFilterMode("custom")
       const label = `${format(range.from, "M/d/yyyy", { locale: enUS })} – ${format(range.to, "M/d/yyyy", { locale: enUS })}`
       setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_DATE_RANGE, label))
     }
   }
 
   const handleDateSelectChange = (value: string) => {
+    if (value === "month") {
+      applySelectedMonth(selectedMonth)
+      setMonthPopoverOpen(true)
+      return
+    }
     if (value === "custom") {
-      setActivePresetDays(0)
+      setDateFilterMode("custom")
       setDatePopoverOpen(true)
       return
     }
     applyDatePreset(Number(value))
+  }
+
+  const handleMonthInputChange = (value: string) => {
+    if (!value) return
+    const [yearPart, monthPart] = value.split("-").map(Number)
+    if (!yearPart || !monthPart) return
+    applySelectedMonth(new Date(yearPart, monthPart - 1, 1))
   }
 
   const handleCommissionUserChange = (value: string) => {
@@ -652,8 +1050,27 @@ export function CustomReportBuilderContent() {
     const label =
       value === "All"
         ? "All"
-        : commissionUsers.find((u) => u.email === value)?.label ?? value
+        : commissionUsersForFilter.find((u) => u.email === value)?.label ?? value
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_USER, label))
+  }
+
+  const handleCommissionTeamChange = (value: string) => {
+    setCommissionTeam(value)
+    const label =
+      value === "All"
+        ? "All"
+        : commissionTeams.find((team) => team.teamId === value)?.label ?? value
+    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
+    if (value === "All") {
+      setTeamPlanAppIds(null)
+      setTeamMemberUsers([])
+      const ids = availableApps.map((app) => app.appId)
+      setSelectedApps(ids)
+      syncAppsActiveFilter(ids, availableApps)
+    } else {
+      setCommissionUser("All")
+      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_USER))
+    }
   }
 
   const addMetricFilter = () => {
@@ -693,11 +1110,7 @@ export function CustomReportBuilderContent() {
   const toggleAppWithFilter = (appId: string) => {
     setSelectedApps((prev) => {
       const next = prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]
-      if (next.length > MAX_SELECTED_APPS) {
-        setAppLimitDialogOpen(true)
-        return prev
-      }
-      syncAppsActiveFilter(next, availableApps)
+      syncAppsActiveFilter(next, appsForSelection)
       return next
     })
   }
@@ -706,31 +1119,42 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => prev.filter((f) => f.type !== type))
     switch (type) {
       case FILTER_DATE_RANGE:
+        setDateFilterMode("preset")
         setEndDate(new Date())
         setStartDate(subDays(new Date(), 30))
         setActivePresetDays(30)
         setDatePopoverOpen(false)
+        setMonthPopoverOpen(false)
         break
       case FILTER_APPS:
-        if (availableApps.length <= MAX_SELECTED_APPS) {
-          setSelectedApps(availableApps.map((app) => app.appId))
+        if (canManageCommission && commissionTeam !== "All") {
+          const ids = appsForSelection.map((app) => app.appId)
+          setSelectedApps(ids)
+          syncAppsActiveFilter(ids, appsForSelection)
         } else {
-          setSelectedApps(availableApps.slice(0, MAX_SELECTED_APPS).map((app) => app.appId))
-          setAppLimitDialogOpen(true)
+          setSelectedApps(availableApps.map((app) => app.appId))
+          syncAppsActiveFilter(availableApps.map((app) => app.appId), availableApps)
         }
         break
       case FILTER_COMMISSION_USER:
         setCommissionUser("All")
+        break
+      case FILTER_COMMISSION_TEAM:
+        setCommissionTeam("All")
+        setTeamPlanAppIds(null)
         break
     }
   }
 
   const clearAllFilters = () => {
     applyDatePreset(30)
-    const firstId = availableApps[0]?.appId
+    setCommissionTeam("All")
+    setTeamPlanAppIds(null)
+    const pool = availableApps
+    const firstId = pool[0]?.appId
     if (firstId) {
       setSelectedApps([firstId])
-      syncAppsActiveFilter([firstId], availableApps)
+      syncAppsActiveFilter([firstId], pool)
     }
     setCommissionUser("All")
     setMetricFilters([])
@@ -739,12 +1163,14 @@ export function CustomReportBuilderContent() {
 
   const appsTriggerLabel =
     selectedAppLabels.length === 0
-      ? appsLoading
+      ? appsLoading || teamPlansLoading
         ? "Loading apps..."
-        : "Select apps"
+        : commissionTeam !== "All" && teamPlanAppIds?.length === 0
+          ? "No apps in plan"
+          : "Select apps"
       : selectedAppLabels.length === 1
         ? selectedAppLabels[0]
-        : selectedAppLabels.length === availableApps.length
+        : selectedAppLabels.length === appsForSelection.length
           ? "All apps"
           : `${selectedAppLabels.length} apps`
 
@@ -983,19 +1409,59 @@ export function CustomReportBuilderContent() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Dialog open={appLimitDialogOpen} onOpenChange={setAppLimitDialogOpen}>
+      <Dialog
+        open={saveDialogOpen}
+        onOpenChange={(open) => {
+          if (!savingReport) setSaveDialogOpen(open)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Too many apps selected</DialogTitle>
+            <DialogTitle>Save report</DialogTitle>
             <DialogDescription>
-              Select fewer than 20 apps to ensure the system loads reliably.
+              Save the current filters, parameters, and metrics for quick access later.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
-            <Button type="button" onClick={() => setAppLimitDialogOpen(false)}>
-              Got it
-            </Button>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="save-report-name">Report name</Label>
+            <Input
+              id="save-report-name"
+              value={saveReportName}
+              onChange={(e) => setSaveReportName(e.target.value)}
+              placeholder={defaultCustomReportName()}
+              maxLength={200}
+              disabled={savingReport}
+            />
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="save-report-folder">Folder (optional)</Label>
+              <Input
+                id="save-report-folder"
+                value={saveReportFolder}
+                onChange={(e) => setSaveReportFolder(e.target.value)}
+                placeholder="e.g. Revenue, UA, Executive"
+                maxLength={100}
+                disabled={savingReport}
+              />
+            </div>
           </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={savingReport}
+              onClick={() => setSaveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={savingReport || !saveReportName.trim()}
+              onClick={() => void handleConfirmSaveReport()}
+            >
+              {savingReport ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1007,9 +1473,28 @@ export function CustomReportBuilderContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700" type="button">
+          {savedReportId ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              disabled={pinningReport || savingReport || loadingSavedReport}
+              onClick={() => void handleTogglePin()}
+              title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+              aria-label={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+            >
+              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+            </Button>
+          ) : null}
+          <Button
+            className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+            type="button"
+            disabled={savingReport || loadingSavedReport}
+            onClick={handleSaveReportClick}
+          >
             <Save className="w-4 h-4" />
-            Save report
+            {savingReport ? "Saving…" : savedReportId ? "Update report" : "Save report"}
           </Button>
         </div>
       </div>
@@ -1030,11 +1515,42 @@ export function CustomReportBuilderContent() {
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="month">Select month</SelectItem>
                 <SelectItem value="custom">Custom…</SelectItem>
               </SelectContent>
             </Select>
 
-            {(dateSelectValue === "custom" || activePresetDays === 0) && (
+            {dateFilterMode === "month" && (
+              <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-10 bg-white border-slate-200" type="button">
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {dateRangeLabel}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="start">
+                  <div className="space-y-2">
+                    <Label htmlFor="report-month-picker" className="text-sm font-medium text-slate-700">
+                      Month
+                    </Label>
+                    <Input
+                      id="report-month-picker"
+                      type="month"
+                      className="h-10 w-[220px]"
+                      max={maxSelectableMonth}
+                      value={format(selectedMonth, "yyyy-MM")}
+                      onChange={(e) => handleMonthInputChange(e.target.value)}
+                    />
+                    <p className="text-xs text-slate-500">
+                      {format(startDate, "M/d/yyyy", { locale: enUS })} –{" "}
+                      {format(endDate, "M/d/yyyy", { locale: enUS })}
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {dateFilterMode === "custom" && (
               <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="h-10 bg-white border-slate-200" type="button">
@@ -1071,13 +1587,69 @@ export function CustomReportBuilderContent() {
               </Popover>
             )}
 
+            {canManageCommission && (
+              <Select value={commissionTeam} onValueChange={handleCommissionTeamChange}>
+                <SelectTrigger className="w-52 h-10 bg-white">
+                  <SelectValue placeholder="Team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All teams</SelectItem>
+                  {commissionTeams.map((team) => (
+                    <SelectItem key={team.teamId} value={team.teamId}>
+                      {team.label}
+                    </SelectItem>
+                  ))}
+                  {commissionTeams.length === 0 ? (
+                    <div className="px-2 py-2 text-sm text-slate-500">
+                      No teams under you or as team lead
+                    </div>
+                  ) : null}
+                </SelectContent>
+              </Select>
+            )}
+
+            {canManageCommission && (
+              <Select
+                value={commissionUser}
+                onValueChange={handleCommissionUserChange}
+                disabled={teamMembersLoading}
+              >
+                <SelectTrigger className="w-52 h-10 bg-white">
+                  <SelectValue
+                    placeholder={
+                      teamMembersLoading
+                        ? "Loading members..."
+                        : commissionTeam !== "All"
+                          ? "Team member"
+                          : "Commission User"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  {commissionUsersForFilter.map((user) => (
+                    <SelectItem key={user.email} value={user.email}>
+                      {user.label}
+                    </SelectItem>
+                  ))}
+                  {commissionUsersForFilter.length === 0 ? (
+                    <div className="px-2 py-2 text-sm text-slate-500">
+                      {commissionTeam !== "All"
+                        ? "No members in this team"
+                        : "No subordinate users found"}
+                    </div>
+                  ) : null}
+                </SelectContent>
+              </Select>
+            )}
+
             <Popover open={appPopoverOpen} onOpenChange={setAppPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className="h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal"
                   type="button"
-                  disabled={appsLoading}
+                  disabled={appsLoading || teamPlansLoading}
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
@@ -1099,15 +1671,10 @@ export function CustomReportBuilderContent() {
                           size="sm"
                           className="h-7 text-xs"
                           onClick={() => {
-                            if (availableApps.length > MAX_SELECTED_APPS) {
-                              setAppLimitDialogOpen(true)
-                              return
-                            }
-                            const ids = availableApps.map((a) => a.appId)
+                            const ids = appsForSelection.map((a) => a.appId)
                             setSelectedApps(ids)
-                            syncAppsActiveFilter(ids, availableApps)
+                            syncAppsActiveFilter(ids, appsForSelection)
                           }}
-                          disabled={availableApps.length > MAX_SELECTED_APPS}
                         >
                           Select all
                         </Button>
@@ -1118,13 +1685,18 @@ export function CustomReportBuilderContent() {
                           className="h-7 text-xs"
                           onClick={() => {
                             setSelectedApps([])
-                            syncAppsActiveFilter([], availableApps)
+                            syncAppsActiveFilter([], appsForSelection)
                           }}
                         >
                           Clear
                         </Button>
                       </div>
-                      {availableApps.map((app) => (
+                      {commissionTeam !== "All" && teamPlanAppIds !== null && appsForSelection.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-slate-500">
+                          No apps in profit plan for this team in the selected date range.
+                        </div>
+                      ) : null}
+                      {appsForSelection.map((app) => (
                         <CommandItem
                           key={app.appId}
                           value={app.displayName || app.name}
@@ -1152,27 +1724,6 @@ export function CustomReportBuilderContent() {
                 </Command>
               </PopoverContent>
             </Popover>
-
-            {canManageCommission && (
-              <Select value={commissionUser} onValueChange={handleCommissionUserChange}>
-                <SelectTrigger className="w-52 h-10 bg-white">
-                  <SelectValue placeholder="Commission User" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All</SelectItem>
-                  {commissionUsers.map((user) => (
-                    <SelectItem key={user.email} value={user.email}>
-                      {user.label}
-                    </SelectItem>
-                  ))}
-                  {commissionUsers.length === 0 ? (
-                    <div className="px-2 py-2 text-sm text-slate-500">
-                      No subordinate users found
-                    </div>
-                  ) : null}
-                </SelectContent>
-              </Select>
-            )}
 
             <Popover open={metricFilterPopoverOpen} onOpenChange={setMetricFilterPopoverOpen}>
               <PopoverTrigger asChild>

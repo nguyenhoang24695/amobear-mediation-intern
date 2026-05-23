@@ -96,7 +96,7 @@ interface UserGroup {
   users: TeamMember[]
 }
 
-function DraggableTeamRow({ group }: { group: UserGroup }) {
+function DraggableTeamRow({ group, placed }: { group: UserGroup; placed: boolean }) {
   const dragData: PersonnelDragData = {
     type: PERSONNEL_DRAG_TYPE,
     user: {
@@ -121,6 +121,7 @@ function DraggableTeamRow({ group }: { group: UserGroup }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: paletteDraggableId(`team:${group.id}`),
     data: dragData,
+    disabled: placed,
   })
 
   const style = transform
@@ -133,13 +134,14 @@ function DraggableTeamRow({ group }: { group: UserGroup }) {
       style={style}
       className={cn(
         "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
-        "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50",
+        placed
+          ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed"
+          : "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50",
         isDragging && "opacity-50 shadow-md ring-2 ring-blue-300",
       )}
-      {...listeners}
-      {...attributes}
+      {...(placed ? {} : { ...listeners, ...attributes })}
     >
-      <GripVertical className="h-4 w-4 shrink-0 text-slate-400" />
+      {!placed && <GripVertical className="h-4 w-4 shrink-0 text-slate-400" />}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
         <FolderOpen className="h-4 w-4" />
       </div>
@@ -147,9 +149,15 @@ function DraggableTeamRow({ group }: { group: UserGroup }) {
         <p className="truncate font-medium text-slate-900">{group.name}</p>
         <p className="truncate text-xs text-slate-500">{group.users.length} members</p>
       </div>
-      <Badge variant="secondary" className="shrink-0 text-[10px]">
-        Team
-      </Badge>
+      {placed ? (
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          On chart
+        </Badge>
+      ) : (
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          Team
+        </Badge>
+      )}
     </div>
   )
 }
@@ -311,7 +319,11 @@ export function PersonnelUsersPalette({
                   </div>
                 </div>
               ) : (
-                <DraggableTeamRow key={group.id} group={group} />
+                <DraggableTeamRow
+                  key={group.id}
+                  group={group}
+                  placed={isOrgUserPlacedInTree(tree, `team:${group.id}`)}
+                />
               ),
             )}
           </div>

@@ -19,6 +19,7 @@ import { OrgOverviewTab } from "./tabs/org-overview-tab"
 import { OrgUsersTab } from "./tabs/org-users-tab"
 import { OrgPersonnelTab } from "./tabs/org-personnel-tab"
 import { OrgTeamsTab } from "./tabs/org-teams-tab"
+import { OrgProfitPlanTab } from "./tabs/org-profit-plan-tab"
 import { OrgSettingsTab } from "./tabs/org-settings-tab"
 import { organizationsApi, type OrganizationDetail } from "@/lib/api/services"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
@@ -233,6 +234,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
           {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
           {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
+          {canViewTeams && <TabsTrigger value="profit-plan">Profit Plan</TabsTrigger>}
           {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
 
@@ -261,6 +263,12 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
         {canViewTeams && (
           <TabsContent value="teams">
             <OrgTeamsTab orgId={orgId} orgName={orgTabData.name} canManage={canManageTeams} />
+          </TabsContent>
+        )}
+
+        {canViewTeams && (
+          <TabsContent value="profit-plan">
+            <OrgProfitPlanTab orgId={orgId} canManage={canManageTeams} />
           </TabsContent>
         )}
 
