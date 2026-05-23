@@ -81,7 +81,7 @@ import {
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
-import { useApi } from "@/hooks/use-api"
+import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { organizationsApi, reportsApi, structureApi } from "@/lib/api/services"
@@ -471,6 +471,7 @@ export function CustomReportBuilderContent() {
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveReportName, setSaveReportName] = useState(defaultCustomReportName)
+  const [saveReportFolder, setSaveReportFolder] = useState("")
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
   const [isPinned, setIsPinned] = useState(false)
   const [pinningReport, setPinningReport] = useState(false)
@@ -514,6 +515,7 @@ export function CustomReportBuilderContent() {
         report,
         availableApps,
         setSaveReportName,
+        setSaveReportFolder,
         setSavedReportId,
         setIsPinned,
         setSelectedParameters,
@@ -735,6 +737,7 @@ export function CustomReportBuilderContent() {
     }
     return {
       name: name.trim(),
+      folder: saveReportFolder.trim() || null,
       filters,
       dimensions: [...selectedParameters],
       metrics: [...selectedMetrics],
@@ -779,9 +782,11 @@ export function CustomReportBuilderContent() {
       const saved = await persistSavedReport(name)
       setSavedReportId(saved.id)
       setSaveReportName(saved.name)
+      setSaveReportFolder(saved.folder ?? "")
       setIsPinned(Boolean(saved.isPinned))
       loadedReportIdRef.current = saved.id
       setSaveDialogOpen(false)
+      invalidateCache("custom_reports_saved_list")
       toast.success(isUpdate ? "Report updated" : "Report saved")
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to save report"
@@ -1232,6 +1237,17 @@ export function CustomReportBuilderContent() {
               maxLength={200}
               disabled={savingReport}
             />
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="save-report-folder">Folder (optional)</Label>
+              <Input
+                id="save-report-folder"
+                value={saveReportFolder}
+                onChange={(e) => setSaveReportFolder(e.target.value)}
+                placeholder="e.g. Revenue, UA, Executive"
+                maxLength={100}
+                disabled={savingReport}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button

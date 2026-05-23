@@ -52,6 +52,7 @@ import {
   BadgePercent,
   Music2,
   Star,
+  Plus,
 } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/shared/logo"
@@ -100,6 +101,8 @@ type NavItem = {
     isNew?: boolean
     /** Match ?reportId= for /reports saved-report links */
     reportId?: string | null
+    /** Distinguish /reports index vs ?new=1 when reportId is null */
+    reportsView?: "index" | "new"
   }[]
 }
 
@@ -338,6 +341,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const reportIdParam = pathname === "/reports" ? searchParams.get("reportId") : null
+  const isNewReportParam = pathname === "/reports" && searchParams.get("new") === "1"
   const router = useRouter()
   const { toast } = useToast()
   const { unseenCount: alertNotificationCount, openAlertIds, markAlertsViewed } = useAlertNotifications()
@@ -378,9 +382,17 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
         children: [
           {
             icon: BarChart3,
-            label: "Custom Report",
+            label: "All reports",
             href: "/reports",
             reportId: null,
+            reportsView: "index",
+          },
+          {
+            icon: Plus,
+            label: "New report",
+            href: "/reports?new=1",
+            reportId: null,
+            reportsView: "new",
           },
           ...pinnedReports.map((report) => ({
             icon: FileText,
@@ -563,7 +575,9 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                       const childActive =
                         pathname === "/reports" && child.reportId !== undefined
                           ? child.reportId === null
-                            ? !reportIdParam
+                            ? child.reportsView === "new"
+                              ? isNewReportParam && !reportIdParam
+                              : !reportIdParam && !isNewReportParam
                             : reportIdParam === child.reportId
                           : pathname === child.href ||
                             (child.href !== "/" && pathname.startsWith(child.href.split("?")[0]))

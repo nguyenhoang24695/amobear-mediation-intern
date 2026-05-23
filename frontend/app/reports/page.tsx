@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { Loader2 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { ScreenFunctionGuard } from "@/components/auth/screen-function-guard"
-import { CustomReportBuilderContent } from "@/components/reports/custom-report-builder-content"
+import { ReportsPageContent } from "@/components/reports/reports-page-content"
 
 export default function ReportsPage() {
   return (
@@ -15,7 +15,7 @@ export default function ReportsPage() {
             </div>
           }
         >
-          <CustomReportBuilderContent />
+          <ReportsPageContent />
         </Suspense>
       </ScreenFunctionGuard>
     </DashboardLayout>

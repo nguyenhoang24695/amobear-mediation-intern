@@ -39,7 +39,6 @@ import {
   LogOut,
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useApi } from "@/hooks/use-api"
 import { teamMembersApi } from "@/lib/api/services"
 import { ManagePermissionsModal } from "./manage-permissions-modal"
@@ -70,7 +69,7 @@ interface UsersTableProps {
   searchQuery: string
   roleFilter: string
   statusFilter: string
-  teamId?: string
+  teamId: string
   onInviteClick?: () => void
   onTeamNameChange?: (name?: string) => void
 }
@@ -124,7 +123,6 @@ function formatTeamActionFailures(
 }
 
 export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
-  const router = useRouter()
   const currentUser = useMemo(() => getCurrentUser(), [])
   const currentUserId = currentUser?.id
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -155,7 +153,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     search: searchQuery || undefined,
     role: roleFilter !== "all" ? roleFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
-    teamId: teamId || undefined,
+    teamId,
   }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamId])
 
   // Fetch team members from API
@@ -314,15 +312,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   }
 
   const handleRemoveClick = (userIds: string[]) => {
-    if (!teamId) {
-      toast({
-        title: "Error",
-        description: "Team ID is required to remove users",
-        variant: "destructive",
-      })
-      return
-    }
-
     if (userIds.length === 0) {
       toast({
         title: "Error",
@@ -343,7 +332,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   }
 
   const handleLeaveClick = () => {
-    if (!teamId || !currentUserId) return
+    if (!currentUserId) return
     setIsLeaveAction(true)
     setUsersToRemove([currentUserId])
     setActionErrorMessage(null)
@@ -353,7 +342,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   }
 
   const handleConfirmRemove = async () => {
-    if (!teamId || usersToRemove.length === 0) return
+    if (usersToRemove.length === 0) return
 
     setRemoving(true)
     setActionErrorMessage(null)
@@ -396,10 +385,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       const failures = results.filter((r) => !r.success)
       const successCount = results.length - failures.length
       const failureDetail = formatTeamActionFailures(failures, userNameById)
-      const leftSelf =
-        currentUserId != null &&
-        usersToRemove.includes(currentUserId) &&
-        results.some((r) => r.userId === currentUserId && r.success)
 
       if (failures.length === results.length) {
         setActionErrorMessage(failureDetail)
@@ -439,12 +424,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       setIsLeaveAction(false)
       setActionErrorMessage(null)
 
-      if (leftSelf) {
-        router.push("/team-members")
-        return
-      }
-
-      refetch()
+      await refetch()
     } catch (err: unknown) {
       const message = extractTeamActionError(err, "Failed to update team membership")
       setActionErrorMessage(message)
@@ -459,8 +439,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   }
 
   const handleSetTeamLead = async (userId: string, userName: string) => {
-    if (!teamId) return
-
     try {
       const response = await teamMembersApi.setTeamLead(teamId, userId)
       if (!response.success) {
@@ -541,7 +519,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                     onClick={() =>
                       bulkIsSelfOnly ? handleLeaveClick() : handleRemoveClick(selectedUsers)
                     }
-                    disabled={!teamId}
                   >
                     {bulkIsSelfOnly ? (
                       <LogOut className="w-4 h-4 mr-2" />
@@ -807,9 +784,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           Edit User
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={!teamId}
                           onClick={() => {
-                            if (!teamId) return
                             const currentUser = getCurrentUser()
                             if (currentUser && user.id === currentUser.id) {
                               // User is trying to manage their own permissions
@@ -868,7 +843,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         ) : (
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-600"
-                            disabled={!teamId}
                             onClick={() => handleRemoveClick([user.id])}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -950,7 +924,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         </div>
       </Card>
       {/* Manage Permissions Modal */}
-      {permissionsUserId && teamId && (
+      {permissionsUserId && (
         <ManagePermissionsModal
           open={permissionsModalOpen}
           onOpenChange={setPermissionsModalOpen}

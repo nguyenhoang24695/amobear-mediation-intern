@@ -64,6 +64,7 @@ export interface CustomReportFilters {
 
 export interface SaveCustomReportRequest {
   name: string
+  folder?: string | null
   filters: CustomReportFilters
   dimensions: string[]
   metrics: string[]
@@ -72,6 +73,7 @@ export interface SaveCustomReportRequest {
 export interface CustomReportSaved {
   id: string
   name: string
+  folder: string
   ownerId: string
   filters: CustomReportFilters
   dimensions: string[]
@@ -84,6 +86,7 @@ export interface CustomReportSaved {
 export interface CustomReportListItem {
   id: string
   name: string
+  folder: string
   updatedAt: string
   isPinned: boolean
 }

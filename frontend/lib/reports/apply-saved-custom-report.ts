@@ -13,6 +13,7 @@ export type DateFilterMode = "preset" | "month" | "custom"
 export interface ApplySavedCustomReportOptions {
   report: CustomReportSaved
   setSaveReportName: (name: string) => void
+  setSaveReportFolder?: (folder: string) => void
   setSavedReportId: (id: string) => void
   setIsPinned: (pinned: boolean) => void
   setSelectedParameters: (ids: string[]) => void
@@ -48,6 +49,7 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
   const { filters } = report
 
   options.setSaveReportName(report.name)
+  options.setSaveReportFolder?.(report.folder ?? "")
   options.setSavedReportId(report.id)
   options.setIsPinned(Boolean(report.isPinned))
   options.setSelectedParameters([...report.dimensions])
