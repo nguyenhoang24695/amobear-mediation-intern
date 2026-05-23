@@ -1,6 +1,7 @@
 "use client"
 
-import { type CSSProperties, useEffect, useMemo, useState } from "react"
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   closestCenter,
   DndContext,
@@ -74,6 +75,8 @@ import {
   AlertCircle,
   Plus,
   GripVertical,
+  Pin,
+  PinOff,
 } from "lucide-react"
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
@@ -87,8 +90,11 @@ import type {
   CustomReportCatalogItem,
   CustomReportFilters,
   CustomReportMetricFilter,
+  CustomReportSaved,
   SaveCustomReportRequest,
 } from "@/types/reports"
+import { applySavedCustomReport } from "@/lib/reports/apply-saved-custom-report"
+import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
 
@@ -285,7 +291,11 @@ function renderParameterCell(
   if (paramId === "app") {
     const appName = String(row.app_display_name ?? row.app ?? "")
     const appIconUri = typeof row.app_icon_uri === "string" ? row.app_icon_uri : ""
-    const shouldShowAppSub = !selectedParameters.includes("platform") && Boolean(row.app_sub)
+    const appSub = String(row.app_sub ?? "").trim()
+    const shouldShowAppSub =
+      !selectedParameters.includes("platform") &&
+      appSub.length > 0 &&
+      appSub.toLowerCase() !== appName.trim().toLowerCase()
     return (
       <div className="flex items-center gap-2 min-w-[180px]">
         <Avatar className="h-10 w-10 rounded-lg shrink-0">
@@ -297,7 +307,7 @@ function renderParameterCell(
         <div className="min-w-0">
           <div className="text-sm font-medium text-slate-900 truncate">{appName}</div>
           {shouldShowAppSub ? (
-            <div className="text-xs text-slate-500">{String(row.app_sub ?? "")}</div>
+            <div className="text-xs text-slate-500">{appSub}</div>
           ) : null}
         </div>
       </div>
@@ -409,6 +419,9 @@ function escapeExcelHtml(value: unknown): string {
 }
 
 export function CustomReportBuilderContent() {
+  const searchParams = useSearchParams()
+  const reportIdFromUrl = searchParams.get("reportId")
+
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const currentUser = getCurrentUser()
   const orgId = currentUser?.organization?.id
@@ -459,7 +472,11 @@ export function CustomReportBuilderContent() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveReportName, setSaveReportName] = useState(defaultCustomReportName)
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
+  const [isPinned, setIsPinned] = useState(false)
+  const [pinningReport, setPinningReport] = useState(false)
+  const [loadingSavedReport, setLoadingSavedReport] = useState(false)
   const [savingReport, setSavingReport] = useState(false)
+  const loadedReportIdRef = useRef<string | null>(null)
 
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
@@ -482,13 +499,68 @@ export function CustomReportBuilderContent() {
 
   useEffect(() => {
     if (appsInitialized || appsLoading || availableApps.length === 0) return
+    if (reportIdFromUrl) return
     const initialIds = availableApps.map((app) => app.appId)
     if (initialIds.length > 0) {
       setSelectedApps(initialIds)
       syncAppsActiveFilter(initialIds, availableApps)
     }
     setAppsInitialized(true)
-  }, [appsInitialized, appsLoading, availableApps])
+  }, [appsInitialized, appsLoading, availableApps, reportIdFromUrl])
+
+  const applyLoadedSavedReport = useCallback(
+    (report: CustomReportSaved) => {
+      applySavedCustomReport({
+        report,
+        availableApps,
+        setSaveReportName,
+        setSavedReportId,
+        setIsPinned,
+        setSelectedParameters,
+        setSelectedMetrics,
+        setSelectedApps,
+        setMetricFilters,
+        setCommissionUser,
+        setSortColumn,
+        setSortDirection,
+        setDateFilterMode,
+        setActivePresetDays,
+        setStartDate,
+        setEndDate,
+        setSelectedMonth,
+        setActiveFilters,
+        upsertActiveFilter,
+        syncAppsActiveFilter,
+      })
+      setAppsInitialized(true)
+    },
+    [availableApps],
+  )
+
+  useEffect(() => {
+    if (!reportIdFromUrl || appsLoading) return
+    if (loadedReportIdRef.current === reportIdFromUrl) return
+
+    let cancelled = false
+    const load = async () => {
+      setLoadingSavedReport(true)
+      try {
+        const report = await reportsApi.getSaved(reportIdFromUrl)
+        if (cancelled) return
+        loadedReportIdRef.current = reportIdFromUrl
+        applyLoadedSavedReport(report)
+      } catch (err) {
+        console.error("Failed to load saved report:", err)
+        if (!cancelled) toast.error("Could not load saved report")
+      } finally {
+        if (!cancelled) setLoadingSavedReport(false)
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [reportIdFromUrl, appsLoading, applyLoadedSavedReport])
 
   useEffect(() => {
     if (appsLoading || availableApps.length === 0) return
@@ -707,6 +779,8 @@ export function CustomReportBuilderContent() {
       const saved = await persistSavedReport(name)
       setSavedReportId(saved.id)
       setSaveReportName(saved.name)
+      setIsPinned(Boolean(saved.isPinned))
+      loadedReportIdRef.current = saved.id
       setSaveDialogOpen(false)
       toast.success(isUpdate ? "Report updated" : "Report saved")
     } catch (err: unknown) {
@@ -714,6 +788,23 @@ export function CustomReportBuilderContent() {
       toast.error(message)
     } finally {
       setSavingReport(false)
+    }
+  }
+
+  const handleTogglePin = async () => {
+    if (!savedReportId) return
+    setPinningReport(true)
+    try {
+      const nextPinned = !isPinned
+      const updated = await reportsApi.setPinned(savedReportId, nextPinned)
+      setIsPinned(updated.isPinned)
+      notifyPinnedCustomReportsChanged()
+      toast.success(updated.isPinned ? "Pinned to sidebar" : "Unpinned from sidebar")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update pin"
+      toast.error(message)
+    } finally {
+      setPinningReport(false)
     }
   }
 
@@ -1171,10 +1262,24 @@ export function CustomReportBuilderContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {savedReportId ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              disabled={pinningReport || savingReport || loadingSavedReport}
+              onClick={() => void handleTogglePin()}
+              title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+              aria-label={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+            >
+              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+            </Button>
+          ) : null}
           <Button
             className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
             type="button"
-            disabled={savingReport}
+            disabled={savingReport || loadingSavedReport}
             onClick={handleSaveReportClick}
           >
             <Save className="w-4 h-4" />

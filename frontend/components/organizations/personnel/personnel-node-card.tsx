@@ -59,10 +59,11 @@ export function PersonnelNodeCard({
   const displayName = node.type === "organization" ? node.name : node.name
   const subtitle =
     node.isTeamGroup ? node.title ?? "" : node.type === "department" ? "Department" : node.title ?? node.department ?? ""
+  const isHydratedTeamMember = Boolean(node.teamId && !node.isTeamGroup)
   const hasRemovableContent =
     node.type === "member" ||
     (node.type === "organization" && (node.children?.length ?? 0) > 0)
-  const canRemove = showRemove && hasRemovableContent && onRemove
+  const canRemove = showRemove && hasRemovableContent && onRemove && !isHydratedTeamMember
 
   return (
     <div className="relative">

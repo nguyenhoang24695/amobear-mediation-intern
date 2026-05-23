@@ -2678,6 +2678,17 @@ export const reportsApi = {
         return apiClient.get('/api/v1/reports/saved')
     },
 
+    listPinned: async (): Promise<import('@/types/reports').CustomReportListItem[]> => {
+        return apiClient.get('/api/v1/reports/saved/pinned')
+    },
+
+    setPinned: async (
+        id: string,
+        isPinned: boolean,
+    ): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.patch(`/api/v1/reports/saved/${id}/pin`, { isPinned })
+    },
+
     getSaved: async (id: string): Promise<import('@/types/reports').CustomReportSaved> => {
         return apiClient.get(`/api/v1/reports/saved/${id}`)
     },

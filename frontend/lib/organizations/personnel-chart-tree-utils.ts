@@ -1,4 +1,5 @@
 import type { PersonnelNode } from "./personnel-chart-types"
+import { stripTeamMemberChildrenForPersist } from "./personnel-chart-team-utils"
 
 export function flattenPersonnelTree(node: PersonnelNode): PersonnelNode[] {
   const list: PersonnelNode[] = [node]
@@ -50,7 +51,12 @@ export function normalizePersonnelTreeForCompare(node: PersonnelNode): Personnel
 }
 
 export function personnelTreesEqual(a: PersonnelNode, b: PersonnelNode): boolean {
-  return JSON.stringify(normalizePersonnelTreeForCompare(a)) === JSON.stringify(normalizePersonnelTreeForCompare(b))
+  const left = stripTeamMemberChildrenForPersist(a)
+  const right = stripTeamMemberChildrenForPersist(b)
+  return (
+    JSON.stringify(normalizePersonnelTreeForCompare(left)) ===
+    JSON.stringify(normalizePersonnelTreeForCompare(right))
+  )
 }
 
 function detachSubtree(root: PersonnelNode, nodeId: string): { tree: PersonnelNode; subtree: PersonnelNode | null } {

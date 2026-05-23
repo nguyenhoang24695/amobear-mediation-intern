@@ -42,6 +42,11 @@ import {
   type PersonnelMemberPatch,
 } from "@/lib/mock/org-personnel-mock"
 import { personnelTreesEqual } from "@/lib/organizations/personnel-chart-tree-utils"
+import {
+  stripTeamMemberChildrenForPersist,
+  hydrateTeamGroupsInTree,
+} from "@/lib/organizations/personnel-chart-team-utils"
+import type { OrgTeam } from "@/lib/api/services"
 import { OrgPersonnelToolbar } from "../personnel/org-personnel-toolbar"
 import { OrgChartTree } from "../personnel/org-chart-tree"
 import { PersonnelDetailSheet } from "../personnel/personnel-detail-sheet"
@@ -117,6 +122,9 @@ export function OrgPersonnelTab({
   const [removeTarget, setRemoveTarget] = useState<PersonnelNode | null>(null)
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
   const removeTargetRef = useRef<PersonnelNode | null>(null)
+  const orgTeamsByIdRef = useRef<Map<string, OrgTeam>>(new Map())
+  const [displayTree, setDisplayTree] = useState<PersonnelNode>(defaultTree)
+  const [hydratingChart, setHydratingChart] = useState(false)
 
   const removeDescendantNames = useMemo(
     () => (removeTarget ? getMemberDescendantNames(removeTarget) : []),
@@ -137,11 +145,17 @@ export function OrgPersonnelTab({
     const load = async () => {
       setLoading(true)
       try {
-        const data = await organizationsApi.getPersonnelChart(orgId)
+        const [data, teams] = await Promise.all([
+          organizationsApi.getPersonnelChart(orgId),
+          organizationsApi.getTeams(orgId).catch(() => [] as OrgTeam[]),
+        ])
         if (cancelled) return
+        orgTeamsByIdRef.current = new Map(teams.map((t) => [t.id, t]))
+
         if (data?.root) {
-          setSavedTree(data.root)
-          setDraftTree(data.root)
+          const stripped = stripTeamMemberChildrenForPersist(data.root)
+          setSavedTree(stripped)
+          setDraftTree(stripped)
           setHasSavedOnServer(true)
         } else {
           const mock = getMockOrgPersonnelTree(orgId, orgName)
@@ -167,22 +181,43 @@ export function OrgPersonnelTab({
     }
   }, [orgId, orgName])
 
-  const displayTree = useMemo(() => {
-    const source = isEditMode ? draftTree : savedTree
-    if (!searchQuery.trim()) return source
-    return filterPersonnelTree(source, searchQuery) ?? source
-  }, [draftTree, savedTree, searchQuery, isEditMode])
+  const persistedTree = isEditMode ? draftTree : savedTree
 
-  const activeTree = isEditMode ? draftTree : savedTree
-  const stats = useMemo(() => getPersonnelStats(activeTree), [activeTree])
-  const allCollapsibleIds = useMemo(() => collectCollapsibleIds(activeTree), [activeTree])
+  useEffect(() => {
+    let cancelled = false
+    setHydratingChart(true)
+    void (async () => {
+      try {
+        const hydrated = await hydrateTeamGroupsInTree(
+          persistedTree,
+          orgTeamsByIdRef.current,
+        )
+        if (cancelled) return
+        const shown = searchQuery.trim()
+          ? filterPersonnelTree(hydrated, searchQuery) ?? hydrated
+          : hydrated
+        setDisplayTree(shown)
+      } catch (err) {
+        console.error("Failed to hydrate team groups:", err)
+        if (!cancelled) setDisplayTree(persistedTree)
+      } finally {
+        if (!cancelled) setHydratingChart(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [persistedTree, searchQuery])
+
+  const stats = useMemo(() => getPersonnelStats(displayTree), [displayTree])
+  const allCollapsibleIds = useMemo(() => collectCollapsibleIds(displayTree), [displayTree])
   const allCollapsed =
     allCollapsibleIds.length > 0 && allCollapsibleIds.every((id) => collapsedIds.has(id))
 
   const managerCandidates = useMemo(() => {
     if (!selectedNode || selectedNode.type !== "member") return []
-    return getManagerCandidates(activeTree, selectedNode.id)
-  }, [activeTree, selectedNode])
+    return getManagerCandidates(displayTree, selectedNode.id)
+  }, [displayTree, selectedNode])
 
   const handleSelect = useCallback((node: PersonnelNode) => {
     setSelectedNode(node)
@@ -291,14 +326,13 @@ export function OrgPersonnelTab({
     if (!canManage || !isDirty) return
     setSaving(true)
     try {
-      const result = await organizationsApi.savePersonnelChart(orgId, { root: draftTree })
-      if (result.root) {
-        setSavedTree(result.root)
-        setDraftTree(result.root)
-      } else {
-        setSavedTree(draftTree)
-        setDraftTree(draftTree)
-      }
+      const payload = stripTeamMemberChildrenForPersist(draftTree)
+      const result = await organizationsApi.savePersonnelChart(orgId, { root: payload })
+      const stripped = result.root
+        ? stripTeamMemberChildrenForPersist(result.root)
+        : payload
+      setSavedTree(stripped)
+      setDraftTree(stripped)
       setHasSavedOnServer(true)
       setHistoryRefreshKey((k) => k + 1)
       toast.success("Organizational chart saved")
@@ -405,7 +439,7 @@ export function OrgPersonnelTab({
   const handleZoomIn = () => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100))
   const handleZoomOut = () => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100))
 
-  const flatCount = flattenPersonnelTree(activeTree).length
+  const flatCount = flattenPersonnelTree(displayTree).length
 
   if (!canView) {
     return (
@@ -625,7 +659,19 @@ export function OrgPersonnelTab({
                     onExpandedChange={setPaletteExpanded}
                     historyRefreshKey={historyRefreshKey}
                   />
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">{chartBlock}</div>
+                  <div
+                    className={cn(
+                      "relative flex min-h-0 min-w-0 flex-1 flex-col",
+                      hydratingChart && "opacity-70",
+                    )}
+                  >
+                    {chartBlock}
+                    {hydratingChart && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <DragOverlay dropAnimation={null}>
                   {dragOverlayLabel ? (
@@ -646,7 +692,19 @@ export function OrgPersonnelTab({
                   onExpandedChange={setPaletteExpanded}
                   historyRefreshKey={historyRefreshKey}
                 />
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col">{chartBlock}</div>
+                <div
+                  className={cn(
+                    "relative flex min-h-0 min-w-0 flex-1 flex-col",
+                    hydratingChart && "opacity-70",
+                  )}
+                >
+                  {chartBlock}
+                  {hydratingChart && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>

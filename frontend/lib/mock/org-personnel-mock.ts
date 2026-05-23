@@ -71,45 +71,8 @@ export function addOrgUserUnderNode(
   if (!parent || !isChartDropTarget(parent)) return null
 
   if (user.isTeamGroup && user.teamId) {
-    const members = user.teamMembers ?? []
-    const lead = members.find((member) => member.isTeamLead) ?? members[0]
-    const nonLeadMembers = lead ? members.filter((member) => member.id !== lead.id) : members
-
     const teamChartId = chartNodeIdForTeam(user.teamId)
-
-    const leadNode: PersonnelNode | null = lead
-      ? {
-          id: `team-${user.teamId}-lead-${lead.id}`,
-          parentId: teamChartId,
-          type: "member",
-          name: lead.name,
-          email: lead.email,
-          status: statusFromDropPayload(lead.status),
-          title: lead.title ?? "Team Lead",
-          department: user.name,
-          linkedUserId: lead.id,
-          managerId: parent.linkedUserId ?? parent.id,
-          managerName: parent.name,
-          teamId: user.teamId,
-          teamName: user.name,
-          isTeamLead: true,
-          children: nonLeadMembers.map((member) => ({
-            id: `team-${user.teamId}-member-${member.id}`,
-            parentId: `team-${user.teamId}-lead-${lead.id}`,
-            type: "member",
-            name: member.name,
-            email: member.email,
-            status: statusFromDropPayload(member.status),
-            title: member.title ?? "Team member",
-            department: user.name,
-            linkedUserId: member.id,
-            managerId: lead.id,
-            managerName: lead.name,
-            teamId: user.teamId,
-            teamName: user.name,
-          })),
-        }
-      : null
+    const memberCount = user.teamMembers?.length ?? 0
 
     const teamNode: PersonnelNode = {
       id: teamChartId,
@@ -118,15 +81,13 @@ export function addOrgUserUnderNode(
       name: user.name,
       email: "",
       status: "active",
-      title: user.title ?? `${members.length} members`,
+      title: user.title ?? (memberCount > 0 ? `${memberCount} members` : "Team"),
       department: parent.department ?? parent.name,
       managerId: parent.linkedUserId ?? parent.id,
       managerName: parent.name,
       isTeamGroup: true,
       teamId: user.teamId,
       teamName: user.name,
-      directReports: leadNode ? 1 : undefined,
-      children: leadNode ? [leadNode] : undefined,
     }
 
     return appendChildToNode(root, parentId, teamNode)

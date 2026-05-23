@@ -78,10 +78,12 @@ export interface CustomReportSaved {
   metrics: string[]
   createdAt: string
   updatedAt: string
+  isPinned: boolean
 }
 
 export interface CustomReportListItem {
   id: string
   name: string
   updatedAt: string
+  isPinned: boolean
 }
