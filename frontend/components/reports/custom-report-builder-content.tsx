@@ -112,6 +112,7 @@ const FILTER_COMMISSION_USER = "Commission User"
 
 const DEFAULT_PARAMETERS: CustomReportCatalogItem[] = [
   { id: "app", label: "App", category: "Core" },
+  { id: "app_store_id", label: "App Store ID", category: "Core" },
   { id: "date", label: "Date", category: "Time" },
   { id: "platform", label: "Platform", category: "Core" },
 ]
@@ -133,6 +134,7 @@ const DEFAULT_METRICS: CustomReportCatalogItem[] = [
 
 const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
   app: 280,
+  app_store_id: 280,
   date: 140,
   platform: 140,
 }
@@ -316,6 +318,35 @@ function renderParameterCell(
 
   if (paramId === "platform") {
     return renderPlatformBadge(String(row.platform ?? ""))
+  }
+
+  if (paramId === "app_store_id") {
+    const displayName = String(row.app_store_display_name ?? row.app_store_id ?? "")
+    const storeId = String(row.app_store_id ?? "")
+    const appIconUri = typeof row.app_icon_uri === "string" ? row.app_icon_uri : ""
+    const storeSub = String(row.app_store_sub ?? "").trim()
+    const shouldShowStoreSub =
+      !selectedParameters.includes("platform") &&
+      storeSub.length > 0 &&
+      storeSub.toLowerCase() !== displayName.trim().toLowerCase()
+    return (
+      <div className="flex items-center gap-2 min-w-[180px]">
+        <Avatar className="h-10 w-10 rounded-lg shrink-0">
+          {appIconUri ? <AvatarImage src={appIconUri} alt={displayName} className="rounded-lg object-cover" /> : null}
+          <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
+            <Smartphone className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
+          {shouldShowStoreSub ? (
+            <div className="text-xs text-slate-500 truncate">{storeSub}</div>
+          ) : storeId && storeId.toLowerCase() !== displayName.trim().toLowerCase() ? (
+            <div className="text-xs text-slate-500 font-mono truncate">{storeId}</div>
+          ) : null}
+        </div>
+      </div>
+    )
   }
 
   return (
