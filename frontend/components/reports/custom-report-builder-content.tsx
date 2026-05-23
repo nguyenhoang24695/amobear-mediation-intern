@@ -421,6 +421,7 @@ function escapeExcelHtml(value: unknown): string {
 export function CustomReportBuilderContent() {
   const searchParams = useSearchParams()
   const reportIdFromUrl = searchParams.get("reportId")
+  const folderFromUrl = searchParams.get("folder")
 
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const currentUser = getCurrentUser()
@@ -508,6 +509,11 @@ export function CustomReportBuilderContent() {
     }
     setAppsInitialized(true)
   }, [appsInitialized, appsLoading, availableApps, reportIdFromUrl])
+
+  useEffect(() => {
+    if (reportIdFromUrl || !folderFromUrl?.trim()) return
+    setSaveReportFolder(folderFromUrl.trim())
+  }, [reportIdFromUrl, folderFromUrl])
 
   const applyLoadedSavedReport = useCallback(
     (report: CustomReportSaved) => {
@@ -787,6 +793,7 @@ export function CustomReportBuilderContent() {
       loadedReportIdRef.current = saved.id
       setSaveDialogOpen(false)
       invalidateCache("custom_reports_saved_list")
+      invalidateCache("custom_reports_folders_list")
       toast.success(isUpdate ? "Report updated" : "Report saved")
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to save report"

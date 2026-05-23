@@ -90,3 +90,9 @@ export interface CustomReportListItem {
   updatedAt: string
   isPinned: boolean
 }
+
+export interface CustomReportFolder {
+  id: string
+  name: string
+  createdAt: string
+}

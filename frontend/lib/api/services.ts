@@ -2682,6 +2682,14 @@ export const reportsApi = {
         return apiClient.get('/api/v1/reports/saved')
     },
 
+    listFolders: async (): Promise<import('@/types/reports').CustomReportFolder[]> => {
+        return apiClient.get('/api/v1/reports/folders')
+    },
+
+    createFolder: async (name: string): Promise<import('@/types/reports').CustomReportFolder> => {
+        return apiClient.post('/api/v1/reports/folders', { name })
+    },
+
     listPinned: async (): Promise<import('@/types/reports').CustomReportListItem[]> => {
         return apiClient.get('/api/v1/reports/saved/pinned')
     },
