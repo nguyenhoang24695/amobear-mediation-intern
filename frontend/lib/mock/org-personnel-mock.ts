@@ -32,11 +32,28 @@ export function chartNodeIdForOrgUser(userId: string): string {
   return `user-${userId}`
 }
 
+export function chartNodeIdForTeam(teamId: string): string {
+  return `team-${teamId}`
+}
+
+function parseTeamPaletteId(userId: string): string | null {
+  if (!userId.startsWith("team:")) return null
+  const teamId = userId.slice("team:".length).trim()
+  return teamId.length > 0 ? teamId : null
+}
+
 function statusFromDropPayload(status?: string): PersonnelStatus {
   return (status === "inactive" || status === "invited" ? status : "active") as PersonnelStatus
 }
 
 export function isOrgUserPlacedInTree(root: PersonnelNode, userId: string, email?: string): boolean {
+  const paletteTeamId = parseTeamPaletteId(userId)
+  if (paletteTeamId) {
+    return flattenPersonnelTree(root).some(
+      (n) => n.isTeamGroup && n.teamId === paletteTeamId,
+    )
+  }
+
   const normEmail = email?.trim().toLowerCase()
   return flattenPersonnelTree(root).some(
     (n) => n.linkedUserId === userId || (normEmail && n.email?.trim().toLowerCase() === normEmail),
@@ -58,10 +75,12 @@ export function addOrgUserUnderNode(
     const lead = members.find((member) => member.isTeamLead) ?? members[0]
     const nonLeadMembers = lead ? members.filter((member) => member.id !== lead.id) : members
 
+    const teamChartId = chartNodeIdForTeam(user.teamId)
+
     const leadNode: PersonnelNode | null = lead
       ? {
           id: `team-${user.teamId}-lead-${lead.id}`,
-          parentId: chartNodeIdForOrgUser(user.id),
+          parentId: teamChartId,
           type: "member",
           name: lead.name,
           email: lead.email,
@@ -93,7 +112,7 @@ export function addOrgUserUnderNode(
       : null
 
     const teamNode: PersonnelNode = {
-      id: chartNodeIdForOrgUser(user.id),
+      id: teamChartId,
       parentId,
       type: "member",
       name: user.name,
@@ -101,7 +120,6 @@ export function addOrgUserUnderNode(
       status: "active",
       title: user.title ?? `${members.length} members`,
       department: parent.department ?? parent.name,
-      linkedUserId: user.id,
       managerId: parent.linkedUserId ?? parent.id,
       managerName: parent.name,
       isTeamGroup: true,

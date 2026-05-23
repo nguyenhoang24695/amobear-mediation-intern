@@ -387,6 +387,7 @@ export function OrgPersonnelTab({
       return
     }
     setDraftTree(savedTree)
+    setPaletteExpanded(true)
     setIsEditMode(true)
   }, [isEditMode, isDirty, savedTree])
 

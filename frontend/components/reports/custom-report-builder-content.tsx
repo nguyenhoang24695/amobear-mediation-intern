@@ -33,9 +33,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -73,7 +75,7 @@ import {
   Plus,
   GripVertical,
 } from "lucide-react"
-import { format, subDays } from "date-fns"
+import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
 import { useApi } from "@/hooks/use-api"
@@ -81,7 +83,13 @@ import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { organizationsApi, reportsApi, structureApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
-import type { CustomReportCatalogItem, CustomReportMetricFilter } from "@/types/reports"
+import type {
+  CustomReportCatalogItem,
+  CustomReportFilters,
+  CustomReportMetricFilter,
+  SaveCustomReportRequest,
+} from "@/types/reports"
+import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
 
 const datePresets = [
@@ -89,6 +97,8 @@ const datePresets = [
   { id: "last30", label: "Last 30 days", days: 30 },
   { id: "last90", label: "Last 90 days", days: 90 },
 ] as const
+
+type DateFilterMode = "preset" | "month" | "custom"
 
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
@@ -112,6 +122,7 @@ const DEFAULT_METRICS: CustomReportCatalogItem[] = [
   { id: "ua_cost", label: "UA cost", category: "Cost", format: "currency" },
   { id: "iap_net_revenue", label: "IAP net revenue", category: "Revenue", format: "currency" },
   { id: "total_revenue_usd", label: "Total revenue (IAA + IAP)", category: "Revenue", format: "currency" },
+  { id: "profit", label: "Profit", category: "Revenue", format: "currency" },
 ]
 
 const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
@@ -122,7 +133,6 @@ const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
-const MAX_SELECTED_APPS = 20
 
 interface ActiveFilter {
   type: string
@@ -375,6 +385,21 @@ function getMetricFilterLabel(filter: CustomReportMetricFilter, metrics: CustomR
   return `${metricLabel} ${conditionLabel} ${filter.value}`
 }
 
+function defaultCustomReportName(): string {
+  return `Custom Report - ${format(new Date(), "yyyyMMdd")}`
+}
+
+function getMonthDateRange(month: Date): { start: Date; end: Date } {
+  const start = startOfMonth(month)
+  const endOfSelected = endOfMonth(month)
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  return {
+    start,
+    end: endOfSelected > today ? today : endOfSelected,
+  }
+}
+
 function escapeExcelHtml(value: unknown): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -395,12 +420,14 @@ export function CustomReportBuilderContent() {
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30))
   const [endDate, setEndDate] = useState<Date>(new Date())
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>("preset")
   const [activePresetDays, setActivePresetDays] = useState(30)
+  const [selectedMonth, setSelectedMonth] = useState<Date>(() => startOfMonth(new Date()))
+  const [monthPopoverOpen, setMonthPopoverOpen] = useState(false)
 
   const [selectedApps, setSelectedApps] = useState<string[]>([])
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
   const [appsInitialized, setAppsInitialized] = useState(false)
-  const [appLimitDialogOpen, setAppLimitDialogOpen] = useState(false)
 
   const [selectedParameters, setSelectedParameters] = useState<string[]>(["app", "date"])
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
@@ -429,6 +456,11 @@ export function CustomReportBuilderContent() {
 
   const [commissionUsers, setCommissionUsers] = useState<CommissionUserOption[]>([])
 
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [saveReportName, setSaveReportName] = useState(defaultCustomReportName)
+  const [savedReportId, setSavedReportId] = useState<string | null>(null)
+  const [savingReport, setSavingReport] = useState(false)
+
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
     { cacheKey: `reports_apps_list_${currentUserId}` },
@@ -450,10 +482,7 @@ export function CustomReportBuilderContent() {
 
   useEffect(() => {
     if (appsInitialized || appsLoading || availableApps.length === 0) return
-    const initialIds =
-      availableApps.length <= MAX_SELECTED_APPS
-        ? availableApps.map((app) => app.appId)
-        : availableApps.slice(0, MAX_SELECTED_APPS).map((app) => app.appId)
+    const initialIds = availableApps.map((app) => app.appId)
     if (initialIds.length > 0) {
       setSelectedApps(initialIds)
       syncAppsActiveFilter(initialIds, availableApps)
@@ -517,7 +546,17 @@ export function CustomReportBuilderContent() {
   })
 
   const dateSelectValue =
-    activePresetDays === 7 ? "7" : activePresetDays === 30 ? "30" : activePresetDays === 90 ? "90" : "custom"
+    dateFilterMode === "month"
+      ? "month"
+      : dateFilterMode === "custom"
+        ? "custom"
+        : activePresetDays === 7
+          ? "7"
+          : activePresetDays === 30
+            ? "30"
+            : activePresetDays === 90
+              ? "90"
+              : "30"
 
   const toggleParameter = (paramId: string) => {
     setSelectedParameters((prev) =>
@@ -545,9 +584,13 @@ export function CustomReportBuilderContent() {
     .map((a) => a.displayName || a.name)
 
   const dateRangeLabel =
-    activePresetDays > 0
-      ? `Last ${activePresetDays} days`
-      : `${format(startDate, "M/d/yyyy", { locale: enUS })} – ${format(endDate, "M/d/yyyy", { locale: enUS })}`
+    dateFilterMode === "month"
+      ? format(selectedMonth, "MMMM yyyy", { locale: enUS })
+      : dateFilterMode === "preset" && activePresetDays > 0
+        ? `Last ${activePresetDays} days`
+        : `${format(startDate, "M/d/yyyy", { locale: enUS })} – ${format(endDate, "M/d/yyyy", { locale: enUS })}`
+
+  const maxSelectableMonth = format(new Date(), "yyyy-MM")
 
   const filteredParameters = useMemo(() => {
     if (!sidebarSearch.trim()) return catalogParameters
@@ -604,6 +647,76 @@ export function CustomReportBuilderContent() {
     })
   }
 
+  const buildSaveReportPayload = (name: string): SaveCustomReportRequest => {
+    const filters: CustomReportFilters = {
+      from: format(startDate, "yyyy-MM-dd"),
+      to: format(endDate, "yyyy-MM-dd"),
+      appIds: selectedApps,
+      revenueSource: "All",
+      metricFilters,
+      commissionUser,
+      commissionUsernames: commissionUsernamesForQuery,
+      sortBy: sortColumn,
+      sortDir: sortDirection,
+      activePresetDays: dateFilterMode === "preset" && activePresetDays > 0 ? activePresetDays : null,
+      selectedMonth: dateFilterMode === "month" ? format(selectedMonth, "yyyy-MM") : null,
+    }
+    return {
+      name: name.trim(),
+      filters,
+      dimensions: [...selectedParameters],
+      metrics: [...selectedMetrics],
+    }
+  }
+
+  const persistSavedReport = async (name: string) => {
+    const payload = buildSaveReportPayload(name)
+    if (savedReportId) {
+      return reportsApi.updateSaved(savedReportId, payload)
+    }
+    return reportsApi.createSaved(payload)
+  }
+
+  const handleSaveReportClick = () => {
+    if (selectedParameters.length === 0 || selectedMetrics.length === 0) {
+      toast.error("Select at least one parameter and one metric before saving.")
+      return
+    }
+    if (selectedApps.length === 0) {
+      toast.error("Select at least one app before saving.")
+      return
+    }
+    if (savedReportId) {
+      void handleConfirmSaveReport(saveReportName)
+      return
+    }
+    setSaveReportName(defaultCustomReportName())
+    setSaveDialogOpen(true)
+  }
+
+  const handleConfirmSaveReport = async (nameOverride?: string) => {
+    const name = (nameOverride ?? saveReportName).trim()
+    if (!name) {
+      toast.error("Report name is required.")
+      return
+    }
+
+    const isUpdate = Boolean(savedReportId)
+    setSavingReport(true)
+    try {
+      const saved = await persistSavedReport(name)
+      setSavedReportId(saved.id)
+      setSaveReportName(saved.name)
+      setSaveDialogOpen(false)
+      toast.success(isUpdate ? "Report updated" : "Report saved")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save report"
+      toast.error(message)
+    } finally {
+      setSavingReport(false)
+    }
+  }
+
   const handleMetricDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -621,30 +734,58 @@ export function CustomReportBuilderContent() {
   }
 
   const applyDatePreset = (days: number) => {
+    setDateFilterMode("preset")
     setEndDate(new Date())
     setStartDate(subDays(new Date(), days))
     setActivePresetDays(days)
     setDatePopoverOpen(false)
+    setMonthPopoverOpen(false)
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_DATE_RANGE, `Last ${days} days`))
+  }
+
+  const applySelectedMonth = (month: Date) => {
+    const normalized = startOfMonth(month)
+    const { start, end } = getMonthDateRange(normalized)
+    setDateFilterMode("month")
+    setSelectedMonth(normalized)
+    setStartDate(start)
+    setEndDate(end)
+    setMonthPopoverOpen(false)
+    setDatePopoverOpen(false)
+    setActiveFilters((prev) =>
+      upsertActiveFilter(prev, FILTER_DATE_RANGE, format(normalized, "MMMM yyyy", { locale: enUS })),
+    )
   }
 
   const onCustomDateSelect = (range: DateRange | undefined) => {
     if (range?.from) setStartDate(range.from)
     if (range?.to) setEndDate(range.to)
     if (range?.from && range?.to) {
-      setActivePresetDays(0)
+      setDateFilterMode("custom")
       const label = `${format(range.from, "M/d/yyyy", { locale: enUS })} – ${format(range.to, "M/d/yyyy", { locale: enUS })}`
       setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_DATE_RANGE, label))
     }
   }
 
   const handleDateSelectChange = (value: string) => {
+    if (value === "month") {
+      applySelectedMonth(selectedMonth)
+      setMonthPopoverOpen(true)
+      return
+    }
     if (value === "custom") {
-      setActivePresetDays(0)
+      setDateFilterMode("custom")
       setDatePopoverOpen(true)
       return
     }
     applyDatePreset(Number(value))
+  }
+
+  const handleMonthInputChange = (value: string) => {
+    if (!value) return
+    const [yearPart, monthPart] = value.split("-").map(Number)
+    if (!yearPart || !monthPart) return
+    applySelectedMonth(new Date(yearPart, monthPart - 1, 1))
   }
 
   const handleCommissionUserChange = (value: string) => {
@@ -693,10 +834,6 @@ export function CustomReportBuilderContent() {
   const toggleAppWithFilter = (appId: string) => {
     setSelectedApps((prev) => {
       const next = prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]
-      if (next.length > MAX_SELECTED_APPS) {
-        setAppLimitDialogOpen(true)
-        return prev
-      }
       syncAppsActiveFilter(next, availableApps)
       return next
     })
@@ -706,18 +843,16 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => prev.filter((f) => f.type !== type))
     switch (type) {
       case FILTER_DATE_RANGE:
+        setDateFilterMode("preset")
         setEndDate(new Date())
         setStartDate(subDays(new Date(), 30))
         setActivePresetDays(30)
         setDatePopoverOpen(false)
+        setMonthPopoverOpen(false)
         break
       case FILTER_APPS:
-        if (availableApps.length <= MAX_SELECTED_APPS) {
-          setSelectedApps(availableApps.map((app) => app.appId))
-        } else {
-          setSelectedApps(availableApps.slice(0, MAX_SELECTED_APPS).map((app) => app.appId))
-          setAppLimitDialogOpen(true)
-        }
+        setSelectedApps(availableApps.map((app) => app.appId))
+        syncAppsActiveFilter(availableApps.map((app) => app.appId), availableApps)
         break
       case FILTER_COMMISSION_USER:
         setCommissionUser("All")
@@ -983,19 +1118,48 @@ export function CustomReportBuilderContent() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Dialog open={appLimitDialogOpen} onOpenChange={setAppLimitDialogOpen}>
+      <Dialog
+        open={saveDialogOpen}
+        onOpenChange={(open) => {
+          if (!savingReport) setSaveDialogOpen(open)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Too many apps selected</DialogTitle>
+            <DialogTitle>Save report</DialogTitle>
             <DialogDescription>
-              Select fewer than 20 apps to ensure the system loads reliably.
+              Save the current filters, parameters, and metrics for quick access later.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
-            <Button type="button" onClick={() => setAppLimitDialogOpen(false)}>
-              Got it
-            </Button>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="save-report-name">Report name</Label>
+            <Input
+              id="save-report-name"
+              value={saveReportName}
+              onChange={(e) => setSaveReportName(e.target.value)}
+              placeholder={defaultCustomReportName()}
+              maxLength={200}
+              disabled={savingReport}
+            />
           </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={savingReport}
+              onClick={() => setSaveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={savingReport || !saveReportName.trim()}
+              onClick={() => void handleConfirmSaveReport()}
+            >
+              {savingReport ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1007,9 +1171,14 @@ export function CustomReportBuilderContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700" type="button">
+          <Button
+            className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+            type="button"
+            disabled={savingReport}
+            onClick={handleSaveReportClick}
+          >
             <Save className="w-4 h-4" />
-            Save report
+            {savingReport ? "Saving…" : savedReportId ? "Update report" : "Save report"}
           </Button>
         </div>
       </div>
@@ -1030,11 +1199,42 @@ export function CustomReportBuilderContent() {
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="month">Select month</SelectItem>
                 <SelectItem value="custom">Custom…</SelectItem>
               </SelectContent>
             </Select>
 
-            {(dateSelectValue === "custom" || activePresetDays === 0) && (
+            {dateFilterMode === "month" && (
+              <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-10 bg-white border-slate-200" type="button">
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {dateRangeLabel}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="start">
+                  <div className="space-y-2">
+                    <Label htmlFor="report-month-picker" className="text-sm font-medium text-slate-700">
+                      Month
+                    </Label>
+                    <Input
+                      id="report-month-picker"
+                      type="month"
+                      className="h-10 w-[220px]"
+                      max={maxSelectableMonth}
+                      value={format(selectedMonth, "yyyy-MM")}
+                      onChange={(e) => handleMonthInputChange(e.target.value)}
+                    />
+                    <p className="text-xs text-slate-500">
+                      {format(startDate, "M/d/yyyy", { locale: enUS })} –{" "}
+                      {format(endDate, "M/d/yyyy", { locale: enUS })}
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {dateFilterMode === "custom" && (
               <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="h-10 bg-white border-slate-200" type="button">
@@ -1099,15 +1299,10 @@ export function CustomReportBuilderContent() {
                           size="sm"
                           className="h-7 text-xs"
                           onClick={() => {
-                            if (availableApps.length > MAX_SELECTED_APPS) {
-                              setAppLimitDialogOpen(true)
-                              return
-                            }
                             const ids = availableApps.map((a) => a.appId)
                             setSelectedApps(ids)
                             syncAppsActiveFilter(ids, availableApps)
                           }}
-                          disabled={availableApps.length > MAX_SELECTED_APPS}
                         >
                           Select all
                         </Button>

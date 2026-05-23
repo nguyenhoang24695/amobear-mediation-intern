@@ -2673,6 +2673,27 @@ export const reportsApi = {
     ): Promise<import('@/types/reports').CustomReportQueryResponse> => {
         return apiClient.post('/api/v1/reports/query', request)
     },
+
+    listSaved: async (): Promise<import('@/types/reports').CustomReportListItem[]> => {
+        return apiClient.get('/api/v1/reports/saved')
+    },
+
+    getSaved: async (id: string): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.get(`/api/v1/reports/saved/${id}`)
+    },
+
+    createSaved: async (
+        body: import('@/types/reports').SaveCustomReportRequest,
+    ): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.post('/api/v1/reports/saved', body)
+    },
+
+    updateSaved: async (
+        id: string,
+        body: import('@/types/reports').SaveCustomReportRequest,
+    ): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.put(`/api/v1/reports/saved/${id}`, body)
+    },
 }
 
 
