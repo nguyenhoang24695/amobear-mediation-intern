@@ -1757,6 +1757,16 @@ export const organizationsApi = {
         return apiClient.get<OrgTeam[]>(`/api/v1/organizations/${orgId}/teams`)
     },
 
+    getProfitPlans: async (
+        orgId: string,
+        params?: { from?: string; to?: string; teamId?: string },
+    ): Promise<TeamMonthlyProfitPlan[]> => {
+        return apiClient.get<TeamMonthlyProfitPlan[]>(
+            `/api/v1/organizations/${orgId}/profit-plans`,
+            params as Record<string, string | number | undefined>,
+        )
+    },
+
     // Create a new team
     createTeam: async (orgId: string, data: CreateTeamRequest): Promise<OrgTeam> => {
         return apiClient.post<OrgTeam>(`/api/v1/organizations/${orgId}/teams`, data)
@@ -1872,17 +1882,25 @@ export interface TeamMonthlyProfitPlan {
     teamId: string
     teamName: string
     month: string
+    appId: string
+    appLabel: string
+    appPlatform?: string | null
+    appStoreId?: string | null
+    appIconUri?: string | null
+    assignedUserId?: string | null
+    assignedUserName?: string | null
+    assignedUserEmail?: string | null
     plannedProfit: number
     actualProfit: number
     completionPercent?: number | null
-    appIds: string[]
     createdAt: string
     updatedAt: string
 }
 
 export interface UpsertTeamMonthlyProfitPlanRequest {
+    appId: string
     plannedProfit: number
-    appIds: string[]
+    assignedUserId?: string | null
 }
 
 export interface TeamProfitAppOption {
@@ -1893,6 +1911,12 @@ export interface TeamProfitAppOption {
     platform?: string | null
     iconUri?: string | null
     appStoreId?: string | null
+}
+
+export interface TeamProfitMemberOption {
+    userId: string
+    label: string
+    email: string
 }
 
 export const teamProfitApi = {
@@ -1906,8 +1930,10 @@ export const teamProfitApi = {
         )
     },
 
-    getPlan: async (teamId: string, month: string): Promise<TeamMonthlyProfitPlan | null> => {
-        return apiClient.get<TeamMonthlyProfitPlan | null>(`/api/v1/teams/${teamId}/profit-plans/${month}`)
+    getPlan: async (teamId: string, month: string, appId: string): Promise<TeamMonthlyProfitPlan | null> => {
+        return apiClient.get<TeamMonthlyProfitPlan | null>(
+            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}`,
+        )
     },
 
     upsertPlan: async (
@@ -1915,15 +1941,21 @@ export const teamProfitApi = {
         month: string,
         body: UpsertTeamMonthlyProfitPlanRequest,
     ): Promise<TeamMonthlyProfitPlan> => {
-        return apiClient.put<TeamMonthlyProfitPlan>(`/api/v1/teams/${teamId}/profit-plans/${month}`, body)
+        return apiClient.put<TeamMonthlyProfitPlan>(`/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}`, body)
     },
 
-    deletePlan: async (teamId: string, month: string): Promise<void> => {
-        await apiClient.delete(`/api/v1/teams/${teamId}/profit-plans/${month}`)
+    deletePlan: async (teamId: string, month: string, appId: string): Promise<void> => {
+        await apiClient.delete(
+            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}`,
+        )
     },
 
     getAppOptions: async (teamId: string): Promise<TeamProfitAppOption[]> => {
         return apiClient.get<TeamProfitAppOption[]>(`/api/v1/teams/${teamId}/profit-app-options`)
+    },
+
+    getMemberOptions: async (teamId: string): Promise<TeamProfitMemberOption[]> => {
+        return apiClient.get<TeamProfitMemberOption[]>(`/api/v1/teams/${teamId}/profit-member-options`)
     },
 }
 

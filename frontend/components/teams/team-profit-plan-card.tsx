@@ -1,27 +1,52 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import {
   teamProfitApi,
   type TeamMonthlyProfitPlan,
   type TeamProfitAppOption,
+  type TeamProfitMemberOption,
 } from "@/lib/api/services"
-import { ChevronDown, Loader2, Save, Target } from "lucide-react"
+import { Loader2, Plus, Target, Trash2 } from "lucide-react"
 
 interface TeamProfitPlanCardProps {
   teamId: string
+}
+
+interface DraftPlanRow {
+  appId: string
+  plannedProfit: string
+  assignedUserId: string
+}
+
+const EMPTY_DRAFT: DraftPlanRow = {
+  appId: "",
+  plannedProfit: "",
+  assignedUserId: "none",
 }
 
 function formatCurrency(value: number | null | undefined) {
@@ -38,93 +63,93 @@ function getStatus(completion?: number | null) {
 
 export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"))
-  const [plan, setPlan] = useState<TeamMonthlyProfitPlan | null>(null)
+  const [plans, setPlans] = useState<TeamMonthlyProfitPlan[]>([])
   const [appOptions, setAppOptions] = useState<TeamProfitAppOption[]>([])
-  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([])
-  const [plannedProfit, setPlannedProfit] = useState("")
-  const [appsOpen, setAppsOpen] = useState(false)
+  const [memberOptions, setMemberOptions] = useState<TeamProfitMemberOption[]>([])
+  const [draft, setDraft] = useState<DraftPlanRow>(EMPTY_DRAFT)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deletingAppId, setDeletingAppId] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      setLoading(true)
-      try {
-        const [options, currentPlan] = await Promise.all([
-          teamProfitApi.getAppOptions(teamId),
-          teamProfitApi.getPlan(teamId, month),
-        ])
-        if (cancelled) return
-
-        setAppOptions(options)
-        setPlan(currentPlan)
-        setSelectedAppIds(currentPlan?.appIds ?? [])
-        setPlannedProfit(currentPlan ? String(currentPlan.plannedProfit) : "")
-      } catch (err) {
-        if (cancelled) return
-        console.error("Failed to load team profit plan:", err)
-        setPlan(null)
-        setSelectedAppIds([])
-        setPlannedProfit("")
-        toast.error("Failed to load team profit plan")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [options, members, monthPlans] = await Promise.all([
+        teamProfitApi.getAppOptions(teamId),
+        teamProfitApi.getMemberOptions(teamId),
+        teamProfitApi.getPlans(teamId, { from: month, to: month }),
+      ])
+      setAppOptions(options)
+      setMemberOptions(members)
+      setPlans(monthPlans)
+    } catch (err) {
+      console.error("Failed to load team profit plans:", err)
+      setPlans([])
+      toast.error("Failed to load team profit plans")
+    } finally {
+      setLoading(false)
     }
   }, [teamId, month])
 
   useEffect(() => {
-    const valid = new Set(appOptions.map((app) => app.appId))
-    setSelectedAppIds((prev) => prev.filter((id) => valid.has(id)))
-  }, [appOptions])
+    void loadData()
+  }, [loadData])
 
-  const selectedLabels = useMemo(() => {
-    const byId = new Map(appOptions.map((app) => [app.appId, app]))
-    return selectedAppIds.map((id) => byId.get(id)?.label ?? id)
-  }, [appOptions, selectedAppIds])
+  const usedAppIds = useMemo(() => new Set(plans.map((plan) => plan.appId)), [plans])
+  const availableApps = useMemo(
+    () => appOptions.filter((app) => !usedAppIds.has(app.appId)),
+    [appOptions, usedAppIds],
+  )
 
-  const completion = plan?.completionPercent ?? null
-  const status = getStatus(completion)
-  const progressValue = Math.max(0, Math.min(100, completion ?? 0))
+  const totals = useMemo(() => {
+    const planned = plans.reduce((sum, plan) => sum + plan.plannedProfit, 0)
+    const actual = plans.reduce((sum, plan) => sum + plan.actualProfit, 0)
+    const completion = planned > 0 ? Math.round((actual / planned) * 10000) / 100 : null
+    return { planned, actual, completion }
+  }, [plans])
 
-  const toggleApp = (appId: string) => {
-    setSelectedAppIds((prev) =>
-      prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId],
-    )
-  }
+  const summaryStatus = getStatus(totals.completion)
 
-  const handleSave = async () => {
-    const value = Number(plannedProfit)
-    if (Number.isNaN(value) || value < 0) {
-      toast.error("Planned profit must be a non-negative number")
+  const handleSaveDraft = async () => {
+    const value = Number(draft.plannedProfit)
+    if (!draft.appId) {
+      toast.error("Select an app")
       return
     }
-    if (selectedAppIds.length === 0) {
-      toast.error("Select at least one app")
+    if (Number.isNaN(value) || value < 0) {
+      toast.error("Planned profit must be a non-negative number")
       return
     }
 
     setSaving(true)
     try {
-      const saved = await teamProfitApi.upsertPlan(teamId, month, {
+      await teamProfitApi.upsertPlan(teamId, month, {
+        appId: draft.appId,
         plannedProfit: value,
-        appIds: selectedAppIds,
+        assignedUserId: draft.assignedUserId === "none" ? null : draft.assignedUserId,
       })
-      setPlan(saved)
-      setSelectedAppIds(saved.appIds)
-      setPlannedProfit(String(saved.plannedProfit))
-      toast.success("Team profit plan saved")
+      setDraft(EMPTY_DRAFT)
+      await loadData()
+      toast.success("Profit plan saved")
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to save team profit plan"
+      const message = err instanceof Error ? err.message : "Failed to save profit plan"
       toast.error(message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async (appId: string) => {
+    setDeletingAppId(appId)
+    try {
+      await teamProfitApi.deletePlan(teamId, month, appId)
+      await loadData()
+      toast.success("Profit plan removed")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete profit plan"
+      toast.error(message)
+    } finally {
+      setDeletingAppId(null)
     }
   }
 
@@ -138,14 +163,14 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
               Monthly Profit Plan
             </CardTitle>
             <CardDescription>
-              Configure planned profit and selected apps for this team.
+              One planned profit target per app for the selected month.
             </CardDescription>
           </div>
-          <Badge className={cn("w-fit", status.className)}>{status.label}</Badge>
+          <Badge className={cn("w-fit", summaryStatus.className)}>{summaryStatus.label}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 lg:grid-cols-[10rem_12rem_1fr_auto] lg:items-end">
+        <div className="grid gap-3 lg:grid-cols-[10rem_1fr] lg:items-end">
           <div className="space-y-1.5">
             <Label htmlFor="team-profit-month">Month</Label>
             <Input
@@ -156,128 +181,168 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
               className="bg-white"
             />
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="team-planned-profit">Planned Profit</Label>
-            <Input
-              id="team-planned-profit"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              value={plannedProfit}
-              onChange={(event) => setPlannedProfit(event.target.value)}
-              placeholder="0.00"
-              className="bg-white"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Apps</Label>
-            <Popover open={appsOpen} onOpenChange={setAppsOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 w-full justify-between bg-white font-normal"
-                  disabled={loading || appOptions.length === 0}
-                >
-                  <span className="truncate">
-                    {selectedLabels.length === 0
-                      ? "Select apps"
-                      : selectedLabels.length === 1
-                        ? selectedLabels[0]
-                        : `${selectedLabels.length} apps selected`}
-                  </span>
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[360px] p-0" align="start">
-                <Command shouldFilter>
-                  <CommandInput placeholder="Search apps..." />
-                  <CommandList>
-                    <CommandEmpty>No apps found.</CommandEmpty>
-                    <CommandGroup>
-                      <div className="flex gap-2 border-b border-slate-100 px-2 py-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setSelectedAppIds(appOptions.map((app) => app.appId))}
-                        >
-                          Select all
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setSelectedAppIds([])}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                      {appOptions.map((app) => (
-                        <CommandItem
-                          key={app.appId}
-                          value={`${app.label} ${app.appId} ${app.appStoreId ?? ""}`}
-                          onSelect={() => toggleApp(app.appId)}
-                          className="cursor-pointer"
-                        >
-                          <Checkbox checked={selectedAppIds.includes(app.appId)} className="mr-2" />
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">{app.label}</div>
-                            <div className="truncate text-xs text-slate-500">
-                              {app.platform ?? "Unknown"} · {app.appStoreId || app.appId}
-                            </div>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <Button
-            type="button"
-            className="h-10 bg-blue-600 hover:bg-blue-700"
-            onClick={handleSave}
-            disabled={saving || loading}
-          >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save
-          </Button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-6 text-sm text-slate-500">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Loading profit plan...
+            Loading profit plans...
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Planned Profit</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {formatCurrency(plan?.plannedProfit ?? Number(plannedProfit || 0))}
-              </p>
+          <>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium text-slate-500">Total Planned</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(totals.planned)}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium text-slate-500">Total Actual</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(totals.actual)}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium text-slate-500">Overall Completion</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {totals.completion == null ? "—" : `${totals.completion.toFixed(2)}%`}
+                </p>
+                <Progress value={Math.max(0, Math.min(100, totals.completion ?? 0))} className="mt-3" />
+              </div>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Actual Profit</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {formatCurrency(plan?.actualProfit ?? 0)}
-              </p>
+
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>App</TableHead>
+                    <TableHead>Assigned User</TableHead>
+                    <TableHead className="text-right">Planned</TableHead>
+                    <TableHead className="text-right">Actual</TableHead>
+                    <TableHead className="text-right">Completion</TableHead>
+                    <TableHead className="w-[72px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plans.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-8 text-center text-sm text-slate-500">
+                        No profit plans for this month yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    plans.map((plan) => {
+                      const status = getStatus(plan.completionPercent)
+                      return (
+                        <TableRow key={plan.id}>
+                          <TableCell>
+                            <div className="min-w-0">
+                              <div className="font-medium text-slate-900 truncate">{plan.appLabel}</div>
+                              <div className="text-xs text-slate-500 truncate">
+                                {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.appId}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-700">
+                            {plan.assignedUserName ?? plan.assignedUserEmail ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(plan.plannedProfit)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(plan.actualProfit)}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge className={cn("w-fit", status.className)} variant="secondary">
+                              {plan.completionPercent == null ? "—" : `${plan.completionPercent.toFixed(2)}%`}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-red-600"
+                              disabled={deletingAppId === plan.appId}
+                              onClick={() => void handleDelete(plan.appId)}
+                            >
+                              {deletingAppId === plan.appId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+
+                  <TableRow className="bg-slate-50/60">
+                    <TableCell>
+                      <Select
+                        value={draft.appId || "none"}
+                        onValueChange={(value) =>
+                          setDraft((prev) => ({ ...prev, appId: value === "none" ? "" : value }))
+                        }
+                      >
+                        <SelectTrigger className="h-9 bg-white">
+                          <SelectValue placeholder="Select app" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" disabled>
+                            Select app
+                          </SelectItem>
+                          {availableApps.map((app) => (
+                            <SelectItem key={app.appId} value={app.appId}>
+                              {app.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={draft.assignedUserId}
+                        onValueChange={(value) => setDraft((prev) => ({ ...prev, assignedUserId: value }))}
+                      >
+                        <SelectTrigger className="h-9 bg-white">
+                          <SelectValue placeholder="Assign user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Unassigned</SelectItem>
+                          {memberOptions.map((member) => (
+                            <SelectItem key={member.userId} value={member.userId}>
+                              {member.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        value={draft.plannedProfit}
+                        onChange={(event) =>
+                          setDraft((prev) => ({ ...prev, plannedProfit: event.target.value }))
+                        }
+                        placeholder="0.00"
+                        className="h-9 bg-white text-right"
+                      />
+                    </TableCell>
+                    <TableCell colSpan={2} />
+                    <TableCell>
+                      <Button
+                        type="button"
+                        size="icon"
+                        className="h-9 w-9 bg-blue-600 hover:bg-blue-700"
+                        disabled={saving || availableApps.length === 0}
+                        onClick={() => void handleSaveDraft()}
+                        title="Add plan"
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Completion</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {completion == null ? "—" : `${completion.toFixed(2)}%`}
-              </p>
-              <Progress value={progressValue} className="mt-3" />
-            </div>
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
