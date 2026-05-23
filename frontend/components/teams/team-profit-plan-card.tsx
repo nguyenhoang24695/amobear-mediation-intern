@@ -6,6 +6,15 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -31,7 +40,7 @@ import {
   type TeamProfitAppOption,
   type TeamProfitMemberOption,
 } from "@/lib/api/services"
-import { Loader2, Plus, Target, Trash2 } from "lucide-react"
+import { Loader2, Plus, Target, Trash2, UserPlus } from "lucide-react"
 
 interface TeamProfitPlanCardProps {
   teamId: string
@@ -70,6 +79,10 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deletingAppId, setDeletingAppId] = useState<string | null>(null)
+  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(() => new Set())
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [assignUserId, setAssignUserId] = useState("none")
+  const [assigning, setAssigning] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -82,6 +95,7 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
       setAppOptions(options)
       setMemberOptions(members)
       setPlans(monthPlans)
+      setSelectedPlanIds(new Set())
     } catch (err) {
       console.error("Failed to load team profit plans:", err)
       setPlans([])
@@ -109,6 +123,59 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
   }, [plans])
 
   const summaryStatus = getStatus(totals.completion)
+
+  const selectedPlans = useMemo(
+    () => plans.filter((plan) => selectedPlanIds.has(plan.id)),
+    [plans, selectedPlanIds],
+  )
+  const allPlansSelected = plans.length > 0 && selectedPlans.length === plans.length
+
+  const togglePlanSelection = (planId: string, checked: boolean) => {
+    setSelectedPlanIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(planId)
+      else next.delete(planId)
+      return next
+    })
+  }
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (!checked) {
+      setSelectedPlanIds(new Set())
+      return
+    }
+    setSelectedPlanIds(new Set(plans.map((plan) => plan.id)))
+  }
+
+  const handleBulkAssignUser = async () => {
+    if (selectedPlans.length === 0) return
+    setAssigning(true)
+    try {
+      const result = await teamProfitApi.bulkAssignUser(teamId, {
+        assignedUserId: assignUserId === "none" ? null : assignUserId,
+        items: selectedPlans.map((plan) => ({ month: plan.month, appId: plan.appId })),
+      })
+
+      if (result.failed > 0) {
+        toast.error(`${result.succeeded} assigned, ${result.failed} failed`)
+      } else {
+        toast.success(
+          assignUserId === "none"
+            ? `Unassigned user from ${result.succeeded} plan(s)`
+            : `Assigned user to ${result.succeeded} plan(s)`,
+        )
+      }
+
+      setAssignOpen(false)
+      setAssignUserId("none")
+      await loadData()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to assign user"
+      toast.error(message)
+    } finally {
+      setAssigning(false)
+    }
+  }
 
   const handleSaveDraft = async () => {
     const value = Number(draft.plannedProfit)
@@ -208,10 +275,39 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
               </div>
             </div>
 
+            {selectedPlans.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                <span className="text-sm text-blue-900">{selectedPlans.length} plan(s) selected</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    setAssignUserId(memberOptions[0]?.userId ?? "none")
+                    setAssignOpen(true)
+                  }}
+                >
+                  <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                  Assign user
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="bg-white" onClick={() => setSelectedPlanIds(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            ) : null}
+
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allPlansSelected}
+                        onCheckedChange={(checked) => toggleSelectAll(checked === true)}
+                        disabled={plans.length === 0}
+                        aria-label="Select all plans"
+                      />
+                    </TableHead>
                     <TableHead>App</TableHead>
                     <TableHead>Assigned User</TableHead>
                     <TableHead className="text-right">Planned</TableHead>
@@ -223,15 +319,23 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
                 <TableBody>
                   {plans.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-sm text-slate-500">
+                      <TableCell colSpan={7} className="py-8 text-center text-sm text-slate-500">
                         No profit plans for this month yet.
                       </TableCell>
                     </TableRow>
                   ) : (
                     plans.map((plan) => {
                       const status = getStatus(plan.completionPercent)
+                      const isSelected = selectedPlanIds.has(plan.id)
                       return (
-                        <TableRow key={plan.id}>
+                        <TableRow key={plan.id} data-state={isSelected ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => togglePlanSelection(plan.id, checked === true)}
+                              aria-label={`Select ${plan.appLabel}`}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="min-w-0">
                               <div className="font-medium text-slate-900 truncate">{plan.appLabel}</div>
@@ -272,6 +376,7 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
                   )}
 
                   <TableRow className="bg-slate-50/60">
+                    <TableCell />
                     <TableCell>
                       <Select
                         value={draft.appId || "none"}
@@ -345,6 +450,42 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
           </>
         )}
       </CardContent>
+
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign user to plans</DialogTitle>
+            <DialogDescription>
+              Assign a team member to {selectedPlans.length} selected profit plan(s) for {month}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="bulk-assign-user">Team member</Label>
+            <Select value={assignUserId} onValueChange={setAssignUserId}>
+              <SelectTrigger id="bulk-assign-user" className="bg-white">
+                <SelectValue placeholder="Select member" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {memberOptions.map((member) => (
+                  <SelectItem key={member.userId} value={member.userId}>
+                    {member.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setAssignOpen(false)} disabled={assigning}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleBulkAssignUser()} disabled={assigning || selectedPlans.length === 0}>
+              {assigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

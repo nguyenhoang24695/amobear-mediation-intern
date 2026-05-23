@@ -268,7 +268,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
 
         {canViewTeams && (
           <TabsContent value="profit-plan">
-            <OrgProfitPlanTab orgId={orgId} />
+            <OrgProfitPlanTab orgId={orgId} canManage={canManageTeams} />
           </TabsContent>
         )}
 

@@ -55,6 +55,8 @@ export interface CustomReportFilters {
   metricFilters: CustomReportMetricFilter[]
   commissionUser?: string | null
   commissionUsernames?: string[] | null
+  /** Team filter for commission managers — limits apps to profit-plan apps for the team. */
+  commissionTeamId?: string | null
   sortBy?: string | null
   sortDir: string
   activePresetDays?: number | null

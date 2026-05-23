@@ -7,6 +7,7 @@ import type { CustomReportSaved } from "@/types/reports"
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
 const FILTER_COMMISSION_USER = "Commission User"
+const FILTER_COMMISSION_TEAM = "Team"
 
 export type DateFilterMode = "preset" | "month" | "custom"
 
@@ -21,6 +22,7 @@ export interface ApplySavedCustomReportOptions {
   setSelectedApps: (ids: string[]) => void
   setMetricFilters: (filters: CustomReportSaved["filters"]["metricFilters"]) => void
   setCommissionUser: (value: string) => void
+  setCommissionTeam?: (value: string) => void
   setSortColumn: (column: string) => void
   setSortDirection: (dir: "asc" | "desc") => void
   setDateFilterMode: (mode: DateFilterMode) => void
@@ -56,6 +58,7 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
   options.setSelectedMetrics([...report.metrics])
   options.setMetricFilters(filters.metricFilters ?? [])
   options.setCommissionUser(filters.commissionUser ?? "All")
+  options.setCommissionTeam?.(filters.commissionTeamId ?? "All")
   options.setSortColumn(filters.sortBy ?? "date")
   options.setSortDirection(filters.sortDir === "asc" ? "asc" : "desc")
 
