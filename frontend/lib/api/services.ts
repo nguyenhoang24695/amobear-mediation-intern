@@ -1029,6 +1029,10 @@ export const teamMembersApi = {
         return apiClient.post(`/api/v1/team-members/remove-from-team`, { userId, teamId })
     },
 
+    leaveTeam: async (teamId: string): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/leave-team`, { teamId })
+    },
+
     setTeamLead: async (
         teamId: string,
         userId: string,
