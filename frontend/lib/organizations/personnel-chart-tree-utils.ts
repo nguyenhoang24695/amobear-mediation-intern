@@ -1,4 +1,5 @@
 import type { PersonnelNode } from "./personnel-chart-types"
+import { stripTeamMemberChildrenForPersist } from "./personnel-chart-team-utils"
 
 export function flattenPersonnelTree(node: PersonnelNode): PersonnelNode[] {
   const list: PersonnelNode[] = [node]
@@ -41,12 +42,21 @@ export function normalizePersonnelTreeForCompare(node: PersonnelNode): Personnel
     managerId: node.managerId ?? undefined,
     managerName: node.managerName ?? undefined,
     linkedUserId: node.linkedUserId ?? undefined,
+    isTeamGroup: node.isTeamGroup ?? undefined,
+    teamId: node.teamId ?? undefined,
+    teamName: node.teamName ?? undefined,
+    isTeamLead: node.isTeamLead ?? undefined,
     children: (node.children ?? []).map(normalizePersonnelTreeForCompare),
   }
 }
 
 export function personnelTreesEqual(a: PersonnelNode, b: PersonnelNode): boolean {
-  return JSON.stringify(normalizePersonnelTreeForCompare(a)) === JSON.stringify(normalizePersonnelTreeForCompare(b))
+  const left = stripTeamMemberChildrenForPersist(a)
+  const right = stripTeamMemberChildrenForPersist(b)
+  return (
+    JSON.stringify(normalizePersonnelTreeForCompare(left)) ===
+    JSON.stringify(normalizePersonnelTreeForCompare(right))
+  )
 }
 
 function detachSubtree(root: PersonnelNode, nodeId: string): { tree: PersonnelNode; subtree: PersonnelNode | null } {
@@ -68,9 +78,7 @@ function detachSubtree(root: PersonnelNode, nodeId: string): { tree: PersonnelNo
     const result = detachSubtree(child, nodeId)
     if (result.subtree) {
       detached = result.subtree
-      if (result.tree.id !== child.id) {
-        children.push(result.tree)
-      }
+      children.push(result.tree)
     } else {
       children.push(child)
     }

@@ -62,6 +62,11 @@ import type {
 } from '@/types/api'
 import { apiClient, APP_INSIGHT_REGENERATE_TIMEOUT_MS } from './client'
 import { formatDateForAPI } from '@/lib/utils/dashboard'
+import type {
+    OrganizationPersonnelChartResponse,
+    PersonnelChartHistoryPagedResult,
+    PersonnelNode as PersonnelChartNode,
+} from "@/lib/organizations/personnel-chart-types"
 
 // Auth Types
 export interface LoginRequest {
@@ -1023,6 +1028,17 @@ export const teamMembersApi = {
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/remove-from-team`, { userId, teamId })
     },
+
+    leaveTeam: async (teamId: string): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/leave-team`, { teamId })
+    },
+
+    setTeamLead: async (
+        teamId: string,
+        userId: string,
+    ): Promise<{ success: boolean; message?: string }> => {
+        return apiClient.post(`/api/v1/team-members/set-team-lead`, { teamId, userId })
+    },
 }
 
 // Dashboard API Service
@@ -1741,6 +1757,50 @@ export const organizationsApi = {
         return apiClient.get<OrgTeam[]>(`/api/v1/organizations/${orgId}/teams`)
     },
 
+    getProfitPlans: async (
+        orgId: string,
+        params?: { from?: string; to?: string; teamId?: string; unassigned?: boolean },
+    ): Promise<TeamMonthlyProfitPlan[]> => {
+        return apiClient.get<TeamMonthlyProfitPlan[]>(
+            `/api/v1/organizations/${orgId}/profit-plans`,
+            params as Record<string, string | number | boolean | undefined>,
+        )
+    },
+
+    assignProfitPlanTeam: async (
+        orgId: string,
+        month: string,
+        appId: string,
+        teamId: string,
+    ): Promise<TeamMonthlyProfitPlan> => {
+        return apiClient.post<TeamMonthlyProfitPlan>(
+            `/api/v1/organizations/${orgId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}/assign-team`,
+            { teamId },
+        )
+    },
+
+    bulkAssignProfitPlanTeam: async (
+        orgId: string,
+        body: BulkAssignTeamProfitPlanRequest,
+    ): Promise<BulkProfitPlanActionResult> => {
+        return apiClient.post<BulkProfitPlanActionResult>(
+            `/api/v1/organizations/${orgId}/profit-plans/bulk-assign-team`,
+            body,
+        )
+    },
+
+    exportProfitPlanTemplate: async (orgId: string, month: string): Promise<{ blob: Blob; contentType: string | null }> => {
+        return apiClient.getBlob(
+            `/api/v1/organizations/${orgId}/profit-plans/template?month=${encodeURIComponent(month)}`,
+        )
+    },
+
+    importProfitPlans: async (orgId: string, file: File): Promise<ImportTeamProfitPlansResult> => {
+        const fd = new FormData()
+        fd.append("file", file)
+        return apiClient.post<ImportTeamProfitPlansResult>(`/api/v1/organizations/${orgId}/profit-plans/import`, fd)
+    },
+
     // Create a new team
     createTeam: async (orgId: string, data: CreateTeamRequest): Promise<OrgTeam> => {
         return apiClient.post<OrgTeam>(`/api/v1/organizations/${orgId}/teams`, data)
@@ -1840,10 +1900,135 @@ export interface OrgTeam {
     id: string
     name: string
     description?: string
+    userId?: string | null
+    teamLeadName?: string | null
+    teamLeadEmail?: string | null
+    teamLeadAvatarUrl?: string | null
     isActive: boolean
     memberCount: number
     createdAt: string
     updatedAt: string
+}
+
+export interface TeamMonthlyProfitPlan {
+    id: string
+    organizationId: string
+    teamId?: string | null
+    teamName: string
+    month: string
+    appId: string
+    appLabel: string
+    appPlatform?: string | null
+    appStoreId?: string | null
+    appIconUri?: string | null
+    assignedUserId?: string | null
+    assignedUserName?: string | null
+    assignedUserEmail?: string | null
+    plannedProfit: number
+    actualProfit: number
+    completionPercent?: number | null
+    createdAt: string
+    updatedAt: string
+}
+
+export interface UpsertTeamMonthlyProfitPlanRequest {
+    appId: string
+    plannedProfit: number
+    assignedUserId?: string | null
+}
+
+export interface ImportTeamProfitPlansResult {
+    imported: number
+    updated: number
+    skipped: number
+    errors: string[]
+}
+
+export interface BulkProfitPlanItem {
+    month: string
+    appId: string
+}
+
+export interface BulkAssignTeamProfitPlanRequest {
+    teamId: string
+    items: BulkProfitPlanItem[]
+}
+
+export interface BulkAssignUserProfitPlanRequest {
+    assignedUserId?: string | null
+    items: BulkProfitPlanItem[]
+}
+
+export interface BulkProfitPlanActionResult {
+    succeeded: number
+    failed: number
+    errors: string[]
+}
+
+export interface TeamProfitAppOption {
+    appId: string
+    label: string
+    displayName?: string | null
+    name?: string | null
+    platform?: string | null
+    iconUri?: string | null
+    appStoreId?: string | null
+}
+
+export interface TeamProfitMemberOption {
+    userId: string
+    label: string
+    email: string
+}
+
+export const teamProfitApi = {
+    getPlans: async (
+        teamId: string,
+        params?: { from?: string; to?: string },
+    ): Promise<TeamMonthlyProfitPlan[]> => {
+        return apiClient.get<TeamMonthlyProfitPlan[]>(
+            `/api/v1/teams/${teamId}/profit-plans`,
+            params as Record<string, string | number | undefined>,
+        )
+    },
+
+    getPlan: async (teamId: string, month: string, appId: string): Promise<TeamMonthlyProfitPlan | null> => {
+        return apiClient.get<TeamMonthlyProfitPlan | null>(
+            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}`,
+        )
+    },
+
+    upsertPlan: async (
+        teamId: string,
+        month: string,
+        body: UpsertTeamMonthlyProfitPlanRequest,
+    ): Promise<TeamMonthlyProfitPlan> => {
+        return apiClient.put<TeamMonthlyProfitPlan>(`/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}`, body)
+    },
+
+    deletePlan: async (teamId: string, month: string, appId: string): Promise<void> => {
+        await apiClient.delete(
+            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}`,
+        )
+    },
+
+    getAppOptions: async (teamId: string): Promise<TeamProfitAppOption[]> => {
+        return apiClient.get<TeamProfitAppOption[]>(`/api/v1/teams/${teamId}/profit-app-options`)
+    },
+
+    getMemberOptions: async (teamId: string): Promise<TeamProfitMemberOption[]> => {
+        return apiClient.get<TeamProfitMemberOption[]>(`/api/v1/teams/${teamId}/profit-member-options`)
+    },
+
+    bulkAssignUser: async (
+        teamId: string,
+        body: BulkAssignUserProfitPlanRequest,
+    ): Promise<BulkProfitPlanActionResult> => {
+        return apiClient.post<BulkProfitPlanActionResult>(
+            `/api/v1/teams/${teamId}/profit-plans/bulk-assign-user`,
+            body,
+        )
+    },
 }
 
 // User Teams API types
@@ -1855,6 +2040,7 @@ export interface UserTeamMember {
     role: string
     status: string
     avatarUrl?: string
+  isTeamLead?: boolean
 }
 
 export interface UserTeamWithMembers {
@@ -1862,6 +2048,7 @@ export interface UserTeamWithMembers {
     name: string
     description?: string
     isActive: boolean
+    teamLeadUserId?: string | null
     memberCount: number
     createdAt: string
     updatedAt: string
@@ -1871,11 +2058,13 @@ export interface UserTeamWithMembers {
 export interface CreateTeamRequest {
     name: string
     description?: string
+    userId?: string | null
 }
 
 export interface UpdateTeamRequest {
     name: string
     description?: string
+    userId?: string | null
     isActive: boolean
 }
 
@@ -2591,6 +2780,46 @@ export const reportsApi = {
         request: import('@/types/reports').CustomReportQueryRequest,
     ): Promise<import('@/types/reports').CustomReportQueryResponse> => {
         return apiClient.post('/api/v1/reports/query', request)
+    },
+
+    listSaved: async (): Promise<import('@/types/reports').CustomReportListItem[]> => {
+        return apiClient.get('/api/v1/reports/saved')
+    },
+
+    listFolders: async (): Promise<import('@/types/reports').CustomReportFolder[]> => {
+        return apiClient.get('/api/v1/reports/folders')
+    },
+
+    createFolder: async (name: string): Promise<import('@/types/reports').CustomReportFolder> => {
+        return apiClient.post('/api/v1/reports/folders', { name })
+    },
+
+    listPinned: async (): Promise<import('@/types/reports').CustomReportListItem[]> => {
+        return apiClient.get('/api/v1/reports/saved/pinned')
+    },
+
+    setPinned: async (
+        id: string,
+        isPinned: boolean,
+    ): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.patch(`/api/v1/reports/saved/${id}/pin`, { isPinned })
+    },
+
+    getSaved: async (id: string): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.get(`/api/v1/reports/saved/${id}`)
+    },
+
+    createSaved: async (
+        body: import('@/types/reports').SaveCustomReportRequest,
+    ): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.post('/api/v1/reports/saved', body)
+    },
+
+    updateSaved: async (
+        id: string,
+        body: import('@/types/reports').SaveCustomReportRequest,
+    ): Promise<import('@/types/reports').CustomReportSaved> => {
+        return apiClient.put(`/api/v1/reports/saved/${id}`, body)
     },
 }
 

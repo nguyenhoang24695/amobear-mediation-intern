@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
+import { teamMembersApi } from "@/lib/api/services"
+import type { TeamMember } from "@/types/api"
 import { isOrgUserPlacedInTree, type PersonnelNode } from "@/lib/mock/org-personnel-mock"
 import { paletteDraggableId, type PersonnelDragData, PERSONNEL_DRAG_TYPE } from "./personnel-dnd"
-import { ChevronLeft, ChevronRight, GripVertical, Loader2, Search, Users } from "lucide-react"
+import { ChevronLeft, ChevronRight, FolderOpen, GripVertical, Loader2, Search, Users } from "lucide-react"
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -24,7 +25,7 @@ function DraggableUserRow({
   user,
   placed,
 }: {
-  user: OrgUserItem
+  user: TeamMember
   placed: boolean
 }) {
   const dragData: PersonnelDragData = {
@@ -33,7 +34,7 @@ function DraggableUserRow({
       id: user.id,
       name: user.fullName || user.email,
       email: user.email,
-      status: user.status,
+      status: user.status ?? "active",
     },
   }
 
@@ -89,6 +90,78 @@ interface PersonnelUsersPaletteProps {
   embedded?: boolean
 }
 
+interface UserGroup {
+  id: string
+  name: string
+  users: TeamMember[]
+}
+
+function DraggableTeamRow({ group, placed }: { group: UserGroup; placed: boolean }) {
+  const dragData: PersonnelDragData = {
+    type: PERSONNEL_DRAG_TYPE,
+    user: {
+      id: `team:${group.id}`,
+      name: group.name,
+      email: "",
+      status: "active",
+      title: `${group.users.length} members`,
+      isTeamGroup: true,
+      teamId: group.id,
+      teamMembers: group.users.map((user) => ({
+        id: user.id,
+        name: user.fullName || user.email,
+        email: user.email,
+        status: user.status ?? "active",
+        title: user.teams.find((team) => team.id === group.id)?.role ?? "member",
+        isTeamLead: Boolean(user.teams.find((team) => team.id === group.id)?.isTeamLead),
+      })),
+    },
+  }
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: paletteDraggableId(`team:${group.id}`),
+    data: dragData,
+    disabled: placed,
+  })
+
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform) }
+    : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
+        placed
+          ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed"
+          : "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50",
+        isDragging && "opacity-50 shadow-md ring-2 ring-blue-300",
+      )}
+      {...(placed ? {} : { ...listeners, ...attributes })}
+    >
+      {!placed && <GripVertical className="h-4 w-4 shrink-0 text-slate-400" />}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+        <FolderOpen className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium text-slate-900">{group.name}</p>
+        <p className="truncate text-xs text-slate-500">{group.users.length} members</p>
+      </div>
+      {placed ? (
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          On chart
+        </Badge>
+      ) : (
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          Team
+        </Badge>
+      )}
+    </div>
+  )
+}
+
 export function PersonnelUsersPalette({
   orgId,
   tree,
@@ -97,21 +170,20 @@ export function PersonnelUsersPalette({
   embedded = false,
 }: PersonnelUsersPaletteProps) {
   const [search, setSearch] = useState("")
-  const [users, setUsers] = useState<OrgUserItem[]>([])
+  const [users, setUsers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchUsers = useCallback(async (query: string) => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const result = await organizationsApi.getUsers(orgId, {
+      const result = await teamMembersApi.filterTeamMembers({
         page: 1,
-        pageSize: 200,
-        search: query.trim() || undefined,
+        pageSize: 500,
         status: "active",
       })
-      setUsers(result.items ?? [])
+      setUsers(result.data?.items ?? [])
     } catch (err) {
       console.error("Failed to load org users for palette:", err)
       setError("Could not load users")
@@ -119,12 +191,11 @@ export function PersonnelUsersPalette({
     } finally {
       setLoading(false)
     }
-  }, [orgId])
+  }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => void fetchUsers(search), 300)
-    return () => clearTimeout(t)
-  }, [fetchUsers, search])
+    void fetchUsers()
+  }, [fetchUsers, orgId])
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -134,9 +205,45 @@ export function PersonnelUsersPalette({
         u.fullName?.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         u.firstName?.toLowerCase().includes(q) ||
-        u.lastName?.toLowerCase().includes(q),
+        u.lastName?.toLowerCase().includes(q) ||
+        u.teams.some((team) => team.name.toLowerCase().includes(q)),
     )
   }, [users, search])
+
+  const groupedUsers = useMemo<UserGroup[]>(() => {
+    const teamGroups = new Map<string, UserGroup>()
+    const noTeamUsers: TeamMember[] = []
+
+    for (const user of filteredUsers) {
+      if (!user.teams.length) {
+        noTeamUsers.push(user)
+        continue
+      }
+
+      for (const team of user.teams) {
+        const group = teamGroups.get(team.id) ?? { id: team.id, name: team.name, users: [] }
+        group.users.push(user)
+        teamGroups.set(team.id, group)
+      }
+    }
+
+    const groups = [...teamGroups.values()]
+      .map((group) => ({
+        ...group,
+        users: group.users.sort((a, b) => (a.fullName || a.email).localeCompare(b.fullName || b.email)),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    if (noTeamUsers.length > 0) {
+      groups.push({
+        id: "no-team",
+        name: "No team",
+        users: noTeamUsers.sort((a, b) => (a.fullName || a.email).localeCompare(b.fullName || b.email)),
+      })
+    }
+
+    return groups
+  }, [filteredUsers])
 
   const availableCount = filteredUsers.filter(
     (u) => !isOrgUserPlacedInTree(tree, u.id, u.email),
@@ -176,7 +283,7 @@ export function PersonnelUsersPalette({
           />
         </div>
         <p className="mt-2 text-[11px] text-slate-500">
-          Drag a user onto someone in the chart to add as a direct report.
+          Drag a team or unassigned user onto someone in the chart to add as a direct report.
         </p>
       </div>
 
@@ -187,17 +294,38 @@ export function PersonnelUsersPalette({
           </div>
         ) : error ? (
           <p className="py-6 text-center text-sm text-red-600">{error}</p>
-        ) : filteredUsers.length === 0 ? (
+        ) : groupedUsers.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate-500">No users found</p>
         ) : (
-          <div className="space-y-2">
-            {filteredUsers.map((user) => (
-              <DraggableUserRow
-                key={user.id}
-                user={user}
-                placed={isOrgUserPlacedInTree(tree, user.id, user.email)}
-              />
-            ))}
+          <div className="space-y-3">
+            {groupedUsers.map((group) =>
+              group.id === "no-team" ? (
+                <div key={group.id} className="space-y-2">
+                  <div className="flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <Users className="h-3.5 w-3.5" />
+                    <span className="truncate">{group.name}</span>
+                    <Badge variant="secondary" className="ml-auto text-[10px]">
+                      {group.users.length}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {group.users.map((user) => (
+                      <DraggableUserRow
+                        key={`${group.id}-${user.id}`}
+                        user={user}
+                        placed={isOrgUserPlacedInTree(tree, user.id, user.email)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <DraggableTeamRow
+                  key={group.id}
+                  group={group}
+                  placed={isOrgUserPlacedInTree(tree, `team:${group.id}`)}
+                />
+              ),
+            )}
           </div>
         )}
       </ScrollArea>

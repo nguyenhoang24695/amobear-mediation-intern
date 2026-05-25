@@ -35,7 +35,8 @@ export function PersonnelDroppableNode({
   ...cardProps
 }: PersonnelDroppableNodeProps) {
   const canDrop = isEditMode && isChartDropTarget(node)
-  const canDrag = isEditMode && node.type === "member"
+  const isHydratedTeamMember = Boolean(node.teamId && !node.isTeamGroup)
+  const canDrag = isEditMode && node.type === "member" && !isHydratedTeamMember
 
   const dragData: PersonnelChartNodeDragData = {
     type: PERSONNEL_CHART_NODE_DRAG_TYPE,
