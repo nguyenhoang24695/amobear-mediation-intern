@@ -76,10 +76,7 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
       options.setDateFilterMode("month")
       options.setSelectedMonth(month)
       const start = month
-      const endRaw = endOfMonth(month)
-      const today = new Date()
-      today.setHours(23, 59, 59, 999)
-      const end = endRaw > today ? today : endRaw
+      const end = endOfMonth(month)
       options.setStartDate(start)
       options.setEndDate(end)
       activeFilters = upsertActiveFilter(
