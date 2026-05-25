@@ -10,23 +10,111 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
-import { organizationsApi } from "@/lib/api/services"
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
+import { cn } from "@/lib/utils"
+
+const NO_TEAM_LEAD_VALUE = "__none__"
+
+interface TeamLeadComboboxProps {
+    users: OrgUserItem[]
+    value: string | null
+    onChange: (value: string | null) => void
+    disabled?: boolean
+    emptyMessage?: string
+}
+
+export function TeamLeadCombobox({
+    users,
+    value,
+    onChange,
+    disabled = false,
+    emptyMessage = "No users found.",
+}: TeamLeadComboboxProps) {
+    const [open, setOpen] = useState(false)
+    const selectedUser = value ? users.find((user) => user.id === value) : null
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    disabled={disabled}
+                    className="w-full justify-between bg-white font-normal"
+                >
+                    <span className="truncate">
+                        {selectedUser
+                            ? `${selectedUser.fullName || selectedUser.email} (${selectedUser.email})`
+                            : "No team lead"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command shouldFilter>
+                    <CommandInput placeholder="Search by name or email..." />
+                    <CommandList>
+                        <CommandEmpty>{emptyMessage}</CommandEmpty>
+                        <CommandGroup>
+                            <CommandItem
+                                value={`${NO_TEAM_LEAD_VALUE} no team lead`}
+                                onSelect={() => {
+                                    onChange(null)
+                                    setOpen(false)
+                                }}
+                            >
+                                <Check className={cn("mr-2 h-4 w-4", value == null ? "opacity-100" : "opacity-0")} />
+                                No team lead
+                            </CommandItem>
+                            {users.map((user) => {
+                                const label = `${user.fullName || user.email} (${user.email})`
+                                return (
+                                    <CommandItem
+                                        key={user.id}
+                                        value={`${user.fullName ?? ""} ${user.email}`}
+                                        onSelect={() => {
+                                            onChange(user.id)
+                                            setOpen(false)
+                                        }}
+                                    >
+                                        <Check className={cn("mr-2 h-4 w-4", value === user.id ? "opacity-100" : "opacity-0")} />
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm">{user.fullName || user.email}</div>
+                                            <div className="truncate text-xs text-slate-500">{user.email}</div>
+                                        </div>
+                                        <span className="sr-only">{label}</span>
+                                    </CommandItem>
+                                )
+                            })}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
 
 interface CreateTeamModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     orgId: string
     orgName: string
+    users?: OrgUserItem[]
     onSuccess?: () => void
 }
 
-export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess }: CreateTeamModalProps) {
+export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = [], onSuccess }: CreateTeamModalProps) {
     const [name, setName] = useState("")
     const [description, setDescription] = useState("")
+    const [teamLeadUserId, setTeamLeadUserId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState("")
 
@@ -34,6 +122,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess 
         if (!open) {
             setName("")
             setDescription("")
+            setTeamLeadUserId(null)
             setError("")
             setSaving(false)
         }
@@ -52,6 +141,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess 
             await organizationsApi.createTeam(orgId, {
                 name: name.trim(),
                 description: description.trim() || undefined,
+                userId: teamLeadUserId,
             })
             handleOpenChange(false)
             onSuccess?.()
@@ -103,6 +193,22 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, onSuccess 
                             maxLength={500}
                         />
                         <p className="text-xs text-slate-400 text-right">{description.length}/500</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="team-lead">
+                            Team Lead <span className="text-slate-400">(optional)</span>
+                        </Label>
+                        <TeamLeadCombobox
+                            users={users}
+                            value={teamLeadUserId}
+                            onChange={setTeamLeadUserId}
+                            disabled={users.length === 0}
+                            emptyMessage="Add team members before assigning a team lead."
+                        />
+                        {users.length === 0 && (
+                            <p className="text-xs text-slate-500">Add team members before assigning a team lead.</p>
+                        )}
                     </div>
 
                     {error && <p className="text-sm text-red-500">{error}</p>}

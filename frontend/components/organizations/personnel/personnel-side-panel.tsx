@@ -112,6 +112,7 @@ export function PersonnelSidePanel({
     historyHasMore && loadedCount < cappedTotal && loadedCount < historyMaxViewable
 
   const defaultTab = isEditMode && canManage ? "users" : "history"
+  const showUsersTab = canManage && isEditMode
 
   if (!expanded) {
     return (
@@ -143,9 +144,9 @@ export function PersonnelSidePanel({
         </Button>
       </div>
       <Tabs key={defaultTab} defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className={cn("mx-2 grid w-auto", canManage ? "grid-cols-2" : "grid-cols-1")}>
-          {canManage && (
-            <TabsTrigger value="users" className="text-xs gap-1" disabled={!isEditMode}>
+        <TabsList className={cn("mx-2 grid w-auto", showUsersTab ? "grid-cols-2" : "grid-cols-1")}>
+          {showUsersTab && (
+            <TabsTrigger value="users" className="text-xs gap-1">
               <Users className="h-3 w-3" />
               Users
             </TabsTrigger>
@@ -156,13 +157,9 @@ export function PersonnelSidePanel({
           </TabsTrigger>
         </TabsList>
 
-        {canManage && (
+        {showUsersTab && (
           <TabsContent value="users" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-            {isEditMode ? (
-              <PersonnelUsersPalette orgId={orgId} tree={tree} embedded />
-            ) : (
-              <p className="px-3 py-4 text-xs text-slate-500">Switch to edit mode to add users from the list.</p>
-            )}
+            <PersonnelUsersPalette orgId={orgId} tree={tree} embedded />
           </TabsContent>
         )}
 

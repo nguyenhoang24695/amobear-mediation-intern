@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   AlertDialog,
@@ -23,6 +24,8 @@ import { formatMetaRequestId, formatUserGuidShort, groupValidationErrors } from 
 import { getMediaPreviewSource } from "@/lib/meta-ads/media-preview"
 import { copyTextToClipboard } from "@/lib/utils"
 import type {
+  CreateMetaCampaignRequestDto,
+  MetaAdVariantDto,
   MetaCampaignRequestDetailDto,
   MetaCreatedObjectDto,
   MetaCreativeDraftDto,
@@ -125,8 +128,21 @@ function formatCallToAction(value?: string | null): string {
   return value.replaceAll("_", " ")
 }
 
-function getCreativeType(detail: MetaCampaignRequestDetailDto): MetaCreativeType {
-  return detail.payload.creative.type ?? "SINGLE_IMAGE"
+/** Return all ad variants from a payload (backward compat: wraps legacy creative/ad fields). */
+function getAllVariants(payload: CreateMetaCampaignRequestDto): MetaAdVariantDto[] {
+  if (payload.adVariants && payload.adVariants.length > 0) return payload.adVariants
+  if (payload.creative) {
+    return [{
+      sequenceNumber: 1,
+      creative: payload.creative,
+      ad: payload.ad ?? { name: "", status: "PAUSED" },
+    }]
+  }
+  return []
+}
+
+function getCreativeType(creative: MetaCreativeDraftDto): MetaCreativeType {
+  return (creative.type ?? "SINGLE_IMAGE") as MetaCreativeType
 }
 
 function getCreativeCommon(creative: MetaCreativeDraftDto) {
@@ -211,9 +227,8 @@ function getRequestPerformanceGoalSummary(detail: MetaCampaignRequestDetailDto):
   }
   return "Maximize number of app installs"
 }
-function getCreativeSummaryHeadline(detail: MetaCampaignRequestDetailDto): string {
-  const creative = detail.payload.creative
-  switch (getCreativeType(detail)) {
+function getCreativeSummaryHeadline(creative: MetaCreativeDraftDto): string {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return getSingleVideoCreative(creative).headline ?? "-"
     case "CAROUSEL_IMAGE":
@@ -227,9 +242,8 @@ function getCreativeSummaryHeadline(detail: MetaCampaignRequestDetailDto): strin
   }
 }
 
-function getCreativeSummaryCallToAction(detail: MetaCampaignRequestDetailDto): string {
-  const creative = detail.payload.creative
-  switch (getCreativeType(detail)) {
+function getCreativeSummaryCallToAction(creative: MetaCreativeDraftDto): string {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return getSingleVideoCreative(creative).callToActionType ?? "-"
     case "CAROUSEL_IMAGE":
@@ -243,11 +257,10 @@ function getCreativeSummaryCallToAction(detail: MetaCampaignRequestDetailDto): s
   }
 }
 
-function getCreativeChecklist(detail: MetaCampaignRequestDetailDto): ChecklistItem[] {
-  const creative = detail.payload.creative
+function getCreativeChecklist(creative: MetaCreativeDraftDto): ChecklistItem[] {
   const common = getCreativeCommon(creative)
 
-  if (getCreativeType(detail) === "SINGLE_VIDEO") {
+  if (getCreativeType(creative) === "SINGLE_VIDEO") {
     const video = getSingleVideoCreative(creative)
     return [
       { label: "Creative name", ok: !!common.name },
@@ -259,7 +272,7 @@ function getCreativeChecklist(detail: MetaCampaignRequestDetailDto): ChecklistIt
     ]
   }
 
-  if (getCreativeType(detail) === "CAROUSEL_IMAGE") {
+  if (getCreativeType(creative) === "CAROUSEL_IMAGE") {
     const carousel = getCarouselCreative(creative)
     return [
       { label: "Creative name", ok: !!common.name },
@@ -273,7 +286,7 @@ function getCreativeChecklist(detail: MetaCampaignRequestDetailDto): ChecklistIt
     ]
   }
 
-  if (getCreativeType(detail) === "FLEXIBLE") {
+  if (getCreativeType(creative) === "FLEXIBLE") {
     const flexible = getFlexibleCreative(creative)
     return [
       { label: "Creative name", ok: !!common.name },
@@ -285,7 +298,7 @@ function getCreativeChecklist(detail: MetaCampaignRequestDetailDto): ChecklistIt
     ]
   }
 
-  if (getCreativeType(detail) === "EXISTING_POST") {
+  if (getCreativeType(creative) === "EXISTING_POST") {
     const existingPost = getExistingPostCreative(creative)
     return [
       { label: "Creative name", ok: !!common.name },
@@ -305,13 +318,12 @@ function getCreativeChecklist(detail: MetaCampaignRequestDetailDto): ChecklistIt
   ]
 }
 
-function isCreativeComplete(detail: MetaCampaignRequestDetailDto): boolean {
-  return getCreativeChecklist(detail).every((item) => item.ok)
+function isCreativeComplete(creative: MetaCreativeDraftDto): boolean {
+  return getCreativeChecklist(creative).every((item) => item.ok)
 }
 
-function getCreativePreviewImage(detail: MetaCampaignRequestDetailDto): { url: string; requiresAuth: boolean } {
-  const creative = detail.payload.creative
-  switch (getCreativeType(detail)) {
+function getCreativePreviewImage(creative: MetaCreativeDraftDto): { url: string; requiresAuth: boolean } {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return getMediaPreviewSource(getSingleVideoCreative(creative).thumbnail)
     case "CAROUSEL_IMAGE":
@@ -330,9 +342,8 @@ function getCreativePreviewImage(detail: MetaCampaignRequestDetailDto): { url: s
   }
 }
 
-function getCreativePreviewHeadline(detail: MetaCampaignRequestDetailDto): string {
-  const creative = detail.payload.creative
-  switch (getCreativeType(detail)) {
+function getCreativePreviewHeadline(creative: MetaCreativeDraftDto): string {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return getSingleVideoCreative(creative).headline ?? "Video creative"
     case "CAROUSEL_IMAGE":
@@ -345,9 +356,8 @@ function getCreativePreviewHeadline(detail: MetaCampaignRequestDetailDto): strin
       return getSingleImageCreative(creative).headline ?? "Creative headline"
   }
 }
-function getCreativePreviewMessage(detail: MetaCampaignRequestDetailDto): string {
-  const creative = detail.payload.creative
-  switch (getCreativeType(detail)) {
+function getCreativePreviewMessage(creative: MetaCreativeDraftDto): string {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return getSingleVideoCreative(creative).message ?? "Video preview will use the selected source at execute time."
     case "CAROUSEL_IMAGE": {
@@ -365,9 +375,8 @@ function getCreativePreviewMessage(detail: MetaCampaignRequestDetailDto): string
   }
 }
 
-function getCreativePreviewCallToAction(detail: MetaCampaignRequestDetailDto): string {
-  const creative = detail.payload.creative
-  switch (getCreativeType(detail)) {
+function getCreativePreviewCallToAction(creative: MetaCreativeDraftDto): string {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return formatCallToAction(getSingleVideoCreative(creative).callToActionType)
     case "CAROUSEL_IMAGE":
@@ -381,8 +390,8 @@ function getCreativePreviewCallToAction(detail: MetaCampaignRequestDetailDto): s
   }
 }
 
-function getCreativePreviewIcon(detail: MetaCampaignRequestDetailDto) {
-  switch (getCreativeType(detail)) {
+function getCreativePreviewIcon(creative: MetaCreativeDraftDto) {
+  switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
       return <Video className="w-6 h-6 text-slate-300" />
     case "CAROUSEL_IMAGE":
@@ -613,11 +622,10 @@ export function RequestDetailContent({ requestId }: Props) {
     )
   }
 
-  const creativeType = getCreativeType(detail)
-  const creativeCommon = getCreativeCommon(detail.payload.creative)
-  const creativeChecklist = getCreativeChecklist(detail)
-  const creativeComplete = isCreativeComplete(detail)
-  const previewImage = getCreativePreviewImage(detail)
+  const allVariants = getAllVariants(detail.payload)
+  const primaryCreative = allVariants[0]?.creative ?? detail.payload.creative ?? {}
+  const creativeType = getCreativeType(primaryCreative)
+  const creativeCommon = getCreativeCommon(primaryCreative)
   const createdObjects = sortCreatedObjects(detail.createdObjects)
   const hasValidationErrors = Object.keys(groupedValidationErrors).length > 0
 
@@ -801,98 +809,235 @@ export function RequestDetailContent({ requestId }: Props) {
                 <DetailRow label="Creative Type" value={creativeType.replaceAll("_", " ")} mono />
                 <DetailRow label="Creative Name" value={creativeCommon.name || "-"} />
                 <DetailRow label="Facebook Page ID" value={creativeCommon.pageId || "-"} mono />
-                <DetailRow label="Headline / Reference" value={getCreativeSummaryHeadline(detail)} />
-                <DetailRow label="CTA / Mode" value={getCreativeSummaryCallToAction(detail)} mono />
-                <DetailRow label="Ad Name" value={detail.payload.ad.name} />
+                <DetailRow label="Headline / Reference" value={getCreativeSummaryHeadline(primaryCreative)} />
+                <DetailRow label="CTA / Mode" value={getCreativeSummaryCallToAction(primaryCreative)} mono />
+                <DetailRow label="Ad Name" value={allVariants[0]?.ad?.name ?? detail.payload.ad?.name ?? "-"} />
+                {allVariants.length > 1 && (
+                  <DetailRow label="Ad Variations" value={`${allVariants.length} variations`} />
+                )}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-3">
+          {/* Creative card — tabs when multiple variants, plain card when single */}
+          {allVariants.length > 1 ? (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-slate-500" />
-                  Creative
+                  Creative — {allVariants.length} Variations
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">
-                    {creativeType}
-                  </Badge>
-                  <Badge className={creativeComplete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
-                    {creativeComplete ? "Complete" : "Incomplete"}
-                  </Badge>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-slate-500">Snapshot of the request creative payload that will be transformed into the matching Meta creative shape during execution.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                    <DetailRow label="Creative Type" value={creativeType.replaceAll("_", " ")} mono />
-                    <DetailRow label="Creative Name" value={creativeCommon.name || "-"} />
-                    <DetailRow label="Facebook Page ID" value={creativeCommon.pageId || "-"} mono />
-                    <DetailRow label="Instagram Actor ID" value={creativeCommon.instagramActorId || "-"} mono />
-                  </div>
-
-                  <CreativeTypeSnapshot detail={detail} />
-
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      {creativeChecklist.map((item) => (
-                        <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
-                          {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
-                          <span>{item.label}</span>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Primary text, headline, description, CTA, and page are shared across all variations. Each variation differs only by its image/video.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue={`variant-${allVariants[0].sequenceNumber}`}>
+                  <TabsList className="mb-4 flex-wrap h-auto gap-1">
+                    {allVariants.map((variant, index) => {
+                      const vc = variant.creative ?? {}
+                      const vcComplete = isCreativeComplete(vc)
+                      return (
+                        <TabsTrigger
+                          key={variant.sequenceNumber}
+                          value={`variant-${variant.sequenceNumber}`}
+                          className="text-xs gap-1.5"
+                        >
+                          Variation #{index + 1}
+                          <span className={`w-1.5 h-1.5 rounded-full ${vcComplete ? "bg-green-500" : "bg-amber-400"}`} />
+                        </TabsTrigger>
+                      )
+                    })}
+                  </TabsList>
+                  {allVariants.map((variant, index) => {
+                    const vc = variant.creative ?? {}
+                    const vcType = getCreativeType(vc)
+                    const vcCommon = getCreativeCommon(vc)
+                    const vcChecklist = getCreativeChecklist(vc)
+                    const vcComplete = isCreativeComplete(vc)
+                    const vcPreview = getCreativePreviewImage(vc)
+                    return (
+                      <TabsContent key={variant.sequenceNumber} value={`variant-${variant.sequenceNumber}`}>
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <p className="text-xs text-slate-500">
+                            Ad: &ldquo;{variant.ad?.name || "-"}&rdquo; · Variation #{index + 1} of {allVariants.length}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">
+                              {vcType}
+                            </Badge>
+                            <Badge className={vcComplete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
+                              {vcComplete ? "Complete" : "Incomplete"}
+                            </Badge>
+                          </div>
                         </div>
-                      ))}
+                        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                              <DetailRow label="Creative Type" value={vcType.replaceAll("_", " ")} mono />
+                              <DetailRow label="Creative Name" value={vcCommon.name || "-"} />
+                              <DetailRow label="Facebook Page ID" value={vcCommon.pageId || "-"} mono />
+                              <DetailRow label="Instagram Actor ID" value={vcCommon.instagramActorId || "-"} mono />
+                            </div>
+                            <CreativeTypeSnapshot creative={vc} />
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
+                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                {vcChecklist.map((item) => (
+                                  <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
+                                    {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                                    <span>{item.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">Creative Preview</p>
+                            <div className="w-44 overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
+                              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                              </div>
+                              <div className="space-y-1.5 p-2">
+                                <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100">
+                                  {vcPreview.url ? (
+                                    <ProtectedMediaImage
+                                      src={vcPreview.url}
+                                      requiresAuth={vcPreview.requiresAuth}
+                                      alt="Creative preview"
+                                      className="h-full w-full object-cover"
+                                      fallback={getCreativePreviewIcon(vc)}
+                                    />
+                                  ) : (
+                                    getCreativePreviewIcon(vc)
+                                  )}
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900">{getCreativePreviewHeadline(vc)}</p>
+                                  <p className="line-clamp-2 text-[9px] leading-tight text-slate-500">{getCreativePreviewMessage(vc)}</p>
+                                </div>
+                                <div className="pt-0.5">
+                                  <div className="rounded bg-blue-600 py-1 text-center">
+                                    <span className="text-[9px] font-semibold text-white">{getCreativePreviewCallToAction(vc)}</span>
+                                  </div>
+                                </div>
+                                <p className="text-[8px] text-slate-400">Sponsored</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                              <Smartphone className="w-3 h-3" />
+                              <span>Preview only</span>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    )
+                  })}
+                </Tabs>
+              </CardContent>
+            </Card>
+          ) : (
+            // Single variant — existing card layout
+            allVariants.map((variant) => {
+              const vc = variant.creative ?? {}
+              const vcType = getCreativeType(vc)
+              const vcCommon = getCreativeCommon(vc)
+              const vcChecklist = getCreativeChecklist(vc)
+              const vcComplete = isCreativeComplete(vc)
+              const vcPreview = getCreativePreviewImage(vc)
+              return (
+                <Card key={variant.sequenceNumber} className="border-slate-200">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-slate-500" />
+                        Creative
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">
+                          {vcType}
+                        </Badge>
+                        <Badge className={vcComplete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
+                          {vcComplete ? "Complete" : "Incomplete"}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Snapshot of the request creative payload that will be transformed into the matching Meta creative shape during execution.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                          <DetailRow label="Creative Type" value={vcType.replaceAll("_", " ")} mono />
+                          <DetailRow label="Creative Name" value={vcCommon.name || "-"} />
+                          <DetailRow label="Facebook Page ID" value={vcCommon.pageId || "-"} mono />
+                          <DetailRow label="Instagram Actor ID" value={vcCommon.instagramActorId || "-"} mono />
+                        </div>
 
-                <div className="flex flex-col items-center">
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">Creative Preview</p>
-                  <div className="w-44 overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
-                    <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5">
-                      <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                      <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                      <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                    </div>
-                    <div className="space-y-1.5 p-2">
-                      <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100">
-                        {previewImage.url ? (
-                          <ProtectedMediaImage
-                            src={previewImage.url}
-                            requiresAuth={previewImage.requiresAuth}
-                            alt="Creative preview"
-                            className="h-full w-full object-cover"
-                            fallback={getCreativePreviewIcon(detail)}
-                          />
-                        ) : (
-                          getCreativePreviewIcon(detail)
-                        )}
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900">{getCreativePreviewHeadline(detail)}</p>
-                        <p className="line-clamp-2 text-[9px] leading-tight text-slate-500">{getCreativePreviewMessage(detail)}</p>
-                      </div>
-                      <div className="pt-0.5">
-                        <div className="rounded bg-blue-600 py-1 text-center">
-                          <span className="text-[9px] font-semibold text-white">{getCreativePreviewCallToAction(detail)}</span>
+                        <CreativeTypeSnapshot creative={vc} />
+
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            {vcChecklist.map((item) => (
+                              <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
+                                {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                                <span>{item.label}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                      <p className="text-[8px] text-slate-400">Sponsored</p>
+
+                      <div className="flex flex-col items-center">
+                        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">Creative Preview</p>
+                        <div className="w-44 overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
+                          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                          </div>
+                          <div className="space-y-1.5 p-2">
+                            <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100">
+                              {vcPreview.url ? (
+                                <ProtectedMediaImage
+                                  src={vcPreview.url}
+                                  requiresAuth={vcPreview.requiresAuth}
+                                  alt="Creative preview"
+                                  className="h-full w-full object-cover"
+                                  fallback={getCreativePreviewIcon(vc)}
+                                />
+                              ) : (
+                                getCreativePreviewIcon(vc)
+                              )}
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900">{getCreativePreviewHeadline(vc)}</p>
+                              <p className="line-clamp-2 text-[9px] leading-tight text-slate-500">{getCreativePreviewMessage(vc)}</p>
+                            </div>
+                            <div className="pt-0.5">
+                              <div className="rounded bg-blue-600 py-1 text-center">
+                                <span className="text-[9px] font-semibold text-white">{getCreativePreviewCallToAction(vc)}</span>
+                              </div>
+                            </div>
+                            <p className="text-[8px] text-slate-400">Sponsored</p>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                          <Smartphone className="w-3 h-3" />
+                          <span>Preview only</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                    <Smartphone className="w-3 h-3" />
-                    <span>Preview only</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
 
           <Card className="border-slate-200">
             <CardHeader className="pb-3">
@@ -1067,9 +1212,8 @@ export function RequestDetailContent({ requestId }: Props) {
   )
 }
 
-function CreativeTypeSnapshot({ detail }: { detail: MetaCampaignRequestDetailDto }) {
-  const creative = detail.payload.creative
-  const creativeType = getCreativeType(detail)
+function CreativeTypeSnapshot({ creative }: { creative: MetaCreativeDraftDto }) {
+  const creativeType = getCreativeType(creative)
   const common = getCreativeCommon(creative)
 
   if (creativeType === "SINGLE_VIDEO") {

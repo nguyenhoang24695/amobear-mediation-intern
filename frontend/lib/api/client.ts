@@ -89,7 +89,7 @@ export class ApiClient {
         }
     }
 
-    async get<T>(endpoint: string, params?: Record<string, string | number | undefined>): Promise<T> {
+    async get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
         const queryString = params
             ? "?" + new URLSearchParams(Object.entries(params).filter(([_, value]) => value !== undefined && value !== null).map(([key, value]) => [key, String(value)])).toString()
             : ""

@@ -549,6 +549,7 @@ export interface TeamMember {
     role: string
     status: string
     joinedAt?: string
+    isTeamLead?: boolean
   }>
   permissions?: Record<string, string>
   metaAdAccountIds?: number[] | null

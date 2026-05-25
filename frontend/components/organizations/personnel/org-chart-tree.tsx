@@ -91,6 +91,7 @@ function OrgChartNode({
   const hasChildren = children.length > 0
   const collapsed = collapsedIds.has(node.id)
   const highlighted = nodeMatchesSearch(node, searchQuery)
+  const renderTeamGroup = node.isTeamGroup && hasChildren && !collapsed
 
   return (
     <li
@@ -114,7 +115,34 @@ function OrgChartNode({
         organizationLogoUrl={organizationLogoUrl}
       />
 
-      {hasChildren && !collapsed && (
+      {renderTeamGroup ? (
+        <>
+          <div className="h-6 w-px bg-slate-300" aria-hidden />
+          <div className="relative rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/30 px-6 pb-6 pt-8">
+            <div className="absolute left-3 top-2 rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-blue-700 shadow-sm">
+              {node.teamName ?? node.name}
+            </div>
+            <ul className="relative flex items-start gap-6 pt-0">
+              {children.map((child, index) => (
+                <OrgChartNode
+                  key={child.id}
+                  node={child}
+                  selectedId={selectedId}
+                  searchQuery={searchQuery}
+                  collapsedIds={collapsedIds}
+                  onSelect={onSelect}
+                  onToggleCollapse={onToggleCollapse}
+                  isEditMode={isEditMode}
+                  onRemoveNode={onRemoveNode}
+                  organizationLogoUrl={organizationLogoUrl}
+                  siblingIndex={index}
+                  siblingCount={children.length}
+                />
+              ))}
+            </ul>
+          </div>
+        </>
+      ) : hasChildren && !collapsed && (
         <>
           <div className="h-6 w-px bg-slate-300" aria-hidden />
           <ul className="relative flex items-start gap-6 pt-0">

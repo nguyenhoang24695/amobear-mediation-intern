@@ -35,6 +35,8 @@ import {
   ArrowUp,
   ArrowDown,
   Database,
+  Crown,
+  LogOut,
 } from "lucide-react"
 import Link from "next/link"
 import { useApi } from "@/hooks/use-api"
@@ -67,7 +69,7 @@ interface UsersTableProps {
   searchQuery: string
   roleFilter: string
   statusFilter: string
-  teamId?: string
+  teamId: string
   onInviteClick?: () => void
   onTeamNameChange?: (name?: string) => void
 }
@@ -89,7 +91,40 @@ const statusConfig = {
 type SortColumn = "name" | "role" | "teams" | "appAccess" | "metaAdAccounts" | "status" | "joinedAt" | null
 type SortDirection = "asc" | "desc"
 
+function extractTeamActionError(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message.trim()) return err.message
+  const anyErr = err as { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string }
+  return (
+    anyErr?.response?.data?.error?.message ||
+    anyErr?.response?.data?.message ||
+    anyErr?.message ||
+    fallback
+  )
+}
+
+function formatTeamActionFailures(
+  failures: Array<{ userId: string; error?: string }>,
+  userNameById: Map<string, string>,
+): string {
+  if (failures.length === 0) return "An unknown error occurred."
+  if (failures.length === 1) {
+    const f = failures[0]
+    const name = userNameById.get(f.userId)
+    const detail = f.error?.trim() || "An unknown error occurred."
+    return name ? `${name}: ${detail}` : detail
+  }
+  return failures
+    .map((f) => {
+      const name = userNameById.get(f.userId) ?? f.userId
+      const detail = f.error?.trim() || "Unknown error"
+      return `• ${name}: ${detail}`
+    })
+    .join("\n")
+}
+
 export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
+  const currentUser = useMemo(() => getCurrentUser(), [])
+  const currentUserId = currentUser?.id
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -106,6 +141,8 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] = useState(false)
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
   const [usersToRemove, setUsersToRemove] = useState<string[]>([])
+  const [isLeaveAction, setIsLeaveAction] = useState(false)
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
   const [removing, setRemoving] = useState(false)
   const { toast } = useToast()
 
@@ -116,7 +153,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
     search: searchQuery || undefined,
     role: roleFilter !== "all" ? roleFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
-    teamId: teamId || undefined,
+    teamId,
   }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamId])
 
   // Fetch team members from API
@@ -181,6 +218,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         status: displayStatus,
         lastActive: "N/A", // TODO: Get lastActive from API if available
         joinedAt: teamJoinedAt, // JoinedAt from team membership
+        isTeamLead: teamId ? Boolean(user.teams.find((t) => t.id === teamId)?.isTeamLead) : false,
         permissions: user.permissions, // Store permissions for modal
       }
     })
@@ -274,15 +312,6 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
   }
 
   const handleRemoveClick = (userIds: string[]) => {
-    if (!teamId) {
-      toast({
-        title: "Error",
-        description: "Team ID is required to remove users",
-        variant: "destructive",
-      })
-      return
-    }
-
     if (userIds.length === 0) {
       toast({
         title: "Error",
@@ -292,71 +321,141 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       return
     }
 
-    // Update both states - React will batch these updates
+    const onlySelf =
+      userIds.length === 1 && currentUserId != null && userIds[0] === currentUserId
+    setIsLeaveAction(onlySelf)
     setUsersToRemove(userIds)
-    // Use setTimeout to ensure state is updated before opening modal
+    setActionErrorMessage(null)
+    setTimeout(() => {
+      setRemoveConfirmOpen(true)
+    }, 0)
+  }
+
+  const handleLeaveClick = () => {
+    if (!currentUserId) return
+    setIsLeaveAction(true)
+    setUsersToRemove([currentUserId])
+    setActionErrorMessage(null)
     setTimeout(() => {
       setRemoveConfirmOpen(true)
     }, 0)
   }
 
   const handleConfirmRemove = async () => {
-    if (!teamId || usersToRemove.length === 0) return
+    if (usersToRemove.length === 0) return
 
     setRemoving(true)
+    setActionErrorMessage(null)
+    const userNameById = new Map(sortedUsers.map((u) => [u.id, u.name]))
+    const isSingleLeave = isLeaveAction && usersToRemove.length === 1
+
     try {
       const results: Array<{ userId: string; success: boolean; error?: string }> = []
 
       for (const userId of usersToRemove) {
+        const isSelf = currentUserId != null && userId === currentUserId
         try {
-          const response = await teamMembersApi.removeUserFromTeam(userId, teamId)
+          const response = isSelf
+            ? await teamMembersApi.leaveTeam(teamId)
+            : await teamMembersApi.removeUserFromTeam(userId, teamId)
           if (response.success) {
             results.push({ userId, success: true })
           } else {
             results.push({
               userId,
               success: false,
-              error: response.message || "Failed to remove user from team",
+              error: extractTeamActionError(
+                { message: response.message },
+                isSelf ? "Failed to leave team" : "Failed to remove user from team",
+              ),
             })
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           results.push({
             userId,
             success: false,
-            error: err?.response?.data?.error?.message || err?.message || "Failed to remove user from team",
+            error: extractTeamActionError(
+              err,
+              isSelf ? "Failed to leave team" : "Failed to remove user from team",
+            ),
           })
         }
       }
 
-      const successCount = results.filter((r) => r.success).length
-      const failCount = results.filter((r) => !r.success).length
+      const failures = results.filter((r) => !r.success)
+      const successCount = results.length - failures.length
+      const failureDetail = formatTeamActionFailures(failures, userNameById)
 
-      if (failCount > 0) {
+      if (failures.length === results.length) {
+        setActionErrorMessage(failureDetail)
         toast({
-          title: "Partial success",
-          description: `${successCount} of ${usersToRemove.length} users removed successfully. ${failCount} failed.`,
+          title: isSingleLeave ? "Could not leave team" : "Could not remove from team",
+          description: failureDetail,
           variant: "destructive",
         })
-      } else {
+        return
+      }
+
+      if (failures.length > 0) {
         toast({
-          title: "Users removed",
-          description: `${successCount} user${successCount > 1 ? "s" : ""} removed from team successfully.`,
+          title: "Some actions failed",
+          description: failureDetail,
+          variant: "destructive",
         })
       }
 
-      // Refresh data
-      refetch()
+      if (successCount > 0) {
+        if (isSingleLeave && failures.length === 0) {
+          toast({
+            title: "Left team",
+            description: "You have left the team successfully.",
+          })
+        } else if (failures.length === 0) {
+          toast({
+            title: "Users removed",
+            description: `${successCount} user${successCount > 1 ? "s" : ""} removed from team successfully.`,
+          })
+        }
+      }
+
       setSelectedUsers([])
       setRemoveConfirmOpen(false)
       setUsersToRemove([])
-    } catch (err: any) {
+      setIsLeaveAction(false)
+      setActionErrorMessage(null)
+
+      await refetch()
+    } catch (err: unknown) {
+      const message = extractTeamActionError(err, "Failed to update team membership")
+      setActionErrorMessage(message)
       toast({
-        title: "Error",
-        description: err?.response?.data?.error?.message || err?.message || "Failed to remove users from team",
+        title: isSingleLeave ? "Could not leave team" : "Could not remove from team",
+        description: message,
         variant: "destructive",
       })
     } finally {
       setRemoving(false)
+    }
+  }
+
+  const handleSetTeamLead = async (userId: string, userName: string) => {
+    try {
+      const response = await teamMembersApi.setTeamLead(teamId, userId)
+      if (!response.success) {
+        throw new Error(response.message || "Failed to set team lead")
+      }
+
+      toast({
+        title: "Team lead updated",
+        description: `${userName} is now the team lead.`,
+      })
+      refetch()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.error?.message || err?.message || "Failed to set team lead",
+        variant: "destructive",
+      })
     }
   }
 
@@ -408,16 +507,28 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-b border-blue-100">
             <span className="text-sm font-medium text-blue-700">{selectedUsers.length} users selected</span>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 bg-transparent"
-                onClick={() => handleRemoveClick(selectedUsers)}
-                disabled={!teamId}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Remove
-              </Button>
+              {(() => {
+                const bulkIsSelfOnly =
+                  Boolean(teamId && currentUserId) &&
+                  selectedUsers.every((id) => id === currentUserId)
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 bg-transparent"
+                    onClick={() =>
+                      bulkIsSelfOnly ? handleLeaveClick() : handleRemoveClick(selectedUsers)
+                    }
+                  >
+                    {bulkIsSelfOnly ? (
+                      <LogOut className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Trash2 className="w-4 h-4 mr-2" />
+                    )}
+                    {bulkIsSelfOnly ? "Leave" : "Remove"}
+                  </Button>
+                )
+              })()}
               <Button variant="outline" size="sm" className="text-amber-600 hover:text-amber-700 bg-transparent">
                 Deactivate
               </Button>
@@ -537,7 +648,20 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900 group-hover:text-blue-600">{user.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 group-hover:text-blue-600">{user.name}</p>
+                          {teamId && currentUserId === user.id && (
+                            <Badge variant="outline" className="text-xs font-normal text-blue-700 border-blue-200 bg-blue-50">
+                              &lt;&lt;me&gt;&gt;
+                            </Badge>
+                          )}
+                          {user.isTeamLead && (
+                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 gap-1">
+                              <Crown className="w-3 h-3" />
+                              Team Lead
+                            </Badge>
+                          )}
+                        </div>
                         <p
                           className={`text-xs ${user.status === "invited" ? "italic text-amber-600" : "text-slate-500"}`}
                         >
@@ -660,9 +784,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           Edit User
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={!teamId}
                           onClick={() => {
-                            if (!teamId) return
                             const currentUser = getCurrentUser()
                             if (currentUser && user.id === currentUser.id) {
                               // User is trying to manage their own permissions
@@ -692,6 +814,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           <Database className="w-4 h-4 mr-2" />
                           History Permission
                         </DropdownMenuItem>
+                        {teamId && !user.isTeamLead && (
+                          <DropdownMenuItem onClick={() => handleSetTeamLead(user.id, user.name)}>
+                            <Crown className="w-4 h-4 mr-2" />
+                            Set as Team Lead
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         {user.status === "invited" && (
                           <DropdownMenuItem>
@@ -704,14 +832,23 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                           {user.status === "inactive" ? "Reactivate User" : "Deactivate User"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
-                          disabled={!teamId}
-                          onClick={() => handleRemoveClick([user.id])}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Remove
-                        </DropdownMenuItem>
+                        {teamId && currentUserId === user.id ? (
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={handleLeaveClick}
+                          >
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Leave
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => handleRemoveClick([user.id])}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Remove
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -787,7 +924,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         </div>
       </Card>
       {/* Manage Permissions Modal */}
-      {permissionsUserId && teamId && (
+      {permissionsUserId && (
         <ManagePermissionsModal
           open={permissionsModalOpen}
           onOpenChange={setPermissionsModalOpen}
@@ -832,21 +969,42 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         </DialogContent>
       </Dialog>
 
-      {/* Remove Confirm Modal */}
-      <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+      {/* Remove / Leave Confirm Modal */}
+      <AlertDialog
+        open={removeConfirmOpen}
+        onOpenChange={(open) => {
+          setRemoveConfirmOpen(open)
+          if (!open) {
+            setIsLeaveAction(false)
+            setUsersToRemove([])
+            setActionErrorMessage(null)
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {usersToRemove.length === 1 ? "User" : "Users"} from Team</AlertDialogTitle>
-            <AlertDialogDescription>
-              {usersToRemove.length === 1 ? (
-                <>
-                  Are you sure you want to remove this user from the team? This action cannot be undone.
-                </>
-              ) : (
-                <>
-                  Are you sure you want to remove {usersToRemove.length} users from the team? This action cannot be undone.
-                </>
-              )}
+            <AlertDialogTitle>
+              {isLeaveAction && usersToRemove.length === 1
+                ? "Leave Team"
+                : `Remove ${usersToRemove.length === 1 ? "User" : "Users"} from Team`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {isLeaveAction && usersToRemove.length === 1 ? (
+                  <p>Are you sure you want to leave this team? You will lose access to this team&apos;s resources.</p>
+                ) : usersToRemove.length === 1 ? (
+                  <p>Are you sure you want to remove this user from the team? This action cannot be undone.</p>
+                ) : (
+                  <p>
+                    Are you sure you want to remove {usersToRemove.length} users from the team? This action cannot be undone.
+                  </p>
+                )}
+                {actionErrorMessage && (
+                  <p className="whitespace-pre-wrap rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700">
+                    {actionErrorMessage}
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -857,7 +1015,13 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             >
               {removing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {removing ? "Removing..." : "Remove"}
+              {removing
+                ? isLeaveAction && usersToRemove.length === 1
+                  ? "Leaving..."
+                  : "Removing..."
+                : isLeaveAction && usersToRemove.length === 1
+                  ? "Leave"
+                  : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

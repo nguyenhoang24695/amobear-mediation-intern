@@ -10,6 +10,7 @@ import { Search, Download, Plus, Users, UserCheck, Clock, Shield } from "lucide-
 import { UsersTable } from "./users-table"
 import { InviteUserModal } from "./invite-user-modal"
 import { useRoles } from "@/hooks/use-roles"
+import { TeamProfitPlanCard } from "@/components/teams/team-profit-plan-card"
 
 const statsData = [
   { label: "Total Users", value: 45, icon: Users, color: "text-slate-600" },
@@ -19,7 +20,7 @@ const statsData = [
 ]
 
 interface UserManagementContentProps {
-  teamId?: string
+  teamId: string
 }
 
 export function UserManagementContent({ teamId }: UserManagementContentProps) {
@@ -50,6 +51,8 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
           )}
         </p>
       </div>
+
+      <TeamProfitPlanCard teamId={teamId} />
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">

@@ -765,6 +765,12 @@ export interface MetaAdDraftDto {
   trackingSpecsJson?: string | null
 }
 
+export interface MetaAdVariantDto {
+  sequenceNumber: number
+  creative: MetaCreativeDraftDto
+  ad: MetaAdDraftDto
+}
+
 export interface CreateMetaCampaignRequestDto {
   metaAdAccountId: number
   appRowId?: number | null
@@ -772,8 +778,10 @@ export interface CreateMetaCampaignRequestDto {
   idempotencyKey?: string | null
   campaign: MetaCampaignDraftDto
   adSet: MetaAdSetDraftDto
-  creative: MetaCreativeDraftDto
-  ad: MetaAdDraftDto
+  adVariants: MetaAdVariantDto[]
+  // Legacy fields — kept for backward compat read of old payload_json
+  creative?: MetaCreativeDraftDto | null
+  ad?: MetaAdDraftDto | null
 }
 
 export interface UpdateMetaCampaignRequestDto {
@@ -782,8 +790,10 @@ export interface UpdateMetaCampaignRequestDto {
   paidMediaAppBindingId?: number | null
   campaign: MetaCampaignDraftDto
   adSet: MetaAdSetDraftDto
-  creative: MetaCreativeDraftDto
-  ad: MetaAdDraftDto
+  adVariants: MetaAdVariantDto[]
+  // Legacy fields — kept for backward compat read of old payload_json
+  creative?: MetaCreativeDraftDto | null
+  ad?: MetaAdDraftDto | null
 }
 
 export interface ApproveMetaCampaignRequestDto {
@@ -1013,6 +1023,43 @@ export interface MetaFlexibleAssetFormState {
   video: MetaRequestAssetSelectionState
   thumbnail: MetaRequestAssetSelectionState
 }
+export interface AdVariantFormState {
+  // Stable key used for retry idempotency (1-based, auto-incremented)
+  sequenceNumber: number
+  creativeType: MetaCreativeType
+  creativeName: string
+  facebookPageId: string
+  instagramActorId: string
+  singleImagePrimaryText: string
+  singleImagePrimaryTexts: string[]
+  singleImageHeadline: string
+  singleImageHeadlines: string[]
+  singleImageDescription: string
+  singleImageCallToAction: string
+  singleImageLinkUrl: string
+  singleImageImage: MetaRequestAssetSelectionState
+  singleVideoPrimaryText: string
+  singleVideoPrimaryTexts: string[]
+  singleVideoHeadline: string
+  singleVideoHeadlines: string[]
+  singleVideoDescription: string
+  singleVideoCallToAction: string
+  singleVideoLinkUrl: string
+  singleVideoVideo: MetaRequestAssetSelectionState
+  singleVideoThumbnail: MetaRequestAssetSelectionState
+  carouselPrimaryText: string
+  carouselCallToAction: string
+  carouselCards: MetaCarouselCardFormState[]
+  flexiblePrimaryTexts: string[]
+  flexibleHeadlines: string[]
+  flexibleCallToAction: string
+  flexibleLinkUrl: string
+  flexibleAssets: MetaFlexibleAssetFormState[]
+  existingPostId: string
+  adName: string
+  trackingSpecs: string
+}
+
 export interface MetaRequestFormState {
   adAccountId: string
   appRowId: string
@@ -1083,6 +1130,8 @@ export interface MetaRequestFormState {
   existingPostId: string
   adName: string
   trackingSpecs: string
+  // Additional ad variants (variant 2, 3, ...). Variant 1 is represented by the flat creative/ad fields above.
+  additionalVariants: AdVariantFormState[]
 }
 
 export interface MetaRequestFilters {
