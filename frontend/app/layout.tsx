@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Mediation Pro - Ad Mediation Dashboard",
+  title: "Nexus - Ad Mediation Dashboard",
   description: "Comprehensive ad mediation platform managing 200+ mobile apps with 60,000+ ad instances",
   generator: "v0.app",
   icons: {

@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!HELP_DOC_SLUGS.includes(slug as HelpDocSlug)) {
     return { title: "Help" }
   }
-  return { title: `${TITLES[slug as HelpDocSlug]} — Mediation Pro` }
+  return { title: `${TITLES[slug as HelpDocSlug]} — Nexus` }
 }
 
 export default async function HelpDocPage({ params }: { params: Promise<{ slug: string }> }) {

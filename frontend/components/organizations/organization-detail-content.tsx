@@ -84,7 +84,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
 
   const handleCopySlug = () => {
     if (!org) return
-    navigator.clipboard.writeText(`${org.slug}.mediationpro.io`)
+    navigator.clipboard.writeText(`${org.slug}.nexus.io`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -161,7 +161,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
               </Badge>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-slate-500">{org.slug}.mediationpro.io</span>
+              <span className="text-sm text-slate-500">{org.slug}.nexus.io</span>
               <button
                 onClick={handleCopySlug}
                 className="text-slate-400 hover:text-slate-600 transition-colors"

@@ -305,7 +305,7 @@ export function AdSetBudgetSection({
               </div>
             </div>
             {isABO ? <p className="text-[11px] text-slate-400">At least one ad set budget field is required for ad set budget mode.</p> : null}
-            <p className="text-[11px] text-slate-400">{`Enter budget and bid amounts in normal ${currency} units. Mediation Pro converts them to Meta minor units during execution.`}</p>
+            <p className="text-[11px] text-slate-400">{`Enter budget and bid amounts in normal ${currency} units. Nexus converts them to Meta minor units during execution.`}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 items-start">

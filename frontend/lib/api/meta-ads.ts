@@ -20,6 +20,7 @@ import type {
   MetaCampaignDuplicateStartResponseDto,
   MetaCampaignPreviewDto,
   MetaCampaignListResponseDto,
+  MetaCampaignStatusUpdateResultDto,
   MetaCampaignRequestDetailDto,
   MetaCampaignRequestListItemDto,
   MetaCampaignBreakdownPageDto,
@@ -140,6 +141,14 @@ export const metaCampaignsApi = {
 
   syncOne: async (id: number) => {
     return apiClient.post<SyncMetaCampaignsResultDto>(`${CAMPAIGNS_PREFIX}/${id}/sync`, {})
+  },
+
+  pause: async (id: number) => {
+    return apiClient.post<MetaCampaignStatusUpdateResultDto>(`${CAMPAIGNS_PREFIX}/${id}/pause`, {})
+  },
+
+  resume: async (id: number) => {
+    return apiClient.post<MetaCampaignStatusUpdateResultDto>(`${CAMPAIGNS_PREFIX}/${id}/resume`, {})
   },
 
   duplicate: async (id: number, request?: MetaCampaignDuplicateRequestDto) => {

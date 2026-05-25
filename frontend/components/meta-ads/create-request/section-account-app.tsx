@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck, Loader2, Check, ChevronsUpDown } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
+import { resolveMetaAppMappingPlatform } from "./platform"
 import type { MetaAdAccountDto, MetaAppMappingDto, MetaObjectivePresetDto } from "@/types/meta-ads"
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
@@ -162,6 +163,7 @@ export function AccountAppSection({
   integrationName,
 }: Props) {
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride || ""
+  const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
   const hasMappingIssue = !selectedAppMapping?.metaApplicationId || !mappingUrl
   const isTokenBlocking = tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
   const appSelectDisabled = !form.adAccountId || appMappingsLoading
@@ -272,9 +274,9 @@ export function AccountAppSection({
                 <div className="flex items-center gap-2 py-0.5">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] px-1.5 py-0 ${mapping.platform === "IOS" ? "border-blue-200 text-blue-700" : "border-green-200 text-green-700"}`}
+                    className={`text-[10px] px-1.5 py-0 ${resolveMetaAppMappingPlatform(mapping) === "IOS" ? "border-blue-200 text-blue-700" : "border-green-200 text-green-700"}`}
                   >
-                    {mapping.platform ?? "APP"}
+                    {resolveMetaAppMappingPlatform(mapping) ?? "APP"}
                   </Badge>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -334,7 +336,7 @@ export function AccountAppSection({
                 {selectedAppMapping.metaApplicationId || "Not configured"}
               </span>
               <span className="text-slate-500">Platform</span>
-              <span className="text-slate-900">{selectedAppMapping.platform ?? "-"}</span>
+              <span className="text-slate-900">{selectedAppPlatform ?? "-"}</span>
               <span className="text-slate-500">Store URL</span>
               <span className={`truncate ${mappingUrl ? "text-slate-900" : "text-amber-700 italic"}`}>
                 {mappingUrl || "Not configured"}
@@ -346,9 +348,9 @@ export function AccountAppSection({
                 Configure the mapping in <strong>Meta Ads &gt; App Mappings</strong>.
               </p>
             ) : null}
-            {selectedAppMapping?.platform ? (
+            {selectedAppPlatform ? (
               <p className="text-[11px] text-slate-600">
-                {selectedAppMapping.platform === "ANDROID" ? "Android" : selectedAppMapping.platform === "IOS" ? "iOS" : selectedAppMapping.platform} targeting will be derived automatically for app promotion ad sets.
+                {selectedAppPlatform === "ANDROID" ? "Android" : "iOS"} targeting will be derived automatically for app promotion ad sets.
               </p>
             ) : null}
           </div>

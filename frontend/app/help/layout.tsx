@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { HelpDocsShell } from "@/components/help/help-docs-shell"
 
 export const metadata: Metadata = {
-  title: "Help & Docs — Mediation Pro",
+  title: "Help & Docs — Nexus",
   description: "Hướng dẫn Alert Center, Slack user và cấu hình alert rule",
 }
 

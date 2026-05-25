@@ -236,19 +236,19 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     () => reference?.appMappings.find((mapping) => mapping.id === form?.paidMediaAppBindingId) ?? reference?.appMappings.find((mapping) => mapping.tikTokAppId === form?.adGroup.appId),
     [form?.paidMediaAppBindingId, form?.adGroup.appId, reference],
   )
-  const targetingAdAccountId = form?.tikTokAdAccountRowId ?? 0
-  const targetingObjectiveType = form?.campaign.objectiveType || "APP_PROMOTION"
-  const targetingPlacements = form ? getTargetingPlacementParam(form) : "PLACEMENT_TIKTOK"
-  const targetingOperatingSystem = form ? getTargetingOperatingSystem(form, selectedAppMapping) : undefined
   const accountScopedAppMappings = useMemo(() => {
     if (!reference || !selectedAdAccount) return []
     const advertiserId = selectedAdAccount.advertiserId
-    const matched = reference.appMappings.filter((mapping) => mapping.advertiserIds?.some((id) => id === advertiserId))
-    if (selectedAppMapping && !matched.some((mapping) => mapping.id === selectedAppMapping.id)) {
-      return [selectedAppMapping, ...matched]
-    }
-    return matched
-  }, [reference, selectedAdAccount, selectedAppMapping])
+    return reference.appMappings.filter((mapping) => mapping.isActive && mapping.advertiserIds?.some((id) => id === advertiserId))
+  }, [reference, selectedAdAccount])
+  const selectedAccountAppMapping = useMemo(() => {
+    if (!selectedAppMapping) return undefined
+    return accountScopedAppMappings.some((mapping) => mapping.id === selectedAppMapping.id) ? selectedAppMapping : undefined
+  }, [accountScopedAppMappings, selectedAppMapping])
+  const targetingAdAccountId = form?.tikTokAdAccountRowId ?? 0
+  const targetingObjectiveType = form?.campaign.objectiveType || "APP_PROMOTION"
+  const targetingPlacements = form ? getTargetingPlacementParam(form) : "PLACEMENT_TIKTOK"
+  const targetingOperatingSystem = form ? getTargetingOperatingSystem(form, selectedAccountAppMapping) : undefined
 
   const loadGeoCountryGroups = useCallback(async () => {
     setGeoCountryGroupsLoading(true)
@@ -520,28 +520,29 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     if (!form) throw new Error("Form is not ready")
     if (!form.tikTokAdAccountRowId) throw new Error("Select a TikTok ad account before saving.")
     if (!form.paidMediaAppBindingId) throw new Error("Select an app mapping before saving.")
+    if (!selectedAccountAppMapping) throw new Error("This ad account does not have the selected app configured in TikTok.")
 
     const payload = sanitizeTikTokRequestForm({
       ...form,
       idempotencyKey: form.idempotencyKey || buildIdempotencyKey(),
       adGroup: {
         ...form.adGroup,
-        appId: selectedAppMapping?.tikTokAppId ?? form.adGroup.appId,
-        appDownloadUrl: selectedAppMapping?.downloadUrl ?? form.adGroup.appDownloadUrl,
+        appId: selectedAccountAppMapping.tikTokAppId,
+        appDownloadUrl: selectedAccountAppMapping.downloadUrl ?? form.adGroup.appDownloadUrl,
       },
       ads: form.ads.map((ad) => ({
         ...ad,
-        landingPageUrl: ad.landingPageUrl || selectedAppMapping?.downloadUrl || "",
+        landingPageUrl: ad.landingPageUrl || selectedAccountAppMapping.downloadUrl || "",
       })),
       adGroups: (form.adGroups?.length ? form.adGroups : [{ adGroup: form.adGroup, ads: form.ads }]).map((group) => ({
         adGroup: {
           ...group.adGroup,
-          appId: selectedAppMapping?.tikTokAppId ?? group.adGroup.appId,
-          appDownloadUrl: selectedAppMapping?.downloadUrl ?? group.adGroup.appDownloadUrl,
+          appId: selectedAccountAppMapping.tikTokAppId,
+          appDownloadUrl: selectedAccountAppMapping.downloadUrl ?? group.adGroup.appDownloadUrl,
         },
         ads: group.ads.map((ad) => ({
           ...ad,
-          landingPageUrl: ad.landingPageUrl || selectedAppMapping?.downloadUrl || "",
+          landingPageUrl: ad.landingPageUrl || selectedAccountAppMapping.downloadUrl || "",
         })),
       })),
     })
@@ -561,7 +562,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
     }
 
     return detail
-  }, [draftId, form, reference, requestId, router, selectedAppMapping, toast])
+  }, [draftId, form, reference, requestId, router, selectedAccountAppMapping, toast])
 
   const runValidation = useCallback(async (id: number): Promise<TikTokValidationResultDto> => {
     const result = await tiktokCampaignRequestsApi.validate(id)
@@ -861,10 +862,10 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-5">
           <div id={requestSectionIds["account-app"]} className={cn(getSectionWrapperClass("account-app", highlightedSection))}>
-            <AccountAppSection form={form} reference={reference} appMappings={accountScopedAppMappings} selectedAdAccount={selectedAdAccount} selectedAppMapping={selectedAppMapping} onChange={updateForm} />
+            <AccountAppSection form={form} reference={reference} appMappings={accountScopedAppMappings} selectedAdAccount={selectedAdAccount} selectedAppMapping={selectedAccountAppMapping} onChange={updateForm} />
           </div>
           <div id={requestSectionIds["campaign-settings"]} className={cn(getSectionWrapperClass("campaign-settings", highlightedSection))}>
-            <CampaignSettingsSection form={form} reference={reference} selectedAppMapping={selectedAppMapping} locations={targetingOptions?.locations} onChange={updateForm} />
+            <CampaignSettingsSection form={form} reference={reference} selectedAppMapping={selectedAccountAppMapping} locations={targetingOptions?.locations} onChange={updateForm} />
           </div>
           {form.adGroups.length > 1 ? (
             <div className="rounded-xl border bg-white p-4 shadow-sm">
@@ -898,7 +899,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
             />
           </div>
           <div id={requestSectionIds["adgroup-budget"]} className={cn(getSectionWrapperClass("adgroup-budget", highlightedSection))}>
-            <AdGroupBudgetSection form={form} reference={reference} selectedAdAccount={selectedAdAccount} selectedAppMapping={selectedAppMapping} onChange={updateForm} />
+            <AdGroupBudgetSection form={form} reference={reference} selectedAdAccount={selectedAdAccount} selectedAppMapping={selectedAccountAppMapping} onChange={updateForm} />
           </div>
           <div id={requestSectionIds.creative} className={cn(getSectionWrapperClass("creative", highlightedSection))}>
             <CreativeSection
@@ -933,7 +934,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
           reference={reference}
           validationErrors={validationErrors}
           serverStatus={serverStatus}
-          selectedAppMapping={selectedAppMapping}
+          selectedAppMapping={selectedAccountAppMapping}
           isPersisted={Boolean(draftId)}
           onNavigateToSection={navigateToSection}
         />
