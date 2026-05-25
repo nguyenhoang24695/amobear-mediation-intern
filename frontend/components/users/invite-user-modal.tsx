@@ -287,11 +287,11 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
                   <div className="p-4 bg-slate-50 rounded-lg border text-sm space-y-3">
-                    <p className="font-medium">Subject: You&apos;ve been invited to join WeatherPlus Inc on Mediation Pro</p>
+                    <p className="font-medium">Subject: You&apos;ve been invited to join Amobear Inc on Nexus Platform</p>
                     <div className="border-t pt-3 space-y-2 text-slate-600">
                       <p>Hi there,</p>
                       <p>
-                        John Doe has invited you to join WeatherPlus Inc on Mediation Pro as a{" "}
+                        John Doe has invited you to join Amobear Inc on Nexus Platform as a{" "}
                         <strong className="text-slate-900 capitalize">{role}</strong>.
                       </p>
                       {message && <div className="bg-white p-3 rounded border italic">&quot;{message}&quot;</div>}

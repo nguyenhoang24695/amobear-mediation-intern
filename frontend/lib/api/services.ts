@@ -2821,6 +2821,10 @@ export const reportsApi = {
     ): Promise<import('@/types/reports').CustomReportSaved> => {
         return apiClient.put(`/api/v1/reports/saved/${id}`, body)
     },
+
+    deleteSaved: async (id: string): Promise<{ deleted: boolean }> => {
+        return apiClient.delete(`/api/v1/reports/saved/${id}`)
+    },
 }
 
 
