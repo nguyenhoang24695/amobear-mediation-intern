@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { addMonths, format, parse } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Loader2, Target, Upload, UserPlus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Loader2, Target, Upload, UserPlus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -97,6 +97,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<ImportTeamProfitPlansResult | null>(null)
+  const [exportingTemplate, setExportingTemplate] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -245,6 +246,35 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     }
   }
 
+  const handleExportTemplate = async () => {
+    setExportingTemplate(true)
+    try {
+      const { blob } = await organizationsApi.exportProfitPlanTemplate(orgId, month)
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = objectUrl
+      link.download = `profit-plan-template-${month}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+
+      toast({
+        title: "Template exported",
+        description: `Downloaded profit plan template for ${month}.`,
+      })
+    } catch (err) {
+      console.error("Failed to export profit plan template:", err)
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Could not export profit plan template.",
+        variant: "destructive",
+      })
+    } finally {
+      setExportingTemplate(false)
+    }
+  }
+
   return (
     <>
       <Card className="border-slate-200">
@@ -321,10 +351,22 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             </div>
 
             {canManage ? (
-              <Button type="button" variant="outline" className="bg-white" onClick={() => setImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import Excel
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-white"
+                  onClick={() => void handleExportTemplate()}
+                  disabled={exportingTemplate}
+                >
+                  {exportingTemplate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                  Export template
+                </Button>
+                <Button type="button" variant="outline" className="bg-white" onClick={() => setImportOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Excel
+                </Button>
+              </div>
             ) : null}
           </div>
 
