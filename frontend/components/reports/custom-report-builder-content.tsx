@@ -549,6 +549,7 @@ export function CustomReportBuilderContent() {
   const [hydratedPersonnelChartRoot, setHydratedPersonnelChartRoot] = useState<PersonnelNode | null>(null)
   const [teamPlanAppIds, setTeamPlanAppIds] = useState<string[] | null>(null)
   const [teamPlansLoading, setTeamPlansLoading] = useState(false)
+  const canScopeManagedTeams = canManageCommission || commissionTeams.length > 0
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveReportName, setSaveReportName] = useState(defaultCustomReportName)
@@ -577,12 +578,12 @@ export function CustomReportBuilderContent() {
   }, [appsResponse])
 
   const appsForSelection = useMemo(() => {
-    if (!canManageCommission || commissionTeam === "All" || teamPlanAppIds === null) {
+    if (!canScopeManagedTeams || commissionTeam === "All" || teamPlanAppIds === null) {
       return availableApps
     }
     const allowed = new Set(teamPlanAppIds)
     return availableApps.filter((app) => allowed.has(app.appId))
-  }, [availableApps, canManageCommission, commissionTeam, teamPlanAppIds])
+  }, [availableApps, canScopeManagedTeams, commissionTeam, teamPlanAppIds])
 
   const commissionUsersForFilter = useMemo(
     () => (commissionTeam === "All" ? subordinateUsers : teamMemberUsers),
@@ -714,7 +715,7 @@ export function CustomReportBuilderContent() {
   }, [appsLoading, appsForSelection])
 
   useEffect(() => {
-    if (!canManageCommission || !orgId) {
+    if (!orgId) {
       setRawPersonnelChartRoot(null)
       setHydratedPersonnelChartRoot(null)
       setSubordinateUsers([])
@@ -754,12 +755,16 @@ export function CustomReportBuilderContent() {
           ? findPersonnelNodeById(hydratedRoot, currentNode.id)
           : null
         const underManager = currentNode ? collectTeamsUnderPersonnelNode(currentNode) : []
+        const managedMembershipTeamNodes = findPersonnelTeamNodes(rawRoot, currentUserTeamIds)
+          .filter((teamNode) => collectTeamIdsUnderPersonnelNode(teamNode).length > 1)
         const memberManagedTeams = collectMembershipManagedTeams(rawRoot, currentUserTeamIds)
         const leadFromChart = currentUser?.id
           ? collectTeamLeadTeamsFromChart(hydratedRoot, currentUser.id)
           : []
         const leadFromOrg = collectTeamLeadTeamsFromOrgTeams(orgTeams, currentUser?.id)
-        const membershipUsers = findPersonnelTeamNodes(hydratedRoot, currentUserTeamIds)
+        const membershipUsers = managedMembershipTeamNodes
+          .map((teamNode) => findPersonnelTeamNode(hydratedRoot, teamNode.teamId ?? ""))
+          .filter((teamNode): teamNode is PersonnelNode => Boolean(teamNode))
           .map((teamNode) => getSubordinateCommissionUsers(teamNode))
 
         setSubordinateUsers(
@@ -783,7 +788,7 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [canManageCommission, orgId, currentUser?.id, currentUser?.email, currentUserTeamIdsKey])
+  }, [orgId, currentUser?.id, currentUser?.email, currentUserTeamIdsKey])
 
   const selectedCommissionTeamIds = useMemo(() => {
     if (commissionTeam === "All") return []
@@ -796,7 +801,7 @@ export function CustomReportBuilderContent() {
   const selectedCommissionTeamIdsKey = selectedCommissionTeamIds.join("|")
 
   useEffect(() => {
-    if (!canManageCommission || commissionTeam === "All") {
+    if (!canScopeManagedTeams || commissionTeam === "All") {
       setTeamMemberUsers([])
       setTeamMembersLoading(false)
       return
@@ -838,7 +843,7 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [canManageCommission, commissionTeam, hydratedPersonnelChartRoot])
+  }, [canScopeManagedTeams, commissionTeam, hydratedPersonnelChartRoot])
 
   useEffect(() => {
     if (commissionTeam === "All") return
@@ -849,7 +854,7 @@ export function CustomReportBuilderContent() {
   }, [commissionTeam, commissionTeams])
 
   useEffect(() => {
-    if (!canManageCommission || !orgId || commissionTeam === "All") {
+    if (!canScopeManagedTeams || !orgId || commissionTeam === "All") {
       setTeamPlanAppIds(null)
       setTeamPlansLoading(false)
       return
@@ -883,14 +888,14 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [canManageCommission, orgId, commissionTeam, startDate, endDate, selectedCommissionTeamIdsKey])
+  }, [canScopeManagedTeams, orgId, commissionTeam, startDate, endDate, selectedCommissionTeamIdsKey])
 
   useEffect(() => {
-    if (!canManageCommission || commissionTeam === "All" || teamPlanAppIds === null) return
+    if (!canScopeManagedTeams || commissionTeam === "All" || teamPlanAppIds === null) return
     const permitted = appsForSelection.map((app) => app.appId)
     setSelectedApps(permitted)
     syncAppsActiveFilter(permitted, appsForSelection)
-  }, [canManageCommission, commissionTeam, teamPlanAppIds, appsForSelection])
+  }, [canScopeManagedTeams, commissionTeam, teamPlanAppIds, appsForSelection])
 
   useEffect(() => {
     if (commissionTeam === "All") return
@@ -907,10 +912,13 @@ export function CustomReportBuilderContent() {
   }, [commissionUser, commissionUsersForFilter])
 
   const commissionUsernamesForQuery = useMemo((): string[] | null => {
-    if (!canManageCommission) return null
-    if (commissionUser === "All") return null
-    return [commissionUser]
-  }, [canManageCommission, commissionUser])
+    if (!canScopeManagedTeams) return null
+    if (commissionUser !== "All") return [commissionUser]
+    if (commissionTeam !== "All") {
+      return teamMemberUsers.length > 0 ? teamMemberUsers.map((user) => user.email) : null
+    }
+    return subordinateUsers.length > 0 ? subordinateUsers.map((user) => user.email) : null
+  }, [canScopeManagedTeams, commissionTeam, commissionUser, subordinateUsers, teamMemberUsers])
 
   const currentReportQuery = useMemo<AppliedReportQueryState>(
     () => ({
@@ -1085,7 +1093,7 @@ export function CustomReportBuilderContent() {
       metricFilters,
       commissionUser,
       commissionUsernames: commissionUsernamesForQuery,
-      commissionTeamId: canManageCommission && commissionTeam !== "All" ? commissionTeam : null,
+      commissionTeamId: canScopeManagedTeams && commissionTeam !== "All" ? commissionTeam : null,
       sortBy: sortColumn,
       sortDir: sortDirection,
       activePresetDays: dateFilterMode === "preset" && activePresetDays > 0 ? activePresetDays : null,
@@ -1350,7 +1358,7 @@ export function CustomReportBuilderContent() {
         setMonthPopoverOpen(false)
         break
       case FILTER_APPS:
-        if (canManageCommission && commissionTeam !== "All") {
+        if (canScopeManagedTeams && commissionTeam !== "All") {
           const ids = appsForSelection.map((app) => app.appId)
           setSelectedApps(ids)
           syncAppsActiveFilter(ids, appsForSelection)
@@ -1904,7 +1912,7 @@ export function CustomReportBuilderContent() {
               </Popover>
             )}
 
-            {canManageCommission && (
+            {canScopeManagedTeams && (
               <Select value={commissionTeam} onValueChange={handleCommissionTeamChange}>
                 <SelectTrigger className="w-52 h-10 bg-white">
                   <SelectValue placeholder="Team" />
@@ -1925,7 +1933,7 @@ export function CustomReportBuilderContent() {
               </Select>
             )}
 
-            {canManageCommission && (
+            {canScopeManagedTeams && (
               <Select
                 value={commissionUser}
                 onValueChange={handleCommissionUserChange}

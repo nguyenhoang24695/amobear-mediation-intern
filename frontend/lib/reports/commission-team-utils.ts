@@ -116,6 +116,7 @@ export function collectMembershipManagedTeams(
   membershipTeamIds: Iterable<string>,
 ): CommissionTeamOption[] {
   const teamNodes = findPersonnelTeamNodes(root, membershipTeamIds)
+    .filter((node) => collectTeamIdsUnderPersonnelNode(node).length > 1)
   return mergeCommissionTeamOptions(...teamNodes.map((node) => collectTeamsUnderPersonnelNode(node)))
 }
 
@@ -124,6 +125,7 @@ export function collectMembershipManagedTeamIds(
   membershipTeamIds: Iterable<string>,
 ): string[] {
   const teamNodes = findPersonnelTeamNodes(root, membershipTeamIds)
+    .filter((node) => collectTeamIdsUnderPersonnelNode(node).length > 1)
   const uniqueTeamIds = new Set<string>()
   for (const node of teamNodes) {
     for (const teamId of collectTeamIdsUnderPersonnelNode(node)) {
