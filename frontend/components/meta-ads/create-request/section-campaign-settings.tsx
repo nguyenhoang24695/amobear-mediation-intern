@@ -237,7 +237,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             </div>
           </div>
         </div>
-        <p className="text-[11px] text-slate-400">{`Enter budget in normal ${currency} units. Mediation Pro converts it to Meta minor units during execution.`}</p>
+        <p className="text-[11px] text-slate-400">{`Enter budget in normal ${currency} units. Nexus converts it to Meta minor units during execution.`}</p>
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-slate-700">
@@ -261,7 +261,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             ))}
           </div>
         </div>
-        <p className="text-[11px] text-slate-400">{`Enter budget in normal ${currency} units. Mediation Pro converts it to Meta minor units during execution.`}</p>
+        <p className="text-[11px] text-slate-400">{`Enter budget in normal ${currency} units. Nexus converts it to Meta minor units during execution.`}</p>
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-slate-700">
@@ -301,7 +301,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
               {(!selectedBidStrategySupported || !selectedBidStrategyCompatible) ? <p className="text-[11px] text-amber-800">{getBidStrategyDisabledReason(selectedBidStrategy.key, form.performanceGoalType)}</p> : null}
             </div>
           ) : null}
-          <p className="text-[11px] text-slate-400">Some options are unavailable because they require additional fields or are not yet supported in Mediation Pro.</p>
+          <p className="text-[11px] text-slate-400">Some options are unavailable because they require additional fields or are not yet supported in Nexus.</p>
           {bidAmountRequired ? (
             <p className="text-[11px] text-amber-700 flex items-start gap-1">
               <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />

@@ -817,7 +817,7 @@ export function AppMappingsContent() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-900">Discovery Candidates</h2>
-            <p className="text-sm text-slate-500">Review Meta app signals found from synced ad accounts before mapping them into Mediation Pro.</p>
+            <p className="text-sm text-slate-500">Review Meta app signals found from synced ad accounts before mapping them into Nexus.</p>
           </div>
           <span className="text-xs text-slate-400">
             {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? "s" : ""}

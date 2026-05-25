@@ -188,7 +188,7 @@ export default function ForgotPasswordPage() {
 
       {/* Footer */}
       <footer className="mt-8 text-center">
-        <p className="text-xs text-slate-400">© 2026 Mediation Pro. All rights reserved.</p>
+        <p className="text-xs text-slate-400">© 2026 Nexus. All rights reserved.</p>
       </footer>
     </div>
   )

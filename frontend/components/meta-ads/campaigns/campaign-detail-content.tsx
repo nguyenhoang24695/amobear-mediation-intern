@@ -699,7 +699,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
       invalidateCache("meta-campaigns:list")
       toast({
         title: "Campaign duplicated",
-        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
+        description: "Meta finished duplicating the campaign and Nexus synced the new campaign."
       })
       router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
       return

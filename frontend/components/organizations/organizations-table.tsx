@@ -240,7 +240,7 @@ export function OrganizationsTable({
                             <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                             <div>
                               <p className="font-semibold text-slate-900">{org.name}</p>
-                              <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                              <p className="text-xs text-slate-500">{org.slug}.com</p>
                             </div>
                           </Link>
                         ) : (
@@ -248,7 +248,7 @@ export function OrganizationsTable({
                             <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                             <div>
                               <p className="font-semibold text-slate-900">{org.name}</p>
-                              <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                              <p className="text-xs text-slate-500">{org.slug}.com</p>
                             </div>
                           </div>
                         )}
@@ -353,7 +353,7 @@ export function OrganizationsTable({
                       <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                       <div>
                         <p className="font-semibold text-slate-900">{org.name}</p>
-                        <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                        <p className="text-xs text-slate-500">{org.slug}.com</p>
                       </div>
                     </Link>
                   ) : (
@@ -361,7 +361,7 @@ export function OrganizationsTable({
                       <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                       <div>
                         <p className="font-semibold text-slate-900">{org.name}</p>
-                        <p className="text-xs text-slate-500">{org.slug}.mediationpro.io</p>
+                        <p className="text-xs text-slate-500">{org.slug}.com</p>
                       </div>
                     </div>
                   )}

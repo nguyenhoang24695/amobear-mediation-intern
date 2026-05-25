@@ -650,7 +650,7 @@ export function CampaignListContent() {
       void refetch()
       toast({
         title: "Campaign duplicated",
-        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
+        description: "Meta finished duplicating the campaign and Nexus synced the new campaign."
       })
       router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
       return
@@ -685,7 +685,7 @@ export function CampaignListContent() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">Meta Campaigns</h1>
-              <p className="text-sm text-slate-500">Monitor campaigns already known in Mediation Pro and drill into synced Meta structure.</p>
+              <p className="text-sm text-slate-500">Monitor campaigns already known in Nexus and drill into synced Meta structure.</p>
             </div>
           </div>
         </div>

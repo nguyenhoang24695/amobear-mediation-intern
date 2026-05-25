@@ -132,8 +132,8 @@ export default function AcceptInvitationPage() {
 
           {/* Title */}
           <div className="space-y-1">
-            <h1 className="text-xl font-bold text-slate-900">You&apos;ve been invited to join WeatherPlus Inc</h1>
-            <p className="text-sm text-slate-500">John Doe invited you to collaborate on Mediation Pro</p>
+            <h1 className="text-xl font-bold text-slate-900">You&apos;ve been invited to join Amobear Inc</h1>
+            <p className="text-sm text-slate-500">John Doe invited you to collaborate on Nexus</p>
           </div>
         </CardHeader>
 
@@ -305,7 +305,7 @@ export default function AcceptInvitationPage() {
       </Card>
 
       <footer className="mt-8 text-center">
-        <p className="text-xs text-slate-400">© 2026 Mediation Pro. All rights reserved.</p>
+        <p className="text-xs text-slate-400">© 2026 Nexus. All rights reserved.</p>
       </footer>
     </div>
   )

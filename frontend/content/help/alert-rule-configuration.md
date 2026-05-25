@@ -1,6 +1,6 @@
 # Hướng dẫn tạo và cấu hình Alert Rule
 
-Tài liệu mô tả **quy trình trên UI** để tạo hoặc chỉnh **Alert Rule** trong Mediation Pro: phạm vi, điều kiện, metric, và **kênh thông báo** (Email, Slack, Telegram, In-app).
+Tài liệu mô tả **quy trình trên UI** để tạo hoặc chỉnh **Alert Rule** trong Nexus: phạm vi, điều kiện, metric, và **kênh thông báo** (Email, Slack, Telegram, In-app).
 
 Đường dẫn chính: **`/alert-center`**. Rules thường được quản lý trong panel/sheet từ trang này (không có route riêng `/alert-rules` trong bản hiện tại).
 

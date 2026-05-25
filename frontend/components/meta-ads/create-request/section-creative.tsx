@@ -323,7 +323,7 @@ export function CreativeSection({
             </Badge>
           </div>
         </div>
-        <p className="text-[11px] text-slate-400 mt-1">Draft the Meta creative here. Uploaded media stays in Mediation Pro until execute time.</p>
+        <p className="text-[11px] text-slate-400 mt-1">Draft the Meta creative here. Uploaded media stays in Nexus until execute time.</p>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-[1fr_220px] gap-6">
