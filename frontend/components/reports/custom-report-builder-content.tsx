@@ -157,6 +157,17 @@ interface ActiveFilter {
   value: string
 }
 
+interface AppliedReportQueryState {
+  startDate: Date
+  endDate: Date
+  selectedAppIds: string[]
+  dimensions: string[]
+  metrics: string[]
+  revenueSource: string
+  metricFilters: CustomReportMetricFilter[]
+  commissionUsernames: string[] | null
+}
+
 interface SortableReportFieldItemProps {
   id: string
   label: string
@@ -518,6 +529,7 @@ export function CustomReportBuilderContent() {
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
   const [isPinned, setIsPinned] = useState(false)
   const [pinningReport, setPinningReport] = useState(false)
+  const [appliedReportQuery, setAppliedReportQuery] = useState<AppliedReportQueryState | null>(null)
   const [loadingSavedReport, setLoadingSavedReport] = useState(false)
   const [savingReport, setSavingReport] = useState(false)
   const loadedReportIdRef = useRef<string | null>(null)
@@ -764,18 +776,80 @@ export function CustomReportBuilderContent() {
     return [commissionUser]
   }, [canManageCommission, commissionUser])
 
+  const currentReportQuery = useMemo<AppliedReportQueryState>(
+    () => ({
+      startDate,
+      endDate,
+      selectedAppIds: [...selectedApps],
+      dimensions: [...selectedParameters],
+      metrics: [...selectedMetrics],
+      revenueSource: "All",
+      metricFilters: [...metricFilters],
+      commissionUsernames: commissionUsernamesForQuery ? [...commissionUsernamesForQuery] : null,
+    }),
+    [
+      startDate,
+      endDate,
+      selectedApps,
+      selectedParameters,
+      selectedMetrics,
+      metricFilters,
+      commissionUsernamesForQuery,
+    ],
+  )
+
+  const hasPendingApply = useMemo(() => {
+    if (!appliedReportQuery) return true
+
+    const normalize = (state: AppliedReportQueryState) =>
+      JSON.stringify({
+        startDate: format(state.startDate, "yyyy-MM-dd"),
+        endDate: format(state.endDate, "yyyy-MM-dd"),
+        selectedAppIds: [...state.selectedAppIds].sort(),
+        dimensions: state.dimensions,
+        metrics: state.metrics,
+        revenueSource: state.revenueSource,
+        metricFilters: state.metricFilters,
+        commissionUsernames: state.commissionUsernames ? [...state.commissionUsernames].sort() : null,
+      })
+
+    return normalize(currentReportQuery) !== normalize(appliedReportQuery)
+  }, [currentReportQuery, appliedReportQuery])
+
+  useEffect(() => {
+    setAppliedReportQuery(null)
+  }, [reportIdFromUrl])
+
+  useEffect(() => {
+    if (!appsInitialized || appsLoading || loadingSavedReport) return
+    if (reportIdFromUrl && loadedReportIdRef.current !== reportIdFromUrl) return
+    if (appliedReportQuery) return
+    setAppliedReportQuery(currentReportQuery)
+  }, [
+    appsInitialized,
+    appsLoading,
+    loadingSavedReport,
+    reportIdFromUrl,
+    appliedReportQuery,
+    currentReportQuery,
+  ])
+
+  const handleApplyFilters = () => {
+    setAppliedReportQuery(currentReportQuery)
+  }
+
   const { data: reportData, loading: reportLoading, error: reportError } = useCustomReportQuery({
-    startDate,
-    endDate,
-    selectedAppIds: selectedApps,
-    dimensions: selectedParameters,
-    metrics: selectedMetrics,
-    revenueSource: "All",
-    metricFilters,
-    commissionUsernames: commissionUsernamesForQuery,
+    startDate: appliedReportQuery?.startDate ?? startDate,
+    endDate: appliedReportQuery?.endDate ?? endDate,
+    selectedAppIds: appliedReportQuery?.selectedAppIds ?? [],
+    dimensions: appliedReportQuery?.dimensions ?? [],
+    metrics: appliedReportQuery?.metrics ?? [],
+    revenueSource: appliedReportQuery?.revenueSource ?? "All",
+    metricFilters: appliedReportQuery?.metricFilters ?? [],
+    commissionUsernames: appliedReportQuery?.commissionUsernames ?? null,
     sortBy: sortColumn,
     sortDir: sortDirection,
-    enabled: selectedApps.length > 0,
+    enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
   })
 
   const dateSelectValue =
@@ -1502,7 +1576,7 @@ export function CustomReportBuilderContent() {
       <Card className="border-slate-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium">Filters</CardTitle>
-          <CardDescription>Date range, apps, and report criteria</CardDescription>
+          <CardDescription>Date range, apps, and report criteria. Click Apply to refresh data.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
@@ -1805,6 +1879,16 @@ export function CustomReportBuilderContent() {
                 </div>
               </PopoverContent>
             </Popover>
+
+            <Button
+              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+              type="button"
+              disabled={loadingSavedReport || reportLoading || !hasPendingApply}
+              onClick={handleApplyFilters}
+            >
+              <Search className="w-4 h-4" />
+              Apply
+            </Button>
           </div>
 
           {(activeFilters.length > 0 || metricFilters.length > 0) && (

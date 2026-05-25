@@ -1789,6 +1789,12 @@ export const organizationsApi = {
         )
     },
 
+    exportProfitPlanTemplate: async (orgId: string, month: string): Promise<{ blob: Blob; contentType: string | null }> => {
+        return apiClient.getBlob(
+            `/api/v1/organizations/${orgId}/profit-plans/template?month=${encodeURIComponent(month)}`,
+        )
+    },
+
     importProfitPlans: async (orgId: string, file: File): Promise<ImportTeamProfitPlansResult> => {
         const fd = new FormData()
         fd.append("file", file)
