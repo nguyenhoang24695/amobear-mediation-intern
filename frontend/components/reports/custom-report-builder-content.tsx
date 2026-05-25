@@ -727,7 +727,7 @@ export function CustomReportBuilderContent() {
       try {
         const [chart, orgTeams] = await Promise.all([
           organizationsApi.getPersonnelChart(orgId),
-          organizationsApi.getTeams(orgId),
+          organizationsApi.getTeams(orgId).catch(() => []),
         ])
 
         if (!chart?.root) {
@@ -874,7 +874,7 @@ export function CustomReportBuilderContent() {
         setTeamPlanAppIds(uniqueAppIds)
       })
       .catch(() => {
-        if (!cancelled) setTeamPlanAppIds([])
+        if (!cancelled) setTeamPlanAppIds(null)
       })
       .finally(() => {
         if (!cancelled) setTeamPlansLoading(false)
