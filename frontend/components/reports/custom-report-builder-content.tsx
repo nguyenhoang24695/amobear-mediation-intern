@@ -164,6 +164,11 @@ interface ActiveFilter {
   value: string
 }
 
+interface MetricRowSpanState {
+  rowSpan: number
+  hidden: boolean
+}
+
 interface AppliedReportQueryState {
   startDate: Date
   endDate: Date
@@ -417,6 +422,54 @@ function getMetricColumnStyle(): CSSProperties {
   return {
     minWidth: METRIC_COLUMN_WIDTH,
   }
+}
+
+function buildUaCostRowSpanMap(
+  rows: Array<Record<string, string | number | null>>,
+  selectedParameters: string[],
+): Map<number, MetricRowSpanState> {
+  const shouldMergeUaCost =
+    selectedParameters.includes("date") &&
+    (selectedParameters.includes("app") || selectedParameters.includes("app_store_id"))
+
+  if (!shouldMergeUaCost || rows.length === 0) {
+    return new Map()
+  }
+
+  const rowSpanMap = new Map<number, MetricRowSpanState>()
+  let index = 0
+
+  while (index < rows.length) {
+    const row = rows[index]
+    const dateKey = String(row.date ?? "").trim()
+    const appStoreIdKey = String(row.app_store_id ?? row.app_id ?? row.app ?? "").trim()
+
+    if (!dateKey || !appStoreIdKey) {
+      index += 1
+      continue
+    }
+
+    let end = index + 1
+    while (end < rows.length) {
+      const nextRow = rows[end]
+      const nextDateKey = String(nextRow.date ?? "").trim()
+      const nextAppStoreIdKey = String(nextRow.app_store_id ?? nextRow.app_id ?? nextRow.app ?? "").trim()
+      if (nextDateKey !== dateKey || nextAppStoreIdKey !== appStoreIdKey) break
+      end += 1
+    }
+
+    const span = end - index
+    if (span > 1) {
+      rowSpanMap.set(index, { rowSpan: span, hidden: false })
+      for (let i = index + 1; i < end; i += 1) {
+        rowSpanMap.set(i, { rowSpan: 0, hidden: true })
+      }
+    }
+
+    index = end
+  }
+
+  return rowSpanMap
 }
 
 function findCurrentPersonnelNode(root: PersonnelNode, currentUserId?: string, currentUserEmail?: string): PersonnelNode | null {
@@ -1441,6 +1494,10 @@ export function CustomReportBuilderContent() {
 
   const tableRows = reportData?.rows ?? []
   const tableTotals = reportData?.totals ?? {}
+  const uaCostRowSpanMap = useMemo(
+    () => buildUaCostRowSpanMap(tableRows, selectedParameters),
+    [tableRows, selectedParameters],
+  )
 
   const handleExportExcel = () => {
     if (tableRows.length === 0) return
@@ -1662,18 +1719,39 @@ export function CustomReportBuilderContent() {
                 {renderParameterCell(paramId, row, selectedParameters)}
               </TableCell>
             ))}
-            {selectedMetrics.map((metricId, index) => (
-              <TableCell
-                key={metricId}
-                className={cn(
-                  "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
-                  index === selectedMetrics.length - 1 && "pr-5",
-                )}
-                style={getMetricColumnStyle()}
-              >
-                {formatMetricValue(row[metricId], metricId, catalogMetrics)}
-              </TableCell>
-            ))}
+            {selectedMetrics.map((metricId, index) => {
+              if (metricId === "ua_cost") {
+                const spanState = uaCostRowSpanMap.get(idx)
+                if (spanState?.hidden) return null
+
+                return (
+                  <TableCell
+                    key={metricId}
+                    rowSpan={spanState?.rowSpan}
+                    className={cn(
+                      "text-sm text-right text-slate-700 py-2 whitespace-nowrap align-top",
+                      index === selectedMetrics.length - 1 && "pr-5",
+                    )}
+                    style={getMetricColumnStyle()}
+                  >
+                    {formatMetricValue(row[metricId], metricId, catalogMetrics)}
+                  </TableCell>
+                )
+              }
+
+              return (
+                <TableCell
+                  key={metricId}
+                  className={cn(
+                    "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
+                    index === selectedMetrics.length - 1 && "pr-5",
+                  )}
+                  style={getMetricColumnStyle()}
+                >
+                  {formatMetricValue(row[metricId], metricId, catalogMetrics)}
+                </TableCell>
+              )
+            })}
           </TableRow>
         ))}
       </TableBody>
