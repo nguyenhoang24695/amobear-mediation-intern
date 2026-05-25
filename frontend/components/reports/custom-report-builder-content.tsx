@@ -85,7 +85,7 @@ import type { DateRange } from "react-day-picker"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
-import { organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
+import { authApi, organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
 import type {
   CustomReportCatalogItem,
@@ -128,7 +128,7 @@ const FILTER_COMMISSION_TEAM = "Team"
 
 const DEFAULT_PARAMETERS: CustomReportCatalogItem[] = [
   { id: "app", label: "App", category: "Core" },
-  { id: "app_store_id", label: "App Store ID", category: "Core" },
+  { id: "publisher", label: "Publisher", category: "Core" },
   { id: "date", label: "Date", category: "Time" },
   { id: "platform", label: "Platform", category: "Core" },
 ]
@@ -150,6 +150,7 @@ const DEFAULT_METRICS: CustomReportCatalogItem[] = [
 
 const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
   app: 280,
+  publisher: 280,
   app_store_id: 280,
   date: 140,
   platform: 140,
@@ -371,6 +372,22 @@ function renderParameterCell(
     )
   }
 
+  if (paramId === "publisher") {
+    const displayName = String(row.publisher_display_name ?? row.publisher ?? "")
+    const publisherId = String(row.publisher_id ?? row.publisher ?? "")
+    const publisherSub = String(row.publisher_sub ?? "").trim()
+    return (
+      <div className="min-w-[180px]">
+        <div className="text-sm font-medium text-slate-900 truncate">{displayName || "—"}</div>
+        {publisherSub ? (
+          <div className="text-xs text-slate-500 font-mono truncate">{publisherSub}</div>
+        ) : publisherId && publisherId.toLowerCase() !== displayName.trim().toLowerCase() ? (
+          <div className="text-xs text-slate-500 font-mono truncate">{publisherId}</div>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <span className="text-sm text-slate-700 whitespace-nowrap">
       {String(row[paramId] ?? "—")}
@@ -475,12 +492,9 @@ function defaultCustomReportName(): string {
 
 function getMonthDateRange(month: Date): { start: Date; end: Date } {
   const start = startOfMonth(month)
-  const endOfSelected = endOfMonth(month)
-  const today = new Date()
-  today.setHours(23, 59, 59, 999)
   return {
     start,
-    end: endOfSelected > today ? today : endOfSelected,
+    end: endOfMonth(month),
   }
 }
 
@@ -498,10 +512,17 @@ export function CustomReportBuilderContent() {
   const folderFromUrl = searchParams.get("folder")
 
   const canManageCommission = hasScreenFunction("s-commission", "manage")
-  const currentUser = getCurrentUser()
+  const storedCurrentUser = getCurrentUser()
+  const { data: currentUserResponse } = useApi(
+    () => authApi.getCurrentUser(),
+    { cacheKey: `reports_current_user_${storedCurrentUser?.id ?? "anonymous"}` },
+  )
+  const currentUser = currentUserResponse?.data ?? storedCurrentUser
   const orgId = currentUser?.organization?.id
-  const currentUserId = currentUser?.id ?? "anonymous"
-  const currentUserTeamIds = (currentUser?.teams ?? []).map((team) => team.id).filter(Boolean)
+  const currentUserId = currentUser?.id ?? storedCurrentUser?.id ?? "anonymous"
+  const currentUserTeamIds = (currentUser?.teams ?? storedCurrentUser?.teams ?? [])
+    .map((team) => team.id)
+    .filter(Boolean)
   const currentUserTeamIdsKey = [...currentUserTeamIds].sort().join("|")
 
   const [catalogParameters, setCatalogParameters] = useState(DEFAULT_PARAMETERS)
@@ -1435,6 +1456,8 @@ export function CustomReportBuilderContent() {
 
     const getParameterDisplayValue = (paramId: string, row: Record<string, string | number | null>) => {
       if (paramId === "app") return row.app_display_name ?? row.app ?? ""
+      if (paramId === "publisher") return row.publisher_display_name ?? row.publisher ?? ""
+      if (paramId === "app_store_id") return row.app_store_display_name ?? row.app_store_id ?? ""
       return row[paramId] ?? ""
     }
 
