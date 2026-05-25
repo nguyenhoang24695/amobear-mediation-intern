@@ -820,20 +820,6 @@ export function CustomReportBuilderContent() {
     setAppliedReportQuery(null)
   }, [reportIdFromUrl])
 
-  useEffect(() => {
-    if (!appsInitialized || appsLoading || loadingSavedReport) return
-    if (reportIdFromUrl && loadedReportIdRef.current !== reportIdFromUrl) return
-    if (appliedReportQuery) return
-    setAppliedReportQuery(currentReportQuery)
-  }, [
-    appsInitialized,
-    appsLoading,
-    loadingSavedReport,
-    reportIdFromUrl,
-    appliedReportQuery,
-    currentReportQuery,
-  ])
-
   const handleApplyFilters = () => {
     setAppliedReportQuery(currentReportQuery)
   }
@@ -1324,7 +1310,13 @@ export function CustomReportBuilderContent() {
     URL.revokeObjectURL(url)
   }
 
-  const tableContent = reportLoading ? (
+  const tableContent = !appliedReportQuery ? (
+    <div className="flex flex-col items-center justify-center min-h-[280px] text-center p-8">
+      <p className="text-sm text-slate-600">
+        Adjust filters, then click Apply to load report data.
+      </p>
+    </div>
+  ) : reportLoading ? (
     <div className="p-4 space-y-2">
       {[1, 2, 3, 4, 5].map((i) => (
         <Skeleton key={i} className="h-12 w-full" />
