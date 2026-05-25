@@ -85,7 +85,7 @@ import type { DateRange } from "react-day-picker"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
-import { authApi, organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
+import { authApi, organizationsApi, reportsApi, structureApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
 import type {
   CustomReportCatalogItem,
@@ -102,11 +102,8 @@ import {
   collectTeamIdsUnderPersonnelNode,
   collectTeamsUnderPersonnelNode,
   findPersonnelTeamNode,
-  findPersonnelTeamNodes,
   mergeCommissionTeamOptions,
-  mapTeamMembersToCommissionUsers,
   type CommissionTeamOption,
-  type CommissionUserOption,
 } from "@/lib/reports/commission-team-utils"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { toast } from "sonner"
@@ -123,7 +120,6 @@ type DateFilterMode = "preset" | "month" | "custom"
 
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
-const FILTER_COMMISSION_USER = "Commission User"
 const FILTER_COMMISSION_TEAM = "Team"
 
 const DEFAULT_PARAMETERS: CustomReportCatalogItem[] = [
@@ -177,7 +173,6 @@ interface AppliedReportQueryState {
   metrics: string[]
   revenueSource: string
   metricFilters: CustomReportMetricFilter[]
-  commissionUsernames: string[] | null
 }
 
 interface SortableReportFieldItemProps {
@@ -488,50 +483,6 @@ function findCurrentPersonnelNode(root: PersonnelNode, currentUserId?: string, c
   return null
 }
 
-function getSubordinateCommissionUsers(node: PersonnelNode): CommissionUserOption[] {
-  const byEmail = new Map<string, CommissionUserOption>()
-
-  const walk = (current: PersonnelNode) => {
-    for (const child of current.children ?? []) {
-      if (child.type === "member" && child.email) {
-        const email = child.email.trim()
-        const normalized = email.toLowerCase()
-        if (!byEmail.has(normalized)) {
-          byEmail.set(normalized, {
-            email,
-            label: child.name ? `${child.name} (${email})` : email,
-          })
-        }
-      }
-      walk(child)
-    }
-  }
-
-  walk(node)
-  return [...byEmail.values()].sort((a, b) => a.label.localeCompare(b.label))
-}
-
-function findPersonnelNodeById(root: PersonnelNode, nodeId: string): PersonnelNode | null {
-  if (root.id === nodeId) return root
-  for (const child of root.children ?? []) {
-    const found = findPersonnelNodeById(child, nodeId)
-    if (found) return found
-  }
-  return null
-}
-
-function mergeCommissionUserOptions(...groups: CommissionUserOption[][]): CommissionUserOption[] {
-  const byEmail = new Map<string, CommissionUserOption>()
-  for (const group of groups) {
-    for (const user of group) {
-      const normalizedEmail = user.email.trim().toLowerCase()
-      if (!normalizedEmail || byEmail.has(normalizedEmail)) continue
-      byEmail.set(normalizedEmail, user)
-    }
-  }
-  return [...byEmail.values()].sort((a, b) => a.label.localeCompare(b.label))
-}
-
 function getMetricFilterLabel(filter: CustomReportMetricFilter, metrics: CustomReportCatalogItem[]) {
   const metricLabel = metrics.find((metric) => metric.id === filter.metric)?.label ?? filter.metric
   const conditionLabel =
@@ -601,7 +552,6 @@ export function CustomReportBuilderContent() {
   ])
 
   const [sidebarSearch, setSidebarSearch] = useState("")
-  const [commissionUser, setCommissionUser] = useState("All")
   const [metricFilters, setMetricFilters] = useState<CustomReportMetricFilter[]>([])
   const [metricFilterPopoverOpen, setMetricFilterPopoverOpen] = useState(false)
   const [draftMetricFilterMetric, setDraftMetricFilterMetric] = useState("estimated_revenue")
@@ -614,9 +564,6 @@ export function CustomReportBuilderContent() {
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
-  const [subordinateUsers, setSubordinateUsers] = useState<CommissionUserOption[]>([])
-  const [teamMemberUsers, setTeamMemberUsers] = useState<CommissionUserOption[]>([])
-  const [teamMembersLoading, setTeamMembersLoading] = useState(false)
   const [commissionTeam, setCommissionTeam] = useState("All")
   const [commissionTeams, setCommissionTeams] = useState<CommissionTeamOption[]>([])
   const [rawPersonnelChartRoot, setRawPersonnelChartRoot] = useState<PersonnelNode | null>(null)
@@ -658,11 +605,6 @@ export function CustomReportBuilderContent() {
     const allowed = new Set(teamPlanAppIds)
     return availableApps.filter((app) => allowed.has(app.appId))
   }, [availableApps, canScopeManagedTeams, commissionTeam, teamPlanAppIds])
-
-  const commissionUsersForFilter = useMemo(
-    () => (commissionTeam === "All" ? subordinateUsers : teamMemberUsers),
-    [commissionTeam, subordinateUsers, teamMemberUsers],
-  )
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -733,7 +675,6 @@ export function CustomReportBuilderContent() {
         setSelectedMetrics,
         setSelectedApps,
         setMetricFilters,
-        setCommissionUser,
         setCommissionTeam,
         setSortColumn,
         setSortDirection,
@@ -792,7 +733,6 @@ export function CustomReportBuilderContent() {
     if (!orgId) {
       setRawPersonnelChartRoot(null)
       setHydratedPersonnelChartRoot(null)
-      setSubordinateUsers([])
       setCommissionTeams([])
       return
     }
@@ -809,7 +749,6 @@ export function CustomReportBuilderContent() {
           if (cancelled) return
           setRawPersonnelChartRoot(null)
           setHydratedPersonnelChartRoot(null)
-          setSubordinateUsers([])
           setCommissionTeams([])
           return
         }
@@ -825,28 +764,12 @@ export function CustomReportBuilderContent() {
         setHydratedPersonnelChartRoot(hydratedRoot)
 
         const currentNode = findCurrentPersonnelNode(rawRoot, currentUser?.id, currentUser?.email)
-        const hydratedCurrentNode = currentNode
-          ? findPersonnelNodeById(hydratedRoot, currentNode.id)
-          : null
         const underManager = currentNode ? collectTeamsUnderPersonnelNode(currentNode) : []
-        const managedMembershipTeamNodes = findPersonnelTeamNodes(rawRoot, currentUserTeamIds)
-          .filter((teamNode) => collectTeamIdsUnderPersonnelNode(teamNode).length > 1)
         const memberManagedTeams = collectMembershipManagedTeams(rawRoot, currentUserTeamIds)
         const leadFromChart = currentUser?.id
           ? collectTeamLeadTeamsFromChart(hydratedRoot, currentUser.id)
           : []
         const leadFromOrg = collectTeamLeadTeamsFromOrgTeams(orgTeams, currentUser?.id)
-        const membershipUsers = managedMembershipTeamNodes
-          .map((teamNode) => findPersonnelTeamNode(hydratedRoot, teamNode.teamId ?? ""))
-          .filter((teamNode): teamNode is PersonnelNode => Boolean(teamNode))
-          .map((teamNode) => getSubordinateCommissionUsers(teamNode))
-
-        setSubordinateUsers(
-          mergeCommissionUserOptions(
-            hydratedCurrentNode ? getSubordinateCommissionUsers(hydratedCurrentNode) : [],
-            ...membershipUsers,
-          ),
-        )
         setCommissionTeams(
           mergeCommissionTeamOptions(underManager, memberManagedTeams, leadFromChart, leadFromOrg),
         )
@@ -854,7 +777,6 @@ export function CustomReportBuilderContent() {
         if (cancelled) return
         setRawPersonnelChartRoot(null)
         setHydratedPersonnelChartRoot(null)
-        setSubordinateUsers([])
         setCommissionTeams([])
       }
     })()
@@ -873,51 +795,6 @@ export function CustomReportBuilderContent() {
   }, [commissionTeam, rawPersonnelChartRoot])
 
   const selectedCommissionTeamIdsKey = selectedCommissionTeamIds.join("|")
-
-  useEffect(() => {
-    if (!canScopeManagedTeams || commissionTeam === "All") {
-      setTeamMemberUsers([])
-      setTeamMembersLoading(false)
-      return
-    }
-
-    let cancelled = false
-    setTeamMembersLoading(true)
-    const selectedTeamNode = hydratedPersonnelChartRoot
-      ? findPersonnelTeamNode(hydratedPersonnelChartRoot, commissionTeam)
-      : null
-
-    if (selectedTeamNode) {
-      setTeamMemberUsers(getSubordinateCommissionUsers(selectedTeamNode))
-      setTeamMembersLoading(false)
-      return () => {
-        cancelled = true
-      }
-    }
-
-    teamMembersApi
-      .filterTeamMembers({
-        teamId: commissionTeam,
-        page: 1,
-        pageSize: 500,
-        status: "active",
-      })
-      .then((response) => {
-        if (cancelled) return
-        const members = response.data?.items ?? []
-        setTeamMemberUsers(mapTeamMembersToCommissionUsers(members))
-      })
-      .catch(() => {
-        if (!cancelled) setTeamMemberUsers([])
-      })
-      .finally(() => {
-        if (!cancelled) setTeamMembersLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [canScopeManagedTeams, commissionTeam, hydratedPersonnelChartRoot])
 
   useEffect(() => {
     if (commissionTeam === "All") return
@@ -978,22 +855,6 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
   }, [commissionTeam, commissionTeams])
 
-  useEffect(() => {
-    if (commissionUser === "All") return
-    if (commissionUsersForFilter.some((user) => user.email === commissionUser)) return
-    setCommissionUser("All")
-    setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_USER))
-  }, [commissionUser, commissionUsersForFilter])
-
-  const commissionUsernamesForQuery = useMemo((): string[] | null => {
-    if (!canScopeManagedTeams) return null
-    if (commissionUser !== "All") return [commissionUser]
-    if (commissionTeam !== "All") {
-      return teamMemberUsers.length > 0 ? teamMemberUsers.map((user) => user.email) : null
-    }
-    return subordinateUsers.length > 0 ? subordinateUsers.map((user) => user.email) : null
-  }, [canScopeManagedTeams, commissionTeam, commissionUser, subordinateUsers, teamMemberUsers])
-
   const currentReportQuery = useMemo<AppliedReportQueryState>(
     () => ({
       startDate,
@@ -1003,7 +864,6 @@ export function CustomReportBuilderContent() {
       metrics: [...selectedMetrics],
       revenueSource: "All",
       metricFilters: [...metricFilters],
-      commissionUsernames: commissionUsernamesForQuery ? [...commissionUsernamesForQuery] : null,
     }),
     [
       startDate,
@@ -1012,7 +872,6 @@ export function CustomReportBuilderContent() {
       selectedParameters,
       selectedMetrics,
       metricFilters,
-      commissionUsernamesForQuery,
     ],
   )
 
@@ -1028,7 +887,6 @@ export function CustomReportBuilderContent() {
         metrics: state.metrics,
         revenueSource: state.revenueSource,
         metricFilters: state.metricFilters,
-        commissionUsernames: state.commissionUsernames ? [...state.commissionUsernames].sort() : null,
       })
 
     return normalize(currentReportQuery) !== normalize(appliedReportQuery)
@@ -1050,7 +908,7 @@ export function CustomReportBuilderContent() {
     metrics: appliedReportQuery?.metrics ?? [],
     revenueSource: appliedReportQuery?.revenueSource ?? "All",
     metricFilters: appliedReportQuery?.metricFilters ?? [],
-    commissionUsernames: appliedReportQuery?.commissionUsernames ?? null,
+    commissionUsernames: null,
     sortBy: sortColumn,
     sortDir: sortDirection,
     enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
@@ -1165,8 +1023,6 @@ export function CustomReportBuilderContent() {
       appIds: selectedApps,
       revenueSource: "All",
       metricFilters,
-      commissionUser,
-      commissionUsernames: commissionUsernamesForQuery,
       commissionTeamId: canScopeManagedTeams && commissionTeam !== "All" ? commissionTeam : null,
       sortBy: sortColumn,
       sortDir: sortDirection,
@@ -1350,15 +1206,6 @@ export function CustomReportBuilderContent() {
     applySelectedMonth(new Date(yearPart, monthPart - 1, 1))
   }
 
-  const handleCommissionUserChange = (value: string) => {
-    setCommissionUser(value)
-    const label =
-      value === "All"
-        ? "All"
-        : commissionUsersForFilter.find((u) => u.email === value)?.label ?? value
-    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_USER, label))
-  }
-
   const handleCommissionTeamChange = (value: string) => {
     setCommissionTeam(value)
     const label =
@@ -1368,13 +1215,9 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
     if (value === "All") {
       setTeamPlanAppIds(null)
-      setTeamMemberUsers([])
       const ids = availableApps.map((app) => app.appId)
       setSelectedApps(ids)
       syncAppsActiveFilter(ids, availableApps)
-    } else {
-      setCommissionUser("All")
-      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_USER))
     }
   }
 
@@ -1441,9 +1284,6 @@ export function CustomReportBuilderContent() {
           syncAppsActiveFilter(availableApps.map((app) => app.appId), availableApps)
         }
         break
-      case FILTER_COMMISSION_USER:
-        setCommissionUser("All")
-        break
       case FILTER_COMMISSION_TEAM:
         setCommissionTeam("All")
         setTeamPlanAppIds(null)
@@ -1461,7 +1301,6 @@ export function CustomReportBuilderContent() {
       setSelectedApps([firstId])
       syncAppsActiveFilter([firstId], pool)
     }
-    setCommissionUser("All")
     setMetricFilters([])
     setActiveFilters([{ type: FILTER_DATE_RANGE, value: "Last 30 days" }])
   }
@@ -2028,41 +1867,6 @@ export function CustomReportBuilderContent() {
                   {commissionTeams.length === 0 ? (
                     <div className="px-2 py-2 text-sm text-slate-500">
                       No teams under you or as team lead
-                    </div>
-                  ) : null}
-                </SelectContent>
-              </Select>
-            )}
-
-            {canScopeManagedTeams && (
-              <Select
-                value={commissionUser}
-                onValueChange={handleCommissionUserChange}
-                disabled={teamMembersLoading}
-              >
-                <SelectTrigger className="w-52 h-10 bg-white">
-                  <SelectValue
-                    placeholder={
-                      teamMembersLoading
-                        ? "Loading members..."
-                        : commissionTeam !== "All"
-                          ? "Team member"
-                          : "Commission User"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All</SelectItem>
-                  {commissionUsersForFilter.map((user) => (
-                    <SelectItem key={user.email} value={user.email}>
-                      {user.label}
-                    </SelectItem>
-                  ))}
-                  {commissionUsersForFilter.length === 0 ? (
-                    <div className="px-2 py-2 text-sm text-slate-500">
-                      {commissionTeam !== "All"
-                        ? "No members in this team"
-                        : "No subordinate users found"}
                     </div>
                   ) : null}
                 </SelectContent>
