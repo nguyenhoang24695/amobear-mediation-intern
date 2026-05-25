@@ -42,6 +42,8 @@ import { metaCampaignsApi, metaReferenceApi } from "@/lib/api/meta-ads"
 import { structureApi } from "@/lib/api/services"
 import { DuplicateOperationStatus } from "@/components/meta-ads/campaigns/duplicate-operation-status"
 import { DuplicateReadinessStatus } from "@/components/meta-ads/campaigns/duplicate-readiness-status"
+import { getCampaignStatusAction, isCampaignStatusActionBlocked } from "@/components/meta-ads/campaigns/campaign-status-action"
+import { saveCampaignStatusError, type CampaignStatusUpdateError } from "@/components/meta-ads/campaigns/campaign-status-error"
 import { cn } from "@/lib/utils"
 import type { MetaCampaignDuplicateReadinessResultDto, MetaCampaignListItemDto } from "@/types/meta-ads"
 import {
@@ -50,9 +52,12 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  ExternalLink,
   Loader2,
   Megaphone,
   MoreHorizontal,
+  PauseCircle,
+  PlayCircle,
   RefreshCw,
   Search,
 } from "lucide-react"
@@ -410,6 +415,9 @@ export function CampaignListContent() {
   const [checkingReadinessCampaignId, setCheckingReadinessCampaignId] = useState<number | null>(null)
   const [activeReadinessCampaignId, setActiveReadinessCampaignId] = useState<number | null>(null)
   const [readinessByCampaignId, setReadinessByCampaignId] = useState<Record<number, MetaCampaignDuplicateReadinessResultDto>>({})
+  const [statusTarget, setStatusTarget] = useState<MetaCampaignListItemDto | null>(null)
+  const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null)
+  const [statusUpdateError, setStatusUpdateError] = useState<CampaignStatusUpdateError | null>(null)
 
   const deferredSearch = useDeferredValue(search)
 
@@ -633,6 +641,43 @@ export function CampaignListContent() {
     }
   }
 
+  const handleStatusUpdate = async (campaign: MetaCampaignListItemDto) => {
+    const statusAction = getCampaignStatusAction(campaign)
+    if (!statusAction) return
+
+    try {
+      setStatusUpdatingId(campaign.id)
+      const result = statusAction.action === "pause"
+        ? await metaCampaignsApi.pause(campaign.id)
+        : await metaCampaignsApi.resume(campaign.id)
+
+      invalidateCache(listCacheKey)
+      invalidateCache(`meta-campaign:${campaign.id}`)
+      setListVersion((previous) => previous + 1)
+      await refetch()
+      setStatusTarget(null)
+
+      toast({
+        title: statusAction.action === "pause" ? "Campaign paused" : "Campaign resumed",
+        description: result.message,
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Meta campaign status update failed."
+      const updateError: CampaignStatusUpdateError = {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        action: statusAction.action,
+        message,
+        occurredAt: new Date().toISOString(),
+      }
+      saveCampaignStatusError(updateError)
+      setStatusUpdateError(updateError)
+      setStatusTarget(null)
+    } finally {
+      setStatusUpdatingId(null)
+    }
+  }
+
   useEffect(() => {
     if (!duplicateOperation) return
     if (!duplicateCompleted && !duplicateFailed) return
@@ -650,7 +695,7 @@ export function CampaignListContent() {
       void refetch()
       toast({
         title: "Campaign duplicated",
-        description: "Meta finished duplicating the campaign and Nexus synced the new campaign."
+        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
       })
       router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
       return
@@ -670,6 +715,9 @@ export function CampaignListContent() {
       description: "Meta finished duplicating the campaign, but the new local campaign id is not available yet."
     })
   }, [duplicateCompleted, duplicateFailed, duplicateOperation, handledDuplicateOperationId, listCacheKey, refetch, router, toast])
+
+  const statusTargetAction = statusTarget ? getCampaignStatusAction(statusTarget) : null
+
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
@@ -685,7 +733,7 @@ export function CampaignListContent() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">Meta Campaigns</h1>
-              <p className="text-sm text-slate-500">Monitor campaigns already known in Nexus and drill into synced Meta structure.</p>
+              <p className="text-sm text-slate-500">Monitor campaigns already known in Mediation Pro and drill into synced Meta structure.</p>
             </div>
           </div>
         </div>
@@ -855,6 +903,10 @@ export function CampaignListContent() {
                     const readiness = readinessByCampaignId[item.id]
                     const readinessPassed = readiness?.isReady === true
                     const readinessBusy = checkingReadinessCampaignId === item.id
+                    const statusAction = getCampaignStatusAction(item)
+                    const statusActionBlocked = isCampaignStatusActionBlocked(item)
+                    const statusBusy = statusUpdatingId === item.id
+                    const menuBusy = duplicatingCampaignId === item.id || readinessBusy || statusBusy
                     return (
                       <TableRow key={item.id} className={cn(hasIssue && "bg-amber-50/40")}>
                         <TableCell>
@@ -911,41 +963,59 @@ export function CampaignListContent() {
                           </div>
                         </TableCell>
                         <TableCell className="w-[70px] text-right">
-                          {canDuplicate ? (
+                          {(canDuplicate || canSync) ? (
                             <div className="flex justify-end">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={duplicatingCampaignId === item.id || readinessBusy}>
-                                    {duplicatingCampaignId === item.id || readinessBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={menuBusy}>
+                                    {menuBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    className="gap-2"
-                                    onSelect={(event) => {
-                                      event.preventDefault()
-                                      void handleCheckDuplicateReadiness(item)
-                                    }}
-                                  >
-                                    <RefreshCw className="h-4 w-4" />
-                                    Check Duplicate Readiness
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="gap-2"
-                                    disabled={!readinessPassed}
-                                    onSelect={(event) => {
-                                      event.preventDefault()
-                                      if (!readinessPassed) {
-                                        return
-                                      }
+                                  {canSync && statusAction ? (
+                                    <DropdownMenuItem
+                                      className="gap-2"
+                                      disabled={statusActionBlocked}
+                                      onSelect={(event) => {
+                                        event.preventDefault()
+                                        if (statusActionBlocked) return
+                                        setStatusTarget(item)
+                                      }}
+                                    >
+                                      {statusAction.action === "pause" ? <PauseCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
+                                      {statusAction.label}
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  {canDuplicate ? (
+                                    <>
+                                      <DropdownMenuItem
+                                        className="gap-2"
+                                        onSelect={(event) => {
+                                          event.preventDefault()
+                                          void handleCheckDuplicateReadiness(item)
+                                        }}
+                                      >
+                                        <RefreshCw className="h-4 w-4" />
+                                        Check Duplicate Readiness
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="gap-2"
+                                        disabled={!readinessPassed}
+                                        onSelect={(event) => {
+                                          event.preventDefault()
+                                          if (!readinessPassed) {
+                                            return
+                                          }
 
-                                      setDuplicateTarget(item)
-                                      setActiveReadinessCampaignId(item.id)
-                                    }}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                    Duplicate Campaign
-                                  </DropdownMenuItem>
+                                          setDuplicateTarget(item)
+                                          setActiveReadinessCampaignId(item.id)
+                                        }}
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                        Duplicate Campaign
+                                      </DropdownMenuItem>
+                                    </>
+                                  ) : null}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -975,6 +1045,88 @@ export function CampaignListContent() {
           ) : null}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={Boolean(statusUpdateError)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setStatusUpdateError(null)
+          }
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusUpdateError?.action === "pause" ? "Pause" : "Resume"} Campaign Failed
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 break-words">
+              <span className="block rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {statusUpdateError?.message ?? "Meta campaign status update failed."}
+              </span>
+              <span className="block text-xs text-slate-600">
+                Campaign: <span className="font-medium text-slate-900">{statusUpdateError?.campaignName ?? "Selected campaign"}</span>
+                {statusUpdateError ? ` - ID: ${statusUpdateError.campaignId} - ${formatDateTime(statusUpdateError.occurredAt)}` : null}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-wrap">
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => {
+                if (!statusUpdateError) return
+                router.push(`/meta-ads/campaigns/${statusUpdateError.campaignId}`)
+              }}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open Campaign Detail
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => {
+          if (!open && statusUpdatingId === null) {
+            setStatusTarget(null)
+          }
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{statusTargetAction?.confirmTitle ?? "Update Campaign Status?"}</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 break-words">
+              <span className="block">
+                {statusTargetAction?.confirmDescription ?? "This will update the campaign status on Meta."}
+              </span>
+              <span className="block rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                <span className="block break-all font-medium text-slate-900">{statusTarget?.name ?? "Selected campaign"}</span>
+                <span className="mt-1 block">Status: {toTitleCase(statusTarget?.status)} · Effective: {toTitleCase(statusTarget?.effectiveStatus)} · Target: {toTitleCase(statusTargetAction?.targetStatus)}</span>
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-wrap">
+            <AlertDialogCancel disabled={statusUpdatingId !== null}>Cancel</AlertDialogCancel>
+            <Button
+              className={statusTargetAction?.action === "pause" ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-emerald-600 text-white hover:bg-emerald-700"}
+              disabled={!statusTarget || !statusTargetAction || statusUpdatingId !== null}
+              onClick={() => {
+                if (statusTarget) {
+                  void handleStatusUpdate(statusTarget)
+                }
+              }}
+            >
+              {statusUpdatingId !== null
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : statusTargetAction?.action === "pause"
+                  ? <PauseCircle className="mr-2 h-4 w-4" />
+                  : <PlayCircle className="mr-2 h-4 w-4" />}
+              {statusTargetAction?.label ?? "Update Status"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(duplicateTarget)}

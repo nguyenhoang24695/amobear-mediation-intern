@@ -411,6 +411,17 @@ export interface MetaCampaignDuplicateRequestDto {
   deepCopy?: boolean
 }
 
+export interface MetaCampaignStatusUpdateResultDto {
+  campaignId: number
+  externalCampaignId: string
+  previousStatus: string
+  newStatus: string
+  effectiveStatus?: string | null
+  message: string
+  updatedAt: string
+  traceId?: string | null
+}
+
 export interface MetaCampaignDuplicateConflictResponseDto {
   message: string
   readiness: MetaCampaignDuplicateReadinessResultDto

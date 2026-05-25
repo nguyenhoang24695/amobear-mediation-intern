@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -39,6 +40,13 @@ import { hasScreenFunction } from "@/lib/auth"
 import { metaCampaignsApi } from "@/lib/api/meta-ads"
 import { DuplicateOperationStatus } from "@/components/meta-ads/campaigns/duplicate-operation-status"
 import { DuplicateReadinessStatus } from "@/components/meta-ads/campaigns/duplicate-readiness-status"
+import { getCampaignStatusAction, isCampaignStatusActionBlocked } from "@/components/meta-ads/campaigns/campaign-status-action"
+import {
+  clearCampaignStatusError,
+  readCampaignStatusError,
+  saveCampaignStatusError,
+  type CampaignStatusUpdateError,
+} from "@/components/meta-ads/campaigns/campaign-status-error"
 import { cn } from "@/lib/utils"
 import type {
   MetaCampaignAdSetSummaryDto,
@@ -58,8 +66,11 @@ import {
   Layers3,
   Link2,
   Loader2,
+  PauseCircle,
   Palette,
+  PlayCircle,
   RefreshCw,
+  X,
 } from "lucide-react"
 
 const issueStatuses = new Set(["WITH_ISSUES", "DISAPPROVED", "ARCHIVED", "DELETED", "PENDING_BILLING_INFO"])
@@ -665,6 +676,9 @@ export function CampaignDetailContent({ campaignId }: Props) {
   const [handledDuplicateOperationId, setHandledDuplicateOperationId] = useState<number | null>(null)
   const [checkingReadiness, setCheckingReadiness] = useState(false)
   const [readiness, setReadiness] = useState<MetaCampaignDuplicateReadinessResultDto | null>(null)
+  const [statusUpdating, setStatusUpdating] = useState(false)
+  const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
+  const [statusUpdateError, setStatusUpdateError] = useState<CampaignStatusUpdateError | null>(null)
 
   const { data: detail, loading, error, refetch } = useApi(
     () => metaCampaignsApi.getById(numericCampaignId),
@@ -685,6 +699,15 @@ export function CampaignDetailContent({ campaignId }: Props) {
   }, [numericCampaignId])
 
   useEffect(() => {
+    if (!Number.isFinite(numericCampaignId) || numericCampaignId <= 0) {
+      setStatusUpdateError(null)
+      return
+    }
+
+    setStatusUpdateError(readCampaignStatusError(numericCampaignId))
+  }, [numericCampaignId])
+
+  useEffect(() => {
     if (!duplicateOperation) return
     if (!duplicateCompleted && !duplicateFailed) return
     if (handledDuplicateOperationId === duplicateOperation.id) return
@@ -699,7 +722,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
       invalidateCache("meta-campaigns:list")
       toast({
         title: "Campaign duplicated",
-        description: "Meta finished duplicating the campaign and Nexus synced the new campaign."
+        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
       })
       router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
       return
@@ -738,6 +761,8 @@ export function CampaignDetailContent({ campaignId }: Props) {
   }
 
   const appHref = detail.appId ? `/apps/${detail.appId}` : undefined
+  const statusAction = getCampaignStatusAction(detail)
+  const statusActionBlocked = isCampaignStatusActionBlocked(detail)
 
   const handleSync = async () => {
     try {
@@ -798,6 +823,48 @@ export function CampaignDetailContent({ campaignId }: Props) {
       setActiveDuplicateOperationId(null)
     }
   }
+
+  const handleStatusUpdate = async () => {
+    if (!statusAction) return
+
+    try {
+      setStatusUpdating(true)
+      const result = statusAction.action === "pause"
+        ? await metaCampaignsApi.pause(numericCampaignId)
+        : await metaCampaignsApi.resume(numericCampaignId)
+
+      invalidateCache(`meta-campaign:${numericCampaignId}`)
+      invalidateCache("meta-campaigns:list")
+      const refreshed = await refetch()
+      setStatusConfirmOpen(false)
+      setStatusUpdateError(null)
+      clearCampaignStatusError(numericCampaignId)
+
+      const resumedButNotActive = statusAction.action === "resume" && (refreshed.effectiveStatus ?? "").toUpperCase() !== "ACTIVE"
+      toast({
+        title: resumedButNotActive ? "Campaign resumed with delivery warning" : statusAction.action === "pause" ? "Campaign paused" : "Campaign resumed",
+        description: resumedButNotActive
+          ? "Campaign is ACTIVE at campaign level, but delivery may still be blocked by ad set, ad, account, schedule, or review state."
+          : result.message,
+        variant: resumedButNotActive ? "destructive" : "default",
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Campaign status update failed."
+      const updateError: CampaignStatusUpdateError = {
+        campaignId: numericCampaignId,
+        campaignName: detail.name,
+        action: statusAction.action,
+        message,
+        occurredAt: new Date().toISOString(),
+      }
+      setStatusUpdateError(updateError)
+      saveCampaignStatusError(updateError)
+      setStatusConfirmOpen(false)
+      toast({ title: "Status update failed", description: message, variant: "destructive" })
+    } finally {
+      setStatusUpdating(false)
+    }
+  }
   return (
     <div className="space-y-5">
       <div>
@@ -847,21 +914,41 @@ export function CampaignDetailContent({ campaignId }: Props) {
           <div className="flex items-center gap-2">
             {canDuplicate ? (
               <>
-                <Button variant="outline" className="gap-2" onClick={() => void handleCheckDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing}>
+                <Button variant="outline" className="gap-2" onClick={() => void handleCheckDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing || statusUpdating}>
                   {checkingReadiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   Check Duplicate Readiness
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={() => setDuplicateConfirmOpen(true)} disabled={duplicating || syncing || readiness?.isReady !== true}>
+                <Button variant="outline" className="gap-2" onClick={() => setDuplicateConfirmOpen(true)} disabled={duplicating || syncing || statusUpdating || readiness?.isReady !== true}>
                   {duplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
                   Duplicate Campaign
                 </Button>
               </>
             ) : null}
             {canSync ? (
-              <Button variant="outline" className="gap-2" onClick={handleSync} disabled={syncing}>
-                {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                Sync This Campaign
-              </Button>
+              <>
+                {statusAction ? (
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "gap-2",
+                      statusAction.action === "pause" ? "border-amber-200 text-amber-700 hover:bg-amber-50" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    )}
+                    onClick={() => setStatusConfirmOpen(true)}
+                    disabled={syncing || duplicating || statusUpdating || statusActionBlocked}
+                  >
+                    {statusUpdating
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : statusAction.action === "pause"
+                        ? <PauseCircle className="h-4 w-4" />
+                        : <PlayCircle className="h-4 w-4" />}
+                    {statusAction.label}
+                  </Button>
+                ) : null}
+                <Button variant="outline" className="gap-2" onClick={handleSync} disabled={syncing || statusUpdating}>
+                  {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Sync This Campaign
+                </Button>
+              </>
             ) : null}
             {detail.createdFromRequestId ? (
               <Button asChild variant="outline" className="gap-2">
@@ -874,6 +961,38 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </div>
         </div>
       </div>
+
+      {statusUpdateError ? (
+        <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-800">
+          <AlertTriangle className="h-4 w-4" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <AlertTitle className="line-clamp-none text-red-900">
+                {statusUpdateError.action === "pause" ? "Pause" : "Resume"} campaign failed
+              </AlertTitle>
+              <AlertDescription className="space-y-1 text-red-700">
+                <div className="break-words">{statusUpdateError.message}</div>
+                <div className="text-xs text-red-600">
+                  Campaign: <span className="font-medium">{statusUpdateError.campaignName}</span> - ID:{" "}
+                  <span className="font-mono">{statusUpdateError.campaignId}</span> - {formatDateTime(statusUpdateError.occurredAt)}
+                </div>
+              </AlertDescription>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-red-700 hover:bg-red-100 hover:text-red-900"
+              onClick={() => {
+                clearCampaignStatusError(statusUpdateError.campaignId)
+                setStatusUpdateError(null)
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
 
       {duplicateOperation ? <DuplicateOperationStatus operation={duplicateOperation} /> : null}
       {readiness ? <DuplicateReadinessStatus readiness={readiness} /> : null}
@@ -1084,6 +1203,47 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </Tabs>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={statusConfirmOpen}
+        onOpenChange={(open) => {
+          if (!statusUpdating) {
+            setStatusConfirmOpen(open)
+          }
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{statusAction?.confirmTitle ?? "Update Campaign Status?"}</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 break-words">
+              <span className="block">
+                {statusAction?.confirmDescription ?? "This will update the campaign status on Meta."}
+              </span>
+              <span className="block rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                <span className="block break-all font-medium text-slate-900">{detail.name}</span>
+                <span className="mt-1 block">Status: {toTitleCase(detail.status)} · Effective: {toTitleCase(detail.effectiveStatus)} · Target: {toTitleCase(statusAction?.targetStatus)}</span>
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-wrap">
+            <AlertDialogCancel disabled={statusUpdating}>Cancel</AlertDialogCancel>
+            <Button
+              className={statusAction?.action === "pause" ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-emerald-600 text-white hover:bg-emerald-700"}
+              disabled={!statusAction || statusUpdating || statusActionBlocked}
+              onClick={() => {
+                void handleStatusUpdate()
+              }}
+            >
+              {statusUpdating
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : statusAction?.action === "pause"
+                  ? <PauseCircle className="mr-2 h-4 w-4" />
+                  : <PlayCircle className="mr-2 h-4 w-4" />}
+              {statusAction?.label ?? "Update Status"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={duplicateConfirmOpen}
