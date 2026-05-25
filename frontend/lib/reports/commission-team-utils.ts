@@ -27,6 +27,13 @@ export interface CommissionTeamOption {
   label: string
 }
 
+function walkPersonnelTree(node: PersonnelNode, visit: (current: PersonnelNode) => void) {
+  visit(node)
+  for (const child of node.children ?? []) {
+    walkPersonnelTree(child, visit)
+  }
+}
+
 /** Teams placed under the current user in the personnel chart (team group nodes). */
 export function collectTeamsUnderPersonnelNode(node: PersonnelNode): CommissionTeamOption[] {
   const byId = new Map<string, CommissionTeamOption>()
@@ -64,6 +71,66 @@ export function collectTeamLeadTeamsFromChart(
 
   walk(root)
   return [...byId.values()]
+}
+
+export function findPersonnelTeamNode(root: PersonnelNode, teamId: string): PersonnelNode | null {
+  let found: PersonnelNode | null = null
+  walkPersonnelTree(root, (current) => {
+    if (!found && current.isTeamGroup && current.teamId === teamId) {
+      found = current
+    }
+  })
+  return found
+}
+
+export function findPersonnelTeamNodes(root: PersonnelNode, teamIds: Iterable<string>): PersonnelNode[] {
+  const targetTeamIds = new Set(
+    [...teamIds]
+      .map((teamId) => teamId.trim())
+      .filter(Boolean),
+  )
+  if (targetTeamIds.size === 0) return []
+
+  const foundByTeamId = new Map<string, PersonnelNode>()
+  walkPersonnelTree(root, (current) => {
+    if (!current.isTeamGroup || !current.teamId) return
+    if (targetTeamIds.has(current.teamId) && !foundByTeamId.has(current.teamId)) {
+      foundByTeamId.set(current.teamId, current)
+    }
+  })
+  return [...foundByTeamId.values()]
+}
+
+export function collectTeamIdsUnderPersonnelNode(node: PersonnelNode): string[] {
+  const teamIds = new Set<string>()
+  walkPersonnelTree(node, (current) => {
+    if (current.isTeamGroup && current.teamId) {
+      teamIds.add(current.teamId)
+    }
+  })
+  return [...teamIds]
+}
+
+export function collectMembershipManagedTeams(
+  root: PersonnelNode,
+  membershipTeamIds: Iterable<string>,
+): CommissionTeamOption[] {
+  const teamNodes = findPersonnelTeamNodes(root, membershipTeamIds)
+  return mergeCommissionTeamOptions(...teamNodes.map((node) => collectTeamsUnderPersonnelNode(node)))
+}
+
+export function collectMembershipManagedTeamIds(
+  root: PersonnelNode,
+  membershipTeamIds: Iterable<string>,
+): string[] {
+  const teamNodes = findPersonnelTeamNodes(root, membershipTeamIds)
+  const uniqueTeamIds = new Set<string>()
+  for (const node of teamNodes) {
+    for (const teamId of collectTeamIdsUnderPersonnelNode(node)) {
+      uniqueTeamIds.add(teamId)
+    }
+  }
+  return [...uniqueTeamIds]
 }
 
 export function mergeCommissionTeamOptions(

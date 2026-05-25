@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
+import { Pagination as DataPagination } from "@/components/shared/pagination"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -83,6 +84,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"))
   const [teamFilter, setTeamFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
   const [teams, setTeams] = useState<OrgTeam[]>([])
   const [plans, setPlans] = useState<TeamMonthlyProfitPlan[]>([])
   const [loading, setLoading] = useState(true)
@@ -92,6 +94,8 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [assignTeamId, setAssignTeamId] = useState("")
   const [assigning, setAssigning] = useState(false)
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(() => new Set())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   const [importOpen, setImportOpen] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -116,6 +120,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       setTeams(teamList)
       setPlans(planList)
       setSelectedPlanIds(new Set())
+      setCurrentPage(1)
     } catch (err) {
       console.error("Failed to load organization profit plans:", err)
       setPlans([])
@@ -128,20 +133,50 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     void loadData()
   }, [loadData])
 
+  const filteredPlans = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return plans
+
+    return plans.filter((plan) =>
+      [plan.appLabel, plan.appId, plan.appStoreId]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    )
+  }, [plans, searchQuery])
+
   const totals = useMemo(() => {
-    const planned = plans.reduce((sum, plan) => sum + plan.plannedProfit, 0)
-    const actual = plans.reduce((sum, plan) => sum + plan.actualProfit, 0)
+    const planned = filteredPlans.reduce((sum, plan) => sum + plan.plannedProfit, 0)
+    const actual = filteredPlans.reduce((sum, plan) => sum + plan.actualProfit, 0)
     const completion = planned > 0 ? Math.round((actual / planned) * 10000) / 100 : null
     return { planned, actual, completion }
-  }, [plans])
+  }, [filteredPlans])
 
   const summaryStatus = getStatus(totals.completion)
 
   const selectedPlans = useMemo(
-    () => plans.filter((plan) => selectedPlanIds.has(plan.id)),
-    [plans, selectedPlanIds],
+    () => filteredPlans.filter((plan) => selectedPlanIds.has(plan.id)),
+    [filteredPlans, selectedPlanIds],
   )
-  const allPlansSelected = plans.length > 0 && selectedPlans.length === plans.length
+  const allPlansSelected = filteredPlans.length > 0 && selectedPlans.length === filteredPlans.length
+  const totalPages = Math.max(1, Math.ceil(filteredPlans.length / pageSize))
+  const paginatedPlans = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredPlans.slice(startIndex, startIndex + pageSize)
+  }, [filteredPlans, currentPage, pageSize])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [month, teamFilter, pageSize, searchQuery])
+
+  useEffect(() => {
+    setSelectedPlanIds(new Set())
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const togglePlanSelection = (planId: string, checked: boolean) => {
     setSelectedPlanIds((prev) => {
@@ -157,7 +192,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       setSelectedPlanIds(new Set())
       return
     }
-    setSelectedPlanIds(new Set(plans.map((plan) => plan.id)))
+    setSelectedPlanIds(new Set(filteredPlans.map((plan) => plan.id)))
   }
 
   const openAssignDialog = (plansToAssign: TeamMonthlyProfitPlan[]) => {
@@ -332,22 +367,34 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1.5">
-              <Label htmlFor="org-profit-team">Team</Label>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger id="org-profit-team" className="w-[220px] bg-white">
-                  <SelectValue placeholder="All teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All teams</SelectItem>
-                  <SelectItem value="unassigned">Unassigned Team</SelectItem>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="org-profit-team">Team</Label>
+                <Select value={teamFilter} onValueChange={setTeamFilter}>
+                  <SelectTrigger id="org-profit-team" className="w-[220px] bg-white">
+                    <SelectValue placeholder="All teams" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All teams</SelectItem>
+                    <SelectItem value="unassigned">Unassigned Team</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-profit-search">Search app</Label>
+                <Input
+                  id="org-profit-search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="App name, App ID, or Store ID"
+                  className="w-full bg-white sm:w-[280px]"
+                />
+              </div>
             </div>
 
             {canManage ? (
@@ -436,17 +483,19 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plans.length === 0 ? (
+                  {filteredPlans.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={canManage ? 8 : 7}
                         className="py-10 text-center text-sm text-slate-500"
                       >
-                        No profit plans found for the selected filters.
+                        {searchQuery.trim()
+                          ? "No profit plans match your search."
+                          : "No profit plans found for the selected filters."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    plans.map((plan) => {
+                    paginatedPlans.map((plan) => {
                       const status = getStatus(plan.completionPercent)
                       const unassigned = isUnassignedPlan(plan)
                       const isSelected = selectedPlanIds.has(plan.id)
@@ -497,6 +546,21 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               </Table>
             </div>
           )}
+
+          {!loading && filteredPlans.length > 0 ? (
+            <DataPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredPlans.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size)
+                setCurrentPage(1)
+              }}
+              itemName="plans"
+            />
+          ) : null}
         </CardContent>
       </Card>
 
