@@ -6,7 +6,6 @@ import type { CustomReportSaved } from "@/types/reports"
 
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
-const FILTER_COMMISSION_USER = "Commission User"
 const FILTER_COMMISSION_TEAM = "Team"
 
 export type DateFilterMode = "preset" | "month" | "custom"
@@ -21,7 +20,6 @@ export interface ApplySavedCustomReportOptions {
   setSelectedMetrics: (ids: string[]) => void
   setSelectedApps: (ids: string[]) => void
   setMetricFilters: (filters: CustomReportSaved["filters"]["metricFilters"]) => void
-  setCommissionUser: (value: string) => void
   setCommissionTeam?: (value: string) => void
   setSortColumn: (column: string) => void
   setSortDirection: (dir: "asc" | "desc") => void
@@ -57,7 +55,6 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
   options.setSelectedParameters([...report.dimensions])
   options.setSelectedMetrics([...report.metrics])
   options.setMetricFilters(filters.metricFilters ?? [])
-  options.setCommissionUser(filters.commissionUser ?? "All")
   options.setCommissionTeam?.(filters.commissionTeamId ?? "All")
   options.setSortColumn(filters.sortBy ?? "date")
   options.setSortDirection(filters.sortDir === "asc" ? "asc" : "desc")
@@ -76,10 +73,7 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
       options.setDateFilterMode("month")
       options.setSelectedMonth(month)
       const start = month
-      const endRaw = endOfMonth(month)
-      const today = new Date()
-      today.setHours(23, 59, 59, 999)
-      const end = endRaw > today ? today : endRaw
+      const end = endOfMonth(month)
       options.setStartDate(start)
       options.setEndDate(end)
       activeFilters = upsertActiveFilter(
@@ -104,13 +98,6 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
     options.setEndDate(to)
     const label = `${format(from, "M/d/yyyy", { locale: enUS })} – ${format(to, "M/d/yyyy", { locale: enUS })}`
     activeFilters = upsertActiveFilter(activeFilters, FILTER_DATE_RANGE, label)
-  }
-
-  const commissionLabel = filters.commissionUser && filters.commissionUser !== "All"
-    ? filters.commissionUser
-    : "All"
-  if (commissionLabel !== "All") {
-    activeFilters = upsertActiveFilter(activeFilters, FILTER_COMMISSION_USER, commissionLabel)
   }
 
   options.setActiveFilters(activeFilters)

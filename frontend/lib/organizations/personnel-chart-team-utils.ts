@@ -8,18 +8,28 @@ function statusFromMember(status?: string): PersonnelStatus {
   return (status === "inactive" || status === "invited" ? status : "active") as PersonnelStatus
 }
 
-/** Persisted chart: team container only — no embedded members. */
+function isGeneratedTeamRuntimeNode(nodeId: string, teamId: string): boolean {
+  return (
+    nodeId.startsWith(`team-${teamId}-lead-`) ||
+    nodeId.startsWith(`team-${teamId}-member-`)
+  )
+}
+
+/** Persisted chart keeps structural team subtrees, but strips hydrated runtime members. */
 export function stripTeamMemberChildrenForPersist(node: PersonnelNode): PersonnelNode {
+  const children = (node.children ?? [])
+    .filter((child) => !(node.isTeamGroup && node.teamId && isGeneratedTeamRuntimeNode(child.id, node.teamId)))
+    .map(stripTeamMemberChildrenForPersist)
+
   if (node.isTeamGroup && node.teamId) {
     return {
       ...node,
-      children: undefined,
+      children: children.length > 0 ? children : undefined,
       directReports: undefined,
       isTeamLead: undefined,
     }
   }
 
-  const children = (node.children ?? []).map(stripTeamMemberChildrenForPersist)
   return {
     ...node,
     children: children.length > 0 ? children : undefined,
@@ -110,28 +120,41 @@ async function hydrateTeamNode(
       name: node.managerName ?? "",
       linkedUserId: node.managerId ?? undefined,
     } as PersonnelNode)
+  const structuralChildren = node.children?.length
+    ? await Promise.all(
+        node.children
+          .filter((child) => !isGeneratedTeamRuntimeNode(child.id, teamId))
+          .map((child) => hydrateTeamNode(child, node, orgTeamsById)),
+      )
+    : []
+  const hasStructuralChildren = structuralChildren.length > 0
 
   let members: TeamMember[] = []
-  try {
-    const response = await teamMembersApi.filterTeamMembers({
-      teamId,
-      page: 1,
-      pageSize: 500,
-      status: "active",
-    })
-    members = response.data?.items ?? []
-  } catch {
-    members = []
+  if (!hasStructuralChildren) {
+    try {
+      const response = await teamMembersApi.filterTeamMembers({
+        teamId,
+        page: 1,
+        pageSize: 500,
+        status: "active",
+      })
+      members = response.data?.items ?? []
+    } catch {
+      members = []
+    }
   }
 
-  const hydratedChildren = buildTeamMemberNodes(
-    teamId,
-    teamName,
-    teamChartId,
-    chartParent,
-    members,
-    teamMeta?.userId,
-  )
+  const hydratedChildren = hasStructuralChildren
+    ? []
+    : buildTeamMemberNodes(
+        teamId,
+        teamName,
+        teamChartId,
+        chartParent,
+        members,
+        teamMeta?.userId,
+      )
+  const mergedChildren = hasStructuralChildren ? structuralChildren : [...hydratedChildren, ...structuralChildren]
 
   return {
     ...node,
@@ -141,8 +164,8 @@ async function hydrateTeamNode(
     title: teamMeta?.memberCount
       ? `${teamMeta.memberCount} members`
       : node.title ?? `${members.length} members`,
-    children: hydratedChildren.length > 0 ? hydratedChildren : undefined,
-    directReports: hydratedChildren.length > 0 ? 1 : undefined,
+    children: mergedChildren.length > 0 ? mergedChildren : undefined,
+    directReports: mergedChildren.length > 0 ? mergedChildren.length : undefined,
   }
 }
 
