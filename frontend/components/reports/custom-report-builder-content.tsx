@@ -1,7 +1,7 @@
 "use client"
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   closestCenter,
   DndContext,
@@ -78,6 +78,7 @@ import {
   GripVertical,
   Pin,
   PinOff,
+  Trash2,
 } from "lucide-react"
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
@@ -121,10 +122,10 @@ type DateFilterMode = "preset" | "month" | "custom"
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
 const FILTER_COMMISSION_TEAM = "Team"
+const HIDDEN_PARAMETER_IDS = new Set(["publisher"])
 
 const DEFAULT_PARAMETERS: CustomReportCatalogItem[] = [
   { id: "app", label: "App", category: "Core" },
-  { id: "publisher", label: "Publisher", category: "Core" },
   { id: "date", label: "Date", category: "Time" },
   { id: "platform", label: "Platform", category: "Core" },
 ]
@@ -490,6 +491,10 @@ function getMetricFilterLabel(filter: CustomReportMetricFilter, metrics: CustomR
   return `${metricLabel} ${conditionLabel} ${filter.value}`
 }
 
+function filterVisibleParameters(parameters: CustomReportCatalogItem[]): CustomReportCatalogItem[] {
+  return parameters.filter((parameter) => !HIDDEN_PARAMETER_IDS.has(parameter.id))
+}
+
 function defaultCustomReportName(): string {
   return `Custom Report - ${format(new Date(), "yyyyMMdd")}`
 }
@@ -511,6 +516,7 @@ function escapeExcelHtml(value: unknown): string {
 }
 
 export function CustomReportBuilderContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const reportIdFromUrl = searchParams.get("reportId")
   const folderFromUrl = searchParams.get("folder")
@@ -573,6 +579,7 @@ export function CustomReportBuilderContent() {
   const canScopeManagedTeams = canManageCommission || commissionTeams.length > 0
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [saveReportName, setSaveReportName] = useState(defaultCustomReportName)
   const [saveReportFolder, setSaveReportFolder] = useState("")
   const [availableFolders, setAvailableFolders] = useState<string[]>([])
@@ -583,6 +590,7 @@ export function CustomReportBuilderContent() {
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
   const [isPinned, setIsPinned] = useState(false)
   const [pinningReport, setPinningReport] = useState(false)
+  const [deletingReport, setDeletingReport] = useState(false)
   const [appliedReportQuery, setAppliedReportQuery] = useState<AppliedReportQueryState | null>(null)
   const [loadingSavedReport, setLoadingSavedReport] = useState(false)
   const [savingReport, setSavingReport] = useState(false)
@@ -608,10 +616,18 @@ export function CustomReportBuilderContent() {
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
-      if (c.dimensions?.length) setCatalogParameters(c.dimensions)
+      if (c.dimensions?.length) setCatalogParameters(filterVisibleParameters(c.dimensions))
       if (c.metrics?.length) setCatalogMetrics(c.metrics)
     }).catch(() => {
       /* use defaults */
+    })
+  }, [])
+
+  useEffect(() => {
+    setSelectedParameters((prev) => {
+      const next = prev.filter((parameterId) => !HIDDEN_PARAMETER_IDS.has(parameterId))
+      if (next.length === 0) return ["app"]
+      return next.length === prev.length ? prev : next
     })
   }, [])
 
@@ -1132,6 +1148,26 @@ export function CustomReportBuilderContent() {
       toast.error(message)
     } finally {
       setPinningReport(false)
+    }
+  }
+
+  const handleDeleteReport = async () => {
+    if (!savedReportId) return
+
+    setDeletingReport(true)
+    try {
+      await reportsApi.deleteSaved(savedReportId)
+      if (isPinned) notifyPinnedCustomReportsChanged()
+      invalidateCache("custom_reports_saved_list")
+      invalidateCache("custom_reports_folders_list")
+      setDeleteDialogOpen(false)
+      toast.success("Report deleted")
+      router.push("/reports")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete report"
+      toast.error(message)
+    } finally {
+      setDeletingReport(false)
     }
   }
 
@@ -1714,6 +1750,42 @@ export function CustomReportBuilderContent() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!deletingReport) setDeleteDialogOpen(open)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete report</DialogTitle>
+            <DialogDescription>
+              {savedReportId
+                ? `Delete "${saveReportName.trim() || "this report"}"? This action cannot be undone.`
+                : "Delete this report? This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deletingReport}
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletingReport}
+              onClick={() => void handleDeleteReport()}
+            >
+              {deletingReport ? "Deleting…" : "Delete report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -1742,9 +1814,21 @@ export function CustomReportBuilderContent() {
             <Button
               type="button"
               variant="outline"
+              className="h-10 gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              disabled={deletingReport || savingReport || loadingSavedReport || pinningReport}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          ) : null}
+          {savedReportId ? (
+            <Button
+              type="button"
+              variant="outline"
               size="icon"
               className="h-10 w-10 shrink-0"
-              disabled={pinningReport || savingReport || loadingSavedReport}
+              disabled={pinningReport || savingReport || loadingSavedReport || deletingReport}
               onClick={() => void handleTogglePin()}
               title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
               aria-label={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
@@ -1755,7 +1839,7 @@ export function CustomReportBuilderContent() {
           <Button
             className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
             type="button"
-            disabled={savingReport || loadingSavedReport}
+            disabled={savingReport || loadingSavedReport || deletingReport}
             onClick={handleSaveReportClick}
           >
             <Save className="w-4 h-4" />
