@@ -13,7 +13,7 @@ export function useCustomReportQuery(options: {
   metrics: string[]
   revenueSource: string
   metricFilters?: CustomReportMetricFilter[]
-  commissionUsernames: string[] | null
+  commissionUsernames?: string[] | null
   sortBy: string
   sortDir: "asc" | "desc"
   enabled?: boolean
@@ -26,7 +26,6 @@ export function useCustomReportQuery(options: {
     metrics,
     revenueSource,
     metricFilters = [],
-    commissionUsernames,
     sortBy,
     sortDir,
     enabled = true,
@@ -41,7 +40,6 @@ export function useCustomReportQuery(options: {
   const dimensionsKey = [...dimensions].sort().join(",")
   const metricsKey = [...metrics].sort().join(",")
   const metricFiltersKey = JSON.stringify(metricFilters)
-  const commissionKey = commissionUsernames?.join(",") ?? ""
 
   useEffect(() => {
     if (!enabled || dimensions.length === 0 || metrics.length === 0 || selectedAppIds.length === 0) {
@@ -65,7 +63,6 @@ export function useCustomReportQuery(options: {
           metrics: metricsKey ? metricsKey.split(",") : [],
           revenueSource,
           metricFilters,
-          commissionUsernames,
           sortBy,
           sortDir,
         })
@@ -90,7 +87,6 @@ export function useCustomReportQuery(options: {
     metricsKey,
     metricFiltersKey,
     revenueSource,
-    commissionKey,
     sortBy,
     sortDir,
     // Keep dependency array length stable across Fast Refresh while using canonical keys,
@@ -99,7 +95,6 @@ export function useCustomReportQuery(options: {
     dimensionsKey,
     metricsKey,
     metricFiltersKey,
-    commissionKey,
   ])
 
   return { data, loading, error }
