@@ -25,7 +25,7 @@ import { insightApi } from "@/lib/api/services"
 import { useToast } from "@/hooks/use-toast"
 import type { InsightTemplate } from "@/types/api"
 
-const STORAGE_KEY = "mediationpro.insightGlobalSettings.v1"
+const STORAGE_KEY = "nexus.insightGlobalSettings.v1"
 
 type TriggerType = "pipeline" | "fixed" | "manual"
 

@@ -212,7 +212,7 @@ export function UserDropdown() {
           {/* Support Section */}
           <DropdownMenuItem
             className="gap-2 cursor-pointer"
-            onClick={() => window.open("https://docs.mediationpro.io", "_blank")}
+            onClick={() => window.open("https://docs.nexus.io", "_blank")}
           >
             <HelpCircle className="w-4 h-4" />
             Help & Documentation

@@ -1,7 +1,9 @@
 import type {
+  AdVariantFormState,
   CreateMetaCampaignRequestDto,
   GroupedValidationErrors,
   MetaCampaignRequestDetailDto,
+  MetaAdVariantDto,
   MetaCarouselCardDraftDto,
   MetaCarouselCardFormState,
   MetaFlexibleAssetFormState,
@@ -287,53 +289,53 @@ function getFlexibleCreative(creative: MetaCreativeDraftDto) {
   }
 }
 
-export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?: string): CreateMetaCampaignRequestDto {
-  const budgets = parseBudgetStrategy(form)
+/** Build a MetaCreativeDraftDto from any AdVariantFormState (or the flat fields of MetaRequestFormState). */
+export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreativeDraftDto {
   const creativeCommon = {
-    name: form.creativeName.trim(),
-    pageId: form.facebookPageId.trim() || null,
-    instagramActorId: form.instagramActorId.trim() || null,
+    name: v.creativeName.trim(),
+    pageId: v.facebookPageId.trim() || null,
+    instagramActorId: v.instagramActorId.trim() || null,
   }
 
   const creative: MetaCreativeDraftDto = {
-    type: form.creativeType,
+    type: v.creativeType,
     common: creativeCommon,
   }
 
-  if (form.creativeType === "SINGLE_VIDEO") {
+  if (v.creativeType === "SINGLE_VIDEO") {
     creative.singleVideo = {
-      message: getFirstVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText) || null,
-      messages: sanitizeTextVariations(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText),
-      headline: getFirstVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || null,
-      headlines: sanitizeTextVariations(form.singleVideoHeadlines, form.singleVideoHeadline),
-      description: form.singleVideoDescription.trim() || null,
-      callToActionType: form.singleVideoCallToAction.trim() || null,
-      linkUrl: form.singleVideoLinkUrl.trim() || null,
-      video: buildMediaSource(form.singleVideoVideo, "video"),
-      thumbnail: buildMediaSource(form.singleVideoThumbnail, "image"),
+      message: getFirstVariation(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText) || null,
+      messages: sanitizeTextVariations(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText),
+      headline: getFirstVariation(v.singleVideoHeadlines, v.singleVideoHeadline) || null,
+      headlines: sanitizeTextVariations(v.singleVideoHeadlines, v.singleVideoHeadline),
+      description: v.singleVideoDescription.trim() || null,
+      callToActionType: v.singleVideoCallToAction.trim() || null,
+      linkUrl: v.singleVideoLinkUrl.trim() || null,
+      video: buildMediaSource(v.singleVideoVideo, "video"),
+      thumbnail: buildMediaSource(v.singleVideoThumbnail, "image"),
     }
-  } else if (form.creativeType === "CAROUSEL_IMAGE") {
+  } else if (v.creativeType === "CAROUSEL_IMAGE") {
     creative.carousel = {
-      message: form.carouselPrimaryText.trim() || null,
-      callToActionType: form.carouselCallToAction.trim() || null,
-      cards: form.carouselCards.map((card) => ({
+      message: v.carouselPrimaryText.trim() || null,
+      callToActionType: v.carouselCallToAction.trim() || null,
+      cards: v.carouselCards.map((card) => ({
         headline: card.headline.trim() || null,
         description: card.description.trim() || null,
         linkUrl: card.linkUrl.trim() || null,
         image: buildMediaSource(card.image, "image"),
       })),
     }
-  } else if (form.creativeType === "EXISTING_POST") {
+  } else if (v.creativeType === "EXISTING_POST") {
     creative.existingPost = {
-      sourcePostId: form.existingPostId.trim() || null,
+      sourcePostId: v.existingPostId.trim() || null,
     }
-  } else if (form.creativeType === "FLEXIBLE") {
+  } else if (v.creativeType === "FLEXIBLE") {
     creative.flexible = {
-      primaryTexts: sanitizeTextVariations(form.flexiblePrimaryTexts),
-      headlines: sanitizeTextVariations(form.flexibleHeadlines),
-      callToActionType: form.flexibleCallToAction.trim() || null,
-      linkUrl: form.flexibleLinkUrl.trim() || null,
-      assets: form.flexibleAssets.map((asset) => ({
+      primaryTexts: sanitizeTextVariations(v.flexiblePrimaryTexts),
+      headlines: sanitizeTextVariations(v.flexibleHeadlines),
+      callToActionType: v.flexibleCallToAction.trim() || null,
+      linkUrl: v.flexibleLinkUrl.trim() || null,
+      assets: v.flexibleAssets.map((asset) => ({
         assetType: asset.assetType,
         image: asset.assetType === "IMAGE" ? buildMediaSource(asset.image, "image") : null,
         video: asset.assetType === "VIDEO" ? buildMediaSource(asset.video, "video") : null,
@@ -342,16 +344,136 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
     }
   } else {
     creative.singleImage = {
-      message: getFirstVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) || null,
-      messages: sanitizeTextVariations(form.singleImagePrimaryTexts, form.singleImagePrimaryText),
-      headline: getFirstVariation(form.singleImageHeadlines, form.singleImageHeadline) || null,
-      headlines: sanitizeTextVariations(form.singleImageHeadlines, form.singleImageHeadline),
-      description: form.singleImageDescription.trim() || null,
-      callToActionType: form.singleImageCallToAction.trim() || null,
-      linkUrl: form.singleImageLinkUrl.trim() || null,
-      image: buildMediaSource(form.singleImageImage, "image"),
+      message: getFirstVariation(v.singleImagePrimaryTexts, v.singleImagePrimaryText) || null,
+      messages: sanitizeTextVariations(v.singleImagePrimaryTexts, v.singleImagePrimaryText),
+      headline: getFirstVariation(v.singleImageHeadlines, v.singleImageHeadline) || null,
+      headlines: sanitizeTextVariations(v.singleImageHeadlines, v.singleImageHeadline),
+      description: v.singleImageDescription.trim() || null,
+      callToActionType: v.singleImageCallToAction.trim() || null,
+      linkUrl: v.singleImageLinkUrl.trim() || null,
+      image: buildMediaSource(v.singleImageImage, "image"),
     }
   }
+
+  return creative
+}
+
+/** Build an AdVariantDto from an AdVariantFormState. */
+function variantFormStateToDto(v: AdVariantFormState): MetaAdVariantDto {
+  return {
+    sequenceNumber: v.sequenceNumber,
+    creative: variantFormStateToCreativeDto(v),
+    ad: {
+      name: v.adName.trim(),
+      status: "PAUSED",
+      trackingSpecsJson: v.trackingSpecs.trim() || null,
+    },
+  }
+}
+
+/** Extract AdVariantFormState-shaped fields from the flat MetaRequestFormState (variant 1). */
+function primaryVariantFromFormState(form: MetaRequestFormState): AdVariantFormState {
+  return {
+    sequenceNumber: 1,
+    creativeType: form.creativeType,
+    creativeName: form.creativeName,
+    facebookPageId: form.facebookPageId,
+    instagramActorId: form.instagramActorId,
+    singleImagePrimaryText: form.singleImagePrimaryText,
+    singleImagePrimaryTexts: form.singleImagePrimaryTexts,
+    singleImageHeadline: form.singleImageHeadline,
+    singleImageHeadlines: form.singleImageHeadlines,
+    singleImageDescription: form.singleImageDescription,
+    singleImageCallToAction: form.singleImageCallToAction,
+    singleImageLinkUrl: form.singleImageLinkUrl,
+    singleImageImage: form.singleImageImage,
+    singleVideoPrimaryText: form.singleVideoPrimaryText,
+    singleVideoPrimaryTexts: form.singleVideoPrimaryTexts,
+    singleVideoHeadline: form.singleVideoHeadline,
+    singleVideoHeadlines: form.singleVideoHeadlines,
+    singleVideoDescription: form.singleVideoDescription,
+    singleVideoCallToAction: form.singleVideoCallToAction,
+    singleVideoLinkUrl: form.singleVideoLinkUrl,
+    singleVideoVideo: form.singleVideoVideo,
+    singleVideoThumbnail: form.singleVideoThumbnail,
+    carouselPrimaryText: form.carouselPrimaryText,
+    carouselCallToAction: form.carouselCallToAction,
+    carouselCards: form.carouselCards,
+    flexiblePrimaryTexts: form.flexiblePrimaryTexts,
+    flexibleHeadlines: form.flexibleHeadlines,
+    flexibleCallToAction: form.flexibleCallToAction,
+    flexibleLinkUrl: form.flexibleLinkUrl,
+    flexibleAssets: form.flexibleAssets,
+    existingPostId: form.existingPostId,
+    adName: form.adName,
+    trackingSpecs: form.trackingSpecs,
+  }
+}
+
+/**
+ * Compose an additional variant for serialization by overlaying the variant's per-variant
+ * fields (media pickers) on top of the shared form fields.
+ *
+ * This implements "shared text + per-variant media": text/page/type/CTA/link URL/description
+ * always come from the form (= primary variant), so all ads in a request always have
+ * consistent shared copy. Only the image/video differs per variant.
+ */
+function composeAdditionalVariantForSerialization(
+  v: AdVariantFormState,
+  form: MetaRequestFormState,
+): AdVariantFormState {
+  return {
+    ...primaryVariantFromFormState(form), // shared: type, page, instagram, text fields, CTAs, link URLs, tracking specs
+    sequenceNumber: v.sequenceNumber,
+    // Creative Name / Ad Name inherit from form here; numeric suffix is applied later
+    // by applyVariantNumberSuffixIfMulti so all variants follow the same naming rule.
+    creativeName: form.creativeName,
+    adName: form.adName,
+    // Per-variant media (only meaningful for SINGLE_IMAGE and SINGLE_VIDEO):
+    singleImageImage: v.singleImageImage,
+    singleVideoVideo: v.singleVideoVideo,
+    singleVideoThumbnail: v.singleVideoThumbnail,
+  }
+}
+
+/**
+ * Append `_{sequenceNumber}` to creative name and ad name when there are multiple variants,
+ * so Meta receives unique-but-correlated names (e.g. `MyAd_1`, `MyAd_2`, `MyAd_3`).
+ *
+ * When there is only 1 variant total, names pass through unchanged — no noise for the
+ * single-variant case.
+ */
+function applyVariantNumberSuffixIfMulti(
+  v: AdVariantFormState,
+  totalVariants: number,
+): AdVariantFormState {
+  if (totalVariants <= 1) return v
+  const suffix = `_${v.sequenceNumber}`
+  const baseCreativeName = v.creativeName.trim()
+  const baseAdName = v.adName.trim()
+  return {
+    ...v,
+    creativeName: baseCreativeName ? `${baseCreativeName}${suffix}` : "",
+    adName: baseAdName ? `${baseAdName}${suffix}` : "",
+  }
+}
+
+export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?: string): CreateMetaCampaignRequestDto {
+  const budgets = parseBudgetStrategy(form)
+
+  // Build all variants: variant 1 = primary (flat form fields), variant 2+ = additionalVariants.
+  // Additional variants always inherit shared text/page/type fields from the form.
+  // When there are multiple variants, append `_1`, `_2`, `_3` etc. to all creative/ad names.
+  const totalVariants = 1 + (form.additionalVariants?.length ?? 0)
+  const primaryVariant = primaryVariantFromFormState(form)
+  const adVariants: MetaAdVariantDto[] = [
+    variantFormStateToDto(applyVariantNumberSuffixIfMulti(primaryVariant, totalVariants)),
+    ...(form.additionalVariants ?? []).map((v) =>
+      variantFormStateToDto(
+        applyVariantNumberSuffixIfMulti(composeAdditionalVariantForSerialization(v, form), totalVariants),
+      ),
+    ),
+  ]
 
   return {
     metaAdAccountId: Number(form.adAccountId),
@@ -405,12 +527,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       facebookPositions: form.placementMode === "MANUAL" ? form.facebookPositions : [],
       instagramPositions: form.placementMode === "MANUAL" ? form.instagramPositions : [],
     },
-    creative,
-    ad: {
-      name: form.adName.trim(),
-      status: "PAUSED",
-      trackingSpecsJson: form.trackingSpecs.trim() || null,
-    },
+    adVariants,
   }
 }
 
@@ -422,8 +539,66 @@ export function formStateToUpdateDto(form: MetaRequestFormState): UpdateMetaCamp
     paidMediaAppBindingId: createDto.paidMediaAppBindingId,
     campaign: createDto.campaign,
     adSet: createDto.adSet,
-    creative: createDto.creative,
-    ad: createDto.ad,
+    adVariants: createDto.adVariants,
+  }
+}
+
+/** Map a single MetaAdVariantDto (from payload) → AdVariantFormState for the form. */
+function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFormState {
+  const creative = variant.creative ?? {}
+  const creativeType = (creative.type ?? "SINGLE_IMAGE") as import("@/types/meta-ads").MetaCreativeType
+  const common = getCreativeCommon(creative)
+  const singleImage = getSingleImageCreative(creative)
+  const singleVideo = getSingleVideoCreative(creative)
+  const carousel = getCarouselCreative(creative)
+  const flexible = getFlexibleCreative(creative)
+
+  return {
+    sequenceNumber: variant.sequenceNumber,
+    creativeType,
+    creativeName: common.name,
+    facebookPageId: common.pageId,
+    instagramActorId: common.instagramActorId,
+    singleImagePrimaryText: getFirstVariation(singleImage.messages, singleImage.message),
+    singleImagePrimaryTexts: sanitizeTextVariations(singleImage.messages, singleImage.message).length > 0 ? sanitizeTextVariations(singleImage.messages, singleImage.message) : [""],
+    singleImageHeadline: getFirstVariation(singleImage.headlines, singleImage.headline),
+    singleImageHeadlines: sanitizeTextVariations(singleImage.headlines, singleImage.headline).length > 0 ? sanitizeTextVariations(singleImage.headlines, singleImage.headline) : [""],
+    singleImageDescription: singleImage.description ?? "",
+    singleImageCallToAction: singleImage.callToActionType ?? "LEARN_MORE",
+    singleImageLinkUrl: singleImage.linkUrl ?? "",
+    singleImageImage: mediaSourceToSelection(singleImage.image, "image"),
+    singleVideoPrimaryText: getFirstVariation(singleVideo.messages, singleVideo.message),
+    singleVideoPrimaryTexts: sanitizeTextVariations(singleVideo.messages, singleVideo.message).length > 0 ? sanitizeTextVariations(singleVideo.messages, singleVideo.message) : [""],
+    singleVideoHeadline: getFirstVariation(singleVideo.headlines, singleVideo.headline),
+    singleVideoHeadlines: sanitizeTextVariations(singleVideo.headlines, singleVideo.headline).length > 0 ? sanitizeTextVariations(singleVideo.headlines, singleVideo.headline) : [""],
+    singleVideoDescription: singleVideo.description ?? "",
+    singleVideoCallToAction: singleVideo.callToActionType ?? "LEARN_MORE",
+    singleVideoLinkUrl: singleVideo.linkUrl ?? "",
+    singleVideoVideo: mediaSourceToSelection(singleVideo.video, "video"),
+    singleVideoThumbnail: mediaSourceToSelection(singleVideo.thumbnail, "image"),
+    carouselPrimaryText: carousel.message ?? "",
+    carouselCallToAction: carousel.callToActionType ?? "LEARN_MORE",
+    carouselCards: (carousel.cards ?? []).map((card) => ({
+      id: createId(),
+      headline: card.headline ?? "",
+      description: card.description ?? "",
+      linkUrl: card.linkUrl ?? "",
+      image: mediaSourceToSelection(card.image, "image"),
+    })),
+    flexiblePrimaryTexts: sanitizeTextVariations(flexible.primaryTexts).length > 0 ? sanitizeTextVariations(flexible.primaryTexts) : [""],
+    flexibleHeadlines: sanitizeTextVariations(flexible.headlines).length > 0 ? sanitizeTextVariations(flexible.headlines) : [""],
+    flexibleCallToAction: flexible.callToActionType ?? "LEARN_MORE",
+    flexibleLinkUrl: flexible.linkUrl ?? "",
+    flexibleAssets: (flexible.assets ?? []).map((asset) => ({
+      id: createId(),
+      assetType: (asset.assetType ?? "IMAGE").trim().toUpperCase() === "VIDEO" ? "VIDEO" : "IMAGE",
+      image: mediaSourceToSelection(asset.image, "image"),
+      video: mediaSourceToSelection(asset.video, "video"),
+      thumbnail: mediaSourceToSelection(asset.thumbnail, "image"),
+    })),
+    existingPostId: creative.existingPost?.sourcePostId ?? "",
+    adName: variant.ad?.name ?? "",
+    trackingSpecs: variant.ad?.trackingSpecsJson ?? "",
   }
 }
 
@@ -437,14 +612,21 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
         ? "FEMALE"
         : "MALE"
 
-  const creativeType = payload.creative.type ?? "SINGLE_IMAGE"
   const geoMode = inferGeoModeFromDraft(payload.adSet)
   const performanceGoal = inferPerformanceGoalState(payload.adSet)
-  const common = getCreativeCommon(payload.creative)
-  const singleImage = getSingleImageCreative(payload.creative)
-  const singleVideo = getSingleVideoCreative(payload.creative)
-  const carousel = getCarouselCreative(payload.creative)
-  const flexible = getFlexibleCreative(payload.creative)
+
+  // Resolve primary variant: new payloads use adVariants[0]; old payloads use top-level creative/ad
+  const firstVariantDto: MetaAdVariantDto = payload.adVariants?.[0] ?? {
+    sequenceNumber: 1,
+    creative: payload.creative ?? {},
+    ad: payload.ad ?? { name: "", status: "PAUSED" },
+  }
+  const { sequenceNumber: _primarySeq, ...primaryVariantFields } = adVariantDtoToVariantFormState(firstVariantDto)
+
+  // Additional variants from adVariants[1+]
+  const additionalVariants = (payload.adVariants ?? [])
+    .slice(1)
+    .map((v) => adVariantDtoToVariantFormState(v))
 
   return {
     adAccountId: detail.metaAdAccountId.toString(),
@@ -492,50 +674,9 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     advantageAudience: payload.adSet.advantageAudience ?? false,
     startTime: payload.adSet.startTime ? payload.adSet.startTime.slice(0, 16) : "",
     endTime: payload.adSet.endTime ? payload.adSet.endTime.slice(0, 16) : "",
-    creativeType,
-    creativeName: common.name,
-    facebookPageId: common.pageId,
-    instagramActorId: common.instagramActorId,
-    singleImagePrimaryText: getFirstVariation(singleImage.messages, singleImage.message),
-    singleImagePrimaryTexts: sanitizeTextVariations(singleImage.messages, singleImage.message).length > 0 ? sanitizeTextVariations(singleImage.messages, singleImage.message) : [""],
-    singleImageHeadline: getFirstVariation(singleImage.headlines, singleImage.headline),
-    singleImageHeadlines: sanitizeTextVariations(singleImage.headlines, singleImage.headline).length > 0 ? sanitizeTextVariations(singleImage.headlines, singleImage.headline) : [""],
-    singleImageDescription: singleImage.description ?? "",
-    singleImageCallToAction: singleImage.callToActionType ?? "LEARN_MORE",
-    singleImageLinkUrl: singleImage.linkUrl ?? "",
-    singleImageImage: mediaSourceToSelection(singleImage.image, "image"),
-    singleVideoPrimaryText: getFirstVariation(singleVideo.messages, singleVideo.message),
-    singleVideoPrimaryTexts: sanitizeTextVariations(singleVideo.messages, singleVideo.message).length > 0 ? sanitizeTextVariations(singleVideo.messages, singleVideo.message) : [""],
-    singleVideoHeadline: getFirstVariation(singleVideo.headlines, singleVideo.headline),
-    singleVideoHeadlines: sanitizeTextVariations(singleVideo.headlines, singleVideo.headline).length > 0 ? sanitizeTextVariations(singleVideo.headlines, singleVideo.headline) : [""],
-    singleVideoDescription: singleVideo.description ?? "",
-    singleVideoCallToAction: singleVideo.callToActionType ?? "LEARN_MORE",
-    singleVideoLinkUrl: singleVideo.linkUrl ?? "",
-    singleVideoVideo: mediaSourceToSelection(singleVideo.video, "video"),
-    singleVideoThumbnail: mediaSourceToSelection(singleVideo.thumbnail, "image"),
-    carouselPrimaryText: carousel.message ?? "",
-    carouselCallToAction: carousel.callToActionType ?? "LEARN_MORE",
-    carouselCards: (carousel.cards ?? []).map((card) => ({
-      id: createId(),
-      headline: card.headline ?? "",
-      description: card.description ?? "",
-      linkUrl: card.linkUrl ?? "",
-      image: mediaSourceToSelection(card.image, "image"),
-    })),
-    flexiblePrimaryTexts: sanitizeTextVariations(flexible.primaryTexts).length > 0 ? sanitizeTextVariations(flexible.primaryTexts) : [""],
-    flexibleHeadlines: sanitizeTextVariations(flexible.headlines).length > 0 ? sanitizeTextVariations(flexible.headlines) : [""],
-    flexibleCallToAction: flexible.callToActionType ?? "LEARN_MORE",
-    flexibleLinkUrl: flexible.linkUrl ?? "",
-    flexibleAssets: (flexible.assets ?? []).map((asset) => ({
-      id: createId(),
-      assetType: (asset.assetType ?? "IMAGE").trim().toUpperCase() === "VIDEO" ? "VIDEO" : "IMAGE",
-      image: mediaSourceToSelection(asset.image, "image"),
-      video: mediaSourceToSelection(asset.video, "video"),
-      thumbnail: mediaSourceToSelection(asset.thumbnail, "image"),
-    })),
-    existingPostId: payload.creative.existingPost?.sourcePostId ?? "",
-    adName: payload.ad.name ?? "",
-    trackingSpecs: payload.ad.trackingSpecsJson ?? "",
+    // Spread all creative + ad fields from primary variant (variant 1)
+    ...primaryVariantFields,
+    additionalVariants,
   }
 }
 export function groupValidationErrors(errors: string[]): GroupedValidationErrors {

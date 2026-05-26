@@ -23,6 +23,7 @@ type TikTokUploadKind = "image" | "video"
 type TikTokCreativeDraft = TikTokRequestFormState["ad"]
 
 const maxTikTokAdTexts = 5
+const supportedTikTokIdentityType = "BC_AUTH_TT"
 
 interface VideoRatioInfo {
   ratio: number
@@ -60,7 +61,15 @@ function splitCsv(value: string) {
 
 function normalizeIdentityType(value?: string | null) {
   const normalized = value?.trim().toUpperCase()
-  return !normalized || normalized === "CUSTOMIZED_USER" ? "AUTH_CODE" : normalized
+  return !normalized || normalized === "CUSTOMIZED_USER" ? supportedTikTokIdentityType : normalized
+}
+
+function isSupportedIdentity(identityType?: string | null, identityAuthorizedBcId?: string | null) {
+  return normalizeIdentityType(identityType) === supportedTikTokIdentityType && Boolean(identityAuthorizedBcId?.trim())
+}
+
+function isSupportedIdentityOption(option: TikTokIdentityOptionDto) {
+  return isSupportedIdentity(option.identityType, option.identityAuthorizedBcId)
 }
 
 function assetLabel(asset: TikTokRequestAssetDto | null, fallback?: string) {
@@ -306,24 +315,14 @@ export function CreativeSection({
             const imageUploadDisabledReason = !videoAssetId
               ? "Upload video before uploading the cover image."
               : "Video dimensions are loading before cover image validation."
+            const supportedIdentityOptions = identityOptions.filter(isSupportedIdentityOption)
             const selectedIdentityKey = identityOptionKey(creative.identityId, creative.identityType, creative.identityAuthorizedBcId)
-            const selectedIdentityKnown = identityOptions.some((option) => option.key === selectedIdentityKey)
+            const selectedIdentitySupported = isSupportedIdentity(creative.identityType, creative.identityAuthorizedBcId)
+            const selectedIdentityKnown = supportedIdentityOptions.some((option) => option.key === selectedIdentityKey)
             const identityEmptyMessage = form.tikTokAdAccountRowId
-              ? identityLoadError || "No usable identities found for this ad account."
+              ? identityLoadError || "No Business Center authorized TikTok identities found for this ad account."
               : "Select an ad account first."
-            const identitySelectOptions = selectedIdentityKey && !selectedIdentityKnown
-              ? [
-                {
-                  key: selectedIdentityKey,
-                  label: `${creative.identityId} (${normalizeIdentityType(creative.identityType)}, previously selected)`,
-                  identityId: creative.identityId ?? "",
-                  identityType: normalizeIdentityType(creative.identityType),
-                  identityAuthorizedBcId: creative.identityAuthorizedBcId,
-                  displayName: null,
-                } satisfies TikTokIdentityOptionDto,
-                ...identityOptions,
-              ]
-              : identityOptions
+            const identitySelectOptions = supportedIdentityOptions
             const videoPreview = getTikTokRequestAssetPreviewSource(videoAsset)
             const imagePreview = getTikTokRequestAssetPreviewSource(imageAsset)
             const libraryRatioMessage = videoMode === "library" && imageMode === "library" ? libraryRatioMismatchMessage(selectedLibraryVideo, selectedLibraryImage) : null
@@ -577,7 +576,7 @@ export function CreativeSection({
                             placeholder={identityLoading ? "Loading identities..." : "Select identity..."}
                             searchPlaceholder="Search by identity name, ID, type, BC ID..."
                             emptyMessage={identityEmptyMessage}
-                            disabled={!form.tikTokAdAccountRowId || identityLoading || identityOptions.length === 0}
+                            disabled={!form.tikTokAdAccountRowId || identityLoading || identitySelectOptions.length === 0}
                             onValueChange={(value) => {
                               const identity = identitySelectOptions.find((option) => option.key === value)
                               if (!identity) return
@@ -607,10 +606,10 @@ export function CreativeSection({
                               </div>
                             )}
                           />
-                          {form.tikTokAdAccountRowId && !identityLoading && identityOptions.length === 0 ? (
+                          {form.tikTokAdAccountRowId && !identityLoading && identitySelectOptions.length === 0 ? (
                             <p className="text-xs text-amber-700">{identityEmptyMessage}</p>
                           ) : selectedIdentityKey && !selectedIdentityKnown ? (
-                            <p className="text-xs text-amber-700">This identity is not available from TikTok anymore. Choose a current identity before submit.</p>
+                            <p className="text-xs text-amber-700">{selectedIdentitySupported ? "This identity is not available from TikTok anymore. Choose a current Business Center authorized identity before submit." : "The previously selected identity is not supported. Choose a Business Center authorized TikTok identity before submit."}</p>
                           ) : null}
                         </div>
                         <div className="space-y-2">

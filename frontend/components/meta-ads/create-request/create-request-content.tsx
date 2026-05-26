@@ -27,6 +27,7 @@ import {
   groupValidationErrors,
 } from "@/lib/meta-ads/mappers"
 import type {
+  AdVariantFormState,
   GroupedValidationErrors,
   MetaAppMappingDto,
   MetaCampaignRequestDetailDto,
@@ -49,6 +50,7 @@ import { AdSetBudgetSection } from "./section-adset-budget"
 import { CreativeSection } from "./section-creative"
 import { AdSection } from "./section-ad"
 import { RequestSummaryRail } from "./summary-rail"
+import { resolveMetaAppMappingPlatform } from "./platform"
 export type RequestFormState = MetaRequestFormState
 
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
@@ -150,6 +152,7 @@ function clearMetaLibrarySelection(selection: MetaRequestFormState["singleImageI
 function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): RequestFormState {
   return {
     ...state,
+    // Primary variant (flat fields)
     singleImageImage: clearMetaLibrarySelection(state.singleImageImage, state.adAccountId),
     singleVideoVideo: clearMetaLibrarySelection(state.singleVideoVideo, state.adAccountId),
     singleVideoThumbnail: clearMetaLibrarySelection(state.singleVideoThumbnail, state.adAccountId),
@@ -162,6 +165,23 @@ function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): Re
       image: clearMetaLibrarySelection(asset.image, state.adAccountId),
       video: clearMetaLibrarySelection(asset.video, state.adAccountId),
       thumbnail: clearMetaLibrarySelection(asset.thumbnail, state.adAccountId),
+    })),
+    // Additional variants
+    additionalVariants: state.additionalVariants.map((variant) => ({
+      ...variant,
+      singleImageImage: clearMetaLibrarySelection(variant.singleImageImage, state.adAccountId),
+      singleVideoVideo: clearMetaLibrarySelection(variant.singleVideoVideo, state.adAccountId),
+      singleVideoThumbnail: clearMetaLibrarySelection(variant.singleVideoThumbnail, state.adAccountId),
+      carouselCards: variant.carouselCards.map((card) => ({
+        ...card,
+        image: clearMetaLibrarySelection(card.image, state.adAccountId),
+      })),
+      flexibleAssets: variant.flexibleAssets.map((asset) => ({
+        ...asset,
+        image: clearMetaLibrarySelection(asset.image, state.adAccountId),
+        video: clearMetaLibrarySelection(asset.video, state.adAccountId),
+        thumbnail: clearMetaLibrarySelection(asset.thumbnail, state.adAccountId),
+      })),
     })),
   }
 }
@@ -236,6 +256,7 @@ function createDefaultFormState(): RequestFormState {
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
+    additionalVariants: [],
   })
 }
 
@@ -329,6 +350,7 @@ export function CreateRequestContent({ requestId }: Props) {
   const [loadedRequestId, setLoadedRequestId] = useState<number | null>(null)
   const [facebookPageSource, setFacebookPageSource] = useState<"promote_pages" | "access_token_all">("promote_pages")
   const [highlightedSection, setHighlightedSection] = useState<RequestSectionTarget | null>(null)
+  const [activeVariantTab, setActiveVariantTab] = useState("variant-1")
   const highlightTimeoutRef = useRef<number | null>(null)
 
   const {
@@ -418,6 +440,7 @@ export function CreateRequestContent({ requestId }: Props) {
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
     ?? referenceData?.appMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
+  const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
   const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
   const tokenState = deriveTokenState({
@@ -473,12 +496,159 @@ export function CreateRequestContent({ requestId }: Props) {
         next.campaignObjective = patch.objective
       }
 
+      // Variants only supported for SINGLE_IMAGE / SINGLE_VIDEO. If user switches to another type,
+      // drop any additional variants (they wouldn't have meaningful per-variant media for non-supported types).
+      if (
+        patch.creativeType &&
+        patch.creativeType !== previous.creativeType &&
+        patch.creativeType !== "SINGLE_IMAGE" &&
+        patch.creativeType !== "SINGLE_VIDEO" &&
+        next.additionalVariants.length > 0
+      ) {
+        next.additionalVariants = []
+      }
+
       const normalizedNext = patch.adAccountId && patch.adAccountId !== previous.adAccountId ? clearMetaLibrarySelectionsForAccountChange(next) : next
 
       return sanitizeRequestFormState(normalizedNext)
     })
 
     setIsDirty(true)
+  }
+
+  // ── Ad variant management ────────────────────────────────────────────
+  const totalVariants = 1 + form.additionalVariants.length
+  // Multi-variant ads only make sense when each variant has its own image/video.
+  // For CAROUSEL / FLEXIBLE / EXISTING_POST, force a single variant.
+  const supportsVariants = form.creativeType === "SINGLE_IMAGE" || form.creativeType === "SINGLE_VIDEO"
+  const canAddVariant = supportsVariants && totalVariants < 6
+  const maxSeqNumber = form.additionalVariants.reduce((max, v) => Math.max(max, v.sequenceNumber), 1)
+
+  // If the active variant tab disappears (e.g. user changed creative type), reset to variant-1.
+  useEffect(() => {
+    if (activeVariantTab === "variant-1") return
+    const seq = Number(activeVariantTab.replace("variant-", ""))
+    if (!Number.isFinite(seq) || !form.additionalVariants.some((v) => v.sequenceNumber === seq)) {
+      setActiveVariantTab("variant-1")
+    }
+  }, [activeVariantTab, form.additionalVariants])
+
+  const handleAddVariant = () => {
+    if (!canAddVariant) return
+    const newSeq = maxSeqNumber + 1
+    const newVariant: AdVariantFormState = {
+      sequenceNumber: newSeq,
+      creativeType: "SINGLE_IMAGE",
+      creativeName: "",
+      facebookPageId: form.facebookPageId,
+      instagramActorId: form.instagramActorId,
+      singleImagePrimaryText: "",
+      singleImagePrimaryTexts: [""],
+      singleImageHeadline: "",
+      singleImageHeadlines: [""],
+      singleImageDescription: "",
+      singleImageCallToAction: "LEARN_MORE",
+      singleImageLinkUrl: "",
+      singleImageImage: createEmptyMediaSelection("meta_ref"),
+      singleVideoPrimaryText: "",
+      singleVideoPrimaryTexts: [""],
+      singleVideoHeadline: "",
+      singleVideoHeadlines: [""],
+      singleVideoDescription: "",
+      singleVideoCallToAction: "LEARN_MORE",
+      singleVideoLinkUrl: "",
+      singleVideoVideo: createEmptyMediaSelection("meta_ref"),
+      singleVideoThumbnail: createEmptyMediaSelection("meta_ref"),
+      carouselPrimaryText: "",
+      carouselCallToAction: "LEARN_MORE",
+      carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
+      flexiblePrimaryTexts: [""],
+      flexibleHeadlines: [""],
+      flexibleCallToAction: "LEARN_MORE",
+      flexibleLinkUrl: "",
+      flexibleAssets: [createEmptyFlexibleAsset()],
+      existingPostId: "",
+      adName: "",
+      trackingSpecs: "",
+    }
+    updateForm({ additionalVariants: [...form.additionalVariants, newVariant] })
+    setActiveVariantTab(`variant-${newSeq}`)
+  }
+
+  /** Duplicate the primary variant (Variation #1 — backed by flat form fields). */
+  const handleDuplicatePrimaryVariant = () => {
+    if (!canAddVariant) return
+    const newSeq = maxSeqNumber + 1
+    const copy: AdVariantFormState = {
+      sequenceNumber: newSeq,
+      creativeType: form.creativeType,
+      creativeName: form.creativeName ? `${form.creativeName} (Copy)` : "",
+      facebookPageId: form.facebookPageId,
+      instagramActorId: form.instagramActorId,
+      singleImagePrimaryText: form.singleImagePrimaryText,
+      singleImagePrimaryTexts: [...form.singleImagePrimaryTexts],
+      singleImageHeadline: form.singleImageHeadline,
+      singleImageHeadlines: [...form.singleImageHeadlines],
+      singleImageDescription: form.singleImageDescription,
+      singleImageCallToAction: form.singleImageCallToAction,
+      singleImageLinkUrl: form.singleImageLinkUrl,
+      singleImageImage: { ...form.singleImageImage },
+      singleVideoPrimaryText: form.singleVideoPrimaryText,
+      singleVideoPrimaryTexts: [...form.singleVideoPrimaryTexts],
+      singleVideoHeadline: form.singleVideoHeadline,
+      singleVideoHeadlines: [...form.singleVideoHeadlines],
+      singleVideoDescription: form.singleVideoDescription,
+      singleVideoCallToAction: form.singleVideoCallToAction,
+      singleVideoLinkUrl: form.singleVideoLinkUrl,
+      singleVideoVideo: { ...form.singleVideoVideo },
+      singleVideoThumbnail: { ...form.singleVideoThumbnail },
+      carouselPrimaryText: form.carouselPrimaryText,
+      carouselCallToAction: form.carouselCallToAction,
+      carouselCards: form.carouselCards.map((c) => ({ ...c })),
+      flexiblePrimaryTexts: [...form.flexiblePrimaryTexts],
+      flexibleHeadlines: [...form.flexibleHeadlines],
+      flexibleCallToAction: form.flexibleCallToAction,
+      flexibleLinkUrl: form.flexibleLinkUrl,
+      flexibleAssets: form.flexibleAssets.map((a) => ({ ...a })),
+      existingPostId: form.existingPostId,
+      adName: form.adName ? `${form.adName} (Copy)` : "",
+      trackingSpecs: form.trackingSpecs,
+    }
+    updateForm({ additionalVariants: [...form.additionalVariants, copy] })
+    setActiveVariantTab(`variant-${newSeq}`)
+  }
+
+  /** Duplicate an additional variant by its sequenceNumber. */
+  const handleDuplicateVariant = (seqNumber: number) => {
+    if (!canAddVariant) return
+    const source = form.additionalVariants.find((v) => v.sequenceNumber === seqNumber)
+    if (!source) return
+    const newSeq = maxSeqNumber + 1
+    const copy: AdVariantFormState = {
+      ...source,
+      sequenceNumber: newSeq,
+      creativeName: source.creativeName ? `${source.creativeName} (Copy)` : "",
+      adName: source.adName ? `${source.adName} (Copy)` : "",
+      carouselCards: source.carouselCards.map((c) => ({ ...c })),
+      flexibleAssets: source.flexibleAssets.map((a) => ({ ...a })),
+    }
+    updateForm({ additionalVariants: [...form.additionalVariants, copy] })
+    setActiveVariantTab(`variant-${newSeq}`)
+  }
+
+  const handleDeleteVariant = (seqNumber: number) => {
+    if (activeVariantTab === `variant-${seqNumber}`) {
+      setActiveVariantTab("variant-1")
+    }
+    updateForm({ additionalVariants: form.additionalVariants.filter((v) => v.sequenceNumber !== seqNumber) })
+  }
+
+  const handleUpdateAdditionalVariant = (seqNumber: number, patch: Partial<AdVariantFormState>) => {
+    updateForm({
+      additionalVariants: form.additionalVariants.map((v) =>
+        v.sequenceNumber === seqNumber ? { ...v, ...patch } : v
+      ),
+    })
   }
 
   const syncFromDetail = (statusDetail: MetaCampaignRequestDetailDto) => {
@@ -712,8 +882,10 @@ export function CreateRequestContent({ requestId }: Props) {
             />
           </div>
           <div id={requestSectionIds["adset-budget"]} className={getSectionWrapperClass("adset-budget", highlightedSection)}>
-            <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppMapping?.platform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
+                <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppPlatform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
           </div>
+          {/* Creative section — variations now live inside CreativeSection itself,
+              between Primary Text/Headline (shared above) and Description/CTA (shared below). */}
           <div id={requestSectionIds["creative"]} className={getSectionWrapperClass("creative", highlightedSection)}>
             <CreativeSection
               form={form}
@@ -725,8 +897,24 @@ export function CreateRequestContent({ requestId }: Props) {
               facebookPagesMessage={facebookPagesError?.message ?? null}
               facebookPageSource={facebookPageSource}
               onFacebookPageSourceChange={setFacebookPageSource}
+              additionalVariants={form.additionalVariants}
+              activeVariantTab={activeVariantTab}
+              onActiveVariantTabChange={setActiveVariantTab}
+              onAddVariant={handleAddVariant}
+              onDuplicateVariant={(seq) => {
+                if (seq === "primary") {
+                  handleDuplicatePrimaryVariant()
+                } else {
+                  handleDuplicateVariant(seq)
+                }
+              }}
+              onDeleteVariant={handleDeleteVariant}
+              onUpdateAdditionalVariant={handleUpdateAdditionalVariant}
+              canAddVariant={canAddVariant}
+              supportsVariants={supportsVariants}
             />
           </div>
+          {/* Ad section — shared. Ad Name for additional variants is auto-suffixed `_v{N}` by the mapper. */}
           <div id={requestSectionIds["ad"]} className={getSectionWrapperClass("ad", highlightedSection)}>
             <AdSection form={form} onChange={updateForm} />
           </div>
@@ -793,8 +981,6 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
-
 
 
 

@@ -6,6 +6,7 @@ import { CheckCircle2, XCircle, AlertCircle, Pause } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 import { bidStrategyRequiresBidAmount, getAllowedBillingEvents, getAllowedPerformanceGoalTypes, isBidAmountAllowed, isBidStrategyCompatible, isBidStrategySupported, resolveOptimizationGoal } from "./constants"
 import type { GroupedValidationErrors, MetaAppMappingDto, MetaRequestStatus } from "@/types/meta-ads"
+import { resolveMetaAppMappingPlatform } from "./platform"
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
@@ -33,7 +34,8 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const isBillingCompatible = allowedBillingEvents.includes(form.billingEvent)
   const bidStrategySupported = isBidStrategySupported(form.bidStrategy)
   const startTimeValid = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(form.startTime)
-  const platformAlignmentReady = !selectedAppMapping?.platform || selectedAppMapping.platform === "ANDROID" || selectedAppMapping.platform === "IOS"
+  const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
+  const platformAlignmentReady = !form.paidMediaAppBindingId || selectedAppPlatform === "ANDROID" || selectedAppPlatform === "IOS"
   const tokenOk = tokenState === "ready"
   const creativeStatus = getCreativeStatus(form)
   const geoStatus = getGeoStatus(form)
@@ -74,12 +76,12 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
       <Card className="border-slate-200">
         <CardHeader className="pb-2 pt-3 px-3"><CardTitle className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Meta Compatibility</CardTitle></CardHeader>
         <CardContent className="px-3 pb-3 space-y-1.5 text-[11px]">
-          <p className="text-slate-500">Unavailable options in this form are disabled because Meta would reject them or Mediation Pro does not support the required extra fields yet.</p>
+          <p className="text-slate-500">Unavailable options in this form are disabled because Meta would reject them or Nexus does not support the required extra fields yet.</p>
           <SummaryLine label="Billing events" value={allowedBillingEvents.join(", ")} />
           <SummaryLine label="Optimization goal" value={resolvedOptimizationGoal} />
           <SummaryLine label="Ad set budget sharing" value={form.budgetStrategy === "ABO" ? (form.isAdSetBudgetSharingEnabled ? "Enabled" : "Disabled") : "Only applies to ad set budget"} />
           <SummaryLine label="Advantage Audience" value={form.advantageAudience ? "Enabled" : "Disabled"} />
-          <SummaryLine label="Platform targeting" value={selectedAppMapping?.platform ? `${selectedAppMapping.platform} auto-derived` : "Depends on selected app mapping"} />
+          <SummaryLine label="Platform targeting" value={selectedAppPlatform ? `${selectedAppPlatform} auto-derived` : "Depends on selected app mapping"} />
         </CardContent>
       </Card>
 
@@ -274,7 +276,6 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-
 
 
 

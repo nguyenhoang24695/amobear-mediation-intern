@@ -122,15 +122,15 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
     setState("loading")
 
     // Prepare request data
-    const appPermissions = giveAllApps 
+    const appPermissions = giveAllApps
       ? undefined // If giveAllApps is true, don't send appPermissions (backend will handle it)
-      : selectedApps.length > 0 
+      : selectedApps.length > 0
         ? selectedApps.map(app => ({ AppId: app.id, Level: app.permission }))
         : undefined
 
     // Send invitation for each email
     const results: Array<{ email: string; success: boolean; error?: string }> = []
-    
+
     for (const email of emails) {
       try {
         const response = await teamMembersApi.inviteUser({
@@ -143,10 +143,10 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
         if (response.success) {
           results.push({ email, success: true })
         } else {
-          results.push({ 
-            email, 
-            success: false, 
-            error: (response as any).error?.message || "Failed to send invitation" 
+          results.push({
+            email,
+            success: false,
+            error: (response as any).error?.message || "Failed to send invitation"
           })
         }
       } catch (error: any) {
@@ -287,11 +287,11 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
                   <div className="p-4 bg-slate-50 rounded-lg border text-sm space-y-3">
-                    <p className="font-medium">Subject: You&apos;ve been invited to join Amobear Inc on Nexus Platform</p>
+                    <p className="font-medium">Subject: You&apos;ve been invited to join Amobear Inc on Nexus</p>
                     <div className="border-t pt-3 space-y-2 text-slate-600">
                       <p>Hi there,</p>
                       <p>
-                        John Doe has invited you to join Amobear Inc on Nexus Platform as a{" "}
+                        John Doe has invited you to join Amobear Inc on Nexus as a{" "}
                         <strong className="text-slate-900 capitalize">{role}</strong>.
                       </p>
                       {message && <div className="bg-white p-3 rounded border italic">&quot;{message}&quot;</div>}
@@ -378,11 +378,10 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 {inviteResults.map((result) => (
                   <div
                     key={result.email}
-                    className={`flex items-center gap-2 text-sm rounded-md px-3 py-2 ${
-                      result.success
-                        ? "text-slate-600 bg-slate-50"
-                        : "text-red-600 bg-red-50"
-                    }`}
+                    className={`flex items-center gap-2 text-sm rounded-md px-3 py-2 ${result.success
+                      ? "text-slate-600 bg-slate-50"
+                      : "text-red-600 bg-red-50"
+                      }`}
                   >
                     {result.success ? (
                       <CheckCircle2 className="w-4 h-4 text-green-500" />

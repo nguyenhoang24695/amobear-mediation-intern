@@ -44,7 +44,7 @@ export const OPTIMIZATION_GOAL_BILLING_EVENT_MAP: Record<string, readonly string
 
 export const BID_STRATEGIES_REQUIRING_BID_AMOUNT = ["COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST"] as const
 export const UNSUPPORTED_BID_STRATEGY_REASONS: Record<string, string> = {
-  LOWEST_COST_WITH_MIN_ROAS: "Unavailable: requires ROAS floor, which is not supported in Mediation Pro yet.",
+  LOWEST_COST_WITH_MIN_ROAS: "Unavailable: requires ROAS floor, which is not supported in Nexus yet.",
 }
 
 const PERFORMANCE_GOAL_BID_STRATEGY_MAP: Record<string, readonly string[]> = {

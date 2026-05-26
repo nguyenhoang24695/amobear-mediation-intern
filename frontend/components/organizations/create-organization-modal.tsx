@@ -266,7 +266,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                   disabled={saving}
                 />
                 <span className="inline-flex items-center px-3 text-sm text-slate-500 bg-slate-50 border border-l-0 border-slate-200 rounded-r-md whitespace-nowrap">
-                  .mediationpro.io
+                  .nexus.io
                   {slugChecking && <Loader2 className="w-3 h-3 ml-2 animate-spin" />}
                 </span>
               </div>

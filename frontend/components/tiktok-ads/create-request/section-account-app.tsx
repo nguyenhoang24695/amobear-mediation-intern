@@ -38,7 +38,7 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
       aside={
         <div className="space-y-2 text-xs text-slate-600">
           <p>Advertiser ID: <span className="font-medium text-slate-900">{selectedAdAccount?.advertiserId ?? "-"}</span></p>
-          <p>TikTok App ID: <span className="font-medium text-slate-900">{selectedAppMapping?.tikTokAppId ?? "-"}</span></p>
+          <p>TikTok Mobile App ID: <span className="font-medium text-slate-900">{selectedAppMapping?.tikTokAppId ?? "-"}</span></p>
         </div>
       }
     >
@@ -89,10 +89,10 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
         <div className="space-y-2">
           <Label>App mapping</Label>
           <SearchableSelect
-            value={form.paidMediaAppBindingId ? String(form.paidMediaAppBindingId) : ""}
+            value={selectedAppMapping && form.paidMediaAppBindingId ? String(form.paidMediaAppBindingId) : ""}
             options={appMappings}
             placeholder={form.tikTokAdAccountRowId ? "Select app..." : "Select ad account first..."}
-            searchPlaceholder="Search by app name, app ID, platform, TikTok app ID..."
+            searchPlaceholder="Search by app name, store ID, platform, TikTok mobile app ID..."
             emptyMessage="No app mappings found for this account."
             disabled={!form.tikTokAdAccountRowId}
             onValueChange={(value) => {
@@ -122,7 +122,7 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
               })
             }}
             getValue={(mapping) => String(mapping.id)}
-            getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.appPlatform ?? mapping.platform ?? ""} ${mapping.tikTokAppId} ${mapping.normalizedStoreIdentifier ?? ""}`}
+            getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.packageName ?? ""} ${mapping.downloadUrl ?? ""} ${mapping.appPlatform ?? mapping.platform ?? ""} ${mapping.tikTokAppId} ${mapping.normalizedStoreIdentifier ?? ""}`}
             renderValue={(mapping) => (
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</span>
@@ -134,14 +134,17 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
                 <Badge variant="outline" className={(mapping.appPlatform ?? mapping.platform) === "IOS" ? "border-blue-200 text-blue-700" : "border-emerald-200 text-emerald-700"}>{mapping.appPlatform ?? mapping.platform ?? "APP"}</Badge>
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</div>
-                  <div className="truncate font-mono text-xs text-slate-400">{mapping.tikTokAppId}</div>
+                  <div className="truncate font-mono text-xs text-slate-400">{mapping.packageName ?? mapping.normalizedStoreIdentifier ?? mapping.downloadUrl ?? mapping.tikTokAppId}</div>
+                  <div className="truncate font-mono text-[11px] text-slate-400">Mobile App ID: {mapping.tikTokAppId}</div>
                 </div>
               </div>
             )}
           />
 
           {form.tikTokAdAccountRowId && appMappings.length === 0 ? (
-            <p className="text-xs text-amber-700">No known advertised app mapping for this advertiser yet.</p>
+            <p className="text-xs text-amber-700">This ad account does not have the selected app configured in TikTok.</p>
+          ) : form.tikTokAdAccountRowId && form.paidMediaAppBindingId && !selectedAppMapping ? (
+            <p className="text-xs text-amber-700">This ad account does not have the selected app configured in TikTok.</p>
           ) : form.tikTokAdAccountRowId ? (
             <p className="text-xs text-slate-500">Showing {appMappings.length} app mapping{appMappings.length === 1 ? "" : "s"} known for this advertiser.</p>
           ) : (
