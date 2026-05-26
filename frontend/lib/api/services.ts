@@ -1759,33 +1759,11 @@ export const organizationsApi = {
 
     getProfitPlans: async (
         orgId: string,
-        params?: { from?: string; to?: string; teamId?: string; unassigned?: boolean },
+        params?: { from?: string; to?: string; teamId?: string },
     ): Promise<TeamMonthlyProfitPlan[]> => {
         return apiClient.get<TeamMonthlyProfitPlan[]>(
             `/api/v1/organizations/${orgId}/profit-plans`,
             params as Record<string, string | number | boolean | undefined>,
-        )
-    },
-
-    assignProfitPlanTeam: async (
-        orgId: string,
-        month: string,
-        appId: string,
-        teamId: string,
-    ): Promise<TeamMonthlyProfitPlan> => {
-        return apiClient.post<TeamMonthlyProfitPlan>(
-            `/api/v1/organizations/${orgId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}/assign-team`,
-            { teamId },
-        )
-    },
-
-    bulkAssignProfitPlanTeam: async (
-        orgId: string,
-        body: BulkAssignTeamProfitPlanRequest,
-    ): Promise<BulkProfitPlanActionResult> => {
-        return apiClient.post<BulkProfitPlanActionResult>(
-            `/api/v1/organizations/${orgId}/profit-plans/bulk-assign-team`,
-            body,
         )
     },
 
@@ -1913,17 +1891,12 @@ export interface OrgTeam {
 export interface TeamMonthlyProfitPlan {
     id: string
     organizationId: string
-    teamId?: string | null
-    teamName: string
     month: string
     appId: string
     appLabel: string
     appPlatform?: string | null
     appStoreId?: string | null
     appIconUri?: string | null
-    assignedUserId?: string | null
-    assignedUserName?: string | null
-    assignedUserEmail?: string | null
     plannedProfit: number
     actualProfit: number
     completionPercent?: number | null
@@ -1934,7 +1907,6 @@ export interface TeamMonthlyProfitPlan {
 export interface UpsertTeamMonthlyProfitPlanRequest {
     appId: string
     plannedProfit: number
-    assignedUserId?: string | null
 }
 
 export interface ImportTeamProfitPlansResult {
@@ -1949,22 +1921,6 @@ export interface BulkProfitPlanItem {
     appId: string
 }
 
-export interface BulkAssignTeamProfitPlanRequest {
-    teamId: string
-    items: BulkProfitPlanItem[]
-}
-
-export interface BulkAssignUserProfitPlanRequest {
-    assignedUserId?: string | null
-    items: BulkProfitPlanItem[]
-}
-
-export interface BulkProfitPlanActionResult {
-    succeeded: number
-    failed: number
-    errors: string[]
-}
-
 export interface TeamProfitAppOption {
     appId: string
     label: string
@@ -1973,12 +1929,6 @@ export interface TeamProfitAppOption {
     platform?: string | null
     iconUri?: string | null
     appStoreId?: string | null
-}
-
-export interface TeamProfitMemberOption {
-    userId: string
-    label: string
-    email: string
 }
 
 export const teamProfitApi = {
@@ -2014,20 +1964,6 @@ export const teamProfitApi = {
 
     getAppOptions: async (teamId: string): Promise<TeamProfitAppOption[]> => {
         return apiClient.get<TeamProfitAppOption[]>(`/api/v1/teams/${teamId}/profit-app-options`)
-    },
-
-    getMemberOptions: async (teamId: string): Promise<TeamProfitMemberOption[]> => {
-        return apiClient.get<TeamProfitMemberOption[]>(`/api/v1/teams/${teamId}/profit-member-options`)
-    },
-
-    bulkAssignUser: async (
-        teamId: string,
-        body: BulkAssignUserProfitPlanRequest,
-    ): Promise<BulkProfitPlanActionResult> => {
-        return apiClient.post<BulkProfitPlanActionResult>(
-            `/api/v1/teams/${teamId}/profit-plans/bulk-assign-user`,
-            body,
-        )
     },
 }
 

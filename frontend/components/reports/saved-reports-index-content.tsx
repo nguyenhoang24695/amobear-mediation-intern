@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { hasScreenFunction } from "@/lib/auth"
 import { reportsApi } from "@/lib/api/services"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import type { CustomReportFolder, CustomReportListItem } from "@/types/reports"
@@ -73,12 +74,16 @@ function ReportsTable({
   onTogglePinned,
   deletingReportId,
   pinningReportId,
+  canPinReports,
+  canDeleteReports,
 }: {
   reports: CustomReportListItem[]
   onDelete: (report: CustomReportListItem) => void
   onTogglePinned: (report: CustomReportListItem) => void
   deletingReportId?: string | null
   pinningReportId?: string | null
+  canPinReports: boolean
+  canDeleteReports: boolean
 }) {
   if (reports.length === 0) {
     return (
@@ -111,34 +116,38 @@ function ReportsTable({
               {formatUpdatedAt(report.updatedAt)}
             </TableCell>
             <TableCell>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={
-                  report.isPinned
-                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-                    : ""
-                }
-                disabled={pinningReportId === report.id || deletingReportId === report.id}
-                onClick={() => onTogglePinned(report)}
-              >
-                <Pin className="h-4 w-4" />
-                {pinningReportId === report.id ? "Updating…" : report.isPinned ? "Unpin" : "Pin"}
-              </Button>
+              {canPinReports ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={
+                    report.isPinned
+                      ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                      : ""
+                  }
+                  disabled={pinningReportId === report.id || deletingReportId === report.id}
+                  onClick={() => onTogglePinned(report)}
+                >
+                  <Pin className="h-4 w-4" />
+                  {pinningReportId === report.id ? "Updating…" : report.isPinned ? "Unpin" : "Pin"}
+                </Button>
+              ) : null}
             </TableCell>
             <TableCell className="text-right">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                disabled={deletingReportId === report.id}
-                onClick={() => onDelete(report)}
-              >
-                <Trash2 className="h-4 w-4" />
-                {deletingReportId === report.id ? "Deleting…" : "Delete"}
-              </Button>
+              {canDeleteReports ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  disabled={deletingReportId === report.id}
+                  onClick={() => onDelete(report)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deletingReportId === report.id ? "Deleting…" : "Delete"}
+                </Button>
+              ) : null}
             </TableCell>
           </TableRow>
         ))}
@@ -152,6 +161,11 @@ export function SavedReportsIndexContent({
   folders,
   onDataChange,
 }: SavedReportsIndexContentProps) {
+  const canCreateReports = hasScreenFunction("s-reports", "create")
+  const canDeleteReports = hasScreenFunction("s-reports", "delete")
+  const canPinReports = hasScreenFunction("s-reports", "pin")
+  const canManageFolders = hasScreenFunction("s-reports", "manage-folders")
+
   const [searchQuery, setSearchQuery] = useState("")
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
   const [addFolderOpen, setAddFolderOpen] = useState(false)
@@ -222,6 +236,11 @@ export function SavedReportsIndexContent({
   }, [])
 
   const handleCreateFolder = async () => {
+    if (!canManageFolders) {
+      toast.error("You do not have permission to manage report folders.")
+      return
+    }
+
     const name = newFolderName.trim()
     if (!name) {
       toast.error("Folder name is required.")
@@ -246,6 +265,10 @@ export function SavedReportsIndexContent({
 
   const handleDeleteReport = async () => {
     if (!reportToDelete) return
+    if (!canDeleteReports) {
+      toast.error("You do not have permission to delete reports.")
+      return
+    }
 
     setDeletingReportId(reportToDelete.id)
     try {
@@ -263,6 +286,11 @@ export function SavedReportsIndexContent({
   }
 
   const handleTogglePinned = async (report: CustomReportListItem) => {
+    if (!canPinReports) {
+      toast.error("You do not have permission to pin reports.")
+      return
+    }
+
     setPinningReportId(report.id)
     try {
       const updated = await reportsApi.setPinned(report.id, !report.isPinned)
@@ -289,16 +317,20 @@ export function SavedReportsIndexContent({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setAddFolderOpen(true)}>
-            <FolderPlus className="mr-2 h-4 w-4" />
-            Add folder
-          </Button>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
-            <Link href="/reports?new=1">
-              <Plus className="mr-2 h-4 w-4" />
-              New report
-            </Link>
-          </Button>
+          {canManageFolders ? (
+            <Button variant="outline" onClick={() => setAddFolderOpen(true)}>
+              <FolderPlus className="mr-2 h-4 w-4" />
+              Add folder
+            </Button>
+          ) : null}
+          {canCreateReports ? (
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/reports?new=1">
+                <Plus className="mr-2 h-4 w-4" />
+                New report
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -317,7 +349,9 @@ export function SavedReportsIndexContent({
           <CardContent className="py-12 text-center text-sm text-slate-500">
             {searchQuery.trim()
               ? "No reports match your search."
-              : "No folders yet. Add a folder or save your first report."}
+              : canCreateReports || canManageFolders
+                ? "No folders yet. Add a folder or save your first report."
+                : "No reports available yet."}
           </CardContent>
         </Card>
       ) : (
@@ -352,18 +386,20 @@ export function SavedReportsIndexContent({
                       {group.reports.length} report{group.reports.length === 1 ? "" : "s"}
                     </p>
                   </div>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 text-blue-600 hover:text-blue-700"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Link href={newReportHref}>
-                      <Plus className="mr-1 h-3.5 w-3.5" />
-                      New in folder
-                    </Link>
-                  </Button>
+                  {canCreateReports ? (
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-blue-600 hover:text-blue-700"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Link href={newReportHref}>
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        New in folder
+                      </Link>
+                    </Button>
+                  ) : null}
                 </button>
                 {expanded && (
                   <CardContent className="p-0">
@@ -373,6 +409,8 @@ export function SavedReportsIndexContent({
                       deletingReportId={deletingReportId}
                       pinningReportId={pinningReportId}
                       onDelete={setReportToDelete}
+                      canPinReports={canPinReports}
+                      canDeleteReports={canDeleteReports}
                     />
                   </CardContent>
                 )}
