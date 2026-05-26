@@ -53,9 +53,10 @@ export interface CustomReportFilters {
   appIds: string[]
   revenueSource: string
   metricFilters: CustomReportMetricFilter[]
+  /** Selected team member user ID for commission team app scope. */
   commissionUser?: string | null
   commissionUsernames?: string[] | null
-  /** Team filter for commission managers — limits apps to profit-plan apps for the team. */
+  /** Team filter for commission managers — limits apps to profit-plan apps visible for the selected team scope. */
   commissionTeamId?: string | null
   sortBy?: string | null
   sortDir: string

@@ -3,19 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { addMonths, format, parse } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Download, Loader2, Target, Upload, UserPlus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Loader2, Target, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -34,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Pagination as DataPagination } from "@/components/shared/pagination"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -74,8 +67,21 @@ function formatMonthLabel(month: string): string {
   return format(parseMonthValue(month), "MMMM yyyy", { locale: enUS })
 }
 
-function isUnassignedPlan(plan: TeamMonthlyProfitPlan) {
-  return !plan.teamId
+function escapeCsvValue(value: string | number | null | undefined) {
+  const normalized = value == null ? "" : String(value)
+  if (/[",\n]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`
+  }
+  return normalized
+}
+
+function sanitizeFileNamePart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
 export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabProps) {
@@ -89,11 +95,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [plans, setPlans] = useState<TeamMonthlyProfitPlan[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [assignOpen, setAssignOpen] = useState(false)
-  const [assignPlans, setAssignPlans] = useState<TeamMonthlyProfitPlan[]>([])
-  const [assignTeamId, setAssignTeamId] = useState("")
-  const [assigning, setAssigning] = useState(false)
-  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(() => new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
@@ -101,17 +102,13 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<ImportTeamProfitPlansResult | null>(null)
+  const [exportingData, setExportingData] = useState(false)
   const [exportingTemplate, setExportingTemplate] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const planParams =
-        teamFilter === "all"
-          ? { from: month, to: month }
-          : teamFilter === "unassigned"
-            ? { from: month, to: month, unassigned: true }
-            : { from: month, to: month, teamId: teamFilter }
+      const planParams = teamFilter === "all" ? { from: month, to: month } : { from: month, to: month, teamId: teamFilter }
 
       const [teamList, planList] = await Promise.all([
         organizationsApi.getTeams(orgId),
@@ -119,7 +116,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       ])
       setTeams(teamList)
       setPlans(planList)
-      setSelectedPlanIds(new Set())
       setCurrentPage(1)
     } catch (err) {
       console.error("Failed to load organization profit plans:", err)
@@ -152,12 +148,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   }, [filteredPlans])
 
   const summaryStatus = getStatus(totals.completion)
-
-  const selectedPlans = useMemo(
-    () => filteredPlans.filter((plan) => selectedPlanIds.has(plan.id)),
-    [filteredPlans, selectedPlanIds],
-  )
-  const allPlansSelected = filteredPlans.length > 0 && selectedPlans.length === filteredPlans.length
   const totalPages = Math.max(1, Math.ceil(filteredPlans.length / pageSize))
   const paginatedPlans = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -169,85 +159,10 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   }, [month, teamFilter, pageSize, searchQuery])
 
   useEffect(() => {
-    setSelectedPlanIds(new Set())
-  }, [searchQuery])
-
-  useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages)
     }
   }, [currentPage, totalPages])
-
-  const togglePlanSelection = (planId: string, checked: boolean) => {
-    setSelectedPlanIds((prev) => {
-      const next = new Set(prev)
-      if (checked) next.add(planId)
-      else next.delete(planId)
-      return next
-    })
-  }
-
-  const toggleSelectAll = (checked: boolean) => {
-    if (!checked) {
-      setSelectedPlanIds(new Set())
-      return
-    }
-    setSelectedPlanIds(new Set(filteredPlans.map((plan) => plan.id)))
-  }
-
-  const openAssignDialog = (plansToAssign: TeamMonthlyProfitPlan[]) => {
-    setAssignPlans(plansToAssign)
-    const teamIds = [...new Set(plansToAssign.map((p) => p.teamId).filter(Boolean))]
-    setAssignTeamId(
-      teamIds.length === 1 && teamIds[0] ? teamIds[0]! : teams[0]?.id ?? "",
-    )
-    setAssignOpen(true)
-  }
-
-  const handleAssign = async () => {
-    if (assignPlans.length === 0 || !assignTeamId) return
-    setAssigning(true)
-    try {
-      if (assignPlans.length === 1) {
-        const plan = assignPlans[0]
-        await organizationsApi.assignProfitPlanTeam(orgId, plan.month, plan.appId, assignTeamId)
-        toast({
-          title: "Updated",
-          description: "Profit plan team has been updated.",
-        })
-      } else {
-        const result = await organizationsApi.bulkAssignProfitPlanTeam(orgId, {
-          teamId: assignTeamId,
-          items: assignPlans.map((plan) => ({ month: plan.month, appId: plan.appId })),
-        })
-        if (result.failed > 0) {
-          toast({
-            title: "Partially assigned",
-            description: `${result.succeeded} succeeded, ${result.failed} failed.`,
-            variant: "destructive",
-          })
-        } else {
-          toast({
-            title: "Updated",
-            description: `${result.succeeded} profit plan team assignment(s) updated.`,
-          })
-        }
-      }
-
-      setAssignOpen(false)
-      setAssignPlans([])
-      await loadData()
-    } catch (err) {
-      console.error("Failed to assign profit plan:", err)
-      toast({
-        title: "Assign failed",
-        description: err instanceof Error ? err.message : "Could not assign profit plan to team.",
-        variant: "destructive",
-      })
-    } finally {
-      setAssigning(false)
-    }
-  }
 
   const handleImport = async () => {
     if (!importFile) return
@@ -307,6 +222,78 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       })
     } finally {
       setExportingTemplate(false)
+    }
+  }
+
+  const handleExportData = async () => {
+    if (filteredPlans.length === 0) return
+
+    setExportingData(true)
+    try {
+      const rows = [
+        [
+          "Month",
+          "App",
+          "App ID",
+          "Platform",
+          "App Store ID",
+          "Planned Profit",
+          "Actual Profit",
+          "Completion Percent",
+        ],
+        ...filteredPlans.map((plan) => [
+          plan.month,
+          plan.appLabel,
+          plan.appId,
+          plan.appPlatform ?? "",
+          plan.appStoreId ?? "",
+          plan.plannedProfit,
+          plan.actualProfit,
+          plan.completionPercent == null ? "" : plan.completionPercent.toFixed(2),
+        ]),
+      ]
+
+      const csv = rows
+        .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+        .join("\n")
+
+      const teamLabel =
+        teamFilter === "all"
+          ? "all-teams"
+          : teams.find((team) => team.id === teamFilter)?.name || "team"
+
+      const fileName = [
+        "profit-plan",
+        month,
+        sanitizeFileNamePart(teamLabel),
+        searchQuery.trim() ? "filtered" : null,
+      ]
+        .filter(Boolean)
+        .join("-")
+
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = objectUrl
+      link.download = `${fileName}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+
+      toast({
+        title: "Profit plans exported",
+        description: `Downloaded ${filteredPlans.length} row(s) for ${formatMonthLabel(month)}.`,
+      })
+    } catch (err) {
+      console.error("Failed to export profit plans:", err)
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Could not export profit plan data.",
+        variant: "destructive",
+      })
+    } finally {
+      setExportingData(false)
     }
   }
 
@@ -376,7 +363,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All teams</SelectItem>
-                    <SelectItem value="unassigned">Unassigned Team</SelectItem>
                     {teams.map((team) => (
                       <SelectItem key={team.id} value={team.id}>
                         {team.name}
@@ -397,24 +383,57 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               </div>
             </div>
 
-            {canManage ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="bg-white"
-                  onClick={() => void handleExportTemplate()}
-                  disabled={exportingTemplate}
-                >
-                  {exportingTemplate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  Export template
-                </Button>
-                <Button type="button" variant="outline" className="bg-white" onClick={() => setImportOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import Excel
-                </Button>
-              </div>
-            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="bg-white"
+                    onClick={() => void handleExportData()}
+                    disabled={loading || exportingData || filteredPlans.length === 0}
+                  >
+                    {exportingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Export data
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Export the current month's visible profit plan data.
+                </TooltipContent>
+              </Tooltip>
+              {canManage ? (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="bg-white"
+                        onClick={() => void handleExportTemplate()}
+                        disabled={exportingTemplate}
+                      >
+                        {exportingTemplate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Export template
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      Download an Excel template for this month.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button type="button" variant="outline" className="bg-white" onClick={() => setImportOpen(true)}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Import Excel
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      Upload an Excel file to update this month's plans.
+                    </TooltipContent>
+                  </Tooltip>
+                </>
+              ) : null}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -435,24 +454,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             </div>
           </div>
 
-          {canManage && selectedPlans.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
-              <span className="text-sm text-blue-900">{selectedPlans.length} plan(s) selected</span>
-              <Button
-                type="button"
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => openAssignDialog(selectedPlans)}
-              >
-                <UserPlus className="mr-1.5 h-3.5 w-3.5" />
-                Assign / change team
-              </Button>
-              <Button type="button" size="sm" variant="outline" className="bg-white" onClick={() => setSelectedPlanIds(new Set())}>
-                Clear
-              </Button>
-            </div>
-          ) : null}
-
           {loading ? (
             <div className="flex items-center justify-center py-10 text-sm text-slate-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -463,20 +464,8 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    {canManage ? (
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={allPlansSelected}
-                          onCheckedChange={(checked) => toggleSelectAll(checked === true)}
-                          disabled={plans.length === 0}
-                          aria-label="Select all plans"
-                        />
-                      </TableHead>
-                    ) : null}
                     <TableHead>Month</TableHead>
-                    <TableHead>Team</TableHead>
                     <TableHead>App</TableHead>
-                    <TableHead>Assigned User</TableHead>
                     <TableHead className="text-right">Planned</TableHead>
                     <TableHead className="text-right">Actual</TableHead>
                     <TableHead className="text-right">Completion</TableHead>
@@ -485,10 +474,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                 <TableBody>
                   {filteredPlans.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={canManage ? 8 : 7}
-                        className="py-10 text-center text-sm text-slate-500"
-                      >
+                      <TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">
                         {searchQuery.trim()
                           ? "No profit plans match your search."
                           : "No profit plans found for the selected filters."}
@@ -497,29 +483,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   ) : (
                     paginatedPlans.map((plan) => {
                       const status = getStatus(plan.completionPercent)
-                      const unassigned = isUnassignedPlan(plan)
-                      const isSelected = selectedPlanIds.has(plan.id)
                       return (
-                        <TableRow key={plan.id} data-state={isSelected ? "selected" : undefined}>
-                          {canManage ? (
-                            <TableCell>
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={(checked) => togglePlanSelection(plan.id, checked === true)}
-                                aria-label={`Select ${plan.appLabel}`}
-                              />
-                            </TableCell>
-                          ) : null}
+                        <TableRow key={plan.id}>
                           <TableCell className="whitespace-nowrap text-sm text-slate-700">{plan.month}</TableCell>
-                          <TableCell className="text-sm font-medium text-slate-900">
-                            {unassigned ? (
-                              <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-                                Unassigned
-                              </Badge>
-                            ) : (
-                              plan.teamName
-                            )}
-                          </TableCell>
                           <TableCell>
                             <div className="min-w-0">
                               <div className="font-medium text-slate-900 truncate">{plan.appLabel}</div>
@@ -527,9 +493,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                                 {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.appId}
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-700">
-                            {plan.assignedUserName ?? plan.assignedUserEmail ?? "—"}
                           </TableCell>
                           <TableCell className="text-right font-medium">{formatCurrency(plan.plannedProfit)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(plan.actualProfit)}</TableCell>
@@ -564,52 +527,12 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         </CardContent>
       </Card>
 
-      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign / change team</DialogTitle>
-            <DialogDescription>
-              {assignPlans.length === 1
-                ? `Set team for ${assignPlans[0]?.appLabel ?? "app"} (${assignPlans[0]?.month}). Current: ${
-                    assignPlans[0]?.teamName || "Unassigned"
-                  }.`
-                : `Set team for ${assignPlans.length} profit plans.`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="assign-team">Team</Label>
-            <Select value={assignTeamId} onValueChange={setAssignTeamId}>
-              <SelectTrigger id="assign-team" className="bg-white">
-                <SelectValue placeholder="Select team" />
-              </SelectTrigger>
-              <SelectContent>
-                {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setAssignOpen(false)} disabled={assigning}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={() => void handleAssign()} disabled={assigning || !assignTeamId || assignPlans.length === 0}>
-              {assigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Assign
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={importOpen} onOpenChange={resetImportDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Import profit plans</DialogTitle>
             <DialogDescription>
-              Upload an Excel file (.xlsx) with columns: Month, App ID, Planned Profit, Assigned User Email
-              (optional), Team Name (optional).
+              Upload an Excel file (.xlsx) with columns: Month, App ID, Planned Profit.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -641,6 +564,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+      </>
   )
 }

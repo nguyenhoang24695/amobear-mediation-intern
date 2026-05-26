@@ -65,6 +65,7 @@ import {
 import {
   CalendarIcon,
   ChevronDown,
+  ChevronLeft,
   Save,
   Search,
   ArrowUpDown,
@@ -86,7 +87,7 @@ import type { DateRange } from "react-day-picker"
 import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
-import { authApi, organizationsApi, reportsApi, structureApi } from "@/lib/api/services"
+import { authApi, organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
 import type {
   CustomReportCatalogItem,
@@ -100,9 +101,7 @@ import {
   collectMembershipManagedTeams,
   collectTeamLeadTeamsFromChart,
   collectTeamLeadTeamsFromOrgTeams,
-  collectTeamIdsUnderPersonnelNode,
   collectTeamsUnderPersonnelNode,
-  findPersonnelTeamNode,
   mergeCommissionTeamOptions,
   type CommissionTeamOption,
 } from "@/lib/reports/commission-team-utils"
@@ -122,6 +121,7 @@ type DateFilterMode = "preset" | "month" | "custom"
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
 const FILTER_COMMISSION_TEAM = "Team"
+const FILTER_COMMISSION_MEMBER = "Team member"
 const HIDDEN_PARAMETER_IDS = new Set(["publisher"])
 
 const DEFAULT_PARAMETERS: CustomReportCatalogItem[] = [
@@ -174,6 +174,13 @@ interface AppliedReportQueryState {
   metrics: string[]
   revenueSource: string
   metricFilters: CustomReportMetricFilter[]
+}
+
+interface CommissionMemberOption {
+  userId: string
+  email: string
+  label: string
+  isTeamLead: boolean
 }
 
 interface SortableReportFieldItemProps {
@@ -521,6 +528,12 @@ export function CustomReportBuilderContent() {
   const reportIdFromUrl = searchParams.get("reportId")
   const folderFromUrl = searchParams.get("folder")
 
+  const canCreateReports = hasScreenFunction("s-reports", "create")
+  const canEditReports = hasScreenFunction("s-reports", "edit")
+  const canDeleteReports = hasScreenFunction("s-reports", "delete")
+  const canPinReports = hasScreenFunction("s-reports", "pin")
+  const canManageReportFolders = hasScreenFunction("s-reports", "manage-folders")
+  const canExportReports = hasScreenFunction("s-reports", "export-csv")
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const storedCurrentUser = getCurrentUser()
   const { data: currentUserResponse } = useApi(
@@ -570,12 +583,13 @@ export function CustomReportBuilderContent() {
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
-  const [commissionTeam, setCommissionTeam] = useState("All")
+  const [commissionTeam, setCommissionTeam] = useState("")
   const [commissionTeams, setCommissionTeams] = useState<CommissionTeamOption[]>([])
-  const [rawPersonnelChartRoot, setRawPersonnelChartRoot] = useState<PersonnelNode | null>(null)
-  const [hydratedPersonnelChartRoot, setHydratedPersonnelChartRoot] = useState<PersonnelNode | null>(null)
-  const [teamPlanAppIds, setTeamPlanAppIds] = useState<string[] | null>(null)
-  const [teamPlansLoading, setTeamPlansLoading] = useState(false)
+  const [commissionMembers, setCommissionMembers] = useState<CommissionMemberOption[]>([])
+  const [commissionMember, setCommissionMember] = useState("")
+  const [memberPermittedAppIds, setMemberPermittedAppIds] = useState<string[] | null>(null)
+  const [memberOptionsLoading, setMemberOptionsLoading] = useState(false)
+  const [memberPermissionsLoading, setMemberPermissionsLoading] = useState(false)
   const canScopeManagedTeams = canManageCommission || commissionTeams.length > 0
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
@@ -607,12 +621,13 @@ export function CustomReportBuilderContent() {
   }, [appsResponse])
 
   const appsForSelection = useMemo(() => {
-    if (!canScopeManagedTeams || commissionTeam === "All" || teamPlanAppIds === null) {
+    if (!canScopeManagedTeams) {
       return availableApps
     }
-    const allowed = new Set(teamPlanAppIds)
+    if (!commissionTeam || !commissionMember || memberPermittedAppIds === null) return []
+    const allowed = new Set(memberPermittedAppIds)
     return availableApps.filter((app) => allowed.has(app.appId))
-  }, [availableApps, canScopeManagedTeams, commissionTeam, teamPlanAppIds])
+  }, [availableApps, canScopeManagedTeams, commissionTeam, commissionMember, memberPermittedAppIds])
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -692,6 +707,7 @@ export function CustomReportBuilderContent() {
         setSelectedApps,
         setMetricFilters,
         setCommissionTeam,
+        setCommissionMember,
         setSortColumn,
         setSortDirection,
         setDateFilterMode,
@@ -747,9 +763,9 @@ export function CustomReportBuilderContent() {
 
   useEffect(() => {
     if (!orgId) {
-      setRawPersonnelChartRoot(null)
-      setHydratedPersonnelChartRoot(null)
       setCommissionTeams([])
+      setCommissionMembers([])
+      setCommissionMember("")
       return
     }
 
@@ -763,8 +779,6 @@ export function CustomReportBuilderContent() {
 
         if (!chart?.root) {
           if (cancelled) return
-          setRawPersonnelChartRoot(null)
-          setHydratedPersonnelChartRoot(null)
           setCommissionTeams([])
           return
         }
@@ -775,9 +789,6 @@ export function CustomReportBuilderContent() {
           new Map(orgTeams.map((team) => [team.id, team])),
         )
         if (cancelled) return
-
-        setRawPersonnelChartRoot(rawRoot)
-        setHydratedPersonnelChartRoot(hydratedRoot)
 
         const currentNode = findCurrentPersonnelNode(rawRoot, currentUser?.id, currentUser?.email)
         const underManager = currentNode ? collectTeamsUnderPersonnelNode(currentNode) : []
@@ -791,9 +802,9 @@ export function CustomReportBuilderContent() {
         )
       } catch {
         if (cancelled) return
-        setRawPersonnelChartRoot(null)
-        setHydratedPersonnelChartRoot(null)
         setCommissionTeams([])
+        setCommissionMembers([])
+        setCommissionMember("")
       }
     })()
 
@@ -802,74 +813,129 @@ export function CustomReportBuilderContent() {
     }
   }, [orgId, currentUser?.id, currentUser?.email, currentUserTeamIdsKey])
 
-  const selectedCommissionTeamIds = useMemo(() => {
-    if (commissionTeam === "All") return []
-    if (!rawPersonnelChartRoot) return [commissionTeam]
-    const selectedTeamNode = findPersonnelTeamNode(rawPersonnelChartRoot, commissionTeam)
-    const scopedTeamIds = selectedTeamNode ? collectTeamIdsUnderPersonnelNode(selectedTeamNode) : []
-    return scopedTeamIds.length > 0 ? scopedTeamIds : [commissionTeam]
-  }, [commissionTeam, rawPersonnelChartRoot])
-
-  const selectedCommissionTeamIdsKey = selectedCommissionTeamIds.join("|")
-
   useEffect(() => {
-    if (commissionTeam === "All") return
+    if (!canScopeManagedTeams) return
+    if (commissionTeams.length === 0) {
+      setCommissionTeam("")
+      setCommissionMembers([])
+      setCommissionMember("")
+      setMemberPermittedAppIds(null)
+      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_TEAM))
+      return
+    }
     if (commissionTeams.some((team) => team.teamId === commissionTeam)) return
-    setCommissionTeam("All")
-    setTeamPlanAppIds(null)
-    setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_TEAM))
+    setCommissionTeam(commissionTeams[0].teamId)
   }, [commissionTeam, commissionTeams])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || !orgId || commissionTeam === "All") {
-      setTeamPlanAppIds(null)
-      setTeamPlansLoading(false)
+    if (!canScopeManagedTeams || !commissionTeam) {
+      setCommissionMembers([])
+      setCommissionMember("")
+      setMemberOptionsLoading(false)
       return
     }
 
     let cancelled = false
-    setTeamPlansLoading(true)
-    organizationsApi
-      .getProfitPlans(orgId, {
-        from: format(startOfMonth(startDate), "yyyy-MM"),
-        to: format(startOfMonth(endDate), "yyyy-MM"),
-      })
-      .then((plans) => {
+    setMemberOptionsLoading(true)
+    teamMembersApi
+      .filterTeamMembers({ teamId: commissionTeam, page: 1, pageSize: 500 })
+      .then((response) => {
         if (cancelled) return
-        const scopedTeamIds = new Set(selectedCommissionTeamIds)
-        const uniqueAppIds = [...new Set(
-          plans
-            .filter((plan) => plan.teamId && scopedTeamIds.has(plan.teamId))
-            .map((plan) => plan.appId)
-            .filter(Boolean),
-        )]
-        setTeamPlanAppIds(uniqueAppIds)
+        const nextMembers = response.data.items
+          .map((member): CommissionMemberOption | null => {
+            const email = member.email?.trim()
+            if (!email) return null
+            const teamMeta = member.teams.find((team) => team.id === commissionTeam)
+            return {
+              userId: member.id,
+              email,
+              label: member.fullName ? `${member.fullName} (${email})` : email,
+              isTeamLead: Boolean(teamMeta?.isTeamLead),
+            }
+          })
+          .filter((member): member is CommissionMemberOption => Boolean(member))
+          .sort((a, b) => {
+            if (a.isTeamLead !== b.isTeamLead) return a.isTeamLead ? -1 : 1
+            return a.label.localeCompare(b.label)
+          })
+
+        setCommissionMembers(nextMembers)
+        if (nextMembers.length === 0) {
+          setCommissionMember("")
+          return
+        }
+
+        if (nextMembers.some((member) => member.userId === commissionMember)) {
+          setCommissionMember(commissionMember)
+          return
+        }
+
+        const defaultMember = nextMembers.find((member) => member.isTeamLead) ?? nextMembers[0]
+        setCommissionMember(defaultMember.userId)
       })
       .catch(() => {
-        if (!cancelled) setTeamPlanAppIds(null)
+        if (!cancelled) {
+          setCommissionMembers([])
+          setCommissionMember("")
+        }
       })
       .finally(() => {
-        if (!cancelled) setTeamPlansLoading(false)
+        if (!cancelled) setMemberOptionsLoading(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [canScopeManagedTeams, orgId, commissionTeam, startDate, endDate, selectedCommissionTeamIdsKey])
+  }, [canScopeManagedTeams, commissionTeam, commissionMember])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || commissionTeam === "All" || teamPlanAppIds === null) return
+    if (!canScopeManagedTeams || !commissionMember) {
+      setMemberPermittedAppIds(null)
+      setMemberPermissionsLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setMemberPermissionsLoading(true)
+    teamMembersApi
+      .getPermittedApps(commissionMember, { limit: 5000 })
+      .then((response) => {
+        if (cancelled) return
+        const appIds = [...new Set((response.data ?? []).map((app) => app.appId).filter(Boolean))]
+        setMemberPermittedAppIds(appIds)
+      })
+      .catch(() => {
+        if (!cancelled) setMemberPermittedAppIds(null)
+      })
+      .finally(() => {
+        if (!cancelled) setMemberPermissionsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [canScopeManagedTeams, commissionMember])
+
+  useEffect(() => {
+    if (!canScopeManagedTeams || !commissionTeam || !commissionMember || memberPermittedAppIds === null) return
     const permitted = appsForSelection.map((app) => app.appId)
     setSelectedApps(permitted)
     syncAppsActiveFilter(permitted, appsForSelection)
-  }, [canScopeManagedTeams, commissionTeam, teamPlanAppIds, appsForSelection])
+  }, [canScopeManagedTeams, commissionTeam, commissionMember, memberPermittedAppIds, appsForSelection])
 
   useEffect(() => {
-    if (commissionTeam === "All") return
+    if (!commissionTeam) return
     const label = commissionTeams.find((team) => team.teamId === commissionTeam)?.label
     if (!label) return
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
   }, [commissionTeam, commissionTeams])
+
+  useEffect(() => {
+    if (!commissionMember) return
+    const label = commissionMembers.find((member) => member.userId === commissionMember)?.label
+    if (!label) return
+    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_MEMBER, label))
+  }, [commissionMember, commissionMembers])
 
   const currentReportQuery = useMemo<AppliedReportQueryState>(
     () => ({
@@ -1039,7 +1105,8 @@ export function CustomReportBuilderContent() {
       appIds: selectedApps,
       revenueSource: "All",
       metricFilters,
-      commissionTeamId: canScopeManagedTeams && commissionTeam !== "All" ? commissionTeam : null,
+      commissionUser: canScopeManagedTeams ? commissionMember || null : null,
+      commissionTeamId: canScopeManagedTeams ? commissionTeam || null : null,
       sortBy: sortColumn,
       sortDir: sortDirection,
       activePresetDays: dateFilterMode === "preset" && activePresetDays > 0 ? activePresetDays : null,
@@ -1063,6 +1130,11 @@ export function CustomReportBuilderContent() {
   }
 
   const handleSaveReportClick = () => {
+    if (savedReportId ? !canEditReports : !canCreateReports) {
+      toast.error(savedReportId ? "You do not have permission to update reports." : "You do not have permission to save reports.")
+      return
+    }
+
     if (selectedParameters.length === 0 || selectedMetrics.length === 0) {
       toast.error("Select at least one parameter and one metric before saving.")
       return
@@ -1080,6 +1152,11 @@ export function CustomReportBuilderContent() {
   }
 
   const handleConfirmSaveReport = async (nameOverride?: string) => {
+    if (savedReportId ? !canEditReports : !canCreateReports) {
+      toast.error(savedReportId ? "You do not have permission to update reports." : "You do not have permission to save reports.")
+      return
+    }
+
     const name = (nameOverride ?? saveReportName).trim()
     if (!name) {
       toast.error("Report name is required.")
@@ -1108,6 +1185,11 @@ export function CustomReportBuilderContent() {
   }
 
   const handleCreateFolder = async () => {
+    if (!canManageReportFolders) {
+      toast.error("You do not have permission to manage report folders.")
+      return
+    }
+
     const name = newFolderName.trim()
     if (!name) {
       toast.error("Folder name is required.")
@@ -1136,6 +1218,10 @@ export function CustomReportBuilderContent() {
 
   const handleTogglePin = async () => {
     if (!savedReportId) return
+    if (!canPinReports) {
+      toast.error("You do not have permission to pin reports.")
+      return
+    }
     setPinningReport(true)
     try {
       const nextPinned = !isPinned
@@ -1153,6 +1239,10 @@ export function CustomReportBuilderContent() {
 
   const handleDeleteReport = async () => {
     if (!savedReportId) return
+    if (!canDeleteReports) {
+      toast.error("You do not have permission to delete reports.")
+      return
+    }
 
     setDeletingReport(true)
     try {
@@ -1244,17 +1334,18 @@ export function CustomReportBuilderContent() {
 
   const handleCommissionTeamChange = (value: string) => {
     setCommissionTeam(value)
-    const label =
-      value === "All"
-        ? "All"
-        : commissionTeams.find((team) => team.teamId === value)?.label ?? value
+    setCommissionMembers([])
+    setCommissionMember("")
+    setMemberPermittedAppIds(null)
+    const label = commissionTeams.find((team) => team.teamId === value)?.label ?? value
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
-    if (value === "All") {
-      setTeamPlanAppIds(null)
-      const ids = availableApps.map((app) => app.appId)
-      setSelectedApps(ids)
-      syncAppsActiveFilter(ids, availableApps)
-    }
+  }
+
+  const handleCommissionMemberChange = (value: string) => {
+    setCommissionMember(value)
+    setMemberPermittedAppIds(null)
+    const label = commissionMembers.find((member) => member.userId === value)?.label ?? value
+    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_MEMBER, label))
   }
 
   const addMetricFilter = () => {
@@ -1311,7 +1402,7 @@ export function CustomReportBuilderContent() {
         setMonthPopoverOpen(false)
         break
       case FILTER_APPS:
-        if (canScopeManagedTeams && commissionTeam !== "All") {
+        if (canScopeManagedTeams) {
           const ids = appsForSelection.map((app) => app.appId)
           setSelectedApps(ids)
           syncAppsActiveFilter(ids, appsForSelection)
@@ -1321,32 +1412,39 @@ export function CustomReportBuilderContent() {
         }
         break
       case FILTER_COMMISSION_TEAM:
-        setCommissionTeam("All")
-        setTeamPlanAppIds(null)
+      case FILTER_COMMISSION_MEMBER:
         break
     }
   }
 
   const clearAllFilters = () => {
     applyDatePreset(30)
-    setCommissionTeam("All")
-    setTeamPlanAppIds(null)
-    const pool = availableApps
+    const pool = canScopeManagedTeams ? appsForSelection : availableApps
     const firstId = pool[0]?.appId
     if (firstId) {
       setSelectedApps([firstId])
       syncAppsActiveFilter([firstId], pool)
     }
     setMetricFilters([])
-    setActiveFilters([{ type: FILTER_DATE_RANGE, value: "Last 30 days" }])
+    const nextFilters = [{ type: FILTER_DATE_RANGE, value: "Last 30 days" }]
+    const teamLabel = commissionTeams.find((team) => team.teamId === commissionTeam)?.label
+    const memberLabel = commissionMembers.find((member) => member.userId === commissionMember)?.label
+    const withTeamFilter = teamLabel
+      ? upsertActiveFilter(nextFilters, FILTER_COMMISSION_TEAM, teamLabel)
+      : nextFilters
+    setActiveFilters(
+      memberLabel
+        ? upsertActiveFilter(withTeamFilter, FILTER_COMMISSION_MEMBER, memberLabel)
+        : withTeamFilter,
+    )
   }
 
   const appsTriggerLabel =
     selectedAppLabels.length === 0
-      ? appsLoading || teamPlansLoading
+      ? appsLoading || memberPermissionsLoading
         ? "Loading apps..."
-        : commissionTeam !== "All" && teamPlanAppIds?.length === 0
-          ? "No apps in plan"
+        : canScopeManagedTeams && memberPermittedAppIds?.length === 0
+          ? "No permitted apps"
           : "Select apps"
       : selectedAppLabels.length === 1
         ? selectedAppLabels[0]
@@ -1360,6 +1458,9 @@ export function CustomReportBuilderContent() {
       ? saveReportName.trim()
       : "Custom Report"
 
+  const displayedParameters = appliedReportQuery?.dimensions ?? []
+  const displayedMetrics = appliedReportQuery?.metrics ?? []
+
   const folderSelectOptions = useMemo(() => {
     const current = saveReportFolder.trim()
     return current && !availableFolders.includes(current)
@@ -1370,18 +1471,23 @@ export function CustomReportBuilderContent() {
   const tableRows = reportData?.rows ?? []
   const tableTotals = reportData?.totals ?? {}
   const uaCostRowSpanMap = useMemo(
-    () => buildUaCostRowSpanMap(tableRows, selectedParameters),
-    [tableRows, selectedParameters],
+    () => buildUaCostRowSpanMap(tableRows, displayedParameters),
+    [tableRows, displayedParameters],
   )
 
   const handleExportExcel = () => {
+    if (!canExportReports) {
+      toast.error("You do not have permission to export reports.")
+      return
+    }
+
     if (tableRows.length === 0) return
 
-    const parameterHeaders = selectedParameters.map((paramId) => {
+    const parameterHeaders = displayedParameters.map((paramId) => {
       const param = catalogParameters.find((p) => p.id === paramId)
       return param?.label ?? paramId
     })
-    const metricHeaders = selectedMetrics.map((metricId) => {
+    const metricHeaders = displayedMetrics.map((metricId) => {
       const metric = catalogMetrics.find((m) => m.id === metricId)
       return metric?.label ?? metricId
     })
@@ -1398,18 +1504,18 @@ export function CustomReportBuilderContent() {
       .join("")
 
     const totalHtml = [
-      ...selectedParameters.map((_, index) => (index === 0 ? "Total" : "")),
-      ...selectedMetrics.map((metricId) => formatMetricValue(tableTotals[metricId], metricId, catalogMetrics)),
+      ...displayedParameters.map((_, index) => (index === 0 ? "Total" : "")),
+      ...displayedMetrics.map((metricId) => formatMetricValue(tableTotals[metricId], metricId, catalogMetrics)),
     ]
       .map((value) => `<td>${escapeExcelHtml(value)}</td>`)
       .join("")
 
     const rowsHtml = tableRows
       .map((row) => {
-        const parameterCells = selectedParameters.map((paramId) =>
+        const parameterCells = displayedParameters.map((paramId) =>
           escapeExcelHtml(getParameterDisplayValue(paramId, row)),
         )
-        const metricCells = selectedMetrics.map((metricId) =>
+        const metricCells = displayedMetrics.map((metricId) =>
           escapeExcelHtml(formatMetricValue(row[metricId], metricId, catalogMetrics)),
         )
         return `<tr>${[...parameterCells, ...metricCells].map((value) => `<td>${value}</td>`).join("")}</tr>`
@@ -1466,7 +1572,7 @@ export function CustomReportBuilderContent() {
       <AlertCircle className="h-8 w-8 text-red-400" />
       <p className="text-sm text-red-600">{reportError}</p>
     </div>
-  ) : selectedParameters.length === 0 || selectedMetrics.length === 0 ? (
+  ) : displayedParameters.length === 0 || displayedMetrics.length === 0 ? (
     <div className="flex flex-col items-center justify-center min-h-[280px] text-center p-8">
       <p className="text-sm text-slate-600">
         Select at least one parameter and one metric in the right panel to view the report.
@@ -1480,7 +1586,7 @@ export function CustomReportBuilderContent() {
     <table className="w-max min-w-full caption-bottom border-separate border-spacing-0 text-sm">
       <TableHeader>
         <TableRow className="border-b-0">
-          {selectedParameters.map((paramId, index) => {
+          {displayedParameters.map((paramId, index) => {
             const param = catalogParameters.find((p) => p.id === paramId)
             return (
               <TableHead
@@ -1488,9 +1594,9 @@ export function CustomReportBuilderContent() {
                 className={cn(
                   "sticky top-0 z-50 bg-white text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 whitespace-nowrap",
                   index === 0 && "pl-5",
-                  index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
+                  index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
-                style={{ ...getParameterStickyStyle(selectedParameters, index), top: 0 }}
+                style={{ ...getParameterStickyStyle(displayedParameters, index), top: 0 }}
                 onClick={() => handleSort(paramId)}
               >
                 <div className="flex items-center gap-1">
@@ -1501,14 +1607,14 @@ export function CustomReportBuilderContent() {
               </TableHead>
             )
           })}
-          {selectedMetrics.map((metricId, index) => {
+          {displayedMetrics.map((metricId, index) => {
             const metric = catalogMetrics.find((m) => m.id === metricId)
             return (
               <TableHead
                 key={metricId}
                 className={cn(
                   "sticky top-0 z-40 bg-white text-xs font-medium text-slate-600 text-right cursor-pointer hover:bg-slate-50 whitespace-nowrap",
-                  index === selectedMetrics.length - 1 && "pr-5",
+                  index === displayedMetrics.length - 1 && "pr-5",
                 )}
                 style={{ ...getMetricColumnStyle(), top: 0 }}
                 onClick={() => handleSort(metricId)}
@@ -1523,15 +1629,15 @@ export function CustomReportBuilderContent() {
           })}
         </TableRow>
         <TableRow className="border-b border-slate-200 bg-slate-100">
-          {selectedParameters.map((paramId, index) => (
+          {displayedParameters.map((paramId, index) => (
             <TableHead
               key={`total-p-${paramId}`}
               className={cn(
                 "sticky top-10 z-50 bg-slate-100 py-3",
                 index === 0 && "pl-5",
-                index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
+                index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={{ ...getParameterStickyStyle(selectedParameters, index), top: "2.5rem" }}
+              style={{ ...getParameterStickyStyle(displayedParameters, index), top: "2.5rem" }}
             >
               {index === 0 ? (
                 <span className="text-sm font-bold text-slate-900">Total</span>
@@ -1540,12 +1646,12 @@ export function CustomReportBuilderContent() {
               )}
             </TableHead>
           ))}
-          {selectedMetrics.map((metricId, index) => (
+          {displayedMetrics.map((metricId, index) => (
             <TableHead
               key={`total-${metricId}`}
               className={cn(
                 "sticky top-10 z-40 bg-slate-100 py-3 text-right text-sm font-bold text-slate-900 whitespace-nowrap",
-                index === selectedMetrics.length - 1 && "pr-5",
+                index === displayedMetrics.length - 1 && "pr-5",
               )}
               style={{ ...getMetricColumnStyle(), top: "2.5rem" }}
             >
@@ -1554,19 +1660,19 @@ export function CustomReportBuilderContent() {
           ))}
         </TableRow>
         <TableRow className="border-b">
-          {selectedParameters.map((paramId, index) => (
+          {displayedParameters.map((paramId, index) => (
             <TableHead
               key={`bar-p-${paramId}`}
               className={cn(
                 "sticky top-20 z-50 h-1 bg-white p-0",
-                index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
+                index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={{ ...getParameterStickyStyle(selectedParameters, index), top: "5rem" }}
+              style={{ ...getParameterStickyStyle(displayedParameters, index), top: "5rem" }}
             >
               <div className="h-1 bg-emerald-500" />
             </TableHead>
           ))}
-          {selectedMetrics.map((metricId) => (
+          {displayedMetrics.map((metricId) => (
             <TableHead
               key={`bar-m-${metricId}`}
               className="sticky top-20 z-40 h-1 bg-white p-0"
@@ -1580,21 +1686,21 @@ export function CustomReportBuilderContent() {
       <TableBody>
         {tableRows.map((row, idx) => (
           <TableRow key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-            {selectedParameters.map((paramId, index) => (
+            {displayedParameters.map((paramId, index) => (
               <TableCell
                 key={paramId}
                 className={cn(
                   "sticky z-20 py-2",
                   idx % 2 === 0 ? "bg-white" : "bg-slate-50",
                   index === 0 && "pl-5",
-                  index === selectedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
+                  index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
-                style={getParameterStickyStyle(selectedParameters, index)}
+                style={getParameterStickyStyle(displayedParameters, index)}
               >
-                {renderParameterCell(paramId, row, selectedParameters)}
+                {renderParameterCell(paramId, row, displayedParameters)}
               </TableCell>
             ))}
-            {selectedMetrics.map((metricId, index) => {
+            {displayedMetrics.map((metricId, index) => {
               if (metricId === "ua_cost") {
                 const spanState = uaCostRowSpanMap.get(idx)
                 if (spanState?.hidden) return null
@@ -1604,8 +1710,8 @@ export function CustomReportBuilderContent() {
                     key={metricId}
                     rowSpan={spanState?.rowSpan}
                     className={cn(
-                      "text-sm text-right text-slate-700 py-2 whitespace-nowrap align-top",
-                      index === selectedMetrics.length - 1 && "pr-5",
+                      "text-sm text-right text-slate-700 py-2 whitespace-nowrap align-middle",
+                      index === displayedMetrics.length - 1 && "pr-5",
                     )}
                     style={getMetricColumnStyle()}
                   >
@@ -1619,7 +1725,7 @@ export function CustomReportBuilderContent() {
                   key={metricId}
                   className={cn(
                     "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
-                    index === selectedMetrics.length - 1 && "pr-5",
+                    index === displayedMetrics.length - 1 && "pr-5",
                   )}
                   style={getMetricColumnStyle()}
                 >
@@ -1663,21 +1769,23 @@ export function CustomReportBuilderContent() {
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between gap-2">
                 <Label htmlFor="save-report-folder">Folder (optional)</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={savingReport || creatingFolder}
-                  onClick={() => {
-                    setIsCreatingFolder((prev) => !prev)
-                    setNewFolderName("")
-                  }}
-                  title="Create new folder"
-                  aria-label="Create new folder"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                {canManageReportFolders ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={savingReport || creatingFolder}
+                    onClick={() => {
+                      setIsCreatingFolder((prev) => !prev)
+                      setNewFolderName("")
+                    }}
+                    title="Create new folder"
+                    aria-label="Create new folder"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                ) : null}
               </div>
               <Select
                 value={saveReportFolder.trim() || "__none"}
@@ -1696,7 +1804,7 @@ export function CustomReportBuilderContent() {
                   ))}
                 </SelectContent>
               </Select>
-              {isCreatingFolder ? (
+              {canManageReportFolders && isCreatingFolder ? (
                 <div className="flex items-center gap-2">
                   <Input
                     value={newFolderName}
@@ -1788,9 +1896,20 @@ export function CustomReportBuilderContent() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
+          {reportIdFromUrl ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="mb-2 h-8 px-2 text-slate-600 hover:text-slate-900"
+              onClick={() => router.push("/reports")}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Back to Reports
+            </Button>
+          ) : null}
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold text-slate-900">{reportPageTitle}</h1>
-            {savedReportId ? (
+            {savedReportId && canEditReports ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -1810,7 +1929,7 @@ export function CustomReportBuilderContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {savedReportId ? (
+          {savedReportId && canDeleteReports ? (
             <Button
               type="button"
               variant="outline"
@@ -1822,7 +1941,7 @@ export function CustomReportBuilderContent() {
               Delete
             </Button>
           ) : null}
-          {savedReportId ? (
+          {savedReportId && canPinReports ? (
             <Button
               type="button"
               variant="outline"
@@ -1836,15 +1955,17 @@ export function CustomReportBuilderContent() {
               {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
             </Button>
           ) : null}
-          <Button
-            className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
-            type="button"
-            disabled={savingReport || loadingSavedReport || deletingReport}
-            onClick={handleSaveReportClick}
-          >
-            <Save className="w-4 h-4" />
-            {savingReport ? "Saving…" : savedReportId ? "Update report" : "Save report"}
-          </Button>
+          {(savedReportId ? canEditReports : canCreateReports) ? (
+            <Button
+              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+              type="button"
+              disabled={savingReport || loadingSavedReport || deletingReport}
+              onClick={handleSaveReportClick}
+            >
+              <Save className="w-4 h-4" />
+              {savingReport ? "Saving…" : savedReportId ? "Update report" : "Save report"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -1937,24 +2058,48 @@ export function CustomReportBuilderContent() {
             )}
 
             {canScopeManagedTeams && (
-              <Select value={commissionTeam} onValueChange={handleCommissionTeamChange}>
-                <SelectTrigger className="w-52 h-10 bg-white">
-                  <SelectValue placeholder="Team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All teams</SelectItem>
-                  {commissionTeams.map((team) => (
-                    <SelectItem key={team.teamId} value={team.teamId}>
-                      {team.label}
-                    </SelectItem>
-                  ))}
-                  {commissionTeams.length === 0 ? (
-                    <div className="px-2 py-2 text-sm text-slate-500">
-                      No teams under you or as team lead
-                    </div>
-                  ) : null}
-                </SelectContent>
-              </Select>
+              <>
+                <Select value={commissionTeam} onValueChange={handleCommissionTeamChange}>
+                  <SelectTrigger className="w-52 h-10 bg-white" disabled={commissionTeams.length === 0}>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {commissionTeams.map((team) => (
+                      <SelectItem key={team.teamId} value={team.teamId}>
+                        {team.label}
+                      </SelectItem>
+                    ))}
+                    {commissionTeams.length === 0 ? (
+                      <div className="px-2 py-2 text-sm text-slate-500">
+                        No teams under you or as team lead
+                      </div>
+                    ) : null}
+                  </SelectContent>
+                </Select>
+
+                <div className="hidden">
+                  <Select value={commissionMember} onValueChange={handleCommissionMemberChange}>
+                    <SelectTrigger
+                      className="w-64 h-10 bg-white"
+                      disabled={!commissionTeam || commissionMembers.length === 0 || memberOptionsLoading}
+                    >
+                      <SelectValue placeholder={memberOptionsLoading ? "Loading team members..." : "Select team member"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commissionMembers.map((member) => (
+                        <SelectItem key={member.userId} value={member.userId}>
+                          {member.label}
+                        </SelectItem>
+                      ))}
+                      {!memberOptionsLoading && commissionMembers.length === 0 ? (
+                        <div className="px-2 py-2 text-sm text-slate-500">
+                          No team members found
+                        </div>
+                      ) : null}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             <Popover open={appPopoverOpen} onOpenChange={setAppPopoverOpen}>
@@ -1963,7 +2108,7 @@ export function CustomReportBuilderContent() {
                   variant="outline"
                   className="h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal"
                   type="button"
-                  disabled={appsLoading || teamPlansLoading}
+                  disabled={appsLoading || memberPermissionsLoading}
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
@@ -2005,9 +2150,9 @@ export function CustomReportBuilderContent() {
                           Clear
                         </Button>
                       </div>
-                      {commissionTeam !== "All" && teamPlanAppIds !== null && appsForSelection.length === 0 ? (
+                      {commissionTeam && commissionMember && memberPermittedAppIds !== null && appsForSelection.length === 0 ? (
                         <div className="px-3 py-4 text-sm text-slate-500">
-                          No apps in profit plan for this team in the selected date range.
+                          No permitted apps for the selected team member.
                         </div>
                       ) : null}
                       {appsForSelection.map((app) => (
@@ -2139,20 +2284,24 @@ export function CustomReportBuilderContent() {
           {(activeFilters.length > 0 || metricFilters.length > 0) && (
             <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
               <span className="text-sm text-slate-500">Active filters:</span>
-              {activeFilters.map((filter) => (
+              {activeFilters
+                .filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER)
+                .map((filter) => (
                 <Badge
                   key={filter.type}
                   variant="secondary"
                   className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
                 >
                   {filter.type}: {filter.value}
-                  <button
-                    type="button"
-                    onClick={() => removeFilter(filter.type)}
-                    className="ml-1 hover:bg-blue-100 rounded p-0.5"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  {filter.type !== FILTER_COMMISSION_TEAM && filter.type !== FILTER_COMMISSION_MEMBER ? (
+                    <button
+                      type="button"
+                      onClick={() => removeFilter(filter.type)}
+                      className="ml-1 hover:bg-blue-100 rounded p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  ) : null}
                 </Badge>
               ))}
               {metricFilters.map((filter, index) => (
@@ -2194,16 +2343,18 @@ export function CustomReportBuilderContent() {
                   {selectedAppLabels.length > 0 && ` · ${appsTriggerLabel}`}
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                className="h-10 gap-2 bg-transparent sm:self-start"
-                type="button"
-                onClick={handleExportExcel}
-                disabled={reportLoading || tableRows.length === 0}
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </Button>
+              {canExportReports ? (
+                <Button
+                  variant="outline"
+                  className="h-10 gap-2 bg-transparent sm:self-start"
+                  type="button"
+                  onClick={handleExportExcel}
+                  disabled={reportLoading || tableRows.length === 0}
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </Button>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="p-0">
