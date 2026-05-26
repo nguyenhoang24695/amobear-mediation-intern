@@ -135,6 +135,11 @@ function formatRawValue(value?: string | null): string {
   return trimmed || "-"
 }
 
+function formatRoasGoal(value?: string | null): string {
+  const trimmed = (value ?? "").trim()
+  return trimmed ? `${trimmed}x` : "-"
+}
+
 function formatDateRange(start?: string | null, end?: string | null): string {
   if (!start && !end) return "-"
   return `${formatDateTime(start)} -> ${formatDateTime(end)}`
@@ -323,6 +328,7 @@ function AdSetConfigurationTable({ items }: { items: MetaCampaignAdSetSummaryDto
                 <div className="space-y-1 text-sm text-slate-700">
                   <div>Bid: {formatRawValue(item.bidAmount)}</div>
                   <div>Strategy: {formatBidStrategy(item.bidStrategy)}</div>
+                  <div>ROAS Goal: {formatRoasGoal(item.roasAverageFloor)}</div>
                 </div>
               </TableCell>
               <TableCell>

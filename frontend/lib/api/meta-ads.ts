@@ -7,6 +7,7 @@ import type {
   CreateMetaIntegrationRequestDto,
   ExecuteMetaCampaignRequestDto,
   MetaAdAccountDto,
+  MetaAdSetDraftValidationDto,
   MetaAppMappingCandidateDto,
   MetaAppMappingCandidateQueryDto,
   MetaAppMappingDiscoveryRequestDto,
@@ -217,12 +218,22 @@ export const metaReferenceApi = {
     return apiClient.get<MetaGeoCityReferenceDto[]>(`${REFERENCE_PREFIX}/geo/cities`, { metaAdAccountId, q })
   },
 
-  getAppPerformanceGoals: async (appRowId: number) => {
-    return apiClient.get<MetaPerformanceGoalReferenceDto>(`${REFERENCE_PREFIX}/apps/${appRowId}/performance-goals`)
+  getAppPerformanceGoals: async (appRowId: number, metaAdAccountId?: number | null, paidMediaAppBindingId?: number | null) => {
+    return apiClient.get<MetaPerformanceGoalReferenceDto>(
+      `${REFERENCE_PREFIX}/apps/${appRowId}/performance-goals`,
+      {
+        ...(metaAdAccountId && Number.isFinite(metaAdAccountId) ? { metaAdAccountId } : {}),
+        ...(paidMediaAppBindingId && Number.isFinite(paidMediaAppBindingId) ? { paidMediaAppBindingId } : {}),
+      },
+    )
   },
 
   createAppCustomEvent: async (appRowId: number, request: CreateMetaAppCustomEventDto) => {
     return apiClient.post<MetaPerformanceGoalOptionDto>(`${REFERENCE_PREFIX}/apps/${appRowId}/performance-goals/custom-events`, request)
+  },
+
+  validateAdSetDraft: async (request: CreateMetaCampaignRequestDto) => {
+    return apiClient.post<MetaAdSetDraftValidationDto>(`${REFERENCE_PREFIX}/adsets/validate-draft`, request)
   },
 }
 
