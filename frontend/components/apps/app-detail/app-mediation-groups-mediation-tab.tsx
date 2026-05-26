@@ -208,8 +208,8 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <Input
                 id="bronze-mg-search"
-                placeholder="Tìm theo tên hoặc Mediation Group ID (bấm Áp dụng để lọc)"
-                aria-label="Tìm theo tên hoặc Mediation Group ID — cần bấm Áp dụng bộ lọc"
+                placeholder="Tìm theo tên group, Mediation Group ID, Ad Source ID hoặc tên Ad Source"
+                aria-label="Tìm theo tên group, Mediation Group ID, Ad Source ID hoặc tên Ad Source — cần bấm Áp dụng bộ lọc"
                 value={searchDraft}
                 onChange={(e) => setSearchDraft(e.target.value)}
                 className="pl-9 h-10 bg-white border-slate-200 w-full"
