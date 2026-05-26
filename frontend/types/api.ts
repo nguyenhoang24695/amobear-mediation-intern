@@ -82,6 +82,7 @@ export interface AppMediationBronzeFilterOptionsResponse {
   endDate?: string
   countries: string[]
   appVersionNames: string[]
+  adSourceTitles: string[]
 }
 
 export interface AppMediationBronzeAdUnitRow {
@@ -198,6 +199,7 @@ export interface AppMediationBronzeMediationGroupsResponse {
   endDate?: string
   country?: string | null
   appVersion?: string | null
+  adSourceTitle?: string | null
   search?: string | null
   page?: number
   pageSize?: number

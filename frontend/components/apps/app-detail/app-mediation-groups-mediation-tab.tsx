@@ -26,6 +26,7 @@ import {
   MediationGroupTargetingCell,
 } from "@/components/mediation/mediation-group-table-cells"
 import { CountryBronzeFilterCombobox } from "@/components/shared/country-bronze-filter-combobox"
+import { StringFilterCombobox } from "@/components/shared/string-filter-combobox"
 import { CountryFlagTooltipCell } from "@/components/shared/country-display"
 import { iso3166Alpha2ToCountryName } from "@/lib/utils/country-flag"
 import { BRONZE_MEDIATION_MIN_YMD, clampYmdLowerBound } from "@/lib/constants/mediation-bronze"
@@ -65,12 +66,14 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
   const [endDraft, setEndDraft] = useState(initEnd)
   const [countryDraft, setCountryDraft] = useState("")
   const [appVersionDraft, setAppVersionDraft] = useState("")
+  const [adSourceTitleDraft, setAdSourceTitleDraft] = useState("")
   const [searchDraft, setSearchDraft] = useState("")
 
   const [startApplied, setStartApplied] = useState(initStart)
   const [endApplied, setEndApplied] = useState(initEnd)
   const [countryApplied, setCountryApplied] = useState("")
   const [appVersionApplied, setAppVersionApplied] = useState("")
+  const [adSourceTitleApplied, setAdSourceTitleApplied] = useState("")
   const [searchApplied, setSearchApplied] = useState("")
 
   const [page, setPage] = useState(1)
@@ -83,17 +86,20 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
       endDraft !== endApplied ||
       countryDraft !== countryApplied ||
       appVersionDraft !== appVersionApplied ||
+      adSourceTitleDraft !== adSourceTitleApplied ||
       searchDraft.trim() !== searchApplied,
     [
       startDraft,
       endDraft,
       countryDraft,
       appVersionDraft,
+      adSourceTitleDraft,
       searchDraft,
       startApplied,
       endApplied,
       countryApplied,
       appVersionApplied,
+      adSourceTitleApplied,
       searchApplied,
     ],
   )
@@ -103,6 +109,7 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
     setEndApplied(endDraft)
     setCountryApplied(countryDraft)
     setAppVersionApplied(appVersionDraft)
+    setAdSourceTitleApplied(adSourceTitleDraft)
     setSearchApplied(searchDraft.trim())
     setPage(1)
   }
@@ -120,9 +127,9 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
   const dataKey = useMemo(
     () =>
       appRowId
-        ? `bronze_mg_${appRowId}_${startApplied}_${endApplied}_${countryApplied}_${appVersionApplied}_${searchApplied}_${page}_${pageSize}`
+        ? `bronze_mg_${appRowId}_${startApplied}_${endApplied}_${countryApplied}_${appVersionApplied}_${adSourceTitleApplied}_${searchApplied}_${page}_${pageSize}`
         : undefined,
-    [appRowId, startApplied, endApplied, countryApplied, appVersionApplied, searchApplied, page, pageSize],
+    [appRowId, startApplied, endApplied, countryApplied, appVersionApplied, adSourceTitleApplied, searchApplied, page, pageSize],
   )
 
   const { data: payload, loading, error } = useApi(
@@ -132,6 +139,7 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
         endDate: endApplied,
         country: countryApplied || undefined,
         appVersion: appVersionApplied || undefined,
+        adSourceTitle: adSourceTitleApplied || undefined,
         search: searchApplied || undefined,
         page,
         pageSize,
@@ -176,6 +184,12 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
             · Country: {iso3166Alpha2ToCountryName(countryApplied) || countryApplied} ({countryApplied.trim().toUpperCase()})
           </span>
         ) : null}
+        {adSourceTitleApplied.trim() ? (
+          <span className="text-slate-500">
+            {" "}
+            · Ad source: {adSourceTitleApplied}
+          </span>
+        ) : null}
       </p>
 
       {!starRocksEnabled && (
@@ -208,8 +222,8 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <Input
                 id="bronze-mg-search"
-                placeholder="Tìm theo tên hoặc Mediation Group ID (bấm Áp dụng để lọc)"
-                aria-label="Tìm theo tên hoặc Mediation Group ID — cần bấm Áp dụng bộ lọc"
+                placeholder="Tìm theo tên group, Mediation Group ID, Ad Source ID hoặc tên Ad Source"
+                aria-label="Tìm theo tên group, Mediation Group ID, Ad Source ID hoặc tên Ad Source — cần bấm Áp dụng bộ lọc"
                 value={searchDraft}
                 onChange={(e) => setSearchDraft(e.target.value)}
                 className="pl-9 h-10 bg-white border-slate-200 w-full"
@@ -286,6 +300,21 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex min-w-[240px] flex-row items-center gap-2 lg:min-w-[320px]">
+                <Label htmlFor="bronze-mg-adsource-title" className="shrink-0 text-sm">
+                  Ad source
+                </Label>
+                <StringFilterCombobox
+                  id="bronze-mg-adsource-title"
+                  options={filterOpts?.adSourceTitles ?? []}
+                  value={adSourceTitleDraft}
+                  onChange={setAdSourceTitleDraft}
+                  disabled={loadingOpts}
+                  allLabel="Tất cả"
+                  searchPlaceholder="Tìm theo title ad source..."
+                  emptyMessage="Không tìm thấy ad source."
+                />
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
@@ -306,11 +335,13 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
                   setEndDraft(e)
                   setCountryDraft("")
                   setAppVersionDraft("")
+                  setAdSourceTitleDraft("")
                   setSearchDraft("")
                   setStartApplied(s)
                   setEndApplied(e)
                   setCountryApplied("")
                   setAppVersionApplied("")
+                  setAdSourceTitleApplied("")
                   setSearchApplied("")
                   setPage(1)
                   setPageSize(20)

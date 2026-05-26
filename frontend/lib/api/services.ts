@@ -455,6 +455,7 @@ export const structureApi = {
             endDate: string
             country?: string
             appVersion?: string
+            adSourceTitle?: string
             search?: string
             page?: number
             pageSize?: number
@@ -463,6 +464,7 @@ export const structureApi = {
         const q: Record<string, string | number | undefined> = { startDate: params.startDate, endDate: params.endDate }
         if (params.country) q.country = params.country
         if (params.appVersion) q.appVersion = params.appVersion
+        if (params.adSourceTitle) q.adSourceTitle = params.adSourceTitle
         if (params.search?.trim()) q.search = params.search.trim()
         if (params.page != null) q.page = params.page
         if (params.pageSize != null) q.pageSize = params.pageSize
