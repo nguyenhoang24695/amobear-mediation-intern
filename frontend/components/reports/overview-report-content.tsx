@@ -165,24 +165,26 @@ function formatLastUpdatedAt(value: string): string {
 }
 
 interface SharedAppAcrossTeamsConflict {
-  appId: string
+  appStoreId: string
   appLabel: string
   teamNames: string[]
 }
 
-/** Apps xuất hiện ở ≥2 team trong danh sách đang hiển thị. */
+/** Apps (app_store_id) xuất hiện ở ≥2 team có team lead trong danh sách đang hiển thị. */
 function findSharedAppsAcrossTeams(teams: ProfitOverviewTeamRow[]): SharedAppAcrossTeamsConflict[] {
-  const byAppId = new Map<string, { appLabel: string; teamNames: Set<string> }>()
+  const byStoreId = new Map<string, { appLabel: string; teamNames: Set<string> }>()
 
   for (const team of teams) {
-    for (const app of team.apps ?? []) {
-      const appId = app.appId?.trim()
-      if (!appId) continue
+    if (!team.leadUserId) continue
 
-      let entry = byAppId.get(appId)
+    for (const app of team.apps ?? []) {
+      const storeId = app.appStoreId?.trim() || app.appId?.trim()
+      if (!storeId) continue
+
+      let entry = byStoreId.get(storeId)
       if (!entry) {
-        entry = { appLabel: app.appLabel?.trim() || appId, teamNames: new Set() }
-        byAppId.set(appId, entry)
+        entry = { appLabel: app.appLabel?.trim() || storeId, teamNames: new Set() }
+        byStoreId.set(storeId, entry)
       }
       if (app.appLabel?.trim()) entry.appLabel = app.appLabel.trim()
       entry.teamNames.add(team.teamName?.trim() || team.teamId)
@@ -190,10 +192,10 @@ function findSharedAppsAcrossTeams(teams: ProfitOverviewTeamRow[]): SharedAppAcr
   }
 
   const conflicts: SharedAppAcrossTeamsConflict[] = []
-  for (const [appId, { appLabel, teamNames }] of byAppId) {
+  for (const [appStoreId, { appLabel, teamNames }] of byStoreId) {
     if (teamNames.size < 2) continue
     conflicts.push({
-      appId,
+      appStoreId,
       appLabel,
       teamNames: [...teamNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
     })
@@ -858,9 +860,9 @@ export function OverviewReportContent() {
                   </p>
                   <ul className="mt-1.5 list-disc space-y-1 pl-4">
                     {sharedAppConflicts.map((conflict) => (
-                      <li key={conflict.appId}>
+                      <li key={conflict.appStoreId}>
                         <span className="font-medium">{conflict.appLabel}</span>{" "}
-                        <span className="font-mono text-red-600/90">({conflict.appId})</span>
+                        <span className="font-mono text-red-600/90">({conflict.appStoreId})</span>
                         {" — shared by "}
                         {conflict.teamNames.join(", ")}
                       </li>
