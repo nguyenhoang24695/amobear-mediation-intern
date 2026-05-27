@@ -109,6 +109,8 @@ export interface ProfitOverviewMonthCell {
 export interface ProfitOverviewAppRow {
   appId: string
   appLabel: string
+  appPlatform?: string | null
+  appStoreId?: string | null
   appIconUri?: string | null
   months: Record<string, ProfitOverviewMonthCell>
 }
@@ -126,6 +128,7 @@ export interface ProfitOverviewTeamRow {
 export interface ProfitOverviewReportResponse {
   months: string[]
   teams: ProfitOverviewTeamRow[]
+  lastUpdatedAt?: string | null
 }
 
 export interface OverviewReportFilter {
