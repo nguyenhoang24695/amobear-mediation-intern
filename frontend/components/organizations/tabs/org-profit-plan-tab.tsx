@@ -134,7 +134,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     if (!query) return plans
 
     return plans.filter((plan) =>
-      [plan.appLabel, plan.appId, plan.appStoreId]
+      [plan.appLabel, plan.appStoreId, plan.admobAppId]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query)),
     )
@@ -234,9 +234,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         [
           "Month",
           "App",
-          "App ID",
-          "Platform",
           "App Store ID",
+          "Platform",
+          "AdMob App ID",
           "Planned Profit",
           "Actual Profit",
           "Completion Percent",
@@ -244,9 +244,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         ...filteredPlans.map((plan) => [
           plan.month,
           plan.appLabel,
-          plan.appId,
+          plan.appStoreId,
           plan.appPlatform ?? "",
-          plan.appStoreId ?? "",
+          plan.admobAppId ?? "",
           plan.plannedProfit,
           plan.actualProfit,
           plan.completionPercent == null ? "" : plan.completionPercent.toFixed(2),
@@ -377,7 +377,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   id="org-profit-search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="App name, App ID, or Store ID"
+                  placeholder="App name, App Store ID, or AdMob App ID"
                   className="w-full bg-white sm:w-[280px]"
                 />
               </div>
@@ -490,7 +490,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                             <div className="min-w-0">
                               <div className="font-medium text-slate-900 truncate">{plan.appLabel}</div>
                               <div className="text-xs text-slate-500 truncate">
-                                {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.appId}
+                                {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.admobAppId || "—"}
                               </div>
                             </div>
                           </TableCell>
@@ -532,7 +532,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           <DialogHeader>
             <DialogTitle>Import profit plans</DialogTitle>
             <DialogDescription>
-              Upload an Excel file (.xlsx) with columns: Month, App ID, Planned Profit.
+              Upload an Excel file (.xlsx) with columns: Month, App Store ID, Planned Profit.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

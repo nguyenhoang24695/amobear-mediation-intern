@@ -1894,10 +1894,10 @@ export interface TeamMonthlyProfitPlan {
     id: string
     organizationId: string
     month: string
-    appId: string
+    appStoreId: string
+    admobAppId?: string | null
     appLabel: string
     appPlatform?: string | null
-    appStoreId?: string | null
     appIconUri?: string | null
     plannedProfit: number
     actualProfit: number
@@ -1907,7 +1907,7 @@ export interface TeamMonthlyProfitPlan {
 }
 
 export interface UpsertTeamMonthlyProfitPlanRequest {
-    appId: string
+    appStoreId: string
     plannedProfit: number
 }
 
@@ -1920,17 +1920,17 @@ export interface ImportTeamProfitPlansResult {
 
 export interface BulkProfitPlanItem {
     month: string
-    appId: string
+    appStoreId: string
 }
 
 export interface TeamProfitAppOption {
-    appId: string
+    appStoreId: string
+    admobAppId?: string | null
     label: string
     displayName?: string | null
     name?: string | null
     platform?: string | null
     iconUri?: string | null
-    appStoreId?: string | null
 }
 
 export const teamProfitApi = {
@@ -1944,9 +1944,9 @@ export const teamProfitApi = {
         )
     },
 
-    getPlan: async (teamId: string, month: string, appId: string): Promise<TeamMonthlyProfitPlan | null> => {
+    getPlan: async (teamId: string, month: string, appStoreId: string): Promise<TeamMonthlyProfitPlan | null> => {
         return apiClient.get<TeamMonthlyProfitPlan | null>(
-            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}`,
+            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appStoreId)}`,
         )
     },
 
@@ -1958,9 +1958,9 @@ export const teamProfitApi = {
         return apiClient.put<TeamMonthlyProfitPlan>(`/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}`, body)
     },
 
-    deletePlan: async (teamId: string, month: string, appId: string): Promise<void> => {
+    deletePlan: async (teamId: string, month: string, appStoreId: string): Promise<void> => {
         await apiClient.delete(
-            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appId)}`,
+            `/api/v1/teams/${teamId}/profit-plans/${encodeURIComponent(month)}/${encodeURIComponent(appStoreId)}`,
         )
     },
 

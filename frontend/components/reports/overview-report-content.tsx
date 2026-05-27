@@ -1,9 +1,26 @@
 "use client"
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { type CSSProperties, Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { format, parse, parseISO } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronDown, ChevronRight, Loader2, RefreshCw, Save } from "lucide-react"
+import { ChevronDown, ChevronRight, GripVertical, Loader2, RefreshCw, Save } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -42,6 +59,7 @@ import type {
   ProfitOverviewMetricValues,
   ProfitOverviewMonthCell,
   ProfitOverviewReportResponse,
+  ProfitOverviewTeamRow,
 } from "@/types/reports"
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -54,6 +72,35 @@ const OVERVIEW_METRICS: { id: OverviewMetricId; label: string }[] = [
 ]
 
 const DEFAULT_OVERVIEW_METRICS: OverviewMetricId[] = ["revenue", "cost", "profit"]
+
+const METRIC_TABLE_STYLES: Record<
+  OverviewMetricId,
+  { header: string; cell: string; cellSubtle: string; border: string }
+> = {
+  revenue: {
+    header: "bg-sky-50 text-sky-900",
+    cell: "bg-sky-50/35",
+    cellSubtle: "bg-sky-50/55",
+    border: "border-sky-200",
+  },
+  cost: {
+    header: "bg-amber-50 text-amber-900",
+    cell: "bg-amber-50/35",
+    cellSubtle: "bg-amber-50/55",
+    border: "border-amber-200",
+  },
+  profit: {
+    header: "bg-emerald-50 text-emerald-900",
+    cell: "bg-emerald-50/35",
+    cellSubtle: "bg-emerald-50/55",
+    border: "border-emerald-200",
+  },
+}
+
+function metricGroupEndBorder(metricId: OverviewMetricId, isLastMetricInMonth: boolean) {
+  if (isLastMetricInMonth) return "border-r-2 border-slate-300"
+  return cn("border-r", METRIC_TABLE_STYLES[metricId].border)
+}
 
 function currentYearRange() {
   const year = new Date().getFullYear()
@@ -117,6 +164,46 @@ function formatLastUpdatedAt(value: string): string {
   }
 }
 
+interface SharedAppAcrossTeamsConflict {
+  appId: string
+  appLabel: string
+  teamNames: string[]
+}
+
+/** Apps xuất hiện ở ≥2 team trong danh sách đang hiển thị. */
+function findSharedAppsAcrossTeams(teams: ProfitOverviewTeamRow[]): SharedAppAcrossTeamsConflict[] {
+  const byAppId = new Map<string, { appLabel: string; teamNames: Set<string> }>()
+
+  for (const team of teams) {
+    for (const app of team.apps ?? []) {
+      const appId = app.appId?.trim()
+      if (!appId) continue
+
+      let entry = byAppId.get(appId)
+      if (!entry) {
+        entry = { appLabel: app.appLabel?.trim() || appId, teamNames: new Set() }
+        byAppId.set(appId, entry)
+      }
+      if (app.appLabel?.trim()) entry.appLabel = app.appLabel.trim()
+      entry.teamNames.add(team.teamName?.trim() || team.teamId)
+    }
+  }
+
+  const conflicts: SharedAppAcrossTeamsConflict[] = []
+  for (const [appId, { appLabel, teamNames }] of byAppId) {
+    if (teamNames.size < 2) continue
+    conflicts.push({
+      appId,
+      appLabel,
+      teamNames: [...teamNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    })
+  }
+
+  return conflicts.sort((a, b) =>
+    a.appLabel.localeCompare(b.appLabel, undefined, { sensitivity: "base" }),
+  )
+}
+
 function formatMonthLabel(month: string): string {
   try {
     return format(parse(month, "yyyy-MM", new Date()), "MMM yyyy", { locale: enUS })
@@ -157,24 +244,92 @@ function emptyMetricValues(): ProfitOverviewMetricValues {
   return { plan: 0, actual: 0, completionPercent: null }
 }
 
-function getMonthCell(
-  months: Record<string, ProfitOverviewMonthCell>,
-  month: string,
-): ProfitOverviewMonthCell {
-  return (
-    months[month] ?? {
+function normalizeMetricValues(raw: unknown): ProfitOverviewMetricValues {
+  if (!raw || typeof raw !== "object") return emptyMetricValues()
+  const record = raw as Record<string, unknown>
+  const completionRaw = record.completionPercent ?? record.CompletionPercent
+  return {
+    plan: Number(record.plan ?? record.Plan ?? 0),
+    actual: Number(record.actual ?? record.Actual ?? 0),
+    completionPercent:
+      completionRaw == null || completionRaw === ""
+        ? null
+        : Number(completionRaw),
+  }
+}
+
+function normalizeMonthCell(raw: unknown): ProfitOverviewMonthCell {
+  if (!raw || typeof raw !== "object") {
+    return {
       revenue: emptyMetricValues(),
       cost: emptyMetricValues(),
       profit: emptyMetricValues(),
     }
+  }
+
+  const record = raw as Record<string, unknown>
+
+  // Legacy API shape (profit only)
+  if (
+    "plannedProfit" in record ||
+    "planned_profit" in record ||
+    "actualProfit" in record ||
+    "actual_profit" in record
+  ) {
+    const profit = normalizeMetricValues({
+      plan: record.plannedProfit ?? record.planned_profit,
+      actual: record.actualProfit ?? record.actual_profit,
+      completionPercent: record.completionPercent ?? record.completion_percent,
+    })
+    return {
+      revenue: emptyMetricValues(),
+      cost: emptyMetricValues(),
+      profit,
+    }
+  }
+
+  return {
+    revenue: normalizeMetricValues(record.revenue ?? record.Revenue),
+    cost: normalizeMetricValues(record.cost ?? record.Cost),
+    profit: normalizeMetricValues(record.profit ?? record.Profit),
+  }
+}
+
+function normalizeMonthsRecord(
+  months: Record<string, ProfitOverviewMonthCell> | undefined,
+): Record<string, ProfitOverviewMonthCell> {
+  if (!months) return {}
+  return Object.fromEntries(
+    Object.entries(months).map(([monthKey, cell]) => [monthKey, normalizeMonthCell(cell)]),
   )
+}
+
+function normalizeOverviewResponse(raw: ProfitOverviewReportResponse): ProfitOverviewReportResponse {
+  return {
+    ...raw,
+    teams: (raw.teams ?? []).map((team) => ({
+      ...team,
+      months: normalizeMonthsRecord(team.months),
+      apps: (team.apps ?? []).map((app) => ({
+        ...app,
+        months: normalizeMonthsRecord(app.months),
+      })),
+    })),
+  }
+}
+
+function getMonthCell(
+  months: Record<string, ProfitOverviewMonthCell>,
+  month: string,
+): ProfitOverviewMonthCell {
+  return normalizeMonthCell(months[month])
 }
 
 function getMetricValues(
   cell: ProfitOverviewMonthCell,
   metricId: OverviewMetricId,
 ): ProfitOverviewMetricValues {
-  return cell[metricId]
+  return cell[metricId] ?? emptyMetricValues()
 }
 
 function TeamAppsPager({
@@ -233,10 +388,12 @@ function OverviewMonthCells({
   months,
   monthKeys,
   selectedMetrics,
+  rowVariant = "team",
 }: {
   months: Record<string, ProfitOverviewMonthCell>
   monthKeys: string[]
   selectedMetrics: OverviewMetricId[]
+  rowVariant?: "team" | "app"
 }) {
   return (
     <>
@@ -246,19 +403,30 @@ function OverviewMonthCells({
           <Fragment key={month}>
             {selectedMetrics.map((metricId, metricIndex) => {
               const values = getMetricValues(cell, metricId)
-              const isLastMetric = metricIndex === selectedMetrics.length - 1
+              const isLastMetricInMonth = metricIndex === selectedMetrics.length - 1
+              const metricStyle = METRIC_TABLE_STYLES[metricId]
+              const bgClass = rowVariant === "app" ? metricStyle.cellSubtle : metricStyle.cell
               return (
                 <Fragment key={`${month}-${metricId}`}>
-                  <TableCell className="min-w-[80px] text-right text-sm tabular-nums text-slate-700">
+                  <TableCell
+                    className={cn(
+                      "min-w-[80px] border-l text-right text-sm tabular-nums text-slate-700",
+                      metricStyle.border,
+                      bgClass,
+                    )}
+                  >
                     {formatCurrency(values.plan)}
                   </TableCell>
-                  <TableCell className="min-w-[80px] text-right text-sm tabular-nums text-slate-700">
+                  <TableCell
+                    className={cn("min-w-[80px] text-right text-sm tabular-nums text-slate-700", bgClass)}
+                  >
                     {formatCurrency(values.actual)}
                   </TableCell>
                   <TableCell
                     className={cn(
                       "min-w-[56px] text-right text-sm tabular-nums",
-                      isLastMetric && "border-r",
+                      metricGroupEndBorder(metricId, isLastMetricInMonth),
+                      bgClass,
                       getPercentClass(values.completionPercent),
                     )}
                   >
@@ -274,7 +442,7 @@ function OverviewMonthCells({
   )
 }
 
-function OverviewMetricToggle({
+function SortableOverviewMetricItem({
   id,
   label,
   selected,
@@ -285,15 +453,40 @@ function OverviewMetricToggle({
   selected: boolean
   onToggle: (id: OverviewMetricId) => void
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !selected,
+  })
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
   return (
     <button
+      ref={setNodeRef}
+      style={style}
       type="button"
       onClick={() => onToggle(id)}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+        "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors",
         selected ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50",
       )}
     >
+      <span
+        className={cn(
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400",
+          selected ? "cursor-grab active:cursor-grabbing hover:bg-white/60" : "opacity-30",
+        )}
+        onClick={(event) => event.stopPropagation()}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </span>
+      <span className={cn("h-5 w-1 shrink-0 rounded-full", selected ? "bg-blue-500" : "bg-transparent")} />
       <span
         className={cn(
           "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
@@ -303,7 +496,7 @@ function OverviewMetricToggle({
       >
         {selected ? <span className="text-[10px] leading-none">✓</span> : null}
       </span>
-      {label}
+      <span className="flex-1 leading-snug">{label}</span>
     </button>
   )
 }
@@ -322,11 +515,21 @@ export function OverviewReportContent() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
   const [expandedTeamIds, setExpandedTeamIds] = useState<Set<string>>(() => new Set())
   const [teamAppPageByTeamId, setTeamAppPageByTeamId] = useState<Record<string, number>>({})
+  const [metricOrder, setMetricOrder] = useState<OverviewMetricId[]>(DEFAULT_OVERVIEW_METRICS)
   const [selectedMetrics, setSelectedMetrics] = useState<OverviewMetricId[]>(DEFAULT_OVERVIEW_METRICS)
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
   const visibleMetrics = useMemo(
-    () => OVERVIEW_METRICS.filter((metric) => selectedMetrics.includes(metric.id)),
-    [selectedMetrics],
+    () =>
+      metricOrder
+        .filter((id) => selectedMetrics.includes(id))
+        .map((id) => OVERVIEW_METRICS.find((metric) => metric.id === id))
+        .filter((metric): metric is (typeof OVERVIEW_METRICS)[number] => metric != null),
+    [metricOrder, selectedMetrics],
   )
 
   const colsPerMonth = visibleMetrics.length * 3
@@ -338,6 +541,22 @@ export function OverviewReportContent() {
         return prev.filter((id) => id !== metricId)
       }
       return [...prev, metricId]
+    })
+  }
+
+  const handleMetricDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const activeId = String(active.id) as OverviewMetricId
+    const overId = String(over.id) as OverviewMetricId
+    if (!selectedMetrics.includes(activeId) || !selectedMetrics.includes(overId)) return
+
+    setMetricOrder((prev) => {
+      const oldIndex = prev.indexOf(activeId)
+      const newIndex = prev.indexOf(overId)
+      if (oldIndex < 0 || newIndex < 0) return prev
+      return arrayMove(prev, oldIndex, newIndex)
     })
   }
 
@@ -361,7 +580,7 @@ export function OverviewReportContent() {
         from: appliedFrom,
         to: appliedTo,
       })
-      setData(response)
+      setData(normalizeOverviewResponse(response))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to load overview report"
       toast.error(message)
@@ -436,12 +655,8 @@ export function OverviewReportContent() {
 
   const handleYearChange = (year: string) => {
     setSelectedYear(year)
-    const from = `${year}-01`
-    const to = `${year}-12`
-    setFromMonth(from)
-    setToMonth(to)
-    setAppliedFrom(from)
-    setAppliedTo(to)
+    setFromMonth(`${year}-01`)
+    setToMonth(`${year}-12`)
   }
 
   const months = data?.months ?? []
@@ -461,6 +676,8 @@ export function OverviewReportContent() {
     const selected = new Set(selectedTeamIds)
     return allTeams.filter((team) => selected.has(team.teamId))
   }, [allTeams, selectedTeamIds])
+
+  const sharedAppConflicts = useMemo(() => findSharedAppsAcrossTeams(teams), [teams])
 
   useEffect(() => {
     if (allTeams.length === 0) return
@@ -631,6 +848,26 @@ export function OverviewReportContent() {
                   <span className="text-slate-400">—</span>
                 )}
               </p>
+              {sharedAppConflicts.length > 0 ? (
+                <div
+                  className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+                  role="alert"
+                >
+                  <p className="font-semibold text-red-800">
+                    Warning: the same app appears under multiple teams
+                  </p>
+                  <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                    {sharedAppConflicts.map((conflict) => (
+                      <li key={conflict.appId}>
+                        <span className="font-medium">{conflict.appLabel}</span>{" "}
+                        <span className="font-mono text-red-600/90">({conflict.appId})</span>
+                        {" — shared by "}
+                        {conflict.teamNames.join(", ")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div className="max-h-[min(70vh,720px)] overflow-auto">
                 <Table>
                   <TableHeader>
@@ -639,7 +876,6 @@ export function OverviewReportContent() {
                         rowSpan={3}
                         className="sticky left-0 z-20 min-w-[360px] border-r bg-slate-50 align-bottom"
                       >
-                        App
                       </TableHead>
                       {months.map((month) => (
                         <TableHead
@@ -651,42 +887,64 @@ export function OverviewReportContent() {
                         </TableHead>
                       ))}
                     </TableRow>
-                    <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
+                    <TableRow className="hover:bg-transparent">
                       {months.map((month) =>
-                        visibleMetrics.map((metric, metricIndex) => (
-                          <TableHead
-                            key={`${month}-${metric.id}-group`}
-                            colSpan={3}
-                            className={cn(
-                              "border-b text-center text-xs font-medium text-slate-600",
-                              metricIndex === visibleMetrics.length - 1 && "border-r",
-                            )}
-                          >
-                            {metric.label}
-                          </TableHead>
-                        )),
-                      )}
-                    </TableRow>
-                    <TableRow className="bg-slate-50/60 hover:bg-slate-50/60">
-                      {months.map((month) =>
-                        visibleMetrics.map((metric, metricIndex) => (
-                          <Fragment key={`${month}-${metric.id}-subheads`}>
-                            <TableHead className="min-w-[80px] text-right text-xs text-slate-500">
-                              Plan
-                            </TableHead>
-                            <TableHead className="min-w-[80px] text-right text-xs text-slate-500">
-                              Actual
-                            </TableHead>
+                        visibleMetrics.map((metric, metricIndex) => {
+                          const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
+                          const metricStyle = METRIC_TABLE_STYLES[metric.id]
+                          return (
                             <TableHead
+                              key={`${month}-${metric.id}-group`}
+                              colSpan={3}
                               className={cn(
-                                "min-w-[56px] text-right text-xs text-slate-500",
-                                metricIndex === visibleMetrics.length - 1 && "border-r",
+                                "border-b border-l text-center text-xs font-semibold",
+                                metricStyle.header,
+                                metricStyle.border,
+                                metricGroupEndBorder(metric.id, isLastMetricInMonth),
                               )}
                             >
-                              %
+                              {metric.label}
                             </TableHead>
-                          </Fragment>
-                        )),
+                          )
+                        }),
+                      )}
+                    </TableRow>
+                    <TableRow className="hover:bg-transparent">
+                      {months.map((month) =>
+                        visibleMetrics.map((metric, metricIndex) => {
+                          const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
+                          const metricStyle = METRIC_TABLE_STYLES[metric.id]
+                          return (
+                            <Fragment key={`${month}-${metric.id}-subheads`}>
+                              <TableHead
+                                className={cn(
+                                  "min-w-[80px] border-l text-right text-xs text-slate-600",
+                                  metricStyle.header,
+                                  metricStyle.border,
+                                )}
+                              >
+                                Plan
+                              </TableHead>
+                              <TableHead
+                                className={cn(
+                                  "min-w-[80px] text-right text-xs text-slate-600",
+                                  metricStyle.header,
+                                )}
+                              >
+                                Actual
+                              </TableHead>
+                              <TableHead
+                                className={cn(
+                                  "min-w-[56px] text-right text-xs text-slate-600",
+                                  metricStyle.header,
+                                  metricGroupEndBorder(metric.id, isLastMetricInMonth),
+                                )}
+                              >
+                                %
+                              </TableHead>
+                            </Fragment>
+                          )
+                        }),
                       )}
                     </TableRow>
                   </TableHeader>
@@ -781,6 +1039,7 @@ export function OverviewReportContent() {
                                 monthKeys={months}
                                 months={app.months}
                                 selectedMetrics={visibleMetrics.map((m) => m.id)}
+                                rowVariant="app"
                               />
                             </TableRow>
                           ))}
@@ -794,13 +1053,24 @@ export function OverviewReportContent() {
                                 onPageChange={(page) => setTeamAppPage(team.teamId, page)}
                               />
                             </TableCell>
-                            {months.map((month) => (
-                              <TableCell
-                                key={`${team.teamId}-pager-${month}`}
-                                colSpan={colsPerMonth}
-                                className="border-r bg-slate-50/30"
-                              />
-                            ))}
+                            {months.map((month) =>
+                              visibleMetrics.map((metric, metricIndex) => {
+                                const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
+                                const metricStyle = METRIC_TABLE_STYLES[metric.id]
+                                return (
+                                  <TableCell
+                                    key={`${team.teamId}-pager-${month}-${metric.id}`}
+                                    colSpan={3}
+                                    className={cn(
+                                      "border-l",
+                                      metricStyle.cellSubtle,
+                                      metricStyle.border,
+                                      metricGroupEndBorder(metric.id, isLastMetricInMonth),
+                                    )}
+                                  />
+                                )
+                              }),
+                            )}
                           </TableRow>
                         ) : null}
                       </Fragment>
@@ -815,7 +1085,9 @@ export function OverviewReportContent() {
           <Card className="flex min-h-[320px] flex-col border-slate-200 xl:min-h-0">
             <CardHeader className="border-b border-slate-100 pb-3">
               <CardTitle className="text-base font-medium">Metrics</CardTitle>
-              <CardDescription>Choose metrics shown per month (Plan / Actual / %)</CardDescription>
+              <CardDescription>
+                Toggle metrics and drag selected items to reorder columns
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
               <ScrollArea className="max-h-[min(70vh,640px)] flex-1">
@@ -823,15 +1095,29 @@ export function OverviewReportContent() {
                   <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
                     Metrics ({visibleMetrics.length})
                   </div>
-                  {OVERVIEW_METRICS.map((metric) => (
-                    <OverviewMetricToggle
-                      key={metric.id}
-                      id={metric.id}
-                      label={metric.label}
-                      selected={selectedMetrics.includes(metric.id)}
-                      onToggle={toggleMetric}
-                    />
-                  ))}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleMetricDragEnd}
+                  >
+                    <SortableContext items={metricOrder} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-1">
+                        {metricOrder.map((metricId) => {
+                          const metric = OVERVIEW_METRICS.find((item) => item.id === metricId)
+                          if (!metric) return null
+                          return (
+                            <SortableOverviewMetricItem
+                              key={metric.id}
+                              id={metric.id}
+                              label={metric.label}
+                              selected={selectedMetrics.includes(metric.id)}
+                              onToggle={toggleMetric}
+                            />
+                          )
+                        })}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
                 </div>
               </ScrollArea>
             </CardContent>
