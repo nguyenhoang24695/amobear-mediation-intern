@@ -106,6 +106,13 @@ export interface ProfitOverviewMonthCell {
   completionPercent?: number | null
 }
 
+export interface ProfitOverviewAppRow {
+  appId: string
+  appLabel: string
+  appIconUri?: string | null
+  months: Record<string, ProfitOverviewMonthCell>
+}
+
 export interface ProfitOverviewTeamRow {
   teamId: string
   teamName: string
@@ -113,9 +120,17 @@ export interface ProfitOverviewTeamRow {
   leadName?: string | null
   leadEmail?: string | null
   months: Record<string, ProfitOverviewMonthCell>
+  apps: ProfitOverviewAppRow[]
 }
 
 export interface ProfitOverviewReportResponse {
   months: string[]
   teams: ProfitOverviewTeamRow[]
+}
+
+export interface OverviewReportFilter {
+  from: string
+  to: string
+  selectedYear?: string | null
+  teamIds: string[]
 }

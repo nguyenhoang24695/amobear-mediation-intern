@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import { format, parse } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { Loader2, RefreshCw } from "lucide-react"
+import { ChevronDown, ChevronRight, Loader2, RefreshCw, Save } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -24,9 +24,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { StringMultiSelectCombobox } from "@/components/shared/string-multi-select-combobox"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { reportsApi } from "@/lib/api/services"
-import type { ProfitOverviewMonthCell, ProfitOverviewReportResponse } from "@/types/reports"
+import type {
+  ProfitOverviewAppRow,
+  ProfitOverviewMonthCell,
+  ProfitOverviewReportResponse,
+} from "@/types/reports"
 
 function currentYearRange() {
   const year = new Date().getFullYear()
@@ -58,13 +68,50 @@ function formatMonthLabel(month: string): string {
   }
 }
 
-function getCell(row: ProfitOverviewReportResponse["teams"][number], month: string): ProfitOverviewMonthCell {
+function getCell(
+  months: Record<string, ProfitOverviewMonthCell>,
+  month: string,
+): ProfitOverviewMonthCell {
   return (
-    row.months[month] ?? {
+    months[month] ?? {
       plannedProfit: 0,
       actualProfit: 0,
       completionPercent: null,
     }
+  )
+}
+
+function OverviewMonthCells({
+  months,
+  monthKeys,
+}: {
+  months: Record<string, ProfitOverviewMonthCell>
+  monthKeys: string[]
+}) {
+  return (
+    <>
+      {monthKeys.map((month) => {
+        const cell = getCell(months, month)
+        return (
+          <Fragment key={month}>
+            <TableCell className="text-right text-sm tabular-nums text-slate-700">
+              {formatCurrency(cell.plannedProfit)}
+            </TableCell>
+            <TableCell className="text-right text-sm tabular-nums text-slate-700">
+              {formatCurrency(cell.actualProfit)}
+            </TableCell>
+            <TableCell
+              className={cn(
+                "border-r text-right text-sm tabular-nums",
+                getPercentClass(cell.completionPercent),
+              )}
+            >
+              {formatPercent(cell.completionPercent)}
+            </TableCell>
+          </Fragment>
+        )
+      })}
+    </>
   )
 }
 
@@ -77,6 +124,10 @@ export function OverviewReportContent() {
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
   const [data, setData] = useState<ProfitOverviewReportResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [filterReady, setFilterReady] = useState(false)
+  const [savingFilter, setSavingFilter] = useState(false)
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
+  const [expandedTeamIds, setExpandedTeamIds] = useState<Set<string>>(() => new Set())
 
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear()
@@ -101,8 +152,32 @@ export function OverviewReportContent() {
   }, [appliedFrom, appliedTo])
 
   useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const saved = await reportsApi.getOverviewFilter()
+        if (cancelled || !saved) return
+        setFromMonth(saved.from)
+        setToMonth(saved.to)
+        setAppliedFrom(saved.from)
+        setAppliedTo(saved.to)
+        setSelectedYear(saved.selectedYear ?? saved.from.slice(0, 4))
+        setSelectedTeamIds(saved.teamIds ?? [])
+      } catch {
+        // Không chặn trang nếu chưa có filter đã lưu hoặc API lỗi.
+      } finally {
+        if (!cancelled) setFilterReady(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!filterReady) return
     void loadData()
-  }, [loadData])
+  }, [loadData, filterReady])
 
   const applyRange = () => {
     if (fromMonth > toMonth) {
@@ -112,6 +187,28 @@ export function OverviewReportContent() {
     setAppliedFrom(fromMonth)
     setAppliedTo(toMonth)
     setSelectedYear(fromMonth.slice(0, 4))
+  }
+
+  const saveFilter = async () => {
+    if (fromMonth > toMonth) {
+      toast.error("From month must be on or before to month.")
+      return
+    }
+    setSavingFilter(true)
+    try {
+      await reportsApi.saveOverviewFilter({
+        from: fromMonth,
+        to: toMonth,
+        selectedYear,
+        teamIds: selectedTeamIds,
+      })
+      toast.success("Filter saved to your settings.")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save filter"
+      toast.error(message)
+    } finally {
+      setSavingFilter(false)
+    }
   }
 
   const handleYearChange = (year: string) => {
@@ -125,7 +222,44 @@ export function OverviewReportContent() {
   }
 
   const months = data?.months ?? []
-  const teams = data?.teams ?? []
+  const allTeams = data?.teams ?? []
+
+  const teamOptions = useMemo(
+    () =>
+      allTeams.map((team) => ({
+        value: team.teamId,
+        label: team.teamName,
+      })),
+    [allTeams],
+  )
+
+  const teams = useMemo(() => {
+    if (selectedTeamIds.length === 0) return allTeams
+    const selected = new Set(selectedTeamIds)
+    return allTeams.filter((team) => selected.has(team.teamId))
+  }, [allTeams, selectedTeamIds])
+
+  useEffect(() => {
+    if (allTeams.length === 0) return
+    const validIds = new Set(allTeams.map((team) => team.teamId))
+    setSelectedTeamIds((prev) => prev.filter((id) => validIds.has(id)))
+    setExpandedTeamIds((prev) => {
+      const next = new Set<string>()
+      for (const id of prev) {
+        if (validIds.has(id)) next.add(id)
+      }
+      return next
+    })
+  }, [allTeams])
+
+  const toggleTeamExpanded = (teamId: string) => {
+    setExpandedTeamIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(teamId)) next.delete(teamId)
+      else next.add(teamId)
+      return next
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -133,7 +267,7 @@ export function OverviewReportContent() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Overview Report</h1>
           <p className="mt-1 text-sm text-slate-500">
-            KPI profit plan vs actual by team (team lead apps). Each month shows Plan, Actual, and %.
+            KPI profit plan vs actual by team. Expand a team to see plan and actual per app.
           </p>
         </div>
         <Button
@@ -184,9 +318,43 @@ export function OverviewReportContent() {
               className="w-[160px]"
             />
           </div>
+          <div className="min-w-[240px] flex-1 space-y-2">
+            <Label htmlFor="overview-teams">Teams</Label>
+            <StringMultiSelectCombobox
+              id="overview-teams"
+              options={teamOptions}
+              values={selectedTeamIds}
+              onChange={setSelectedTeamIds}
+              disabled={loading || teamOptions.length === 0}
+              placeholder="All teams"
+              searchPlaceholder="Search teams..."
+              emptyMessage="No teams found."
+              triggerClassName="min-w-[240px]"
+            />
+          </div>
           <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={applyRange}>
             Apply
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                disabled={savingFilter}
+                onClick={() => void saveFilter()}
+                aria-label="Save filter"
+              >
+                {savingFilter ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Save current filter to your settings</TooltipContent>
+          </Tooltip>
         </CardContent>
       </Card>
 
@@ -194,10 +362,16 @@ export function OverviewReportContent() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
-      ) : teams.length === 0 ? (
+      ) : allTeams.length === 0 ? (
         <Card className="border-slate-200">
           <CardContent className="py-12 text-center text-sm text-slate-500">
             No teams available for this period.
+          </CardContent>
+        </Card>
+      ) : teams.length === 0 ? (
+        <Card className="border-slate-200">
+          <CardContent className="py-12 text-center text-sm text-slate-500">
+            No teams match the selected filters.
           </CardContent>
         </Card>
       ) : (
@@ -211,7 +385,7 @@ export function OverviewReportContent() {
                       rowSpan={2}
                       className="sticky left-0 z-20 min-w-[220px] border-r bg-slate-50 align-bottom"
                     >
-                      Team / Leader
+                      Team
                     </TableHead>
                     {months.map((month) => (
                       <TableHead
@@ -241,51 +415,55 @@ export function OverviewReportContent() {
                 </TableHeader>
                 <TableBody>
                   {teams.map((team) => {
-                    const leaderLabel =
-                      team.leadName?.trim() ||
-                      team.leadEmail?.trim() ||
-                      "No team lead"
+                    const apps = team.apps ?? []
+                    const canExpand = apps.length > 0
+                    const expanded = expandedTeamIds.has(team.teamId)
 
                     return (
                       <Fragment key={team.teamId}>
-                        <TableRow className="bg-slate-50/90 hover:bg-slate-50/90">
-                          <TableCell className="sticky left-0 z-10 border-r bg-slate-50 py-2 font-semibold text-slate-900">
-                            {team.teamName}
-                          </TableCell>
-                          {months.map((month) => (
-                            <TableCell
-                              key={`${team.teamId}-${month}-spacer`}
-                              colSpan={3}
-                              className="border-r bg-slate-50"
-                            />
-                          ))}
-                        </TableRow>
-                        <TableRow className="hover:bg-slate-50/50">
-                          <TableCell className="sticky left-0 z-10 border-r bg-white py-2 pl-6 text-sm text-slate-700">
-                            {leaderLabel}
-                          </TableCell>
-                          {months.map((month) => {
-                            const cell = getCell(team, month)
-                            return (
-                              <Fragment key={`${team.teamId}-${month}`}>
-                                <TableCell className="text-right text-sm tabular-nums text-slate-700">
-                                  {formatCurrency(cell.plannedProfit)}
-                                </TableCell>
-                                <TableCell className="text-right text-sm tabular-nums text-slate-700">
-                                  {formatCurrency(cell.actualProfit)}
-                                </TableCell>
-                                <TableCell
-                                  className={cn(
-                                    "border-r text-right text-sm tabular-nums",
-                                    getPercentClass(cell.completionPercent),
-                                  )}
+                        <TableRow className="hover:bg-slate-50/60">
+                          <TableCell className="sticky left-0 z-10 border-r bg-white py-2 font-semibold text-slate-900">
+                            <div className="flex items-center gap-1">
+                              {canExpand ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0"
+                                  onClick={() => toggleTeamExpanded(team.teamId)}
+                                  aria-expanded={expanded}
+                                  aria-label={
+                                    expanded
+                                      ? `Collapse apps for ${team.teamName}`
+                                      : `Expand apps for ${team.teamName}`
+                                  }
                                 >
-                                  {formatPercent(cell.completionPercent)}
-                                </TableCell>
-                              </Fragment>
-                            )
-                          })}
+                                  {expanded ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              ) : (
+                                <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
+                              )}
+                              <span>{team.teamName}</span>
+                            </div>
+                          </TableCell>
+                          <OverviewMonthCells monthKeys={months} months={team.months} />
                         </TableRow>
+                        {expanded &&
+                          apps.map((app: ProfitOverviewAppRow) => (
+                            <TableRow
+                              key={`${team.teamId}-${app.appId}`}
+                              className="bg-slate-50/40 hover:bg-slate-50/60"
+                            >
+                              <TableCell className="sticky left-0 z-10 border-r bg-slate-50/80 py-2 pl-12 text-sm text-slate-700">
+                                {app.appLabel}
+                              </TableCell>
+                              <OverviewMonthCells monthKeys={months} months={app.months} />
+                            </TableRow>
+                          ))}
                       </Fragment>
                     )
                   })}

@@ -2770,6 +2770,16 @@ export const reportsApi = {
     }): Promise<import('@/types/reports').ProfitOverviewReportResponse> => {
         return apiClient.get('/api/v1/reports/profit-overview', params as Record<string, string | undefined>)
     },
+
+    getOverviewFilter: async (): Promise<import('@/types/reports').OverviewReportFilter | null> => {
+        return apiClient.get('/api/v1/reports/overview-filter')
+    },
+
+    saveOverviewFilter: async (
+        filter: import('@/types/reports').OverviewReportFilter,
+    ): Promise<import('@/types/reports').OverviewReportFilter> => {
+        return apiClient.put('/api/v1/reports/overview-filter', filter)
+    },
 }
 
 
