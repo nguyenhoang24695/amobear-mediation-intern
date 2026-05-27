@@ -33,14 +33,49 @@ import {
 import { cn } from "@/lib/utils"
 import { reportsApi } from "@/lib/api/services"
 import type {
+  OverviewReportFilter,
   ProfitOverviewAppRow,
   ProfitOverviewMonthCell,
   ProfitOverviewReportResponse,
 } from "@/types/reports"
 
+const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+
 function currentYearRange() {
   const year = new Date().getFullYear()
   return { from: `${year}-01`, to: `${year}-12` }
+}
+
+function pickStringField(source: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = source[key]
+    if (typeof value === "string" && value.trim()) return value.trim()
+  }
+  return undefined
+}
+
+/** Chuẩn hóa payload API (camelCase hoặc PascalCase) — tránh set state undefined lên input controlled. */
+function parseOverviewFilter(raw: unknown): OverviewReportFilter | null {
+  if (!raw || typeof raw !== "object") return null
+  const record = raw as Record<string, unknown>
+  const from = pickStringField(record, "from", "From")
+  const to = pickStringField(record, "to", "To")
+  if (!from || !to || !MONTH_KEY_PATTERN.test(from) || !MONTH_KEY_PATTERN.test(to)) return null
+
+  const teamIdsRaw = record.teamIds ?? record.TeamIds
+  const teamIds = Array.isArray(teamIdsRaw)
+    ? teamIdsRaw.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+    : []
+
+  const selectedYear =
+    pickStringField(record, "selectedYear", "SelectedYear") ?? from.slice(0, 4)
+
+  return { from, to, selectedYear, teamIds }
+}
+
+function resolveYearInOptions(year: string, yearOptions: readonly string[]): string {
+  if (yearOptions.includes(year)) return year
+  return yearOptions[0] ?? String(new Date().getFullYear())
 }
 
 function formatCurrency(value: number | null | undefined) {
@@ -134,6 +169,14 @@ export function OverviewReportContent() {
     return Array.from({ length: 5 }, (_, index) => String(current - index))
   }, [])
 
+  const selectYearValue = resolveYearInOptions(selectedYear, yearOptions)
+
+  useEffect(() => {
+    if (!yearOptions.includes(selectedYear)) {
+      setSelectedYear(selectYearValue)
+    }
+  }, [selectedYear, selectYearValue, yearOptions])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -155,14 +198,17 @@ export function OverviewReportContent() {
     let cancelled = false
     void (async () => {
       try {
-        const saved = await reportsApi.getOverviewFilter()
-        if (cancelled || !saved) return
+        const raw = await reportsApi.getOverviewFilter()
+        if (cancelled) return
+        const saved = parseOverviewFilter(raw)
+        if (!saved) return
+        const year = resolveYearInOptions(saved.selectedYear ?? saved.from.slice(0, 4), yearOptions)
         setFromMonth(saved.from)
         setToMonth(saved.to)
         setAppliedFrom(saved.from)
         setAppliedTo(saved.to)
-        setSelectedYear(saved.selectedYear ?? saved.from.slice(0, 4))
-        setSelectedTeamIds(saved.teamIds ?? [])
+        setSelectedYear(year)
+        setSelectedTeamIds(saved.teamIds)
       } catch {
         // Không chặn trang nếu chưa có filter đã lưu hoặc API lỗi.
       } finally {
@@ -172,7 +218,7 @@ export function OverviewReportContent() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [yearOptions])
 
   useEffect(() => {
     if (!filterReady) return
@@ -285,7 +331,7 @@ export function OverviewReportContent() {
         <CardContent className="flex flex-wrap items-end gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="overview-year">Year</Label>
-            <Select value={selectedYear} onValueChange={handleYearChange}>
+            <Select value={selectYearValue} onValueChange={handleYearChange}>
               <SelectTrigger id="overview-year" className="w-[120px]">
                 <SelectValue />
               </SelectTrigger>
@@ -303,8 +349,8 @@ export function OverviewReportContent() {
             <Input
               id="overview-from"
               type="month"
-              value={fromMonth}
-              onChange={(e) => setFromMonth(e.target.value)}
+              value={fromMonth || defaultRange.from}
+              onChange={(e) => setFromMonth(e.target.value || defaultRange.from)}
               className="w-[160px]"
             />
           </div>
@@ -313,8 +359,8 @@ export function OverviewReportContent() {
             <Input
               id="overview-to"
               type="month"
-              value={toMonth}
-              onChange={(e) => setToMonth(e.target.value)}
+              value={toMonth || defaultRange.to}
+              onChange={(e) => setToMonth(e.target.value || defaultRange.to)}
               className="w-[160px]"
             />
           </div>
