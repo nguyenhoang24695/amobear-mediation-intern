@@ -334,6 +334,7 @@ export interface MetaCampaignAdSetSummaryDto {
   budgetRemaining?: string | null
   bidAmount?: string | null
   bidStrategy?: string | null
+  roasAverageFloor?: string | null
   billingEvent?: string | null
   optimizationGoal?: string | null
   pacingType?: string | null
@@ -613,6 +614,12 @@ export interface MetaPerformanceGoalReferenceDto {
   goalTypes: MetaPerformanceGoalTypeOptionDto[]
   appEvents: MetaPerformanceGoalOptionDto[]
   valueTypes: MetaPerformanceGoalOptionDto[]
+  valueOptimizationEligibilityStatus?: "eligible" | "ineligible" | "unknown" | null
+  valueOptimizationDisabledReason?: string | null
+  valueOptimizationCheckedAt?: string | null
+  metaErrorCode?: number | null
+  metaErrorSubcode?: number | null
+  fbtraceId?: string | null
 }
 export interface MetaCampaignDraftDto {
   name: string
@@ -654,6 +661,7 @@ export interface MetaAdSetDraftDto {
   performanceGoalEventName?: string | null
   performanceGoalValueType?: string | null
   bidAmount?: number | null
+  roasAverageFloor?: number | null
   advantageAudience: boolean
   startTime?: string | null
   endTime?: string | null
@@ -822,6 +830,18 @@ export interface ExecuteMetaCampaignRequestDto {
 export interface MetaValidationResultDto {
   isValid: boolean
   errors: string[]
+}
+
+export interface MetaAdSetDraftValidationDto {
+  isValid: boolean
+  valueOptimizationEligibilityStatus: "eligible" | "ineligible" | "unknown"
+  valueOptimizationDisabledReason?: string | null
+  warning?: string | null
+  checkedAt?: string | null
+  errors: string[]
+  metaErrorCode?: number | null
+  metaErrorSubcode?: number | null
+  fbtraceId?: string | null
 }
 
 export interface MetaOperationLogDto {
@@ -1106,6 +1126,7 @@ export interface MetaRequestFormState {
   performanceGoalEventName: string
   performanceGoalValueType: string
   bidAmount: string
+  roasAverageFloor: string
   advantageAudience: boolean
   startTime: string
   endTime: string

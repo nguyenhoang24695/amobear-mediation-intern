@@ -213,7 +213,8 @@ function getMediaSourceValue(source?: MetaCreativeMediaSourceDto | null, kind: "
 }
 
 function getRequestValueEventLabel(value?: string | null): string {
-  if (value === "IN_APP_AD_IMPRESSION") return "In-app ad impression"
+  const normalized = value?.trim().toUpperCase()
+  if (normalized === "IN_APP_AD_IMPRESSION" || normalized === "AD_IMPRESSION") return "In-app ad impression"
   return "In-app purchase"
 }
 

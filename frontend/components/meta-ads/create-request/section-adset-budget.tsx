@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -18,12 +18,13 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { metaReferenceApi } from "@/lib/api/meta-ads"
-import { CalendarClock, Info, Loader2, Plus } from "lucide-react"
+import { AlertTriangle, CalendarClock, Info, Loader2, Plus } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
-import type { MetaPerformanceGoalOptionDto, MetaPerformanceGoalReferenceDto, MetaPerformanceGoalTypeOptionDto } from "@/types/meta-ads"
+import type { MetaAdSetDraftValidationDto, MetaPerformanceGoalOptionDto, MetaPerformanceGoalReferenceDto, MetaPerformanceGoalTypeOptionDto } from "@/types/meta-ads"
 import {
   BILLING_EVENT_OPTIONS,
   bidStrategyRequiresBidAmount,
+  bidStrategyRequiresRoasGoal,
   getAllowedBillingEvents,
   getBillingEventDisabledReason,
   getAllowedPerformanceGoalTypes,
@@ -44,6 +45,8 @@ interface Props {
   performanceGoalReferenceLoading?: boolean
   performanceGoalReferenceMessage?: string | null
   refreshPerformanceGoalReference?: (() => Promise<MetaPerformanceGoalReferenceDto>) | null
+  adSetDraftValidation?: MetaAdSetDraftValidationDto | null
+  adSetDraftValidationLoading?: boolean
 }
 
 const DEFAULT_GOAL_TYPES: Record<string, MetaPerformanceGoalTypeOptionDto> = {
@@ -64,7 +67,7 @@ const DEFAULT_GOAL_TYPES: Record<string, MetaPerformanceGoalTypeOptionDto> = {
   VALUE: {
     key: "VALUE",
     label: "Maximize value of conversions",
-    description: "We'll try to show your ads to the people most likely to generate higher value through specific actions, such as in-app purchase or in-app ad impression.",
+    description: "We'll try to show your ads to the people most likely to generate higher value through selected value events.",
     isEnabled: true,
     disabledReason: null,
   },
@@ -122,12 +125,36 @@ function getPerformanceGoalOptions(
     const disabledReason = getPerformanceGoalDisabledReasonForBidStrategy(key, bidStrategy)
     return disabledReason
       ? { ...base, isEnabled: false, disabledReason }
-      : { ...base, isEnabled: base.isEnabled !== false, disabledReason: null }
+      : { ...base, isEnabled: base.isEnabled !== false, disabledReason: base.isEnabled === false ? base.disabledReason : null }
   })
 }
 
-function getValueEventOptions(reference?: MetaPerformanceGoalReferenceDto | null): MetaPerformanceGoalOptionDto[] {
-  return reference?.valueTypes?.length ? reference.valueTypes : DEFAULT_VALUE_TYPES
+function getValueEventOptions(reference?: MetaPerformanceGoalReferenceDto | null, appPlatform?: string | null): MetaPerformanceGoalOptionDto[] {
+  const optionsByKey = new Map<string, MetaPerformanceGoalOptionDto>()
+  const canonicalValueTypeKey = (key: string) => {
+    const normalized = key.trim().toUpperCase()
+    if (normalized === "PURCHASE") return "IN_APP_PURCHASE"
+    if (normalized === "AD_IMPRESSION") return "IN_APP_AD_IMPRESSION"
+    return normalized
+  }
+  for (const option of DEFAULT_VALUE_TYPES) {
+    optionsByKey.set(canonicalValueTypeKey(option.key), option)
+  }
+  for (const option of reference?.valueTypes ?? []) {
+    optionsByKey.set(canonicalValueTypeKey(option.key), { ...option, key: canonicalValueTypeKey(option.key) })
+  }
+  void appPlatform
+  return Array.from(optionsByKey.values()).filter((option) => {
+    const key = option.key.toUpperCase()
+    return key === "IN_APP_PURCHASE" || key === "PURCHASE" || key === "IN_APP_AD_IMPRESSION" || key === "AD_IMPRESSION"
+  })
+}
+
+function getValueEventIneligibleMessage(valueType?: string | null): string {
+  const normalized = valueType?.trim().toUpperCase()
+  return normalized === "IN_APP_AD_IMPRESSION" || normalized === "AD_IMPRESSION"
+    ? "This app is not eligible for Meta Value Optimization / Minimum ROAS for in-app ad impression."
+    : "This app is not eligible for Meta Value Optimization / Minimum ROAS for in-app purchase."
 }
 
 function normalizeCatalogEventKey(value: string): string {
@@ -174,6 +201,8 @@ export function AdSetBudgetSection({
   performanceGoalReferenceLoading,
   performanceGoalReferenceMessage,
   refreshPerformanceGoalReference,
+  adSetDraftValidation,
+  adSetDraftValidationLoading,
 }: Props) {
   const { toast } = useToast()
   const currency = (currencyCode ?? "USD").trim() || "USD"
@@ -192,23 +221,28 @@ export function AdSetBudgetSection({
       ? "iOS mobile targeting will be applied automatically from the selected app mapping."
       : null
 
+  const draftValueEligibilityStatus = adSetDraftValidation?.valueOptimizationEligibilityStatus?.toLowerCase()
+  const draftValueIneligible = draftValueEligibilityStatus === "ineligible"
   const performanceGoalOptions = getPerformanceGoalOptions(allowedPerformanceGoals, form.bidStrategy, performanceGoalReference)
   const selectedPerformanceGoal = performanceGoalOptions.find((goalType) => goalType.key === selectedGoalType)
     ?? DEFAULT_GOAL_TYPES.APP_INSTALLS
   const selectedPerformanceGoalCompatible = isPerformanceGoalCompatibleWithBidStrategy(selectedGoalType, form.bidStrategy)
-  const valueEventOptions = getValueEventOptions(performanceGoalReference)
+  const valueEventOptions = getValueEventOptions(performanceGoalReference, appPlatform)
   const selectedValueType = valueEventOptions.find((valueType) => valueType.key === form.performanceGoalValueType)
+  const valueEligibilityStatus = (draftValueIneligible ? "ineligible" : (draftValueEligibilityStatus ?? "unknown")).toLowerCase()
+  const valueEligibilityReason = adSetDraftValidation?.valueOptimizationDisabledReason ?? adSetDraftValidation?.errors?.[0] ?? getValueEventIneligibleMessage(form.performanceGoalValueType)
+  const valueEligibilityWarning = adSetDraftValidation?.warning
   const appEventCatalog = useMemo(() => buildAppEventOptions(performanceGoalReference), [performanceGoalReference])
   const selectedAppEventKey = normalizeCatalogEventKey(form.performanceGoalEventName)
   const selectedAppEventOption = appEventCatalog.all.find((option) => option.key.toUpperCase() === selectedAppEventKey)
   const orphanAppEventOption = !selectedAppEventOption && selectedAppEventKey
     ? {
-        key: selectedAppEventKey,
-        label: humanizeEventKey(selectedAppEventKey),
-        description: "This event is not in the current catalog.",
-        groupKey: "CUSTOM" as const,
-        isCustom: true,
-      }
+      key: selectedAppEventKey,
+      label: humanizeEventKey(selectedAppEventKey),
+      description: "This event is not in the current catalog.",
+      groupKey: "CUSTOM" as const,
+      isCustom: true,
+    }
     : null
 
   const [customEventDialogOpen, setCustomEventDialogOpen] = useState(false)
@@ -216,6 +250,14 @@ export function AdSetBudgetSection({
   const [customEventError, setCustomEventError] = useState<string | null>(null)
   const [addingCustomEvent, setAddingCustomEvent] = useState(false)
   const normalizedCustomEventPreview = customEventName.trim() ? normalizeCatalogEventKey(customEventName) : ""
+
+  useEffect(() => {
+    if (selectedGoalType !== "VALUE" || valueEventOptions.length === 0 || selectedValueType) {
+      return
+    }
+
+    onChange({ performanceGoalValueType: valueEventOptions[0]?.key ?? "IN_APP_PURCHASE" })
+  }, [onChange, selectedGoalType, selectedValueType, valueEventOptions])
 
   const handlePerformanceGoalChange = (value: string) => {
     const option = performanceGoalOptions.find((goalType) => goalType.key === value)
@@ -365,6 +407,18 @@ export function AdSetBudgetSection({
                 </p>
                 {performanceGoalReferenceLoading ? <p className="text-[11px] text-slate-400">Loading performance goals for this app...</p> : null}
                 {performanceGoalReferenceMessage ? <p className="text-[11px] text-amber-700">{performanceGoalReferenceMessage}</p> : null}
+                {adSetDraftValidationLoading ? (
+                  <p className="text-[11px] text-slate-400 flex items-start gap-1">
+                    <Loader2 className="w-3 h-3 mt-0.5 flex-shrink-0 animate-spin" />
+                    Checking Meta Value Optimization eligibility for this draft...
+                  </p>
+                ) : null}
+                {valueEligibilityStatus === "unknown" && form.adAccountId && (selectedGoalType === "VALUE" || bidStrategyRequiresRoasGoal(form.bidStrategy)) ? (
+                  <p className="text-[11px] text-amber-700 flex items-start gap-1">
+                    <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    {valueEligibilityWarning ?? "Value Optimization eligibility could not be verified for this app yet."}
+                  </p>
+                ) : null}
               </div>
 
               {selectedGoalType === "APP_EVENT" ? (
@@ -455,6 +509,12 @@ export function AdSetBudgetSection({
                   <p className="text-[11px] text-slate-400">
                     {selectedValueType?.description ?? "Select the value event Meta should maximize against."}
                   </p>
+                  {valueEligibilityStatus === "ineligible" ? (
+                    <p className="text-[11px] text-amber-800 flex items-start gap-1">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      {valueEligibilityReason}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -561,7 +621,3 @@ export function AdSetBudgetSection({
     </>
   )
 }
-
-
-
-

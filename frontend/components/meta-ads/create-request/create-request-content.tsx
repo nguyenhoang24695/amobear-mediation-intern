@@ -29,6 +29,7 @@ import {
 import type {
   AdVariantFormState,
   GroupedValidationErrors,
+  MetaAdSetDraftValidationDto,
   MetaAppMappingDto,
   MetaCampaignRequestDetailDto,
   MetaCreateCampaignReferenceDto,
@@ -42,7 +43,7 @@ import type {
 } from "@/types/meta-ads"
 import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { getAllowedBillingEvents, getAllowedBidStrategies, getAllowedPerformanceGoalTypes, getAllowedPerformanceGoalsForBidStrategy, bidStrategyRequiresBidAmount, resolveOptimizationGoal } from "./constants"
+import { getAllowedBillingEvents, getAllowedBidStrategies, getAllowedPerformanceGoalTypes, getAllowedPerformanceGoalsForBidStrategy, bidStrategyRequiresBidAmount, bidStrategyRequiresRoasGoal, resolveOptimizationGoal } from "./constants"
 import { AccountAppSection } from "./section-account-app"
 import { CampaignSettingsSection } from "./section-campaign-settings"
 import { AdSetAudienceSection } from "./section-adset-audience"
@@ -100,8 +101,12 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
 
   if (next.performanceGoalType !== "VALUE") {
     next.performanceGoalValueType = "IN_APP_PURCHASE"
-  } else if (!next.performanceGoalValueType.trim()) {
+  } else if (!["IN_APP_PURCHASE", "PURCHASE", "IN_APP_AD_IMPRESSION", "AD_IMPRESSION"].includes(next.performanceGoalValueType.trim().toUpperCase())) {
     next.performanceGoalValueType = "IN_APP_PURCHASE"
+  } else if (next.performanceGoalValueType.trim().toUpperCase() === "PURCHASE") {
+    next.performanceGoalValueType = "IN_APP_PURCHASE"
+  } else if (next.performanceGoalValueType.trim().toUpperCase() === "AD_IMPRESSION") {
+    next.performanceGoalValueType = "IN_APP_AD_IMPRESSION"
   }
 
   const allowedBillingEvents = getAllowedBillingEvents(next.optimizationGoal)
@@ -116,6 +121,9 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
 
   if (!bidStrategyRequiresBidAmount(next.bidStrategy)) {
     next.bidAmount = ""
+  }
+  if (!bidStrategyRequiresRoasGoal(next.bidStrategy)) {
+    next.roasAverageFloor = ""
   }
 
   next.countryGroupIds = Array.isArray(next.countryGroupIds)
@@ -221,6 +229,7 @@ function createDefaultFormState(): RequestFormState {
     performanceGoalEventName: "",
     performanceGoalValueType: "IN_APP_PURCHASE",
     bidAmount: "",
+    roasAverageFloor: "",
     advantageAudience: true,
     startTime: formatDateTimeLocal(new Date()),
     endTime: "",
@@ -351,7 +360,10 @@ export function CreateRequestContent({ requestId }: Props) {
   const [facebookPageSource, setFacebookPageSource] = useState<"promote_pages" | "access_token_all">("promote_pages")
   const [highlightedSection, setHighlightedSection] = useState<RequestSectionTarget | null>(null)
   const [activeVariantTab, setActiveVariantTab] = useState("variant-1")
+  const [adSetDraftValidation, setAdSetDraftValidation] = useState<MetaAdSetDraftValidationDto | null>(null)
+  const [adSetDraftValidationLoading, setAdSetDraftValidationLoading] = useState(false)
   const highlightTimeoutRef = useRef<number | null>(null)
+  const adSetDraftValidationSeqRef = useRef(0)
 
   const {
     data: referenceData,
@@ -413,10 +425,14 @@ export function CreateRequestContent({ requestId }: Props) {
     error: performanceGoalReferenceError,
     refetch: refetchPerformanceGoalReference,
   } = useApi<MetaPerformanceGoalReferenceDto>(
-    () => metaReferenceApi.getAppPerformanceGoals(Number(form.appRowId)),
+    () => metaReferenceApi.getAppPerformanceGoals(
+      Number(form.appRowId),
+      form.adAccountId ? Number(form.adAccountId) : null,
+      form.paidMediaAppBindingId ? Number(form.paidMediaAppBindingId) : null,
+    ),
     {
       enabled: !!form.appRowId && !Number.isNaN(Number(form.appRowId)),
-      cacheKey: form.appRowId ? `meta-reference:app:${form.appRowId}:performance-goals` : "meta-reference:app:none:performance-goals",
+      cacheKey: form.appRowId ? `meta-reference:app:${form.appRowId}:ad-account:${form.adAccountId || "none"}:binding:${form.paidMediaAppBindingId || "none"}:performance-goals` : "meta-reference:app:none:performance-goals",
     }
   )
   const {
@@ -453,6 +469,56 @@ export function CreateRequestContent({ requestId }: Props) {
   })
 
   const isSubmitBlocked = submitting || saving || validating || tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
+
+  useEffect(() => {
+    const requiresValueDraftValidation =
+      form.performanceGoalType === "VALUE"
+      || bidStrategyRequiresRoasGoal(form.bidStrategy)
+    const hasMinimumDraft =
+      !!form.adAccountId
+      && !!form.paidMediaAppBindingId
+      && !!form.campaignName.trim()
+      && !!form.adSetName.trim()
+      && (!!form.campaignDailyBudget.trim() || !!form.campaignLifetimeBudget.trim() || !!form.adSetDailyBudget.trim() || !!form.adSetLifetimeBudget.trim())
+
+    if (!requiresValueDraftValidation || !hasMinimumDraft) {
+      adSetDraftValidationSeqRef.current += 1
+      setAdSetDraftValidation(null)
+      setAdSetDraftValidationLoading(false)
+      return
+    }
+
+    const sequence = adSetDraftValidationSeqRef.current + 1
+    adSetDraftValidationSeqRef.current = sequence
+    setAdSetDraftValidationLoading(true)
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const result = await metaReferenceApi.validateAdSetDraft(formStateToCreateDto(form))
+        if (adSetDraftValidationSeqRef.current === sequence) {
+          setAdSetDraftValidation(result)
+        }
+      } catch (error) {
+        if (adSetDraftValidationSeqRef.current === sequence) {
+          const message = error instanceof Error ? error.message : "Unable to verify Meta ad set draft right now."
+          setAdSetDraftValidation({
+            isValid: true,
+            valueOptimizationEligibilityStatus: "unknown",
+            warning: message,
+            errors: [],
+          })
+        }
+      } finally {
+        if (adSetDraftValidationSeqRef.current === sequence) {
+          setAdSetDraftValidationLoading(false)
+        }
+      }
+    }, 800)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [form])
 
   const scrollToSection = (target: RequestSectionTarget) => {
     setHighlightedSection(target)
@@ -882,7 +948,7 @@ export function CreateRequestContent({ requestId }: Props) {
             />
           </div>
           <div id={requestSectionIds["adset-budget"]} className={getSectionWrapperClass("adset-budget", highlightedSection)}>
-                <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppPlatform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} />
+                <AdSetBudgetSection form={form} onChange={updateForm} currencyCode={selectedAdAccount?.currency} appPlatform={selectedAppPlatform} appRowId={form.appRowId ? Number(form.appRowId) : null} performanceGoalReference={performanceGoalReference ?? null} performanceGoalReferenceLoading={performanceGoalReferenceLoading} performanceGoalReferenceMessage={performanceGoalReferenceError?.message ?? null} refreshPerformanceGoalReference={refetchPerformanceGoalReference} adSetDraftValidation={adSetDraftValidation} adSetDraftValidationLoading={adSetDraftValidationLoading} />
           </div>
           {/* Creative section — variations now live inside CreativeSection itself,
               between Primary Text/Headline (shared above) and Description/CTA (shared below). */}
@@ -981,16 +1047,6 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
