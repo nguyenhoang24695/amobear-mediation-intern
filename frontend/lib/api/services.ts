@@ -2763,6 +2763,13 @@ export const reportsApi = {
     deleteSaved: async (id: string): Promise<{ deleted: boolean }> => {
         return apiClient.delete(`/api/v1/reports/saved/${id}`)
     },
+
+    getProfitOverview: async (params?: {
+        from?: string
+        to?: string
+    }): Promise<import('@/types/reports').ProfitOverviewReportResponse> => {
+        return apiClient.get('/api/v1/reports/profit-overview', params as Record<string, string | undefined>)
+    },
 }
 
 

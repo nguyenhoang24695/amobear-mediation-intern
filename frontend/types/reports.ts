@@ -99,3 +99,23 @@ export interface CustomReportFolder {
   name: string
   createdAt: string
 }
+
+export interface ProfitOverviewMonthCell {
+  plannedProfit: number
+  actualProfit: number
+  completionPercent?: number | null
+}
+
+export interface ProfitOverviewTeamRow {
+  teamId: string
+  teamName: string
+  leadUserId?: string | null
+  leadName?: string | null
+  leadEmail?: string | null
+  months: Record<string, ProfitOverviewMonthCell>
+}
+
+export interface ProfitOverviewReportResponse {
+  months: string[]
+  teams: ProfitOverviewTeamRow[]
+}

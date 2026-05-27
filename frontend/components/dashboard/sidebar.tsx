@@ -102,7 +102,7 @@ type NavItem = {
     /** Match ?reportId= for /reports saved-report links */
     reportId?: string | null
     /** Distinguish /reports index vs ?new=1 when reportId is null */
-    reportsView?: "index" | "new"
+    reportsView?: "overview" | "index" | "new"
   }[]
 }
 
@@ -374,12 +374,18 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
 
   const sidebarNavItems = useMemo((): NavItem[] => {
     return navItems.map((item) => {
-      if (item.label !== "Reports" || pinnedReports.length === 0) return item
+      if (item.label !== "Reports" || !hasScreenFunction("s-reports", "view")) return item
       return {
         ...item,
         href: "#",
         hasSubmenu: true,
         children: [
+          {
+            icon: BarChart3,
+            label: "Overview Report",
+            href: "/reports/overview",
+            reportsView: "overview",
+          },
           {
             icon: BarChart3,
             label: "All reports",
@@ -573,14 +579,16 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                       if (!isNavChildVisible(child)) return null
 
                       const childActive =
-                        pathname === "/reports" && child.reportId !== undefined
-                          ? child.reportId === null
-                            ? child.reportsView === "new"
-                              ? isNewReportParam && !reportIdParam
-                              : !reportIdParam && !isNewReportParam
-                            : reportIdParam === child.reportId
-                          : pathname === child.href ||
-                            (child.href !== "/" && pathname.startsWith(child.href.split("?")[0]))
+                        child.reportsView === "overview"
+                          ? pathname === "/reports/overview"
+                          : pathname === "/reports" && child.reportId !== undefined
+                            ? child.reportId === null
+                              ? child.reportsView === "new"
+                                ? isNewReportParam && !reportIdParam
+                                : !reportIdParam && !isNewReportParam
+                              : reportIdParam === child.reportId
+                            : pathname === child.href ||
+                              (child.href !== "/" && pathname.startsWith(child.href.split("?")[0]))
 
                       return (
                         <Link
