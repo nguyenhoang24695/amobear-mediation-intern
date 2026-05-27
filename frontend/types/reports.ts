@@ -99,3 +99,49 @@ export interface CustomReportFolder {
   name: string
   createdAt: string
 }
+
+export type OverviewMetricId = "revenue" | "cost" | "profit"
+
+export interface ProfitOverviewMetricValues {
+  plan: number
+  actual: number
+  completionPercent?: number | null
+}
+
+export interface ProfitOverviewMonthCell {
+  revenue: ProfitOverviewMetricValues
+  cost: ProfitOverviewMetricValues
+  profit: ProfitOverviewMetricValues
+}
+
+export interface ProfitOverviewAppRow {
+  appId: string
+  appLabel: string
+  appPlatform?: string | null
+  appStoreId?: string | null
+  appIconUri?: string | null
+  months: Record<string, ProfitOverviewMonthCell>
+}
+
+export interface ProfitOverviewTeamRow {
+  teamId: string
+  teamName: string
+  leadUserId?: string | null
+  leadName?: string | null
+  leadEmail?: string | null
+  months: Record<string, ProfitOverviewMonthCell>
+  apps: ProfitOverviewAppRow[]
+}
+
+export interface ProfitOverviewReportResponse {
+  months: string[]
+  teams: ProfitOverviewTeamRow[]
+  lastUpdatedAt?: string | null
+}
+
+export interface OverviewReportFilter {
+  from: string
+  to: string
+  selectedYear?: string | null
+  teamIds: string[]
+}

@@ -191,7 +191,7 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
                             <div className="min-w-0">
                               <div className="font-medium text-slate-900 truncate">{plan.appLabel}</div>
                               <div className="text-xs text-slate-500 truncate">
-                                {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.appId}
+                                {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.admobAppId || "—"}
                               </div>
                             </div>
                           </TableCell>

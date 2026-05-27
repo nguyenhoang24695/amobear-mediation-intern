@@ -343,6 +343,10 @@ function appDetailTabPermissionSuffix(tab: AppDetailTab): string {
   }
 }
 
+function isDeprecatedAppDetailTab(tab: AppDetailTab): boolean {
+  return tab === "ad-units" || tab === "mediation-groups"
+}
+
 function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
   const fnKey = `${FN_VIEW_DETAILS_KEY}:${suffix}`
   return (
@@ -356,7 +360,11 @@ function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
  * Co "view-details" => full tab. Khong thi check "view-details:<suffix>" (xem appDetailTabPermissionSuffix).
  */
 export function hasAppDetailTab(tab: AppDetailTab): boolean {
-  return hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(tab))
+  const suffix = appDetailTabPermissionSuffix(tab)
+  if (isDeprecatedAppDetailTab(tab)) {
+    return hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${suffix}`)
+  }
+  return hasAppDetailScreenFunctionForSuffix(suffix)
 }
 
 /**
