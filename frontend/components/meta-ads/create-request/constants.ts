@@ -43,14 +43,13 @@ export const OPTIMIZATION_GOAL_BILLING_EVENT_MAP: Record<string, readonly string
 }
 
 export const BID_STRATEGIES_REQUIRING_BID_AMOUNT = ["COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST"] as const
-export const UNSUPPORTED_BID_STRATEGY_REASONS: Record<string, string> = {
-  LOWEST_COST_WITH_MIN_ROAS: "Unavailable: requires ROAS floor, which is not supported in Nexus yet.",
-}
+export const MIN_ROAS_BID_STRATEGY = "LOWEST_COST_WITH_MIN_ROAS"
+export const UNSUPPORTED_BID_STRATEGY_REASONS: Record<string, string> = {}
 
 const PERFORMANCE_GOAL_BID_STRATEGY_MAP: Record<string, readonly string[]> = {
-  APP_INSTALLS: ["LOWEST_COST_WITHOUT_CAP", "COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST", "LOWEST_COST_WITH_MIN_ROAS"],
-  APP_EVENT: ["LOWEST_COST_WITHOUT_CAP", "COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST", "LOWEST_COST_WITH_MIN_ROAS"],
-  VALUE: ["LOWEST_COST_WITHOUT_CAP", "LOWEST_COST_WITH_MIN_ROAS"],
+  APP_INSTALLS: ["LOWEST_COST_WITHOUT_CAP", "COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST"],
+  APP_EVENT: ["LOWEST_COST_WITHOUT_CAP", "COST_CAP", "LOWEST_COST_WITH_BID_CAP", "TARGET_COST"],
+  VALUE: ["LOWEST_COST_WITHOUT_CAP", MIN_ROAS_BID_STRATEGY],
 }
 
 const BID_STRATEGY_PERFORMANCE_GOAL_MAP: Record<string, readonly string[]> = {
@@ -58,7 +57,7 @@ const BID_STRATEGY_PERFORMANCE_GOAL_MAP: Record<string, readonly string[]> = {
   COST_CAP: ["APP_INSTALLS", "APP_EVENT"],
   LOWEST_COST_WITH_BID_CAP: ["APP_INSTALLS", "APP_EVENT"],
   TARGET_COST: ["APP_INSTALLS", "APP_EVENT"],
-  LOWEST_COST_WITH_MIN_ROAS: ["VALUE"],
+  [MIN_ROAS_BID_STRATEGY]: ["VALUE"],
 }
 
 const PERFORMANCE_GOAL_BID_STRATEGY_DISABLED_REASONS: Record<string, Record<string, string>> = {
@@ -90,6 +89,10 @@ export function getAllowedPerformanceGoalTypes(objective?: string | null): reado
 export function bidStrategyRequiresBidAmount(value?: string | null): boolean {
   const normalized = (value ?? "").trim().toUpperCase()
   return BID_STRATEGIES_REQUIRING_BID_AMOUNT.includes(normalized as (typeof BID_STRATEGIES_REQUIRING_BID_AMOUNT)[number])
+}
+
+export function bidStrategyRequiresRoasGoal(value?: string | null): boolean {
+  return (value ?? "").trim().toUpperCase() === MIN_ROAS_BID_STRATEGY
 }
 
 export function isBidAmountAllowed(value?: string | null): boolean {
@@ -148,6 +151,9 @@ export function isBidStrategySupported(value?: string | null): boolean {
 export function getBidStrategyDisabledReason(value?: string | null, performanceGoalType?: string | null): string | null {
   const normalized = (value ?? "").trim().toUpperCase()
   const normalizedPerformanceGoalType = inferPerformanceGoalType(performanceGoalType)
+  if (normalized === MIN_ROAS_BID_STRATEGY && normalizedPerformanceGoalType !== "VALUE") {
+    return "Unavailable: Minimum ROAS is only compatible with Maximize value of conversions."
+  }
   const compatibilityReason = PERFORMANCE_GOAL_BID_STRATEGY_DISABLED_REASONS[normalizedPerformanceGoalType]?.[normalized]
   if (compatibilityReason) return compatibilityReason
   return UNSUPPORTED_BID_STRATEGY_REASONS[normalized] ?? null
@@ -162,11 +168,10 @@ export function getPerformanceGoalDisabledReasonForBidStrategy(performanceGoalTy
     return "Unavailable: Maximize value of conversions cannot be used with cost cap or bid cap. Use Highest value instead."
   }
 
-  if (normalizedGoalType !== "VALUE" && normalizedStrategy === "LOWEST_COST_WITH_MIN_ROAS") {
+  if (normalizedGoalType !== "VALUE" && normalizedStrategy === MIN_ROAS_BID_STRATEGY) {
     return "Unavailable: Minimum ROAS is only compatible with Maximize value of conversions."
   }
 
   return `Unavailable: incompatible with ${normalizedStrategy || "the selected bid strategy"}.`
 }
-
 

@@ -132,12 +132,13 @@ function inferGeoModeFromDraft(adSet: CreateMetaCampaignRequestDto["adSet"]): Me
 function inferPerformanceGoalState(adSet: CreateMetaCampaignRequestDto["adSet"]): Pick<MetaRequestFormState, "performanceGoalType" | "performanceGoalEventName" | "performanceGoalValueType" | "optimizationGoal"> {
   const optimizationGoal = (adSet.optimizationGoal ?? "APP_INSTALLS").trim().toUpperCase()
   const performanceGoalType = (adSet.performanceGoalType ?? "").trim().toUpperCase()
+  const valueType = normalizeValueEventType(adSet.performanceGoalValueType)
 
   if (performanceGoalType === "APP_EVENT" || performanceGoalType === "VALUE" || performanceGoalType === "APP_INSTALLS") {
     return {
       performanceGoalType,
       performanceGoalEventName: adSet.performanceGoalEventName ?? "",
-      performanceGoalValueType: adSet.performanceGoalValueType ?? "",
+      performanceGoalValueType: performanceGoalType === "VALUE" ? valueType : "",
       optimizationGoal,
     }
   }
@@ -146,7 +147,7 @@ function inferPerformanceGoalState(adSet: CreateMetaCampaignRequestDto["adSet"])
     return {
       performanceGoalType: "VALUE",
       performanceGoalEventName: "",
-      performanceGoalValueType: adSet.performanceGoalValueType ?? "IN_APP_PURCHASE",
+      performanceGoalValueType: valueType,
       optimizationGoal: "VALUE",
     }
   }
@@ -166,6 +167,13 @@ function inferPerformanceGoalState(adSet: CreateMetaCampaignRequestDto["adSet"])
     performanceGoalValueType: "",
     optimizationGoal: optimizationGoal || "CONVERSIONS",
   }
+}
+
+function normalizeValueEventType(value?: string | null): string {
+  const normalized = (value ?? "").trim().toUpperCase()
+  if (normalized === "IN_APP_AD_IMPRESSION" || normalized === "AD_IMPRESSION") return "IN_APP_AD_IMPRESSION"
+  if (normalized === "PURCHASE") return "IN_APP_PURCHASE"
+  return "IN_APP_PURCHASE"
 }
 function parseGender(value: string): string[] {
   if (value === "ALL") return []
@@ -498,8 +506,9 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       optimizationGoal: form.optimizationGoal.trim(),
       performanceGoalType: form.performanceGoalType.trim(),
       performanceGoalEventName: form.performanceGoalType === "APP_EVENT" ? form.performanceGoalEventName.trim() || null : null,
-      performanceGoalValueType: form.performanceGoalType === "VALUE" ? form.performanceGoalValueType.trim() || null : null,
+      performanceGoalValueType: form.performanceGoalType === "VALUE" ? normalizeValueEventType(form.performanceGoalValueType) : null,
       bidAmount: parseOptionalAmount(form.bidAmount),
+      roasAverageFloor: parseOptionalAmount(form.roasAverageFloor),
       advantageAudience: form.advantageAudience,
       startTime: parseOptionalDate(form.startTime),
       endTime: parseOptionalDate(form.endTime),
@@ -671,6 +680,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     performanceGoalEventName: performanceGoal.performanceGoalEventName,
     performanceGoalValueType: performanceGoal.performanceGoalValueType,
     bidAmount: payload.adSet.bidAmount?.toString() ?? "",
+    roasAverageFloor: payload.adSet.roasAverageFloor?.toString() ?? "",
     advantageAudience: payload.adSet.advantageAudience ?? false,
     startTime: payload.adSet.startTime ? payload.adSet.startTime.slice(0, 16) : "",
     endTime: payload.adSet.endTime ? payload.adSet.endTime.slice(0, 16) : "",
@@ -706,10 +716,6 @@ export function formatUserGuidShort(value?: string | null): string {
   if (value.length <= 12) return value
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
-
-
-
-
 
 
 

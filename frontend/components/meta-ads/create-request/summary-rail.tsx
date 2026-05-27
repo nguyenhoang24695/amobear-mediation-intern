@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, AlertCircle, Pause } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
-import { bidStrategyRequiresBidAmount, getAllowedBillingEvents, getAllowedPerformanceGoalTypes, isBidAmountAllowed, isBidStrategyCompatible, isBidStrategySupported, resolveOptimizationGoal } from "./constants"
+import { bidStrategyRequiresBidAmount, bidStrategyRequiresRoasGoal, getAllowedBillingEvents, getAllowedPerformanceGoalTypes, isBidStrategySupported, resolveOptimizationGoal } from "./constants"
 import type { GroupedValidationErrors, MetaAppMappingDto, MetaRequestStatus } from "@/types/meta-ads"
 import { resolveMetaAppMappingPlatform } from "./platform"
 
@@ -30,6 +30,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const isGoalCompatible = allowedGoals.length === 0 || allowedGoals.includes(form.performanceGoalType)
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
+  const roasGoalRequired = bidStrategyRequiresRoasGoal(form.bidStrategy)
   const allowedBillingEvents = getAllowedBillingEvents(resolvedOptimizationGoal)
   const isBillingCompatible = allowedBillingEvents.includes(form.billingEvent)
   const bidStrategySupported = isBidStrategySupported(form.bidStrategy)
@@ -64,6 +65,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
           <CheckRow state={form.performanceGoalType ? (isBillingCompatible ? "ok" : "error") : "neutral"} label="Billing event compatible" onClick={() => onNavigateToSection?.("adset-budget")} />
           <CheckRow state={form.bidStrategy ? (bidStrategySupported ? "ok" : "warning") : "neutral"} label={form.bidStrategy ? `Bid strategy supported (${form.bidStrategy})` : "Bid strategy optional"} onClick={() => onNavigateToSection?.("campaign-settings")} />
           <CheckRow state={bidAmountRequired ? (form.bidAmount ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={bidAmountRequired ? "Bid amount provided for strategy" : "Bid amount optional"} onClick={() => onNavigateToSection?.("adset-budget")} />
+          <CheckRow state={roasGoalRequired ? (form.roasAverageFloor ? "ok" : "error") : form.bidStrategy ? "ok" : "neutral"} label={roasGoalRequired ? "ROAS Goal provided for strategy" : "ROAS Goal optional"} onClick={() => onNavigateToSection?.("campaign-settings")} />
           <CheckRow state={"ok"} label={`Advantage Audience explicitly ${form.advantageAudience ? "enabled" : "disabled"}`} onClick={() => onNavigateToSection?.("adset-budget")} />
           <CheckRow state={geoStatus} label={`Geo targeting (${form.geoMode.toLowerCase()})`} onClick={() => onNavigateToSection?.("adset-audience")} />
           <CheckRow state={platformAlignmentReady ? "ok" : "error"} label="Platform targeting can be derived from app mapping" onClick={() => onNavigateToSection?.("account-app")} />
@@ -76,7 +78,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
       <Card className="border-slate-200">
         <CardHeader className="pb-2 pt-3 px-3"><CardTitle className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Meta Compatibility</CardTitle></CardHeader>
         <CardContent className="px-3 pb-3 space-y-1.5 text-[11px]">
-          <p className="text-slate-500">Unavailable options in this form are disabled because Meta would reject them or Nexus does not support the required extra fields yet.</p>
+          <p className="text-slate-500">Unavailable options in this form are disabled because Meta would reject them for the selected objective or performance goal.</p>
           <SummaryLine label="Billing events" value={allowedBillingEvents.join(", ")} />
           <SummaryLine label="Optimization goal" value={resolvedOptimizationGoal} />
           <SummaryLine label="Ad set budget sharing" value={form.budgetStrategy === "ABO" ? (form.isAdSetBudgetSharingEnabled ? "Enabled" : "Disabled") : "Only applies to ad set budget"} />
@@ -116,6 +118,8 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
             <SummaryLine label="Geo" value={geoSummary} />
             <SummaryLine label="Age" value={`${form.ageMin}-${form.ageMax}`} />
             <SummaryLine label="Performance Goal" value={getPerformanceGoalSummary(form)} />
+            <SummaryLine label="Bid Strategy" value={form.bidStrategy || "-"} />
+            <SummaryLine label="ROAS Goal" value={roasGoalRequired && form.roasAverageFloor ? `${form.roasAverageFloor}x` : "-"} />
           </div>
           <div className="pt-2 border-t border-slate-200">
             <p className="font-semibold text-slate-900 mb-1">Creative</p>
@@ -170,7 +174,8 @@ function getGeoSummary(form: RequestFormState): string {
 }
 
 function getValueEventLabel(value?: string | null): string {
-  if (value === "IN_APP_AD_IMPRESSION") return "In-app ad impression"
+  const normalized = value?.trim().toUpperCase()
+  if (normalized === "IN_APP_AD_IMPRESSION" || normalized === "AD_IMPRESSION") return "In-app ad impression"
   return "In-app purchase"
 }
 
@@ -276,8 +281,6 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-
-
 
 
 
