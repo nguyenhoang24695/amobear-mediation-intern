@@ -8,7 +8,8 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -35,14 +36,24 @@ import {
 import { cn } from "@/lib/utils"
 import { reportsApi } from "@/lib/api/services"
 import type {
+  OverviewMetricId,
   OverviewReportFilter,
   ProfitOverviewAppRow,
+  ProfitOverviewMetricValues,
   ProfitOverviewMonthCell,
   ProfitOverviewReportResponse,
 } from "@/types/reports"
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const APPS_PER_PAGE = 20
+
+const OVERVIEW_METRICS: { id: OverviewMetricId; label: string }[] = [
+  { id: "revenue", label: "Revenue" },
+  { id: "cost", label: "Cost" },
+  { id: "profit", label: "Profit" },
+]
+
+const DEFAULT_OVERVIEW_METRICS: OverviewMetricId[] = ["revenue", "cost", "profit"]
 
 function currentYearRange() {
   const year = new Date().getFullYear()
@@ -142,17 +153,28 @@ function renderPlatformBadge(platformValue: string) {
   )
 }
 
-function getCell(
+function emptyMetricValues(): ProfitOverviewMetricValues {
+  return { plan: 0, actual: 0, completionPercent: null }
+}
+
+function getMonthCell(
   months: Record<string, ProfitOverviewMonthCell>,
   month: string,
 ): ProfitOverviewMonthCell {
   return (
     months[month] ?? {
-      plannedProfit: 0,
-      actualProfit: 0,
-      completionPercent: null,
+      revenue: emptyMetricValues(),
+      cost: emptyMetricValues(),
+      profit: emptyMetricValues(),
     }
   )
+}
+
+function getMetricValues(
+  cell: ProfitOverviewMonthCell,
+  metricId: OverviewMetricId,
+): ProfitOverviewMetricValues {
+  return cell[metricId]
 }
 
 function TeamAppsPager({
@@ -210,34 +232,79 @@ function TeamAppsPager({
 function OverviewMonthCells({
   months,
   monthKeys,
+  selectedMetrics,
 }: {
   months: Record<string, ProfitOverviewMonthCell>
   monthKeys: string[]
+  selectedMetrics: OverviewMetricId[]
 }) {
   return (
     <>
       {monthKeys.map((month) => {
-        const cell = getCell(months, month)
+        const cell = getMonthCell(months, month)
         return (
           <Fragment key={month}>
-            <TableCell className="text-right text-sm tabular-nums text-slate-700">
-              {formatCurrency(cell.plannedProfit)}
-            </TableCell>
-            <TableCell className="text-right text-sm tabular-nums text-slate-700">
-              {formatCurrency(cell.actualProfit)}
-            </TableCell>
-            <TableCell
-              className={cn(
-                "border-r text-right text-sm tabular-nums",
-                getPercentClass(cell.completionPercent),
-              )}
-            >
-              {formatPercent(cell.completionPercent)}
-            </TableCell>
+            {selectedMetrics.map((metricId, metricIndex) => {
+              const values = getMetricValues(cell, metricId)
+              const isLastMetric = metricIndex === selectedMetrics.length - 1
+              return (
+                <Fragment key={`${month}-${metricId}`}>
+                  <TableCell className="min-w-[80px] text-right text-sm tabular-nums text-slate-700">
+                    {formatCurrency(values.plan)}
+                  </TableCell>
+                  <TableCell className="min-w-[80px] text-right text-sm tabular-nums text-slate-700">
+                    {formatCurrency(values.actual)}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "min-w-[56px] text-right text-sm tabular-nums",
+                      isLastMetric && "border-r",
+                      getPercentClass(values.completionPercent),
+                    )}
+                  >
+                    {formatPercent(values.completionPercent)}
+                  </TableCell>
+                </Fragment>
+              )
+            })}
           </Fragment>
         )
       })}
     </>
+  )
+}
+
+function OverviewMetricToggle({
+  id,
+  label,
+  selected,
+  onToggle,
+}: {
+  id: OverviewMetricId
+  label: string
+  selected: boolean
+  onToggle: (id: OverviewMetricId) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(id)}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+        selected ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50",
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+          selected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white",
+        )}
+        aria-hidden
+      >
+        {selected ? <span className="text-[10px] leading-none">✓</span> : null}
+      </span>
+      {label}
+    </button>
   )
 }
 
@@ -255,6 +322,24 @@ export function OverviewReportContent() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
   const [expandedTeamIds, setExpandedTeamIds] = useState<Set<string>>(() => new Set())
   const [teamAppPageByTeamId, setTeamAppPageByTeamId] = useState<Record<string, number>>({})
+  const [selectedMetrics, setSelectedMetrics] = useState<OverviewMetricId[]>(DEFAULT_OVERVIEW_METRICS)
+
+  const visibleMetrics = useMemo(
+    () => OVERVIEW_METRICS.filter((metric) => selectedMetrics.includes(metric.id)),
+    [selectedMetrics],
+  )
+
+  const colsPerMonth = visibleMetrics.length * 3
+
+  const toggleMetric = (metricId: OverviewMetricId) => {
+    setSelectedMetrics((prev) => {
+      if (prev.includes(metricId)) {
+        if (prev.length <= 1) return prev
+        return prev.filter((id) => id !== metricId)
+      }
+      return [...prev, metricId]
+    })
+  }
 
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear()
@@ -427,7 +512,7 @@ export function OverviewReportContent() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Overview Report</h1>
           <p className="mt-1 text-sm text-slate-500">
-            KPI profit plan vs actual by team. Expand a team to see plan and actual per app.
+            KPI plan vs actual by team (revenue, cost, profit). Expand a team for per-app detail.
           </p>
         </div>
         <Button
@@ -535,52 +620,76 @@ export function OverviewReportContent() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="overflow-hidden border-slate-200">
-          <CardContent className="p-0">
-            <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
-              Last update at:{" "}
-              {data?.lastUpdatedAt ? (
-                <span className="text-slate-600">{formatLastUpdatedAt(data.lastUpdatedAt)}</span>
-              ) : (
-                <span className="text-slate-400">—</span>
-              )}
-            </p>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-                    <TableHead
-                      rowSpan={2}
-                      className="sticky left-0 z-20 min-w-[360px] border-r bg-slate-50 align-bottom"
-                    >
-                      App
-                    </TableHead>
-                    {months.map((month) => (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_18rem]">
+          <Card className="overflow-hidden border-slate-200">
+            <CardContent className="p-0">
+              <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
+                Last update at:{" "}
+                {data?.lastUpdatedAt ? (
+                  <span className="text-slate-600">{formatLastUpdatedAt(data.lastUpdatedAt)}</span>
+                ) : (
+                  <span className="text-slate-400">—</span>
+                )}
+              </p>
+              <div className="max-h-[min(70vh,720px)] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
                       <TableHead
-                        key={month}
-                        colSpan={3}
-                        className="border-r text-center text-xs font-semibold text-slate-700"
+                        rowSpan={3}
+                        className="sticky left-0 z-20 min-w-[360px] border-r bg-slate-50 align-bottom"
                       >
-                        {formatMonthLabel(month)}
+                        App
                       </TableHead>
-                    ))}
-                  </TableRow>
-                  <TableRow className="bg-slate-50/60 hover:bg-slate-50/60">
-                    {months.map((month) => (
-                      <Fragment key={`${month}-subheads`}>
-                        <TableHead className="min-w-[88px] text-right text-xs text-slate-500">
-                          Plan
+                      {months.map((month) => (
+                        <TableHead
+                          key={month}
+                          colSpan={colsPerMonth}
+                          className="border-r text-center text-xs font-semibold text-slate-700"
+                        >
+                          {formatMonthLabel(month)}
                         </TableHead>
-                        <TableHead className="min-w-[88px] text-right text-xs text-slate-500">
-                          Actual
-                        </TableHead>
-                        <TableHead className="min-w-[64px] border-r text-right text-xs text-slate-500">
-                          %
-                        </TableHead>
-                      </Fragment>
-                    ))}
-                  </TableRow>
-                </TableHeader>
+                      ))}
+                    </TableRow>
+                    <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
+                      {months.map((month) =>
+                        visibleMetrics.map((metric, metricIndex) => (
+                          <TableHead
+                            key={`${month}-${metric.id}-group`}
+                            colSpan={3}
+                            className={cn(
+                              "border-b text-center text-xs font-medium text-slate-600",
+                              metricIndex === visibleMetrics.length - 1 && "border-r",
+                            )}
+                          >
+                            {metric.label}
+                          </TableHead>
+                        )),
+                      )}
+                    </TableRow>
+                    <TableRow className="bg-slate-50/60 hover:bg-slate-50/60">
+                      {months.map((month) =>
+                        visibleMetrics.map((metric, metricIndex) => (
+                          <Fragment key={`${month}-${metric.id}-subheads`}>
+                            <TableHead className="min-w-[80px] text-right text-xs text-slate-500">
+                              Plan
+                            </TableHead>
+                            <TableHead className="min-w-[80px] text-right text-xs text-slate-500">
+                              Actual
+                            </TableHead>
+                            <TableHead
+                              className={cn(
+                                "min-w-[56px] text-right text-xs text-slate-500",
+                                metricIndex === visibleMetrics.length - 1 && "border-r",
+                              )}
+                            >
+                              %
+                            </TableHead>
+                          </Fragment>
+                        )),
+                      )}
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {teams.map((team) => {
                     const apps = team.apps ?? []
@@ -625,7 +734,11 @@ export function OverviewReportContent() {
                               <span>{team.teamName}</span>
                             </div>
                           </TableCell>
-                          <OverviewMonthCells monthKeys={months} months={team.months} />
+                          <OverviewMonthCells
+                            monthKeys={months}
+                            months={team.months}
+                            selectedMetrics={visibleMetrics.map((m) => m.id)}
+                          />
                         </TableRow>
                         {expanded &&
                           paginatedApps.map((app: ProfitOverviewAppRow) => (
@@ -664,7 +777,11 @@ export function OverviewReportContent() {
                                   </div>
                                 </div>
                               </TableCell>
-                              <OverviewMonthCells monthKeys={months} months={app.months} />
+                              <OverviewMonthCells
+                                monthKeys={months}
+                                months={app.months}
+                                selectedMetrics={visibleMetrics.map((m) => m.id)}
+                              />
                             </TableRow>
                           ))}
                         {expanded && apps.length > APPS_PER_PAGE ? (
@@ -680,7 +797,7 @@ export function OverviewReportContent() {
                             {months.map((month) => (
                               <TableCell
                                 key={`${team.teamId}-pager-${month}`}
-                                colSpan={3}
+                                colSpan={colsPerMonth}
                                 className="border-r bg-slate-50/30"
                               />
                             ))}
@@ -690,10 +807,36 @@ export function OverviewReportContent() {
                     )
                   })}
                 </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="flex min-h-[320px] flex-col border-slate-200 xl:min-h-0">
+            <CardHeader className="border-b border-slate-100 pb-3">
+              <CardTitle className="text-base font-medium">Metrics</CardTitle>
+              <CardDescription>Choose metrics shown per month (Plan / Actual / %)</CardDescription>
+            </CardHeader>
+            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+              <ScrollArea className="max-h-[min(70vh,640px)] flex-1">
+                <div className="space-y-1 p-4">
+                  <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Metrics ({visibleMetrics.length})
+                  </div>
+                  {OVERVIEW_METRICS.map((metric) => (
+                    <OverviewMetricToggle
+                      key={metric.id}
+                      id={metric.id}
+                      label={metric.label}
+                      selected={selectedMetrics.includes(metric.id)}
+                      onToggle={toggleMetric}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

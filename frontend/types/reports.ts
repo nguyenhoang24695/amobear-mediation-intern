@@ -100,10 +100,18 @@ export interface CustomReportFolder {
   createdAt: string
 }
 
-export interface ProfitOverviewMonthCell {
-  plannedProfit: number
-  actualProfit: number
+export type OverviewMetricId = "revenue" | "cost" | "profit"
+
+export interface ProfitOverviewMetricValues {
+  plan: number
+  actual: number
   completionPercent?: number | null
+}
+
+export interface ProfitOverviewMonthCell {
+  revenue: ProfitOverviewMetricValues
+  cost: ProfitOverviewMetricValues
+  profit: ProfitOverviewMetricValues
 }
 
 export interface ProfitOverviewAppRow {
