@@ -102,9 +102,11 @@ export interface CustomReportFolder {
 
 export type OverviewMetricId = "revenue" | "cost" | "profit"
 
+export type OverviewParameterId = "plan" | "actual" | "percent"
+
 export interface ProfitOverviewMetricValues {
-  plan: number
-  actual: number
+  plan?: number | null
+  actual?: number | null
   completionPercent?: number | null
 }
 

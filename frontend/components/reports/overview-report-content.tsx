@@ -20,7 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { format, parse, parseISO } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronDown, ChevronRight, GripVertical, Loader2, RefreshCw, Save } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Copy, GripVertical, Loader2, RefreshCw, Save, X } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -37,7 +37,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -54,6 +53,7 @@ import { cn } from "@/lib/utils"
 import { reportsApi } from "@/lib/api/services"
 import type {
   OverviewMetricId,
+  OverviewParameterId,
   OverviewReportFilter,
   ProfitOverviewAppRow,
   ProfitOverviewMetricValues,
@@ -72,6 +72,22 @@ const OVERVIEW_METRICS: { id: OverviewMetricId; label: string }[] = [
 ]
 
 const DEFAULT_OVERVIEW_METRICS: OverviewMetricId[] = ["revenue", "cost", "profit"]
+
+const OVERVIEW_PARAMETERS: { id: OverviewParameterId; label: string }[] = [
+  { id: "plan", label: "Plan" },
+  { id: "actual", label: "Actual" },
+  { id: "percent", label: "%" },
+]
+
+const DEFAULT_OVERVIEW_PARAMETERS: OverviewParameterId[] = ["plan", "actual", "percent"]
+
+const PARAMETER_SIDEBAR_STYLES = {
+  selected: "bg-emerald-50 text-emerald-900",
+  accent: "bg-emerald-500",
+  checkbox: "border-emerald-600 bg-emerald-600",
+  header: "bg-emerald-50 text-emerald-900",
+  border: "border-emerald-200",
+} as const
 
 const METRIC_TABLE_STYLES: Record<
   OverviewMetricId,
@@ -97,14 +113,52 @@ const METRIC_TABLE_STYLES: Record<
   },
 }
 
-function metricGroupEndBorder(metricId: OverviewMetricId, isLastMetricInMonth: boolean) {
+function metricColumnEndBorder(
+  metricId: OverviewMetricId,
+  isLastParameterInMetric: boolean,
+  isLastMetricInMonth: boolean,
+) {
+  if (!isLastParameterInMetric) return ""
   if (isLastMetricInMonth) return "border-r-2 border-slate-300"
   return cn("border-r", METRIC_TABLE_STYLES[metricId].border)
 }
 
+function renderParameterCellContent(
+  values: ProfitOverviewMetricValues,
+  parameterId: OverviewParameterId,
+) {
+  switch (parameterId) {
+    case "plan":
+      return formatCurrency(values.plan)
+    case "actual":
+      return formatCurrency(values.actual)
+    case "percent":
+      return formatPercent(values.completionPercent)
+    default:
+      return "—"
+  }
+}
+
+function parameterCellClassName(
+  parameterId: OverviewParameterId,
+  values: ProfitOverviewMetricValues,
+) {
+  if (parameterId === "percent") return getPercentClass(values.completionPercent)
+  return "text-slate-700"
+}
+
 function currentYearRange() {
   const year = new Date().getFullYear()
-  return { from: `${year}-01`, to: `${year}-12` }
+  return yearRangeForOverview(String(year))
+}
+
+function yearRangeForOverview(year: string) {
+  const now = new Date()
+  const currentYear = String(now.getFullYear())
+  const toMonth = year === currentYear
+    ? String(now.getMonth() + 1).padStart(2, "0")
+    : "12"
+  return { from: `${year}-01`, to: `${year}-${toMonth}` }
 }
 
 function pickStringField(source: Record<string, unknown>, ...keys: string[]): string | undefined {
@@ -140,7 +194,8 @@ function resolveYearInOptions(year: string, yearOptions: readonly string[]): str
 }
 
 function formatCurrency(value: number | null | undefined) {
-  const safe = Number(value ?? 0)
+  if (value == null) return "—"
+  const safe = Number(value)
   return `$${safe.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
@@ -162,6 +217,12 @@ function formatLastUpdatedAt(value: string): string {
   } catch {
     return value
   }
+}
+
+function formatAppStoreId(value: string | null | undefined): string {
+  const trimmed = value?.trim()
+  if (!trimmed) return "—"
+  return trimmed.length > 35 ? `${trimmed.slice(0, 30)}....` : trimmed
 }
 
 interface SharedAppAcrossTeamsConflict {
@@ -243,16 +304,18 @@ function renderPlatformBadge(platformValue: string) {
 }
 
 function emptyMetricValues(): ProfitOverviewMetricValues {
-  return { plan: 0, actual: 0, completionPercent: null }
+  return { plan: null, actual: null, completionPercent: null }
 }
 
 function normalizeMetricValues(raw: unknown): ProfitOverviewMetricValues {
   if (!raw || typeof raw !== "object") return emptyMetricValues()
   const record = raw as Record<string, unknown>
+  const planRaw = record.plan ?? record.Plan
+  const actualRaw = record.actual ?? record.Actual
   const completionRaw = record.completionPercent ?? record.CompletionPercent
   return {
-    plan: Number(record.plan ?? record.Plan ?? 0),
-    actual: Number(record.actual ?? record.Actual ?? 0),
+    plan: planRaw == null || planRaw === "" ? null : Number(planRaw),
+    actual: actualRaw == null || actualRaw === "" ? null : Number(actualRaw),
     completionPercent:
       completionRaw == null || completionRaw === ""
         ? null
@@ -390,11 +453,13 @@ function OverviewMonthCells({
   months,
   monthKeys,
   selectedMetrics,
+  selectedParameters,
   rowVariant = "team",
 }: {
   months: Record<string, ProfitOverviewMonthCell>
   monthKeys: string[]
   selectedMetrics: OverviewMetricId[]
+  selectedParameters: OverviewParameterId[]
   rowVariant?: "team" | "app"
 }) {
   return (
@@ -410,30 +475,27 @@ function OverviewMonthCells({
               const bgClass = rowVariant === "app" ? metricStyle.cellSubtle : metricStyle.cell
               return (
                 <Fragment key={`${month}-${metricId}`}>
-                  <TableCell
-                    className={cn(
-                      "min-w-[80px] border-l text-right text-sm tabular-nums text-slate-700",
-                      metricStyle.border,
-                      bgClass,
-                    )}
-                  >
-                    {formatCurrency(values.plan)}
-                  </TableCell>
-                  <TableCell
-                    className={cn("min-w-[80px] text-right text-sm tabular-nums text-slate-700", bgClass)}
-                  >
-                    {formatCurrency(values.actual)}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "min-w-[56px] text-right text-sm tabular-nums",
-                      metricGroupEndBorder(metricId, isLastMetricInMonth),
-                      bgClass,
-                      getPercentClass(values.completionPercent),
-                    )}
-                  >
-                    {formatPercent(values.completionPercent)}
-                  </TableCell>
+                  {selectedParameters.map((parameterId, parameterIndex) => {
+                    const isLastParameterInMetric = parameterIndex === selectedParameters.length - 1
+                    const isFirstParameter = parameterIndex === 0
+                    const minWidth =
+                      parameterId === "percent" ? "min-w-[56px]" : "min-w-[80px]"
+                    return (
+                      <TableCell
+                        key={`${month}-${metricId}-${parameterId}`}
+                        className={cn(
+                          minWidth,
+                          "text-right text-sm tabular-nums",
+                          isFirstParameter ? cn("border-l", metricStyle.border) : "",
+                          metricColumnEndBorder(metricId, isLastParameterInMetric, isLastMetricInMonth),
+                          bgClass,
+                          parameterCellClassName(parameterId, values),
+                        )}
+                      >
+                        {renderParameterCellContent(values, parameterId)}
+                      </TableCell>
+                    )
+                  })}
                 </Fragment>
               )
             })}
@@ -503,6 +565,71 @@ function SortableOverviewMetricItem({
   )
 }
 
+function SortableOverviewParameterItem({
+  id,
+  label,
+  selected,
+  onToggle,
+}: {
+  id: OverviewParameterId
+  label: string
+  selected: boolean
+  onToggle: (id: OverviewParameterId) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !selected,
+  })
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      type="button"
+      onClick={() => onToggle(id)}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors",
+        selected ? PARAMETER_SIDEBAR_STYLES.selected : "text-slate-700 hover:bg-slate-50",
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400",
+          selected ? "cursor-grab active:cursor-grabbing hover:bg-white/60" : "opacity-30",
+        )}
+        onClick={(event) => event.stopPropagation()}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </span>
+      <span
+        className={cn(
+          "h-5 w-1 shrink-0 rounded-full",
+          selected ? PARAMETER_SIDEBAR_STYLES.accent : "bg-transparent",
+        )}
+      />
+      <span
+        className={cn(
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+          selected ? PARAMETER_SIDEBAR_STYLES.checkbox : "border-slate-300 bg-white",
+          selected ? "text-white" : "",
+        )}
+        aria-hidden
+      >
+        {selected ? <span className="text-[10px] leading-none">✓</span> : null}
+      </span>
+      <span className="flex-1 leading-snug">{label}</span>
+    </button>
+  )
+}
+
 export function OverviewReportContent() {
   const defaultRange = useMemo(() => currentYearRange(), [])
   const [fromMonth, setFromMonth] = useState(defaultRange.from)
@@ -514,11 +641,17 @@ export function OverviewReportContent() {
   const [loading, setLoading] = useState(true)
   const [filterReady, setFilterReady] = useState(false)
   const [savingFilter, setSavingFilter] = useState(false)
+  const [filterExpanded, setFilterExpanded] = useState(true)
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
   const [expandedTeamIds, setExpandedTeamIds] = useState<Set<string>>(() => new Set())
   const [teamAppPageByTeamId, setTeamAppPageByTeamId] = useState<Record<string, number>>({})
   const [metricOrder, setMetricOrder] = useState<OverviewMetricId[]>(DEFAULT_OVERVIEW_METRICS)
   const [selectedMetrics, setSelectedMetrics] = useState<OverviewMetricId[]>(DEFAULT_OVERVIEW_METRICS)
+  const [parameterOrder, setParameterOrder] = useState<OverviewParameterId[]>(DEFAULT_OVERVIEW_PARAMETERS)
+  const [selectedParameters, setSelectedParameters] = useState<OverviewParameterId[]>(
+    DEFAULT_OVERVIEW_PARAMETERS,
+  )
+  const [metricsCollapsed, setMetricsCollapsed] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -534,7 +667,16 @@ export function OverviewReportContent() {
     [metricOrder, selectedMetrics],
   )
 
-  const colsPerMonth = visibleMetrics.length * 3
+  const visibleParameters = useMemo(
+    () =>
+      parameterOrder
+        .filter((id) => selectedParameters.includes(id))
+        .map((id) => OVERVIEW_PARAMETERS.find((parameter) => parameter.id === id))
+        .filter((parameter): parameter is (typeof OVERVIEW_PARAMETERS)[number] => parameter != null),
+    [parameterOrder, selectedParameters],
+  )
+
+  const colsPerMonth = visibleMetrics.length * visibleParameters.length
 
   const toggleMetric = (metricId: OverviewMetricId) => {
     setSelectedMetrics((prev) => {
@@ -562,6 +704,32 @@ export function OverviewReportContent() {
     })
   }
 
+  const toggleParameter = (parameterId: OverviewParameterId) => {
+    setSelectedParameters((prev) => {
+      if (prev.includes(parameterId)) {
+        if (prev.length <= 1) return prev
+        return prev.filter((id) => id !== parameterId)
+      }
+      return [...prev, parameterId]
+    })
+  }
+
+  const handleParameterDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const activeId = String(active.id) as OverviewParameterId
+    const overId = String(over.id) as OverviewParameterId
+    if (!selectedParameters.includes(activeId) || !selectedParameters.includes(overId)) return
+
+    setParameterOrder((prev) => {
+      const oldIndex = prev.indexOf(activeId)
+      const newIndex = prev.indexOf(overId)
+      if (oldIndex < 0 || newIndex < 0) return prev
+      return arrayMove(prev, oldIndex, newIndex)
+    })
+  }
+
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear()
     return Array.from({ length: 5 }, (_, index) => String(current - index))
@@ -575,12 +743,15 @@ export function OverviewReportContent() {
     }
   }, [selectedYear, selectYearValue, yearOptions])
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(
+    async (range?: { from: string; to: string }) => {
     setLoading(true)
     try {
+      const from = range?.from ?? appliedFrom
+      const to = range?.to ?? appliedTo
       const response = await reportsApi.getProfitOverview({
-        from: appliedFrom,
-        to: appliedTo,
+        from,
+        to,
       })
       setData(normalizeOverviewResponse(response))
     } catch (err: unknown) {
@@ -590,7 +761,9 @@ export function OverviewReportContent() {
     } finally {
       setLoading(false)
     }
-  }, [appliedFrom, appliedTo])
+    },
+    [appliedFrom, appliedTo],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -623,7 +796,7 @@ export function OverviewReportContent() {
     void loadData()
   }, [loadData, filterReady])
 
-  const applyRange = () => {
+  const applyRange = async () => {
     if (fromMonth > toMonth) {
       toast.error("From month must be on or before to month.")
       return
@@ -631,6 +804,7 @@ export function OverviewReportContent() {
     setAppliedFrom(fromMonth)
     setAppliedTo(toMonth)
     setSelectedYear(fromMonth.slice(0, 4))
+    await loadData({ from: fromMonth, to: toMonth })
   }
 
   const saveFilter = async () => {
@@ -656,9 +830,10 @@ export function OverviewReportContent() {
   }
 
   const handleYearChange = (year: string) => {
+    const range = yearRangeForOverview(year)
     setSelectedYear(year)
-    setFromMonth(`${year}-01`)
-    setToMonth(`${year}-12`)
+    setFromMonth(range.from)
+    setToMonth(range.to)
   }
 
   const months = data?.months ?? []
@@ -680,6 +855,11 @@ export function OverviewReportContent() {
   }, [allTeams, selectedTeamIds])
 
   const sharedAppConflicts = useMemo(() => findSharedAppsAcrossTeams(teams), [teams])
+  const [sharedAppWarningDismissed, setSharedAppWarningDismissed] = useState(false)
+
+  useEffect(() => {
+    setSharedAppWarningDismissed(false)
+  }, [sharedAppConflicts.length])
 
   useEffect(() => {
     if (allTeams.length === 0) return
@@ -709,6 +889,18 @@ export function OverviewReportContent() {
 
   const setTeamAppPage = (teamId: string, page: number) => {
     setTeamAppPageByTeamId((prev) => ({ ...prev, [teamId]: page }))
+  }
+
+  const copyAppStoreId = async (appStoreId: string | null | undefined) => {
+    const value = appStoreId?.trim()
+    if (!value) return
+
+    try {
+      await navigator.clipboard.writeText(value)
+      toast.success("App Store ID copied.")
+    } catch {
+      toast.error("Failed to copy App Store ID.")
+    }
   }
 
   useEffect(() => {
@@ -746,80 +938,99 @@ export function OverviewReportContent() {
       </div>
 
       <Card className="border-slate-200">
-        <CardContent className="flex flex-wrap items-end gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="overview-year">Year</Label>
-            <Select value={selectYearValue} onValueChange={handleYearChange}>
-              <SelectTrigger id="overview-year" className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {yearOptions.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="overview-from">From</Label>
-            <Input
-              id="overview-from"
-              type="month"
-              value={fromMonth || defaultRange.from}
-              onChange={(e) => setFromMonth(e.target.value || defaultRange.from)}
-              className="w-[160px]"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="overview-to">To</Label>
-            <Input
-              id="overview-to"
-              type="month"
-              value={toMonth || defaultRange.to}
-              onChange={(e) => setToMonth(e.target.value || defaultRange.to)}
-              className="w-[160px]"
-            />
-          </div>
-          <div className="min-w-[240px] flex-1 space-y-2">
-            <Label htmlFor="overview-teams">Teams</Label>
-            <StringMultiSelectCombobox
-              id="overview-teams"
-              options={teamOptions}
-              values={selectedTeamIds}
-              onChange={setSelectedTeamIds}
-              disabled={loading || teamOptions.length === 0}
-              placeholder="All teams"
-              searchPlaceholder="Search teams..."
-              emptyMessage="No teams found."
-              triggerClassName="min-w-[240px]"
-            />
-          </div>
-          <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={applyRange}>
-            Apply
+        <CardHeader className="flex flex-row items-center justify-end gap-3 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setFilterExpanded((prev) => !prev)}
+            aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
+            aria-expanded={filterExpanded}
+          >
+            {filterExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                disabled={savingFilter}
-                onClick={() => void saveFilter()}
-                aria-label="Save filter"
-              >
-                {savingFilter ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Save current filter to your settings</TooltipContent>
-          </Tooltip>
-        </CardContent>
+        </CardHeader>
+        {filterExpanded ? (
+          <CardContent className="flex flex-wrap items-end gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="overview-year">Year</Label>
+              <Select value={selectYearValue} onValueChange={handleYearChange}>
+                <SelectTrigger id="overview-year" className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="overview-from">From</Label>
+              <Input
+                id="overview-from"
+                type="month"
+                value={fromMonth || defaultRange.from}
+                onChange={(e) => setFromMonth(e.target.value || defaultRange.from)}
+                className="w-[160px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="overview-to">To</Label>
+              <Input
+                id="overview-to"
+                type="month"
+                value={toMonth || defaultRange.to}
+                onChange={(e) => setToMonth(e.target.value || defaultRange.to)}
+                className="w-[160px]"
+              />
+            </div>
+            <div className="min-w-[240px] flex-1 space-y-2">
+              <Label htmlFor="overview-teams">Teams</Label>
+              <StringMultiSelectCombobox
+                id="overview-teams"
+                options={teamOptions}
+                values={selectedTeamIds}
+                onChange={setSelectedTeamIds}
+                disabled={loading || teamOptions.length === 0}
+                placeholder="All teams"
+                searchPlaceholder="Search teams..."
+                emptyMessage="No teams found."
+                triggerClassName="min-w-[240px]"
+              />
+            </div>
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={loading}
+              onClick={() => void applyRange()}
+            >
+              Apply
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  disabled={savingFilter}
+                  onClick={() => void saveFilter()}
+                  aria-label="Save filter"
+                >
+                  {savingFilter ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Save current filter to your settings</TooltipContent>
+            </Tooltip>
+          </CardContent>
+        ) : null}
       </Card>
 
       {loading ? (
@@ -839,7 +1050,12 @@ export function OverviewReportContent() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_18rem]">
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-6",
+            metricsCollapsed ? "xl:grid-cols-[1fr_3.5rem]" : "xl:grid-cols-[1fr_18rem]",
+          )}
+        >
           <Card className="overflow-hidden border-slate-200">
             <CardContent className="p-0">
               <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
@@ -850,11 +1066,21 @@ export function OverviewReportContent() {
                   <span className="text-slate-400">—</span>
                 )}
               </p>
-              {sharedAppConflicts.length > 0 ? (
+              {sharedAppConflicts.length > 0 && !sharedAppWarningDismissed ? (
                 <div
-                  className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+                  className="relative border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
                   role="alert"
                 >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-2 h-7 w-7 text-red-700 hover:bg-red-100 hover:text-red-900"
+                    aria-label="Dismiss warning"
+                    onClick={() => setSharedAppWarningDismissed(true)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                   <p className="font-semibold text-red-800">
                     Warning: the same app appears under multiple teams
                   </p>
@@ -871,25 +1097,25 @@ export function OverviewReportContent() {
                 </div>
               ) : null}
               <div className="max-h-[min(70vh,720px)] overflow-auto">
-                <Table>
+                <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableRow className="h-10 bg-slate-50/95 hover:bg-slate-50/95">
                       <TableHead
                         rowSpan={3}
-                        className="sticky left-0 z-20 min-w-[360px] border-r bg-slate-50 align-bottom"
+                        className="sticky left-0 top-0 z-50 min-w-[280px] border-r bg-slate-50 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
                       >
                       </TableHead>
                       {months.map((month) => (
                         <TableHead
                           key={month}
                           colSpan={colsPerMonth}
-                          className="border-r text-center text-xs font-semibold text-slate-700"
+                          className="sticky top-0 z-40 border-r bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
                         >
                           {formatMonthLabel(month)}
                         </TableHead>
                       ))}
                     </TableRow>
-                    <TableRow className="hover:bg-transparent">
+                    <TableRow className="h-8 bg-slate-50/95 hover:bg-slate-50/95">
                       {months.map((month) =>
                         visibleMetrics.map((metric, metricIndex) => {
                           const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
@@ -897,12 +1123,13 @@ export function OverviewReportContent() {
                           return (
                             <TableHead
                               key={`${month}-${metric.id}-group`}
-                              colSpan={3}
+                              colSpan={visibleParameters.length}
                               className={cn(
-                                "border-b border-l text-center text-xs font-semibold",
+                                "sticky top-10 z-40 border-b border-l text-center text-xs font-semibold",
                                 metricStyle.header,
                                 metricStyle.border,
-                                metricGroupEndBorder(metric.id, isLastMetricInMonth),
+                                metricColumnEndBorder(metric.id, true, isLastMetricInMonth),
+                                "bg-slate-50/95",
                               )}
                             >
                               {metric.label}
@@ -911,39 +1138,39 @@ export function OverviewReportContent() {
                         }),
                       )}
                     </TableRow>
-                    <TableRow className="hover:bg-transparent">
+                    <TableRow className="h-8 bg-slate-50/95 hover:bg-slate-50/95">
                       {months.map((month) =>
                         visibleMetrics.map((metric, metricIndex) => {
                           const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
                           const metricStyle = METRIC_TABLE_STYLES[metric.id]
                           return (
                             <Fragment key={`${month}-${metric.id}-subheads`}>
-                              <TableHead
-                                className={cn(
-                                  "min-w-[80px] border-l text-right text-xs text-slate-600",
-                                  metricStyle.header,
-                                  metricStyle.border,
-                                )}
-                              >
-                                Plan
-                              </TableHead>
-                              <TableHead
-                                className={cn(
-                                  "min-w-[80px] text-right text-xs text-slate-600",
-                                  metricStyle.header,
-                                )}
-                              >
-                                Actual
-                              </TableHead>
-                              <TableHead
-                                className={cn(
-                                  "min-w-[56px] text-right text-xs text-slate-600",
-                                  metricStyle.header,
-                                  metricGroupEndBorder(metric.id, isLastMetricInMonth),
-                                )}
-                              >
-                                %
-                              </TableHead>
+                              {visibleParameters.map((parameter, parameterIndex) => {
+                                const isLastParameterInMetric =
+                                  parameterIndex === visibleParameters.length - 1
+                                const isFirstParameter = parameterIndex === 0
+                                const minWidth =
+                                  parameter.id === "percent" ? "min-w-[56px]" : "min-w-[80px]"
+                                return (
+                                  <TableHead
+                                    key={`${month}-${metric.id}-${parameter.id}`}
+                                    className={cn(
+                                      minWidth,
+                                      "sticky top-[72px] z-40 text-right text-xs font-medium",
+                                      PARAMETER_SIDEBAR_STYLES.header,
+                                      isFirstParameter ? cn("border-l", metricStyle.border) : "",
+                                      metricColumnEndBorder(
+                                        metric.id,
+                                        isLastParameterInMetric,
+                                        isLastMetricInMonth,
+                                      ),
+                                      "bg-slate-50/95",
+                                    )}
+                                  >
+                                    {parameter.label}
+                                  </TableHead>
+                                )
+                              })}
                             </Fragment>
                           )
                         }),
@@ -966,7 +1193,7 @@ export function OverviewReportContent() {
                     return (
                       <Fragment key={team.teamId}>
                         <TableRow className="hover:bg-slate-50/60">
-                          <TableCell className="sticky left-0 z-10 border-r bg-white py-2 font-semibold text-slate-900">
+                          <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-white py-2 font-semibold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
                             <div className="flex items-center gap-1">
                               {canExpand ? (
                                 <Button
@@ -998,6 +1225,7 @@ export function OverviewReportContent() {
                             monthKeys={months}
                             months={team.months}
                             selectedMetrics={visibleMetrics.map((m) => m.id)}
+                            selectedParameters={visibleParameters.map((p) => p.id)}
                           />
                         </TableRow>
                         {expanded &&
@@ -1006,7 +1234,7 @@ export function OverviewReportContent() {
                               key={`${team.teamId}-${app.appId}`}
                               className="bg-slate-50/40 hover:bg-slate-50/60"
                             >
-                              <TableCell className="sticky left-0 z-10 border-r bg-slate-50/80 py-2 pl-12">
+                              <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-slate-50 py-2 pl-10 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
                                 <div className="flex min-w-0 items-center justify-between gap-3">
                                   <div className="flex min-w-0 flex-1 items-center gap-2">
                                     <Avatar className="h-8 w-8 shrink-0 rounded-lg">
@@ -1026,9 +1254,21 @@ export function OverviewReportContent() {
                                         {app.appLabel}
                                       </div>
                                       <div className="truncate text-xs text-slate-500">
-                                        <span className="font-mono">{app.appStoreId || "—"}</span>
-                                        <span className="mx-1">·</span>
-                                        <span className="font-mono">{app.appId}</span>
+                                        <span className="font-mono" title={app.appStoreId ?? undefined}>
+                                          {formatAppStoreId(app.appStoreId)}
+                                        </span>
+                                        {app.appStoreId ? (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="ml-1 inline-flex h-5 w-5 align-middle text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                            aria-label={`Copy App Store ID for ${app.appLabel}`}
+                                            onClick={() => void copyAppStoreId(app.appStoreId)}
+                                          >
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                        ) : null}
                                       </div>
                                     </div>
                                   </div>
@@ -1041,13 +1281,14 @@ export function OverviewReportContent() {
                                 monthKeys={months}
                                 months={app.months}
                                 selectedMetrics={visibleMetrics.map((m) => m.id)}
+                                selectedParameters={visibleParameters.map((p) => p.id)}
                                 rowVariant="app"
                               />
                             </TableRow>
                           ))}
                         {expanded && apps.length > APPS_PER_PAGE ? (
                           <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
-                            <TableCell className="sticky left-0 z-10 border-r bg-slate-50/95 py-2 pl-12 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.12)]">
+                            <TableCell className="sticky left-0 z-20 border-r bg-slate-50 py-2 pl-12 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
                               <TeamAppsPager
                                 currentPage={safeAppPage}
                                 totalPages={totalAppPages}
@@ -1062,12 +1303,12 @@ export function OverviewReportContent() {
                                 return (
                                   <TableCell
                                     key={`${team.teamId}-pager-${month}-${metric.id}`}
-                                    colSpan={3}
+                                    colSpan={visibleParameters.length}
                                     className={cn(
                                       "border-l",
                                       metricStyle.cellSubtle,
                                       metricStyle.border,
-                                      metricGroupEndBorder(metric.id, isLastMetricInMonth),
+                                      metricColumnEndBorder(metric.id, true, isLastMetricInMonth),
                                     )}
                                   />
                                 )
@@ -1079,50 +1320,122 @@ export function OverviewReportContent() {
                     )
                   })}
                 </TableBody>
-                </Table>
+                </table>
               </div>
             </CardContent>
           </Card>
 
           <Card className="flex min-h-[320px] flex-col border-slate-200 xl:min-h-0">
-            <CardHeader className="border-b border-slate-100 pb-3">
-              <CardTitle className="text-base font-medium">Metrics</CardTitle>
-              <CardDescription>
-                Toggle metrics and drag selected items to reorder columns
-              </CardDescription>
+            <CardHeader
+              className={cn(
+                "border-b border-slate-100",
+                metricsCollapsed ? "p-2" : "pb-3",
+              )}
+            >
+              <div
+                className={cn(
+                  "flex w-full items-center gap-2",
+                  metricsCollapsed ? "justify-center" : "justify-between",
+                )}
+              >
+                {metricsCollapsed ? null : <CardTitle className="text-base font-medium">Metrics</CardTitle>}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setMetricsCollapsed((prev) => !prev)}
+                  aria-label={metricsCollapsed ? "Expand metrics panel" : "Collapse metrics panel"}
+                  aria-expanded={!metricsCollapsed}
+                >
+                  {metricsCollapsed ? (
+                    <ChevronLeft className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              {metricsCollapsed ? null : (
+                <CardDescription>
+                  Toggle metrics and parameters; drag selected items to reorder columns
+                </CardDescription>
+              )}
             </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-              <ScrollArea className="max-h-[min(70vh,640px)] flex-1">
-                <div className="space-y-1 p-4">
-                  <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Metrics ({visibleMetrics.length})
-                  </div>
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleMetricDragEnd}
-                  >
-                    <SortableContext items={metricOrder} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-1">
-                        {metricOrder.map((metricId) => {
-                          const metric = OVERVIEW_METRICS.find((item) => item.id === metricId)
-                          if (!metric) return null
-                          return (
-                            <SortableOverviewMetricItem
-                              key={metric.id}
-                              id={metric.id}
-                              label={metric.label}
-                              selected={selectedMetrics.includes(metric.id)}
-                              onToggle={toggleMetric}
-                            />
-                          )
-                        })}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
+
+            {metricsCollapsed ? (
+              <CardContent className="flex flex-1 items-center justify-center p-2">
+                <div
+                  className={cn(
+                    "select-none text-xs font-semibold uppercase tracking-wider text-slate-600",
+                    "[writing-mode:vertical-rl] [text-orientation:mixed]",
+                  )}
+                >
+                  Metrics
                 </div>
-              </ScrollArea>
-            </CardContent>
+              </CardContent>
+            ) : (
+              <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+                <ScrollArea className="max-h-[min(70vh,640px)] flex-1">
+                  <div className="space-y-1 p-4">
+                    <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+                      Metrics ({visibleMetrics.length})
+                    </div>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleMetricDragEnd}
+                    >
+                      <SortableContext items={metricOrder} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-1">
+                          {metricOrder.map((metricId) => {
+                            const metric = OVERVIEW_METRICS.find((item) => item.id === metricId)
+                            if (!metric) return null
+                            return (
+                              <SortableOverviewMetricItem
+                                key={metric.id}
+                                id={metric.id}
+                                label={metric.label}
+                                selected={selectedMetrics.includes(metric.id)}
+                                onToggle={toggleMetric}
+                              />
+                            )
+                          })}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+
+                    <div className="my-4 border-t border-slate-100" />
+
+                    <div className="mb-3 text-xs font-medium uppercase tracking-wider text-emerald-700">
+                      Parameters ({visibleParameters.length})
+                    </div>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleParameterDragEnd}
+                    >
+                      <SortableContext items={parameterOrder} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-1">
+                          {parameterOrder.map((parameterId) => {
+                            const parameter = OVERVIEW_PARAMETERS.find((item) => item.id === parameterId)
+                            if (!parameter) return null
+                            return (
+                              <SortableOverviewParameterItem
+                                key={parameter.id}
+                                id={parameter.id}
+                                label={parameter.label}
+                                selected={selectedParameters.includes(parameter.id)}
+                                onToggle={toggleParameter}
+                              />
+                            )
+                          })}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            )}
           </Card>
         </div>
       )}
