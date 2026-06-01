@@ -7,6 +7,7 @@ export interface CustomReportQueryRequest {
   revenueSource: string
   metricFilters?: CustomReportMetricFilter[]
   commissionUsernames?: string[] | null
+  commissionTeamId?: string | null
   sortBy?: string | null
   sortDir?: string
 }
@@ -45,6 +46,26 @@ export interface CustomReportCatalogResponse {
   dimensions: CustomReportCatalogItem[]
   metrics: CustomReportCatalogItem[]
   revenueSources: string[]
+}
+
+export interface TeamLeadAppCacheItem {
+  appId: string
+  appStoreId?: string | null
+  displayName?: string | null
+  platform?: string | null
+  iconUri?: string | null
+  approvalState?: string | null
+  publisherId?: string | null
+}
+
+export interface TeamLeadAppCache {
+  teamId: string
+  organizationId: string
+  leadUserId?: string | null
+  admobAppIds: string[]
+  appStoreIds: string[]
+  apps: TeamLeadAppCacheItem[]
+  cachedAt: string
 }
 
 export interface CustomReportFilters {

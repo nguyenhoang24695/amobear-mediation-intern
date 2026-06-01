@@ -2771,6 +2771,10 @@ export const reportsApi = {
         return apiClient.get('/api/v1/reports/profit-overview', params as Record<string, string | undefined>)
     },
 
+    getTeamApps: async (teamId: string): Promise<import('@/types/reports').TeamLeadAppCache> => {
+        return apiClient.get(`/api/v1/reports/team-apps/${teamId}`)
+    },
+
     getOverviewFilter: async (): Promise<import('@/types/reports').OverviewReportFilter | null> => {
         return apiClient.get('/api/v1/reports/overview-filter')
     },

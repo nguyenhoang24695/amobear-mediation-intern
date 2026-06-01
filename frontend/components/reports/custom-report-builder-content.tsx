@@ -174,6 +174,7 @@ interface AppliedReportQueryState {
   metrics: string[]
   revenueSource: string
   metricFilters: CustomReportMetricFilter[]
+  commissionTeamId?: string | null
 }
 
 interface CommissionMemberOption {
@@ -624,10 +625,10 @@ export function CustomReportBuilderContent() {
     if (!canScopeManagedTeams) {
       return availableApps
     }
-    if (!commissionTeam || !commissionMember || memberPermittedAppIds === null) return []
+    if (!commissionTeam || memberPermittedAppIds === null) return []
     const allowed = new Set(memberPermittedAppIds)
     return availableApps.filter((app) => allowed.has(app.appId))
-  }, [availableApps, canScopeManagedTeams, commissionTeam, commissionMember, memberPermittedAppIds])
+  }, [availableApps, canScopeManagedTeams, commissionTeam, memberPermittedAppIds])
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -889,7 +890,7 @@ export function CustomReportBuilderContent() {
   }, [canScopeManagedTeams, commissionTeam, commissionMember])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || !commissionMember) {
+    if (!canScopeManagedTeams || !commissionTeam) {
       setMemberPermittedAppIds(null)
       setMemberPermissionsLoading(false)
       return
@@ -897,11 +898,11 @@ export function CustomReportBuilderContent() {
 
     let cancelled = false
     setMemberPermissionsLoading(true)
-    teamMembersApi
-      .getPermittedApps(commissionMember, { limit: 5000 })
+    reportsApi
+      .getTeamApps(commissionTeam)
       .then((response) => {
         if (cancelled) return
-        const appIds = [...new Set((response.data ?? []).map((app) => app.appId).filter(Boolean))]
+        const appIds = [...new Set((response.admobAppIds ?? []).filter(Boolean))]
         setMemberPermittedAppIds(appIds)
       })
       .catch(() => {
@@ -914,14 +915,14 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [canScopeManagedTeams, commissionMember])
+  }, [canScopeManagedTeams, commissionTeam])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || !commissionTeam || !commissionMember || memberPermittedAppIds === null) return
+    if (!canScopeManagedTeams || !commissionTeam || memberPermittedAppIds === null) return
     const permitted = appsForSelection.map((app) => app.appId)
     setSelectedApps(permitted)
     syncAppsActiveFilter(permitted, appsForSelection)
-  }, [canScopeManagedTeams, commissionTeam, commissionMember, memberPermittedAppIds, appsForSelection])
+  }, [canScopeManagedTeams, commissionTeam, memberPermittedAppIds, appsForSelection])
 
   useEffect(() => {
     if (!commissionTeam) return
@@ -946,6 +947,7 @@ export function CustomReportBuilderContent() {
       metrics: [...selectedMetrics],
       revenueSource: "All",
       metricFilters: [...metricFilters],
+      commissionTeamId: canScopeManagedTeams ? commissionTeam || null : null,
     }),
     [
       startDate,
@@ -954,6 +956,8 @@ export function CustomReportBuilderContent() {
       selectedParameters,
       selectedMetrics,
       metricFilters,
+      canScopeManagedTeams,
+      commissionTeam,
     ],
   )
 
@@ -969,6 +973,7 @@ export function CustomReportBuilderContent() {
         metrics: state.metrics,
         revenueSource: state.revenueSource,
         metricFilters: state.metricFilters,
+        commissionTeamId: state.commissionTeamId ?? null,
       })
 
     return normalize(currentReportQuery) !== normalize(appliedReportQuery)
@@ -991,6 +996,7 @@ export function CustomReportBuilderContent() {
     revenueSource: appliedReportQuery?.revenueSource ?? "All",
     metricFilters: appliedReportQuery?.metricFilters ?? [],
     commissionUsernames: null,
+    commissionTeamId: appliedReportQuery?.commissionTeamId ?? null,
     sortBy: sortColumn,
     sortDir: sortDirection,
     enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
