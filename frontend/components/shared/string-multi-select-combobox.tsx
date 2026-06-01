@@ -67,7 +67,7 @@ export function StringMultiSelectCombobox({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "h-10 min-h-10 w-full justify-between bg-white px-3 text-left font-normal",
+              "h-9 min-h-9 w-full justify-between bg-white px-3 text-left font-normal",
               triggerClassName,
             )}
           >
