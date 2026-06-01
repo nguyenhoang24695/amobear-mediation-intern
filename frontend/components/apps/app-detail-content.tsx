@@ -41,6 +41,7 @@ const SCREEN_APPS = "s-apps"
 const FN_VIEW_DETAILS = "view-details"
 const FN_SYNC_FROM_ADMOB = "sync-from-admob"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
+import { AppDashboardTab } from "./app-detail/app-dashboard-tab"
 import { AppAdUnitsTab } from "./app-detail/app-ad-units-tab"
 import { AppWaterfallAdUnitsTab } from "./app-detail/app-waterfall-ad-units-tab"
 import { AppMediationGroupsTab } from "./app-detail/app-mediation-groups-tab"
@@ -96,6 +97,7 @@ export function AppDetailContent() {
   // THAO TAC ben trong tab (da co check rieng trong cac tab component), khong
   // anh huong viec hien thi tab.
   const canViewOverview = hasAppDetailTab("overview")
+  const canViewDashboard = hasAppDetailTab("dashboard")
   const canViewAdUnits = hasAppDetailTab("ad-units")
   const canViewAdUnitsMediation = hasAppDetailTab("ad-units-mediation")
   const canViewWaterfallAdUnits = hasAppDetailTab("waterfall-ad-units")
@@ -110,6 +112,7 @@ export function AppDetailContent() {
   // Danh sach tab duoc phep, theo dung thu tu render
   const allowedTabs = [
     canViewOverview && "overview",
+    canViewDashboard && "dashboard",
     canViewAdUnits && "ad-units",
     canViewMediationGroups && "mediation-groups",
     canViewWaterfallAdUnits && "waterfall-ad-units",
@@ -431,6 +434,11 @@ export function AppDetailContent() {
                     Overview
                   </TabsTrigger>
                 ) : null}
+                {canViewDashboard ? (
+                  <TabsTrigger value="dashboard" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                    Dashboard
+                  </TabsTrigger>
+                ) : null}
                 {canViewAdUnits ? (
                   <TabsTrigger value="ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
                     Ad Units
@@ -525,6 +533,11 @@ export function AppDetailContent() {
           {canViewOverview ? (
             <TabsContent value="overview" className="mt-6">
               <AppOverviewTab onNavigateToTab={handleTabChange} />
+            </TabsContent>
+          ) : null}
+          {canViewDashboard && app?.appId ? (
+            <TabsContent value="dashboard" className="mt-6">
+              <AppDashboardTab appId={app.appId} />
             </TabsContent>
           ) : null}
           {canViewAdUnits ? (

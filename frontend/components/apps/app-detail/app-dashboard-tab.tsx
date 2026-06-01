@@ -1,0 +1,93 @@
+"use client"
+
+import { DashboardFilterBar } from "./dashboard/dashboard-filter-bar"
+import { AdjustReportTable } from "./dashboard/tables/adjust-report-table"
+import { EngagementTrendChart } from "./dashboard/charts/engagement-trend-chart"
+import { MetricCards } from "./dashboard/metric-cards"
+import { RetentionChart } from "./dashboard/charts/retention-chart"
+import { RevenueChart } from "./dashboard/charts/revenue-chart"
+import { TopCountryTable } from "./dashboard/tables/top-country-table"
+import { UserTrendChart } from "./dashboard/charts/user-trend-chart"
+import { DashboardRefreshProvider, useDashboardRefresh } from "./dashboard/hooks/use-dashboard-refresh"
+import { useDashboardRange } from "./dashboard/hooks/use-dashboard-range"
+import { useDashboardSummary } from "./dashboard/hooks/use-dashboard-summary"
+import { dashboardRangeCacheKey } from "@/types/app-dashboard"
+
+interface AppDashboardTabProps {
+  appId: string
+}
+
+/**
+ * Entry component cho tab "Dashboard" (PO Dashboard Metric — Phase 1).
+ * Slice 1 (Foundation) chỉ render filter bar + placeholder các block.
+ * Slice 2-6 sẽ thay placeholder bằng MetricCards / charts / tables.
+ *
+ * Xem docs/po-dashboard-metric/05_Slicing_Plan.md.
+ */
+export function AppDashboardTab({ appId }: AppDashboardTabProps) {
+  const { range, setRange } = useDashboardRange()
+
+  return (
+    <DashboardRefreshProvider>
+      <DashboardTabContent appId={appId} range={range} setRange={setRange} />
+    </DashboardRefreshProvider>
+  )
+}
+
+function DashboardTabContent({
+  appId,
+  range,
+  setRange,
+}: {
+  appId: string
+  range: ReturnType<typeof useDashboardRange>["range"]
+  setRange: ReturnType<typeof useDashboardRange>["setRange"]
+}) {
+  const {
+    data: summary,
+    loading: summaryLoading,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useDashboardSummary(appId, range)
+  const { refreshAll, refreshing } = useDashboardRefresh()
+
+  return (
+    <div className="flex flex-col gap-6">
+      <DashboardFilterBar
+        range={range}
+        onRangeChange={setRange}
+        accountDisplayName={summary?.meta.admob_account.display_name}
+        onRefresh={() => void refreshAll()}
+        refreshing={refreshing || summaryLoading}
+      />
+
+      <MetricCards
+        summary={summary}
+        loading={summaryLoading}
+        error={summaryError}
+        onRetry={refetchSummary}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UserTrendChart appId={appId} range={range} />
+        <EngagementTrendChart appId={appId} range={range} />
+      </div>
+        <RetentionChart appId={appId} range={range} />
+        <RevenueChart appId={appId} range={range} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TopCountryTable appId={appId} range={range} metric="iaa" title="Top Country by IAA Revenue" />
+        <TopCountryTable appId={appId} range={range} metric="iap_sub" title="Top Country by IAP + SUB Revenue" />
+        <TopCountryTable appId={appId} range={range} metric="new_users" title="Top Country by New Users" />
+        <TopCountryTable appId={appId} range={range} metric="total_users" title="Top Country by Total Users" />
+      </div>
+
+      <AdjustReportTable appId={appId} range={range} />
+
+      <p className="text-xs text-slate-400">
+        Active app: <code className="font-mono">{appId}</code> · range:{" "}
+        <code className="font-mono">{dashboardRangeCacheKey(range)}</code>
+      </p>
+    </div>
+  )
+}

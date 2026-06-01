@@ -312,6 +312,7 @@ export const APPS_VIEW_DETAILS_FUNCTIONS = {
 
 export const APP_DETAIL_TABS = [
   "overview",
+  "dashboard",
   "ad-units",
   "ad-units-mediation",
   "waterfall-ad-units",
@@ -356,6 +357,10 @@ function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
  * Co "view-details" => full tab. Khong thi check "view-details:<suffix>" (xem appDetailTabPermissionSuffix).
  */
 export function hasAppDetailTab(tab: AppDetailTab): boolean {
+  if (tab === "dashboard") {
+    return hasScreenFunction(SCREEN_APPS_KEY, "view-details:dashboard")
+  }
+
   return hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(tab))
 }
 

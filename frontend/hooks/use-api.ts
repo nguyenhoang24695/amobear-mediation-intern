@@ -140,13 +140,13 @@ export function useApi<T>(
     }
   }, [enabled, requestKey]) // Remove stableApiCall from deps - it's stable
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (overrideApiCall?: () => Promise<T>) => {
     requestCache.delete(requestKey)
     pendingRequests.delete(requestKey)
     try {
       setLoading(true)
       setError(null)
-      const result = await apiCallRef.current()
+      const result = await (overrideApiCall ?? apiCallRef.current)()
       requestCache.set(requestKey, { data: result, timestamp: Date.now() })
       setData(result)
       onSuccessRef.current?.(result)
