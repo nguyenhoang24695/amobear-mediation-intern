@@ -1,6 +1,6 @@
 "use client"
 
-import { type CSSProperties, Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { type CSSProperties, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   closestCenter,
   DndContext,
@@ -369,6 +369,40 @@ function normalizeMonthsRecord(
   )
 }
 
+function getAppMonthsFiltered(
+  appMonths: Record<string, ProfitOverviewMonthCell>,
+  teamMonths: Record<string, ProfitOverviewMonthCell>,
+  monthKeys: string[],
+): Record<string, ProfitOverviewMonthCell> {
+  const result: Record<string, ProfitOverviewMonthCell> = {}
+  for (const monthKey of monthKeys) {
+    const teamCell = teamMonths[monthKey]
+    const isTeamEmpty =
+      !teamCell ||
+      (teamCell.revenue.plan == null &&
+        teamCell.revenue.actual == null &&
+        teamCell.cost.plan == null &&
+        teamCell.cost.actual == null &&
+        teamCell.profit.plan == null &&
+        teamCell.profit.actual == null)
+
+    if (isTeamEmpty) {
+      result[monthKey] = {
+        revenue: emptyMetricValues(),
+        cost: emptyMetricValues(),
+        profit: emptyMetricValues(),
+      }
+    } else {
+      result[monthKey] = appMonths[monthKey] || {
+        revenue: emptyMetricValues(),
+        cost: emptyMetricValues(),
+        profit: emptyMetricValues(),
+      }
+    }
+  }
+  return result
+}
+
 function normalizeOverviewResponse(raw: ProfitOverviewReportResponse): ProfitOverviewReportResponse {
   return {
     ...raw,
@@ -632,14 +666,14 @@ function SortableOverviewParameterItem({
 
 export function OverviewReportContent() {
   const defaultRange = useMemo(() => currentYearRange(), [])
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [fromMonth, setFromMonth] = useState(defaultRange.from)
   const [toMonth, setToMonth] = useState(defaultRange.to)
   const [appliedFrom, setAppliedFrom] = useState(defaultRange.from)
   const [appliedTo, setAppliedTo] = useState(defaultRange.to)
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
   const [data, setData] = useState<ProfitOverviewReportResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [filterReady, setFilterReady] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [savingFilter, setSavingFilter] = useState(false)
   const [filterExpanded, setFilterExpanded] = useState(true)
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
@@ -745,22 +779,22 @@ export function OverviewReportContent() {
 
   const loadData = useCallback(
     async (range?: { from: string; to: string }) => {
-    setLoading(true)
-    try {
-      const from = range?.from ?? appliedFrom
-      const to = range?.to ?? appliedTo
-      const response = await reportsApi.getProfitOverview({
-        from,
-        to,
-      })
-      setData(normalizeOverviewResponse(response))
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to load overview report"
-      toast.error(message)
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
+      setLoading(true)
+      try {
+        const from = range?.from ?? appliedFrom
+        const to = range?.to ?? appliedTo
+        const response = await reportsApi.getProfitOverview({
+          from,
+          to,
+        })
+        setData(normalizeOverviewResponse(response))
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to load overview report"
+        toast.error(message)
+        setData(null)
+      } finally {
+        setLoading(false)
+      }
     },
     [appliedFrom, appliedTo],
   )
@@ -776,25 +810,16 @@ export function OverviewReportContent() {
         const year = resolveYearInOptions(saved.selectedYear ?? saved.from.slice(0, 4), yearOptions)
         setFromMonth(saved.from)
         setToMonth(saved.to)
-        setAppliedFrom(saved.from)
-        setAppliedTo(saved.to)
         setSelectedYear(year)
         setSelectedTeamIds(saved.teamIds)
       } catch {
         // Không chặn trang nếu chưa có filter đã lưu hoặc API lỗi.
-      } finally {
-        if (!cancelled) setFilterReady(true)
       }
     })()
     return () => {
       cancelled = true
     }
   }, [yearOptions])
-
-  useEffect(() => {
-    if (!filterReady) return
-    void loadData()
-  }, [loadData, filterReady])
 
   const applyRange = async () => {
     if (fromMonth > toMonth) {
@@ -805,6 +830,15 @@ export function OverviewReportContent() {
     setAppliedTo(toMonth)
     setSelectedYear(fromMonth.slice(0, 4))
     await loadData({ from: fromMonth, to: toMonth })
+
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          left: scrollContainerRef.current.scrollWidth,
+          behavior: "smooth",
+        })
+      }
+    }, 150)
   }
 
   const saveFilter = async () => {
@@ -856,10 +890,28 @@ export function OverviewReportContent() {
 
   const sharedAppConflicts = useMemo(() => findSharedAppsAcrossTeams(teams), [teams])
   const [sharedAppWarningDismissed, setSharedAppWarningDismissed] = useState(false)
+  const [sharedAppWarningCountdown, setSharedAppWarningCountdown] = useState(10)
 
   useEffect(() => {
     setSharedAppWarningDismissed(false)
   }, [sharedAppConflicts.length])
+
+  useEffect(() => {
+    if (sharedAppConflicts.length === 0 || sharedAppWarningDismissed) return
+
+    setSharedAppWarningCountdown(10)
+    const intervalId = window.setInterval(() => {
+      setSharedAppWarningCountdown((prev) => {
+        if (prev <= 1) {
+          setSharedAppWarningDismissed(true)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [sharedAppConflicts.length, sharedAppWarningDismissed])
 
   useEffect(() => {
     if (allTeams.length === 0) return
@@ -919,43 +971,39 @@ export function OverviewReportContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Overview Report</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            KPI plan vs actual by team (revenue, cost, profit). Expand a team for per-app detail.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={loading}
-          onClick={() => void loadData()}
-        >
-          <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-          Refresh
-        </Button>
-      </div>
-
-      <Card className="border-slate-200">
-        <CardHeader className="flex flex-row items-center justify-end gap-3 py-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setFilterExpanded((prev) => !prev)}
-            aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
-            aria-expanded={filterExpanded}
-          >
-            {filterExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </Button>
+      <Card className="gap-0 overflow-hidden border-slate-200 py-0 shadow-sm">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 [.border-b]:pb-2.5">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-lg font-semibold text-slate-900">Overview Report</CardTitle>
+            <CardDescription className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+              KPI plan vs actual by team (revenue, cost, profit). Expand a team for per-app detail.
+            </CardDescription>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0 border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                onClick={() => setFilterExpanded((prev) => !prev)}
+                aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
+                aria-expanded={filterExpanded}
+              >
+                {filterExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{filterExpanded ? "Hide filters" : "Show filters"}</TooltipContent>
+          </Tooltip>
         </CardHeader>
         {filterExpanded ? (
-          <CardContent className="flex flex-wrap items-end gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="overview-year">Year</Label>
+          <CardContent className="flex flex-wrap items-end gap-3 px-4 py-3 [&_label]:leading-none">
+            <div className="space-y-1">
+              <Label htmlFor="overview-year" className="text-xs">
+                Year
+              </Label>
               <Select value={selectYearValue} onValueChange={handleYearChange}>
-                <SelectTrigger id="overview-year" className="w-[120px]">
+                <SelectTrigger id="overview-year" className="h-9 w-[120px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -967,28 +1015,34 @@ export function OverviewReportContent() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="overview-from">From</Label>
+            <div className="space-y-1">
+              <Label htmlFor="overview-from" className="text-xs">
+                From
+              </Label>
               <Input
                 id="overview-from"
                 type="month"
                 value={fromMonth || defaultRange.from}
                 onChange={(e) => setFromMonth(e.target.value || defaultRange.from)}
-                className="w-[160px]"
+                className="h-9 w-[160px]"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="overview-to">To</Label>
+            <div className="space-y-1">
+              <Label htmlFor="overview-to" className="text-xs">
+                To
+              </Label>
               <Input
                 id="overview-to"
                 type="month"
                 value={toMonth || defaultRange.to}
                 onChange={(e) => setToMonth(e.target.value || defaultRange.to)}
-                className="w-[160px]"
+                className="h-9 w-[160px]"
               />
             </div>
-            <div className="min-w-[240px] flex-1 space-y-2">
-              <Label htmlFor="overview-teams">Teams</Label>
+            <div className="space-y-1">
+              <Label htmlFor="overview-teams" className="text-xs">
+                Teams
+              </Label>
               <StringMultiSelectCombobox
                 id="overview-teams"
                 options={teamOptions}
@@ -998,12 +1052,12 @@ export function OverviewReportContent() {
                 placeholder="All teams"
                 searchPlaceholder="Search teams..."
                 emptyMessage="No teams found."
-                triggerClassName="min-w-[240px]"
+                triggerClassName="h-9 min-h-9 w-[200px]"
               />
             </div>
             <Button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="h-9 bg-blue-600 hover:bg-blue-700"
               disabled={loading}
               onClick={() => void applyRange()}
             >
@@ -1015,7 +1069,7 @@ export function OverviewReportContent() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="shrink-0"
+                  className="h-9 w-9 shrink-0"
                   disabled={savingFilter}
                   onClick={() => void saveFilter()}
                   aria-label="Save filter"
@@ -1037,6 +1091,13 @@ export function OverviewReportContent() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
+      ) : data === null ? (
+        <Card className="border-slate-200">
+          <CardContent className="py-12 text-center text-sm text-slate-500">
+            Select a period and click <span className="font-medium text-slate-700">Apply</span> to load the
+            overview report.
+          </CardContent>
+        </Card>
       ) : allTeams.length === 0 ? (
         <Card className="border-slate-200">
           <CardContent className="py-12 text-center text-sm text-slate-500">
@@ -1071,17 +1132,22 @@ export function OverviewReportContent() {
                   className="relative border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
                   role="alert"
                 >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-2 h-7 w-7 text-red-700 hover:bg-red-100 hover:text-red-900"
-                    aria-label="Dismiss warning"
-                    onClick={() => setSharedAppWarningDismissed(true)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <p className="font-semibold text-red-800">
+                  <div className="absolute right-2 top-2 flex items-center gap-1.5">
+                    <span className="whitespace-nowrap text-[10px] text-red-600/80">
+                      Auto close in {sharedAppWarningCountdown}s
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-red-700 hover:bg-red-100 hover:text-red-900"
+                      aria-label="Dismiss warning"
+                      onClick={() => setSharedAppWarningDismissed(true)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="pr-36 font-semibold text-red-800">
                     Warning: the same app appears under multiple teams
                   </p>
                   <ul className="mt-1.5 list-disc space-y-1 pl-4">
@@ -1096,7 +1162,7 @@ export function OverviewReportContent() {
                   </ul>
                 </div>
               ) : null}
-              <div className="max-h-[min(70vh,720px)] overflow-auto">
+              <div ref={scrollContainerRef} className="max-h-[min(70vh,720px)] overflow-auto">
                 <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
                     <TableRow className="h-10 bg-slate-50/95 hover:bg-slate-50/95">
@@ -1109,7 +1175,7 @@ export function OverviewReportContent() {
                         <TableHead
                           key={month}
                           colSpan={colsPerMonth}
-                          className="sticky top-0 z-40 border-r bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
+                          className="sticky top-0 z-40 border-b border-r border-slate-200 bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
                         >
                           {formatMonthLabel(month)}
                         </TableHead>
@@ -1125,7 +1191,7 @@ export function OverviewReportContent() {
                               key={`${month}-${metric.id}-group`}
                               colSpan={visibleParameters.length}
                               className={cn(
-                                "sticky top-10 z-40 border-b border-l text-center text-xs font-semibold",
+                                "sticky top-10 z-40 border-t border-b border-l border-slate-200 text-center text-xs font-semibold",
                                 metricStyle.header,
                                 metricStyle.border,
                                 metricColumnEndBorder(metric.id, true, isLastMetricInMonth),
@@ -1177,149 +1243,149 @@ export function OverviewReportContent() {
                       )}
                     </TableRow>
                   </TableHeader>
-                <TableBody>
-                  {teams.map((team) => {
-                    const apps = team.apps ?? []
-                    const canExpand = apps.length > 0
-                    const expanded = expandedTeamIds.has(team.teamId)
-                    const appPage = teamAppPageByTeamId[team.teamId] ?? 1
-                    const totalAppPages = Math.max(1, Math.ceil(apps.length / APPS_PER_PAGE))
-                    const safeAppPage = Math.min(appPage, totalAppPages)
-                    const paginatedApps = apps.slice(
-                      (safeAppPage - 1) * APPS_PER_PAGE,
-                      safeAppPage * APPS_PER_PAGE,
-                    )
+                  <TableBody>
+                    {teams.map((team) => {
+                      const apps = team.apps ?? []
+                      const canExpand = apps.length > 0
+                      const expanded = expandedTeamIds.has(team.teamId)
+                      const appPage = teamAppPageByTeamId[team.teamId] ?? 1
+                      const totalAppPages = Math.max(1, Math.ceil(apps.length / APPS_PER_PAGE))
+                      const safeAppPage = Math.min(appPage, totalAppPages)
+                      const paginatedApps = apps.slice(
+                        (safeAppPage - 1) * APPS_PER_PAGE,
+                        safeAppPage * APPS_PER_PAGE,
+                      )
 
-                    return (
-                      <Fragment key={team.teamId}>
-                        <TableRow className="hover:bg-slate-50/60">
-                          <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-white py-2 font-semibold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
-                            <div className="flex items-center gap-1">
-                              {canExpand ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 shrink-0"
-                                  onClick={() => toggleTeamExpanded(team.teamId)}
-                                  aria-expanded={expanded}
-                                  aria-label={
-                                    expanded
-                                      ? `Collapse apps for ${team.teamName}`
-                                      : `Expand apps for ${team.teamName}`
-                                  }
-                                >
-                                  {expanded ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              ) : (
-                                <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
-                              )}
-                              <span>{team.teamName}</span>
-                            </div>
-                          </TableCell>
-                          <OverviewMonthCells
-                            monthKeys={months}
-                            months={team.months}
-                            selectedMetrics={visibleMetrics.map((m) => m.id)}
-                            selectedParameters={visibleParameters.map((p) => p.id)}
-                          />
-                        </TableRow>
-                        {expanded &&
-                          paginatedApps.map((app: ProfitOverviewAppRow) => (
-                            <TableRow
-                              key={`${team.teamId}-${app.appId}`}
-                              className="bg-slate-50/40 hover:bg-slate-50/60"
-                            >
-                              <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-slate-50 py-2 pl-10 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
-                                <div className="flex min-w-0 items-center justify-between gap-3">
-                                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                                    <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                                      {app.appIconUri ? (
-                                        <AvatarImage
-                                          src={app.appIconUri}
-                                          alt={app.appLabel}
-                                          className="rounded-lg object-cover"
-                                        />
-                                      ) : null}
-                                      <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
-                                        {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="min-w-0">
-                                      <div className="truncate text-sm font-medium text-slate-900">
-                                        {app.appLabel}
-                                      </div>
-                                      <div className="truncate text-xs text-slate-500">
-                                        <span className="font-mono" title={app.appStoreId ?? undefined}>
-                                          {formatAppStoreId(app.appStoreId)}
-                                        </span>
-                                        {app.appStoreId ? (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="ml-1 inline-flex h-5 w-5 align-middle text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                                            aria-label={`Copy App Store ID for ${app.appLabel}`}
-                                            onClick={() => void copyAppStoreId(app.appStoreId)}
-                                          >
-                                            <Copy className="h-3 w-3" />
-                                          </Button>
+                      return (
+                        <Fragment key={team.teamId}>
+                          <TableRow className="hover:bg-slate-50/60">
+                            <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-white py-2 font-semibold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
+                              <div className="flex items-center gap-1">
+                                {canExpand ? (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 shrink-0"
+                                    onClick={() => toggleTeamExpanded(team.teamId)}
+                                    aria-expanded={expanded}
+                                    aria-label={
+                                      expanded
+                                        ? `Collapse apps for ${team.teamName}`
+                                        : `Expand apps for ${team.teamName}`
+                                    }
+                                  >
+                                    {expanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                ) : (
+                                  <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
+                                )}
+                                <span>{team.teamName}</span>
+                              </div>
+                            </TableCell>
+                            <OverviewMonthCells
+                              monthKeys={months}
+                              months={team.months}
+                              selectedMetrics={visibleMetrics.map((m) => m.id)}
+                              selectedParameters={visibleParameters.map((p) => p.id)}
+                            />
+                          </TableRow>
+                          {expanded &&
+                            paginatedApps.map((app: ProfitOverviewAppRow) => (
+                              <TableRow
+                                key={`${team.teamId}-${app.appId}`}
+                                className="bg-slate-50/40 hover:bg-slate-50/60"
+                              >
+                                <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-slate-50 py-2 pl-10 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
+                                  <div className="flex min-w-0 items-center justify-between gap-3">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                      <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                                        {app.appIconUri ? (
+                                          <AvatarImage
+                                            src={app.appIconUri}
+                                            alt={app.appLabel}
+                                            className="rounded-lg object-cover"
+                                          />
                                         ) : null}
+                                        <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
+                                          {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="min-w-0">
+                                        <div className="truncate text-sm font-medium text-slate-900">
+                                          {app.appLabel}
+                                        </div>
+                                        <div className="truncate text-xs text-slate-500">
+                                          <span className="font-mono" title={app.appStoreId ?? undefined}>
+                                            {formatAppStoreId(app.appStoreId)}
+                                          </span>
+                                          {app.appStoreId ? (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              className="ml-1 inline-flex h-5 w-5 align-middle text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                              aria-label={`Copy App Store ID for ${app.appLabel}`}
+                                              onClick={() => void copyAppStoreId(app.appStoreId)}
+                                            >
+                                              <Copy className="h-3 w-3" />
+                                            </Button>
+                                          ) : null}
+                                        </div>
                                       </div>
                                     </div>
+                                    <div className="shrink-0">
+                                      {renderPlatformBadge(app.appPlatform ?? "")}
+                                    </div>
                                   </div>
-                                  <div className="shrink-0">
-                                    {renderPlatformBadge(app.appPlatform ?? "")}
-                                  </div>
-                                </div>
+                                </TableCell>
+                                <OverviewMonthCells
+                                  monthKeys={months}
+                                  months={getAppMonthsFiltered(app.months, team.months, months)}
+                                  selectedMetrics={visibleMetrics.map((m) => m.id)}
+                                  selectedParameters={visibleParameters.map((p) => p.id)}
+                                  rowVariant="app"
+                                />
+                              </TableRow>
+                            ))}
+                          {expanded && apps.length > APPS_PER_PAGE ? (
+                            <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
+                              <TableCell className="sticky left-0 z-20 border-r bg-slate-50 py-2 pl-12 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
+                                <TeamAppsPager
+                                  currentPage={safeAppPage}
+                                  totalPages={totalAppPages}
+                                  totalItems={apps.length}
+                                  onPageChange={(page) => setTeamAppPage(team.teamId, page)}
+                                />
                               </TableCell>
-                              <OverviewMonthCells
-                                monthKeys={months}
-                                months={app.months}
-                                selectedMetrics={visibleMetrics.map((m) => m.id)}
-                                selectedParameters={visibleParameters.map((p) => p.id)}
-                                rowVariant="app"
-                              />
+                              {months.map((month) =>
+                                visibleMetrics.map((metric, metricIndex) => {
+                                  const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
+                                  const metricStyle = METRIC_TABLE_STYLES[metric.id]
+                                  return (
+                                    <TableCell
+                                      key={`${team.teamId}-pager-${month}-${metric.id}`}
+                                      colSpan={visibleParameters.length}
+                                      className={cn(
+                                        "border-l",
+                                        metricStyle.cellSubtle,
+                                        metricStyle.border,
+                                        metricColumnEndBorder(metric.id, true, isLastMetricInMonth),
+                                      )}
+                                    />
+                                  )
+                                }),
+                              )}
                             </TableRow>
-                          ))}
-                        {expanded && apps.length > APPS_PER_PAGE ? (
-                          <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
-                            <TableCell className="sticky left-0 z-20 border-r bg-slate-50 py-2 pl-12 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
-                              <TeamAppsPager
-                                currentPage={safeAppPage}
-                                totalPages={totalAppPages}
-                                totalItems={apps.length}
-                                onPageChange={(page) => setTeamAppPage(team.teamId, page)}
-                              />
-                            </TableCell>
-                            {months.map((month) =>
-                              visibleMetrics.map((metric, metricIndex) => {
-                                const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
-                                const metricStyle = METRIC_TABLE_STYLES[metric.id]
-                                return (
-                                  <TableCell
-                                    key={`${team.teamId}-pager-${month}-${metric.id}`}
-                                    colSpan={visibleParameters.length}
-                                    className={cn(
-                                      "border-l",
-                                      metricStyle.cellSubtle,
-                                      metricStyle.border,
-                                      metricColumnEndBorder(metric.id, true, isLastMetricInMonth),
-                                    )}
-                                  />
-                                )
-                              }),
-                            )}
-                          </TableRow>
-                        ) : null}
-                      </Fragment>
-                    )
-                  })}
-                </TableBody>
+                          ) : null}
+                        </Fragment>
+                      )
+                    })}
+                  </TableBody>
                 </table>
               </div>
             </CardContent>
