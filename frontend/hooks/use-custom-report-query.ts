@@ -14,6 +14,7 @@ export function useCustomReportQuery(options: {
   revenueSource: string
   metricFilters?: CustomReportMetricFilter[]
   commissionUsernames?: string[] | null
+  commissionTeamId?: string | null
   sortBy: string
   sortDir: "asc" | "desc"
   enabled?: boolean
@@ -26,6 +27,7 @@ export function useCustomReportQuery(options: {
     metrics,
     revenueSource,
     metricFilters = [],
+    commissionTeamId = null,
     sortBy,
     sortDir,
     enabled = true,
@@ -63,6 +65,7 @@ export function useCustomReportQuery(options: {
           metrics: metricsKey ? metricsKey.split(",") : [],
           revenueSource,
           metricFilters,
+          commissionTeamId,
           sortBy,
           sortDir,
         })
@@ -86,6 +89,7 @@ export function useCustomReportQuery(options: {
     dimensionsKey,
     metricsKey,
     metricFiltersKey,
+    commissionTeamId,
     revenueSource,
     sortBy,
     sortDir,

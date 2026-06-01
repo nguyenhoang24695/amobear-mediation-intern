@@ -7,6 +7,7 @@ export interface CustomReportQueryRequest {
   revenueSource: string
   metricFilters?: CustomReportMetricFilter[]
   commissionUsernames?: string[] | null
+  commissionTeamId?: string | null
   sortBy?: string | null
   sortDir?: string
 }
@@ -45,6 +46,26 @@ export interface CustomReportCatalogResponse {
   dimensions: CustomReportCatalogItem[]
   metrics: CustomReportCatalogItem[]
   revenueSources: string[]
+}
+
+export interface TeamLeadAppCacheItem {
+  appId: string
+  appStoreId?: string | null
+  displayName?: string | null
+  platform?: string | null
+  iconUri?: string | null
+  approvalState?: string | null
+  publisherId?: string | null
+}
+
+export interface TeamLeadAppCache {
+  teamId: string
+  organizationId: string
+  leadUserId?: string | null
+  admobAppIds: string[]
+  appStoreIds: string[]
+  apps: TeamLeadAppCacheItem[]
+  cachedAt: string
 }
 
 export interface CustomReportFilters {
@@ -98,4 +119,52 @@ export interface CustomReportFolder {
   id: string
   name: string
   createdAt: string
+}
+
+export type OverviewMetricId = "revenue" | "cost" | "profit"
+
+export type OverviewParameterId = "plan" | "actual" | "percent"
+
+export interface ProfitOverviewMetricValues {
+  plan?: number | null
+  actual?: number | null
+  completionPercent?: number | null
+}
+
+export interface ProfitOverviewMonthCell {
+  revenue: ProfitOverviewMetricValues
+  cost: ProfitOverviewMetricValues
+  profit: ProfitOverviewMetricValues
+}
+
+export interface ProfitOverviewAppRow {
+  appId: string
+  appLabel: string
+  appPlatform?: string | null
+  appStoreId?: string | null
+  appIconUri?: string | null
+  months: Record<string, ProfitOverviewMonthCell>
+}
+
+export interface ProfitOverviewTeamRow {
+  teamId: string
+  teamName: string
+  leadUserId?: string | null
+  leadName?: string | null
+  leadEmail?: string | null
+  months: Record<string, ProfitOverviewMonthCell>
+  apps: ProfitOverviewAppRow[]
+}
+
+export interface ProfitOverviewReportResponse {
+  months: string[]
+  teams: ProfitOverviewTeamRow[]
+  lastUpdatedAt?: string | null
+}
+
+export interface OverviewReportFilter {
+  from: string
+  to: string
+  selectedYear?: string | null
+  teamIds: string[]
 }

@@ -87,6 +87,7 @@ export function AppDetailContent() {
 
   const mediationGroupsCount = app?.mediationGroupsCount ?? 0
   const waterfallAdUnitsCount = waterfallAdUnits?.length ?? 0
+  const dashboardAppId = app?.appId ?? appIdFromParams
 
   // --- Permissions ---------------------------------------------------------
   const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
@@ -113,16 +114,16 @@ export function AppDetailContent() {
   const allowedTabs = [
     canViewOverview && "overview",
     canViewDashboard && "dashboard",
-    canViewAdUnits && "ad-units",
-    canViewMediationGroups && "mediation-groups",
+    canViewAdUnitsMediation && "ad-units-mediation",
+    canViewMediationGroupsMediation && "mediation-groups-mediation",
     canViewWaterfallAdUnits && "waterfall-ad-units",
     canViewPerformance && "performance",
     showAiInsightTab && "ai-insight",
     showInsightConfigTab && "insight-config",
     showPlaybookTab && "playbook",
     canViewSettingsTab && "settings",
-    canViewAdUnitsMediation && "ad-units-mediation",
-    canViewMediationGroupsMediation && "mediation-groups-mediation",
+    canViewAdUnits && "ad-units",
+    canViewMediationGroups && "mediation-groups",
   ].filter(Boolean) as string[]
   const fallbackTab = allowedTabs[0] ?? "overview"
 
@@ -439,25 +440,19 @@ export function AppDetailContent() {
                     Dashboard
                   </TabsTrigger>
                 ) : null}
-                {canViewAdUnits ? (
-                  <TabsTrigger value="ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                {canViewAdUnitsMediation ? (
+                  <TabsTrigger value="ad-units-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
                     Ad Units
-                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
-                      deprecated
-                    </Badge>
-                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                      {app?.adUnitsCount ?? 0}
+                    <Badge variant="outline" className="ml-2 text-[10px] border-emerald-300 text-emerald-800 bg-emerald-50">
+                      New
                     </Badge>
                   </TabsTrigger>
                 ) : null}
-                {canViewMediationGroups ? (
-                  <TabsTrigger value="mediation-groups" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                {canViewMediationGroupsMediation ? (
+                  <TabsTrigger value="mediation-groups-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
                     Mediation Groups
-                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
-                      deprecated
-                    </Badge>
-                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
-                      {appLoading ? "..." : mediationGroupsCount}
+                    <Badge variant="outline" className="ml-2 text-[10px] border-emerald-300 text-emerald-800 bg-emerald-50">
+                      New
                     </Badge>
                   </TabsTrigger>
                 ) : null}
@@ -497,19 +492,25 @@ export function AppDetailContent() {
                     Settings
                   </TabsTrigger>
                 ) : null}
-                {canViewAdUnitsMediation ? (
-                  <TabsTrigger value="ad-units-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                {canViewAdUnits ? (
+                  <TabsTrigger value="ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
                     Ad Units
-                    <Badge variant="outline" className="ml-2 text-[10px] border-emerald-300 text-emerald-800 bg-emerald-50">
-                      New
+                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                      deprecated
+                    </Badge>
+                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                      {app?.adUnitsCount ?? 0}
                     </Badge>
                   </TabsTrigger>
                 ) : null}
-                {canViewMediationGroupsMediation ? (
-                  <TabsTrigger value="mediation-groups-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                {canViewMediationGroups ? (
+                  <TabsTrigger value="mediation-groups" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
                     Mediation Groups
-                    <Badge variant="outline" className="ml-2 text-[10px] border-emerald-300 text-emerald-800 bg-emerald-50">
-                      New
+                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                      deprecated
+                    </Badge>
+                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                      {appLoading ? "..." : mediationGroupsCount}
                     </Badge>
                   </TabsTrigger>
                 ) : null}
@@ -535,19 +536,19 @@ export function AppDetailContent() {
               <AppOverviewTab onNavigateToTab={handleTabChange} />
             </TabsContent>
           ) : null}
-          {canViewDashboard && app?.appId ? (
+          {canViewDashboard ? (
             <TabsContent value="dashboard" className="mt-6">
-              <AppDashboardTab appId={app.appId} />
+              {dashboardAppId ? <AppDashboardTab appId={dashboardAppId} /> : null}
             </TabsContent>
           ) : null}
-          {canViewAdUnits ? (
-            <TabsContent value="ad-units" className="mt-6">
-              <AppAdUnitsTab />
+          {canViewAdUnitsMediation ? (
+            <TabsContent value="ad-units-mediation" className="mt-6">
+              <AppAdUnitsMediationTab appRowId={app?.id} />
             </TabsContent>
           ) : null}
-          {canViewMediationGroups ? (
-            <TabsContent value="mediation-groups" className="mt-6">
-              <AppMediationGroupsTab />
+          {canViewMediationGroupsMediation ? (
+            <TabsContent value="mediation-groups-mediation" className="mt-6">
+              <AppMediationGroupsMediationTab appRowId={app?.id} />
             </TabsContent>
           ) : null}
           {canViewWaterfallAdUnits ? (
@@ -591,14 +592,14 @@ export function AppDetailContent() {
               <AppSettingsTab app={app ?? null} onAppUpdated={handleAppUpdated} />
             </TabsContent>
           ) : null}
-          {canViewAdUnitsMediation ? (
-            <TabsContent value="ad-units-mediation" className="mt-6">
-              <AppAdUnitsMediationTab appRowId={app?.id} />
+          {canViewAdUnits ? (
+            <TabsContent value="ad-units" className="mt-6">
+              <AppAdUnitsTab />
             </TabsContent>
           ) : null}
-          {canViewMediationGroupsMediation ? (
-            <TabsContent value="mediation-groups-mediation" className="mt-6">
-              <AppMediationGroupsMediationTab appRowId={app?.id} />
+          {canViewMediationGroups ? (
+            <TabsContent value="mediation-groups" className="mt-6">
+              <AppMediationGroupsTab />
             </TabsContent>
           ) : null}
         </Tabs>

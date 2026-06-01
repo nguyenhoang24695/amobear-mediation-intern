@@ -304,6 +304,7 @@ export function hasScreenFunction(screenKey: string, functionKey: string): boole
 /** Function keys on screen s-apps — giu sync voi PermissionScreensConstant backend. */
 export const APPS_VIEW_DETAILS_FUNCTIONS = {
   viewDetails: "view-details",
+  dashboardTab: "view-details:dashboard",
   adUnitsTab: "view-details:ad-units",
   adUnitsTabDeprecated: "view-details:ad-units-deprecated",
   mediationGroupsTab: "view-details:mediation-groups",
@@ -344,6 +345,10 @@ function appDetailTabPermissionSuffix(tab: AppDetailTab): string {
   }
 }
 
+function isDeprecatedAppDetailTab(tab: AppDetailTab): boolean {
+  return tab === "ad-units" || tab === "mediation-groups"
+}
+
 function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
   const fnKey = `${FN_VIEW_DETAILS_KEY}:${suffix}`
   return (
@@ -357,11 +362,16 @@ function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
  * Co "view-details" => full tab. Khong thi check "view-details:<suffix>" (xem appDetailTabPermissionSuffix).
  */
 export function hasAppDetailTab(tab: AppDetailTab): boolean {
+  const suffix = appDetailTabPermissionSuffix(tab)
   if (tab === "dashboard") {
-    return hasScreenFunction(SCREEN_APPS_KEY, "view-details:dashboard")
+    return hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.dashboardTab)
   }
 
-  return hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(tab))
+  if (isDeprecatedAppDetailTab(tab)) {
+    return hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${suffix}`)
+  }
+
+  return hasAppDetailScreenFunctionForSuffix(suffix)
 }
 
 /**

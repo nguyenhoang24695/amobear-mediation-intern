@@ -102,13 +102,47 @@ type NavItem = {
     /** Match ?reportId= for /reports saved-report links */
     reportId?: string | null
     /** Distinguish /reports index vs ?new=1 when reportId is null */
-    reportsView?: "index" | "new"
+    reportsView?: "overview" | "index" | "new"
   }[]
 }
 
 function isNavChildVisible(child: { isShow?: boolean | (() => boolean) }): boolean {
   if (child.isShow === undefined) return true
   return typeof child.isShow === "function" ? child.isShow() : child.isShow
+}
+
+type ReportsNavChild = {
+  href: string
+  reportId?: string | null
+  reportsView?: "overview" | "index" | "new"
+}
+
+function isReportsNavChildActive(
+  child: ReportsNavChild,
+  pathname: string,
+  reportIdParam: string | null,
+  isNewReportParam: boolean,
+): boolean {
+  if (child.reportsView === "overview") {
+    return pathname === "/reports/overview"
+  }
+
+  if (pathname === "/reports/overview") {
+    return false
+  }
+
+  if (child.reportId !== undefined) {
+    if (pathname !== "/reports") return false
+    if (child.reportId === null) {
+      if (child.reportsView === "new") {
+        return isNewReportParam && !reportIdParam
+      }
+      return !reportIdParam && !isNewReportParam
+    }
+    return reportIdParam === child.reportId
+  }
+
+  return pathname === child.href
 }
 
 const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
@@ -374,12 +408,18 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
 
   const sidebarNavItems = useMemo((): NavItem[] => {
     return navItems.map((item) => {
-      if (item.label !== "Reports" || pinnedReports.length === 0) return item
+      if (item.label !== "Reports" || !hasScreenFunction("s-reports", "view")) return item
       return {
         ...item,
         href: "#",
         hasSubmenu: true,
         children: [
+          {
+            icon: BarChart3,
+            label: "Overview Report",
+            href: "/reports/overview",
+            reportsView: "overview",
+          },
           {
             icon: BarChart3,
             label: "All reports",
@@ -476,8 +516,11 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
             const hasSubmenu = !!item.hasSubmenu
             const anyChildActive =
               Array.isArray((item as any).children) &&
-              (item as any).children.some(
-                (child: any) => pathname === child.href || (child.href !== "/" && pathname.startsWith(child.href)),
+              (item as any).children.some((child: any) =>
+                item.label === "Reports"
+                  ? isReportsNavChildActive(child, pathname, reportIdParam, isNewReportParam)
+                  : pathname === child.href ||
+                    (child.href !== "/" && pathname.startsWith(child.href.split("?")[0])),
               )
 
             const isExpanded = hasSubmenu ? openMenus[item.label] ?? anyChildActive : false
@@ -573,12 +616,8 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                       if (!isNavChildVisible(child)) return null
 
                       const childActive =
-                        pathname === "/reports" && child.reportId !== undefined
-                          ? child.reportId === null
-                            ? child.reportsView === "new"
-                              ? isNewReportParam && !reportIdParam
-                              : !reportIdParam && !isNewReportParam
-                            : reportIdParam === child.reportId
+                        item.label === "Reports"
+                          ? isReportsNavChildActive(child, pathname, reportIdParam, isNewReportParam)
                           : pathname === child.href ||
                             (child.href !== "/" && pathname.startsWith(child.href.split("?")[0]))
 

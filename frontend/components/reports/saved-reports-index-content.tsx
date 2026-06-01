@@ -6,9 +6,12 @@ import { format, parseISO } from "date-fns"
 import {
   ChevronDown,
   ChevronRight,
+  Copy,
   Folder,
   FolderOpen,
   FolderPlus,
+  MoreHorizontal,
+  Pencil,
   Pin,
   Plus,
   Search,
@@ -27,6 +30,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -61,6 +77,25 @@ function reportFolderKey(report: CustomReportListItem): string {
   return trimmed.length > 0 ? trimmed : UNCATEGORIZED_KEY
 }
 
+function buildDuplicateReportName(existingNames: readonly string[], sourceName: string): string {
+  const trimmedSource = sourceName.trim()
+  const baseName = trimmedSource.length > 0 ? trimmedSource : "Untitled report"
+  const normalizedNames = new Set(existingNames.map((name) => name.trim().toLowerCase()))
+  const firstCandidate = `${baseName} (Copy)`
+  if (!normalizedNames.has(firstCandidate.toLowerCase())) {
+    return firstCandidate
+  }
+
+  let index = 2
+  while (true) {
+    const candidate = `${baseName} (Copy ${index})`
+    if (!normalizedNames.has(candidate.toLowerCase())) {
+      return candidate
+    }
+    index++
+  }
+}
+
 interface FolderGroup {
   key: string
   label: string
@@ -70,18 +105,36 @@ interface FolderGroup {
 
 function ReportsTable({
   reports,
+  folders,
+  onRename,
+  onDuplicate,
+  onChangeFolder,
   onDelete,
   onTogglePinned,
+  renamingReportId,
+  duplicatingReportId,
+  changingFolderReportId,
   deletingReportId,
   pinningReportId,
+  canCreateReports,
+  canEditReports,
   canPinReports,
   canDeleteReports,
 }: {
   reports: CustomReportListItem[]
+  folders: CustomReportFolder[]
+  onRename: (report: CustomReportListItem) => void
+  onDuplicate: (report: CustomReportListItem) => void
+  onChangeFolder: (report: CustomReportListItem) => void
   onDelete: (report: CustomReportListItem) => void
   onTogglePinned: (report: CustomReportListItem) => void
+  renamingReportId?: string | null
+  duplicatingReportId?: string | null
+  changingFolderReportId?: string | null
   deletingReportId?: string | null
   pinningReportId?: string | null
+  canCreateReports: boolean
+  canEditReports: boolean
   canPinReports: boolean
   canDeleteReports: boolean
 }) {
@@ -135,18 +188,64 @@ function ReportsTable({
               ) : null}
             </TableCell>
             <TableCell className="text-right">
-              {canDeleteReports ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                  disabled={deletingReportId === report.id}
-                  onClick={() => onDelete(report)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {deletingReportId === report.id ? "Deleting…" : "Delete"}
-                </Button>
+              {canCreateReports || canEditReports || canDeleteReports ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={
+                        renamingReportId === report.id ||
+                        duplicatingReportId === report.id ||
+                        changingFolderReportId === report.id ||
+                        deletingReportId === report.id
+                      }
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {canEditReports ? (
+                      <DropdownMenuItem
+                        disabled={renamingReportId === report.id}
+                        onClick={() => onRename(report)}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {renamingReportId === report.id ? "Renaming…" : "Rename"}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canCreateReports ? (
+                      <DropdownMenuItem
+                        disabled={duplicatingReportId === report.id}
+                        onClick={() => onDuplicate(report)}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        {duplicatingReportId === report.id ? "Duplicating…" : "Duplicate"}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canEditReports ? (
+                      <DropdownMenuItem
+                        disabled={changingFolderReportId === report.id}
+                        onClick={() => onChangeFolder(report)}
+                      >
+                        <Folder className="mr-2 h-4 w-4" />
+                        {changingFolderReportId === report.id ? "Changing…" : "Change folder"}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canDeleteReports ? (
+                      <DropdownMenuItem
+                        disabled={deletingReportId === report.id}
+                        className="text-red-600 focus:text-red-700"
+                        onClick={() => onDelete(report)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {deletingReportId === report.id ? "Deleting…" : "Delete"}
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : null}
             </TableCell>
           </TableRow>
@@ -162,6 +261,7 @@ export function SavedReportsIndexContent({
   onDataChange,
 }: SavedReportsIndexContentProps) {
   const canCreateReports = hasScreenFunction("s-reports", "create")
+  const canEditReports = hasScreenFunction("s-reports", "edit")
   const canDeleteReports = hasScreenFunction("s-reports", "delete")
   const canPinReports = hasScreenFunction("s-reports", "pin")
   const canManageFolders = hasScreenFunction("s-reports", "manage-folders")
@@ -172,8 +272,29 @@ export function SavedReportsIndexContent({
   const [newFolderName, setNewFolderName] = useState("")
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [reportToDelete, setReportToDelete] = useState<CustomReportListItem | null>(null)
+  const [reportToChangeFolder, setReportToChangeFolder] = useState<CustomReportListItem | null>(null)
+  const [reportToRename, setReportToRename] = useState<CustomReportListItem | null>(null)
+  const [renameReportName, setRenameReportName] = useState("")
+  const [targetFolderValue, setTargetFolderValue] = useState<string>(UNCATEGORIZED_KEY)
+  const [changeFolderNewFolderName, setChangeFolderNewFolderName] = useState("")
+  const [creatingFolderForMove, setCreatingFolderForMove] = useState(false)
+  const [pendingFolderNames, setPendingFolderNames] = useState<string[]>([])
+  const [renamingReportId, setRenamingReportId] = useState<string | null>(null)
+  const [duplicatingReportId, setDuplicatingReportId] = useState<string | null>(null)
+  const [changingFolderReportId, setChangingFolderReportId] = useState<string | null>(null)
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null)
   const [pinningReportId, setPinningReportId] = useState<string | null>(null)
+
+  const availableFolderNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const folder of folders) {
+      if (folder.name.trim()) names.add(folder.name.trim())
+    }
+    for (const folderName of pendingFolderNames) {
+      if (folderName.trim()) names.add(folderName.trim())
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [folders, pendingFolderNames])
 
   const filteredReports = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -282,6 +403,169 @@ export function SavedReportsIndexContent({
       toast.error(message)
     } finally {
       setDeletingReportId(null)
+    }
+  }
+
+  const handleDuplicateReport = async (report: CustomReportListItem) => {
+    if (!canCreateReports) {
+      toast.error("You do not have permission to create reports.")
+      return
+    }
+
+    setDuplicatingReportId(report.id)
+    try {
+      const fullReport = await reportsApi.getSaved(report.id)
+      const duplicateName = buildDuplicateReportName(
+        reports.map((item) => item.name),
+        fullReport.name,
+      )
+      await reportsApi.createSaved({
+        name: duplicateName,
+        folder: fullReport.folder || null,
+        filters: fullReport.filters,
+        dimensions: fullReport.dimensions,
+        metrics: fullReport.metrics,
+      })
+      toast.success(`Duplicated "${report.name}"`)
+      onDataChange?.()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to duplicate report"
+      toast.error(message)
+    } finally {
+      setDuplicatingReportId(null)
+    }
+  }
+
+  const openRenameDialog = (report: CustomReportListItem) => {
+    if (!canEditReports) {
+      toast.error("You do not have permission to edit reports.")
+      return
+    }
+
+    setReportToRename(report)
+    setRenameReportName(report.name)
+  }
+
+  const handleRenameReport = async () => {
+    if (!reportToRename) return
+    if (!canEditReports) {
+      toast.error("You do not have permission to edit reports.")
+      return
+    }
+
+    const nextName = renameReportName.trim()
+    if (!nextName) {
+      toast.error("Report name is required.")
+      return
+    }
+
+    const currentName = reportToRename.name.trim()
+    if (currentName === nextName) {
+      setReportToRename(null)
+      return
+    }
+
+    setRenamingReportId(reportToRename.id)
+    try {
+      const fullReport = await reportsApi.getSaved(reportToRename.id)
+      await reportsApi.updateSaved(reportToRename.id, {
+        name: nextName,
+        folder: fullReport.folder || null,
+        filters: fullReport.filters,
+        dimensions: fullReport.dimensions,
+        metrics: fullReport.metrics,
+      })
+      toast.success(`Renamed "${reportToRename.name}"`)
+      setReportToRename(null)
+      setRenameReportName("")
+      onDataChange?.()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to rename report"
+      toast.error(message)
+    } finally {
+      setRenamingReportId(null)
+    }
+  }
+
+  const openChangeFolderDialog = (report: CustomReportListItem) => {
+    if (!canEditReports) {
+      toast.error("You do not have permission to edit reports.")
+      return
+    }
+
+    setReportToChangeFolder(report)
+    setTargetFolderValue(report.folder?.trim() ? report.folder.trim() : UNCATEGORIZED_KEY)
+    setChangeFolderNewFolderName("")
+  }
+
+  const handleCreateFolderForMove = async () => {
+    if (!canManageFolders) {
+      toast.error("You do not have permission to manage report folders.")
+      return
+    }
+
+    const name = changeFolderNewFolderName.trim()
+    if (!name) {
+      toast.error("Folder name is required.")
+      return
+    }
+
+    setCreatingFolderForMove(true)
+    try {
+      const created = await reportsApi.createFolder(name)
+      setPendingFolderNames((prev) => (prev.includes(created.name) ? prev : [...prev, created.name]))
+      setExpandedKeys((prev) => new Set(prev).add(created.name))
+      setTargetFolderValue(created.name)
+      setChangeFolderNewFolderName("")
+      toast.success(`Folder "${created.name}" created`)
+      onDataChange?.()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create folder"
+      toast.error(message)
+    } finally {
+      setCreatingFolderForMove(false)
+    }
+  }
+
+  const handleChangeFolder = async () => {
+    if (!reportToChangeFolder) return
+    if (!canEditReports) {
+      toast.error("You do not have permission to edit reports.")
+      return
+    }
+
+    const nextFolder = targetFolderValue === UNCATEGORIZED_KEY ? "" : targetFolderValue
+    const currentFolder = reportToChangeFolder.folder?.trim() ?? ""
+    if (currentFolder === nextFolder) {
+      setReportToChangeFolder(null)
+      return
+    }
+
+    setChangingFolderReportId(reportToChangeFolder.id)
+    try {
+      const fullReport = await reportsApi.getSaved(reportToChangeFolder.id)
+      await reportsApi.updateSaved(reportToChangeFolder.id, {
+        name: fullReport.name,
+        folder: nextFolder || null,
+        filters: fullReport.filters,
+        dimensions: fullReport.dimensions,
+        metrics: fullReport.metrics,
+      })
+
+      if (nextFolder) {
+        setExpandedKeys((prev) => new Set(prev).add(nextFolder))
+      } else {
+        setExpandedKeys((prev) => new Set(prev).add(UNCATEGORIZED_KEY))
+      }
+
+      toast.success(`Moved "${reportToChangeFolder.name}"`)
+      setReportToChangeFolder(null)
+      onDataChange?.()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to change folder"
+      toast.error(message)
+    } finally {
+      setChangingFolderReportId(null)
     }
   }
 
@@ -405,10 +689,19 @@ export function SavedReportsIndexContent({
                   <CardContent className="p-0">
                     <ReportsTable
                       reports={group.reports}
+                      folders={folders}
+                      onRename={openRenameDialog}
+                      onDuplicate={handleDuplicateReport}
+                      onChangeFolder={openChangeFolderDialog}
                       onTogglePinned={handleTogglePinned}
+                      renamingReportId={renamingReportId}
+                      duplicatingReportId={duplicatingReportId}
+                      changingFolderReportId={changingFolderReportId}
                       deletingReportId={deletingReportId}
                       pinningReportId={pinningReportId}
                       onDelete={setReportToDelete}
+                      canCreateReports={canCreateReports}
+                      canEditReports={canEditReports}
                       canPinReports={canPinReports}
                       canDeleteReports={canDeleteReports}
                     />
@@ -465,6 +758,153 @@ export function SavedReportsIndexContent({
               onClick={() => void handleCreateFolder()}
             >
               {creatingFolder ? "Creating…" : "Create folder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(reportToRename)}
+        onOpenChange={(open) => {
+          if (!renamingReportId && !open) {
+            setReportToRename(null)
+            setRenameReportName("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename report</DialogTitle>
+            <DialogDescription>
+              {reportToRename
+                ? `Update the name for "${reportToRename.name}".`
+                : "Update the name for this report."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="rename-report-name">Report name</Label>
+            <Input
+              id="rename-report-name"
+              value={renameReportName}
+              onChange={(e) => setRenameReportName(e.target.value)}
+              placeholder="Report name"
+              maxLength={200}
+              disabled={Boolean(renamingReportId)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleRenameReport()
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={Boolean(renamingReportId)}
+              onClick={() => {
+                setReportToRename(null)
+                setRenameReportName("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={Boolean(renamingReportId) || !renameReportName.trim()}
+              onClick={() => void handleRenameReport()}
+            >
+              {renamingReportId ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(reportToChangeFolder)}
+        onOpenChange={(open) => {
+          if (!changingFolderReportId && !open) {
+            setReportToChangeFolder(null)
+            setChangeFolderNewFolderName("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change folder</DialogTitle>
+            <DialogDescription>
+              {reportToChangeFolder
+                ? `Move "${reportToChangeFolder.name}" to another folder.`
+                : "Move this report to another folder."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Label htmlFor="change-report-folder">Folder</Label>
+            <Select
+              value={targetFolderValue}
+              onValueChange={setTargetFolderValue}
+              disabled={Boolean(changingFolderReportId) || creatingFolderForMove}
+            >
+              <SelectTrigger id="change-report-folder">
+                <SelectValue placeholder="Select a folder" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNCATEGORIZED_KEY}>Uncategorized</SelectItem>
+                {availableFolderNames.map((folderName) => (
+                  <SelectItem key={folderName} value={folderName}>
+                    {folderName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {canManageFolders ? (
+              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                <Label htmlFor="change-report-new-folder">New folder</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="change-report-new-folder"
+                    value={changeFolderNewFolderName}
+                    onChange={(e) => setChangeFolderNewFolderName(e.target.value)}
+                    placeholder="e.g. Revenue, UA, Executive"
+                    maxLength={100}
+                    disabled={Boolean(changingFolderReportId) || creatingFolderForMove}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleCreateFolderForMove()
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={Boolean(changingFolderReportId) || creatingFolderForMove || !changeFolderNewFolderName.trim()}
+                    onClick={() => void handleCreateFolderForMove()}
+                  >
+                    {creatingFolderForMove ? "Creating…" : "Create"}
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  The new folder will be created and selected automatically.
+                </p>
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={Boolean(changingFolderReportId) || creatingFolderForMove}
+              onClick={() => {
+                setReportToChangeFolder(null)
+                setChangeFolderNewFolderName("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={Boolean(changingFolderReportId) || creatingFolderForMove}
+              onClick={() => void handleChangeFolder()}
+            >
+              {changingFolderReportId ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
