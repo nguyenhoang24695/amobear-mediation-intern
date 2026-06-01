@@ -108,7 +108,6 @@ import {
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
-import { hydrateTeamGroupsInTree } from "@/lib/organizations/personnel-chart-team-utils"
 
 const datePresets = [
   { id: "last7", label: "Last 7 days", days: 7 },
@@ -785,17 +784,13 @@ export function CustomReportBuilderContent() {
         }
 
         const rawRoot = chart.root
-        const hydratedRoot = await hydrateTeamGroupsInTree(
-          rawRoot,
-          new Map(orgTeams.map((team) => [team.id, team])),
-        )
         if (cancelled) return
 
         const currentNode = findCurrentPersonnelNode(rawRoot, currentUser?.id, currentUser?.email)
         const underManager = currentNode ? collectTeamsUnderPersonnelNode(currentNode) : []
         const memberManagedTeams = collectMembershipManagedTeams(rawRoot, currentUserTeamIds)
         const leadFromChart = currentUser?.id
-          ? collectTeamLeadTeamsFromChart(hydratedRoot, currentUser.id)
+          ? collectTeamLeadTeamsFromChart(rawRoot, currentUser.id)
           : []
         const leadFromOrg = collectTeamLeadTeamsFromOrgTeams(orgTeams, currentUser?.id)
         setCommissionTeams(
