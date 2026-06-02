@@ -410,6 +410,7 @@ export interface MetaCampaignPreviewDto {
 
 export interface MetaCampaignDuplicateRequestDto {
   deepCopy?: boolean
+  quantity?: number
 }
 
 export interface MetaCampaignStatusUpdateResultDto {
@@ -464,7 +465,24 @@ export interface MetaCampaignDuplicateStartResponseDto {
   status: string
   correlationId: string
   jobId?: string | null
+  requestedCopies: number
+  completedCopies: number
+  failedCopies: number
   message: string
+}
+
+export interface MetaCampaignDuplicateOperationItemDto {
+  id: number
+  copyIndex: number
+  status: string
+  metaAsyncBatchId?: string | null
+  metaAsyncStatus?: string | null
+  externalCampaignId?: string | null
+  campaignId?: number | null
+  campaignName: string
+  failureSummary?: string | null
+  startedAt?: string | null
+  completedAt?: string | null
 }
 
 export interface MetaCampaignDuplicateOperationLogDto {
@@ -500,10 +518,14 @@ export interface MetaCampaignDuplicateOperationDto {
   newExternalCampaignId?: string | null
   newCampaignId?: number | null
   failureSummary?: string | null
+  requestedCopies: number
+  completedCopies: number
+  failedCopies: number
   startedAt?: string | null
   completedAt?: string | null
   createdAt: string
   updatedAt: string
+  items: MetaCampaignDuplicateOperationItemDto[]
   logs: MetaCampaignDuplicateOperationLogDto[]
 }
 
