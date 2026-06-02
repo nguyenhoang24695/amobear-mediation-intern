@@ -50,7 +50,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { reportsApi } from "@/lib/api/services"
+import { getCurrentUser } from "@/lib/auth"
+import { organizationsApi, reportsApi } from "@/lib/api/services"
 import type {
   OverviewMetricId,
   OverviewParameterId,
@@ -674,6 +675,8 @@ export function OverviewReportContent() {
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
   const [data, setData] = useState<ProfitOverviewReportResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingFilterTeams, setLoadingFilterTeams] = useState(false)
+  const [filterTeamOptions, setFilterTeamOptions] = useState<{ value: string; label: string }[]>([])
   const [savingFilter, setSavingFilter] = useState(false)
   const [filterExpanded, setFilterExpanded] = useState(true)
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
@@ -821,6 +824,34 @@ export function OverviewReportContent() {
     }
   }, [yearOptions])
 
+  useEffect(() => {
+    let cancelled = false
+    const orgId = getCurrentUser()?.organization?.id
+    if (!orgId) return
+
+    setLoadingFilterTeams(true)
+    void (async () => {
+      try {
+        const teams = await organizationsApi.getTeams(orgId)
+        if (cancelled) return
+        setFilterTeamOptions(
+          teams
+            .filter((team) => team.isActive)
+            .map((team) => ({ value: team.id, label: team.name }))
+            .sort((a, b) => a.label.localeCompare(b.label)),
+        )
+      } catch {
+        if (!cancelled) setFilterTeamOptions([])
+      } finally {
+        if (!cancelled) setLoadingFilterTeams(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const applyRange = async () => {
     if (fromMonth > toMonth) {
       toast.error("From month must be on or before to month.")
@@ -873,14 +904,13 @@ export function OverviewReportContent() {
   const months = data?.months ?? []
   const allTeams = data?.teams ?? []
 
-  const teamOptions = useMemo(
-    () =>
-      allTeams.map((team) => ({
-        value: team.teamId,
-        label: team.teamName,
-      })),
-    [allTeams],
-  )
+  const teamOptions = filterTeamOptions
+
+  useEffect(() => {
+    if (filterTeamOptions.length === 0) return
+    const validIds = new Set(filterTeamOptions.map((team) => team.value))
+    setSelectedTeamIds((prev) => prev.filter((id) => validIds.has(id)))
+  }, [filterTeamOptions])
 
   const teams = useMemo(() => {
     if (selectedTeamIds.length === 0) return allTeams
@@ -1048,7 +1078,7 @@ export function OverviewReportContent() {
                 options={teamOptions}
                 values={selectedTeamIds}
                 onChange={setSelectedTeamIds}
-                disabled={loading || teamOptions.length === 0}
+                disabled={loadingFilterTeams}
                 placeholder="All teams"
                 searchPlaceholder="Search teams..."
                 emptyMessage="No teams found."
