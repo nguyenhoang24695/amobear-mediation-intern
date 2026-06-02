@@ -528,7 +528,9 @@ export function CustomReportBuilderContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const reportIdFromUrl = searchParams.get("reportId")
+  const isNewReportFromUrl = searchParams.get("new") === "1"
   const folderFromUrl = searchParams.get("folder")
+  const showBackToReports = Boolean(reportIdFromUrl || isNewReportFromUrl)
 
   const canCreateReports = hasScreenFunction("s-reports", "create")
   const canEditReports = hasScreenFunction("s-reports", "edit")
@@ -1899,7 +1901,7 @@ export function CustomReportBuilderContent() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          {reportIdFromUrl ? (
+          {showBackToReports ? (
             <Button
               type="button"
               variant="ghost"
