@@ -413,6 +413,18 @@ export interface MetaCampaignDuplicateRequestDto {
   quantity?: number
 }
 
+export interface MetaAdSetDuplicateRequestDto {
+  quantity?: number
+  newName?: string | null
+}
+
+export interface MetaAdSetDuplicateResponseDto {
+  success: boolean
+  message: string
+  newExternalAdSetIds: string[]
+  newLocalAdSetIds: number[]
+}
+
 export interface MetaCampaignStatusUpdateResultDto {
   campaignId: number
   externalCampaignId: string

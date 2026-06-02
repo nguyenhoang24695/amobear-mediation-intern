@@ -233,7 +233,7 @@ function EmptyState({ title, description }: { title: string; description: string
   )
 }
 
-function AdSetTable({ items }: { items: MetaCampaignAdSetSummaryDto[] }) {
+function AdSetTable({ items, onDuplicate }: { items: MetaCampaignAdSetSummaryDto[]; onDuplicate?: (item: MetaCampaignAdSetSummaryDto) => void }) {
   if (items.length === 0) {
     return <EmptyState title="No ad sets synced" description="Run Sync from Meta on the campaigns list to load ad set structure." />
   }
@@ -249,6 +249,7 @@ function AdSetTable({ items }: { items: MetaCampaignAdSetSummaryDto[] }) {
             <TableHead className="text-xs font-medium text-slate-500">Meta App ID</TableHead>
             <TableHead className="text-xs font-medium text-slate-500">Store URL</TableHead>
             <TableHead className="text-xs font-medium text-slate-500">Last Synced</TableHead>
+            <TableHead className="text-right text-xs font-medium text-slate-500">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -277,6 +278,16 @@ function AdSetTable({ items }: { items: MetaCampaignAdSetSummaryDto[] }) {
               <TableCell>
                 <div className="text-sm text-slate-700">{formatRelativeTime(item.lastSyncedAt)}</div>
                 <div className="text-xs text-slate-500">{formatDateTime(item.lastSyncedAt)}</div>
+              </TableCell>
+              <TableCell className="text-right">
+                {onDuplicate ? (
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => onDuplicate(item)}>
+                    <Copy className="h-4 w-4" />
+                    Duplicate
+                  </Button>
+                ) : (
+                  "-"
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -688,6 +699,11 @@ export function CampaignDetailContent({ campaignId }: Props) {
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
   const [statusUpdateError, setStatusUpdateError] = useState<CampaignStatusUpdateError | null>(null)
 
+  const [duplicateAdSetTarget, setDuplicateAdSetTarget] = useState<MetaCampaignAdSetSummaryDto | null>(null)
+  const [duplicateAdSetQuantity, setDuplicateAdSetQuantity] = useState("1")
+  const [duplicateAdSetName, setDuplicateAdSetName] = useState("")
+  const [duplicatingAdSet, setDuplicatingAdSet] = useState(false)
+
   const { data: detail, loading, error, refetch } = useApi(
     () => metaCampaignsApi.getById(numericCampaignId),
     {
@@ -705,6 +721,9 @@ export function CampaignDetailContent({ campaignId }: Props) {
     setReadiness(null)
     setDuplicateConfirmOpen(false)
     setDuplicateQuantity("1")
+    setDuplicateAdSetTarget(null)
+    setDuplicateAdSetQuantity("1")
+    setDuplicateAdSetName("")
   }, [numericCampaignId])
 
   useEffect(() => {
@@ -846,6 +865,42 @@ export function CampaignDetailContent({ campaignId }: Props) {
       toast({ title: "Duplicate failed", description: readinessResult?.summary ?? message, variant: "destructive" })
       setDuplicating(false)
       setActiveDuplicateOperationId(null)
+    }
+  }
+
+  const handleDuplicateAdSetClick = (item: MetaCampaignAdSetSummaryDto) => {
+    setDuplicateAdSetTarget(item)
+    setDuplicateAdSetQuantity("1")
+    setDuplicateAdSetName(`${item.name} - Copy`)
+  }
+
+  const duplicateAdSetQuantityValue = Number(duplicateAdSetQuantity)
+  const duplicateAdSetQuantityValid = Number.isInteger(duplicateAdSetQuantityValue) && duplicateAdSetQuantityValue >= 1 && duplicateAdSetQuantityValue <= 10
+
+  const handleDuplicateAdSetSubmit = async () => {
+    if (!duplicateAdSetTarget || !duplicateAdSetQuantityValid) return
+
+    try {
+      setDuplicatingAdSet(true)
+      const result = await metaCampaignsApi.duplicateAdSet(duplicateAdSetTarget.id, {
+        quantity: duplicateAdSetQuantityValue,
+        newName: duplicateAdSetQuantityValue === 1 && duplicateAdSetName.trim() !== "" ? duplicateAdSetName.trim() : null,
+      })
+
+      invalidateCache(`meta-campaign:${numericCampaignId}`)
+      invalidateCache("meta-campaigns:list")
+      await refetch()
+      
+      setDuplicateAdSetTarget(null)
+      toast({
+        title: "Ad set duplicated",
+        description: `Successfully duplicated ad set into ${duplicateAdSetQuantityValue} paused copies.`,
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Ad set duplicate failed."
+      toast({ title: "Duplicate failed", description: message, variant: "destructive" })
+    } finally {
+      setDuplicatingAdSet(false)
     }
   }
 
@@ -1225,7 +1280,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
             </TabsList>
 
             <TabsContent value="adsets" className="mt-0">
-              <AdSetTable items={detail.adSets} />
+              <AdSetTable items={detail.adSets} onDuplicate={canDuplicate ? handleDuplicateAdSetClick : undefined} />
             </TabsContent>
             <TabsContent value="ads" className="mt-0">
               <AdTable items={detail.ads} />
@@ -1316,6 +1371,69 @@ export function CampaignDetailContent({ campaignId }: Props) {
             >
               {duplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
               Duplicate Campaign
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(duplicateAdSetTarget)}
+        onOpenChange={(open) => {
+          if (!duplicatingAdSet) {
+            if (!open) setDuplicateAdSetTarget(null)
+          }
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate Ad Set?</AlertDialogTitle>
+            <AlertDialogDescription className="break-words">
+              This action will create paused ad set copies of <strong className="break-all">{duplicateAdSetTarget?.name}</strong> on Meta, including its ads.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-700">Number of copies</div>
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={duplicateAdSetQuantity}
+                onChange={(event) => setDuplicateAdSetQuantity(event.target.value)}
+                disabled={duplicatingAdSet}
+              />
+              <div className={cn("text-xs", duplicateAdSetQuantityValid ? "text-slate-500" : "text-red-600")}>
+                Create between 1 and 10 paused ad set copies.
+              </div>
+            </div>
+
+            {duplicateAdSetQuantityValue === 1 && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-slate-700">New Ad Set Name</div>
+                <Input
+                  type="text"
+                  value={duplicateAdSetName}
+                  onChange={(event) => setDuplicateAdSetName(event.target.value)}
+                  disabled={duplicatingAdSet}
+                  placeholder="Leave empty to use default copy name"
+                />
+                <div className="text-xs text-slate-500">
+                  Specify a custom name for the copy.
+                </div>
+              </div>
+            )}
+          </div>
+          <AlertDialogFooter className="flex-wrap">
+            <AlertDialogCancel disabled={duplicatingAdSet}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              disabled={duplicatingAdSet || !duplicateAdSetQuantityValid}
+              onClick={() => {
+                void handleDuplicateAdSetSubmit()
+              }}
+            >
+              {duplicatingAdSet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+              Duplicate Ad Set
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
