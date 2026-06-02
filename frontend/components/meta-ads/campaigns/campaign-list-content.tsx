@@ -409,6 +409,7 @@ export function CampaignListContent() {
   const [syncing, setSyncing] = useState(false)
   const [listVersion, setListVersion] = useState(0)
   const [duplicateTarget, setDuplicateTarget] = useState<MetaCampaignListItemDto | null>(null)
+  const [duplicateQuantity, setDuplicateQuantity] = useState("1")
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<number | null>(null)
   const [activeDuplicateOperationId, setActiveDuplicateOperationId] = useState<number | null>(null)
   const [handledDuplicateOperationId, setHandledDuplicateOperationId] = useState<number | null>(null)
@@ -429,6 +430,12 @@ export function CampaignListContent() {
     setReadinessByCampaignId({})
     setActiveReadinessCampaignId(null)
   }, [deferredSearch, accountFilter, appFilter, objectiveFilter, effectiveStatusFilter, quickFilter, syncFreshnessFilter, page, pageSize, listVersion])
+
+  useEffect(() => {
+    if (duplicateTarget) {
+      setDuplicateQuantity("1")
+    }
+  }, [duplicateTarget])
 
   const { operation: duplicateOperation, isCompleted: duplicateCompleted, isFailed: duplicateFailed } = useDuplicateOperationPolling(
     activeDuplicateOperationId,
@@ -574,6 +581,8 @@ export function CampaignListContent() {
   const summary = response?.summary
   const activeReadiness = activeReadinessCampaignId !== null ? readinessByCampaignId[activeReadinessCampaignId] ?? null : null
   const duplicateTargetReadiness = duplicateTarget ? readinessByCampaignId[duplicateTarget.id] ?? null : null
+  const duplicateQuantityValue = Number(duplicateQuantity)
+  const duplicateQuantityValid = Number.isInteger(duplicateQuantityValue) && duplicateQuantityValue >= 1 && duplicateQuantityValue <= 10
 
   const handleSync = async () => {
     try {
@@ -617,15 +626,17 @@ export function CampaignListContent() {
     }
   }
   const handleDuplicate = async (campaign: MetaCampaignListItemDto) => {
+    if (!duplicateQuantityValid) return
+
     try {
       setDuplicatingCampaignId(campaign.id)
-      const result = await metaCampaignsApi.duplicate(campaign.id, { deepCopy: true })
+      const result = await metaCampaignsApi.duplicate(campaign.id, { deepCopy: true, quantity: duplicateQuantityValue })
       setActiveDuplicateOperationId(result.operationId)
       setHandledDuplicateOperationId(null)
       setDuplicateTarget(null)
       toast({
         title: "Duplication started",
-        description: `${campaign.name} is being duplicated on Meta. This can take a short while for large campaign trees.`
+        description: `${campaign.name} is being duplicated into ${duplicateQuantityValue} paused copy/copies on Meta.`
       })
     } catch (apiError) {
       const readiness = extractReadinessFromApiError(apiError)
@@ -687,17 +698,28 @@ export function CampaignListContent() {
     setDuplicatingCampaignId(null)
     setActiveDuplicateOperationId(null)
 
-    if (duplicateCompleted && duplicateOperation.newCampaignId) {
+    if (duplicateCompleted) {
+      const successfulItems = (duplicateOperation.items ?? []).filter((item) => item.campaignId)
+      const fallbackCampaignId = successfulItems.length === 0 ? duplicateOperation.newCampaignId : null
       invalidateCache(listCacheKey)
       invalidateCache(`meta-campaign:${duplicateOperation.sourceCampaignId}`)
-      invalidateCache(`meta-campaign:${duplicateOperation.newCampaignId}`)
+      for (const item of successfulItems) {
+        if (item.campaignId) invalidateCache(`meta-campaign:${item.campaignId}`)
+      }
+      if (fallbackCampaignId) invalidateCache(`meta-campaign:${fallbackCampaignId}`)
       setListVersion((previous) => previous + 1)
       void refetch()
+
+      const successfulCount = successfulItems.length || (fallbackCampaignId ? 1 : 0)
       toast({
-        title: "Campaign duplicated",
-        description: "Meta finished duplicating the campaign and MediationPro synced the new campaign."
+        title: duplicateOperation.failedCopies > 0 ? "Campaign duplicates completed with errors" : "Campaign duplicated",
+        description: successfulCount > 0
+          ? `Meta finished ${successfulCount} campaign copy/copies. ${duplicateOperation.failedCopies > 0 ? `${duplicateOperation.failedCopies} failed.` : ""}`.trim()
+          : duplicateOperation.failureSummary ?? "Meta finished the duplicate operation, but no new local campaign id is available yet."
       })
-      router.push(`/meta-ads/campaigns/${duplicateOperation.newCampaignId}`)
+      if (successfulCount === 1) {
+        router.push(`/meta-ads/campaigns/${successfulItems[0]?.campaignId ?? fallbackCampaignId}`)
+      }
       return
     }
 
@@ -1007,6 +1029,7 @@ export function CampaignListContent() {
                                             return
                                           }
 
+                                          setDuplicateQuantity("1")
                                           setDuplicateTarget(item)
                                           setActiveReadinessCampaignId(item.id)
                                         }}
@@ -1140,14 +1163,26 @@ export function CampaignListContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Duplicate Campaign?</AlertDialogTitle>
             <AlertDialogDescription className="break-words">
-              This action will create a direct PAUSED copy of <strong className="break-all">{duplicateTarget?.name ?? "this campaign"}</strong> on Meta Ad Manager, including its synced ad sets and ads. Only campaigns that passed readiness check on this screen can be duplicated.
+              This action will create paused campaign copies of <strong className="break-all">{duplicateTarget?.name ?? "this campaign"}</strong> on Meta Ad Manager, including its synced ad sets and ads. Only campaigns that passed readiness check on this screen can be duplicated.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-slate-700">Number of copies</div>
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              value={duplicateQuantity}
+              onChange={(event) => setDuplicateQuantity(event.target.value)}
+              disabled={duplicatingCampaignId !== null}
+            />
+            <div className={cn("text-xs", duplicateQuantityValid ? "text-slate-500" : "text-red-600")}>Create between 1 and 10 paused campaign copies.</div>
+          </div>
           <AlertDialogFooter className="flex-wrap">
             <AlertDialogCancel disabled={duplicatingCampaignId !== null}>Cancel</AlertDialogCancel>
             <Button
               className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={!duplicateTarget || duplicatingCampaignId !== null || duplicateTargetReadiness?.isReady !== true}
+              disabled={!duplicateTarget || duplicatingCampaignId !== null || duplicateTargetReadiness?.isReady !== true || !duplicateQuantityValid}
               onClick={() => {
                 if (duplicateTarget) {
                   void handleDuplicate(duplicateTarget)

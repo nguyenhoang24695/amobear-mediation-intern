@@ -330,17 +330,19 @@ function renderParameterCell(
       appSub.length > 0 &&
       appSub.toLowerCase() !== appName.trim().toLowerCase()
     return (
-      <div className="flex items-center gap-2 min-w-[180px]">
+      <div className="flex items-center gap-2 min-w-0 max-w-full">
         <Avatar className="h-10 w-10 rounded-lg shrink-0">
           {appIconUri ? <AvatarImage src={appIconUri} alt={appName} className="rounded-lg object-cover" /> : null}
           <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
             <Smartphone className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-900 truncate">{appName}</div>
           {shouldShowAppSub ? (
-            <div className="text-xs text-slate-500">{appSub}</div>
+            <div className="text-xs text-slate-500 font-mono truncate" title={appSub}>
+              {appSub}
+            </div>
           ) : null}
         </div>
       </div>

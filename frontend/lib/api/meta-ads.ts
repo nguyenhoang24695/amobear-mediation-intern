@@ -19,6 +19,8 @@ import type {
   MetaCampaignDuplicateReadinessResultDto,
   MetaCampaignDuplicateRequestDto,
   MetaCampaignDuplicateStartResponseDto,
+  MetaAdSetDuplicateRequestDto,
+  MetaAdSetDuplicateResponseDto,
   MetaCampaignPreviewDto,
   MetaCampaignListResponseDto,
   MetaCampaignStatusUpdateResultDto,
@@ -155,6 +157,11 @@ export const metaCampaignsApi = {
   duplicate: async (id: number, request?: MetaCampaignDuplicateRequestDto) => {
     return apiClient.post<MetaCampaignDuplicateStartResponseDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate`, request ?? { deepCopy: true })
   },
+
+  duplicateAdSet: async (adSetId: number, request?: MetaAdSetDuplicateRequestDto) => {
+    return apiClient.post<MetaAdSetDuplicateResponseDto>(`${CAMPAIGNS_PREFIX}/adsets/${adSetId}/duplicate`, request ?? {})
+  },
+
 
   checkDuplicateReadiness: async (id: number) => {
     return apiClient.post<MetaCampaignDuplicateReadinessResultDto>(`${CAMPAIGNS_PREFIX}/${id}/duplicate-readiness-check`, {})
@@ -398,6 +405,7 @@ export const metaInsightsApi = {
     return apiClient.get<MetaInsightsFiltersResponseDto>(`${INSIGHTS_PREFIX}/filters`, params)
   },
 }
+
 
 
 
