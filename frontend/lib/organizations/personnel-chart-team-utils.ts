@@ -161,6 +161,7 @@ async function hydrateTeamNode(
     id: teamChartId,
     name: teamName,
     teamName,
+    teamGroup: teamMeta?.teamGroup ?? null,
     title: teamMeta?.memberCount
       ? `${teamMeta.memberCount} members`
       : node.title ?? `${members.length} members`,
