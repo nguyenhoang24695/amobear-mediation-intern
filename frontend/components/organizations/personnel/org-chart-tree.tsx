@@ -5,6 +5,38 @@ import { OrgChartPanViewport } from "./org-chart-pan-viewport"
 import { PersonnelDroppableNode } from "./personnel-droppable-node"
 import type { PersonnelNode } from "@/lib/mock/org-personnel-mock"
 import { flattenPersonnelTree } from "@/lib/mock/org-personnel-mock"
+import { TEAM_GROUP_SECTIONS, getTeamGroupChartClusterClass } from "@/lib/organizations/team-group"
+
+type ChartChildSlot =
+  | { kind: "node"; node: PersonnelNode }
+  | { kind: "teamGroupCluster"; label: string; teams: PersonnelNode[] }
+
+function buildChartChildSlots(children: PersonnelNode[]): ChartChildSlot[] {
+  const slots: ChartChildSlot[] = []
+  for (const child of children) {
+    if (!child.isTeamGroup) slots.push({ kind: "node", node: child })
+  }
+
+  const teams = children.filter((child) => child.isTeamGroup)
+  if (teams.length === 0) return slots
+
+  const teamsByKey = new Map<string | null, PersonnelNode[]>()
+  for (const team of teams) {
+    const key = team.teamGroup ?? null
+    const list = teamsByKey.get(key) ?? []
+    list.push(team)
+    teamsByKey.set(key, list)
+  }
+
+  for (const section of TEAM_GROUP_SECTIONS) {
+    const clusterTeams = teamsByKey.get(section.key) ?? []
+    if (clusterTeams.length > 0) {
+      slots.push({ kind: "teamGroupCluster", label: section.label, teams: clusterTeams })
+    }
+  }
+
+  return slots
+}
 
 interface OrgChartTreeProps {
   root: PersonnelNode
@@ -118,22 +150,64 @@ function OrgChartNode({
         <>
           <div className="h-6 w-px bg-slate-300" aria-hidden />
           <ul className="relative flex items-start gap-6 pt-0">
-            {children.map((child, index) => (
-              <OrgChartNode
-                key={child.id}
-                node={child}
-                selectedId={selectedId}
-                searchQuery={searchQuery}
-                collapsedIds={collapsedIds}
-                onSelect={onSelect}
-                onToggleCollapse={onToggleCollapse}
-                isEditMode={isEditMode}
-                onRemoveNode={onRemoveNode}
-                organizationLogoUrl={organizationLogoUrl}
-                siblingIndex={index}
-                siblingCount={children.length}
-              />
-            ))}
+            {buildChartChildSlots(children).map((slot, index, slots) => {
+              const siblingCount = slots.length
+              if (slot.kind === "node") {
+                return (
+                  <OrgChartNode
+                    key={slot.node.id}
+                    node={slot.node}
+                    selectedId={selectedId}
+                    searchQuery={searchQuery}
+                    collapsedIds={collapsedIds}
+                    onSelect={onSelect}
+                    onToggleCollapse={onToggleCollapse}
+                    isEditMode={isEditMode}
+                    onRemoveNode={onRemoveNode}
+                    organizationLogoUrl={organizationLogoUrl}
+                    siblingIndex={index}
+                    siblingCount={siblingCount}
+                  />
+                )
+              }
+
+              return (
+                <li
+                  key={`team-cluster-${slot.label}`}
+                  className="relative flex flex-col items-center pt-6"
+                >
+                  <ChildConnectors index={index} siblingCount={siblingCount} />
+                  <div
+                    className={cn(
+                      "relative rounded-2xl border-2 px-5 pb-5 pt-8 shadow-sm",
+                      getTeamGroupChartClusterClass(slot.label),
+                    )}
+                  >
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-0.5 text-xs font-semibold tracking-wide text-slate-700 shadow-sm">
+                      {slot.label}
+                    </span>
+                    <ul className="relative flex items-start gap-6">
+                      {slot.teams.map((team, teamIndex) => (
+                        <OrgChartNode
+                          key={team.id}
+                          node={team}
+                          selectedId={selectedId}
+                          searchQuery={searchQuery}
+                          collapsedIds={collapsedIds}
+                          onSelect={onSelect}
+                          onToggleCollapse={onToggleCollapse}
+                          isEditMode={isEditMode}
+                          onRemoveNode={onRemoveNode}
+                          organizationLogoUrl={organizationLogoUrl}
+                          siblingIndex={teamIndex}
+                          siblingCount={slot.teams.length}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </>
       )}

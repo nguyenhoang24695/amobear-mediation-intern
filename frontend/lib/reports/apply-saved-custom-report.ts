@@ -20,7 +20,7 @@ export interface ApplySavedCustomReportOptions {
   setSelectedMetrics: (ids: string[]) => void
   setSelectedApps: (ids: string[]) => void
   setMetricFilters: (filters: CustomReportSaved["filters"]["metricFilters"]) => void
-  setCommissionTeam?: (value: string) => void
+  setSelectedCommissionTeamIds?: (ids: string[]) => void
   setCommissionMember?: (value: string) => void
   setSortColumn: (column: string) => void
   setSortDirection: (dir: "asc" | "desc") => void
@@ -36,6 +36,8 @@ export interface ApplySavedCustomReportOptions {
     value: string,
   ) => Array<{ type: string; value: string }>
   syncAppsActiveFilter: (appIds: string[], apps: App[]) => void
+  /** When true, restored appIds are not filtered by the user's global app list. */
+  skipAppPermissionFilter?: boolean
   availableApps: App[]
 }
 
@@ -56,15 +58,22 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
   options.setSelectedParameters([...report.dimensions])
   options.setSelectedMetrics([...report.metrics])
   options.setMetricFilters(filters.metricFilters ?? [])
-  options.setCommissionTeam?.(filters.commissionTeamId ?? "")
+  const savedTeamIds =
+    filters.commissionTeamIds?.filter(Boolean) ??
+    (filters.commissionTeamId ? [filters.commissionTeamId] : [])
+  options.setSelectedCommissionTeamIds?.(savedTeamIds)
   options.setCommissionMember?.(filters.commissionUser ?? "")
   options.setSortColumn(filters.sortBy ?? "date")
   options.setSortDirection(filters.sortDir === "asc" ? "asc" : "desc")
 
-  const permittedAppIds = new Set(availableApps.map((a) => a.appId))
-  const nextApps = (filters.appIds ?? []).filter((id) => permittedAppIds.has(id))
-  options.setSelectedApps(nextApps)
-  syncAppsActiveFilter(nextApps, availableApps)
+  const savedAppIds = filters.appIds ?? []
+  options.setSelectedApps(savedAppIds)
+  if (!options.skipAppPermissionFilter) {
+    const permittedAppIds = new Set(availableApps.map((a) => a.appId))
+    const nextApps = savedAppIds.filter((id) => permittedAppIds.has(id))
+    options.setSelectedApps(nextApps)
+    syncAppsActiveFilter(nextApps, availableApps)
+  }
 
   let activeFilters: Array<{ type: string; value: string }> = []
 

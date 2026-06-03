@@ -1881,6 +1881,7 @@ export interface OrgTeam {
     name: string
     description?: string
     userId?: string | null
+    teamGroup?: string | null
     teamLeadName?: string | null
     teamLeadEmail?: string | null
     teamLeadAvatarUrl?: string | null
@@ -1997,12 +1998,14 @@ export interface CreateTeamRequest {
     name: string
     description?: string
     userId?: string | null
+    teamGroup?: string | null
 }
 
 export interface UpdateTeamRequest {
     name: string
     description?: string
     userId?: string | null
+    teamGroup?: string | null
     isActive: boolean
 }
 

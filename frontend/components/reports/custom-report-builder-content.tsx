@@ -71,6 +71,7 @@ import {
   ArrowUpDown,
   HelpCircle,
   Smartphone,
+  Users,
   Download,
   X,
   AlertCircle,
@@ -102,9 +103,12 @@ import {
   collectTeamLeadTeamsFromChart,
   collectTeamLeadTeamsFromOrgTeams,
   collectTeamsUnderPersonnelNode,
+  getTeamIdsSelectionState,
+  groupCommissionTeamsBySection,
   mergeCommissionTeamOptions,
   type CommissionTeamOption,
 } from "@/lib/reports/commission-team-utils"
+import { mergeTeamLeadCachesToApps } from "@/lib/reports/team-scope-apps"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
@@ -173,7 +177,7 @@ interface AppliedReportQueryState {
   metrics: string[]
   revenueSource: string
   metricFilters: CustomReportMetricFilter[]
-  commissionTeamId?: string | null
+  commissionTeamIds?: string[] | null
 }
 
 interface CommissionMemberOption {
@@ -587,14 +591,61 @@ export function CustomReportBuilderContent() {
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
-  const [commissionTeam, setCommissionTeam] = useState("")
+  const [selectedCommissionTeamIds, setSelectedCommissionTeamIds] = useState<string[]>([])
+  const [teamPopoverOpen, setTeamPopoverOpen] = useState(false)
+  const [teamsInitialized, setTeamsInitialized] = useState(false)
   const [commissionTeams, setCommissionTeams] = useState<CommissionTeamOption[]>([])
   const [commissionMembers, setCommissionMembers] = useState<CommissionMemberOption[]>([])
   const [commissionMember, setCommissionMember] = useState("")
-  const [memberPermittedAppIds, setMemberPermittedAppIds] = useState<string[] | null>(null)
+  const [teamScopeApps, setTeamScopeApps] = useState<App[] | null>(null)
+  const [teamScopeAppsLoading, setTeamScopeAppsLoading] = useState(false)
   const [memberOptionsLoading, setMemberOptionsLoading] = useState(false)
-  const [memberPermissionsLoading, setMemberPermissionsLoading] = useState(false)
   const canScopeManagedTeams = canManageCommission || commissionTeams.length > 0
+  const appSelectorDisabled =
+    canScopeManagedTeams &&
+    (selectedCommissionTeamIds.length === 0 || teamScopeAppsLoading || teamScopeApps === null)
+
+  const syncTeamsActiveFilter = useCallback((teamIds: string[], teams: CommissionTeamOption[]) => {
+    const labels = teams
+      .filter((team) => teamIds.includes(team.teamId))
+      .map((team) => team.label)
+    const value =
+      teamIds.length === 0
+        ? "None selected"
+        : teamIds.length === teams.length
+          ? "All teams"
+          : teamIds.length === 1
+            ? labels[0] ?? "1 team"
+            : `${teamIds.length} teams`
+    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, value))
+  }, [])
+
+  const toggleCommissionTeamWithFilter = useCallback(
+    (teamId: string) => {
+      setSelectedCommissionTeamIds((prev) => {
+        const next = prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+        syncTeamsActiveFilter(next, commissionTeams)
+        return next
+      })
+    },
+    [commissionTeams, syncTeamsActiveFilter],
+  )
+
+  const toggleCommissionTeamSection = useCallback(
+    (teamIds: string[], checked: boolean) => {
+      setSelectedCommissionTeamIds((prev) => {
+        const nextSet = new Set(prev)
+        for (const id of teamIds) {
+          if (checked) nextSet.add(id)
+          else nextSet.delete(id)
+        }
+        const next = [...nextSet]
+        syncTeamsActiveFilter(next, commissionTeams)
+        return next
+      })
+    },
+    [commissionTeams, syncTeamsActiveFilter],
+  )
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -613,6 +664,7 @@ export function CustomReportBuilderContent() {
   const [loadingSavedReport, setLoadingSavedReport] = useState(false)
   const [savingReport, setSavingReport] = useState(false)
   const loadedReportIdRef = useRef<string | null>(null)
+  const prevCommissionTeamIdsRef = useRef<string[]>([])
 
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
@@ -628,10 +680,14 @@ export function CustomReportBuilderContent() {
     if (!canScopeManagedTeams) {
       return availableApps
     }
-    if (!commissionTeam || memberPermittedAppIds === null) return []
-    const allowed = new Set(memberPermittedAppIds)
-    return availableApps.filter((app) => allowed.has(app.appId))
-  }, [availableApps, canScopeManagedTeams, commissionTeam, memberPermittedAppIds])
+    if (selectedCommissionTeamIds.length === 0 || teamScopeApps === null) return []
+    return teamScopeApps
+  }, [availableApps, canScopeManagedTeams, selectedCommissionTeamIds, teamScopeApps])
+
+  const commissionTeamsBySection = useMemo(
+    () => groupCommissionTeamsBySection(commissionTeams),
+    [commissionTeams],
+  )
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -651,15 +707,28 @@ export function CustomReportBuilderContent() {
   }, [])
 
   useEffect(() => {
-    if (appsInitialized || appsLoading || availableApps.length === 0) return
-    if (reportIdFromUrl) return
+    if (appsInitialized || reportIdFromUrl) return
+    if (canScopeManagedTeams) {
+      if (selectedCommissionTeamIds.length === 0 || teamScopeApps === null) return
+    } else if (appsLoading || availableApps.length === 0) {
+      return
+    }
     const initialIds = appsForSelection.map((app) => app.appId)
     if (initialIds.length > 0) {
       setSelectedApps(initialIds)
       syncAppsActiveFilter(initialIds, appsForSelection)
     }
     setAppsInitialized(true)
-  }, [appsInitialized, appsLoading, appsForSelection, reportIdFromUrl])
+  }, [
+    appsInitialized,
+    appsLoading,
+    availableApps.length,
+    appsForSelection,
+    reportIdFromUrl,
+    canScopeManagedTeams,
+    selectedCommissionTeamIds.length,
+    teamScopeApps,
+  ])
 
   useEffect(() => {
     if (reportIdFromUrl || !folderFromUrl?.trim()) return
@@ -710,7 +779,7 @@ export function CustomReportBuilderContent() {
         setSelectedMetrics,
         setSelectedApps,
         setMetricFilters,
-        setCommissionTeam,
+        setSelectedCommissionTeamIds,
         setCommissionMember,
         setSortColumn,
         setSortDirection,
@@ -722,14 +791,19 @@ export function CustomReportBuilderContent() {
         setActiveFilters,
         upsertActiveFilter,
         syncAppsActiveFilter,
+        skipAppPermissionFilter: Boolean(
+          report.filters.commissionTeamIds?.length ||
+            report.filters.commissionTeamId,
+        ),
       })
       setAppsInitialized(true)
+      setTeamsInitialized(true)
     },
     [availableApps],
   )
 
   useEffect(() => {
-    if (!reportIdFromUrl || appsLoading) return
+    if (!reportIdFromUrl) return
     if (loadedReportIdRef.current === reportIdFromUrl) return
 
     let cancelled = false
@@ -739,6 +813,9 @@ export function CustomReportBuilderContent() {
         const report = await reportsApi.getSaved(reportIdFromUrl)
         if (cancelled) return
         loadedReportIdRef.current = reportIdFromUrl
+        prevCommissionTeamIdsRef.current =
+          report.filters.commissionTeamIds?.filter(Boolean) ??
+          (report.filters.commissionTeamId ? [report.filters.commissionTeamId] : [])
         applyLoadedSavedReport(report)
       } catch (err) {
         console.error("Failed to load saved report:", err)
@@ -751,10 +828,14 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [reportIdFromUrl, appsLoading, applyLoadedSavedReport])
+  }, [reportIdFromUrl, applyLoadedSavedReport])
 
   useEffect(() => {
-    if (appsLoading || availableApps.length === 0) return
+    if (canScopeManagedTeams) {
+      if (teamScopeApps === null) return
+    } else if (appsLoading || availableApps.length === 0) {
+      return
+    }
 
     const permittedAppIds = new Set(appsForSelection.map((app) => app.appId))
     setSelectedApps((prev) => {
@@ -763,7 +844,7 @@ export function CustomReportBuilderContent() {
       syncAppsActiveFilter(next, appsForSelection)
       return next
     })
-  }, [appsLoading, appsForSelection])
+  }, [appsLoading, appsForSelection, canScopeManagedTeams, teamScopeApps, availableApps.length])
 
   useEffect(() => {
     if (!orgId) {
@@ -797,8 +878,18 @@ export function CustomReportBuilderContent() {
           ? collectTeamLeadTeamsFromChart(rawRoot, currentUser.id)
           : []
         const leadFromOrg = collectTeamLeadTeamsFromOrgTeams(orgTeams, currentUser?.id)
+        const teamGroupById = new Map(orgTeams.map((team) => [team.id, team.teamGroup ?? null]))
+        const merged = mergeCommissionTeamOptions(
+          underManager,
+          memberManagedTeams,
+          leadFromChart,
+          leadFromOrg,
+        )
         setCommissionTeams(
-          mergeCommissionTeamOptions(underManager, memberManagedTeams, leadFromChart, leadFromOrg),
+          merged.map((team) => ({
+            ...team,
+            teamGroup: team.teamGroup ?? teamGroupById.get(team.teamId) ?? null,
+          })),
         )
       } catch {
         if (cancelled) return
@@ -816,36 +907,48 @@ export function CustomReportBuilderContent() {
   useEffect(() => {
     if (!canScopeManagedTeams) return
     if (commissionTeams.length === 0) {
-      setCommissionTeam("")
+      setSelectedCommissionTeamIds([])
       setCommissionMembers([])
       setCommissionMember("")
-      setMemberPermittedAppIds(null)
+      setTeamScopeApps(null)
       setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_TEAM))
       return
     }
-    if (commissionTeams.some((team) => team.teamId === commissionTeam)) return
-    setCommissionTeam(commissionTeams[0].teamId)
-  }, [commissionTeam, commissionTeams])
+    setSelectedCommissionTeamIds((prev) => {
+      const valid = prev.filter((id) => commissionTeams.some((team) => team.teamId === id))
+      return valid.length === prev.length ? prev : valid
+    })
+  }, [canScopeManagedTeams, commissionTeams])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || !commissionTeam) {
+    if (!canScopeManagedTeams || teamsInitialized || reportIdFromUrl) return
+    if (commissionTeams.length === 0) return
+    const ids = commissionTeams.map((team) => team.teamId)
+    setSelectedCommissionTeamIds(ids)
+    syncTeamsActiveFilter(ids, commissionTeams)
+    setTeamsInitialized(true)
+  }, [canScopeManagedTeams, teamsInitialized, commissionTeams, reportIdFromUrl, syncTeamsActiveFilter])
+
+  useEffect(() => {
+    if (!canScopeManagedTeams || selectedCommissionTeamIds.length !== 1) {
       setCommissionMembers([])
       setCommissionMember("")
       setMemberOptionsLoading(false)
       return
     }
 
+    const teamId = selectedCommissionTeamIds[0]
     let cancelled = false
     setMemberOptionsLoading(true)
     teamMembersApi
-      .filterTeamMembers({ teamId: commissionTeam, page: 1, pageSize: 500 })
+      .filterTeamMembers({ teamId, page: 1, pageSize: 500 })
       .then((response) => {
         if (cancelled) return
         const nextMembers = response.data.items
           .map((member): CommissionMemberOption | null => {
             const email = member.email?.trim()
             if (!email) return null
-            const teamMeta = member.teams.find((team) => team.id === commissionTeam)
+            const teamMeta = member.teams.find((team) => team.id === teamId)
             return {
               userId: member.id,
               email,
@@ -886,49 +989,70 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [canScopeManagedTeams, commissionTeam, commissionMember])
+  }, [canScopeManagedTeams, selectedCommissionTeamIds, commissionMember])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || !commissionTeam) {
-      setMemberPermittedAppIds(null)
-      setMemberPermissionsLoading(false)
+    if (!canScopeManagedTeams || selectedCommissionTeamIds.length === 0) {
+      setTeamScopeApps(null)
+      setTeamScopeAppsLoading(false)
       return
     }
 
     let cancelled = false
-    setMemberPermissionsLoading(true)
-    reportsApi
-      .getTeamApps(commissionTeam)
-      .then((response) => {
+    setTeamScopeAppsLoading(true)
+    Promise.all(selectedCommissionTeamIds.map((teamId) => reportsApi.getTeamApps(teamId)))
+      .then((responses) => {
         if (cancelled) return
-        const appIds = [...new Set((response.admobAppIds ?? []).filter(Boolean))]
-        setMemberPermittedAppIds(appIds)
+        setTeamScopeApps(mergeTeamLeadCachesToApps(responses))
       })
       .catch(() => {
-        if (!cancelled) setMemberPermittedAppIds(null)
+        if (!cancelled) setTeamScopeApps([])
       })
       .finally(() => {
-        if (!cancelled) setMemberPermissionsLoading(false)
+        if (!cancelled) setTeamScopeAppsLoading(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [canScopeManagedTeams, commissionTeam])
+  }, [canScopeManagedTeams, selectedCommissionTeamIds])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || !commissionTeam || memberPermittedAppIds === null) return
+    if (!canScopeManagedTeams) return
+    if (selectedCommissionTeamIds.length === 0) {
+      prevCommissionTeamIdsRef.current = []
+      setSelectedApps([])
+      syncAppsActiveFilter([], appsForSelection)
+      return
+    }
+    if (teamScopeApps === null) return
+
+    const prevTeamKey = [...prevCommissionTeamIdsRef.current].sort().join("|")
+    const nextTeamKey = [...selectedCommissionTeamIds].sort().join("|")
+    const teamsChanged = prevTeamKey !== nextTeamKey
+    prevCommissionTeamIdsRef.current = selectedCommissionTeamIds
+
     const permitted = appsForSelection.map((app) => app.appId)
-    setSelectedApps(permitted)
-    syncAppsActiveFilter(permitted, appsForSelection)
-  }, [canScopeManagedTeams, commissionTeam, memberPermittedAppIds, appsForSelection])
+    const permittedSet = new Set(permitted)
+    setSelectedApps((prev) => {
+      const pruned = prev.filter((id) => permittedSet.has(id))
+      const next =
+        teamsChanged && pruned.length === 0 && permitted.length > 0 ? permitted : pruned
+      if (next.length === prev.length && next.every((id, i) => id === prev[i])) {
+        return prev
+      }
+      syncAppsActiveFilter(next, appsForSelection)
+      return next
+    })
+  }, [canScopeManagedTeams, selectedCommissionTeamIds, teamScopeApps, appsForSelection])
 
   useEffect(() => {
-    if (!commissionTeam) return
-    const label = commissionTeams.find((team) => team.teamId === commissionTeam)?.label
-    if (!label) return
-    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
-  }, [commissionTeam, commissionTeams])
+    if (selectedCommissionTeamIds.length === 0) {
+      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_TEAM))
+      return
+    }
+    syncTeamsActiveFilter(selectedCommissionTeamIds, commissionTeams)
+  }, [selectedCommissionTeamIds, commissionTeams, syncTeamsActiveFilter])
 
   useEffect(() => {
     if (!commissionMember) return
@@ -946,7 +1070,11 @@ export function CustomReportBuilderContent() {
       metrics: [...selectedMetrics],
       revenueSource: "All",
       metricFilters: [...metricFilters],
-      commissionTeamId: canScopeManagedTeams ? commissionTeam || null : null,
+      commissionTeamIds: canScopeManagedTeams
+        ? selectedCommissionTeamIds.length > 0
+          ? [...selectedCommissionTeamIds]
+          : null
+        : null,
     }),
     [
       startDate,
@@ -956,7 +1084,7 @@ export function CustomReportBuilderContent() {
       selectedMetrics,
       metricFilters,
       canScopeManagedTeams,
-      commissionTeam,
+      selectedCommissionTeamIds,
     ],
   )
 
@@ -972,7 +1100,7 @@ export function CustomReportBuilderContent() {
         metrics: state.metrics,
         revenueSource: state.revenueSource,
         metricFilters: state.metricFilters,
-        commissionTeamId: state.commissionTeamId ?? null,
+        commissionTeamIds: state.commissionTeamIds ? [...state.commissionTeamIds].sort() : null,
       })
 
     return normalize(currentReportQuery) !== normalize(appliedReportQuery)
@@ -995,7 +1123,7 @@ export function CustomReportBuilderContent() {
     revenueSource: appliedReportQuery?.revenueSource ?? "All",
     metricFilters: appliedReportQuery?.metricFilters ?? [],
     commissionUsernames: null,
-    commissionTeamId: appliedReportQuery?.commissionTeamId ?? null,
+    commissionTeamIds: appliedReportQuery?.commissionTeamIds ?? null,
     sortBy: sortColumn,
     sortDir: sortDirection,
     enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
@@ -1111,7 +1239,11 @@ export function CustomReportBuilderContent() {
       revenueSource: "All",
       metricFilters,
       commissionUser: canScopeManagedTeams ? commissionMember || null : null,
-      commissionTeamId: canScopeManagedTeams ? commissionTeam || null : null,
+      commissionTeamIds: canScopeManagedTeams
+        ? selectedCommissionTeamIds.length > 0
+          ? selectedCommissionTeamIds
+          : null
+        : null,
       sortBy: sortColumn,
       sortDir: sortDirection,
       activePresetDays: dateFilterMode === "preset" && activePresetDays > 0 ? activePresetDays : null,
@@ -1337,18 +1469,8 @@ export function CustomReportBuilderContent() {
     applySelectedMonth(new Date(yearPart, monthPart - 1, 1))
   }
 
-  const handleCommissionTeamChange = (value: string) => {
-    setCommissionTeam(value)
-    setCommissionMembers([])
-    setCommissionMember("")
-    setMemberPermittedAppIds(null)
-    const label = commissionTeams.find((team) => team.teamId === value)?.label ?? value
-    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, label))
-  }
-
   const handleCommissionMemberChange = (value: string) => {
     setCommissionMember(value)
-    setMemberPermittedAppIds(null)
     const label = commissionMembers.find((member) => member.userId === value)?.label ?? value
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_MEMBER, label))
   }
@@ -1408,9 +1530,11 @@ export function CustomReportBuilderContent() {
         break
       case FILTER_APPS:
         if (canScopeManagedTeams) {
-          const ids = appsForSelection.map((app) => app.appId)
-          setSelectedApps(ids)
-          syncAppsActiveFilter(ids, appsForSelection)
+          if (selectedCommissionTeamIds.length > 0 && appsForSelection.length > 0) {
+            const ids = appsForSelection.map((app) => app.appId)
+            setSelectedApps(ids)
+            syncAppsActiveFilter(ids, appsForSelection)
+          }
         } else {
           setSelectedApps(availableApps.map((app) => app.appId))
           syncAppsActiveFilter(availableApps.map((app) => app.appId), availableApps)
@@ -1432,10 +1556,20 @@ export function CustomReportBuilderContent() {
     }
     setMetricFilters([])
     const nextFilters = [{ type: FILTER_DATE_RANGE, value: "Last 30 days" }]
-    const teamLabel = commissionTeams.find((team) => team.teamId === commissionTeam)?.label
+    const teamLabels = commissionTeams
+      .filter((team) => selectedCommissionTeamIds.includes(team.teamId))
+      .map((team) => team.label)
+    const teamFilterValue =
+      selectedCommissionTeamIds.length === 0
+        ? ""
+        : selectedCommissionTeamIds.length === commissionTeams.length
+          ? "All teams"
+          : selectedCommissionTeamIds.length === 1
+            ? teamLabels[0] ?? "1 team"
+            : `${selectedCommissionTeamIds.length} teams`
     const memberLabel = commissionMembers.find((member) => member.userId === commissionMember)?.label
-    const withTeamFilter = teamLabel
-      ? upsertActiveFilter(nextFilters, FILTER_COMMISSION_TEAM, teamLabel)
+    const withTeamFilter = teamFilterValue
+      ? upsertActiveFilter(nextFilters, FILTER_COMMISSION_TEAM, teamFilterValue)
       : nextFilters
     setActiveFilters(
       memberLabel
@@ -1444,13 +1578,32 @@ export function CustomReportBuilderContent() {
     )
   }
 
+  const selectedCommissionTeamLabels = commissionTeams
+    .filter((team) => selectedCommissionTeamIds.includes(team.teamId))
+    .map((team) => team.label)
+
+  const teamsTriggerLabel =
+    selectedCommissionTeamLabels.length === 0
+      ? commissionTeams.length === 0
+        ? "No teams available"
+        : "Select teams"
+      : selectedCommissionTeamLabels.length === 1
+        ? selectedCommissionTeamLabels[0]
+        : selectedCommissionTeamLabels.length === commissionTeams.length
+          ? "All teams"
+          : `${selectedCommissionTeamLabels.length} teams`
+
   const appsTriggerLabel =
     selectedAppLabels.length === 0
-      ? appsLoading || memberPermissionsLoading
-        ? "Loading apps..."
-        : canScopeManagedTeams && memberPermittedAppIds?.length === 0
-          ? "No permitted apps"
-          : "Select apps"
+      ? appSelectorDisabled
+        ? selectedCommissionTeamIds.length === 0
+          ? "Select teams first"
+          : "Loading apps..."
+        : appsLoading
+          ? "Loading apps..."
+          : canScopeManagedTeams && teamScopeApps !== null && teamScopeApps.length === 0
+            ? "No apps for selected teams"
+            : "Select apps"
       : selectedAppLabels.length === 1
         ? selectedAppLabels[0]
         : selectedAppLabels.length === appsForSelection.length
@@ -2064,29 +2217,133 @@ export function CustomReportBuilderContent() {
 
             {canScopeManagedTeams && (
               <>
-                <Select value={commissionTeam} onValueChange={handleCommissionTeamChange}>
-                  <SelectTrigger className="w-52 h-10 bg-white" disabled={commissionTeams.length === 0}>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {commissionTeams.map((team) => (
-                      <SelectItem key={team.teamId} value={team.teamId}>
-                        {team.label}
-                      </SelectItem>
-                    ))}
-                    {commissionTeams.length === 0 ? (
-                      <div className="px-2 py-2 text-sm text-slate-500">
-                        No teams under you or as team lead
-                      </div>
-                    ) : null}
-                  </SelectContent>
-                </Select>
+                <Popover open={teamPopoverOpen} onOpenChange={setTeamPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal"
+                      type="button"
+                      disabled={commissionTeams.length === 0}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className="truncate">{teamsTriggerLabel}</span>
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[320px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search teams..." />
+                      <CommandList>
+                        <CommandEmpty>No teams found.</CommandEmpty>
+                        <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              const ids = commissionTeams.map((team) => team.teamId)
+                              setSelectedCommissionTeamIds(ids)
+                              syncTeamsActiveFilter(ids, commissionTeams)
+                            }}
+                          >
+                            Select all
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setSelectedCommissionTeamIds([])
+                              syncTeamsActiveFilter([], commissionTeams)
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        {commissionTeams.length === 0 ? (
+                          <div className="px-3 py-4 text-sm text-slate-500">
+                            No teams under you or as team lead
+                          </div>
+                        ) : null}
+                        {commissionTeamsBySection.map(({ section, teams }) => {
+                          const sectionTeamIds = teams.map((team) => team.teamId)
+                          const sectionSelection = getTeamIdsSelectionState(
+                            sectionTeamIds,
+                            selectedCommissionTeamIds,
+                          )
+                          return (
+                            <CommandGroup key={section.label}>
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground cursor-pointer rounded-sm hover:bg-slate-50"
+                                onClick={() =>
+                                  toggleCommissionTeamSection(
+                                    sectionTeamIds,
+                                    sectionSelection !== true,
+                                  )
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault()
+                                    toggleCommissionTeamSection(
+                                      sectionTeamIds,
+                                      sectionSelection !== true,
+                                    )
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={
+                                    sectionSelection === "indeterminate"
+                                      ? "indeterminate"
+                                      : sectionSelection
+                                  }
+                                  onCheckedChange={(value) =>
+                                    toggleCommissionTeamSection(sectionTeamIds, value === true)
+                                  }
+                                  onClick={(event) => event.stopPropagation()}
+                                  aria-label={`Select all teams in ${section.label}`}
+                                />
+                                <span className="text-slate-700">{section.label}</span>
+                              </div>
+                              {teams.map((team) => (
+                                <CommandItem
+                                  key={team.teamId}
+                                  value={`${section.label} ${team.label}`}
+                                  onSelect={() => toggleCommissionTeamWithFilter(team.teamId)}
+                                  className="cursor-pointer pl-8"
+                                >
+                                  <Checkbox
+                                    checked={selectedCommissionTeamIds.includes(team.teamId)}
+                                    className="mr-2"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium truncate">{team.label}</div>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )
+                        })}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
 
                 <div className="hidden">
                   <Select value={commissionMember} onValueChange={handleCommissionMemberChange}>
                     <SelectTrigger
                       className="w-64 h-10 bg-white"
-                      disabled={!commissionTeam || commissionMembers.length === 0 || memberOptionsLoading}
+                      disabled={
+                        selectedCommissionTeamIds.length !== 1 ||
+                        commissionMembers.length === 0 ||
+                        memberOptionsLoading
+                      }
                     >
                       <SelectValue placeholder={memberOptionsLoading ? "Loading team members..." : "Select team member"} />
                     </SelectTrigger>
@@ -2107,13 +2364,19 @@ export function CustomReportBuilderContent() {
               </>
             )}
 
-            <Popover open={appPopoverOpen} onOpenChange={setAppPopoverOpen}>
+            <Popover
+              open={appPopoverOpen}
+              onOpenChange={(open) => {
+                if (appSelectorDisabled) return
+                setAppPopoverOpen(open)
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className="h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal"
                   type="button"
-                  disabled={appsLoading || memberPermissionsLoading}
+                  disabled={appSelectorDisabled || (!canScopeManagedTeams && appsLoading)}
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
@@ -2155,9 +2418,11 @@ export function CustomReportBuilderContent() {
                           Clear
                         </Button>
                       </div>
-                      {commissionTeam && commissionMember && memberPermittedAppIds !== null && appsForSelection.length === 0 ? (
+                      {selectedCommissionTeamIds.length > 0 &&
+                      teamScopeApps !== null &&
+                      appsForSelection.length === 0 ? (
                         <div className="px-3 py-4 text-sm text-slate-500">
-                          No permitted apps for the selected team member.
+                          No apps linked to the selected teams.
                         </div>
                       ) : null}
                       {appsForSelection.map((app) => (

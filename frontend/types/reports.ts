@@ -8,6 +8,7 @@ export interface CustomReportQueryRequest {
   metricFilters?: CustomReportMetricFilter[]
   commissionUsernames?: string[] | null
   commissionTeamId?: string | null
+  commissionTeamIds?: string[] | null
   sortBy?: string | null
   sortDir?: string
 }
@@ -79,6 +80,7 @@ export interface CustomReportFilters {
   commissionUsernames?: string[] | null
   /** Team filter for commission managers — limits apps to profit-plan apps visible for the selected team scope. */
   commissionTeamId?: string | null
+  commissionTeamIds?: string[] | null
   sortBy?: string | null
   sortDir: string
   activePresetDays?: number | null

@@ -15,11 +15,41 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
+import { TEAM_GROUP_VALUES } from "@/lib/organizations/team-group"
 import { cn } from "@/lib/utils"
 
 const NO_TEAM_LEAD_VALUE = "__none__"
+const UNCATEGORIZED_TEAM_GROUP_VALUE = "__uncategorized__"
+
+interface TeamGroupSelectProps {
+    value: string | null
+    onChange: (value: string | null) => void
+    id?: string
+}
+
+export function TeamGroupSelect({ value, onChange, id }: TeamGroupSelectProps) {
+    return (
+        <Select
+            value={value ?? UNCATEGORIZED_TEAM_GROUP_VALUE}
+            onValueChange={(next) => onChange(next === UNCATEGORIZED_TEAM_GROUP_VALUE ? null : next)}
+        >
+            <SelectTrigger id={id} className="w-full bg-white">
+                <SelectValue placeholder="Select group" />
+            </SelectTrigger>
+            <SelectContent>
+                {TEAM_GROUP_VALUES.map((group) => (
+                    <SelectItem key={group} value={group}>
+                        {group}
+                    </SelectItem>
+                ))}
+                <SelectItem value={UNCATEGORIZED_TEAM_GROUP_VALUE}>Uncategorized</SelectItem>
+            </SelectContent>
+        </Select>
+    )
+}
 
 interface TeamLeadComboboxProps {
     users: OrgUserItem[]
@@ -115,6 +145,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = []
     const [name, setName] = useState("")
     const [description, setDescription] = useState("")
     const [teamLeadUserId, setTeamLeadUserId] = useState<string | null>(null)
+    const [teamGroup, setTeamGroup] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState("")
 
@@ -123,6 +154,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = []
             setName("")
             setDescription("")
             setTeamLeadUserId(null)
+            setTeamGroup(null)
             setError("")
             setSaving(false)
         }
@@ -142,6 +174,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = []
                 name: name.trim(),
                 description: description.trim() || undefined,
                 userId: teamLeadUserId,
+                teamGroup,
             })
             handleOpenChange(false)
             onSuccess?.()
@@ -193,6 +226,13 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = []
                             maxLength={500}
                         />
                         <p className="text-xs text-slate-400 text-right">{description.length}/500</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="team-group">
+                            Group <span className="text-slate-400">(optional)</span>
+                        </Label>
+                        <TeamGroupSelect id="team-group" value={teamGroup} onChange={setTeamGroup} />
                     </div>
 
                     <div className="space-y-2">
