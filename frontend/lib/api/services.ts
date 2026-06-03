@@ -2802,8 +2802,18 @@ export const reportsApi = {
     getProfitOverview: async (params?: {
         from?: string
         to?: string
+        /** Omit or empty = all active org teams. */
+        teamIds?: string[]
     }): Promise<import('@/types/reports').ProfitOverviewReportResponse> => {
-        return apiClient.get('/api/v1/reports/profit-overview', params as Record<string, string | undefined>)
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        for (const id of params?.teamIds ?? []) {
+            const trimmed = id?.trim()
+            if (trimmed) search.append("teamIds", trimmed)
+        }
+        const qs = search.toString()
+        return apiClient.get(`/api/v1/reports/profit-overview${qs ? `?${qs}` : ""}`)
     },
 
     getTeamApps: async (teamId: string): Promise<import('@/types/reports').TeamLeadAppCache> => {

@@ -196,6 +196,11 @@ function resolveYearInOptions(year: string, yearOptions: readonly string[]): str
   return yearOptions[0] ?? String(new Date().getFullYear())
 }
 
+/** So team ids from org API and profit-overview API match in Set/has checks. */
+function normalizeTeamId(teamId: string): string {
+  return teamId.trim().toLowerCase()
+}
+
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—"
   const safe = Number(value)
@@ -810,14 +815,16 @@ export function OverviewReportContent() {
   }, [selectedYear, selectYearValue, yearOptions])
 
   const loadData = useCallback(
-    async (range?: { from: string; to: string }) => {
+    async (range?: { from: string; to: string }, teamIdsOverride?: string[]) => {
       setLoading(true)
       try {
         const from = range?.from ?? appliedFrom
         const to = range?.to ?? appliedTo
+        const teamIds = teamIdsOverride ?? selectedTeamIds
         const response = await reportsApi.getProfitOverview({
           from,
           to,
+          ...(teamIds.length > 0 ? { teamIds } : {}),
         })
         setData(normalizeOverviewResponse(response))
       } catch (err: unknown) {
@@ -828,7 +835,7 @@ export function OverviewReportContent() {
         setLoading(false)
       }
     },
-    [appliedFrom, appliedTo],
+    [appliedFrom, appliedTo, selectedTeamIds],
   )
 
   useEffect(() => {
@@ -899,7 +906,7 @@ export function OverviewReportContent() {
     setAppliedFrom(fromMonth)
     setAppliedTo(toMonth)
     setSelectedYear(fromMonth.slice(0, 4))
-    await loadData({ from: fromMonth, to: toMonth })
+    await loadData({ from: fromMonth, to: toMonth }, selectedTeamIds)
 
     setTimeout(() => {
       if (scrollContainerRef.current) {
@@ -945,15 +952,32 @@ export function OverviewReportContent() {
 
   useEffect(() => {
     if (filterTeams.length === 0) return
-    const validIds = new Set(filterTeams.map((team) => team.teamId))
-    setSelectedTeamIds((prev) => prev.filter((id) => validIds.has(id)))
+    const validIds = new Set(filterTeams.map((team) => normalizeTeamId(team.teamId)))
+    setSelectedTeamIds((prev) => prev.filter((id) => validIds.has(normalizeTeamId(id))))
   }, [filterTeams])
 
   const teams = useMemo(() => {
     if (selectedTeamIds.length === 0) return allTeams
-    const selected = new Set(selectedTeamIds)
-    return allTeams.filter((team) => selected.has(team.teamId))
-  }, [allTeams, selectedTeamIds])
+
+    const selected = new Set(selectedTeamIds.map(normalizeTeamId))
+    const dataById = new Map(allTeams.map((team) => [normalizeTeamId(team.teamId), team]))
+
+    const orderedCandidates =
+      filterTeams.length > 0
+        ? filterTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
+        : allTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
+
+    return orderedCandidates.map((candidate) => {
+      const row = dataById.get(normalizeTeamId(candidate.teamId))
+      if (row) return row
+      return {
+        teamId: candidate.teamId,
+        teamName: candidate.label,
+        months: {},
+        apps: [],
+      } satisfies ProfitOverviewTeamRow
+    })
+  }, [allTeams, selectedTeamIds, filterTeams])
 
   const teamGroupByTeamId = useMemo(
     () => new Map(filterTeams.map((team) => [team.teamId, team.teamGroup ?? null])),
@@ -988,14 +1012,15 @@ export function OverviewReportContent() {
     return () => window.clearInterval(intervalId)
   }, [sharedAppConflicts.length, sharedAppWarningDismissed])
 
+  // Chỉ đồng bộ expanded rows theo dữ liệu đã load — không cắt selectedTeamIds theo allTeams
+  // (allTeams có thể là tập con của filterTeams; cắt selection sau Apply gây reset về 1 team).
   useEffect(() => {
     if (allTeams.length === 0) return
-    const validIds = new Set(allTeams.map((team) => team.teamId))
-    setSelectedTeamIds((prev) => prev.filter((id) => validIds.has(id)))
+    const validIds = new Set(allTeams.map((team) => normalizeTeamId(team.teamId)))
     setExpandedTeamIds((prev) => {
       const next = new Set<string>()
       for (const id of prev) {
-        if (validIds.has(id)) next.add(id)
+        if (validIds.has(normalizeTeamId(id))) next.add(id)
       }
       return next
     })
