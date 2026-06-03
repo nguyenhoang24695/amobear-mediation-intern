@@ -71,7 +71,6 @@ import {
   ArrowUpDown,
   HelpCircle,
   Smartphone,
-  Users,
   Download,
   X,
   AlertCircle,
@@ -103,12 +102,13 @@ import {
   collectTeamLeadTeamsFromChart,
   collectTeamLeadTeamsFromOrgTeams,
   collectTeamsUnderPersonnelNode,
-  getTeamIdsSelectionState,
-  groupCommissionTeamsBySection,
   mergeCommissionTeamOptions,
   type CommissionTeamOption,
 } from "@/lib/reports/commission-team-utils"
 import { mergeTeamLeadCachesToApps } from "@/lib/reports/team-scope-apps"
+import { buildTeamGroupSectionsFromOrg } from "@/lib/organizations/team-group"
+import type { OrgTeamGroup } from "@/lib/api/services"
+import { GroupedTeamMultiSelect } from "@/components/reports/grouped-team-multi-select"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
@@ -573,8 +573,8 @@ export function CustomReportBuilderContent() {
 
   const [selectedParameters, setSelectedParameters] = useState<string[]>(["app"])
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
-    "ua_cost",
     "total_revenue_usd",
+    "ua_cost",
     "profit",
   ])
 
@@ -592,9 +592,9 @@ export function CustomReportBuilderContent() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
 
   const [selectedCommissionTeamIds, setSelectedCommissionTeamIds] = useState<string[]>([])
-  const [teamPopoverOpen, setTeamPopoverOpen] = useState(false)
   const [teamsInitialized, setTeamsInitialized] = useState(false)
   const [commissionTeams, setCommissionTeams] = useState<CommissionTeamOption[]>([])
+  const [orgTeamGroups, setOrgTeamGroups] = useState<OrgTeamGroup[]>([])
   const [commissionMembers, setCommissionMembers] = useState<CommissionMemberOption[]>([])
   const [commissionMember, setCommissionMember] = useState("")
   const [teamScopeApps, setTeamScopeApps] = useState<App[] | null>(null)
@@ -620,29 +620,15 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, value))
   }, [])
 
-  const toggleCommissionTeamWithFilter = useCallback(
-    (teamId: string) => {
-      setSelectedCommissionTeamIds((prev) => {
-        const next = prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
-        syncTeamsActiveFilter(next, commissionTeams)
-        return next
-      })
-    },
-    [commissionTeams, syncTeamsActiveFilter],
+  const commissionTeamGroupSections = useMemo(
+    () => buildTeamGroupSectionsFromOrg(orgTeamGroups, commissionTeams),
+    [orgTeamGroups, commissionTeams],
   )
 
-  const toggleCommissionTeamSection = useCallback(
-    (teamIds: string[], checked: boolean) => {
-      setSelectedCommissionTeamIds((prev) => {
-        const nextSet = new Set(prev)
-        for (const id of teamIds) {
-          if (checked) nextSet.add(id)
-          else nextSet.delete(id)
-        }
-        const next = [...nextSet]
-        syncTeamsActiveFilter(next, commissionTeams)
-        return next
-      })
+  const handleCommissionTeamIdsChange = useCallback(
+    (teamIds: string[]) => {
+      setSelectedCommissionTeamIds(teamIds)
+      syncTeamsActiveFilter(teamIds, commissionTeams)
     },
     [commissionTeams, syncTeamsActiveFilter],
   )
@@ -683,11 +669,6 @@ export function CustomReportBuilderContent() {
     if (selectedCommissionTeamIds.length === 0 || teamScopeApps === null) return []
     return teamScopeApps
   }, [availableApps, canScopeManagedTeams, selectedCommissionTeamIds, teamScopeApps])
-
-  const commissionTeamsBySection = useMemo(
-    () => groupCommissionTeamsBySection(commissionTeams),
-    [commissionTeams],
-  )
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -857,10 +838,13 @@ export function CustomReportBuilderContent() {
     let cancelled = false
     void (async () => {
       try {
-        const [chart, orgTeams] = await Promise.all([
+        const [chart, orgTeams, teamGroups] = await Promise.all([
           organizationsApi.getPersonnelChart(orgId),
           organizationsApi.getTeams(orgId).catch(() => []),
+          organizationsApi.getTeamGroups(orgId).catch(() => []),
         ])
+        if (cancelled) return
+        setOrgTeamGroups(teamGroups)
 
         if (!chart?.root) {
           if (cancelled) return
@@ -869,7 +853,6 @@ export function CustomReportBuilderContent() {
         }
 
         const rawRoot = chart.root
-        if (cancelled) return
 
         const currentNode = findCurrentPersonnelNode(rawRoot, currentUser?.id, currentUser?.email)
         const underManager = currentNode ? collectTeamsUnderPersonnelNode(currentNode) : []
@@ -2217,123 +2200,16 @@ export function CustomReportBuilderContent() {
 
             {canScopeManagedTeams && (
               <>
-                <Popover open={teamPopoverOpen} onOpenChange={setTeamPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal"
-                      type="button"
-                      disabled={commissionTeams.length === 0}
-                    >
-                      <span className="flex items-center gap-2 truncate">
-                        <Users className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span className="truncate">{teamsTriggerLabel}</span>
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[320px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search teams..." />
-                      <CommandList>
-                        <CommandEmpty>No teams found.</CommandEmpty>
-                        <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              const ids = commissionTeams.map((team) => team.teamId)
-                              setSelectedCommissionTeamIds(ids)
-                              syncTeamsActiveFilter(ids, commissionTeams)
-                            }}
-                          >
-                            Select all
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              setSelectedCommissionTeamIds([])
-                              syncTeamsActiveFilter([], commissionTeams)
-                            }}
-                          >
-                            Clear
-                          </Button>
-                        </div>
-                        {commissionTeams.length === 0 ? (
-                          <div className="px-3 py-4 text-sm text-slate-500">
-                            No teams under you or as team lead
-                          </div>
-                        ) : null}
-                        {commissionTeamsBySection.map(({ section, teams }) => {
-                          const sectionTeamIds = teams.map((team) => team.teamId)
-                          const sectionSelection = getTeamIdsSelectionState(
-                            sectionTeamIds,
-                            selectedCommissionTeamIds,
-                          )
-                          return (
-                            <CommandGroup key={section.label}>
-                              <div
-                                role="button"
-                                tabIndex={0}
-                                className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground cursor-pointer rounded-sm hover:bg-slate-50"
-                                onClick={() =>
-                                  toggleCommissionTeamSection(
-                                    sectionTeamIds,
-                                    sectionSelection !== true,
-                                  )
-                                }
-                                onKeyDown={(event) => {
-                                  if (event.key === "Enter" || event.key === " ") {
-                                    event.preventDefault()
-                                    toggleCommissionTeamSection(
-                                      sectionTeamIds,
-                                      sectionSelection !== true,
-                                    )
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    sectionSelection === "indeterminate"
-                                      ? "indeterminate"
-                                      : sectionSelection
-                                  }
-                                  onCheckedChange={(value) =>
-                                    toggleCommissionTeamSection(sectionTeamIds, value === true)
-                                  }
-                                  onClick={(event) => event.stopPropagation()}
-                                  aria-label={`Select all teams in ${section.label}`}
-                                />
-                                <span className="text-slate-700">{section.label}</span>
-                              </div>
-                              {teams.map((team) => (
-                                <CommandItem
-                                  key={team.teamId}
-                                  value={`${section.label} ${team.label}`}
-                                  onSelect={() => toggleCommissionTeamWithFilter(team.teamId)}
-                                  className="cursor-pointer pl-8"
-                                >
-                                  <Checkbox
-                                    checked={selectedCommissionTeamIds.includes(team.teamId)}
-                                    className="mr-2"
-                                  />
-                                  <div className="min-w-0">
-                                    <div className="text-sm font-medium truncate">{team.label}</div>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )
-                        })}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <GroupedTeamMultiSelect
+                  teams={commissionTeams}
+                  teamGroupSections={commissionTeamGroupSections}
+                  selectedTeamIds={selectedCommissionTeamIds}
+                  onSelectedTeamIdsChange={handleCommissionTeamIdsChange}
+                  disabled={commissionTeams.length === 0}
+                  triggerLabel={teamsTriggerLabel}
+                  showUsersIcon
+                  emptyTeamsMessage="No teams under you or as team lead"
+                />
 
                 <div className="hidden">
                   <Select value={commissionMember} onValueChange={handleCommissionMemberChange}>

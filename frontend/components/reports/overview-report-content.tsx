@@ -43,7 +43,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { StringMultiSelectCombobox } from "@/components/shared/string-multi-select-combobox"
+import { GroupedTeamMultiSelect } from "@/components/reports/grouped-team-multi-select"
+import type { CommissionTeamOption } from "@/lib/reports/commission-team-utils"
+import { getTeamGroupSectionLabel } from "@/lib/organizations/team-group"
 import {
   Tooltip,
   TooltipContent,
@@ -51,7 +53,7 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { getCurrentUser } from "@/lib/auth"
-import { organizationsApi, reportsApi } from "@/lib/api/services"
+import { organizationsApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
 import type {
   OverviewMetricId,
   OverviewParameterId,
@@ -230,14 +232,28 @@ interface SharedAppAcrossTeamsConflict {
   appStoreId: string
   appLabel: string
   teamNames: string[]
+  groupLabels: string[]
 }
 
-/** Apps (app_store_id) xuất hiện ở ≥2 team có team lead trong danh sách đang hiển thị. */
-function findSharedAppsAcrossTeams(teams: ProfitOverviewTeamRow[]): SharedAppAcrossTeamsConflict[] {
-  const byStoreId = new Map<string, { appLabel: string; teamNames: Set<string> }>()
+/**
+ * Cảnh báo khi cùng app (app_store_id) xuất hiện ở ≥2 team có team lead thuộc các team group khác nhau.
+ * Trùng trên nhiều team cùng group thì không cảnh báo.
+ */
+function findSharedAppsAcrossTeamGroups(
+  teams: ProfitOverviewTeamRow[],
+  teamGroupByTeamId: Map<string, string | null>,
+): SharedAppAcrossTeamsConflict[] {
+  const byStoreId = new Map<
+    string,
+    {
+      appLabel: string
+      teams: Map<string, { teamName: string; groupKey: string | null }>
+    }
+  >()
 
   for (const team of teams) {
     if (!team.leadUserId) continue
+    const groupKey = teamGroupByTeamId.get(team.teamId) ?? null
 
     for (const app of team.apps ?? []) {
       const storeId = app.appStoreId?.trim() || app.appId?.trim()
@@ -245,21 +261,33 @@ function findSharedAppsAcrossTeams(teams: ProfitOverviewTeamRow[]): SharedAppAcr
 
       let entry = byStoreId.get(storeId)
       if (!entry) {
-        entry = { appLabel: app.appLabel?.trim() || storeId, teamNames: new Set() }
+        entry = { appLabel: app.appLabel?.trim() || storeId, teams: new Map() }
         byStoreId.set(storeId, entry)
       }
       if (app.appLabel?.trim()) entry.appLabel = app.appLabel.trim()
-      entry.teamNames.add(team.teamName?.trim() || team.teamId)
+      entry.teams.set(team.teamId, {
+        teamName: team.teamName?.trim() || team.teamId,
+        groupKey,
+      })
     }
   }
 
   const conflicts: SharedAppAcrossTeamsConflict[] = []
-  for (const [appStoreId, { appLabel, teamNames }] of byStoreId) {
-    if (teamNames.size < 2) continue
+  for (const [appStoreId, { appLabel, teams: teamsById }] of byStoreId) {
+    const groupKeys = new Set([...teamsById.values()].map((item) => item.groupKey))
+    if (groupKeys.size < 2) continue
+
+    const groupLabels = [...groupKeys]
+      .map((key) => getTeamGroupSectionLabel(key))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+
     conflicts.push({
       appStoreId,
       appLabel,
-      teamNames: [...teamNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+      teamNames: [...teamsById.values()]
+        .map((item) => item.teamName)
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+      groupLabels,
     })
   }
 
@@ -676,7 +704,8 @@ export function OverviewReportContent() {
   const [data, setData] = useState<ProfitOverviewReportResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingFilterTeams, setLoadingFilterTeams] = useState(false)
-  const [filterTeamOptions, setFilterTeamOptions] = useState<{ value: string; label: string }[]>([])
+  const [filterTeams, setFilterTeams] = useState<CommissionTeamOption[]>([])
+  const [filterTeamGroups, setFilterTeamGroups] = useState<OrgTeamGroup[]>([])
   const [savingFilter, setSavingFilter] = useState(false)
   const [filterExpanded, setFilterExpanded] = useState(true)
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
@@ -832,16 +861,26 @@ export function OverviewReportContent() {
     setLoadingFilterTeams(true)
     void (async () => {
       try {
-        const teams = await organizationsApi.getTeams(orgId)
+        const [teams, groups] = await Promise.all([
+          organizationsApi.getTeams(orgId),
+          organizationsApi.getTeamGroups(orgId).catch(() => [] as OrgTeamGroup[]),
+        ])
         if (cancelled) return
-        setFilterTeamOptions(
+        setFilterTeamGroups(groups)
+        setFilterTeams(
           teams
             .filter((team) => team.isActive)
-            .map((team) => ({ value: team.id, label: team.name }))
-            .sort((a, b) => a.label.localeCompare(b.label)),
+            .map(
+              (team): CommissionTeamOption => ({
+                teamId: team.id,
+                label: team.name,
+                teamGroup: team.teamGroup ?? null,
+              }),
+            )
+            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" })),
         )
       } catch {
-        if (!cancelled) setFilterTeamOptions([])
+        if (!cancelled) setFilterTeams([])
       } finally {
         if (!cancelled) setLoadingFilterTeams(false)
       }
@@ -904,13 +943,11 @@ export function OverviewReportContent() {
   const months = data?.months ?? []
   const allTeams = data?.teams ?? []
 
-  const teamOptions = filterTeamOptions
-
   useEffect(() => {
-    if (filterTeamOptions.length === 0) return
-    const validIds = new Set(filterTeamOptions.map((team) => team.value))
+    if (filterTeams.length === 0) return
+    const validIds = new Set(filterTeams.map((team) => team.teamId))
     setSelectedTeamIds((prev) => prev.filter((id) => validIds.has(id)))
-  }, [filterTeamOptions])
+  }, [filterTeams])
 
   const teams = useMemo(() => {
     if (selectedTeamIds.length === 0) return allTeams
@@ -918,7 +955,15 @@ export function OverviewReportContent() {
     return allTeams.filter((team) => selected.has(team.teamId))
   }, [allTeams, selectedTeamIds])
 
-  const sharedAppConflicts = useMemo(() => findSharedAppsAcrossTeams(teams), [teams])
+  const teamGroupByTeamId = useMemo(
+    () => new Map(filterTeams.map((team) => [team.teamId, team.teamGroup ?? null])),
+    [filterTeams],
+  )
+
+  const sharedAppConflicts = useMemo(
+    () => findSharedAppsAcrossTeamGroups(teams, teamGroupByTeamId),
+    [teams, teamGroupByTeamId],
+  )
   const [sharedAppWarningDismissed, setSharedAppWarningDismissed] = useState(false)
   const [sharedAppWarningCountdown, setSharedAppWarningCountdown] = useState(10)
 
@@ -1073,16 +1118,19 @@ export function OverviewReportContent() {
               <Label htmlFor="overview-teams" className="text-xs">
                 Teams
               </Label>
-              <StringMultiSelectCombobox
+              <GroupedTeamMultiSelect
                 id="overview-teams"
-                options={teamOptions}
-                values={selectedTeamIds}
-                onChange={setSelectedTeamIds}
+                teams={filterTeams}
+                teamGroups={filterTeamGroups}
+                selectedTeamIds={selectedTeamIds}
+                onSelectedTeamIdsChange={setSelectedTeamIds}
                 disabled={loadingFilterTeams}
                 placeholder="All teams"
                 searchPlaceholder="Search teams..."
-                emptyMessage="No teams found."
-                triggerClassName="h-9 min-h-9 w-[200px]"
+                emptySearchMessage="No teams found."
+                emptyTeamsMessage="No teams found."
+                triggerClassName="h-9 min-h-9 w-[200px] max-w-[200px]"
+                popoverClassName="w-[320px] p-0"
               />
             </div>
             <Button
@@ -1178,14 +1226,16 @@ export function OverviewReportContent() {
                     </Button>
                   </div>
                   <p className="pr-36 font-semibold text-red-800">
-                    Warning: the same app appears under multiple teams
+                    Warning: the same app appears under teams in different groups
                   </p>
                   <ul className="mt-1.5 list-disc space-y-1 pl-4">
                     {sharedAppConflicts.map((conflict) => (
                       <li key={conflict.appStoreId}>
                         <span className="font-medium">{conflict.appLabel}</span>{" "}
                         <span className="font-mono text-red-600/90">({conflict.appStoreId})</span>
-                        {" — shared by "}
+                        {" — groups: "}
+                        {conflict.groupLabels.join(", ")}
+                        {" · teams: "}
                         {conflict.teamNames.join(", ")}
                       </li>
                     ))}

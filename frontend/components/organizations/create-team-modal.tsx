@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 import { organizationsApi, type OrgUserItem } from "@/lib/api/services"
-import { TEAM_GROUP_VALUES } from "@/lib/organizations/team-group"
+import type { OrgTeamGroupDefinition } from "@/lib/organizations/team-group"
 import { cn } from "@/lib/utils"
 
 const NO_TEAM_LEAD_VALUE = "__none__"
@@ -30,19 +30,24 @@ interface TeamGroupSelectProps {
     id?: string
 }
 
-export function TeamGroupSelect({ value, onChange, id }: TeamGroupSelectProps) {
+export function TeamGroupSelect({
+    value,
+    onChange,
+    id,
+    groups = [],
+}: TeamGroupSelectProps & { groups?: OrgTeamGroupDefinition[] }) {
     return (
         <Select
             value={value ?? UNCATEGORIZED_TEAM_GROUP_VALUE}
             onValueChange={(next) => onChange(next === UNCATEGORIZED_TEAM_GROUP_VALUE ? null : next)}
         >
             <SelectTrigger id={id} className="w-full bg-white">
-                <SelectValue placeholder="Select group" />
+                <SelectValue placeholder={groups.length === 0 ? "Create a group first" : "Select group"} />
             </SelectTrigger>
             <SelectContent>
-                {TEAM_GROUP_VALUES.map((group) => (
-                    <SelectItem key={group} value={group}>
-                        {group}
+                {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.name}>
+                        {group.name}
                     </SelectItem>
                 ))}
                 <SelectItem value={UNCATEGORIZED_TEAM_GROUP_VALUE}>Uncategorized</SelectItem>
@@ -138,10 +143,19 @@ interface CreateTeamModalProps {
     orgId: string
     orgName: string
     users?: OrgUserItem[]
+    teamGroups?: OrgTeamGroupDefinition[]
     onSuccess?: () => void
 }
 
-export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = [], onSuccess }: CreateTeamModalProps) {
+export function CreateTeamModal({
+    open,
+    onOpenChange,
+    orgId,
+    orgName,
+    users = [],
+    teamGroups = [],
+    onSuccess,
+}: CreateTeamModalProps) {
     const [name, setName] = useState("")
     const [description, setDescription] = useState("")
     const [teamLeadUserId, setTeamLeadUserId] = useState<string | null>(null)
@@ -232,7 +246,7 @@ export function CreateTeamModal({ open, onOpenChange, orgId, orgName, users = []
                         <Label htmlFor="team-group">
                             Group <span className="text-slate-400">(optional)</span>
                         </Label>
-                        <TeamGroupSelect id="team-group" value={teamGroup} onChange={setTeamGroup} />
+                        <TeamGroupSelect id="team-group" value={teamGroup} onChange={setTeamGroup} groups={teamGroups} />
                     </div>
 
                     <div className="space-y-2">

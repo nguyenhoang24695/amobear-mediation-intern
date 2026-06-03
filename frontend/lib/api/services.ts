@@ -1759,6 +1759,14 @@ export const organizationsApi = {
         return apiClient.get<OrgTeam[]>(`/api/v1/organizations/${orgId}/teams`)
     },
 
+    getTeamGroups: async (orgId: string): Promise<OrgTeamGroup[]> => {
+        return apiClient.get<OrgTeamGroup[]>(`/api/v1/organizations/${orgId}/team-groups`)
+    },
+
+    createTeamGroup: async (orgId: string, data: CreateTeamGroupRequest): Promise<OrgTeamGroup> => {
+        return apiClient.post<OrgTeamGroup>(`/api/v1/organizations/${orgId}/team-groups`, data)
+    },
+
     getProfitPlans: async (
         orgId: string,
         params?: { from?: string; to?: string; teamId?: string },
@@ -1874,6 +1882,18 @@ export interface PagedResult<T> {
     page: number
     pageSize: number
     totalPages: number
+}
+
+export interface OrgTeamGroup {
+    id: string
+    name: string
+    sortOrder: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateTeamGroupRequest {
+    name: string
 }
 
 export interface OrgTeam {

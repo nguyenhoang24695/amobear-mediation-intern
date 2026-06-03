@@ -1,7 +1,7 @@
 import type { OrgTeam } from "@/lib/api/services"
 import type { TeamMember } from "@/types/api"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
-import { TEAM_GROUP_SECTIONS } from "@/lib/organizations/team-group"
+import type { TeamGroupSection } from "@/lib/organizations/team-group"
 
 export interface CommissionUserOption {
   email: string
@@ -29,8 +29,11 @@ export interface CommissionTeamOption {
   teamGroup?: string | null
 }
 
-export function groupCommissionTeamsBySection(teams: CommissionTeamOption[]) {
-  return TEAM_GROUP_SECTIONS.map((section) => ({
+export function groupCommissionTeamsBySection(
+  teams: CommissionTeamOption[],
+  sections: TeamGroupSection[],
+) {
+  return sections.map((section) => ({
     section,
     teams: teams
       .filter((team) => (team.teamGroup ?? null) === section.key)

@@ -50,8 +50,9 @@ import {
     ChevronsUpDown,
     Folder,
 } from "lucide-react"
-import { organizationsApi, teamMembersApi, type OrgTeam, type OrgUserItem } from "@/lib/api/services"
-import { TEAM_GROUP_SECTIONS, type TeamGroupValue } from "@/lib/organizations/team-group"
+import { organizationsApi, teamMembersApi, type OrgTeam, type OrgTeamGroup, type OrgUserItem } from "@/lib/api/services"
+import { buildTeamGroupSectionsFromOrg, type TeamGroupSection } from "@/lib/organizations/team-group"
+import { CreateTeamGroupModal } from "../create-team-group-modal"
 import { CreateTeamModal, TeamGroupSelect, TeamLeadCombobox } from "../create-team-modal"
 
 interface OrgTeamsTabProps {
@@ -71,7 +72,7 @@ function getInitials(name?: string | null, email?: string | null): string {
     return source.slice(0, 2).toUpperCase()
 }
 
-function teamMatchesSection(team: OrgTeam, sectionKey: TeamGroupValue | null): boolean {
+function teamMatchesSection(team: OrgTeam, sectionKey: string | null): boolean {
     return (team.teamGroup ?? null) === sectionKey
 }
 
@@ -186,6 +187,7 @@ function TeamRow({ team, canManage, selected, onSelectedChange, onRowClick, onEd
 
 interface TeamsGroupedTableProps {
     filteredTeams: OrgTeam[]
+    teamGroupSections: TeamGroupSection[]
     canManage: boolean
     expandedGroups: Set<string>
     selectedTeamIds: Set<string>
@@ -207,6 +209,7 @@ interface TeamsGroupedTableProps {
 
 function TeamsGroupedTable({
     filteredTeams,
+    teamGroupSections,
     canManage,
     expandedGroups,
     selectedTeamIds,
@@ -239,7 +242,11 @@ function TeamsGroupedTable({
                     <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-2 min-w-0">
                         <span className="text-sm text-slate-600 shrink-0">Set group to</span>
                         <div className="w-full sm:max-w-[220px]">
-                            <TeamGroupSelect value={bulkTeamGroup} onChange={onBulkTeamGroupChange} />
+                            <TeamGroupSelect
+                                value={bulkTeamGroup}
+                                onChange={onBulkTeamGroupChange}
+                                groups={teamGroups}
+                            />
                         </div>
                         <Button
                             className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
@@ -314,7 +321,7 @@ function TeamsGroupedTable({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {TEAM_GROUP_SECTIONS.map((section) => {
+                                {teamGroupSections.map((section) => {
                                     const sectionTeams = filteredTeams.filter((team) =>
                                         teamMatchesSection(team, section.key),
                                     )
@@ -421,6 +428,8 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
+    const [createGroupOpen, setCreateGroupOpen] = useState(false)
+    const [teamGroups, setTeamGroups] = useState<OrgTeamGroup[]>([])
 
     const [editTeam, setEditTeam] = useState<OrgTeam | null>(null)
     const [editName, setEditName] = useState("")
@@ -446,8 +455,10 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         })
     }
 
+    const teamGroupSections = buildTeamGroupSectionsFromOrg(teamGroups, teams)
+
     const expandAllGroups = () => {
-        setExpandedGroups(new Set(TEAM_GROUP_SECTIONS.map((s) => s.label)))
+        setExpandedGroups(new Set(teamGroupSections.map((s) => s.label)))
     }
 
     const collapseAllGroups = () => {
@@ -515,6 +526,16 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }
 
+    const fetchTeamGroups = useCallback(async () => {
+        try {
+            const data = await organizationsApi.getTeamGroups(orgId)
+            setTeamGroups(data)
+        } catch (err) {
+            console.error("Failed to fetch team groups:", err)
+            setTeamGroups([])
+        }
+    }, [orgId])
+
     const fetchTeams = useCallback(async () => {
         try {
             setLoading(true)
@@ -529,9 +550,13 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }, [orgId])
 
+    const refreshTeamsAndGroups = useCallback(async () => {
+        await Promise.all([fetchTeamGroups(), fetchTeams()])
+    }, [fetchTeamGroups, fetchTeams])
+
     useEffect(() => {
-        fetchTeams()
-    }, [fetchTeams])
+        void refreshTeamsAndGroups()
+    }, [refreshTeamsAndGroups])
 
     const filteredTeams = teams.filter((team) => {
         if (!searchQuery) return true
@@ -643,10 +668,20 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                     <p className="text-sm text-slate-500 mt-0.5">Manage teams in this organization</p>
                 </div>
                 {canManage && (
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
-                        <Plus className="w-4 h-4" />
-                        Create Team
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="outline"
+                            className="gap-2 bg-white"
+                            onClick={() => setCreateGroupOpen(true)}
+                        >
+                            <Plus className="w-4 h-4" />
+                            Create Group
+                        </Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
+                            <Plus className="w-4 h-4" />
+                            Create Team
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -715,6 +750,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                     )}
                     <TeamsGroupedTable
                         filteredTeams={filteredTeams}
+                        teamGroupSections={teamGroupSections}
                         canManage={canManage}
                         expandedGroups={expandedGroups}
                         selectedTeamIds={selectedTeamIds}
@@ -736,13 +772,22 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 </>
             )}
 
+            <CreateTeamGroupModal
+                open={createGroupOpen}
+                onOpenChange={setCreateGroupOpen}
+                orgId={orgId}
+                orgName={orgName}
+                onSuccess={fetchTeamGroups}
+            />
+
             <CreateTeamModal
                 open={createOpen}
                 onOpenChange={setCreateOpen}
                 orgId={orgId}
                 orgName={orgName}
                 users={[]}
-                onSuccess={fetchTeams}
+                teamGroups={teamGroups}
+                onSuccess={refreshTeamsAndGroups}
             />
 
             <Dialog open={!!editTeam} onOpenChange={(open) => { if (!open) setEditTeam(null) }}>
@@ -774,7 +819,12 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-team-group">Group <span className="text-slate-400">(optional)</span></Label>
-                            <TeamGroupSelect id="edit-team-group" value={editTeamGroup} onChange={setEditTeamGroup} />
+                            <TeamGroupSelect
+                                id="edit-team-group"
+                                value={editTeamGroup}
+                                onChange={setEditTeamGroup}
+                                groups={teamGroups}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-team-lead">Team Lead <span className="text-slate-400">(optional)</span></Label>
