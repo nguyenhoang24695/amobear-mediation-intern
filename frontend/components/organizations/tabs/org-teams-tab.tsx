@@ -507,18 +507,10 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         if (selectedTeamIds.size === 0 || !canManage) return
         setBulkApplying(true)
         try {
-            const selected = teams.filter((t) => selectedTeamIds.has(t.id))
-            await Promise.all(
-                selected.map((team) =>
-                    organizationsApi.updateTeam(orgId, team.id, {
-                        name: team.name,
-                        description: team.description,
-                        userId: team.userId ?? null,
-                        teamGroup: bulkTeamGroup,
-                        isActive: team.isActive,
-                    }),
-                ),
-            )
+            await organizationsApi.bulkUpdateTeamGroup(orgId, {
+                teamIds: [...selectedTeamIds],
+                teamGroup: bulkTeamGroup,
+            })
             clearSelection()
             await fetchTeams()
         } catch (err) {
