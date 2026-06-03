@@ -1751,6 +1751,7 @@ export const organizationsApi = {
         if (params?.search) queryParams.search = params.search
         if (params?.role) queryParams.role = params.role
         if (params?.status) queryParams.status = params.status
+        if (params?.teamId) queryParams.teamId = params.teamId
         return apiClient.get<PagedResult<OrgUserItem>>(`/api/v1/organizations/${orgId}/users`, queryParams)
     },
 
@@ -1884,6 +1885,7 @@ export interface OrgUsersFilter {
     search?: string
     role?: string
     status?: string
+    teamId?: string
 }
 
 export interface PagedResult<T> {
