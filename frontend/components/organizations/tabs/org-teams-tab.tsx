@@ -187,6 +187,7 @@ function TeamRow({ team, canManage, selected, onSelectedChange, onRowClick, onEd
 
 interface TeamsGroupedTableProps {
     filteredTeams: OrgTeam[]
+    teamGroups: OrgTeamGroup[]
     teamGroupSections: TeamGroupSection[]
     canManage: boolean
     expandedGroups: Set<string>
@@ -209,6 +210,7 @@ interface TeamsGroupedTableProps {
 
 function TeamsGroupedTable({
     filteredTeams,
+    teamGroups,
     teamGroupSections,
     canManage,
     expandedGroups,
@@ -750,6 +752,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                     )}
                     <TeamsGroupedTable
                         filteredTeams={filteredTeams}
+                        teamGroups={teamGroups}
                         teamGroupSections={teamGroupSections}
                         canManage={canManage}
                         expandedGroups={expandedGroups}
