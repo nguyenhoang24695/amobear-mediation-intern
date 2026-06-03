@@ -1799,6 +1799,16 @@ export const organizationsApi = {
         return apiClient.put<OrgTeam>(`/api/v1/organizations/${orgId}/teams/${teamId}`, data)
     },
 
+    bulkUpdateTeamGroup: async (
+        orgId: string,
+        data: { teamIds: string[]; teamGroup: string | null },
+    ): Promise<{ updatedCount: number }> => {
+        return apiClient.patch<{ updatedCount: number }>(
+            `/api/v1/organizations/${orgId}/teams/bulk-team-group`,
+            { teamIds: data.teamIds, teamGroup: data.teamGroup },
+        )
+    },
+
     // Delete a team
     deleteTeam: async (orgId: string, teamId: string): Promise<void> => {
         await apiClient.delete(`/api/v1/organizations/${orgId}/teams/${teamId}`)
