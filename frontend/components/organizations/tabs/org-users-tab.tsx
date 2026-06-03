@@ -149,13 +149,13 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Fetch users
+  // Fetch users — dùng teamMembersApi.filterTeamMembers() vì hỗ trợ filter teamId đúng cách
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const [result, stats] = await Promise.all([
-        organizationsApi.getUsers(orgId, {
+      const [filterResponse, stats] = await Promise.all([
+        teamMembersApi.filterTeamMembers({
           page: currentPage,
           pageSize,
           search: debouncedSearch || undefined,
@@ -165,9 +165,28 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
         }),
         organizationsApi.getStatistics(orgId),
       ])
-      setUsers(result.items)
-      setTotal(result.total)
-      setTotalPages(result.totalPages)
+      // Map TeamMember[] → OrgUserItem[] để tương thích với phần render hiện tại
+      const mappedItems: OrgUserItem[] = (filterResponse.data?.items ?? []).map((m) => {
+        // Lấy joinedAt từ team đang filter (nếu có) để dùng làm createdAt
+        const teamEntry = teamFilter !== "all"
+          ? m.teams?.find((t) => t.id === teamFilter)
+          : undefined
+        return {
+          id: m.id,
+          email: m.email,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          fullName: m.fullName || m.email,
+          avatarUrl: m.avatarUrl,
+          role: m.role,
+          status: (m.status ?? "active") as string,
+          createdAt: teamEntry?.joinedAt ?? m.lastLoginAt ?? new Date().toISOString(),
+          lastLoginAt: m.lastLoginAt,
+        }
+      })
+      setUsers(mappedItems)
+      setTotal(filterResponse.data?.total ?? 0)
+      setTotalPages(filterResponse.data?.totalPages ?? 1)
       setActiveCount(stats.activeUsers)
       setInactiveCount(stats.totalUsers - stats.activeUsers)
     } catch (err) {
