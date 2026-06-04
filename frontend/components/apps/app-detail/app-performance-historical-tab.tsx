@@ -27,7 +27,6 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
-  ChevronLeft,
   BarChart3,
   Download,
   Loader2,
@@ -47,9 +46,21 @@ import {
   ComposedChart,
   ReferenceLine,
 } from "recharts"
-import { format, subDays, startOfDay, isSameDay, parseISO, addDays, isAfter } from "date-fns"
+import {
+  format,
+  subDays,
+  subMonths,
+  startOfDay,
+  startOfMonth,
+  endOfMonth,
+  isSameDay,
+  parseISO,
+  addDays,
+  isAfter,
+} from "date-fns"
 import { useApi } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
+import { Pagination as DataPagination } from "@/components/shared/pagination"
 import { dashboardApi, structureApi } from "@/lib/api/services"
 import type { AppHourlyPerformanceResponseDto, RevenueOverview } from "@/types/api"
 
@@ -196,12 +207,14 @@ interface AppPerformanceTabProps {
   publisherTimezoneOffsetHours?: number | null
 }
 
-type PresetKey = "24h" | "7d" | "30d" | "custom"
+type PresetKey = "24h" | "7d" | "30d" | "last-month" | "this-month" | "custom"
 
 const presets: { key: PresetKey; label: string }[] = [
   { key: "24h", label: "Last 24 hours" },
   { key: "7d", label: "Last 7 days" },
   { key: "30d", label: "Last 30 days" },
+  { key: "last-month", label: "Last Month" },
+  { key: "this-month", label: "This Month" },
   { key: "custom", label: "Custom range" },
 ]
 
@@ -248,7 +261,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
   const [tableFilterDate, setTableFilterDate] = useState<Date | undefined>(undefined)
   const [tableSearchDate, setTableSearchDate] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 10
+  const [pageSize, setPageSize] = useState(10)
   /** Offset (+7) hoặc UTC — gửi API; ngày trong range là lịch tại offset đó */
   const [queryTimeZoneId, setQueryTimeZoneId] = useState(() => {
     const fromAccount = performanceQueryTimeZoneIdFromPublisherOffsetHours(publisherTimezoneOffsetHours)
@@ -300,6 +313,28 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         to,
       }
     }
+    if (preset === "this-month") {
+      const startD = startOfMonth(now)
+      return {
+        start: format(startD, "yyyy-MM-dd"),
+        end: format(endD, "yyyy-MM-dd"),
+        from: startD,
+        to: endD,
+      }
+    }
+
+    if (preset === "last-month") {
+      const lastMonth = subMonths(now, 1)
+      const startD = startOfMonth(lastMonth)
+      const endLastMonth = startOfDay(endOfMonth(lastMonth))
+      return {
+        start: format(startD, "yyyy-MM-dd"),
+        end: format(endLastMonth, "yyyy-MM-dd"),
+        from: startD,
+        to: endLastMonth,
+      }
+    }
+
     let startD: Date
     switch (preset) {
       case "24h":
@@ -539,7 +574,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
     return filtered
   }, [dailyData, tableFilterDate, tableSearchDate, tableSortField, tableSortDir])
 
-  const totalPages = Math.ceil(filteredTableData.length / pageSize)
+  const totalPages = Math.max(1, Math.ceil(filteredTableData.length / pageSize))
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize
     return filteredTableData.slice(start, start + pageSize)
@@ -1204,55 +1239,20 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
               </Table>
             </div>
 
-            {totalPages > 1 ? (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-slate-500">
-                  Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredTableData.length)} of{" "}
-                  {filteredTableData.length} days
-                </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 bg-transparent"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum: number
-                    if (totalPages <= 5) {
-                      pageNum = i + 1
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i
-                    } else {
-                      pageNum = currentPage - 2 + i
-                    }
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="icon"
-                        className={`h-8 w-8 ${currentPage === pageNum ? "bg-blue-600 text-white" : "bg-transparent"}`}
-                        onClick={() => setCurrentPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 bg-transparent"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
+            {filteredTableData.length > 0 ? (
+              <div className="mt-4 rounded-lg border border-slate-200 overflow-hidden">
+                <DataPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredTableData.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size)
+                    setCurrentPage(1)
+                  }}
+                  itemName="days"
+                />
               </div>
             ) : null}
           </CardContent>
