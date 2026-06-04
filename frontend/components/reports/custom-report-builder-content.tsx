@@ -102,6 +102,7 @@ import {
   collectTeamLeadTeamsFromChart,
   collectTeamLeadTeamsFromOrgTeams,
   collectTeamsUnderPersonnelNode,
+  findCurrentPersonnelNode,
   mergeCommissionTeamOptions,
   type CommissionTeamOption,
 } from "@/lib/reports/commission-team-utils"
@@ -479,22 +480,6 @@ function buildUaCostRowSpanMap(
   }
 
   return rowSpanMap
-}
-
-function findCurrentPersonnelNode(root: PersonnelNode, currentUserId?: string, currentUserEmail?: string): PersonnelNode | null {
-  const normalizedEmail = currentUserEmail?.trim().toLowerCase()
-  const isCurrentNode =
-    (currentUserId && root.linkedUserId === currentUserId) ||
-    (normalizedEmail && root.email?.trim().toLowerCase() === normalizedEmail)
-
-  if (isCurrentNode) return root
-
-  for (const child of root.children ?? []) {
-    const found = findCurrentPersonnelNode(child, currentUserId, currentUserEmail)
-    if (found) return found
-  }
-
-  return null
 }
 
 function getMetricFilterLabel(filter: CustomReportMetricFilter, metrics: CustomReportCatalogItem[]) {

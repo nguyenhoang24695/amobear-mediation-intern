@@ -37,7 +37,9 @@ export interface PerformanceSyncCompareListResponse {
 export interface PerformanceSyncCompareQuery {
   startDate?: string
   endDate?: string
+  /** @deprecated Dùng sourceTables */
   sourceTable?: string
+  sourceTables?: string[]
   status?: string
   appSearch?: string
   platform?: string
@@ -53,4 +55,22 @@ export interface PerformanceSyncCompareResyncResponse {
   queued: boolean
   jobId?: string | null
   count: number
+}
+
+export interface PerformanceSyncCompareRecompareRequest {
+  hashKeys: string[]
+}
+
+export interface PerformanceSyncCompareRecompareResultItem {
+  hashKey: string
+  outcome: "deleted" | "updated" | "failed" | string
+  message?: string | null
+}
+
+export interface PerformanceSyncCompareRecompareResponse {
+  processed: number
+  matchedDeleted: number
+  updated: number
+  failed: number
+  results: PerformanceSyncCompareRecompareResultItem[]
 }

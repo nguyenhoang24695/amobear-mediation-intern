@@ -52,8 +52,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { getCurrentUser } from "@/lib/auth"
-import { organizationsApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
+import { authApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
+import { useApi } from "@/hooks/use-api"
+import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams"
 import type {
   OverviewMetricId,
   OverviewParameterId,
@@ -672,8 +674,22 @@ function SortableOverviewParameterItem({
 }
 
 export function OverviewReportContent() {
+  const canManageCommission = hasScreenFunction("s-commission", "manage")
+  const storedCurrentUser = getCurrentUser()
+  const { data: currentUserResponse } = useApi(
+    () => authApi.getCurrentUser(),
+    { cacheKey: `overview_report_current_user_${storedCurrentUser?.id ?? "anonymous"}` },
+  )
+  const currentUser = currentUserResponse?.data ?? storedCurrentUser
+  const orgId = currentUser?.organization?.id
+  const currentUserTeamIds = (currentUser?.teams ?? storedCurrentUser?.teams ?? [])
+    .map((team) => team.id)
+    .filter(Boolean)
+  const currentUserTeamIdsKey = [...currentUserTeamIds].sort().join("|")
+
   const defaultRange = useMemo(() => currentYearRange(), [])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [teamsFilterInitialized, setTeamsFilterInitialized] = useState(false)
   const [fromMonth, setFromMonth] = useState(defaultRange.from)
   const [toMonth, setToMonth] = useState(defaultRange.to)
   const [appliedFrom, setAppliedFrom] = useState(defaultRange.from)
@@ -783,6 +799,19 @@ export function OverviewReportContent() {
 
   const selectYearValue = resolveYearInOptions(selectedYear, yearOptions)
 
+  const canScopeManagedTeams = canManageCommission || filterTeams.length > 0
+
+  const resolveTeamIdsForApi = useCallback(
+    (teamIds: string[]) => {
+      if (teamIds.length > 0) return teamIds
+      if (canScopeManagedTeams && filterTeams.length > 0) {
+        return filterTeams.map((team) => team.teamId)
+      }
+      return teamIds
+    },
+    [canScopeManagedTeams, filterTeams],
+  )
+
   useEffect(() => {
     if (!yearOptions.includes(selectedYear)) {
       setSelectedYear(selectYearValue)
@@ -849,7 +878,7 @@ export function OverviewReportContent() {
       try {
         const from = range?.from ?? appliedFrom
         const to = range?.to ?? appliedTo
-        const teamIds = teamIdsOverride ?? selectedTeamIds
+        const teamIds = resolveTeamIdsForApi(teamIdsOverride ?? selectedTeamIds)
         const response = await reportsApi.getProfitOverview({
           from,
           to,
@@ -900,7 +929,7 @@ export function OverviewReportContent() {
         setLoading(false)
       }
     },
-    [appliedFrom, appliedTo, selectedTeamIds, filterTeams, loadTeamApps],
+    [appliedFrom, appliedTo, selectedTeamIds, filterTeams, loadTeamApps, resolveTeamIdsForApi],
   )
 
   useEffect(() => {
@@ -926,33 +955,30 @@ export function OverviewReportContent() {
   }, [yearOptions])
 
   useEffect(() => {
-    let cancelled = false
-    const orgId = getCurrentUser()?.organization?.id
-    if (!orgId) return
+    if (!orgId) {
+      setFilterTeams([])
+      setFilterTeamGroups([])
+      return
+    }
 
+    let cancelled = false
     setLoadingFilterTeams(true)
     void (async () => {
       try {
-        const [teams, groups] = await Promise.all([
-          organizationsApi.getTeams(orgId),
-          organizationsApi.getTeamGroups(orgId).catch(() => [] as OrgTeamGroup[]),
-        ])
+        const { teams, teamGroups } = await loadScopedCommissionTeams({
+          orgId,
+          currentUserId: currentUser?.id,
+          currentUserEmail: currentUser?.email,
+          currentUserTeamIds,
+        })
         if (cancelled) return
-        setFilterTeamGroups(groups)
-        setFilterTeams(
-          teams
-            .filter((team) => team.isActive)
-            .map(
-              (team): CommissionTeamOption => ({
-                teamId: team.id,
-                label: team.name,
-                teamGroup: team.teamGroup ?? null,
-              }),
-            )
-            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" })),
-        )
+        setFilterTeamGroups(teamGroups)
+        setFilterTeams(teams)
       } catch {
-        if (!cancelled) setFilterTeams([])
+        if (!cancelled) {
+          setFilterTeams([])
+          setFilterTeamGroups([])
+        }
       } finally {
         if (!cancelled) setLoadingFilterTeams(false)
       }
@@ -961,7 +987,18 @@ export function OverviewReportContent() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [orgId, currentUser?.id, currentUser?.email, currentUserTeamIdsKey])
+
+  useEffect(() => {
+    if (!canScopeManagedTeams || teamsFilterInitialized) return
+    if (filterTeams.length === 0) return
+    if (selectedTeamIds.length > 0) {
+      setTeamsFilterInitialized(true)
+      return
+    }
+    setSelectedTeamIds(filterTeams.map((team) => team.teamId))
+    setTeamsFilterInitialized(true)
+  }, [canScopeManagedTeams, teamsFilterInitialized, filterTeams, selectedTeamIds.length])
 
   const applyRange = async () => {
     if (fromMonth > toMonth) {
@@ -1216,7 +1253,7 @@ export function OverviewReportContent() {
                 selectedTeamIds={selectedTeamIds}
                 onSelectedTeamIdsChange={setSelectedTeamIds}
                 disabled={loadingFilterTeams}
-                placeholder="All teams"
+                placeholder={canScopeManagedTeams ? "Teams in your scope" : "All teams"}
                 searchPlaceholder="Search teams..."
                 emptySearchMessage="No teams found."
                 emptyTeamsMessage="No teams found."
