@@ -17,6 +17,8 @@ export interface PersonnelNode {
   isTeamGroup?: boolean
   teamId?: string
   teamName?: string
+  /** Business group from teams.team_group (Administration, Platform, …). */
+  teamGroup?: string | null
   isTeamLead?: boolean
   children?: PersonnelNode[]
 }

@@ -1,6 +1,7 @@
 import type { OrgTeam } from "@/lib/api/services"
 import type { TeamMember } from "@/types/api"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
+import type { TeamGroupSection } from "@/lib/organizations/team-group"
 
 export interface CommissionUserOption {
   email: string
@@ -25,6 +26,33 @@ export function mapTeamMembersToCommissionUsers(members: TeamMember[]): Commissi
 export interface CommissionTeamOption {
   teamId: string
   label: string
+  teamGroup?: string | null
+}
+
+export function groupCommissionTeamsBySection(
+  teams: CommissionTeamOption[],
+  sections: TeamGroupSection[],
+) {
+  return sections.map((section) => ({
+    section,
+    teams: teams
+      .filter((team) => (team.teamGroup ?? null) === section.key)
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" })),
+  })).filter((group) => group.teams.length > 0)
+}
+
+export type TeamIdsSelectionState = boolean | "indeterminate"
+
+export function getTeamIdsSelectionState(
+  teamIds: string[],
+  selectedIds: Iterable<string>,
+): TeamIdsSelectionState {
+  if (teamIds.length === 0) return false
+  const selected = new Set(selectedIds)
+  const selectedCount = teamIds.filter((id) => selected.has(id)).length
+  if (selectedCount === 0) return false
+  if (selectedCount === teamIds.length) return true
+  return "indeterminate"
 }
 
 function walkPersonnelTree(node: PersonnelNode, visit: (current: PersonnelNode) => void) {
@@ -43,6 +71,7 @@ export function collectTeamsUnderPersonnelNode(node: PersonnelNode): CommissionT
       byId.set(current.teamId, {
         teamId: current.teamId,
         label: current.teamName ?? current.name,
+        teamGroup: current.teamGroup ?? null,
       })
     }
     for (const child of current.children ?? []) walk(child)
@@ -64,6 +93,7 @@ export function collectTeamLeadTeamsFromChart(
       byId.set(current.teamId, {
         teamId: current.teamId,
         label: current.teamName ?? current.name,
+        teamGroup: current.teamGroup ?? null,
       })
     }
     for (const child of current.children ?? []) walk(child)
@@ -141,10 +171,17 @@ export function mergeCommissionTeamOptions(
   const byId = new Map<string, CommissionTeamOption>()
   for (const group of groups) {
     for (const team of group) {
-      if (!byId.has(team.teamId)) byId.set(team.teamId, team)
+      const existing = byId.get(team.teamId)
+      if (!existing) {
+        byId.set(team.teamId, team)
+        continue
+      }
+      if (!existing.teamGroup && team.teamGroup) {
+        byId.set(team.teamId, { ...existing, teamGroup: team.teamGroup })
+      }
     }
   }
-  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label))
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
 }
 
 /** Teams where userId on OrgTeam matches current user (team lead from master data). */
@@ -155,5 +192,9 @@ export function collectTeamLeadTeamsFromOrgTeams(
   if (!currentUserId) return []
   return orgTeams
     .filter((team) => team.userId === currentUserId)
-    .map((team) => ({ teamId: team.id, label: team.name }))
+    .map((team) => ({
+      teamId: team.id,
+      label: team.name,
+      teamGroup: team.teamGroup ?? null,
+    }))
 }

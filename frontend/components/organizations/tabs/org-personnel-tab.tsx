@@ -46,7 +46,8 @@ import {
   stripTeamMemberChildrenForPersist,
   hydrateTeamGroupsInTree,
 } from "@/lib/organizations/personnel-chart-team-utils"
-import type { OrgTeam } from "@/lib/api/services"
+import type { OrgTeam, OrgTeamGroup } from "@/lib/api/services"
+import { buildTeamGroupSectionsFromOrg } from "@/lib/organizations/team-group"
 import { OrgPersonnelToolbar } from "../personnel/org-personnel-toolbar"
 import { OrgChartTree } from "../personnel/org-chart-tree"
 import { PersonnelDetailSheet } from "../personnel/personnel-detail-sheet"
@@ -123,6 +124,7 @@ export function OrgPersonnelTab({
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
   const removeTargetRef = useRef<PersonnelNode | null>(null)
   const orgTeamsByIdRef = useRef<Map<string, OrgTeam>>(new Map())
+  const [orgTeamGroups, setOrgTeamGroups] = useState<OrgTeamGroup[]>([])
   const [displayTree, setDisplayTree] = useState<PersonnelNode>(defaultTree)
   const [hydratingChart, setHydratingChart] = useState(false)
 
@@ -145,12 +147,14 @@ export function OrgPersonnelTab({
     const load = async () => {
       setLoading(true)
       try {
-        const [data, teams] = await Promise.all([
+        const [data, teams, groups] = await Promise.all([
           organizationsApi.getPersonnelChart(orgId),
           organizationsApi.getTeams(orgId).catch(() => [] as OrgTeam[]),
+          organizationsApi.getTeamGroups(orgId).catch(() => [] as OrgTeamGroup[]),
         ])
         if (cancelled) return
         orgTeamsByIdRef.current = new Map(teams.map((t) => [t.id, t]))
+        setOrgTeamGroups(groups)
 
         if (data?.root) {
           const stripped = stripTeamMemberChildrenForPersist(data.root)
@@ -441,6 +445,11 @@ export function OrgPersonnelTab({
 
   const flatCount = flattenPersonnelTree(displayTree).length
 
+  const teamGroupSections = useMemo(
+    () => buildTeamGroupSectionsFromOrg(orgTeamGroups, [...orgTeamsByIdRef.current.values()]),
+    [orgTeamGroups, displayTree],
+  )
+
   if (!canView) {
     return (
       <p className="text-sm text-slate-500 py-8 text-center">You do not have permission to view the organizational chart.</p>
@@ -458,6 +467,7 @@ export function OrgPersonnelTab({
   const chartBlock = (
     <OrgChartTree
       root={displayTree}
+      teamGroupSections={teamGroupSections}
       selectedId={selectedNode?.id ?? null}
       searchQuery={searchQuery}
       collapsedIds={collapsedIds}

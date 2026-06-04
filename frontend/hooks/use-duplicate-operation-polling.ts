@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { metaCampaignsApi } from "@/lib/api/meta-ads"
 import type { MetaCampaignDuplicateOperationDto } from "@/types/meta-ads"
 
-const TERMINAL_STATUSES = new Set(["completed", "failed"])
+const TERMINAL_STATUSES = new Set(["completed", "completed_with_errors", "failed"])
 
 export function useDuplicateOperationPolling(operationId: number | null, enabled: boolean) {
   const [operation, setOperation] = useState<MetaCampaignDuplicateOperationDto | null>(null)
@@ -70,7 +70,7 @@ export function useDuplicateOperationPolling(operationId: number | null, enabled
     operation,
     loading,
     error,
-    isCompleted: normalizedStatus === "completed",
+    isCompleted: normalizedStatus === "completed" || normalizedStatus === "completed_with_errors",
     isFailed: normalizedStatus === "failed",
     isTerminal: TERMINAL_STATUSES.has(normalizedStatus),
   }

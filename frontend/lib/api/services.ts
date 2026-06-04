@@ -1751,12 +1751,21 @@ export const organizationsApi = {
         if (params?.search) queryParams.search = params.search
         if (params?.role) queryParams.role = params.role
         if (params?.status) queryParams.status = params.status
+        if (params?.teamId) queryParams.teamId = params.teamId
         return apiClient.get<PagedResult<OrgUserItem>>(`/api/v1/organizations/${orgId}/users`, queryParams)
     },
 
     // Get teams for an organization
     getTeams: async (orgId: string): Promise<OrgTeam[]> => {
         return apiClient.get<OrgTeam[]>(`/api/v1/organizations/${orgId}/teams`)
+    },
+
+    getTeamGroups: async (orgId: string): Promise<OrgTeamGroup[]> => {
+        return apiClient.get<OrgTeamGroup[]>(`/api/v1/organizations/${orgId}/team-groups`)
+    },
+
+    createTeamGroup: async (orgId: string, data: CreateTeamGroupRequest): Promise<OrgTeamGroup> => {
+        return apiClient.post<OrgTeamGroup>(`/api/v1/organizations/${orgId}/team-groups`, data)
     },
 
     getProfitPlans: async (
@@ -1789,6 +1798,16 @@ export const organizationsApi = {
     // Update a team
     updateTeam: async (orgId: string, teamId: string, data: UpdateTeamRequest): Promise<OrgTeam> => {
         return apiClient.put<OrgTeam>(`/api/v1/organizations/${orgId}/teams/${teamId}`, data)
+    },
+
+    bulkUpdateTeamGroup: async (
+        orgId: string,
+        data: { teamIds: string[]; teamGroup: string | null },
+    ): Promise<{ updatedCount: number }> => {
+        return apiClient.patch<{ updatedCount: number }>(
+            `/api/v1/organizations/${orgId}/teams/bulk-team-group`,
+            { teamIds: data.teamIds, teamGroup: data.teamGroup },
+        )
     },
 
     // Delete a team
@@ -1866,6 +1885,7 @@ export interface OrgUsersFilter {
     search?: string
     role?: string
     status?: string
+    teamId?: string
 }
 
 export interface PagedResult<T> {
@@ -1876,11 +1896,24 @@ export interface PagedResult<T> {
     totalPages: number
 }
 
+export interface OrgTeamGroup {
+    id: string
+    name: string
+    sortOrder: number
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CreateTeamGroupRequest {
+    name: string
+}
+
 export interface OrgTeam {
     id: string
     name: string
     description?: string
     userId?: string | null
+    teamGroup?: string | null
     teamLeadName?: string | null
     teamLeadEmail?: string | null
     teamLeadAvatarUrl?: string | null
@@ -1997,12 +2030,14 @@ export interface CreateTeamRequest {
     name: string
     description?: string
     userId?: string | null
+    teamGroup?: string | null
 }
 
 export interface UpdateTeamRequest {
     name: string
     description?: string
     userId?: string | null
+    teamGroup?: string | null
     isActive: boolean
 }
 
@@ -2767,8 +2802,56 @@ export const reportsApi = {
     getProfitOverview: async (params?: {
         from?: string
         to?: string
+        /** Omit or empty = all active org teams. */
+        teamIds?: string[]
     }): Promise<import('@/types/reports').ProfitOverviewReportResponse> => {
-        return apiClient.get('/api/v1/reports/profit-overview', params as Record<string, string | undefined>)
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        for (const id of params?.teamIds ?? []) {
+            const trimmed = id?.trim()
+            if (trimmed) search.append("teamIds", trimmed)
+        }
+        const qs = search.toString()
+        return apiClient.get(`/api/v1/reports/profit-overview${qs ? `?${qs}` : ""}`)
+    },
+
+    getProfitOverviewTeamApps: async (
+        teamId: string,
+        params?: {
+            from?: string
+            to?: string
+            page?: number
+            pageSize?: number
+        },
+    ): Promise<import('@/types/reports').ProfitOverviewTeamAppsResponse> => {
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        if (params?.page != null) search.set("page", String(params.page))
+        if (params?.pageSize != null) search.set("pageSize", String(params.pageSize))
+        const qs = search.toString()
+        return apiClient.get(
+            `/api/v1/reports/profit-overview/teams/${teamId}/apps${qs ? `?${qs}` : ""}`,
+        )
+    },
+
+    getProfitOverviewSharedAppConflicts: async (params?: {
+        from?: string
+        to?: string
+        teamIds?: string[]
+    }): Promise<import('@/types/reports').ProfitOverviewSharedAppConflict[]> => {
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        for (const id of params?.teamIds ?? []) {
+            const trimmed = id?.trim()
+            if (trimmed) search.append("teamIds", trimmed)
+        }
+        const qs = search.toString()
+        return apiClient.get(
+            `/api/v1/reports/profit-overview/shared-app-conflicts${qs ? `?${qs}` : ""}`,
+        )
     },
 
     getTeamApps: async (teamId: string): Promise<import('@/types/reports').TeamLeadAppCache> => {

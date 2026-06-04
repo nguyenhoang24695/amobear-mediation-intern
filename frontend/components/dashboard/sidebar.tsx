@@ -218,6 +218,21 @@ const navItems: NavItem[] = [
   },
   { icon: Activity, label: "Activity Logs", href: "/activity-logs", isShow: () => hasScreenFunction("s-activity-logs", "view") },
   {
+    icon: Gauge,
+    label: "Monitoring",
+    href: "#",
+    hasSubmenu: true,
+    isShow: () => hasScreenFunction("s-monitoring-admob", "view"),
+    children: [
+      {
+        icon: Smartphone,
+        label: "AdMob",
+        href: "/monitoring/admob",
+        isShow: () => hasScreenFunction("s-monitoring-admob", "view"),
+      },
+    ],
+  },
+  {
     icon: Megaphone,
     label: "Meta Ads",
     href: "#",

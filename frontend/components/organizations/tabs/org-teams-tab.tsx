@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Fragment } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
     DropdownMenu,
@@ -35,9 +36,24 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { organizationsApi, teamMembersApi, type OrgTeam, type OrgUserItem } from "@/lib/api/services"
-import { CreateTeamModal, TeamLeadCombobox } from "../create-team-modal"
+import {
+    Search,
+    Plus,
+    Users,
+    Loader2,
+    FolderOpen,
+    MoreHorizontal,
+    Pencil,
+    Trash2,
+    ChevronRight,
+    ChevronDown,
+    ChevronsUpDown,
+    Folder,
+} from "lucide-react"
+import { organizationsApi, teamMembersApi, type OrgTeam, type OrgTeamGroup, type OrgUserItem } from "@/lib/api/services"
+import { buildTeamGroupSectionsFromOrg, type TeamGroupSection } from "@/lib/organizations/team-group"
+import { CreateTeamGroupModal } from "../create-team-group-modal"
+import { CreateTeamModal, TeamGroupSelect, TeamLeadCombobox } from "../create-team-modal"
 
 interface OrgTeamsTabProps {
     orgId: string
@@ -56,6 +72,357 @@ function getInitials(name?: string | null, email?: string | null): string {
     return source.slice(0, 2).toUpperCase()
 }
 
+function teamMatchesSection(team: OrgTeam, sectionKey: string | null): boolean {
+    return (team.teamGroup ?? null) === sectionKey
+}
+
+const TEAM_TABLE_COLUMN_COUNT = 9
+
+function getTeamSelectionState(teamIds: string[], selectedTeamIds: Set<string>): boolean | "indeterminate" {
+    if (teamIds.length === 0) return false
+    const selectedCount = teamIds.filter((id) => selectedTeamIds.has(id)).length
+    if (selectedCount === 0) return false
+    if (selectedCount === teamIds.length) return true
+    return "indeterminate"
+}
+
+interface TeamRowProps {
+    team: OrgTeam
+    canManage: boolean
+    selected: boolean
+    onSelectedChange: (checked: boolean) => void
+    onRowClick: (teamId: string, e: React.MouseEvent) => void
+    onEdit: (team: OrgTeam) => void
+    onDelete: (team: OrgTeam) => void
+}
+
+function TeamRow({ team, canManage, selected, onSelectedChange, onRowClick, onEdit, onDelete }: TeamRowProps) {
+    return (
+        <TableRow
+            className="hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+            onClick={(e) => onRowClick(team.id, e)}
+        >
+            <TableCell className="w-10" />
+            <TableCell className="w-10 py-3" onClick={(e) => e.stopPropagation()}>
+                {canManage && (
+                    <Checkbox
+                        checked={selected}
+                        onCheckedChange={(value) => onSelectedChange(value === true)}
+                        aria-label={`Select ${team.name}`}
+                    />
+                )}
+            </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2 pl-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Users className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="font-medium text-slate-900">{team.name}</span>
+                </div>
+            </TableCell>
+            <TableCell className="text-sm text-slate-500 max-w-xs truncate">
+                {team.description || "—"}
+            </TableCell>
+            <TableCell>
+                {team.userId ? (
+                    <div className="flex items-center gap-2 min-w-[180px]">
+                        <Avatar className="h-8 w-8">
+                            {team.teamLeadAvatarUrl ? (
+                                <AvatarImage src={team.teamLeadAvatarUrl} alt={team.teamLeadName || team.teamLeadEmail || "Team lead"} />
+                            ) : null}
+                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                                {getInitials(team.teamLeadName, team.teamLeadEmail)}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                            <div className="text-sm font-medium text-slate-900 truncate">
+                                {team.teamLeadName || team.teamLeadEmail || "Unknown user"}
+                            </div>
+                            {team.teamLeadEmail && (
+                                <div className="text-xs text-slate-500 truncate">{team.teamLeadEmail}</div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <span className="text-sm text-slate-400">—</span>
+                )}
+            </TableCell>
+            <TableCell className="text-center">
+                <Badge variant="secondary" className="rounded-full">
+                    {team.memberCount}
+                </Badge>
+            </TableCell>
+            <TableCell>
+                {team.isActive ? (
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>
+                ) : (
+                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Inactive</Badge>
+                )}
+            </TableCell>
+            <TableCell className="text-sm text-slate-500">{formatDate(team.createdAt)}</TableCell>
+            <TableCell>
+                {canManage && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEdit(team)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => onDelete(team)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
+            </TableCell>
+        </TableRow>
+    )
+}
+
+interface TeamsGroupedTableProps {
+    filteredTeams: OrgTeam[]
+    teamGroups: OrgTeamGroup[]
+    teamGroupSections: TeamGroupSection[]
+    canManage: boolean
+    expandedGroups: Set<string>
+    selectedTeamIds: Set<string>
+    bulkTeamGroup: string | null
+    bulkApplying: boolean
+    onBulkTeamGroupChange: (value: string | null) => void
+    onApplyBulkGroup: () => void
+    onClearSelection: () => void
+    onToggleTeamSelection: (teamId: string, checked: boolean) => void
+    onToggleSectionSelection: (teamIds: string[], checked: boolean) => void
+    onToggleAllSelection: (checked: boolean) => void
+    onToggleGroup: (label: string) => void
+    onExpandAll: () => void
+    onCollapseAll: () => void
+    onRowClick: (teamId: string, e: React.MouseEvent) => void
+    onEdit: (team: OrgTeam) => void
+    onDelete: (team: OrgTeam) => void
+}
+
+function TeamsGroupedTable({
+    filteredTeams,
+    teamGroups,
+    teamGroupSections,
+    canManage,
+    expandedGroups,
+    selectedTeamIds,
+    bulkTeamGroup,
+    bulkApplying,
+    onBulkTeamGroupChange,
+    onApplyBulkGroup,
+    onClearSelection,
+    onToggleTeamSelection,
+    onToggleSectionSelection,
+    onToggleAllSelection,
+    onToggleGroup,
+    onExpandAll,
+    onCollapseAll,
+    onRowClick,
+    onEdit,
+    onDelete,
+}: TeamsGroupedTableProps) {
+    const selectedCount = selectedTeamIds.size
+    const allFilteredIds = filteredTeams.map((t) => t.id)
+    const allFilteredSelected = getTeamSelectionState(allFilteredIds, selectedTeamIds)
+
+    return (
+        <div className="space-y-2">
+            {canManage && selectedCount > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                    <span className="text-sm font-medium text-slate-900 shrink-0">
+                        {selectedCount} team{selectedCount !== 1 ? "s" : ""} selected
+                    </span>
+                    <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-2 min-w-0">
+                        <span className="text-sm text-slate-600 shrink-0">Set group to</span>
+                        <div className="w-full sm:max-w-[220px]">
+                            <TeamGroupSelect
+                                value={bulkTeamGroup}
+                                onChange={onBulkTeamGroupChange}
+                                groups={teamGroups}
+                            />
+                        </div>
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                            onClick={onApplyBulkGroup}
+                            disabled={bulkApplying}
+                        >
+                            {bulkApplying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {bulkApplying ? "Applying..." : "Apply"}
+                        </Button>
+                        <Button variant="ghost" className="shrink-0" onClick={onClearSelection} disabled={bulkApplying}>
+                            Clear selection
+                        </Button>
+                    </div>
+                </div>
+            )}
+            <div className="flex items-center justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={onExpandAll} className="text-xs">
+                    <ChevronsUpDown className="w-3 h-3 mr-1" />
+                    Expand all
+                </Button>
+                <Button variant="outline" size="sm" onClick={onCollapseAll} className="text-xs">
+                    <ChevronsUpDown className="w-3 h-3 mr-1" />
+                    Collapse all
+                </Button>
+            </div>
+            <Card className="border-slate-200">
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                                    <TableHead className="w-10">
+                                        <span className="sr-only">Expand</span>
+                                    </TableHead>
+                                    <TableHead className="w-10">
+                                        {canManage ? (
+                                            <Checkbox
+                                                checked={
+                                                    allFilteredSelected === "indeterminate"
+                                                        ? "indeterminate"
+                                                        : allFilteredSelected
+                                                }
+                                                onCheckedChange={(value) => onToggleAllSelection(value === true)}
+                                                aria-label="Select all teams"
+                                                disabled={filteredTeams.length === 0}
+                                            />
+                                        ) : (
+                                            <span className="sr-only">Select</span>
+                                        )}
+                                    </TableHead>
+                                    <TableHead>
+                                        <span className="text-xs font-medium uppercase tracking-wide">Group / Team</span>
+                                    </TableHead>
+                                    <TableHead>
+                                        <span className="text-xs font-medium uppercase tracking-wide">Description</span>
+                                    </TableHead>
+                                    <TableHead>
+                                        <span className="text-xs font-medium uppercase tracking-wide">Team Lead</span>
+                                    </TableHead>
+                                    <TableHead className="text-center">
+                                        <span className="text-xs font-medium uppercase tracking-wide">Members</span>
+                                    </TableHead>
+                                    <TableHead>
+                                        <span className="text-xs font-medium uppercase tracking-wide">Status</span>
+                                    </TableHead>
+                                    <TableHead>
+                                        <span className="text-xs font-medium uppercase tracking-wide">Created</span>
+                                    </TableHead>
+                                    <TableHead className="w-12">
+                                        <span className="sr-only">Actions</span>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {teamGroupSections.map((section) => {
+                                    const sectionTeams = filteredTeams.filter((team) =>
+                                        teamMatchesSection(team, section.key),
+                                    )
+                                    const isExpanded = expandedGroups.has(section.label)
+                                    const activeInSection = sectionTeams.filter((t) => t.isActive).length
+                                    const sectionTeamIds = sectionTeams.map((t) => t.id)
+                                    const sectionSelection = getTeamSelectionState(sectionTeamIds, selectedTeamIds)
+
+                                    return (
+                                        <Fragment key={section.label}>
+                                            <TableRow
+                                                className="bg-slate-50/80 hover:bg-slate-100 cursor-pointer border-t border-slate-200 first:border-t-0"
+                                                onClick={() => onToggleGroup(section.label)}
+                                            >
+                                                <TableCell className="w-10 py-3">
+                                                    {isExpanded ? (
+                                                        <ChevronDown className="w-5 h-5 text-slate-500" />
+                                                    ) : (
+                                                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell
+                                                    className="w-10 py-3"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {canManage && sectionTeams.length > 0 && (
+                                                        <Checkbox
+                                                            checked={
+                                                                sectionSelection === "indeterminate"
+                                                                    ? "indeterminate"
+                                                                    : sectionSelection
+                                                            }
+                                                            onCheckedChange={(value) =>
+                                                                onToggleSectionSelection(sectionTeamIds, value === true)
+                                                            }
+                                                            aria-label={`Select all teams in ${section.label}`}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell colSpan={TEAM_TABLE_COLUMN_COUNT - 2} className="py-3">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            {isExpanded ? (
+                                                                <FolderOpen className="w-5 h-5 shrink-0 text-slate-600" />
+                                                            ) : (
+                                                                <Folder className="w-5 h-5 shrink-0 text-slate-600" />
+                                                            )}
+                                                            <span className="font-semibold text-slate-900">{section.label}</span>
+                                                            <Badge variant="secondary" className="rounded-full shrink-0">
+                                                                {sectionTeams.length} team{sectionTeams.length !== 1 ? "s" : ""}
+                                                            </Badge>
+                                                            {sectionTeams.length > 0 && activeInSection < sectionTeams.length && (
+                                                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 shrink-0">
+                                                                    {activeInSection} active
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                            {isExpanded && sectionTeams.length === 0 && (
+                                                <TableRow key={`${section.label}-empty`} className="hover:bg-transparent">
+                                                    <TableCell className="w-10" />
+                                                    <TableCell className="w-10" />
+                                                    <TableCell
+                                                        colSpan={TEAM_TABLE_COLUMN_COUNT - 2}
+                                                        className="py-6 text-center text-sm text-slate-500"
+                                                    >
+                                                        No teams in this group
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {isExpanded &&
+                                                sectionTeams.map((team) => (
+                                                    <TeamRow
+                                                        key={team.id}
+                                                        team={team}
+                                                        canManage={canManage}
+                                                        selected={selectedTeamIds.has(team.id)}
+                                                        onSelectedChange={(checked) =>
+                                                            onToggleTeamSelection(team.id, checked)
+                                                        }
+                                                        onRowClick={onRowClick}
+                                                        onEdit={onEdit}
+                                                        onDelete={onDelete}
+                                                    />
+                                                ))}
+                                        </Fragment>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
 export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false }: OrgTeamsTabProps) {
     const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
@@ -63,11 +430,13 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
+    const [createGroupOpen, setCreateGroupOpen] = useState(false)
+    const [teamGroups, setTeamGroups] = useState<OrgTeamGroup[]>([])
 
-    // Edit state
     const [editTeam, setEditTeam] = useState<OrgTeam | null>(null)
     const [editName, setEditName] = useState("")
     const [editDescription, setEditDescription] = useState("")
+    const [editTeamGroup, setEditTeamGroup] = useState<string | null>(null)
     const [editTeamLeadUserId, setEditTeamLeadUserId] = useState<string | null>(null)
     const [editTeamLeadCandidates, setEditTeamLeadCandidates] = useState<OrgUserItem[]>([])
     const [editTeamLeadLoading, setEditTeamLeadLoading] = useState(false)
@@ -75,9 +444,91 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const [editSaving, setEditSaving] = useState(false)
     const [editError, setEditError] = useState("")
 
-    // Delete state
     const [deleteTeam, setDeleteTeam] = useState<OrgTeam | null>(null)
     const [deleting, setDeleting] = useState(false)
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
+
+    const toggleGroup = (label: string) => {
+        setExpandedGroups((prev) => {
+            const next = new Set(prev)
+            if (next.has(label)) next.delete(label)
+            else next.add(label)
+            return next
+        })
+    }
+
+    const teamGroupSections = buildTeamGroupSectionsFromOrg(teamGroups, teams)
+
+    const expandAllGroups = () => {
+        setExpandedGroups(new Set(teamGroupSections.map((s) => s.label)))
+    }
+
+    const collapseAllGroups = () => {
+        setExpandedGroups(new Set())
+    }
+
+    const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(() => new Set())
+    const [bulkTeamGroup, setBulkTeamGroup] = useState<string | null>(null)
+    const [bulkApplying, setBulkApplying] = useState(false)
+
+    const toggleTeamSelection = (teamId: string, checked: boolean) => {
+        setSelectedTeamIds((prev) => {
+            const next = new Set(prev)
+            if (checked) next.add(teamId)
+            else next.delete(teamId)
+            return next
+        })
+    }
+
+    const toggleSectionSelection = (teamIds: string[], checked: boolean) => {
+        setSelectedTeamIds((prev) => {
+            const next = new Set(prev)
+            for (const id of teamIds) {
+                if (checked) next.add(id)
+                else next.delete(id)
+            }
+            return next
+        })
+    }
+
+    const toggleAllSelection = (checked: boolean) => {
+        if (!checked) {
+            setSelectedTeamIds(new Set())
+            return
+        }
+        setSelectedTeamIds(new Set(filteredTeams.map((t) => t.id)))
+    }
+
+    const clearSelection = () => {
+        setSelectedTeamIds(new Set())
+    }
+
+    const handleApplyBulkGroup = async () => {
+        if (selectedTeamIds.size === 0 || !canManage) return
+        setBulkApplying(true)
+        try {
+            await organizationsApi.bulkUpdateTeamGroup(orgId, {
+                teamIds: [...selectedTeamIds],
+                teamGroup: bulkTeamGroup,
+            })
+            clearSelection()
+            await fetchTeams()
+        } catch (err) {
+            console.error("Failed to bulk update team groups:", err)
+        } finally {
+            setBulkApplying(false)
+        }
+    }
+
+    const fetchTeamGroups = useCallback(async () => {
+        try {
+            const data = await organizationsApi.getTeamGroups(orgId)
+            setTeamGroups(data)
+        } catch (err) {
+            console.error("Failed to fetch team groups:", err)
+            setTeamGroups([])
+        }
+    }, [orgId])
 
     const fetchTeams = useCallback(async () => {
         try {
@@ -93,11 +544,14 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }, [orgId])
 
-    useEffect(() => {
-        fetchTeams()
-    }, [fetchTeams])
+    const refreshTeamsAndGroups = useCallback(async () => {
+        await Promise.all([fetchTeamGroups(), fetchTeams()])
+    }, [fetchTeamGroups, fetchTeams])
 
-    // Client-side search filter
+    useEffect(() => {
+        void refreshTeamsAndGroups()
+    }, [refreshTeamsAndGroups])
+
     const filteredTeams = teams.filter((team) => {
         if (!searchQuery) return true
         const query = searchQuery.toLowerCase()
@@ -107,11 +561,11 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
     const activeCount = teams.filter((t) => t.isActive).length
     const inactiveCount = teams.filter((t) => t.isActive === false).length
 
-    // Edit handlers
     const openEdit = (team: OrgTeam) => {
         setEditTeam(team)
         setEditName(team.name)
         setEditDescription(team.description || "")
+        setEditTeamGroup(team.teamGroup ?? null)
         setEditTeamLeadUserId(team.userId ?? null)
         setEditTeamLeadCandidates([])
         void fetchTeamLeadCandidates(team.id)
@@ -152,6 +606,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 name: editName.trim(),
                 description: editDescription.trim() || undefined,
                 userId: editTeamLeadUserId,
+                teamGroup: editTeamGroup,
                 isActive: editIsActive,
             })
             setEditTeam(null)
@@ -168,7 +623,6 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }
 
-    // Delete handler
     const handleDelete = async () => {
         if (!deleteTeam) return
         setDeleting(true)
@@ -183,11 +637,13 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         }
     }
 
-    // Navigate to team members page
     const handleRowClick = (teamId: string, e: React.MouseEvent) => {
-        // Don't navigate if clicking on action button
         const target = e.target as HTMLElement
-        if (target.closest('[role="menuitem"]') || target.closest('button')) {
+        if (
+            target.closest('[role="menuitem"]') ||
+            target.closest("button") ||
+            target.closest('[data-slot="checkbox"]')
+        ) {
             return
         }
         router.push(`/team-members?teamId=${teamId}`)
@@ -195,7 +651,6 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
 
     return (
         <div className="space-y-6">
-            {/* Tab Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2">
@@ -207,22 +662,38 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                     <p className="text-sm text-slate-500 mt-0.5">Manage teams in this organization</p>
                 </div>
                 {canManage && (
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
-                        <Plus className="w-4 h-4" />
-                        Create Team
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="outline"
+                            className="gap-2 bg-white"
+                            onClick={() => setCreateGroupOpen(true)}
+                        >
+                            <Plus className="w-4 h-4" />
+                            Create Group
+                        </Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
+                            <Plus className="w-4 h-4" />
+                            Create Team
+                        </Button>
+                    </div>
                 )}
             </div>
 
-            {/* Search */}
             <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input placeholder="Search teams..." className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <Input
+                        placeholder="Search teams..."
+                        className="pl-9"
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value)
+                            clearSelection()
+                        }}
+                    />
                 </div>
             </div>
 
-            {/* Stats Row */}
             {!loading && !error && (
                 <div className="flex flex-wrap items-center gap-6 text-sm">
                     <span className="text-slate-500">Total: <span className="font-semibold text-slate-900">{teams.length}</span></span>
@@ -233,14 +704,12 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 </div>
             )}
 
-            {/* Loading State */}
             {loading && (
                 <div className="flex items-center justify-center py-16">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                 </div>
             )}
 
-            {/* Error State */}
             {error && !loading && (
                 <Card className="border-slate-200">
                     <CardContent className="flex flex-col items-center justify-center py-16">
@@ -250,18 +719,15 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 </Card>
             )}
 
-            {/* Empty State */}
-            {!loading && !error && filteredTeams.length === 0 && (
+            {!loading && !error && teams.length === 0 && (
                 <Card className="border-slate-200">
                     <CardContent className="flex flex-col items-center justify-center py-16">
                         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                             <FolderOpen className="w-8 h-8 text-slate-400" />
                         </div>
                         <h3 className="text-lg font-semibold text-slate-900 mb-1">No teams found</h3>
-                        <p className="text-sm text-slate-500 mb-4">
-                            {searchQuery ? "Try adjusting your search" : "Create your first team to get started"}
-                        </p>
-                        {canManage && !searchQuery && (
+                        <p className="text-sm text-slate-500 mb-4">Create your first team to get started</p>
+                        {canManage && (
                             <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setCreateOpen(true)}>
                                 <Plus className="w-4 h-4" />
                                 Create Team
@@ -271,133 +737,54 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 </Card>
             )}
 
-            {/* Table */}
-            {!loading && !error && filteredTeams.length > 0 && (
-                <Card className="border-slate-200">
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-slate-50 hover:bg-slate-50">
-                                        <TableHead>
-                                            <span className="text-xs font-medium uppercase tracking-wide">Team Name</span>
-                                        </TableHead>
-                                        <TableHead>
-                                            <span className="text-xs font-medium uppercase tracking-wide">Description</span>
-                                        </TableHead>
-                                        <TableHead>
-                                            <span className="text-xs font-medium uppercase tracking-wide">Team Lead</span>
-                                        </TableHead>
-                                        <TableHead className="text-center">
-                                            <span className="text-xs font-medium uppercase tracking-wide">Members</span>
-                                        </TableHead>
-                                        <TableHead>
-                                            <span className="text-xs font-medium uppercase tracking-wide">Status</span>
-                                        </TableHead>
-                                        <TableHead>
-                                            <span className="text-xs font-medium uppercase tracking-wide">Created</span>
-                                        </TableHead>
-                                        <TableHead className="w-12">
-                                            <span className="sr-only">Actions</span>
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredTeams.map((team) => (
-                                        <TableRow
-                                            key={team.id}
-                                            className="hover:bg-slate-50 transition-colors cursor-pointer"
-                                            onClick={(e) => handleRowClick(team.id, e)}
-                                        >
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                        <Users className="w-4 h-4 text-blue-600" />
-                                                    </div>
-                                                    <span className="font-medium text-slate-900">{team.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-sm text-slate-500 max-w-xs truncate">
-                                                {team.description || "—"}
-                                            </TableCell>
-                                            <TableCell>
-                                                {team.userId ? (
-                                                    <div className="flex items-center gap-2 min-w-[180px]">
-                                                        <Avatar className="h-8 w-8">
-                                                            {team.teamLeadAvatarUrl ? (
-                                                                <AvatarImage src={team.teamLeadAvatarUrl} alt={team.teamLeadName || team.teamLeadEmail || "Team lead"} />
-                                                            ) : null}
-                                                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
-                                                                {getInitials(team.teamLeadName, team.teamLeadEmail)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="min-w-0">
-                                                            <div className="text-sm font-medium text-slate-900 truncate">
-                                                                {team.teamLeadName || team.teamLeadEmail || "Unknown user"}
-                                                            </div>
-                                                            {team.teamLeadEmail && (
-                                                                <div className="text-xs text-slate-500 truncate">{team.teamLeadEmail}</div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-sm text-slate-400">—</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="secondary" className="rounded-full">
-                                                    {team.memberCount}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                {team.isActive ? (
-                                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>
-                                                ) : (
-                                                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Inactive</Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-slate-500">{formatDate(team.createdAt)}</TableCell>
-                                            <TableCell>
-                                                {canManage && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                <MoreHorizontal className="w-4 h-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => openEdit(team)}>
-                                                                <Pencil className="w-4 h-4 mr-2" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteTeam(team)}>
-                                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
+            {!loading && !error && teams.length > 0 && (
+                <>
+                    {searchQuery && filteredTeams.length === 0 && (
+                        <p className="text-sm text-slate-500">No teams match your search. Try adjusting your keywords.</p>
+                    )}
+                    <TeamsGroupedTable
+                        filteredTeams={filteredTeams}
+                        teamGroups={teamGroups}
+                        teamGroupSections={teamGroupSections}
+                        canManage={canManage}
+                        expandedGroups={expandedGroups}
+                        selectedTeamIds={selectedTeamIds}
+                        bulkTeamGroup={bulkTeamGroup}
+                        bulkApplying={bulkApplying}
+                        onBulkTeamGroupChange={setBulkTeamGroup}
+                        onApplyBulkGroup={handleApplyBulkGroup}
+                        onClearSelection={clearSelection}
+                        onToggleTeamSelection={toggleTeamSelection}
+                        onToggleSectionSelection={toggleSectionSelection}
+                        onToggleAllSelection={toggleAllSelection}
+                        onToggleGroup={toggleGroup}
+                        onExpandAll={expandAllGroups}
+                        onCollapseAll={collapseAllGroups}
+                        onRowClick={handleRowClick}
+                        onEdit={openEdit}
+                        onDelete={setDeleteTeam}
+                    />
+                </>
             )}
 
-            {/* Create Team Modal */}
+            <CreateTeamGroupModal
+                open={createGroupOpen}
+                onOpenChange={setCreateGroupOpen}
+                orgId={orgId}
+                orgName={orgName}
+                onSuccess={fetchTeamGroups}
+            />
+
             <CreateTeamModal
                 open={createOpen}
                 onOpenChange={setCreateOpen}
                 orgId={orgId}
                 orgName={orgName}
                 users={[]}
-                onSuccess={fetchTeams}
+                teamGroups={teamGroups}
+                onSuccess={refreshTeamsAndGroups}
             />
 
-            {/* Edit Team Dialog */}
             <Dialog open={!!editTeam} onOpenChange={(open) => { if (!open) setEditTeam(null) }}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -426,6 +813,15 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                             <p className="text-xs text-slate-400 text-right">{editDescription.length}/500</p>
                         </div>
                         <div className="space-y-2">
+                            <Label htmlFor="edit-team-group">Group <span className="text-slate-400">(optional)</span></Label>
+                            <TeamGroupSelect
+                                id="edit-team-group"
+                                value={editTeamGroup}
+                                onChange={setEditTeamGroup}
+                                groups={teamGroups}
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="edit-team-lead">Team Lead <span className="text-slate-400">(optional)</span></Label>
                             <TeamLeadCombobox
                                 users={editTeamLeadCandidates}
@@ -452,7 +848,6 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation */}
             <AlertDialog open={!!deleteTeam} onOpenChange={(open) => { if (!open) setDeleteTeam(null) }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

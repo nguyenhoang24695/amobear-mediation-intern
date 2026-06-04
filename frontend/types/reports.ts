@@ -8,6 +8,7 @@ export interface CustomReportQueryRequest {
   metricFilters?: CustomReportMetricFilter[]
   commissionUsernames?: string[] | null
   commissionTeamId?: string | null
+  commissionTeamIds?: string[] | null
   sortBy?: string | null
   sortDir?: string
 }
@@ -79,6 +80,7 @@ export interface CustomReportFilters {
   commissionUsernames?: string[] | null
   /** Team filter for commission managers — limits apps to profit-plan apps visible for the selected team scope. */
   commissionTeamId?: string | null
+  commissionTeamIds?: string[] | null
   sortBy?: string | null
   sortDir: string
   activePresetDays?: number | null
@@ -153,7 +155,26 @@ export interface ProfitOverviewTeamRow {
   leadName?: string | null
   leadEmail?: string | null
   months: Record<string, ProfitOverviewMonthCell>
+  /** Số app (distinct) — chi tiết load qua API apps riêng. */
+  appCount?: number
+  /** @deprecated Chỉ dùng khi API cũ trả apps; overview mới không gồm apps. */
+  apps?: ProfitOverviewAppRow[]
+}
+
+export interface ProfitOverviewTeamAppsResponse {
+  teamId: string
+  months: string[]
   apps: ProfitOverviewAppRow[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
+export interface ProfitOverviewSharedAppConflict {
+  appStoreId: string
+  appLabel: string
+  groupLabels: string[]
+  teamNames: string[]
 }
 
 export interface ProfitOverviewReportResponse {
