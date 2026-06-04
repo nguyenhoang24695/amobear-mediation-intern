@@ -237,8 +237,11 @@ function formatAppStoreId(value: string | null | undefined): string {
 
 interface TeamAppsCacheEntry {
   totalCount: number
+  totalAppPages: number
   pages: Record<number, ProfitOverviewAppRow[]>
   loading: boolean
+  loaded: boolean
+  error?: string | null
 }
 
 function normalizeAppRows(apps: ProfitOverviewAppRow[]): ProfitOverviewAppRow[] {
@@ -250,7 +253,6 @@ function normalizeAppRows(apps: ProfitOverviewAppRow[]): ProfitOverviewAppRow[] 
 
 function getTeamAppCount(team: ProfitOverviewTeamRow, cache?: TeamAppsCacheEntry): number {
   if (cache && cache.totalCount > 0) return cache.totalCount
-  if (team.appCount != null && team.appCount > 0) return team.appCount
   return team.apps?.length ?? 0
 }
 
@@ -259,7 +261,7 @@ async function prefetchTeamAppsPage1(
   loadPage: (teamId: string, page: number) => Promise<void>,
   concurrency = 4,
 ) {
-  const targets = teams.filter((team) => getTeamAppCount(team) > 0)
+  const targets = teams
   if (targets.length === 0) return
 
   let index = 0
@@ -418,7 +420,6 @@ function normalizeOverviewResponse(raw: ProfitOverviewReportResponse): ProfitOve
     teams: (raw.teams ?? []).map((team) => ({
       ...team,
       months: normalizeMonthsRecord(team.months),
-      appCount: team.appCount ?? team.apps?.length ?? 0,
     })),
   }
 }
@@ -789,20 +790,23 @@ export function OverviewReportContent() {
   }, [selectedYear, selectYearValue, yearOptions])
 
   const loadTeamApps = useCallback(
-    async (teamId: string, page: number) => {
+    async (teamId: string, page: number, range?: { from: string; to: string }) => {
       setTeamAppsCache((prev) => ({
         ...prev,
         [teamId]: {
           totalCount: prev[teamId]?.totalCount ?? 0,
+          totalAppPages: prev[teamId]?.totalAppPages ?? 0,
           pages: prev[teamId]?.pages ?? {},
           loading: true,
+          loaded: prev[teamId]?.loaded ?? false,
+          error: null,
         },
       }))
 
       try {
         const response = await reportsApi.getProfitOverviewTeamApps(teamId, {
-          from: appliedFrom,
-          to: appliedTo,
+          from: range?.from ?? appliedFrom,
+          to: range?.to ?? appliedTo,
           page,
           pageSize: APPS_PER_PAGE,
         })
@@ -810,22 +814,27 @@ export function OverviewReportContent() {
           ...prev,
           [teamId]: {
             totalCount: response.totalCount,
+            totalAppPages: response.totalAppPages,
             pages: {
               ...(prev[teamId]?.pages ?? {}),
               [page]: normalizeAppRows(response.apps ?? []),
             },
             loading: false,
+            loaded: true,
+            error: null,
           },
         }))
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to load team apps"
-        toast.error(message)
         setTeamAppsCache((prev) => ({
           ...prev,
           [teamId]: {
             totalCount: prev[teamId]?.totalCount ?? 0,
+            totalAppPages: prev[teamId]?.totalAppPages ?? 0,
             pages: prev[teamId]?.pages ?? {},
             loading: false,
+            loaded: true,
+            error: message,
           },
         }))
       }
@@ -848,6 +857,26 @@ export function OverviewReportContent() {
         })
         const normalized = normalizeOverviewResponse(response)
         setData(normalized)
+        const normalizedTeamById = new Map(
+          normalized.teams.map((team) => [normalizeTeamId(team.teamId), team]),
+        )
+        const filterTeamById = new Map(
+          filterTeams.map((team) => [normalizeTeamId(team.teamId), team]),
+        )
+        const appPrefetchTeams =
+          teamIds.length === 0
+            ? normalized.teams
+            : teamIds.map((teamId) => {
+                const normalizedId = normalizeTeamId(teamId)
+                const row = normalizedTeamById.get(normalizedId)
+                if (row) return row
+                const option = filterTeamById.get(normalizedId)
+                return {
+                  teamId,
+                  teamName: option?.label ?? teamId,
+                  months: {},
+                } satisfies ProfitOverviewTeamRow
+              })
 
         void reportsApi
           .getProfitOverviewSharedAppConflicts({
@@ -858,7 +887,10 @@ export function OverviewReportContent() {
           .then(setSharedAppConflicts)
           .catch(() => setSharedAppConflicts([]))
 
-        void prefetchTeamAppsPage1(normalized.teams, loadTeamApps)
+        void prefetchTeamAppsPage1(
+          appPrefetchTeams,
+          (teamId, page) => loadTeamApps(teamId, page, { from, to }),
+        )
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to load overview report"
         toast.error(message)
@@ -868,7 +900,7 @@ export function OverviewReportContent() {
         setLoading(false)
       }
     },
-    [appliedFrom, appliedTo, selectedTeamIds, loadTeamApps],
+    [appliedFrom, appliedTo, selectedTeamIds, filterTeams, loadTeamApps],
   )
 
   useEffect(() => {
@@ -1007,7 +1039,6 @@ export function OverviewReportContent() {
         teamId: candidate.teamId,
         teamName: "label" in candidate ? candidate.label : candidate.teamName,
         months: {},
-        appCount: 0,
       } satisfies ProfitOverviewTeamRow
     })
   }, [allTeams, selectedTeamIds, filterTeams])
@@ -1398,10 +1429,12 @@ export function OverviewReportContent() {
                     {teams.map((team) => {
                       const appsCache = teamAppsCache[team.teamId]
                       const appCount = getTeamAppCount(team, appsCache)
-                      const canExpand = appCount > 0
+                      const firstPageApps = appsCache?.pages[1] ?? []
+                      const appLoadError = appsCache?.error ?? null
+                      const canExpand = firstPageApps.length > 0 || Boolean(appLoadError)
                       const expanded = expandedTeamIds.has(team.teamId)
                       const appPage = teamAppPageByTeamId[team.teamId] ?? 1
-                      const totalAppPages = Math.max(1, Math.ceil(appCount / APPS_PER_PAGE))
+                      const totalAppPages = Math.max(1, appsCache?.totalAppPages ?? Math.ceil(appCount / APPS_PER_PAGE))
                       const safeAppPage = Math.min(appPage, totalAppPages)
                       const paginatedApps = appsCache?.pages[safeAppPage] ?? []
                       const appsLoading = expanded && (appsCache?.loading ?? false) && paginatedApps.length === 0
@@ -1472,7 +1505,33 @@ export function OverviewReportContent() {
                               )}
                             </TableRow>
                           ) : null}
+                          {expanded && appLoadError ? (
+                            <TableRow className="bg-red-50/40 hover:bg-red-50/60">
+                              <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-red-50 py-4 pl-10 text-sm text-red-700 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
+                                Error loading apps: {appLoadError}
+                              </TableCell>
+                              {months.map((month) =>
+                                visibleMetrics.map((metric, metricIndex) => {
+                                  const isLastMetricInMonth = metricIndex === visibleMetrics.length - 1
+                                  const metricStyle = METRIC_TABLE_STYLES[metric.id]
+                                  return (
+                                    <TableCell
+                                      key={`${team.teamId}-error-${month}-${metric.id}`}
+                                      colSpan={visibleParameters.length}
+                                      className={cn(
+                                        "border-l",
+                                        metricStyle.cellSubtle,
+                                        metricStyle.border,
+                                        metricColumnEndBorder(metric.id, true, isLastMetricInMonth),
+                                      )}
+                                    />
+                                  )
+                                }),
+                              )}
+                            </TableRow>
+                          ) : null}
                           {expanded &&
+                            !appLoadError &&
                             !appsLoading &&
                             paginatedApps.map((app: ProfitOverviewAppRow) => (
                               <TableRow
@@ -1531,7 +1590,7 @@ export function OverviewReportContent() {
                                 />
                               </TableRow>
                             ))}
-                          {expanded && appCount > APPS_PER_PAGE ? (
+                          {expanded && !appLoadError && appCount > APPS_PER_PAGE ? (
                             <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
                               <TableCell className="sticky left-0 z-20 border-r bg-slate-50 py-2 pl-12 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
                                 <TeamAppsPager

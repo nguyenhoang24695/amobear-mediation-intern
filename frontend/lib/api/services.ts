@@ -47,6 +47,7 @@ import type {
     SourceDetailsDto,
     AppDailyInsight,
     AppHourlyPerformanceResponseDto,
+    AppGrowthTodayResponseDto,
     AppInsightHistoryDay,
     AppMediationBronzeAdUnitsResponse,
     AppMediationBronzeAdUnitDetailRowsResponse,
@@ -300,6 +301,10 @@ export const structureApi = {
         const params: Record<string, string> = { appId, startDate, endDate }
         if (timeZoneId) params.timeZoneId = timeZoneId
         return apiClient.get<AppHourlyPerformanceResponseDto>('/api/Structure/apps/performance/hourly', params)
+    },
+
+    getAppPerformanceGrowthToday: async (appId: string): Promise<AppGrowthTodayResponseDto> => {
+        return apiClient.get<AppGrowthTodayResponseDto>('/api/Structure/apps/performance/growth-today', { appId })
     },
 
     syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {

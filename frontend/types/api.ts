@@ -75,6 +75,20 @@ export interface AppHourlyPerformanceResponseDto {
   lastUpdatedUtc: string
 }
 
+export interface AppGrowthTodayPointDto {
+  syncedAt: string
+  value: number
+}
+
+export interface AppGrowthTodayResponseDto {
+  revenueReportDate: string
+  costReportDate: string
+  revenuePoints: AppGrowthTodayPointDto[]
+  costPoints: AppGrowthTodayPointDto[]
+  latestRevenue?: number | null
+  latestCost?: number | null
+}
+
 /** GET .../mediation-bronze/* — dữ liệu từ StarRocks bronze.mediation_table. */
 export interface AppMediationBronzeFilterOptionsResponse {
   starRocksEnabled: boolean

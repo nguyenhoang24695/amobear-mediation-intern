@@ -1624,9 +1624,22 @@ export function CustomReportBuilderContent() {
 
     if (tableRows.length === 0) return
 
-    const parameterHeaders = displayedParameters.map((paramId) => {
-      const param = catalogParameters.find((p) => p.id === paramId)
-      return param?.label ?? paramId
+    type ExportParamColumn =
+      | { kind: "param"; paramId: string }
+      | { kind: "app_store_id"; paramId: "app" }
+
+    const exportParamColumns: ExportParamColumn[] = []
+    for (const paramId of displayedParameters) {
+      exportParamColumns.push({ kind: "param", paramId })
+      if (paramId === "app" && !displayedParameters.includes("app_store_id")) {
+        exportParamColumns.push({ kind: "app_store_id", paramId: "app" })
+      }
+    }
+
+    const parameterHeaders = exportParamColumns.map((col) => {
+      if (col.kind === "app_store_id") return "App Store ID"
+      const param = catalogParameters.find((p) => p.id === col.paramId)
+      return param?.label ?? col.paramId
     })
     const metricHeaders = displayedMetrics.map((metricId) => {
       const metric = catalogMetrics.find((m) => m.id === metricId)
@@ -1640,12 +1653,15 @@ export function CustomReportBuilderContent() {
       return row[paramId] ?? ""
     }
 
+    const getAppStoreIdExportValue = (row: Record<string, string | number | null>) =>
+      String(row.app_store_id ?? row.app_id ?? row.app ?? "").trim()
+
     const headerHtml = [...parameterHeaders, ...metricHeaders]
       .map((header) => `<th>${escapeExcelHtml(header)}</th>`)
       .join("")
 
     const totalHtml = [
-      ...displayedParameters.map((_, index) => (index === 0 ? "Total" : "")),
+      ...exportParamColumns.map((_, index) => (index === 0 ? "Total" : "")),
       ...displayedMetrics.map((metricId) => formatMetricValue(tableTotals[metricId], metricId, catalogMetrics)),
     ]
       .map((value) => `<td>${escapeExcelHtml(value)}</td>`)
@@ -1653,9 +1669,10 @@ export function CustomReportBuilderContent() {
 
     const rowsHtml = tableRows
       .map((row) => {
-        const parameterCells = displayedParameters.map((paramId) =>
-          escapeExcelHtml(getParameterDisplayValue(paramId, row)),
-        )
+        const parameterCells = exportParamColumns.map((col) => {
+          if (col.kind === "app_store_id") return escapeExcelHtml(getAppStoreIdExportValue(row))
+          return escapeExcelHtml(getParameterDisplayValue(col.paramId, row))
+        })
         const metricCells = displayedMetrics.map((metricId) =>
           escapeExcelHtml(formatMetricValue(row[metricId], metricId, catalogMetrics)),
         )
