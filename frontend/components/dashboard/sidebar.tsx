@@ -314,6 +314,21 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    icon: Star,
+    label: "AdMob Ads",
+    href: "#",
+    hasSubmenu: true,
+    isShow: () => hasScreenFunction("s-apps", "view"),
+    children: [
+      {
+        icon: GitMerge,
+        label: "App Mappings",
+        href: "/admob-ads/app-mappings",
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-apps", fn)),
+      },
+    ],
+  },
+  {
     icon: Bot,
     label: "AI Assistant",
     href: "#",
