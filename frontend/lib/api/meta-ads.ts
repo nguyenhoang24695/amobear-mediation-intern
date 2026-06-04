@@ -34,6 +34,7 @@ import type {
   MetaCreateCampaignReferenceDto,
   MetaExecuteResponseDto,
   MetaFacebookPageReferenceDto,
+  MetaFacebookPageProfileDto,
   MetaFacebookPostReferencePageDto,
   MetaFacebookPostReferenceQueryDto,
   MetaGeoCityReferenceDto,
@@ -187,6 +188,10 @@ export const metaReferenceApi = {
 
   getAdAccountFacebookPages: async (adAccountId: number, source: "promote_pages" | "access_token_all" = "promote_pages") => {
     return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source })
+  },
+
+  getFacebookPageProfileId: async (adAccountId: number, pageId: string) => {
+    return apiClient.get<MetaFacebookPageProfileDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages/${encodeURIComponent(pageId)}/profile-id`)
   },
 
   getFacebookPagePosts: async (adAccountId: number, pageId: string, query?: MetaFacebookPostReferenceQueryDto) => {
