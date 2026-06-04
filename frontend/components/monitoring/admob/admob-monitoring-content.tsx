@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { format, formatDistanceToNow } from "date-fns"
-import { AlertCircle, ImageIcon, Loader2, RefreshCw, RotateCw, Search } from "lucide-react"
+import { AlertCircle, GitCompareArrows, ImageIcon, Loader2, RefreshCw, RotateCw, Search } from "lucide-react"
 import { toast } from "sonner"
 import { admobMonitoringApi } from "@/lib/api/admob-monitoring"
 import { hasScreenFunction } from "@/lib/auth"
@@ -23,20 +23,28 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Pagination } from "@/components/shared/pagination"
 import { cn } from "@/lib/utils"
 
-const SOURCE_TABLE_OPTIONS = [
-  { value: "all", label: "All sources" },
+const RECOMPARE_TOOLTIP =
+  "Đọc lại dữ liệu bronze (admob_revenue_table so với bảng nguồn). Không gọi AdMob API. Nếu delta trong ngưỡng cho phép thì xóa dòng khỏi hàng đợi; nếu vẫn lệch thì cập nhật Revenue, Detail và Delta."
+
+const RESYNC_TOOLTIP =
+  "Kéo lại dữ liệu từ AdMob API và ghi lại bronze cho từng grain (ngày, app, platform). Chạy nền qua Hangfire. Dùng khi cần làm mới dữ liệu nguồn sau khi sync đã chạy."
+
+const SOURCE_TABLE_FILTER_OPTIONS = [
   { value: "admob_table", label: "AdMob table" },
   { value: "mkt_table", label: "MKT table" },
   { value: "mediation_table", label: "Mediation table" },
-]
+] as const
+
+const ALL_SOURCE_TABLE_VALUES = SOURCE_TABLE_FILTER_OPTIONS.map((o) => o.value)
 
 const STATUS_OPTIONS = [
+  { value: "all", label: "All" },
   { value: "Waiting", label: "Waiting" },
   { value: "Running", label: "Running" },
-  { value: "all", label: "All statuses" },
 ]
 
 const PLATFORM_OPTIONS = [
@@ -80,7 +88,7 @@ function statusBadgeClass(status: string) {
 }
 
 function sourceLabel(value: string) {
-  return SOURCE_TABLE_OPTIONS.find((item) => item.value === value)?.label ?? value
+  return SOURCE_TABLE_FILTER_OPTIONS.find((item) => item.value === value)?.label ?? value
 }
 
 function renderPlatformBadge(platformValue: string) {
@@ -121,12 +129,15 @@ export function AdmobMonitoringContent() {
   const [pageSize, setPageSize] = useState(20)
   const [startDate, setStartDate] = useState(defaultStartDate)
   const [endDate, setEndDate] = useState(today)
-  const [sourceTable, setSourceTable] = useState("all")
+  const [selectedSourceTables, setSelectedSourceTables] = useState<Set<string>>(
+    () => new Set(ALL_SOURCE_TABLE_VALUES),
+  )
   const [status, setStatus] = useState("Waiting")
   const [platform, setPlatform] = useState("all")
   const [appSearch, setAppSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [resyncing, setResyncing] = useState(false)
+  const [recomparing, setRecomparing] = useState(false)
   const [selectedHashKeys, setSelectedHashKeys] = useState<Set<string>>(() => new Set())
 
   const waitingItems = useMemo(
@@ -139,13 +150,31 @@ export function AdmobMonitoringContent() {
   const someWaitingSelected =
     waitingItems.some((item) => selectedHashKeys.has(item.hashKey)) && !allWaitingSelected
 
+  const selectedSourceList = useMemo(() => [...selectedSourceTables], [selectedSourceTables])
+  const allSourcesSelected =
+    ALL_SOURCE_TABLE_VALUES.length > 0 &&
+    ALL_SOURCE_TABLE_VALUES.every((v) => selectedSourceTables.has(v))
+  const someSourcesSelected =
+    ALL_SOURCE_TABLE_VALUES.some((v) => selectedSourceTables.has(v)) && !allSourcesSelected
+
   const loadData = useCallback(async () => {
+    if (selectedSourceList.length === 0) {
+      setItems([])
+      setTotal(0)
+      setTotalPages(0)
+      toast.error("Chọn ít nhất một nguồn (Source).")
+      return
+    }
+
     setLoading(true)
     try {
+      const sourceTables =
+        selectedSourceList.length >= ALL_SOURCE_TABLE_VALUES.length ? undefined : selectedSourceList
+
       const response = await admobMonitoringApi.listPerformanceSyncCompare({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        sourceTable: sourceTable === "all" ? undefined : sourceTable,
+        sourceTables,
         status,
         platform: platform === "all" ? undefined : platform,
         appSearch: appSearch.trim() || undefined,
@@ -172,7 +201,20 @@ export function AdmobMonitoringContent() {
     } finally {
       setLoading(false)
     }
-  }, [appSearch, endDate, page, pageSize, platform, sourceTable, startDate, status])
+  }, [appSearch, endDate, page, pageSize, platform, selectedSourceList, startDate, status])
+
+  const toggleSourceTable = (value: string, checked: boolean) => {
+    setSelectedSourceTables((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(value)
+      else next.delete(value)
+      return next
+    })
+  }
+
+  const toggleAllSourceTables = (checked: boolean) => {
+    setSelectedSourceTables(checked ? new Set(ALL_SOURCE_TABLE_VALUES) : new Set())
+  }
 
   useEffect(() => {
     void loadData()
@@ -229,13 +271,35 @@ export function AdmobMonitoringContent() {
     }
   }
 
+  const recompareSelected = async () => {
+    if (selectedHashKeys.size === 0) return
+    setRecomparing(true)
+    try {
+      const response = await admobMonitoringApi.recomparePerformanceSyncCompare({
+        hashKeys: [...selectedHashKeys],
+      })
+      const parts: string[] = []
+      if (response.matchedDeleted > 0) parts.push(`${response.matchedDeleted} removed (matched)`)
+      if (response.updated > 0) parts.push(`${response.updated} updated (still mismatched)`)
+      if (response.failed > 0) parts.push(`${response.failed} failed`)
+      toast.success(parts.length > 0 ? `Re-compare: ${parts.join(", ")}.` : "Re-compare completed.")
+      setSelectedHashKeys(new Set())
+      await loadData()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to re-compare"
+      toast.error(message)
+    } finally {
+      setRecomparing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">AdMob Monitoring</h1>
           <p className="text-sm text-slate-500">
-            Monitor mismatches from bronze.performance_sync_compare and re-sync selected rows.
+            Monitor mismatches from bronze.performance_sync_compare. Re-compare refreshes metrics; re-sync pulls bronze data again.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -261,20 +325,33 @@ export function AdmobMonitoringContent() {
               <Label htmlFor="end-date">End date</Label>
               <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 md:col-span-2">
               <Label>Source</Label>
-              <Select value={sourceTable} onValueChange={setSourceTable}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOURCE_TABLE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+              <div className="rounded-md border border-slate-200 bg-white px-3 py-2.5">
+                <label className="flex cursor-pointer items-center gap-2 border-b border-slate-100 pb-2 text-sm font-medium text-slate-700">
+                  <Checkbox
+                    checked={allSourcesSelected ? true : someSourcesSelected ? "indeterminate" : false}
+                    onCheckedChange={(value) => toggleAllSourceTables(value === true)}
+                    aria-label="Chọn tất cả nguồn"
+                  />
+                  Tất cả nguồn
+                </label>
+                <div className="mt-2 space-y-2">
+                  {SOURCE_TABLE_FILTER_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                    >
+                      <Checkbox
+                        checked={selectedSourceTables.has(option.value)}
+                        onCheckedChange={(value) => toggleSourceTable(option.value, value === true)}
+                        aria-label={option.label}
+                      />
                       {option.label}
-                    </SelectItem>
+                    </label>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -329,20 +406,55 @@ export function AdmobMonitoringContent() {
           <div>
             <CardTitle className="text-base">Compare Queue</CardTitle>
             <CardDescription>
-              Rows with status Waiting can be selected and queued for background re-sync.
+              Select Waiting rows to re-compare (update metrics or remove if matched) or queue background re-sync.
             </CardDescription>
           </div>
           {selectedCount > 0 ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-slate-600">{selectedCount} selected</span>
-              <Button
-                type="button"
-                onClick={() => void resyncSelected()}
-                disabled={!canRun || resyncing}
-              >
-                {resyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
-                Re-sync selected
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void recompareSelected()}
+                      disabled={!canRun || recomparing || resyncing}
+                    >
+                      {recomparing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <GitCompareArrows className="mr-2 h-4 w-4" />
+                      )}
+                      Re-compare selected
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm">
+                  {RECOMPARE_TOOLTIP}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      type="button"
+                      onClick={() => void resyncSelected()}
+                      disabled={!canRun || resyncing || recomparing}
+                    >
+                      {resyncing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCw className="mr-2 h-4 w-4" />
+                      )}
+                      Re-sync selected
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm">
+                  {RESYNC_TOOLTIP}
+                </TooltipContent>
+              </Tooltip>
             </div>
           ) : null}
         </CardHeader>
