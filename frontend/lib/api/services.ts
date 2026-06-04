@@ -2816,6 +2816,44 @@ export const reportsApi = {
         return apiClient.get(`/api/v1/reports/profit-overview${qs ? `?${qs}` : ""}`)
     },
 
+    getProfitOverviewTeamApps: async (
+        teamId: string,
+        params?: {
+            from?: string
+            to?: string
+            page?: number
+            pageSize?: number
+        },
+    ): Promise<import('@/types/reports').ProfitOverviewTeamAppsResponse> => {
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        if (params?.page != null) search.set("page", String(params.page))
+        if (params?.pageSize != null) search.set("pageSize", String(params.pageSize))
+        const qs = search.toString()
+        return apiClient.get(
+            `/api/v1/reports/profit-overview/teams/${teamId}/apps${qs ? `?${qs}` : ""}`,
+        )
+    },
+
+    getProfitOverviewSharedAppConflicts: async (params?: {
+        from?: string
+        to?: string
+        teamIds?: string[]
+    }): Promise<import('@/types/reports').ProfitOverviewSharedAppConflict[]> => {
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        for (const id of params?.teamIds ?? []) {
+            const trimmed = id?.trim()
+            if (trimmed) search.append("teamIds", trimmed)
+        }
+        const qs = search.toString()
+        return apiClient.get(
+            `/api/v1/reports/profit-overview/shared-app-conflicts${qs ? `?${qs}` : ""}`,
+        )
+    },
+
     getTeamApps: async (teamId: string): Promise<import('@/types/reports').TeamLeadAppCache> => {
         return apiClient.get(`/api/v1/reports/team-apps/${teamId}`)
     },
