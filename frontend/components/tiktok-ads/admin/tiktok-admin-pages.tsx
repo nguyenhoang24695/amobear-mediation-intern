@@ -3,12 +3,11 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { Check, ChevronsUpDown, Loader2, RefreshCw, ShieldCheck, PlugZap, Play, CheckCircle2, XCircle, Send, Pencil, Search, X } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2, RefreshCw, PlugZap, Play, CheckCircle2, XCircle, Send, Pencil, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -30,12 +29,11 @@ import type { App } from "@/types/api"
 import type {
   TikTokAdAccountDto,
   TikTokAdAccountPageDto,
-  TikTokAppMappingCandidateDto,
+  TikTokAppMappingAdmobBindingDto,
   TikTokAppMappingDto,
   TikTokCampaignRequestListItemDto,
   TikTokIntegrationDto,
   TikTokReferenceResponseDto,
-  ResolveTikTokAppMappingCandidateRequestDto,
 } from "@/types/tiktok-ads"
 
 function statusTone(value?: string) {
@@ -52,42 +50,25 @@ function formatDateTime(value?: string | null) {
   return date.toLocaleString()
 }
 
-function formatCandidateLabel(value?: string | null) {
-  if (!value) return "-"
-  return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
-}
-
-function getCandidateSuggestion(candidate: TikTokAppMappingCandidateDto) {
-  if (candidate.resolvedApp?.appDisplayName) return candidate.resolvedApp.appDisplayName
-  if (candidate.recommendedApp?.appDisplayName) return candidate.recommendedApp.appDisplayName
-  if (candidate.suggestedApps.length === 1) return candidate.suggestedApps[0].appDisplayName ?? candidate.suggestedApps[0].appId ?? "-"
-  if (candidate.suggestedApps.length > 1) return `${candidate.suggestedApps.length} candidate apps`
-  return "Manual review"
-}
-
-function getCandidateDefaultAppRowId(candidate: TikTokAppMappingCandidateDto) {
-  return candidate.resolvedAppRowId ?? candidate.recommendedAppRowId ?? candidate.suggestedApps[0]?.appRowId ?? null
-}
-
-function getCandidatePlatforms(candidate: TikTokAppMappingCandidateDto) {
-  const platforms = [
-    candidate.resolvedApp?.platform,
-    candidate.recommendedApp?.platform,
-    ...candidate.suggestedApps.map((app) => app.platform),
-  ].map(normalizePlatform).filter(Boolean)
-
-  return platforms.length > 0 ? Array.from(new Set(platforms)) : ["UNKNOWN"]
-}
-
-function getCandidateStoreIdentifier(candidate: TikTokAppMappingCandidateDto) {
-  if (candidate.packageName) return { value: candidate.packageName, label: "Package name" }
-  if (candidate.bundleId) return { value: candidate.bundleId, label: "Bundle ID" }
-  if (candidate.identifiers.length > 0) return { value: candidate.identifiers[0], label: "Identifier" }
-  return { value: "-", label: "No store identifier" }
-}
-
 function normalizePlatform(value?: string | null) {
   return value?.toUpperCase() ?? ""
+}
+
+type TikTokMappingStatus = "mapped" | "unmapped"
+
+type TikTokAppMappingGroup = {
+  key: string
+  primaryMapping: TikTokAppMappingDto
+  mappings: TikTokAppMappingDto[]
+  admobBindings: TikTokAppMappingAdmobBindingDto[]
+  admobAccountCount: number
+  app?: App
+  appLabel: string
+  platform: string
+  storeIdentifier: string
+  tikTokAppIds: string[]
+  latestUpdatedAt?: string | null
+  status: TikTokMappingStatus
 }
 
 function getPlatformBadgeClass(platform?: string | null) {
@@ -105,10 +86,6 @@ function getTikTokMappingAppLabel(app?: App | null, mapping?: TikTokAppMappingDt
   return mapping?.appDisplayName ?? mapping?.externalAppName ?? app?.displayName ?? app?.name ?? mapping?.appId ?? mapping?.packageName ?? mapping?.normalizedStoreIdentifier ?? (mapping ? `Binding ${mapping.id}` : "-")
 }
 
-function getTikTokMappingAdMobId(app?: App | null, mapping?: TikTokAppMappingDto | null) {
-  return mapping?.appId ?? app?.appId ?? null
-}
-
 function firstNonEmpty(...values: Array<string | null | undefined>) {
   return values.find((value) => value && value.trim()) ?? null
 }
@@ -124,19 +101,146 @@ function getTikTokMappingPlatform(app?: App | null, mapping?: TikTokAppMappingDt
   return normalizePlatform(mapping?.appPlatform ?? mapping?.platform ?? app?.platform)
 }
 
-function getDisplayAppName(app?: App | null) {
-  return app?.displayName ?? app?.name ?? "-"
+function getStatusBadgeClass(status: TikTokMappingStatus) {
+  return status === "mapped"
+    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none"
+    : "bg-amber-100 text-amber-700 hover:bg-amber-100 border-none"
 }
 
-function getResolveSelectableApps(apps: App[], mappedAppRows: Set<number>, resolutionType: string) {
-  switch (resolutionType) {
-    case "update_mapping":
-      return apps.filter((app) => mappedAppRows.has(app.id))
-    case "create_mapping":
-      return apps.filter((app) => !mappedAppRows.has(app.id))
+function isHttpUrl(value?: string | null) {
+  return /^https?:\/\//i.test(value?.trim() ?? "")
+}
+
+function buildStoreUrl(platform?: string | null, storeIdentifier?: string | null) {
+  const id = storeIdentifier?.trim()
+  if (!id) return null
+
+  switch (normalizePlatform(platform)) {
+    case "ANDROID":
+      return `https://play.google.com/store/apps/details?id=${encodeURIComponent(id)}`
+    case "IOS": {
+      const appStoreId = id.replace(/\D/g, "")
+      return appStoreId && /^\d+$/.test(id) ? `https://apps.apple.com/app/id${appStoreId}` : null
+    }
     default:
-      return apps
+      return null
   }
+}
+
+function getTikTokMappingStoreUrl(mapping: TikTokAppMappingDto, group: Pick<TikTokAppMappingGroup, "platform" | "storeIdentifier">) {
+  if (isHttpUrl(mapping.storeUrlOverride)) return mapping.storeUrlOverride!.trim()
+  if (isHttpUrl(mapping.downloadUrl)) return mapping.downloadUrl.trim()
+  return buildStoreUrl(group.platform, group.storeIdentifier)
+}
+
+function getTikTokGroupKey(mapping: TikTokAppMappingDto) {
+  const normalizedStoreIdentifier = mapping.normalizedStoreIdentifier?.trim().toLowerCase()
+  if (!normalizedStoreIdentifier) return `tiktok:${mapping.id}`
+
+  return `store:${normalizePlatform(mapping.platform ?? mapping.appPlatform) || "UNKNOWN"}:${normalizedStoreIdentifier}`
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => !!value)))
+}
+
+function getLatestUpdatedAt(mappings: TikTokAppMappingDto[]) {
+  return mappings
+    .map((mapping) => mapping.updatedAt)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null
+}
+
+function dedupeTikTokAdmobBindings(mappings: TikTokAppMappingDto[]) {
+  const byId = new Map<number, TikTokAppMappingAdmobBindingDto>()
+  mappings.forEach((mapping) => {
+    ;(mapping.admobBindings ?? []).forEach((binding) => byId.set(binding.bindingId, binding))
+  })
+
+  return Array.from(byId.values()).sort((a, b) => {
+    const accountA = a.admobAccountName ?? ""
+    const accountB = b.admobAccountName ?? ""
+    return accountA.localeCompare(accountB) || a.externalAppId.localeCompare(b.externalAppId)
+  })
+}
+
+function buildTikTokAppMappingGroups(mappings: TikTokAppMappingDto[], apps: App[]): TikTokAppMappingGroup[] {
+  const appByRowId = new Map(apps.map((app) => [app.id, app]))
+  const rowsByKey = new Map<string, TikTokAppMappingDto[]>()
+
+  mappings.forEach((mapping) => {
+    const key = getTikTokGroupKey(mapping)
+    const rows = rowsByKey.get(key) ?? []
+    rows.push(mapping)
+    rowsByKey.set(key, rows)
+  })
+
+  return Array.from(rowsByKey.entries())
+    .map(([key, rows]) => {
+      const sortedRows = rows.slice().sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      const primaryMapping = sortedRows[0]
+      const app = primaryMapping.appRowId ? appByRowId.get(primaryMapping.appRowId) : undefined
+      const admobBindings = dedupeTikTokAdmobBindings(sortedRows)
+      const admobAccountCount = new Set(
+        admobBindings
+          .map((binding) => binding.admobAccountId)
+          .filter((value): value is number => typeof value === "number"),
+      ).size
+      const status: TikTokMappingStatus = admobAccountCount > 0 ? "mapped" : "unmapped"
+
+      return {
+        key,
+        primaryMapping,
+        mappings: sortedRows,
+        admobBindings,
+        admobAccountCount,
+        app,
+        appLabel: getTikTokMappingAppLabel(app, primaryMapping),
+        platform: getTikTokMappingPlatform(app, primaryMapping) || "UNKNOWN",
+        storeIdentifier: getTikTokMappingStoreIdentifier(app, primaryMapping) ?? "",
+        tikTokAppIds: uniqueStrings(sortedRows.map((mapping) => mapping.tikTokAppId)),
+        latestUpdatedAt: getLatestUpdatedAt(sortedRows),
+        status,
+      }
+    })
+    .sort((a, b) => a.appLabel.localeCompare(b.appLabel) || a.storeIdentifier.localeCompare(b.storeIdentifier) || a.key.localeCompare(b.key))
+}
+
+function filterTikTokAppMappingGroups(groups: TikTokAppMappingGroup[], filters: { search: string; platform: string; status: string }) {
+  const query = filters.search.trim().toLowerCase()
+  return groups.filter((group) => {
+    if (filters.platform !== "all" && group.platform !== filters.platform) return false
+    if (filters.status !== "all" && group.status !== filters.status) return false
+    if (!query) return true
+
+    const searchableValues = [
+      group.appLabel,
+      group.app?.appId ?? "",
+      group.storeIdentifier,
+      ...group.tikTokAppIds,
+      ...group.mappings.flatMap((mapping) => [
+        mapping.externalAppName ?? "",
+        mapping.downloadUrl ?? "",
+        mapping.packageName ?? "",
+        mapping.appStoreId ?? "",
+        mapping.storeUrlOverride ?? "",
+        ...(mapping.advertiserIds ?? []),
+      ]),
+      ...group.admobBindings.flatMap((binding) => [
+        binding.admobAccountName ?? "",
+        binding.admobAccountExternalId ?? "",
+        binding.externalAppId,
+        binding.appId ?? "",
+        binding.appDisplayName ?? "",
+      ]),
+    ]
+
+    return searchableValues.some((value) => value.toLowerCase().includes(query))
+  })
+}
+
+function getDisplayAppName(app?: App | null) {
+  return app?.displayName ?? app?.name ?? "-"
 }
 
 function PageShell({ title, subtitle, children, action }: { title: string; subtitle: string; children: ReactNode; action?: ReactNode }) {
@@ -612,46 +716,27 @@ export function TikTokAdAccountsPage() {
 }
 
 export function TikTokAppMappingsPage() {
-  const { toast } = useToast()
   const [items, setItems] = useState<TikTokAppMappingDto[]>([])
-  const [candidates, setCandidates] = useState<TikTokAppMappingCandidateDto[]>([])
   const [apps, setApps] = useState<App[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [activeTab, setActiveTab] = useState<"mappings" | "candidates">("mappings")
   const [mappingSearch, setMappingSearch] = useState("")
+  const [platformFilter, setPlatformFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [mappingPage, setMappingPage] = useState(1)
   const [mappingPageSize, setMappingPageSize] = useState(10)
-  const [candidateSearch, setCandidateSearch] = useState("")
-  const [candidateMatchFilter, setCandidateMatchFilter] = useState("all")
-  const [candidateOsFilter, setCandidateOsFilter] = useState("all")
-  const [candidatePage, setCandidatePage] = useState(1)
-  const [candidatePageSize, setCandidatePageSize] = useState(10)
-  const [resolveTarget, setResolveTarget] = useState<TikTokAppMappingCandidateDto | null>(null)
-  const [resolveForm, setResolveForm] = useState({ resolutionType: "create_mapping", appRowId: "", resolutionNote: "" })
-  const [resolveDialogOpen, setResolveDialogOpen] = useState(false)
-  const [resolveAppSelectOpen, setResolveAppSelectOpen] = useState(false)
-  const [resolvingId, setResolvingId] = useState<number | null>(null)
 
-  const mappedAppRows = useMemo(() => new Set(items.map((item) => item.appRowId).filter((value): value is number => typeof value === "number")), [items])
   const appByRowId = useMemo(() => new Map(apps.map((app) => [app.id, app])), [apps])
-  const resolveSelectableApps = useMemo(
-    () => getResolveSelectableApps(apps, mappedAppRows, resolveForm.resolutionType),
-    [apps, mappedAppRows, resolveForm.resolutionType]
-  )
-  const selectedResolveApp = resolveForm.appRowId ? appByRowId.get(Number(resolveForm.appRowId)) ?? null : null
 
   const load = async () => {
     setLoading(true)
     setError("")
     try {
-      const [mappings, candidateRows, appsResponse] = await Promise.all([
+      const [mappings, appsResponse] = await Promise.all([
         tiktokAccountsApi.getAppMappings(),
-        tiktokAccountsApi.listAppMappingCandidates(),
         structureApi.getApps(),
       ])
       setItems(mappings)
-      setCandidates(candidateRows)
       setApps(appsResponse.apps)
     }
     catch (ex: any) { setError(ex.message) }
@@ -659,584 +744,200 @@ export function TikTokAppMappingsPage() {
   }
   useEffect(() => { void load() }, [])
 
+  const groups = useMemo(() => buildTikTokAppMappingGroups(items, apps), [apps, items])
   const filteredMappings = useMemo(() => {
-    const search = mappingSearch.trim().toLowerCase()
-    return items.filter((item) => {
-      const app = item.appRowId ? appByRowId.get(item.appRowId) : undefined
-      const platform = getTikTokMappingPlatform(app, item)
-
-      if (!search) return true
-
-      return [
-        getTikTokMappingAppLabel(app, item),
-        getTikTokMappingAdMobId(app, item),
-        platform,
-        item.tikTokAppId,
-        item.downloadUrl,
-      ].filter(Boolean).some((value) => value!.toLowerCase().includes(search))
+    return filterTikTokAppMappingGroups(groups, {
+      search: mappingSearch,
+      platform: platformFilter,
+      status: statusFilter,
     })
-  }, [appByRowId, items, mappingSearch])
-
-  const filteredCandidates = useMemo(() => {
-    const search = candidateSearch.trim().toLowerCase()
-    return candidates.filter((candidate) => {
-      const platforms = getCandidatePlatforms(candidate)
-      if (candidateMatchFilter !== "all" && candidate.matchQuality !== candidateMatchFilter) return false
-      if (candidateOsFilter !== "all" && !platforms.includes(candidateOsFilter)) return false
-      if (!search) return true
-      return [
-        candidate.tikTokAppId,
-        candidate.source,
-        candidate.matchQuality,
-        candidate.reviewStatus,
-        ...platforms,
-        candidate.downloadUrl,
-        candidate.packageName,
-        candidate.bundleId,
-        candidate.storeUrl,
-        candidate.sampleCampaignId,
-        candidate.sampleAdGroupId,
-        candidate.recommendedApp?.appDisplayName,
-        candidate.recommendedApp?.appId,
-        ...candidate.sourceAdvertiserIds,
-        ...candidate.identifiers,
-        ...candidate.suggestedApps.flatMap((app) => [app.appDisplayName, app.appId]),
-      ].filter(Boolean).some((value) => value!.toLowerCase().includes(search))
-    })
-  }, [candidateMatchFilter, candidateOsFilter, candidateSearch, candidates])
+  }, [groups, mappingSearch, platformFilter, statusFilter])
 
   useEffect(() => {
     setMappingPage(1)
-  }, [mappingSearch])
-
-  useEffect(() => {
-    setCandidatePage(1)
-  }, [candidateMatchFilter, candidateOsFilter, candidateSearch])
+  }, [mappingSearch, platformFilter, statusFilter])
 
   const mappingTotalPages = Math.max(1, Math.ceil(filteredMappings.length / mappingPageSize))
-  const candidateTotalPages = Math.max(1, Math.ceil(filteredCandidates.length / candidatePageSize))
 
   useEffect(() => {
     if (mappingPage > mappingTotalPages) setMappingPage(mappingTotalPages)
   }, [mappingPage, mappingTotalPages])
-
-  useEffect(() => {
-    if (candidatePage > candidateTotalPages) setCandidatePage(candidateTotalPages)
-  }, [candidatePage, candidateTotalPages])
 
   const paginatedMappings = useMemo(() => {
     const start = (mappingPage - 1) * mappingPageSize
     return filteredMappings.slice(start, start + mappingPageSize)
   }, [filteredMappings, mappingPage, mappingPageSize])
 
-  const paginatedCandidates = useMemo(() => {
-    const start = (candidatePage - 1) * candidatePageSize
-    return filteredCandidates.slice(start, start + candidatePageSize)
-  }, [candidatePage, candidatePageSize, filteredCandidates])
-
-  const openResolve = (candidate: TikTokAppMappingCandidateDto) => {
-    const appRowId = getCandidateDefaultAppRowId(candidate)
-    const resolutionType = appRowId && mappedAppRows.has(appRowId) ? "update_mapping" : "create_mapping"
-    setResolveTarget(candidate)
-    setResolveForm({
-      resolutionType,
-      appRowId: appRowId?.toString() ?? "",
-      resolutionNote: "",
-    })
-    setResolveAppSelectOpen(false)
-    setResolveDialogOpen(true)
-  }
-
-  const handleResolveDialogOpenChange = (open: boolean) => {
-    setResolveDialogOpen(open)
-    if (!open) {
-      setResolveAppSelectOpen(false)
-      setResolveTarget(null)
-      setResolveForm({ resolutionType: "create_mapping", appRowId: "", resolutionNote: "" })
-    }
-  }
-
-  const handleResolveResolutionTypeChange = (value: string) => {
-    setResolveAppSelectOpen(false)
-    setResolveForm((current) => {
-      const nextSelectableApps = getResolveSelectableApps(apps, mappedAppRows, value)
-      const hasCurrentSelection = current.appRowId
-        ? nextSelectableApps.some((app) => app.id === Number(current.appRowId))
-        : false
-
-      return {
-        ...current,
-        resolutionType: value,
-        appRowId: value === "dismiss"
-          ? current.appRowId
-          : hasCurrentSelection
-            ? current.appRowId
-            : nextSelectableApps[0]?.id.toString() ?? "",
-      }
-    })
-  }
-
-  const resolveCandidate = async () => {
-    if (!resolveTarget) return
-    try {
-      setResolvingId(resolveTarget.id)
-      const payload: ResolveTikTokAppMappingCandidateRequestDto = {
-        resolutionType: resolveForm.resolutionType,
-        appRowId: resolveForm.resolutionType === "dismiss" ? null : Number(resolveForm.appRowId),
-        resolutionNote: resolveForm.resolutionNote.trim() || null,
-      }
-      await tiktokAccountsApi.resolveAppMappingCandidate(resolveTarget.id, payload)
-      handleResolveDialogOpenChange(false)
-      await load()
-      toast({ title: "TikTok mapping candidate resolved" })
-    } catch (ex: any) {
-      toast({ title: "Resolve failed", description: ex.message, variant: "destructive" })
-    } finally {
-      setResolvingId(null)
-    }
-  }
-
-  const dismissCandidate = async (candidate: TikTokAppMappingCandidateDto) => {
-    try {
-      setResolvingId(candidate.id)
-      await tiktokAccountsApi.resolveAppMappingCandidate(candidate.id, { resolutionType: "dismiss" })
-      await load()
-      toast({ title: "TikTok mapping candidate dismissed" })
-    } catch (ex: any) {
-      toast({ title: "Dismiss failed", description: ex.message, variant: "destructive" })
-    } finally {
-      setResolvingId(null)
-    }
-  }
-
   return (
-    <PageShell title="TikTok App Mappings" subtitle="Map internal apps to TikTok mobile app IDs and store URLs." action={<Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}>
+    <PageShell title="TikTok App Mappings" subtitle="Track TikTok store identities and whether each one is mapped with AdMob." action={<Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}>
       <ErrorBox message={error} />
-      <div className="inline-flex rounded-md bg-slate-100 p-1">
-        <Button size="sm" variant={activeTab === "mappings" ? "default" : "ghost"} onClick={() => setActiveTab("mappings")}>
-          App Mappings
-          <Badge className="ml-2 bg-white text-slate-700">{filteredMappings.length}</Badge>
-        </Button>
-        <Button size="sm" variant={activeTab === "candidates" ? "default" : "ghost"} onClick={() => setActiveTab("candidates")}>
-          Mapping Candidates
-          <Badge className="ml-2 bg-white text-slate-700">{filteredCandidates.length}</Badge>
-        </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-72">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Input
+            className="h-9 pl-8 text-sm"
+            placeholder="Search by app, store ID, TikTok or AdMob app ID..."
+            value={mappingSearch}
+            onChange={(e) => setMappingSearch(e.target.value)}
+          />
+        </div>
+        <Select value={platformFilter} onValueChange={setPlatformFilter}>
+          <SelectTrigger className="h-9 w-36 bg-white text-sm">
+            <SelectValue placeholder="Platform" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All OS</SelectItem>
+            <SelectItem value="ANDROID">Android</SelectItem>
+            <SelectItem value="IOS">iOS</SelectItem>
+            <SelectItem value="UNKNOWN">Unknown</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-40 bg-white text-sm">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="mapped">Mapped</SelectItem>
+            <SelectItem value="unmapped">Unmapped</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-xs text-slate-400">
+          {filteredMappings.length} store app{filteredMappings.length !== 1 ? "s" : ""}
+        </span>
       </div>
-      {activeTab === "mappings" ? (
-        <>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-72">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              <Input
-                className="h-9 pl-8 text-sm"
-                placeholder="Search by app, store ID, TikTok mobile app ID..."
-                value={mappingSearch}
-                onChange={(e) => setMappingSearch(e.target.value)}
-              />
-            </div>
-            <span className="ml-auto text-xs text-slate-400">
-              {filteredMappings.length} mapping{filteredMappings.length !== 1 ? "s" : ""}
-            </span>
-          </div>
 
-          <div className="overflow-x-auto rounded-md border bg-white">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="text-xs font-medium text-slate-500">App</TableHead>
-                  <TableHead className="w-36 text-xs font-medium text-slate-500">Operation System</TableHead>
-                  <TableHead className="text-xs font-medium text-slate-500">TikTok Mobile App ID</TableHead>
-                  <TableHead className="text-xs font-medium text-slate-500">Download URL</TableHead>
-                  <TableHead className="w-24 text-xs font-medium text-slate-500">Enabled</TableHead>
-                  <TableHead className="w-36 text-xs font-medium text-slate-500">Updated</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">Loading app mappings...</TableCell></TableRow>
-                ) : filteredMappings.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
-                ) : paginatedMappings.map((item) => {
-                  const app = item.appRowId ? appByRowId.get(item.appRowId) : undefined
-                  const appLabel = getTikTokMappingAppLabel(app, item)
-                  const admobId = getTikTokMappingAdMobId(app, item)
-                  const storeIdentifier = getTikTokMappingStoreIdentifier(app, item)
-                  const platform = getTikTokMappingPlatform(app, item)
+      <div className="overflow-x-auto rounded-md border bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50">
+              <TableHead className="text-xs font-medium text-slate-500">App</TableHead>
+              <TableHead className="w-32 text-xs font-medium text-slate-500">Platform</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500">Store Identity</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500">TikTok App ID</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500">AdMob Mapping</TableHead>
+              <TableHead className="w-28 text-xs font-medium text-slate-500">Status</TableHead>
+              <TableHead className="w-36 text-xs font-medium text-slate-500">Updated</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">Loading app mappings...</TableCell></TableRow>
+            ) : filteredMappings.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
+            ) : paginatedMappings.map((group) => {
+              const mapping = group.primaryMapping
+              const firstAdmobBinding = group.admobBindings[0]
+              const mappedIconUri = firstAdmobBinding?.appRowId ? appByRowId.get(firstAdmobBinding.appRowId)?.iconUri : undefined
+              const appIconUri = mappedIconUri ?? group.app?.iconUri ?? undefined
+              const appRouteId = group.app?.appId ?? mapping.appId ?? null
+              const storeUrl = getTikTokMappingStoreUrl(mapping, group)
 
-                  return (
-                    <TableRow key={item.id} className="text-sm hover:bg-slate-50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          {app?.iconUri ? (
-                            <img src={app.iconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover" />
-                          ) : (
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
-                              {appLabel.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="min-w-0 space-y-0.5">
-                            {admobId ? (
-                              <Link href={`/apps/${encodeURIComponent(admobId)}`} className="block truncate font-medium text-slate-900 transition-colors hover:text-blue-600 hover:underline">
-                                {appLabel}
-                              </Link>
-                            ) : (
-                              <p className="truncate font-medium text-slate-900">{appLabel}</p>
-                            )}
-                            {storeIdentifier ? (
-                              <p className="truncate font-mono text-[11px] text-slate-400">{storeIdentifier}</p>
-                            ) : null}
-                            {admobId ? (
-                              <p className="truncate font-mono text-[11px] text-slate-400">{admobId}</p>
-                            ) : !storeIdentifier ? (
-                              <p className="truncate font-mono text-[11px] text-slate-400">{item.normalizedStoreIdentifier ?? `binding:${item.id}`}</p>
-                            ) : null}
-                          </div>
+              return (
+                <TableRow key={group.key} className="text-sm hover:bg-slate-50">
+                  <TableCell>
+                    <div className="flex min-w-0 items-center gap-3">
+                      {appIconUri ? (
+                        <img src={appIconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover" />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                          {group.appLabel.charAt(0).toUpperCase() || "?"}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`text-[11px] ${getPlatformBadgeClass(platform)}`}>{platform || "UNKNOWN"}</Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-blue-700">{item.tikTokAppId}</TableCell>
-                      <TableCell>
-                        <span className="block max-w-[320px] truncate text-xs text-slate-600">{item.downloadUrl || "-"}</span>
-                      </TableCell>
-                      <TableCell><Badge className={statusTone(item.isActive ? "active" : "disabled")}>{item.isActive ? "active" : "disabled"}</Badge></TableCell>
-                      <TableCell className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-            {filteredMappings.length > 0 ? (
-              <Pagination
-                currentPage={mappingPage}
-                totalPages={mappingTotalPages}
-                totalItems={filteredMappings.length}
-                pageSize={mappingPageSize}
-                onPageChange={setMappingPage}
-                onPageSizeChange={(size) => {
-                  setMappingPageSize(size)
-                  setMappingPage(1)
-                }}
-                itemName="mappings"
-              />
-            ) : null}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-72">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              <Input
-                className="h-9 pl-8 text-sm"
-                placeholder="Search by app, TikTok mobile app ID, status..."
-                value={candidateSearch}
-                onChange={(e) => setCandidateSearch(e.target.value)}
-              />
-            </div>
-            <Select value={candidateMatchFilter} onValueChange={setCandidateMatchFilter}>
-              <SelectTrigger className="h-9 w-44 bg-white text-sm">
-                <SelectValue placeholder="Match status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Match Statuses</SelectItem>
-                <SelectItem value="exact">Exact</SelectItem>
-                <SelectItem value="already_mapped">Already Mapped</SelectItem>
-                <SelectItem value="ambiguous">Ambiguous</SelectItem>
-                <SelectItem value="conflict">Conflict</SelectItem>
-                <SelectItem value="none">Unmapped</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={candidateOsFilter} onValueChange={setCandidateOsFilter}>
-              <SelectTrigger className="h-9 w-36 bg-white text-sm">
-                <SelectValue placeholder="OS" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All OS</SelectItem>
-                <SelectItem value="ANDROID">Android</SelectItem>
-                <SelectItem value="IOS">iOS</SelectItem>
-                <SelectItem value="UNKNOWN">Unknown</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="ml-auto text-xs text-slate-400">
-              {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="overflow-x-auto rounded-md border bg-white">
-            <Table>
-              <TableHeader><TableRow><TableHead>TikTok App</TableHead><TableHead>Store Identifier</TableHead><TableHead>Suggested App</TableHead><TableHead>Match</TableHead><TableHead>Status</TableHead><TableHead>Evidence</TableHead><TableHead>Last Seen</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">Loading mapping candidates...</TableCell></TableRow>
-                ) : filteredCandidates.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">No mapping candidates found.</TableCell></TableRow>
-                ) : paginatedCandidates.map((candidate) => {
-                  const isBusy = resolvingId === candidate.id
-                  const storeIdentifier = getCandidateStoreIdentifier(candidate)
-                  return (
-                    <TableRow key={candidate.id}>
-                      <TableCell>
-                        <div className="font-mono text-xs text-blue-700">{candidate.tikTokAppId || "-"}</div>
-                        <div className="text-xs text-slate-500">{candidate.source}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[240px] truncate font-mono text-xs text-slate-700">{storeIdentifier.value}</div>
-                        <div className="text-xs text-slate-400">{storeIdentifier.label}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{getCandidateSuggestion(candidate)}</div>
-                        <div className="text-xs text-slate-500">{candidate.suggestedApps.length > 1 ? "Multiple internal app matches" : candidate.recommendedApp?.appId ?? candidate.resolvedApp?.appId ?? "No exact match"}</div>
-                      </TableCell>
-                      <TableCell><Badge className={statusTone(candidate.matchQuality)}>{formatCandidateLabel(candidate.matchQuality)}</Badge></TableCell>
-                      <TableCell><Badge className={statusTone(candidate.reviewStatus)}>{formatCandidateLabel(candidate.reviewStatus)}</Badge></TableCell>
-                      <TableCell className="text-xs text-slate-500">{candidate.sourceAdvertiserCount} adv / {candidate.sourceAdGroupCount} adgroups</TableCell>
-                      <TableCell className="text-xs text-slate-500">{formatDateTime(candidate.lastDiscoveredAt)}</TableCell>
-                      <TableCell className="space-x-2 text-right">
-                        <Button size="sm" variant="outline" onClick={() => openResolve(candidate)} disabled={isBusy}>{isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Resolve"}</Button>
-                        {candidate.reviewStatus !== "dismissed" ? <Button size="sm" variant="ghost" onClick={() => dismissCandidate(candidate)} disabled={isBusy}>Dismiss</Button> : null}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-            {filteredCandidates.length > 0 ? (
-              <Pagination
-                currentPage={candidatePage}
-                totalPages={candidateTotalPages}
-                totalItems={filteredCandidates.length}
-                pageSize={candidatePageSize}
-                onPageChange={setCandidatePage}
-                onPageSizeChange={(size) => {
-                  setCandidatePageSize(size)
-                  setCandidatePage(1)
-                }}
-                itemName="candidates"
-              />
-            ) : null}
-          </div>
-        </>
-      )}
-      <Dialog open={resolveDialogOpen} onOpenChange={handleResolveDialogOpenChange}>
-        <DialogContent className="flex max-h-[90vh] w-full max-w-[640px] flex-col gap-0 overflow-hidden rounded-xl p-0">
-          <DialogHeader className="flex-shrink-0 border-b border-slate-100 px-6 pb-4 pt-6">
-            <DialogTitle className="text-base font-semibold text-slate-900">Resolve Mapping Candidate</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            {resolveTarget ? (
-              <>
-                <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={`text-[11px] ${statusTone(resolveTarget.matchQuality)}`}>
-                      {formatCandidateLabel(resolveTarget.matchQuality)}
-                    </Badge>
-                    <Badge className={`text-[11px] ${statusTone(resolveTarget.reviewStatus)}`}>
-                      {formatCandidateLabel(resolveTarget.reviewStatus)}
-                    </Badge>
-                    {(() => {
-                      const suggestedPlatform = resolveTarget.resolvedApp?.platform ?? resolveTarget.recommendedApp?.platform ?? resolveTarget.suggestedApps[0]?.platform
-                      return suggestedPlatform ? (
-                        <Badge className={`text-[11px] ${getPlatformBadgeClass(suggestedPlatform)}`}>
-                          {normalizePlatform(suggestedPlatform)}
-                        </Badge>
-                      ) : null
-                    })()}
-                  </div>
-                  <div className="space-y-1 text-sm text-slate-700">
-                    <p><span className="font-medium">TikTok Mobile App ID:</span> <span className="font-mono">{resolveTarget.tikTokAppId || "-"}</span></p>
-                    <p><span className="font-medium">Download URL:</span> {resolveTarget.downloadUrl || resolveTarget.storeUrl || "-"}</p>
-                    <p><span className="font-medium">Suggested App:</span> {getCandidateSuggestion(resolveTarget)}</p>
-                    <p><span className="font-medium">Evidence:</span> {resolveTarget.sourceAdvertiserCount} advertiser(s), {resolveTarget.sourceAdGroupCount} ad group(s)</p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Resolution</Label>
-                  <Select value={resolveForm.resolutionType} onValueChange={handleResolveResolutionTypeChange}>
-                    <SelectTrigger className="h-9 w-full text-sm">
-                      <SelectValue placeholder="Select resolution..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="create_mapping">Create Mapping</SelectItem>
-                      <SelectItem value="update_mapping">Update Existing Mapping</SelectItem>
-                      <SelectItem value="dismiss">Dismiss</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {resolveForm.resolutionType !== "dismiss" ? (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">
-                      App <span className="text-red-500">*</span>
-                    </Label>
-                    <Popover open={resolveAppSelectOpen} onOpenChange={setResolveAppSelectOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={resolveAppSelectOpen}
-                          className="h-auto min-h-14 w-full justify-between px-3 py-2 font-normal"
-                        >
-                          {selectedResolveApp ? (
-                            <div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
-                              {selectedResolveApp.iconUri ? (
-                                <img
-                                  src={selectedResolveApp.iconUri}
-                                  alt={getDisplayAppName(selectedResolveApp)}
-                                  className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
-                                  {getDisplayAppName(selectedResolveApp).charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="truncate font-medium text-slate-900">{getDisplayAppName(selectedResolveApp)}</span>
-                                  <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedResolveApp.platform)}`}>
-                                    {normalizePlatform(selectedResolveApp.platform) || "APP"}
-                                  </Badge>
-                                </div>
-                                <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedResolveApp.appId}</p>
+                      )}
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="max-w-[240px] truncate font-medium text-slate-900">{group.appLabel}</p>
+                        {storeUrl ? (
+                          <a
+                            href={storeUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block max-w-[240px] truncate font-mono text-[11px] text-slate-400 hover:text-blue-600 hover:underline"
+                          >
+                            {storeUrl}
+                          </a>
+                        ) : appRouteId ? (
+                          <Link
+                            href={`/apps/${encodeURIComponent(appRouteId)}`}
+                            className="block max-w-[240px] truncate font-mono text-[11px] text-slate-400 hover:text-blue-600 hover:underline"
+                          >
+                            {appRouteId}
+                          </Link>
+                        ) : (
+                          <p className="max-w-[240px] truncate font-mono text-[11px] text-slate-400">-</p>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`text-[11px] ${getPlatformBadgeClass(group.platform)}`}>{group.platform || "UNKNOWN"}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="block max-w-[220px] truncate font-mono text-xs text-slate-600">{group.storeIdentifier || "-"}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {group.tikTokAppIds.map((id) => (
+                        <p key={id} className="max-w-[180px] truncate font-mono text-xs text-blue-700">{id}</p>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {group.admobAccountCount > 0 ? (
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-slate-700">
+                          {group.admobAccountCount} AdMob account{group.admobAccountCount === 1 ? "" : "s"}
+                        </p>
+                        <div className="space-y-1">
+                          {group.admobBindings.map((binding) => {
+                            const bindingAppId = binding.appId ?? binding.externalAppId
+                            return (
+                              <div key={binding.bindingId} className="flex min-w-0 items-center gap-2 text-xs">
+                                <Badge className={binding.isActive ? "bg-emerald-50 text-emerald-700 border-none" : "bg-slate-100 text-slate-500 border-none"}>
+                                  {binding.isActive ? "On" : "Off"}
+                                </Badge>
+                                <span className="truncate font-medium text-slate-700">{binding.admobAccountName ?? "No account"}</span>
+                                <Link
+                                  href={`/apps/${encodeURIComponent(bindingAppId)}`}
+                                  className="truncate font-mono text-blue-700 hover:underline"
+                                >
+                                  {binding.externalAppId}
+                                </Link>
                               </div>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-500">Search and select app...</span>
-                          )}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" onWheel={(event) => event.stopPropagation()}>
-                        <Command shouldFilter className="flex max-h-[360px] flex-col">
-                          <CommandInput placeholder="Search by app name, AdMob App ID, store ID..." />
-                          <CommandList className="min-h-0 max-h-[320px] overscroll-contain">
-                            <CommandEmpty>
-                              {resolveForm.resolutionType === "update_mapping"
-                                ? "No mapped app found."
-                                : "No unmapped app found."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {resolveSelectableApps.map((app) => {
-                                const isSelected = resolveForm.appRowId === app.id.toString()
-                                return (
-                                  <CommandItem
-                                    key={app.id}
-                                    value={`${getDisplayAppName(app)} ${app.appId} ${app.appStoreId ?? ""} ${normalizePlatform(app.platform)}`}
-                                    onSelect={() => {
-                                      setResolveForm((current) => ({ ...current, appRowId: app.id.toString() }))
-                                      setResolveAppSelectOpen(false)
-                                    }}
-                                  >
-                                    <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
-                                    <div className="flex min-w-0 items-center gap-3 py-0.5">
-                                      {app.iconUri ? (
-                                        <img
-                                          src={app.iconUri}
-                                          alt={getDisplayAppName(app)}
-                                          className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
-                                        />
-                                      ) : (
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
-                                          {getDisplayAppName(app).charAt(0).toUpperCase()}
-                                        </div>
-                                      )}
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(app)}</span>
-                                          <Badge className={`text-[10px] ${getPlatformBadgeClass(app.platform)}`}>
-                                            {normalizePlatform(app.platform) || "APP"}
-                                          </Badge>
-                                        </div>
-                                        <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {app.appId}</p>
-                                        <p className="truncate text-[11px] text-slate-400">Store ID - {app.appStoreId || "-"}</p>
-                                      </div>
-                                    </div>
-                                  </CommandItem>
-                                )
-                              })}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {resolveSelectableApps.length === 0 ? (
-                      <p className="text-[11px] text-amber-700">
-                        {resolveForm.resolutionType === "update_mapping"
-                          ? "No accessible app with an existing TikTok mapping is available for update."
-                          : "All accessible apps already have a TikTok app mapping."}
-                      </p>
-                    ) : null}
-                    {selectedResolveApp ? (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
-                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Selected App</p>
-                        <div className="flex items-center gap-3">
-                          {selectedResolveApp.iconUri ? (
-                            <img
-                              src={selectedResolveApp.iconUri}
-                              alt={getDisplayAppName(selectedResolveApp)}
-                              className="h-11 w-11 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
-                              {getDisplayAppName(selectedResolveApp).charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(selectedResolveApp)}</span>
-                              <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedResolveApp.platform)}`}>
-                                {normalizePlatform(selectedResolveApp.platform) || "APP"}
-                              </Badge>
-                            </div>
-                            <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedResolveApp.appId}</p>
-                            <p className="truncate text-xs text-slate-500">App Store ID - {selectedResolveApp.appStoreId || "-"}</p>
-                          </div>
+                            )
+                          })}
                         </div>
                       </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Resolution Note</Label>
-                  <Textarea
-                    className="min-h-[88px] text-sm"
-                    value={resolveForm.resolutionNote}
-                    onChange={(event) => setResolveForm((current) => ({ ...current, resolutionNote: event.target.value }))}
-                    placeholder="Optional note for operations context"
-                  />
-                </div>
-              </>
-            ) : null}
-          </div>
-          <DialogFooter className="flex-shrink-0 items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
-            <Button
-              variant="ghost"
-              className="text-slate-600"
-              onClick={() => handleResolveDialogOpenChange(false)}
-              disabled={resolvingId !== null}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => void resolveCandidate()}
-              disabled={
-                resolvingId !== null ||
-                !resolveTarget ||
-                (resolveForm.resolutionType !== "dismiss" && !resolveForm.appRowId)
-              }
-            >
-              {resolvingId !== null ? "Saving..." : "Apply Resolution"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                    ) : (
+                      <span className="text-sm text-slate-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getStatusBadgeClass(group.status)}>{group.status === "mapped" ? "Mapped" : "Unmapped"}</Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-500">{formatDateTime(group.latestUpdatedAt)}</TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+        {filteredMappings.length > 0 ? (
+          <Pagination
+            currentPage={mappingPage}
+            totalPages={mappingTotalPages}
+            totalItems={filteredMappings.length}
+            pageSize={mappingPageSize}
+            onPageChange={setMappingPage}
+            onPageSizeChange={(size) => {
+              setMappingPageSize(size)
+              setMappingPage(1)
+            }}
+            itemName="store apps"
+          />
+        ) : null}
+      </div>
     </PageShell>
   )
 }
-
 export function TikTokRequestsPage() {
   const { toast } = useToast()
   const [items, setItems] = useState<TikTokCampaignRequestListItemDto[]>([])
