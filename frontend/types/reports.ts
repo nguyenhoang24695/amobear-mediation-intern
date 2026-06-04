@@ -155,7 +155,25 @@ export interface ProfitOverviewTeamRow {
   leadName?: string | null
   leadEmail?: string | null
   months: Record<string, ProfitOverviewMonthCell>
+  /** @deprecated Chỉ dùng khi API cũ trả apps; overview mới không gồm apps. */
+  apps?: ProfitOverviewAppRow[]
+}
+
+export interface ProfitOverviewTeamAppsResponse {
+  teamId: string
+  months: string[]
   apps: ProfitOverviewAppRow[]
+  totalCount: number
+  totalAppPages: number
+  page: number
+  pageSize: number
+}
+
+export interface ProfitOverviewSharedAppConflict {
+  appStoreId: string
+  appLabel: string
+  groupLabels: string[]
+  teamNames: string[]
 }
 
 export interface ProfitOverviewReportResponse {

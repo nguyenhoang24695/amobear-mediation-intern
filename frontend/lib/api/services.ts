@@ -47,6 +47,7 @@ import type {
     SourceDetailsDto,
     AppDailyInsight,
     AppHourlyPerformanceResponseDto,
+    AppGrowthTodayResponseDto,
     AppInsightHistoryDay,
     AppMediationBronzeAdUnitsResponse,
     AppMediationBronzeAdUnitDetailRowsResponse,
@@ -300,6 +301,10 @@ export const structureApi = {
         const params: Record<string, string> = { appId, startDate, endDate }
         if (timeZoneId) params.timeZoneId = timeZoneId
         return apiClient.get<AppHourlyPerformanceResponseDto>('/api/Structure/apps/performance/hourly', params)
+    },
+
+    getAppPerformanceGrowthToday: async (appId: string): Promise<AppGrowthTodayResponseDto> => {
+        return apiClient.get<AppGrowthTodayResponseDto>('/api/Structure/apps/performance/growth-today', { appId })
     },
 
     syncAppPerformance: async (appId: string): Promise<{ success: boolean; queued?: boolean; appId: string; jobId?: string; correlationId?: string; message?: string }> => {
@@ -1751,6 +1756,7 @@ export const organizationsApi = {
         if (params?.search) queryParams.search = params.search
         if (params?.role) queryParams.role = params.role
         if (params?.status) queryParams.status = params.status
+        if (params?.teamId) queryParams.teamId = params.teamId
         return apiClient.get<PagedResult<OrgUserItem>>(`/api/v1/organizations/${orgId}/users`, queryParams)
     },
 
@@ -1797,6 +1803,16 @@ export const organizationsApi = {
     // Update a team
     updateTeam: async (orgId: string, teamId: string, data: UpdateTeamRequest): Promise<OrgTeam> => {
         return apiClient.put<OrgTeam>(`/api/v1/organizations/${orgId}/teams/${teamId}`, data)
+    },
+
+    bulkUpdateTeamGroup: async (
+        orgId: string,
+        data: { teamIds: string[]; teamGroup: string | null },
+    ): Promise<{ updatedCount: number }> => {
+        return apiClient.patch<{ updatedCount: number }>(
+            `/api/v1/organizations/${orgId}/teams/bulk-team-group`,
+            { teamIds: data.teamIds, teamGroup: data.teamGroup },
+        )
     },
 
     // Delete a team
@@ -1874,6 +1890,7 @@ export interface OrgUsersFilter {
     search?: string
     role?: string
     status?: string
+    teamId?: string
 }
 
 export interface PagedResult<T> {
@@ -2790,8 +2807,56 @@ export const reportsApi = {
     getProfitOverview: async (params?: {
         from?: string
         to?: string
+        /** Omit or empty = all active org teams. */
+        teamIds?: string[]
     }): Promise<import('@/types/reports').ProfitOverviewReportResponse> => {
-        return apiClient.get('/api/v1/reports/profit-overview', params as Record<string, string | undefined>)
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        for (const id of params?.teamIds ?? []) {
+            const trimmed = id?.trim()
+            if (trimmed) search.append("teamIds", trimmed)
+        }
+        const qs = search.toString()
+        return apiClient.get(`/api/v1/reports/profit-overview${qs ? `?${qs}` : ""}`)
+    },
+
+    getProfitOverviewTeamApps: async (
+        teamId: string,
+        params?: {
+            from?: string
+            to?: string
+            page?: number
+            pageSize?: number
+        },
+    ): Promise<import('@/types/reports').ProfitOverviewTeamAppsResponse> => {
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        if (params?.page != null) search.set("page", String(params.page))
+        if (params?.pageSize != null) search.set("pageSize", String(params.pageSize))
+        const qs = search.toString()
+        return apiClient.get(
+            `/api/v1/reports/profit-overview/teams/${teamId}/apps${qs ? `?${qs}` : ""}`,
+        )
+    },
+
+    getProfitOverviewSharedAppConflicts: async (params?: {
+        from?: string
+        to?: string
+        teamIds?: string[]
+    }): Promise<import('@/types/reports').ProfitOverviewSharedAppConflict[]> => {
+        const search = new URLSearchParams()
+        if (params?.from) search.set("from", params.from)
+        if (params?.to) search.set("to", params.to)
+        for (const id of params?.teamIds ?? []) {
+            const trimmed = id?.trim()
+            if (trimmed) search.append("teamIds", trimmed)
+        }
+        const qs = search.toString()
+        return apiClient.get(
+            `/api/v1/reports/profit-overview/shared-app-conflicts${qs ? `?${qs}` : ""}`,
+        )
     },
 
     getTeamApps: async (teamId: string): Promise<import('@/types/reports').TeamLeadAppCache> => {

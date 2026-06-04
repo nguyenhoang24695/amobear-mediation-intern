@@ -43,7 +43,7 @@ import { Pagination } from "@/components/shared/pagination"
 import { AddUserToOrgModal } from "../add-user-to-org-modal"
 import { AddEditUserModal } from "../modals/add-edit-user-modal"
 import { AddUserToTeamModal } from "../add-user-to-team-modal"
-import { organizationsApi, teamMembersApi, type OrgUserItem } from "@/lib/api/services"
+import { organizationsApi, teamMembersApi, type OrgUserItem, type OrgTeam } from "@/lib/api/services"
 import { getCurrentUser } from "@/lib/auth"
 import { toast } from "sonner"
 import { useRoles } from "@/hooks/use-roles"
@@ -101,12 +101,16 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [teamFilter, setTeamFilter] = useState("all")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 
   const { data: rolesData } = useRoles()
   const roles = rolesData || []
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  // Teams list for filter
+  const [teams, setTeams] = useState<OrgTeam[]>([])
 
 
   const [addUserOpen, setAddUserOpen] = useState(false)
@@ -130,6 +134,13 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
   // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
+  // Fetch teams for filter dropdown
+  useEffect(() => {
+    organizationsApi.getTeams(orgId)
+      .then(setTeams)
+      .catch(() => setTeams([]))
+  }, [orgId])
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
@@ -138,24 +149,44 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Fetch users
+  // Fetch users — dùng teamMembersApi.filterTeamMembers() vì hỗ trợ filter teamId đúng cách
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const [result, stats] = await Promise.all([
-        organizationsApi.getUsers(orgId, {
+      const [filterResponse, stats] = await Promise.all([
+        teamMembersApi.filterTeamMembers({
           page: currentPage,
           pageSize,
           search: debouncedSearch || undefined,
           role: roleFilter !== "all" ? roleFilter : undefined,
           status: statusFilter !== "all" ? statusFilter : undefined,
+          teamId: teamFilter !== "all" ? teamFilter : undefined,
         }),
         organizationsApi.getStatistics(orgId),
       ])
-      setUsers(result.items)
-      setTotal(result.total)
-      setTotalPages(result.totalPages)
+      // Map TeamMember[] → OrgUserItem[] để tương thích với phần render hiện tại
+      const mappedItems: OrgUserItem[] = (filterResponse.data?.items ?? []).map((m) => {
+        // Lấy joinedAt từ team đang filter (nếu có) để dùng làm createdAt
+        const teamEntry = teamFilter !== "all"
+          ? m.teams?.find((t) => t.id === teamFilter)
+          : undefined
+        return {
+          id: m.id,
+          email: m.email,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          fullName: m.fullName || m.email,
+          avatarUrl: m.avatarUrl,
+          role: m.role,
+          status: (m.status ?? "active") as string,
+          createdAt: teamEntry?.joinedAt ?? m.lastLoginAt ?? new Date().toISOString(),
+          lastLoginAt: m.lastLoginAt,
+        }
+      })
+      setUsers(mappedItems)
+      setTotal(filterResponse.data?.total ?? 0)
+      setTotalPages(filterResponse.data?.totalPages ?? 1)
       setActiveCount(stats.activeUsers)
       setInactiveCount(stats.totalUsers - stats.activeUsers)
     } catch (err) {
@@ -164,7 +195,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
     } finally {
       setLoading(false)
     }
-  }, [orgId, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter])
+  }, [orgId, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter, teamFilter])
 
   useEffect(() => {
     fetchUsers()
@@ -173,7 +204,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
   // Reset page on filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [roleFilter, statusFilter])
+  }, [roleFilter, statusFilter, teamFilter])
 
   const toggleSelectAll = () => {
     if (selectedUsers.length === users.length) setSelectedUsers([])
@@ -206,11 +237,23 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input placeholder="Search by name or email..." className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
+        <Select value={teamFilter} onValueChange={setTeamFilter}>
+          <SelectTrigger className="w-40">
+            <Users className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
+            <SelectValue placeholder="Team" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Teams</SelectItem>
+            {teams.map(t => (
+              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
@@ -311,11 +354,11 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
             </div>
             <h3 className="text-lg font-semibold text-slate-900 mb-1">No users found</h3>
             <p className="text-sm text-slate-500 mb-4">
-              {debouncedSearch || roleFilter !== "all" || statusFilter !== "all"
+              {debouncedSearch || roleFilter !== "all" || statusFilter !== "all" || teamFilter !== "all"
                 ? "Try adjusting your filters"
                 : "Add your first user to get started"}
             </p>
-            {canManage && !debouncedSearch && roleFilter === "all" && statusFilter === "all" && (
+            {canManage && !debouncedSearch && roleFilter === "all" && statusFilter === "all" && teamFilter === "all" && (
               <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddUserOpen(true)}>
                 <Plus className="w-4 h-4" />
                 Add User

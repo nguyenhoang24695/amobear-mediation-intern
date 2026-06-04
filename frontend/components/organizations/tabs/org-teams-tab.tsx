@@ -187,6 +187,7 @@ function TeamRow({ team, canManage, selected, onSelectedChange, onRowClick, onEd
 
 interface TeamsGroupedTableProps {
     filteredTeams: OrgTeam[]
+    teamGroups: OrgTeamGroup[]
     teamGroupSections: TeamGroupSection[]
     canManage: boolean
     expandedGroups: Set<string>
@@ -209,6 +210,7 @@ interface TeamsGroupedTableProps {
 
 function TeamsGroupedTable({
     filteredTeams,
+    teamGroups,
     teamGroupSections,
     canManage,
     expandedGroups,
@@ -505,18 +507,10 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
         if (selectedTeamIds.size === 0 || !canManage) return
         setBulkApplying(true)
         try {
-            const selected = teams.filter((t) => selectedTeamIds.has(t.id))
-            await Promise.all(
-                selected.map((team) =>
-                    organizationsApi.updateTeam(orgId, team.id, {
-                        name: team.name,
-                        description: team.description,
-                        userId: team.userId ?? null,
-                        teamGroup: bulkTeamGroup,
-                        isActive: team.isActive,
-                    }),
-                ),
-            )
+            await organizationsApi.bulkUpdateTeamGroup(orgId, {
+                teamIds: [...selectedTeamIds],
+                teamGroup: bulkTeamGroup,
+            })
             clearSelection()
             await fetchTeams()
         } catch (err) {
@@ -750,6 +744,7 @@ export function OrgTeamsTab({ orgId, orgName = "Organization", canManage = false
                     )}
                     <TeamsGroupedTable
                         filteredTeams={filteredTeams}
+                        teamGroups={teamGroups}
                         teamGroupSections={teamGroupSections}
                         canManage={canManage}
                         expandedGroups={expandedGroups}
