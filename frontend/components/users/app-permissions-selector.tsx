@@ -34,6 +34,33 @@ export interface App {
   platform?: string
   /** Play / App Store id — included in search. */
   appStoreId?: string
+  approvalState?: string | null
+}
+
+function getApprovalStateBadgeClass(state: string | null | undefined): string {
+  switch ((state ?? "").toUpperCase()) {
+    case "APPROVED":
+      return "border-green-200 bg-green-50 text-green-700"
+    case "IN_REVIEW":
+      return "border-amber-200 bg-amber-50 text-amber-700"
+    case "ACTION_REQUIRED":
+      return "border-orange-200 bg-orange-50 text-orange-700"
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-500"
+  }
+}
+
+function formatApprovalStateLabel(state: string | null | undefined): string {
+  switch ((state ?? "").toUpperCase()) {
+    case "APPROVED":
+      return "Approved"
+    case "IN_REVIEW":
+      return "In review"
+    case "ACTION_REQUIRED":
+      return "Action required"
+    default:
+      return state?.trim() || "Unknown"
+  }
 }
 
 interface AppPermissionsSelectorProps {
@@ -256,13 +283,22 @@ export function AppPermissionsSelector({
                             </div>
                           )}
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-medium">{app?.name}</span>
                               {app?.platform && (
                                 <Badge variant="outline" className="text-[10px] uppercase font-semibold! h-[18px] px-1 py-0 leading-none text-slate-500">
                                   {app.platform}
                                 </Badge>
                               )}
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] font-semibold! h-[18px] px-1 py-0 leading-none",
+                                  getApprovalStateBadgeClass(app?.approvalState),
+                                )}
+                              >
+                                {formatApprovalStateLabel(app?.approvalState)}
+                              </Badge>
                             </div>
                             <span className="text-[11px] font-mono text-slate-500">
                               {app?.id}

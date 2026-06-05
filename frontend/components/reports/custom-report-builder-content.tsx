@@ -81,6 +81,7 @@ import {
   CalendarIcon,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Save,
   Search,
   ArrowUpDown,
@@ -98,6 +99,7 @@ import {
   Filter,
   Layers,
   Columns3,
+  MoreHorizontal,
 } from "lucide-react"
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
@@ -759,7 +761,9 @@ export function CustomReportBuilderContent() {
   const [sidebarSearch, setSidebarSearch] = useState("")
   const [mobileColumnsOpen, setMobileColumnsOpen] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [mobileReportActionsOpen, setMobileReportActionsOpen] = useState(false)
   const [filtersCardOpen, setFiltersCardOpen] = useState(true)
+  const [parametersMetricsCollapsed, setParametersMetricsCollapsed] = useState(false)
   const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null)
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const reportResultsRef = useRef<HTMLDivElement>(null)
@@ -1289,6 +1293,7 @@ export function CustomReportBuilderContent() {
     setAppliedReportQuery(currentReportQuery)
     if (isMobile) {
       setMobileFiltersOpen(false)
+      setMobileColumnsOpen(false)
     }
     scrollToReportResultsOnMobile()
   }
@@ -2692,6 +2697,132 @@ export function CustomReportBuilderContent() {
     activeFilters.filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER).length +
     metricFilters.length
 
+  const showSaveReportButton = savedReportId ? canEditReports : canCreateReports
+  const showDeleteReportButton = Boolean(savedReportId && canDeleteReports)
+  const showPinReportButton = Boolean(savedReportId && canPinReports)
+  const hasReportActions = showSaveReportButton || showDeleteReportButton || showPinReportButton
+  const reportActionsDisabled =
+    deletingReport || savingReport || loadingSavedReport || pinningReport
+
+  const desktopToolbarButtonClass = (tone: "default" | "danger" | "active" | "primary") =>
+    cn(
+      "flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5",
+      tone === "danger" && "text-red-600 hover:bg-red-50 hover:text-red-700",
+      tone === "active" && "bg-slate-200/70 text-blue-600 hover:bg-slate-200/80 hover:text-blue-700",
+      tone === "primary" && "text-blue-600 hover:bg-blue-50 hover:text-blue-700",
+      tone === "default" && "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+    )
+
+  const renderReportActionButtons = (layout: "desktop" | "mobile") => {
+    const isDesktop = layout === "desktop"
+    const toolbarLabelClass = "text-[10px] font-medium leading-none"
+    const mobileButtonClass = (tone: "default" | "danger" | "primary" | "active") =>
+      cn(
+        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-transform active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+        tone === "danger" && "text-red-600 hover:bg-red-50",
+        tone === "primary" && "border-blue-200 bg-blue-600 text-white hover:bg-blue-700",
+        tone === "active" && "border-blue-200 bg-blue-50 text-blue-600",
+        tone === "default" && "text-slate-600 hover:bg-slate-50",
+      )
+
+    return (
+      <>
+        {showDeleteReportButton ? (
+          isDesktop ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className={desktopToolbarButtonClass("danger")}
+              disabled={reportActionsDisabled}
+              onClick={() => setDeleteDialogOpen(true)}
+              title="Delete report"
+              aria-label="Delete report"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className={toolbarLabelClass}>Delete</span>
+            </Button>
+          ) : (
+            <button
+              type="button"
+              className={mobileButtonClass("danger")}
+              disabled={reportActionsDisabled}
+              onClick={() => {
+                setDeleteDialogOpen(true)
+                setMobileReportActionsOpen(false)
+              }}
+              title="Delete report"
+              aria-label="Delete report"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          )
+        ) : null}
+        {showPinReportButton ? (
+          isDesktop ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className={desktopToolbarButtonClass(isPinned ? "active" : "default")}
+              disabled={reportActionsDisabled}
+              onClick={() => void handleTogglePin()}
+              title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+              aria-label={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+            >
+              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              <span className={toolbarLabelClass}>{isPinned ? "Unpin" : "Pin"}</span>
+            </Button>
+          ) : (
+            <button
+              type="button"
+              className={mobileButtonClass(isPinned ? "active" : "default")}
+              disabled={reportActionsDisabled}
+              onClick={() => {
+                void handleTogglePin()
+                setMobileReportActionsOpen(false)
+              }}
+              title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+              aria-label={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
+            >
+              {isPinned ? <PinOff className="h-5 w-5" /> : <Pin className="h-5 w-5" />}
+            </button>
+          )
+        ) : null}
+        {showSaveReportButton ? (
+          isDesktop ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className={desktopToolbarButtonClass("primary")}
+              disabled={savingReport || loadingSavedReport || deletingReport}
+              onClick={handleSaveReportClick}
+              title={savedReportId ? "Update report" : "Save report"}
+              aria-label={savedReportId ? "Update report" : "Save report"}
+            >
+              <Save className="h-4 w-4" />
+              <span className={toolbarLabelClass}>
+                {savingReport ? "Saving…" : savedReportId ? "Update" : "Save"}
+              </span>
+            </Button>
+          ) : (
+            <button
+              type="button"
+              className={mobileButtonClass("primary")}
+              disabled={savingReport || loadingSavedReport || deletingReport}
+              onClick={() => {
+                handleSaveReportClick()
+                setMobileReportActionsOpen(false)
+              }}
+              title={savedReportId ? "Update report" : "Save report"}
+              aria-label={savedReportId ? "Update report" : "Save report"}
+            >
+              <Save className="h-5 w-5" />
+            </button>
+          )
+        ) : null}
+      </>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Dialog
@@ -2878,69 +3009,34 @@ export function CustomReportBuilderContent() {
               </Button>
             ) : null}
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            className={cn(
-              "flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5",
-              isMobile && "hidden",
-              filtersCardOpen
-                ? "bg-slate-200/70 text-blue-600 hover:bg-slate-200/80 hover:text-blue-700"
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-            )}
-            onClick={() => setFiltersCardOpen((open) => !open)}
-            title={filtersCardOpen ? "Hide filters" : "Show filters"}
-            aria-label={filtersCardOpen ? "Hide filters" : "Show filters"}
-            aria-pressed={filtersCardOpen}
-          >
-            <Filter className="h-4 w-4" />
-            <span className="text-[10px] font-medium leading-none">Filter</span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {hasReportActions ? (
+              <div className="hidden items-center gap-1 md:flex">{renderReportActionButtons("desktop")}</div>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn(
+                "flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5",
+                isMobile && "hidden",
+                filtersCardOpen
+                  ? "bg-slate-200/70 text-blue-600 hover:bg-slate-200/80 hover:text-blue-700"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+              )}
+              onClick={() => setFiltersCardOpen((open) => !open)}
+              title={filtersCardOpen ? "Hide filters" : "Show filters"}
+              aria-label={filtersCardOpen ? "Hide filters" : "Show filters"}
+              aria-pressed={filtersCardOpen}
+            >
+              <Filter className="h-4 w-4" />
+              <span className="text-[10px] font-medium leading-none">Filter</span>
+            </Button>
+          </div>
         </div>
 
         <p className="text-sm text-slate-500">
           Build ad activity reports with custom parameters and metrics
         </p>
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {savedReportId && canDeleteReports ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-              disabled={deletingReport || savingReport || loadingSavedReport || pinningReport}
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
-          ) : null}
-          {savedReportId && canPinReports ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              disabled={pinningReport || savingReport || loadingSavedReport || deletingReport}
-              onClick={() => void handleTogglePin()}
-              title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
-              aria-label={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
-            >
-              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-            </Button>
-          ) : null}
-          {(savedReportId ? canEditReports : canCreateReports) ? (
-            <Button
-              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
-              type="button"
-              disabled={savingReport || loadingSavedReport || deletingReport}
-              onClick={handleSaveReportClick}
-            >
-              <Save className="w-4 h-4" />
-              {savingReport ? "Saving…" : savedReportId ? "Update report" : "Save report"}
-            </Button>
-          ) : null}
-        </div>
       </div>
 
       <div
@@ -2968,11 +3064,18 @@ export function CustomReportBuilderContent() {
         </div>
       </div>
 
-      <div ref={reportResultsRef} className="relative grid scroll-mt-16 grid-cols-1 gap-6 xl:grid-cols-[1fr_18rem]">
+      <div
+        ref={reportResultsRef}
+        className={cn(
+          "relative grid scroll-mt-16 grid-cols-1 gap-6 xl:items-start",
+          parametersMetricsCollapsed ? "xl:grid-cols-[1fr_3.5rem]" : "xl:grid-cols-[1fr_18rem]",
+        )}
+      >
         <Card
           className={cn(
             "flex flex-col overflow-hidden border-slate-200",
             isMobile && "max-h-[95dvh]",
+            !isMobile && "xl:h-[min(75vh,760px)]",
           )}
         >
           <CardHeader className="shrink-0 border-b border-slate-100 pb-3">
@@ -3014,22 +3117,93 @@ export function CustomReportBuilderContent() {
 
         <Card
           className={cn(
-            "flex min-h-[320px] flex-col border-slate-200 xl:min-h-0",
-            isMobile ? "hidden" : "flex",
+            "flex flex-col border-slate-200",
+            isMobile ? "hidden" : "flex xl:h-[min(75vh,760px)]",
           )}
         >
-          <CardHeader className="border-b border-slate-100 pb-3">
-            <CardTitle className="text-base font-medium">Parameters & Metrics</CardTitle>
-            <CardDescription>Choose columns to display in the table</CardDescription>
+          <CardHeader className="shrink-0 border-b border-slate-100 px-3 py-3 min-h-[4.5rem]">
+            <div
+              className={cn(
+                "flex w-full items-center gap-2",
+                parametersMetricsCollapsed ? "justify-center" : "justify-between",
+              )}
+            >
+              <CardTitle
+                className={cn(
+                  "text-base font-medium",
+                  parametersMetricsCollapsed && "sr-only",
+                )}
+              >
+                Parameters & Metrics
+              </CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setParametersMetricsCollapsed((prev) => !prev)}
+                aria-label={
+                  parametersMetricsCollapsed
+                    ? "Expand parameters and metrics panel"
+                    : "Collapse parameters and metrics panel"
+                }
+                aria-expanded={!parametersMetricsCollapsed}
+              >
+                {parametersMetricsCollapsed ? (
+                  <ChevronLeft className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <CardDescription
+              className={cn(parametersMetricsCollapsed && "sr-only")}
+            >
+              Choose columns to display in the table
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-            {renderParametersMetricsBody("max-h-[min(70vh,640px)] flex-1")}
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+            {parametersMetricsCollapsed ? (
+              <div className="flex flex-1 items-center justify-center p-2">
+                <div
+                  className={cn(
+                    "select-none text-xs font-semibold uppercase tracking-wider text-slate-600",
+                    "[writing-mode:vertical-rl] [text-orientation:mixed]",
+                  )}
+                >
+                  Parameters & Metrics
+                </div>
+              </div>
+            ) : (
+              renderParametersMetricsBody("min-h-0 flex-1")
+            )}
           </CardContent>
         </Card>
 
         {isMobile ? (
           <>
             <div className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-end gap-2">
+              {hasReportActions ? (
+                <div className="flex flex-row-reverse items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMobileReportActionsOpen((open) => !open)}
+                    className={cn(
+                      "flex h-12 w-12 items-center justify-center rounded-l-xl border border-r-0 border-slate-200 bg-white shadow-lg",
+                      mobileReportActionsOpen && "ring-2 ring-blue-300",
+                    )}
+                    aria-label={mobileReportActionsOpen ? "Hide report actions" : "Show report actions"}
+                    aria-expanded={mobileReportActionsOpen}
+                  >
+                    <MoreHorizontal className="h-5 w-5 text-slate-600" aria-hidden />
+                  </button>
+                  {mobileReportActionsOpen ? (
+                    <div className="flex items-center gap-2.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-2.5 py-2 shadow-lg">
+                      {renderReportActionButtons("mobile")}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(true)}
@@ -3106,6 +3280,17 @@ export function CustomReportBuilderContent() {
                 </SheetHeader>
                 <div className="flex min-h-0 flex-1 flex-col">
                   {renderParametersMetricsBody("min-h-0 flex-1")}
+                  <div className="shrink-0 border-t border-slate-100 bg-white p-4">
+                    <Button
+                      className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700"
+                      type="button"
+                      disabled={loadingSavedReport || reportLoading || !hasPendingApply}
+                      onClick={handleApplyFilters}
+                    >
+                      <Search className="h-4 w-4" />
+                      Apply
+                    </Button>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

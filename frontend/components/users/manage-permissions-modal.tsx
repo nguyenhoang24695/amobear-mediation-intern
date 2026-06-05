@@ -389,19 +389,21 @@ export function ManagePermissionsModal({
                 </aside>
                 <div className="min-w-0 flex-1">
                   <AppPermissionsSelector
-                    apps={filteredApps.map(({ id, name, icon, platform, appStoreId }) => ({
+                    apps={filteredApps.map(({ id, name, icon, platform, appStoreId, approvalState }) => ({
                       id,
                       name,
                       icon,
                       platform,
                       appStoreId,
+                      approvalState,
                     }))}
-                    allAppsForDisplay={apps.map(({ id, name, icon, platform, appStoreId }) => ({
+                    allAppsForDisplay={apps.map(({ id, name, icon, platform, appStoreId, approvalState }) => ({
                       id,
                       name,
                       icon,
                       platform,
                       appStoreId,
+                      approvalState,
                     }))}
                     giveAllApps={giveAllApps}
                     onGiveAllAppsChange={setGiveAllApps}
