@@ -184,6 +184,27 @@ export function mergeCommissionTeamOptions(
   return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
 }
 
+/** Node của user hiện tại trên personnel chart (theo linkedUserId hoặc email). */
+export function findCurrentPersonnelNode(
+  root: PersonnelNode,
+  currentUserId?: string,
+  currentUserEmail?: string,
+): PersonnelNode | null {
+  const normalizedEmail = currentUserEmail?.trim().toLowerCase()
+  const isCurrentNode =
+    (currentUserId && root.linkedUserId === currentUserId) ||
+    (normalizedEmail && root.email?.trim().toLowerCase() === normalizedEmail)
+
+  if (isCurrentNode) return root
+
+  for (const child of root.children ?? []) {
+    const found = findCurrentPersonnelNode(child, currentUserId, currentUserEmail)
+    if (found) return found
+  }
+
+  return null
+}
+
 /** Teams where userId on OrgTeam matches current user (team lead from master data). */
 export function collectTeamLeadTeamsFromOrgTeams(
   orgTeams: OrgTeam[],
