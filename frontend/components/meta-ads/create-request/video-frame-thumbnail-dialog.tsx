@@ -15,6 +15,8 @@ import { Slider } from "@/components/ui/slider"
 
 interface VideoFrameThumbnailDialogProps {
   videoFile: File | null
+  videoUrl?: string | null
+  resolveVideoUrl?: () => Promise<string | null>
   open: boolean
   onOpenChange: (open: boolean) => void
   onUseFrame: (file: File) => void
@@ -58,17 +60,24 @@ function waitForVideoSeek(video: HTMLVideoElement): Promise<void> {
   })
 }
 
-export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUseFrame }: VideoFrameThumbnailDialogProps) {
+export function VideoFrameThumbnailDialog({ videoFile, videoUrl: remoteVideoUrl, resolveVideoUrl, open, onOpenChange, onUseFrame }: VideoFrameThumbnailDialogProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [duration, setDuration] = useState(0)
   const [selectedTime, setSelectedTime] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null)
+  const [loadingVideoUrl, setLoadingVideoUrl] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const videoUrl = useMemo(() => (videoFile ? URL.createObjectURL(videoFile) : null), [videoFile])
+  const videoUrl = useMemo(() => {
+    if (videoFile) return URL.createObjectURL(videoFile)
+    if (resolveVideoUrl) return resolvedVideoUrl
+    return remoteVideoUrl?.trim() || null
+  }, [remoteVideoUrl, resolveVideoUrl, resolvedVideoUrl, videoFile])
+  const isRemoteVideo = !!videoUrl && !videoFile
 
   useEffect(() => {
     return () => {
@@ -87,17 +96,46 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
     setDuration(0)
     setSelectedTime(0)
     setCapturedFile(null)
+    setResolvedVideoUrl(null)
     setError(null)
     setPreviewUrl((current) => {
       if (current) URL.revokeObjectURL(current)
       return null
     })
-  }, [open, videoFile])
+  }, [open, videoFile, remoteVideoUrl])
+
+  useEffect(() => {
+    if (!open || videoFile || !resolveVideoUrl) return
+
+    let cancelled = false
+    setLoadingVideoUrl(true)
+    setError(null)
+    resolveVideoUrl()
+      .then((url) => {
+        if (cancelled) return
+        if (url?.trim()) {
+          setResolvedVideoUrl(url.trim())
+        } else {
+          setError("Cannot prepare this Meta video for frame capture. Please upload a thumbnail manually.")
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : "Cannot prepare this Meta video for frame capture. Please upload a thumbnail manually.")
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingVideoUrl(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, resolveVideoUrl, videoFile])
 
   async function captureFrame() {
     const video = videoRef.current
     const canvas = canvasRef.current
-    if (!video || !canvas || !videoFile) return
+    if (!video || !canvas || !videoUrl) return
     if (!video.videoWidth || !video.videoHeight) {
       setError("Cannot read video dimensions. Please upload a thumbnail manually.")
       return
@@ -151,6 +189,7 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
                 <video
                   ref={videoRef}
                   src={videoUrl}
+                  crossOrigin={isRemoteVideo ? "anonymous" : undefined}
                   className="max-h-[420px] w-full object-contain"
                   controls
                   preload="metadata"
@@ -165,7 +204,7 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
                   onError={() => setError("Cannot decode this video in browser. Please upload a thumbnail manually.")}
                 />
               ) : (
-                <div className="flex h-64 items-center justify-center text-sm text-slate-300">No local video file available.</div>
+                <div className="flex h-64 items-center justify-center text-sm text-slate-300">{loadingVideoUrl ? "Preparing Meta video..." : "No playable video available."}</div>
               )}
             </div>
 
@@ -203,7 +242,7 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
                 )}
               </div>
             </div>
-            <Button type="button" variant="outline" className="w-full" disabled={!videoUrl || !duration || busy} onClick={() => void captureFrame()}>
+            <Button type="button" variant="outline" className="w-full" disabled={!videoUrl || !duration || busy || loadingVideoUrl} onClick={() => void captureFrame()}>
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
               Capture frame
             </Button>

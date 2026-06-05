@@ -206,6 +206,10 @@ export const metaReferenceApi = {
     return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos`, query)
   },
 
+  getAdAccountVideoCaptureUrl: async (adAccountId: number, videoId: string) => {
+    return apiClient.get<{ url: string }>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos/${encodeURIComponent(videoId)}/capture-url`)
+  },
+
   getGeoRegions: async () => {
     return apiClient.get<MetaGeoRegionDto[]>(`${REFERENCE_PREFIX}/geo/regions`)
   },
