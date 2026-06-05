@@ -13,7 +13,7 @@ type PersonaWorkspaceProps = {
 export function PersonaWorkspace({ title, subtitle, appId }: PersonaWorkspaceProps) {
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="mx-auto max-w-6xl space-y-4 md:space-y-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           <p className="text-muted-foreground text-sm">{subtitle}</p>

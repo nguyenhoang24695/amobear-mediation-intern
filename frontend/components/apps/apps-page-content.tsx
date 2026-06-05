@@ -25,7 +25,7 @@ const FN_VIEW_IN_ADMOB = "view-in-admob"
 const FN_SET_TYPE = "set-type"
 
 const platformOptions = ["All Platforms", "ANDROID", "IOS"]
-const statusOptions = ["All Status", "Active", "Paused", "Error"]
+const statusOptions = ["All Status", "Active", "Others"]
 const typeOptions = ["All Types", "game", "app"]
 const wfOptions = ["All %WF", ">= 40%", "< 40%"]
 const networkOptions = ["All Networks", "AdMob", "Unity Ads", "ironSource", "AppLovin"]
@@ -39,7 +39,7 @@ interface ActiveFilter {
 export function AppsPageContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [platform, setPlatform] = useState("All Platforms")
-  const [status, setStatus] = useState("All Status")
+  const [status, setStatus] = useState("Active")
   const [type, setType] = useState("All Types")
   const [wfFilter, setWfFilter] = useState("All %WF")
   const [network, setNetwork] = useState("All Networks")
@@ -50,8 +50,12 @@ export function AppsPageContent() {
 
   // Fetch apps từ API (khi chọn "All Accounts" = getApps(), khi chọn 1 tài khoản = getApps(publisherId))
   const { data: appsResponse, loading: appsLoading, refetch: refetchApps } = useApi(
-    () => structureApi.getApps(admobAccount === ALL_ACCOUNTS_VALUE ? undefined : admobAccount),
-    { enabled: true, cacheKey: `apps_list_${admobAccount}` }
+    () =>
+      structureApi.getApps({
+        ...(admobAccount !== ALL_ACCOUNTS_VALUE ? { publisherId: admobAccount } : {}),
+        approvalState: "all",
+      }),
+    { enabled: true, cacheKey: `apps_list_all_states_${admobAccount}` }
   )
 
   const apps = appsResponse?.apps || []
@@ -134,7 +138,7 @@ export function AppsPageContent() {
         setPlatform("All Platforms")
         break
       case "Status":
-        setStatus("All Status")
+        setStatus("Active")
         break
       case "Type":
         setType("All Types")
@@ -154,7 +158,7 @@ export function AppsPageContent() {
   const clearAllFilters = () => {
     setActiveFilters([])
     setPlatform("All Platforms")
-    setStatus("All Status")
+    setStatus("Active")
     setType("All Types")
     setWfFilter("All %WF")
     setNetwork("All Networks")

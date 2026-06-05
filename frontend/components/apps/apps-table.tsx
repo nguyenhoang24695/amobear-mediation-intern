@@ -40,6 +40,7 @@ import {
   ImageIcon,
   Trash2,
   Loader2,
+  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
@@ -63,7 +64,7 @@ interface AppsTableProps {
   canResume?: boolean
 }
 
-type SortField = "name" | "adUnits" | "revenue" | "waterfallPct" | "ecpm" | "impressions" | "fillRate" | "lastSync"
+type SortField = "name" | "adUnits" | "revenue" | "waterfallPct" | "ecpm" | "impressions" | "fillRate" | "users" | "lastSync"
 type SortDirection = "asc" | "desc"
 
 export function AppsTable({
@@ -121,7 +122,11 @@ export function AppsTable({
       ecpm: app.todayEcpm ?? app.averageEcpm ?? 0,
       impressions: app.todayImpressions || 0,
       fillRate: app.todayFillRate || 0, // percent (0..100)
-      status: app.approvalState === "APPROVED" ? "Active" : app.approvalState || "Active",
+      activeUserPermissionCount: app.activeUserPermissionCount ?? 0,
+      status:
+        app.approvalState === "APPROVED" || !app.approvalState
+          ? "Active"
+          : app.approvalState,
       lastSync: app.lastSyncedAt ? new Date(app.lastSyncedAt).toLocaleString() : "Never",
       _original: app,
     }))
@@ -151,7 +156,10 @@ export function AppsTable({
     if (platformFilter !== "All Platforms" && app.platform !== platformFilter) {
       return false
     }
-    if (statusFilter !== "All Status" && app.status !== statusFilter) {
+    if (statusFilter === "Active" && app.status !== "Active") {
+      return false
+    }
+    if (statusFilter === "Others" && app.status === "Active") {
       return false
     }
     if (typeFilter !== "All Types") {
@@ -202,6 +210,8 @@ export function AppsTable({
         return multiplier * (a.impressions - b.impressions)
       case "fillRate":
         return multiplier * (a.fillRate - b.fillRate)
+      case "users":
+        return multiplier * (a.activeUserPermissionCount - b.activeUserPermissionCount)
       default:
         return 0
     }
@@ -254,16 +264,16 @@ export function AppsTable({
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Active":
-        return <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
-      case "Paused":
-        return <Badge className="bg-slate-100 text-slate-600 border-0">Paused</Badge>
-      case "Error":
-        return <Badge className="bg-red-100 text-red-700 border-0">Error</Badge>
-      default:
-        return null
+    if (status === "Active") {
+      return <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
     }
+    const label =
+      status === "IN_REVIEW"
+        ? "In review"
+        : status === "ACTION_REQUIRED"
+          ? "Action required"
+          : status
+    return <Badge className="bg-slate-100 text-slate-600 border-0">{label}</Badge>
   }
 
 
@@ -391,6 +401,9 @@ export function AppsTable({
                 </th>
                 <th className="px-4 py-3 text-left">
                   <SortHeader field="fillRate">Fill Rate</SortHeader>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <SortHeader field="users">Users</SortHeader>
                 </th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Last Sync</th>
@@ -545,6 +558,12 @@ export function AppsTable({
                     <span className={cn("text-sm font-medium", getFillRateColor(app.fillRate))}>
                       {app.fillRate.toFixed(2)}%
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-sm text-slate-900">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-medium tabular-nums">{app.activeUserPermissionCount}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(app.status)}</td>
                   <td className="px-4 py-3">

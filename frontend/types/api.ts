@@ -10,6 +10,8 @@ export interface App {
   appStoreId?: string
   iconUri?: string
   approvalState?: string
+  /** Số user đang có quyền app (grantee_type=user, chưa hết hạn). */
+  activeUserPermissionCount?: number
   publisherId: string
   /** admob_accounts.timezone_offset_hours (publisher) — FE Performance tab default timezone query. Null nếu không có account enabled khớp. */
   publisherTimezoneOffsetHours?: number | null
