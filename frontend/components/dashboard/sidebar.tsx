@@ -375,7 +375,7 @@ export function Sidebar(props: SidebarProps) {
       fallback={
         <aside
           className={cn(
-            "fixed left-0 top-0 z-40 h-screen bg-white border-r border-slate-200",
+            "fixed left-0 top-0 z-40 hidden h-screen border-r border-slate-200 bg-white md:flex",
             props.collapsed ? "w-16" : "w-60",
           )}
         />
@@ -496,7 +496,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen bg-white border-r border-slate-200 flex flex-col transition-all duration-300",
+          "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-slate-200 bg-white transition-all duration-300 md:flex",
           collapsed ? "w-16" : "w-60",
         )}
       >

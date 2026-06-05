@@ -40,6 +40,7 @@ import {
   ImageIcon,
   Trash2,
   Loader2,
+  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/shared/pagination"
@@ -63,7 +64,7 @@ interface AppsTableProps {
   canResume?: boolean
 }
 
-type SortField = "name" | "adUnits" | "revenue" | "waterfallPct" | "ecpm" | "impressions" | "fillRate" | "lastSync"
+type SortField = "name" | "adUnits" | "revenue" | "waterfallPct" | "ecpm" | "impressions" | "fillRate" | "users" | "lastSync"
 type SortDirection = "asc" | "desc"
 
 export function AppsTable({
@@ -121,6 +122,7 @@ export function AppsTable({
       ecpm: app.todayEcpm ?? app.averageEcpm ?? 0,
       impressions: app.todayImpressions || 0,
       fillRate: app.todayFillRate || 0, // percent (0..100)
+      activeUserPermissionCount: app.activeUserPermissionCount ?? 0,
       status: app.approvalState === "APPROVED" ? "Active" : app.approvalState || "Active",
       lastSync: app.lastSyncedAt ? new Date(app.lastSyncedAt).toLocaleString() : "Never",
       _original: app,
@@ -202,6 +204,8 @@ export function AppsTable({
         return multiplier * (a.impressions - b.impressions)
       case "fillRate":
         return multiplier * (a.fillRate - b.fillRate)
+      case "users":
+        return multiplier * (a.activeUserPermissionCount - b.activeUserPermissionCount)
       default:
         return 0
     }
@@ -392,6 +396,9 @@ export function AppsTable({
                 <th className="px-4 py-3 text-left">
                   <SortHeader field="fillRate">Fill Rate</SortHeader>
                 </th>
+                <th className="px-4 py-3 text-left">
+                  <SortHeader field="users">Users</SortHeader>
+                </th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Last Sync</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -545,6 +552,12 @@ export function AppsTable({
                     <span className={cn("text-sm font-medium", getFillRateColor(app.fillRate))}>
                       {app.fillRate.toFixed(2)}%
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-sm text-slate-900">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-medium tabular-nums">{app.activeUserPermissionCount}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(app.status)}</td>
                   <td className="px-4 py-3">

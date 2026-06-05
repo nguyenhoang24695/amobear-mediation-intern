@@ -270,7 +270,7 @@ export interface UpdateAppFirebaseParamsPayload {
 // Structure API Service
 export const structureApi = {
     // Apps - Returns apps with metrics from cache and summary
-    getApps: async (publisherId?: string): Promise<{
+    getApps: async (params?: { publisherId?: string; approvalState?: string | null }): Promise<{
         apps: App[]
         summary: {
             totalApps: number
@@ -280,7 +280,11 @@ export const structureApi = {
             averageEcpm: number
         }
     }> => {
-        return apiClient.get('/api/Structure/apps', { publisherId })
+        const { publisherId, approvalState } = params ?? {}
+        return apiClient.get('/api/Structure/apps', {
+            publisherId,
+            approval_state: approvalState ?? undefined,
+        })
     },
 
     getApp: async (id: number): Promise<App> => {

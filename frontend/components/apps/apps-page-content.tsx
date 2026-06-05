@@ -50,7 +50,9 @@ export function AppsPageContent() {
 
   // Fetch apps từ API (khi chọn "All Accounts" = getApps(), khi chọn 1 tài khoản = getApps(publisherId))
   const { data: appsResponse, loading: appsLoading, refetch: refetchApps } = useApi(
-    () => structureApi.getApps(admobAccount === ALL_ACCOUNTS_VALUE ? undefined : admobAccount),
+    () => structureApi.getApps(
+      admobAccount === ALL_ACCOUNTS_VALUE ? undefined : { publisherId: admobAccount },
+    ),
     { enabled: true, cacheKey: `apps_list_${admobAccount}` }
   )
 

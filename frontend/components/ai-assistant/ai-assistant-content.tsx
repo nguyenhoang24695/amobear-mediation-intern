@@ -1084,7 +1084,7 @@ export function AiAssistantContent() {
 
   if (loadingContexts && contexts.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-5rem)] text-slate-500">
+      <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] items-center justify-center text-slate-500 md:h-[calc(100dvh-4rem)]">
         Đang tải...
       </div>
     )
@@ -1092,7 +1092,7 @@ export function AiAssistantContent() {
 
   return (
     <>
-      <div className="flex bg-white overflow-hidden h-[calc(100vh-5rem)] -m-6">
+      <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] overflow-hidden bg-white md:-m-6 md:h-[calc(100dvh-4rem)]">
         <ContextSidebar
           contexts={contexts}
           activeContextId={activeContextId}

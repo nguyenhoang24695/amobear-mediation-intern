@@ -1,6 +1,14 @@
 "use client"
 
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   closestCenter,
@@ -23,6 +31,13 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import {
   Select,
   SelectContent,
@@ -80,11 +95,15 @@ import {
   Pin,
   PinOff,
   Trash2,
+  Filter,
+  Layers,
+  Columns3,
 } from "lucide-react"
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
 import { useApi, invalidateCache } from "@/hooks/use-api"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
@@ -110,6 +129,11 @@ import { mergeTeamLeadCachesToApps } from "@/lib/reports/team-scope-apps"
 import { buildTeamGroupSectionsFromOrg } from "@/lib/organizations/team-group"
 import type { OrgTeamGroup } from "@/lib/api/services"
 import { GroupedTeamMultiSelect } from "@/components/reports/grouped-team-multi-select"
+import {
+  CustomReportRowExpandPanel,
+  type CustomReportRowExpandMetric,
+  type CustomReportRowExpandParameter,
+} from "@/components/reports/custom-report-row-expand-panel"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
@@ -156,6 +180,10 @@ const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
   date: 140,
   platform: 140,
 }
+
+const MOBILE_APP_COLUMN_WIDTH = 52
+const MOBILE_DATE_COLUMN_WIDTH = 72
+const MOBILE_PLATFORM_COLUMN_WIDTH = 40
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
@@ -293,9 +321,60 @@ function formatMetricValue(
   }
 }
 
-function renderPlatformBadge(platformValue: string) {
+function renderPlatformIcon(isAndroid: boolean, className?: string) {
+  return isAndroid ? (
+    <svg className={cn("h-3 w-3", className)} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+    </svg>
+  ) : (
+    <svg className={cn("h-3 w-3", className)} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
+    </svg>
+  )
+}
+
+function renderPlatformBadge(
+  platformValue: string,
+  isMobile = false,
+  options?: { large?: boolean },
+) {
   const platform = platformValue || "Unknown"
   const isAndroid = platform.toUpperCase() === "ANDROID"
+
+  if (options?.large) {
+    return (
+      <Badge
+        variant="outline"
+        className={cn(
+          "gap-2 px-4 py-2 text-base font-semibold",
+          isAndroid
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-slate-200 bg-slate-50 text-slate-700",
+        )}
+      >
+        {renderPlatformIcon(isAndroid, "h-5 w-5")}
+        {platform}
+      </Badge>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <div className="flex justify-center" title={platform}>
+        <Badge
+          variant="outline"
+          className={cn(
+            "h-7 w-7 shrink-0 justify-center p-0",
+            isAndroid
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-slate-200 bg-slate-50 text-slate-700",
+          )}
+        >
+          {renderPlatformIcon(isAndroid)}
+        </Badge>
+      </div>
+    )
+  }
 
   return (
     <Badge
@@ -307,15 +386,7 @@ function renderPlatformBadge(platformValue: string) {
           : "border-slate-200 bg-slate-50 text-slate-700",
       )}
     >
-      {isAndroid ? (
-        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
-        </svg>
-      ) : (
-        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
-        </svg>
-      )}
+      {renderPlatformIcon(isAndroid)}
       {platform}
     </Badge>
   )
@@ -325,7 +396,12 @@ function renderParameterCell(
   paramId: string,
   row: Record<string, string | number | null>,
   selectedParameters: string[],
+  isMobile = false,
+  forExpandPanel = false,
+  expandPanelCentered = false,
 ) {
+  const tableIsMobile = forExpandPanel ? false : isMobile
+
   if (paramId === "app") {
     const appName = String(row.app_display_name ?? row.app ?? "")
     const appIconUri = typeof row.app_icon_uri === "string" ? row.app_icon_uri : ""
@@ -335,27 +411,50 @@ function renderParameterCell(
       appSub.length > 0 &&
       appSub.toLowerCase() !== appName.trim().toLowerCase()
     return (
-      <div className="flex items-center gap-2 min-w-0 max-w-full">
-        <Avatar className="h-10 w-10 rounded-lg shrink-0">
+      <div
+        className={cn(
+          "flex min-w-0 max-w-full items-center gap-2",
+          tableIsMobile ? "justify-center" : "",
+        )}
+        title={tableIsMobile ? appName : undefined}
+      >
+        <Avatar className={cn("shrink-0 rounded-lg", tableIsMobile ? "h-9 w-9" : "h-10 w-10")}>
           {appIconUri ? <AvatarImage src={appIconUri} alt={appName} className="rounded-lg object-cover" /> : null}
           <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
             <Smartphone className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-900 truncate">{appName}</div>
-          {shouldShowAppSub ? (
-            <div className="text-xs text-slate-500 font-mono truncate" title={appSub}>
-              {appSub}
+        {!tableIsMobile ? (
+          <div className="min-w-0 flex-1">
+            <div
+              className={cn(
+                "text-sm font-medium text-slate-900",
+                forExpandPanel ? "break-words" : "truncate",
+              )}
+            >
+              {appName}
             </div>
-          ) : null}
-        </div>
+            {shouldShowAppSub ? (
+              <div
+                className={cn(
+                  "font-mono text-xs text-slate-500",
+                  forExpandPanel ? "break-all" : "truncate",
+                )}
+                title={appSub}
+              >
+                {appSub}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     )
   }
 
   if (paramId === "platform") {
-    return renderPlatformBadge(String(row.platform ?? ""))
+    return renderPlatformBadge(String(row.platform ?? ""), tableIsMobile, {
+      large: expandPanelCentered,
+    })
   }
 
   if (paramId === "app_store_id") {
@@ -368,19 +467,30 @@ function renderParameterCell(
       storeSub.length > 0 &&
       storeSub.toLowerCase() !== displayName.trim().toLowerCase()
     return (
-      <div className="flex items-center gap-2 min-w-[180px]">
+      <div className={cn("flex min-w-0 max-w-full items-center gap-2", forExpandPanel ? "" : "min-w-[180px]")}>
         <Avatar className="h-10 w-10 rounded-lg shrink-0">
           {appIconUri ? <AvatarImage src={appIconUri} alt={displayName} className="rounded-lg object-cover" /> : null}
           <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
             <Smartphone className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
+        <div className="min-w-0 flex-1">
+          <div
+            className={cn(
+              "text-sm font-medium text-slate-900",
+              forExpandPanel ? "break-words" : "truncate",
+            )}
+          >
+            {displayName}
+          </div>
           {shouldShowStoreSub ? (
-            <div className="text-xs text-slate-500 truncate">{storeSub}</div>
+            <div className={cn("text-xs text-slate-500", forExpandPanel ? "break-all" : "truncate")}>
+              {storeSub}
+            </div>
           ) : storeId && storeId.toLowerCase() !== displayName.trim().toLowerCase() ? (
-            <div className="text-xs text-slate-500 font-mono truncate">{storeId}</div>
+            <div className={cn("text-xs text-slate-500 font-mono", forExpandPanel ? "break-all" : "truncate")}>
+              {storeId}
+            </div>
           ) : null}
         </div>
       </div>
@@ -392,33 +502,115 @@ function renderParameterCell(
     const publisherId = String(row.publisher_id ?? row.publisher ?? "")
     const publisherSub = String(row.publisher_sub ?? "").trim()
     return (
-      <div className="min-w-[180px]">
-        <div className="text-sm font-medium text-slate-900 truncate">{displayName || "—"}</div>
+      <div className={cn(forExpandPanel ? "min-w-0 max-w-full" : "min-w-[180px]")}>
+        <div
+          className={cn(
+            "text-sm font-medium text-slate-900",
+            forExpandPanel ? "break-words" : "truncate",
+          )}
+        >
+          {displayName || "—"}
+        </div>
         {publisherSub ? (
-          <div className="text-xs text-slate-500 font-mono truncate">{publisherSub}</div>
+          <div className={cn("text-xs text-slate-500 font-mono", forExpandPanel ? "break-all" : "truncate")}>
+            {publisherSub}
+          </div>
         ) : publisherId && publisherId.toLowerCase() !== displayName.trim().toLowerCase() ? (
-          <div className="text-xs text-slate-500 font-mono truncate">{publisherId}</div>
+          <div className={cn("text-xs text-slate-500 font-mono", forExpandPanel ? "break-all" : "truncate")}>
+            {publisherId}
+          </div>
         ) : null}
       </div>
     )
   }
 
+  if (paramId === "date") {
+    return (
+      <span
+        className={cn(
+          "tabular-nums",
+          expandPanelCentered
+            ? "text-lg font-semibold text-slate-800 md:text-xl"
+            : "text-slate-700",
+          forExpandPanel && !expandPanelCentered ? "break-words text-sm" : "",
+          !forExpandPanel && "whitespace-nowrap",
+          !forExpandPanel && (tableIsMobile ? "text-xs" : "text-sm"),
+        )}
+      >
+        {String(row.date ?? "—")}
+      </span>
+    )
+  }
+
   return (
-    <span className="text-sm text-slate-700 whitespace-nowrap">
+    <span className={cn("text-sm text-slate-700", forExpandPanel ? "break-words" : "whitespace-nowrap")}>
       {String(row[paramId] ?? "—")}
     </span>
   )
 }
 
-function getParameterColumnWidth(paramId: string) {
+function buildRowExpandPanelProps(
+  row: Record<string, string | number | null>,
+  rowIndex: number,
+  displayedParameters: string[],
+  displayedMetrics: string[],
+  catalogParameters: CustomReportCatalogItem[],
+  catalogMetrics: CustomReportCatalogItem[],
+): {
+  rowIndex: number
+  parameters: CustomReportRowExpandParameter[]
+  metrics: CustomReportRowExpandMetric[]
+} {
+  return {
+    rowIndex,
+    parameters: displayedParameters.map((paramId) => {
+      const param = catalogParameters.find((p) => p.id === paramId)
+      const isCenteredPrimary = paramId === "date" || paramId === "platform"
+      return {
+        id: paramId,
+        label: param?.label ?? paramId,
+        content: renderParameterCell(paramId, row, displayedParameters, false, true),
+        desktopContent: isCenteredPrimary
+          ? renderParameterCell(paramId, row, displayedParameters, false, true, true)
+          : undefined,
+      }
+    }),
+    metrics: displayedMetrics.map((metricId) => {
+      const metric = catalogMetrics.find((m) => m.id === metricId)
+      return {
+        id: metricId,
+        label: metric?.label ?? metricId,
+        value: formatMetricValue(row[metricId], metricId, catalogMetrics),
+      }
+    }),
+  }
+}
+
+function getParameterColumnWidth(paramId: string, isMobile = false) {
+  if (isMobile && paramId === "app") return MOBILE_APP_COLUMN_WIDTH
+  if (isMobile && paramId === "date") return MOBILE_DATE_COLUMN_WIDTH
+  if (isMobile && paramId === "platform") return MOBILE_PLATFORM_COLUMN_WIDTH
   return PARAMETER_COLUMN_WIDTHS[paramId] ?? DEFAULT_PARAMETER_COLUMN_WIDTH
 }
 
-function getParameterStickyStyle(parameters: string[], index: number): CSSProperties {
+function getParameterHorizontalPaddingClass(
+  paramId: string,
+  index: number,
+  isMobile: boolean,
+): string | undefined {
+  if (isMobile) {
+    if (paramId === "app") return "px-1.5"
+    if (paramId === "date" || paramId === "platform") return "px-1"
+    return undefined
+  }
+  return index === 0 ? "pl-5" : undefined
+}
+
+function getParameterStickyStyle(parameters: string[], index: number, isMobile = false): CSSProperties {
   const left = parameters
     .slice(0, index)
-    .reduce((sum, paramId) => sum + getParameterColumnWidth(paramId), 0)
-  const width = getParameterColumnWidth(parameters[index])
+    .reduce((sum, paramId) => sum + getParameterColumnWidth(paramId, isMobile), 0)
+  const width = getParameterColumnWidth(parameters[index], isMobile)
 
   return {
     left,
@@ -514,6 +706,7 @@ function escapeExcelHtml(value: unknown): string {
 }
 
 export function CustomReportBuilderContent() {
+  const isMobile = useIsMobile()
   const router = useRouter()
   const searchParams = useSearchParams()
   const reportIdFromUrl = searchParams.get("reportId")
@@ -564,6 +757,13 @@ export function CustomReportBuilderContent() {
   ])
 
   const [sidebarSearch, setSidebarSearch] = useState("")
+  const [mobileColumnsOpen, setMobileColumnsOpen] = useState(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [filtersCardOpen, setFiltersCardOpen] = useState(true)
+  const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const reportResultsRef = useRef<HTMLDivElement>(null)
+  const [tableViewportWidth, setTableViewportWidth] = useState(0)
   const [metricFilters, setMetricFilters] = useState<CustomReportMetricFilter[]>([])
   const [metricFilterPopoverOpen, setMetricFilterPopoverOpen] = useState(false)
   const [draftMetricFilterMetric, setDraftMetricFilterMetric] = useState("estimated_revenue")
@@ -1078,8 +1278,19 @@ export function CustomReportBuilderContent() {
     setAppliedReportQuery(null)
   }, [reportIdFromUrl])
 
+  const scrollToReportResultsOnMobile = useCallback(() => {
+    if (!isMobile) return
+    window.requestAnimationFrame(() => {
+      reportResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }, [isMobile])
+
   const handleApplyFilters = () => {
     setAppliedReportQuery(currentReportQuery)
+    if (isMobile) {
+      setMobileFiltersOpen(false)
+    }
+    scrollToReportResultsOnMobile()
   }
 
   const { data: reportData, loading: reportLoading, error: reportError } = useCustomReportQuery({
@@ -1138,9 +1349,7 @@ export function CustomReportBuilderContent() {
   const dateRangeLabel =
     dateFilterMode === "month"
       ? format(selectedMonth, "MMMM yyyy", { locale: enUS })
-      : dateFilterMode === "preset" && activePresetDays > 0
-        ? `Last ${activePresetDays} days`
-        : `${format(startDate, "M/d/yyyy", { locale: enUS })} – ${format(endDate, "M/d/yyyy", { locale: enUS })}`
+      : `${format(startDate, "M/d/yyyy", { locale: enUS })} – ${format(endDate, "M/d/yyyy", { locale: enUS })}`
 
   const maxSelectableMonth = format(new Date(), "yyyy-MM")
 
@@ -1601,6 +1810,56 @@ export function CustomReportBuilderContent() {
     [tableRows, displayedParameters],
   )
 
+  const sharedPanelProps = useMemo(() => {
+    if (tableRows.length === 0) return null
+
+    const rowIndex = expandedRowIndex ?? 0
+    const row = tableRows[rowIndex]
+    if (!row) return null
+
+    return buildRowExpandPanelProps(
+      row,
+      expandedRowIndex ?? rowIndex,
+      displayedParameters,
+      displayedMetrics,
+      catalogParameters,
+      catalogMetrics,
+    )
+  }, [
+    expandedRowIndex,
+    tableRows,
+    displayedParameters,
+    displayedMetrics,
+    catalogParameters,
+    catalogMetrics,
+  ])
+
+  const isPanelVisible = expandedRowIndex !== null
+
+  const toggleRowExpand = useCallback((idx: number) => {
+    setExpandedRowIndex((current) => (current === idx ? null : idx))
+  }, [])
+
+  useEffect(() => {
+    setExpandedRowIndex(null)
+  }, [tableRows, displayedParameters, displayedMetrics])
+
+  useLayoutEffect(() => {
+    const node = tableScrollRef.current
+    if (!node) return
+
+    const syncViewportWidth = () => {
+      setTableViewportWidth(node.clientWidth)
+    }
+
+    syncViewportWidth()
+    const observer = new ResizeObserver(syncViewportWidth)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [appliedReportQuery, reportLoading, reportError, tableRows.length])
+
+  const tableColumnCount = displayedParameters.length + displayedMetrics.length
+
   const handleExportExcel = () => {
     if (!canExportReports) {
       toast.error("You do not have permission to export reports.")
@@ -1735,17 +1994,31 @@ export function CustomReportBuilderContent() {
               <TableHead
                 key={paramId}
                 className={cn(
-                  "sticky top-0 z-50 bg-white text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 whitespace-nowrap",
-                  index === 0 && "pl-5",
+                  "sticky top-0 z-50 cursor-pointer bg-white text-xs font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50",
+                  getParameterHorizontalPaddingClass(paramId, index, isMobile),
                   index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
-                style={{ ...getParameterStickyStyle(displayedParameters, index), top: 0 }}
+                style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: 0 }}
                 onClick={() => handleSort(paramId)}
               >
-                <div className="flex items-center gap-1">
-                  {param?.label}
+                <div
+                  className={cn(
+                    "flex items-center gap-1",
+                    isMobile && (paramId === "app" || paramId === "platform") && "justify-center",
+                    isMobile && paramId === "date" && "text-xs",
+                  )}
+                >
+                  {isMobile && paramId === "app" ? (
+                    <Smartphone className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                  ) : isMobile && paramId === "platform" ? (
+                    <Layers className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                  ) : (
+                    param?.label
+                  )}
                   {sortColumn === paramId && <ArrowUpDown className="h-3 w-3 text-slate-400" />}
-                  <HelpCircle className="h-3 w-3 text-slate-300" />
+                  {!isMobile || (paramId !== "app" && paramId !== "date" && paramId !== "platform") ? (
+                    <HelpCircle className="h-3 w-3 text-slate-300" />
+                  ) : null}
                 </div>
               </TableHead>
             )
@@ -1777,13 +2050,20 @@ export function CustomReportBuilderContent() {
               key={`total-p-${paramId}`}
               className={cn(
                 "sticky top-10 z-50 bg-slate-100 py-3",
-                index === 0 && "pl-5",
+                getParameterHorizontalPaddingClass(paramId, index, isMobile),
                 index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={{ ...getParameterStickyStyle(displayedParameters, index), top: "2.5rem" }}
+              style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: "2.5rem" }}
             >
               {index === 0 ? (
-                <span className="text-sm font-bold text-slate-900">Total</span>
+                <span
+                  className={cn(
+                    "text-sm font-bold text-slate-900",
+                    isMobile && paramId === "app" && "sr-only",
+                  )}
+                >
+                  Total
+                </span>
               ) : (
                 <span className="text-sm text-slate-500">—</span>
               )}
@@ -1810,7 +2090,7 @@ export function CustomReportBuilderContent() {
                 "sticky top-20 z-50 h-1 bg-white p-0",
                 index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={{ ...getParameterStickyStyle(displayedParameters, index), top: "5rem" }}
+              style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: "5rem" }}
             >
               <div className="h-1 bg-emerald-500" />
             </TableHead>
@@ -1827,60 +2107,590 @@ export function CustomReportBuilderContent() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {tableRows.map((row, idx) => (
-          <TableRow key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-            {displayedParameters.map((paramId, index) => (
-              <TableCell
-                key={paramId}
-                className={cn(
-                  "sticky z-20 py-2",
-                  idx % 2 === 0 ? "bg-white" : "bg-slate-50",
-                  index === 0 && "pl-5",
-                  index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
-                )}
-                style={getParameterStickyStyle(displayedParameters, index)}
-              >
-                {renderParameterCell(paramId, row, displayedParameters)}
-              </TableCell>
-            ))}
-            {displayedMetrics.map((metricId, index) => {
-              if (metricId === "ua_cost") {
-                const spanState = uaCostRowSpanMap.get(idx)
-                if (spanState?.hidden) return null
+        {(() => {
+          const renderTableDataRow = (
+            row: Record<string, string | number | null>,
+            idx: number,
+          ) => {
+            const isExpanded = expandedRowIndex === idx
+            const rowBgClass = idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+            const stickyCellBgClass = isExpanded
+              ? "bg-blue-50"
+              : idx % 2 === 0
+                ? "bg-white"
+                : "bg-slate-50"
 
-                return (
+            return (
+              <TableRow key={idx} className={cn(rowBgClass, isExpanded && "bg-blue-50/70")}>
+                {displayedParameters.map((paramId, index) => (
                   <TableCell
-                    key={metricId}
-                    rowSpan={spanState?.rowSpan}
+                    key={paramId}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? "Collapse" : "Expand"} row ${idx + 1} details`}
                     className={cn(
-                      "text-sm text-right text-slate-700 py-2 whitespace-nowrap align-middle",
-                      index === displayedMetrics.length - 1 && "pr-5",
+                      "sticky z-20 cursor-pointer py-2 transition-colors",
+                      stickyCellBgClass,
+                      "hover:bg-blue-50/80",
+                      isExpanded && "bg-blue-50",
+                      getParameterHorizontalPaddingClass(paramId, index, isMobile),
+                      index === displayedParameters.length - 1 &&
+                        "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                     )}
-                    style={getMetricColumnStyle()}
+                    style={getParameterStickyStyle(displayedParameters, index, isMobile)}
+                    onClick={() => toggleRowExpand(idx)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        toggleRowExpand(idx)
+                      }
+                    }}
                   >
-                    {formatMetricValue(row[metricId], metricId, catalogMetrics)}
+                    {renderParameterCell(paramId, row, displayedParameters, isMobile)}
                   </TableCell>
-                )
-              }
+                ))}
+                {displayedMetrics.map((metricId, index) => {
+                  if (metricId === "ua_cost") {
+                    const spanState = uaCostRowSpanMap.get(idx)
+                    if (spanState?.hidden) return null
 
-              return (
-                <TableCell
-                  key={metricId}
-                  className={cn(
-                    "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
-                    index === displayedMetrics.length - 1 && "pr-5",
-                  )}
-                  style={getMetricColumnStyle()}
+                    return (
+                      <TableCell
+                        key={metricId}
+                        rowSpan={spanState?.rowSpan}
+                        className={cn(
+                          "text-sm text-right text-slate-700 py-2 whitespace-nowrap align-middle",
+                          index === displayedMetrics.length - 1 && "pr-5",
+                        )}
+                        style={getMetricColumnStyle()}
+                      >
+                        {formatMetricValue(row[metricId], metricId, catalogMetrics)}
+                      </TableCell>
+                    )
+                  }
+
+                  return (
+                    <TableCell
+                      key={metricId}
+                      className={cn(
+                        "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
+                        index === displayedMetrics.length - 1 && "pr-5",
+                      )}
+                      style={getMetricColumnStyle()}
+                    >
+                      {formatMetricValue(row[metricId], metricId, catalogMetrics)}
+                    </TableCell>
+                  )
+                })}
+              </TableRow>
+            )
+          }
+
+          const sharedExpandPanelRow = sharedPanelProps ? (
+            <TableRow
+              key="shared-expand-panel"
+              className={cn("bg-blue-50/40", !isPanelVisible && "hidden")}
+              aria-hidden={!isPanelVisible}
+            >
+              <TableCell colSpan={tableColumnCount} className="p-0">
+                <div
+                  className="sticky left-0 z-30 min-w-0 max-w-full overflow-hidden"
+                  style={
+                    tableViewportWidth > 0
+                      ? { width: tableViewportWidth, maxWidth: tableViewportWidth }
+                      : undefined
+                  }
                 >
-                  {formatMetricValue(row[metricId], metricId, catalogMetrics)}
-                </TableCell>
-              )
-            })}
-          </TableRow>
-        ))}
+                  <CustomReportRowExpandPanel
+                    key="shared-expand-panel-content"
+                    {...sharedPanelProps}
+                  />
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : null
+
+          if (!isPanelVisible) {
+            return (
+              <>
+                {tableRows.map((row, idx) => renderTableDataRow(row, idx))}
+                {sharedExpandPanelRow}
+              </>
+            )
+          }
+
+          const expandedIdx = expandedRowIndex
+          return (
+            <>
+              {tableRows
+                .slice(0, expandedIdx + 1)
+                .map((row, idx) => renderTableDataRow(row, idx))}
+              {sharedExpandPanelRow}
+              {tableRows
+                .slice(expandedIdx + 1)
+                .map((row, offsetIdx) => renderTableDataRow(row, expandedIdx + 1 + offsetIdx))}
+            </>
+          )
+        })()}
       </TableBody>
     </table>
   )
+
+  const renderFiltersBody = () => (
+    <>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+                <Select value={dateSelectValue} onValueChange={handleDateSelectChange}>
+                  <SelectTrigger className="h-10 w-full bg-white sm:w-44">
+                    <CalendarIcon className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
+                    <SelectValue placeholder="Date range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                    <SelectItem value="month">Select month</SelectItem>
+                    <SelectItem value="custom">Custom…</SelectItem>
+                  </SelectContent>
+                </Select>
+    
+                {dateFilterMode === "month" && (
+                  <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="h-10 w-full border-slate-200 bg-white sm:w-auto" type="button">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRangeLabel}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4" align="start">
+                      <div className="space-y-2">
+                        <Label htmlFor="report-month-picker" className="text-sm font-medium text-slate-700">
+                          Month
+                        </Label>
+                        <Input
+                          id="report-month-picker"
+                          type="month"
+                          className="h-10 w-[220px]"
+                          max={maxSelectableMonth}
+                          value={format(selectedMonth, "yyyy-MM")}
+                          onChange={(e) => handleMonthInputChange(e.target.value)}
+                        />
+                        <p className="text-xs text-slate-500">
+                          {format(startDate, "M/d/yyyy", { locale: enUS })} –{" "}
+                          {format(endDate, "M/d/yyyy", { locale: enUS })}
+                        </p>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+    
+                {dateFilterMode === "preset" ? (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    disabled
+                    className="h-10 w-full cursor-default border-slate-200 bg-slate-50 text-slate-600 disabled:opacity-100 sm:w-auto"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
+                    {dateRangeLabel}
+                  </Button>
+                ) : null}
+    
+                {dateFilterMode === "custom" ? (
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="h-10 w-full border-slate-200 bg-white sm:w-auto" type="button">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRangeLabel}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="flex gap-1 border-b border-slate-100 p-2">
+                        {datePresets.map((preset) => (
+                          <Button
+                            key={preset.id}
+                            type="button"
+                            variant={activePresetDays === preset.days ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                              "h-7 text-xs",
+                              activePresetDays === preset.days && "bg-blue-600 hover:bg-blue-700",
+                            )}
+                            onClick={() => applyDatePreset(preset.days)}
+                          >
+                            {preset.label}
+                          </Button>
+                        ))}
+                      </div>
+                      <Calendar
+                        mode="range"
+                        locale={enUS}
+                        selected={{ from: startDate, to: endDate }}
+                        onSelect={onCustomDateSelect}
+                        numberOfMonths={2}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : null}
+    
+                {canScopeManagedTeams && (
+                  <>
+                    <GroupedTeamMultiSelect
+                      teams={commissionTeams}
+                      teamGroupSections={commissionTeamGroupSections}
+                      selectedTeamIds={selectedCommissionTeamIds}
+                      onSelectedTeamIdsChange={handleCommissionTeamIdsChange}
+                      disabled={commissionTeams.length === 0}
+                      triggerLabel={teamsTriggerLabel}
+                      showUsersIcon
+                      emptyTeamsMessage="No teams under you or as team lead"
+                      triggerClassName="w-full max-w-none sm:min-w-[11rem] sm:max-w-[280px]"
+                    />
+    
+                    <div className="hidden">
+                      <Select value={commissionMember} onValueChange={handleCommissionMemberChange}>
+                        <SelectTrigger
+                          className="w-64 h-10 bg-white"
+                          disabled={
+                            selectedCommissionTeamIds.length !== 1 ||
+                            commissionMembers.length === 0 ||
+                            memberOptionsLoading
+                          }
+                        >
+                          <SelectValue placeholder={memberOptionsLoading ? "Loading team members..." : "Select team member"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {commissionMembers.map((member) => (
+                            <SelectItem key={member.userId} value={member.userId}>
+                              {member.label}
+                            </SelectItem>
+                          ))}
+                          {!memberOptionsLoading && commissionMembers.length === 0 ? (
+                            <div className="px-2 py-2 text-sm text-slate-500">
+                              No team members found
+                            </div>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+    
+                <Popover
+                  open={appPopoverOpen}
+                  onOpenChange={(open) => {
+                    if (appSelectorDisabled) return
+                    setAppPopoverOpen(open)
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-10 w-full max-w-none justify-between border-slate-200 bg-white font-normal sm:min-w-[11rem] sm:max-w-[280px]"
+                      type="button"
+                      disabled={appSelectorDisabled || (!canScopeManagedTeams && appsLoading)}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className="truncate">{appsTriggerLabel}</span>
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[320px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search app name, App ID, or Store ID..." />
+                      <CommandList>
+                        <CommandEmpty>No apps found.</CommandEmpty>
+                        <CommandGroup>
+                          <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                const ids = appsForSelection.map((a) => a.appId)
+                                setSelectedApps(ids)
+                                syncAppsActiveFilter(ids, appsForSelection)
+                              }}
+                            >
+                              Select all
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                setSelectedApps([])
+                                syncAppsActiveFilter([], appsForSelection)
+                              }}
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                          {selectedCommissionTeamIds.length > 0 &&
+                          teamScopeApps !== null &&
+                          appsForSelection.length === 0 ? (
+                            <div className="px-3 py-4 text-sm text-slate-500">
+                              No apps linked to the selected teams.
+                            </div>
+                          ) : null}
+                          {appsForSelection.map((app) => (
+                            <CommandItem
+                              key={app.appId}
+                              value={[
+                                app.displayName || "",
+                                app.name || "",
+                                app.appId || "",
+                                app.appStoreId || "",
+                              ].join(" ")}
+                              onSelect={() => toggleAppWithFilter(app.appId)}
+                              className="cursor-pointer"
+                            >
+                              <Checkbox checked={selectedApps.includes(app.appId)} className="mr-2" />
+                              <Avatar className="h-8 w-8 rounded-lg mr-2">
+                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-xs">
+                                  {(app.displayName || app.name).slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">
+                                  {app.displayName || app.name}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {app.platform} · {app.appStoreId || app.appId}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+    
+                <Popover open={metricFilterPopoverOpen} onOpenChange={setMetricFilterPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-10 w-full gap-2 bg-white sm:w-auto" type="button">
+                      <Plus className="h-4 w-4" />
+                      Add filter
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[calc(100vw-2rem)] max-w-[560px] p-4"
+                    align="start"
+                    side="bottom"
+                    collisionPadding={16}
+                  >
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_10rem]">
+                      <div>
+                        <div className="text-xs font-medium text-slate-500 mb-1.5">Metric</div>
+                        <Select value={draftMetricFilterMetric} onValueChange={setDraftMetricFilterMetric}>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder="Select metric" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {catalogMetrics.map((metric) => (
+                              <SelectItem key={metric.id} value={metric.id}>
+                                {metric.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+    
+                      <div>
+                        <div className="text-xs font-medium text-slate-500 mb-1.5">Condition</div>
+                        <Select
+                          value={draftMetricFilterCondition}
+                          onValueChange={(value) =>
+                            setDraftMetricFilterCondition(value as CustomReportMetricFilter["condition"])
+                          }
+                        >
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder="Condition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {metricFilterConditions.map((condition) => (
+                              <SelectItem key={condition.value} value={condition.value}>
+                                {condition.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+    
+                      <div>
+                        <div className="text-xs font-medium text-slate-500 mb-1.5">Value</div>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={draftMetricFilterValue}
+                          onChange={(event) => setDraftMetricFilterValue(event.target.value)}
+                          placeholder="Value"
+                          className="h-10 bg-white"
+                        />
+                      </div>
+                      </div>
+    
+                      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="w-full sm:w-auto"
+                          onClick={() => setMetricFilterPopoverOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                          onClick={addMetricFilter}
+                          disabled={!draftMetricFilterMetric || draftMetricFilterValue.trim() === ""}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+    
+                <Button
+                  className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                  type="button"
+                  disabled={loadingSavedReport || reportLoading || !hasPendingApply}
+                  onClick={handleApplyFilters}
+                >
+                  <Search className="w-4 h-4" />
+                  Apply
+                </Button>
+              </div>
+    
+              {(activeFilters.length > 0 || metricFilters.length > 0) && (
+                <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
+                  <span className="text-sm text-slate-500">Active filters:</span>
+                  {activeFilters
+                    .filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER)
+                    .map((filter) => (
+                    <Badge
+                      key={filter.type}
+                      variant="secondary"
+                      className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
+                    >
+                      {filter.type}: {filter.value}
+                      {filter.type !== FILTER_COMMISSION_TEAM && filter.type !== FILTER_COMMISSION_MEMBER ? (
+                        <button
+                          type="button"
+                          onClick={() => removeFilter(filter.type)}
+                          className="ml-1 hover:bg-blue-100 rounded p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      ) : null}
+                    </Badge>
+                  ))}
+                  {metricFilters.map((filter, index) => (
+                    <Badge
+                      key={`${filter.metric}-${filter.condition}-${filter.value}-${index}`}
+                      variant="secondary"
+                      className="bg-purple-50 text-purple-700 border border-purple-200 gap-1 pr-1"
+                    >
+                      {getMetricFilterLabel(filter, catalogMetrics)}
+                      <button
+                        type="button"
+                        onClick={() => removeMetricFilter(index)}
+                        className="ml-1 hover:bg-purple-100 rounded p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
+    </>
+  )
+
+  const renderParametersMetricsBody = (scrollAreaClassName: string) => (
+    <>
+      <div className="border-b border-slate-100 px-4 py-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Search parameters or metrics..."
+            className="h-10 border-slate-200 bg-white pl-9"
+            value={sidebarSearch}
+            onChange={(e) => setSidebarSearch(e.target.value)}
+          />
+        </div>
+      </div>
+      <ScrollArea className={scrollAreaClassName}>
+        <div className="border-b border-slate-100 p-4">
+          <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+            Parameters ({selectedParameters.length})
+          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleParameterDragEnd}>
+            <SortableContext
+              items={orderedFilteredParameters.map((item) => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {orderedFilteredParameters.map((param) => (
+                  <SortableReportFieldItem
+                    key={param.id}
+                    id={param.id}
+                    label={param.label}
+                    selected={selectedParameters.includes(param.id)}
+                    selectedColorClass="bg-emerald-50 text-emerald-800"
+                    onToggle={() => toggleParameter(param.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+        <div className="p-4">
+          <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+            Metrics ({selectedMetrics.length})
+          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMetricDragEnd}>
+            <SortableContext
+              items={orderedFilteredMetrics.map((item) => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {orderedFilteredMetrics.map((metric) => (
+                  <SortableReportFieldItem
+                    key={metric.id}
+                    id={metric.id}
+                    label={metric.label}
+                    selected={selectedMetrics.includes(metric.id)}
+                    selectedColorClass="bg-blue-50 text-blue-800"
+                    onToggle={() => toggleMetric(metric.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+      </ScrollArea>
+    </>
+  )
+
+  const selectedColumnsCount = selectedParameters.length + selectedMetrics.length
+  const activeFiltersCount =
+    activeFilters.filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER).length +
+    metricFilters.length
 
   return (
     <div className="flex flex-col gap-6">
@@ -2037,27 +2847,28 @@ export function CustomReportBuilderContent() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          {showBackToReports ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="mb-2 h-8 px-2 text-slate-600 hover:text-slate-900"
-              onClick={() => router.push("/reports")}
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              Back to Reports
-            </Button>
-          ) : null}
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-slate-900">{reportPageTitle}</h1>
+      <div className="flex flex-col gap-4">
+        {showBackToReports ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-8 w-fit px-2 text-slate-600 hover:text-slate-900"
+            onClick={() => router.push("/reports")}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Back to Reports
+          </Button>
+        ) : null}
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="truncate text-2xl font-semibold text-slate-900">{reportPageTitle}</h1>
             {savedReportId && canEditReports ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900"
                 disabled={savingReport || loadingSavedReport}
                 onClick={() => setSaveDialogOpen(true)}
                 title="Edit report name"
@@ -2067,11 +2878,31 @@ export function CustomReportBuilderContent() {
               </Button>
             ) : null}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Build ad activity reports with custom parameters and metrics
-          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              "flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5",
+              isMobile && "hidden",
+              filtersCardOpen
+                ? "bg-slate-200/70 text-blue-600 hover:bg-slate-200/80 hover:text-blue-700"
+                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+            )}
+            onClick={() => setFiltersCardOpen((open) => !open)}
+            title={filtersCardOpen ? "Hide filters" : "Show filters"}
+            aria-label={filtersCardOpen ? "Hide filters" : "Show filters"}
+            aria-pressed={filtersCardOpen}
+          >
+            <Filter className="h-4 w-4" />
+            <span className="text-[10px] font-medium leading-none">Filter</span>
+          </Button>
         </div>
-        <div className="flex items-center gap-2">
+
+        <p className="text-sm text-slate-500">
+          Build ad activity reports with custom parameters and metrics
+        </p>
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {savedReportId && canDeleteReports ? (
             <Button
               type="button"
@@ -2112,383 +2943,46 @@ export function CustomReportBuilderContent() {
         </div>
       </div>
 
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-300 ease-in-out",
+          isMobile && "hidden",
+          filtersCardOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div
+            className={cn(
+              "origin-top transition-transform duration-300 ease-in-out",
+              filtersCardOpen ? "translate-y-0" : "-translate-y-2",
+            )}
+          >
       <Card className="border-slate-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium">Filters</CardTitle>
           <CardDescription>Date range, apps, and report criteria. Click Apply to refresh data.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-            <Select value={dateSelectValue} onValueChange={handleDateSelectChange}>
-              <SelectTrigger className="w-44 h-10 bg-white">
-                <CalendarIcon className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
-                <SelectValue placeholder="Date range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="month">Select month</SelectItem>
-                <SelectItem value="custom">Custom…</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {dateFilterMode === "month" && (
-              <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-10 bg-white border-slate-200" type="button">
-                    <CalendarIcon className="w-4 h-4 mr-2" />
-                    {dateRangeLabel}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="start">
-                  <div className="space-y-2">
-                    <Label htmlFor="report-month-picker" className="text-sm font-medium text-slate-700">
-                      Month
-                    </Label>
-                    <Input
-                      id="report-month-picker"
-                      type="month"
-                      className="h-10 w-[220px]"
-                      max={maxSelectableMonth}
-                      value={format(selectedMonth, "yyyy-MM")}
-                      onChange={(e) => handleMonthInputChange(e.target.value)}
-                    />
-                    <p className="text-xs text-slate-500">
-                      {format(startDate, "M/d/yyyy", { locale: enUS })} –{" "}
-                      {format(endDate, "M/d/yyyy", { locale: enUS })}
-                    </p>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {dateFilterMode === "custom" && (
-              <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-10 bg-white border-slate-200" type="button">
-                    <CalendarIcon className="w-4 h-4 mr-2" />
-                    {dateRangeLabel}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="flex gap-1 p-2 border-b border-slate-100">
-                    {datePresets.map((preset) => (
-                      <Button
-                        key={preset.id}
-                        type="button"
-                        variant={activePresetDays === preset.days ? "default" : "outline"}
-                        size="sm"
-                        className={cn(
-                          "h-7 text-xs",
-                          activePresetDays === preset.days && "bg-blue-600 hover:bg-blue-700",
-                        )}
-                        onClick={() => applyDatePreset(preset.days)}
-                      >
-                        {preset.label}
-                      </Button>
-                    ))}
-                  </div>
-                  <Calendar
-                    mode="range"
-                    locale={enUS}
-                    selected={{ from: startDate, to: endDate }}
-                    onSelect={onCustomDateSelect}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {canScopeManagedTeams && (
-              <>
-                <GroupedTeamMultiSelect
-                  teams={commissionTeams}
-                  teamGroupSections={commissionTeamGroupSections}
-                  selectedTeamIds={selectedCommissionTeamIds}
-                  onSelectedTeamIdsChange={handleCommissionTeamIdsChange}
-                  disabled={commissionTeams.length === 0}
-                  triggerLabel={teamsTriggerLabel}
-                  showUsersIcon
-                  emptyTeamsMessage="No teams under you or as team lead"
-                />
-
-                <div className="hidden">
-                  <Select value={commissionMember} onValueChange={handleCommissionMemberChange}>
-                    <SelectTrigger
-                      className="w-64 h-10 bg-white"
-                      disabled={
-                        selectedCommissionTeamIds.length !== 1 ||
-                        commissionMembers.length === 0 ||
-                        memberOptionsLoading
-                      }
-                    >
-                      <SelectValue placeholder={memberOptionsLoading ? "Loading team members..." : "Select team member"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {commissionMembers.map((member) => (
-                        <SelectItem key={member.userId} value={member.userId}>
-                          {member.label}
-                        </SelectItem>
-                      ))}
-                      {!memberOptionsLoading && commissionMembers.length === 0 ? (
-                        <div className="px-2 py-2 text-sm text-slate-500">
-                          No team members found
-                        </div>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-
-            <Popover
-              open={appPopoverOpen}
-              onOpenChange={(open) => {
-                if (appSelectorDisabled) return
-                setAppPopoverOpen(open)
-              }}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal"
-                  type="button"
-                  disabled={appSelectorDisabled || (!canScopeManagedTeams && appsLoading)}
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="truncate">{appsTriggerLabel}</span>
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[320px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search app name, App ID, or Store ID..." />
-                  <CommandList>
-                    <CommandEmpty>No apps found.</CommandEmpty>
-                    <CommandGroup>
-                      <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            const ids = appsForSelection.map((a) => a.appId)
-                            setSelectedApps(ids)
-                            syncAppsActiveFilter(ids, appsForSelection)
-                          }}
-                        >
-                          Select all
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            setSelectedApps([])
-                            syncAppsActiveFilter([], appsForSelection)
-                          }}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                      {selectedCommissionTeamIds.length > 0 &&
-                      teamScopeApps !== null &&
-                      appsForSelection.length === 0 ? (
-                        <div className="px-3 py-4 text-sm text-slate-500">
-                          No apps linked to the selected teams.
-                        </div>
-                      ) : null}
-                      {appsForSelection.map((app) => (
-                        <CommandItem
-                          key={app.appId}
-                          value={[
-                            app.displayName || "",
-                            app.name || "",
-                            app.appId || "",
-                            app.appStoreId || "",
-                          ].join(" ")}
-                          onSelect={() => toggleAppWithFilter(app.appId)}
-                          className="cursor-pointer"
-                        >
-                          <Checkbox checked={selectedApps.includes(app.appId)} className="mr-2" />
-                          <Avatar className="h-8 w-8 rounded-lg mr-2">
-                            <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-xs">
-                              {(app.displayName || app.name).slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {app.displayName || app.name}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {app.platform} · {app.appStoreId || app.appId}
-                            </div>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-            <Popover open={metricFilterPopoverOpen} onOpenChange={setMetricFilterPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-10 gap-2 bg-white" type="button">
-                  <Plus className="w-4 h-4" />
-                  Add filter
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[560px] p-4" align="start">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-[minmax(0,1fr)_7rem_10rem] gap-3">
-                  <div>
-                    <div className="text-xs font-medium text-slate-500 mb-1.5">Metric</div>
-                    <Select value={draftMetricFilterMetric} onValueChange={setDraftMetricFilterMetric}>
-                      <SelectTrigger className="h-10 bg-white">
-                        <SelectValue placeholder="Select metric" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {catalogMetrics.map((metric) => (
-                          <SelectItem key={metric.id} value={metric.id}>
-                            {metric.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-medium text-slate-500 mb-1.5">Condition</div>
-                    <Select
-                      value={draftMetricFilterCondition}
-                      onValueChange={(value) =>
-                        setDraftMetricFilterCondition(value as CustomReportMetricFilter["condition"])
-                      }
-                    >
-                      <SelectTrigger className="h-10 bg-white">
-                        <SelectValue placeholder="Condition" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {metricFilterConditions.map((condition) => (
-                          <SelectItem key={condition.value} value={condition.value}>
-                            {condition.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-medium text-slate-500 mb-1.5">Value</div>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      value={draftMetricFilterValue}
-                      onChange={(event) => setDraftMetricFilterValue(event.target.value)}
-                      placeholder="Value"
-                      className="h-10 bg-white"
-                    />
-                  </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      type="button"
-                      onClick={() => setMetricFilterPopoverOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={addMetricFilter}
-                      disabled={!draftMetricFilterMetric || draftMetricFilterValue.trim() === ""}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Button
-              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
-              type="button"
-              disabled={loadingSavedReport || reportLoading || !hasPendingApply}
-              onClick={handleApplyFilters}
-            >
-              <Search className="w-4 h-4" />
-              Apply
-            </Button>
-          </div>
-
-          {(activeFilters.length > 0 || metricFilters.length > 0) && (
-            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
-              <span className="text-sm text-slate-500">Active filters:</span>
-              {activeFilters
-                .filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER)
-                .map((filter) => (
-                <Badge
-                  key={filter.type}
-                  variant="secondary"
-                  className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
-                >
-                  {filter.type}: {filter.value}
-                  {filter.type !== FILTER_COMMISSION_TEAM && filter.type !== FILTER_COMMISSION_MEMBER ? (
-                    <button
-                      type="button"
-                      onClick={() => removeFilter(filter.type)}
-                      className="ml-1 hover:bg-blue-100 rounded p-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  ) : null}
-                </Badge>
-              ))}
-              {metricFilters.map((filter, index) => (
-                <Badge
-                  key={`${filter.metric}-${filter.condition}-${filter.value}-${index}`}
-                  variant="secondary"
-                  className="bg-purple-50 text-purple-700 border border-purple-200 gap-1 pr-1"
-                >
-                  {getMetricFilterLabel(filter, catalogMetrics)}
-                  <button
-                    type="button"
-                    onClick={() => removeMetricFilter(index)}
-                    className="ml-1 hover:bg-purple-100 rounded p-0.5"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              ))}
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
-        </CardContent>
+        <CardContent className="space-y-4">{renderFiltersBody()}</CardContent>
       </Card>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_18rem] gap-6">
-        <Card className="border-slate-200 overflow-hidden">
-          <CardHeader className="pb-3 border-b border-slate-100">
+      <div ref={reportResultsRef} className="relative grid scroll-mt-16 grid-cols-1 gap-6 xl:grid-cols-[1fr_18rem]">
+        <Card
+          className={cn(
+            "flex flex-col overflow-hidden border-slate-200",
+            isMobile && "max-h-[95dvh]",
+          )}
+        >
+          <CardHeader className="shrink-0 border-b border-slate-100 pb-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-base font-medium">Report results</CardTitle>
                 <CardDescription>
                   {dateRangeLabel}
                   {selectedAppLabels.length > 0 && ` · ${appsTriggerLabel}`}
+                  {tableRows.length > 0 ? " · Click a parameter cell to expand row details" : ""}
                 </CardDescription>
               </div>
               {canExportReports ? (
@@ -2505,77 +2999,118 @@ export function CustomReportBuilderContent() {
               ) : null}
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[min(70vh,720px)] overflow-auto">
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            <div
+              ref={tableScrollRef}
+              className={cn(
+                "min-h-0 flex-1 overflow-auto",
+                isMobile ? "max-h-[calc(95dvh-5.5rem)]" : "max-h-[min(70vh,720px)]",
+              )}
+            >
               {tableContent}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 flex flex-col min-h-[320px] xl:min-h-0">
-          <CardHeader className="pb-3 border-b border-slate-100">
+        <Card
+          className={cn(
+            "flex min-h-[320px] flex-col border-slate-200 xl:min-h-0",
+            isMobile ? "hidden" : "flex",
+          )}
+        >
+          <CardHeader className="border-b border-slate-100 pb-3">
             <CardTitle className="text-base font-medium">Parameters & Metrics</CardTitle>
             <CardDescription>Choose columns to display in the table</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col flex-1 p-0 min-h-0">
-            <div className="px-4 py-3 border-b border-slate-100">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Search parameters or metrics..."
-                  className="pl-9 h-10 bg-white border-slate-200"
-                  value={sidebarSearch}
-                  onChange={(e) => setSidebarSearch(e.target.value)}
-                />
-              </div>
-            </div>
-            <ScrollArea className="flex-1 max-h-[min(70vh,640px)]">
-              <div className="p-4 border-b border-slate-100">
-                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
-                  Parameters ({selectedParameters.length})
-                </div>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleParameterDragEnd}>
-                  <SortableContext items={orderedFilteredParameters.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1">
-                      {orderedFilteredParameters.map((param) => (
-                        <SortableReportFieldItem
-                          key={param.id}
-                          id={param.id}
-                          label={param.label}
-                          selected={selectedParameters.includes(param.id)}
-                          selectedColorClass="bg-emerald-50 text-emerald-800"
-                          onToggle={() => toggleParameter(param.id)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              </div>
-              <div className="p-4">
-                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
-                  Metrics ({selectedMetrics.length})
-                </div>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMetricDragEnd}>
-                  <SortableContext items={orderedFilteredMetrics.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1">
-                      {orderedFilteredMetrics.map((metric) => (
-                        <SortableReportFieldItem
-                          key={metric.id}
-                          id={metric.id}
-                          label={metric.label}
-                          selected={selectedMetrics.includes(metric.id)}
-                          selectedColorClass="bg-blue-50 text-blue-800"
-                          onToggle={() => toggleMetric(metric.id)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              </div>
-            </ScrollArea>
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            {renderParametersMetricsBody("max-h-[min(70vh,640px)] flex-1")}
           </CardContent>
         </Card>
+
+        {isMobile ? (
+          <>
+            <div className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-end gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(true)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg",
+                  hasPendingApply && "ring-2 ring-blue-300",
+                )}
+                aria-label="Open filters"
+              >
+                <Filter className="h-4 w-4 text-slate-600" aria-hidden />
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                  style={{ writingMode: "vertical-rl" }}
+                >
+                  Filter
+                </span>
+                {activeFiltersCount > 0 ? (
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-w-5 justify-center px-1 text-[10px] font-semibold"
+                  >
+                    {activeFiltersCount}
+                  </Badge>
+                ) : null}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileColumnsOpen(true)}
+                className="flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg"
+                aria-label="Open parameters and metrics"
+              >
+                <Columns3 className="h-4 w-4 text-slate-600" aria-hidden />
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                  style={{ writingMode: "vertical-rl" }}
+                >
+                  Columns
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="h-5 min-w-5 justify-center px-1 text-[10px] font-semibold"
+                >
+                  {selectedColumnsCount}
+                </Badge>
+              </button>
+            </div>
+
+            <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+              <SheetContent
+                side="right"
+                className="flex w-[min(100vw-1rem,22rem)] flex-col gap-0 p-0"
+              >
+                <SheetHeader className="border-b border-slate-100 px-4 py-4 text-left">
+                  <SheetTitle className="text-base">Filters</SheetTitle>
+                  <SheetDescription>
+                    Date range, apps, and report criteria. Click Apply to refresh data.
+                  </SheetDescription>
+                </SheetHeader>
+                <ScrollArea className="min-h-0 flex-1">
+                  <div className="space-y-4 p-4">{renderFiltersBody()}</div>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet open={mobileColumnsOpen} onOpenChange={setMobileColumnsOpen}>
+              <SheetContent
+                side="right"
+                className="flex w-[min(100vw-1.5rem,20rem)] flex-col gap-0 p-0"
+              >
+                <SheetHeader className="border-b border-slate-100 px-4 py-4 text-left">
+                  <SheetTitle className="text-base">Parameters & Metrics</SheetTitle>
+                  <SheetDescription>Choose columns to display in the table</SheetDescription>
+                </SheetHeader>
+                <div className="flex min-h-0 flex-1 flex-col">
+                  {renderParametersMetricsBody("min-h-0 flex-1")}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </>
+        ) : null}
       </div>
     </div>
   )

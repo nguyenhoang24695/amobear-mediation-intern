@@ -362,50 +362,50 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <Card className="border-slate-200">
-          <CardContent className="py-10 text-center text-slate-500">Loading alert detail...</CardContent>
-        </Card>
-      </div>
+      <Card className="border-slate-200">
+        <CardContent className="py-10 text-center text-slate-500">Loading alert detail...</CardContent>
+      </Card>
     )
   }
 
   if (!alert) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <Card className="border-slate-200">
-          <CardContent className="py-10 text-center text-slate-500">Alert not found.</CardContent>
-        </Card>
-      </div>
+      <Card className="border-slate-200">
+        <CardContent className="py-10 text-center text-slate-500">Alert not found.</CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/alert-center">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Alerts
-                </Button>
-              </Link>
-              <Separator orientation="vertical" className="h-6" />
-              <p className="text-sm text-slate-500">Alerts & Insights &gt; Alert Detail</p>
-            </div>
-            {canEditAlertRule ? (
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => void handleOpenEditRule()} disabled={editRuleLoading}>
-                <Edit className="w-4 h-4" />
-                {editRuleLoading ? "Loading..." : "Edit Rule"}
+    <div className="min-w-0">
+      <div className="-mx-4 mb-4 border-b border-slate-200 bg-white px-4 py-3 md:mx-0 md:rounded-lg md:border md:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <Link href="/alert-center">
+              <Button variant="ghost" size="sm" className="gap-2 px-0 sm:px-3">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Alerts
               </Button>
-            ) : null}
+            </Link>
+            <Separator orientation="vertical" className="hidden h-6 sm:block" />
+            <p className="truncate text-sm text-slate-500">Alerts &gt; Alert Detail</p>
           </div>
+          {canEditAlertRule ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 self-start sm:self-auto"
+              onClick={() => void handleOpenEditRule()}
+              disabled={editRuleLoading}
+            >
+              <Edit className="h-4 w-4" />
+              {editRuleLoading ? "Loading..." : "Edit Rule"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="space-y-6">
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
           <div className="flex items-start gap-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${severityConfig[alert.severity].bgClass}`}>
