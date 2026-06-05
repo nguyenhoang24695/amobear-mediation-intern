@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Command,
@@ -2242,15 +2243,246 @@ export function CustomReportBuilderContent() {
     </table>
   )
 
+  const renderAppSelectorList = () => (
+    <Command
+      className={cn(
+        isMobile
+          ? "flex h-full w-full max-w-full min-w-0 flex-col overflow-hidden rounded-none [&_[data-slot=command-input-wrapper]]:max-w-full [&_[data-slot=command-input-wrapper]]:min-w-0"
+          : undefined,
+      )}
+    >
+      <CommandInput
+        placeholder={isMobile ? "Search apps..." : "Search app name, App ID, or Store ID..."}
+        className={cn(isMobile && "min-w-0 shrink-0 truncate")}
+      />
+      <CommandList
+        className={cn(
+          isMobile
+            ? "max-h-none min-h-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto"
+            : "max-h-[300px]",
+        )}
+      >
+        <CommandEmpty>No apps found.</CommandEmpty>
+        <CommandGroup
+          className={cn(
+            isMobile &&
+              "w-full max-w-full min-w-0 overflow-x-hidden p-0 [&_[cmdk-item]]:max-w-full [&_[cmdk-item]]:min-w-0",
+          )}
+        >
+          <div className="flex gap-2 border-b border-slate-100 px-2 py-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => {
+                const ids = appsForSelection.map((a) => a.appId)
+                setSelectedApps(ids)
+                syncAppsActiveFilter(ids, appsForSelection)
+              }}
+            >
+              Select all
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => {
+                setSelectedApps([])
+                syncAppsActiveFilter([], appsForSelection)
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+          {selectedCommissionTeamIds.length > 0 &&
+          teamScopeApps !== null &&
+          appsForSelection.length === 0 ? (
+            <div className="px-3 py-4 text-sm text-slate-500">
+              No apps linked to the selected teams.
+            </div>
+          ) : null}
+          {appsForSelection.map((app) => {
+            const primaryLabel = app.displayName || app.name || app.appId
+            const storeId = app.appStoreId?.trim()
+            const secondaryLine =
+              storeId && storeId !== primaryLabel
+                ? storeId
+                : app.appId !== primaryLabel
+                  ? app.appId
+                  : null
+
+            return (
+              <CommandItem
+                key={app.appId}
+                value={[
+                  app.displayName || "",
+                  app.name || "",
+                  app.appId || "",
+                  app.appStoreId || "",
+                ].join(" ")}
+                onSelect={() => toggleAppWithFilter(app.appId)}
+                className={cn(
+                  "cursor-pointer overflow-hidden",
+                  isMobile
+                    ? "!grid w-full max-w-full min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-2 px-2 py-2"
+                    : "min-w-0 w-full",
+                )}
+              >
+                <Checkbox checked={selectedApps.includes(app.appId)} className="shrink-0" />
+                <Avatar className="h-7 w-7 shrink-0 rounded-lg">
+                  <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-[10px]">
+                    {(app.displayName || app.name || app.appId).slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 max-w-full overflow-hidden">
+                  <p className="truncate text-sm font-medium leading-tight" title={primaryLabel}>
+                    {primaryLabel}
+                  </p>
+                  {isMobile ? (
+                    secondaryLine ? (
+                      <p
+                        className="truncate text-xs leading-tight text-slate-500"
+                        title={secondaryLine}
+                      >
+                        {secondaryLine}
+                      </p>
+                    ) : null
+                  ) : (
+                    <>
+                      <p className="truncate text-xs leading-tight text-slate-500" title={app.appId}>
+                        {app.appId}
+                      </p>
+                      {storeId ? (
+                        <p
+                          className="truncate font-mono text-[11px] leading-tight text-slate-400"
+                          title={storeId}
+                        >
+                          {storeId}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </CommandItem>
+            )
+          })}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+
+  const renderAppSelectorTrigger = (options?: { toggleOnClick?: boolean }) => (
+    <Button
+      variant="outline"
+      className={cn(
+        "h-10 w-full justify-between border-slate-200 bg-white font-normal sm:min-w-[11rem] sm:max-w-[280px]",
+        isMobile ? "max-w-full min-w-0" : "max-w-none",
+      )}
+      type="button"
+      disabled={appSelectorDisabled || (!canScopeManagedTeams && appsLoading)}
+      aria-expanded={options?.toggleOnClick ? appPopoverOpen : undefined}
+      onClick={
+        options?.toggleOnClick
+          ? () => {
+              if (appSelectorDisabled || (!canScopeManagedTeams && appsLoading)) return
+              setAppPopoverOpen((open) => !open)
+            }
+          : undefined
+      }
+    >
+      <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+        <Smartphone className="h-4 w-4 shrink-0 text-slate-400" />
+        <span className="truncate">{appsTriggerLabel}</span>
+      </span>
+      <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+    </Button>
+  )
+
+  const renderMetricFilterFields = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_10rem]">
+        <div>
+          <div className="text-xs font-medium text-slate-500 mb-1.5">Metric</div>
+          <Select value={draftMetricFilterMetric} onValueChange={setDraftMetricFilterMetric}>
+            <SelectTrigger className="h-10 bg-white">
+              <SelectValue placeholder="Select metric" />
+            </SelectTrigger>
+            <SelectContent className={cn(isMobile && "z-[100]")}>
+              {catalogMetrics.map((metric) => (
+                <SelectItem key={metric.id} value={metric.id}>
+                  {metric.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <div className="text-xs font-medium text-slate-500 mb-1.5">Condition</div>
+          <Select
+            value={draftMetricFilterCondition}
+            onValueChange={(value) =>
+              setDraftMetricFilterCondition(value as CustomReportMetricFilter["condition"])
+            }
+          >
+            <SelectTrigger className="h-10 bg-white">
+              <SelectValue placeholder="Condition" />
+            </SelectTrigger>
+            <SelectContent className={cn(isMobile && "z-[100]")}>
+              {metricFilterConditions.map((condition) => (
+                <SelectItem key={condition.value} value={condition.value}>
+                  {condition.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <div className="text-xs font-medium text-slate-500 mb-1.5">Value</div>
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={draftMetricFilterValue}
+            onChange={(event) => setDraftMetricFilterValue(event.target.value)}
+            placeholder="Value"
+            className="h-10 bg-white"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          variant="outline"
+          type="button"
+          className="w-full sm:w-auto"
+          onClick={() => setMetricFilterPopoverOpen(false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+          onClick={addMetricFilter}
+          disabled={!draftMetricFilterMetric || draftMetricFilterValue.trim() === ""}
+        >
+          Apply
+        </Button>
+      </div>
+    </div>
+  )
+
   const renderFiltersBody = () => (
     <>
-              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Select value={dateSelectValue} onValueChange={handleDateSelectChange}>
                   <SelectTrigger className="h-10 w-full bg-white sm:w-44">
                     <CalendarIcon className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
                     <SelectValue placeholder="Date range" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={cn(isMobile && "z-[100]")}>
                     <SelectItem value="7">Last 7 days</SelectItem>
                     <SelectItem value="30">Last 30 days</SelectItem>
                     <SelectItem value="90">Last 90 days</SelectItem>
@@ -2260,14 +2492,14 @@ export function CustomReportBuilderContent() {
                 </Select>
     
                 {dateFilterMode === "month" && (
-                  <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
+                  <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen} modal={!isMobile}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="h-10 w-full border-slate-200 bg-white sm:w-auto" type="button">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {dateRangeLabel}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-4" align="start">
+                    <PopoverContent className={cn("w-auto p-4", isMobile && "z-[100]")} align="start">
                       <div className="space-y-2">
                         <Label htmlFor="report-month-picker" className="text-sm font-medium text-slate-700">
                           Month
@@ -2302,14 +2534,14 @@ export function CustomReportBuilderContent() {
                 ) : null}
     
                 {dateFilterMode === "custom" ? (
-                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen} modal={!isMobile}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="h-10 w-full border-slate-200 bg-white sm:w-auto" type="button">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {dateRangeLabel}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className={cn("w-auto p-0", isMobile && "z-[100]")} align="start">
                       <div className="flex gap-1 border-b border-slate-100 p-2">
                         {datePresets.map((preset) => (
                           <Button
@@ -2350,6 +2582,8 @@ export function CustomReportBuilderContent() {
                       showUsersIcon
                       emptyTeamsMessage="No teams under you or as team lead"
                       triggerClassName="w-full max-w-none sm:min-w-[11rem] sm:max-w-[280px]"
+                      popoverModal={isMobile ? false : undefined}
+                      popoverClassName={cn("w-[320px] p-0", isMobile && "z-[100]")}
                     />
     
                     <div className="hidden">
@@ -2381,188 +2615,65 @@ export function CustomReportBuilderContent() {
                   </>
                 )}
     
-                <Popover
-                  open={appPopoverOpen}
-                  onOpenChange={(open) => {
-                    if (appSelectorDisabled) return
-                    setAppPopoverOpen(open)
-                  }}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="h-10 w-full max-w-none justify-between border-slate-200 bg-white font-normal sm:min-w-[11rem] sm:max-w-[280px]"
-                      type="button"
-                      disabled={appSelectorDisabled || (!canScopeManagedTeams && appsLoading)}
-                    >
-                      <span className="flex items-center gap-2 truncate">
-                        <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span className="truncate">{appsTriggerLabel}</span>
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[320px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search app name, App ID, or Store ID..." />
-                      <CommandList>
-                        <CommandEmpty>No apps found.</CommandEmpty>
-                        <CommandGroup>
-                          <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                const ids = appsForSelection.map((a) => a.appId)
-                                setSelectedApps(ids)
-                                syncAppsActiveFilter(ids, appsForSelection)
-                              }}
-                            >
-                              Select all
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setSelectedApps([])
-                                syncAppsActiveFilter([], appsForSelection)
-                              }}
-                            >
-                              Clear
-                            </Button>
-                          </div>
-                          {selectedCommissionTeamIds.length > 0 &&
-                          teamScopeApps !== null &&
-                          appsForSelection.length === 0 ? (
-                            <div className="px-3 py-4 text-sm text-slate-500">
-                              No apps linked to the selected teams.
-                            </div>
-                          ) : null}
-                          {appsForSelection.map((app) => (
-                            <CommandItem
-                              key={app.appId}
-                              value={[
-                                app.displayName || "",
-                                app.name || "",
-                                app.appId || "",
-                                app.appStoreId || "",
-                              ].join(" ")}
-                              onSelect={() => toggleAppWithFilter(app.appId)}
-                              className="cursor-pointer"
-                            >
-                              <Checkbox checked={selectedApps.includes(app.appId)} className="mr-2" />
-                              <Avatar className="h-8 w-8 rounded-lg mr-2">
-                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-xs">
-                                  {(app.displayName || app.name).slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0">
-                                <div className="text-sm font-medium truncate">
-                                  {app.displayName || app.name}
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  {app.platform} · {app.appStoreId || app.appId}
-                                </div>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-    
-                <Popover open={metricFilterPopoverOpen} onOpenChange={setMetricFilterPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-10 w-full gap-2 bg-white sm:w-auto" type="button">
-                      <Plus className="h-4 w-4" />
-                      Add filter
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[calc(100vw-2rem)] max-w-[560px] p-4"
-                    align="start"
-                    side="bottom"
-                    collisionPadding={16}
+                {isMobile ? (
+                  <div className="w-full max-w-full min-w-0 overflow-x-hidden">
+                    {renderAppSelectorTrigger({ toggleOnClick: true })}
+                    {appPopoverOpen ? (
+                      <div className="mt-2 h-[220px] w-full max-w-full min-w-0 overflow-x-hidden overflow-y-hidden rounded-md border border-slate-200 bg-white">
+                        {renderAppSelectorList()}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Popover
+                    open={appPopoverOpen}
+                    onOpenChange={(open) => {
+                      if (appSelectorDisabled) return
+                      setAppPopoverOpen(open)
+                    }}
                   >
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_10rem]">
-                      <div>
-                        <div className="text-xs font-medium text-slate-500 mb-1.5">Metric</div>
-                        <Select value={draftMetricFilterMetric} onValueChange={setDraftMetricFilterMetric}>
-                          <SelectTrigger className="h-10 bg-white">
-                            <SelectValue placeholder="Select metric" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {catalogMetrics.map((metric) => (
-                              <SelectItem key={metric.id} value={metric.id}>
-                                {metric.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-    
-                      <div>
-                        <div className="text-xs font-medium text-slate-500 mb-1.5">Condition</div>
-                        <Select
-                          value={draftMetricFilterCondition}
-                          onValueChange={(value) =>
-                            setDraftMetricFilterCondition(value as CustomReportMetricFilter["condition"])
-                          }
-                        >
-                          <SelectTrigger className="h-10 bg-white">
-                            <SelectValue placeholder="Condition" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {metricFilterConditions.map((condition) => (
-                              <SelectItem key={condition.value} value={condition.value}>
-                                {condition.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-    
-                      <div>
-                        <div className="text-xs font-medium text-slate-500 mb-1.5">Value</div>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          value={draftMetricFilterValue}
-                          onChange={(event) => setDraftMetricFilterValue(event.target.value)}
-                          placeholder="Value"
-                          className="h-10 bg-white"
-                        />
-                      </div>
-                      </div>
-    
-                      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                        <Button
-                          variant="outline"
-                          type="button"
-                          className="w-full sm:w-auto"
-                          onClick={() => setMetricFilterPopoverOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
-                          onClick={addMetricFilter}
-                          disabled={!draftMetricFilterMetric || draftMetricFilterValue.trim() === ""}
-                        >
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-    
+                    <PopoverTrigger asChild>{renderAppSelectorTrigger()}</PopoverTrigger>
+                    <PopoverContent className="w-[320px] p-0" align="start">
+                      {renderAppSelectorList()}
+                    </PopoverContent>
+                  </Popover>
+                )}
+
+                {isMobile ? (
+                  <Collapsible
+                    open={metricFilterPopoverOpen}
+                    onOpenChange={setMetricFilterPopoverOpen}
+                    className="w-full"
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" className="h-10 w-full gap-2 bg-white sm:w-auto" type="button">
+                        <Plus className="h-4 w-4" />
+                        Add filter
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2 rounded-md border border-slate-200 bg-white p-4">
+                      {renderMetricFilterFields()}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <Popover open={metricFilterPopoverOpen} onOpenChange={setMetricFilterPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="h-10 w-full gap-2 bg-white sm:w-auto" type="button">
+                        <Plus className="h-4 w-4" />
+                        Add filter
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[calc(100vw-2rem)] max-w-[560px] p-4"
+                      align="start"
+                      side="bottom"
+                      collisionPadding={16}
+                    >
+                      {renderMetricFilterFields()}
+                    </PopoverContent>
+                  </Popover>
+                )}
+
                 <Button
                   className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700 sm:w-auto"
                   type="button"
@@ -2575,17 +2686,19 @@ export function CustomReportBuilderContent() {
               </div>
     
               {(activeFilters.length > 0 || metricFilters.length > 0) && (
-                <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
-                  <span className="text-sm text-slate-500">Active filters:</span>
+                <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-slate-100 pt-1">
+                  <span className="shrink-0 text-sm text-slate-500">Active filters:</span>
                   {activeFilters
                     .filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER)
                     .map((filter) => (
                     <Badge
                       key={filter.type}
                       variant="secondary"
-                      className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
+                      className="max-w-full gap-1 border border-blue-200 bg-blue-50 pr-1 text-blue-700"
                     >
-                      {filter.type}: {filter.value}
+                      <span className="truncate">
+                        {filter.type}: {filter.value}
+                      </span>
                       {filter.type !== FILTER_COMMISSION_TEAM && filter.type !== FILTER_COMMISSION_MEMBER ? (
                         <button
                           type="button"
@@ -3255,16 +3368,18 @@ export function CustomReportBuilderContent() {
             <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
               <SheetContent
                 side="right"
-                className="flex w-[min(100vw-1rem,22rem)] flex-col gap-0 p-0"
+                className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
               >
-                <SheetHeader className="border-b border-slate-100 px-4 py-4 text-left">
+                <SheetHeader className="shrink-0 border-b border-slate-100 px-4 py-4 text-left">
                   <SheetTitle className="text-base">Filters</SheetTitle>
                   <SheetDescription>
                     Date range, apps, and report criteria. Click Apply to refresh data.
                   </SheetDescription>
                 </SheetHeader>
-                <ScrollArea className="min-h-0 flex-1">
-                  <div className="space-y-4 p-4">{renderFiltersBody()}</div>
+                <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+                  <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden p-4">
+                    {renderFiltersBody()}
+                  </div>
                 </ScrollArea>
               </SheetContent>
             </Sheet>

@@ -23,6 +23,7 @@ export const MOBILE_MORE_NAV_ITEMS: MobileMoreNavItem[] = [
   { label: "Insights", href: "/insight-templates", matchPrefixes: ["/insight-templates", "/insight-generation"] },
   { label: "Profile", href: "/profile", matchPrefixes: ["/profile"] },
   { label: "Help", href: "/help", matchPrefixes: ["/help"] },
+  { label: "Maintenance", href: "/settings/maintenance", matchPrefixes: ["/settings/maintenance"] },
 ]
 
 const PAGE_TITLE_RULES: { match: (pathname: string) => boolean; title: string }[] = [
@@ -78,7 +79,9 @@ const PAGE_TITLE_RULES: { match: (pathname: string) => boolean; title: string }[
   { match: (p) => p.startsWith("/data-sources"), title: "Data Sources" },
   { match: (p) => p.startsWith("/insight-templates"), title: "Insight Templates" },
   { match: (p) => p.startsWith("/insight-generation"), title: "Insight Generation" },
+  { match: (p) => p.startsWith("/settings/maintenance"), title: "Quản lý Bảo trì" },
   { match: (p) => p.startsWith("/settings/vcard-generator"), title: "vCard Generator" },
+  { match: (p) => p.startsWith("/maintenance"), title: "Bảo trì hệ thống" },
   { match: (p) => p.startsWith("/activity-logs"), title: "Activity Logs" },
   { match: (p) => p.startsWith("/profile"), title: "Profile" },
   { match: (p) => p.startsWith("/help"), title: "Help & Docs" },

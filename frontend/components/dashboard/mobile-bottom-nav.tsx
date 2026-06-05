@@ -11,7 +11,8 @@ import {
   Search,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { hasScreenFunction } from "@/lib/auth"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
+import { isSuperAdmin } from "@/lib/enums/user-role"
 import { useAlertNotifications } from "@/hooks/use-alert-notifications"
 import { formatAlertBadgeCount } from "@/lib/alert-notification-state"
 import {
@@ -111,6 +112,8 @@ function canShowMoreItem(label: string): boolean {
         hasScreenFunction("s-insight-settings", "manage-templates") ||
         hasScreenFunction("s-insight-settings", "view-generation")
       )
+    case "Maintenance":
+      return isSuperAdmin(getCurrentUser()?.role)
     case "Profile":
     case "Help":
       return true
