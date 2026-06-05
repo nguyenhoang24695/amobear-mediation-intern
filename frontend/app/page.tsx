@@ -1,6 +1,7 @@
 "use client"
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
+import { DashboardDatePicker } from "@/components/dashboard/dashboard-date-picker"
 import { MetricsRow } from "@/components/dashboard/metrics-row"
 import { AlertSummary } from "@/components/dashboard/alert-summary"
 import { RevenueChart } from "@/components/dashboard/revenue-chart"
@@ -43,6 +44,10 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
+            <div className="flex justify-end md:hidden">
+              <DashboardDatePicker />
+            </div>
+
             {!hasAnyDashboardSection && (
               <p className="text-base text-muted-foreground">
                 You currently do not have permission to view dashboard sections.

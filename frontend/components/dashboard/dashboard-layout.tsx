@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
+import { MobileBottomNav } from "./mobile-bottom-nav"
 import { DashboardDateProvider } from "@/contexts/dashboard-date-context"
 
 interface DashboardLayoutProps {
@@ -16,18 +17,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <DashboardDateProvider>
-      <div className="min-h-screen bg-slate-50">
-        {/* Sidebar */}
+      <div className="min-h-screen overflow-x-hidden bg-slate-50 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-        {/* Main Content */}
-        <div className={`transition-all duration-300 ${sidebarCollapsed ? "ml-16" : "ml-60"}`}>
-          {/* Header */}
+        <div
+          className={`min-w-0 transition-all duration-300 ${sidebarCollapsed ? "md:ml-16" : "md:ml-60"}`}
+        >
           <Header />
-
-          {/* Page Content */}
-          <main className="p-6">{children}</main>
+          <main className="min-w-0 p-4 md:p-6">{children}</main>
         </div>
+
+        <MobileBottomNav />
       </div>
     </DashboardDateProvider>
   )

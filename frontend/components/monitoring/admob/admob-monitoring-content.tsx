@@ -25,6 +25,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Pagination } from "@/components/shared/pagination"
+import { StringMultiSelectCombobox } from "@/components/shared/string-multi-select-combobox"
 import { cn } from "@/lib/utils"
 
 const RECOMPARE_TOOLTIP =
@@ -151,11 +152,6 @@ export function AdmobMonitoringContent() {
     waitingItems.some((item) => selectedHashKeys.has(item.hashKey)) && !allWaitingSelected
 
   const selectedSourceList = useMemo(() => [...selectedSourceTables], [selectedSourceTables])
-  const allSourcesSelected =
-    ALL_SOURCE_TABLE_VALUES.length > 0 &&
-    ALL_SOURCE_TABLE_VALUES.every((v) => selectedSourceTables.has(v))
-  const someSourcesSelected =
-    ALL_SOURCE_TABLE_VALUES.some((v) => selectedSourceTables.has(v)) && !allSourcesSelected
 
   const loadData = useCallback(async () => {
     if (selectedSourceList.length === 0) {
@@ -202,19 +198,6 @@ export function AdmobMonitoringContent() {
       setLoading(false)
     }
   }, [appSearch, endDate, page, pageSize, platform, selectedSourceList, startDate, status])
-
-  const toggleSourceTable = (value: string, checked: boolean) => {
-    setSelectedSourceTables((prev) => {
-      const next = new Set(prev)
-      if (checked) next.add(value)
-      else next.delete(value)
-      return next
-    })
-  }
-
-  const toggleAllSourceTables = (checked: boolean) => {
-    setSelectedSourceTables(checked ? new Set(ALL_SOURCE_TABLE_VALUES) : new Set())
-  }
 
   useEffect(() => {
     void loadData()
@@ -325,33 +308,17 @@ export function AdmobMonitoringContent() {
               <Label htmlFor="end-date">End date</Label>
               <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>Source</Label>
-              <div className="rounded-md border border-slate-200 bg-white px-3 py-2.5">
-                <label className="flex cursor-pointer items-center gap-2 border-b border-slate-100 pb-2 text-sm font-medium text-slate-700">
-                  <Checkbox
-                    checked={allSourcesSelected ? true : someSourcesSelected ? "indeterminate" : false}
-                    onCheckedChange={(value) => toggleAllSourceTables(value === true)}
-                    aria-label="Chọn tất cả nguồn"
-                  />
-                  Tất cả nguồn
-                </label>
-                <div className="mt-2 space-y-2">
-                  {SOURCE_TABLE_FILTER_OPTIONS.map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
-                    >
-                      <Checkbox
-                        checked={selectedSourceTables.has(option.value)}
-                        onCheckedChange={(value) => toggleSourceTable(option.value, value === true)}
-                        aria-label={option.label}
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="source-filter">Source</Label>
+              <StringMultiSelectCombobox
+                id="source-filter"
+                options={SOURCE_TABLE_FILTER_OPTIONS}
+                values={selectedSourceList}
+                onChange={(next) => setSelectedSourceTables(new Set(next))}
+                placeholder="Select sources"
+                searchPlaceholder="Search sources..."
+                emptyMessage="No sources found."
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>

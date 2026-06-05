@@ -28,6 +28,14 @@ import {
 } from "@/lib/enums/app-permission-level"
 
 const ALL_ADMOB_ACCOUNTS_VALUE = "all"
+const ALL_APP_STATES_VALUE = "all"
+const DEFAULT_APP_STATE = "APPROVED"
+const APP_STATE_OPTIONS = [
+  { value: ALL_APP_STATES_VALUE, label: "All states" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "IN_REVIEW", label: "In review" },
+  { value: "ACTION_REQUIRED", label: "Action required" },
+] as const
 
 interface ManagePermissionsModalProps {
   open: boolean
@@ -65,8 +73,8 @@ export function ManagePermissionsModal({
   )
 
   const { data: appsResponse, loading: appsLoading } = useApi(
-    () => structureApi.getApps(),
-    { enabled: open, cacheKey: "apps_list_for_manage_permissions" }
+    () => structureApi.getApps({ approvalState: ALL_APP_STATES_VALUE }),
+    { enabled: open, cacheKey: "apps_list_for_manage_permissions_all" }
   )
 
   const { data: metaAdAccountOptionsResponse, loading: metaAdAccountOptionsLoading } = useApi(
@@ -84,6 +92,7 @@ export function ManagePermissionsModal({
         type: app.type ?? null,
         publisherId: app.publisherId,
         appStoreId: app.appStoreId,
+        approvalState: app.approvalState ?? null,
       })) || [],
     [appsResponse]
   )
@@ -101,6 +110,7 @@ export function ManagePermissionsModal({
   const [filterType, setFilterType] = useState<string>("all")
   const [filterPlatform, setFilterPlatform] = useState<string>("all")
   const [filterAdmobAccount, setFilterAdmobAccount] = useState<string>(ALL_ADMOB_ACCOUNTS_VALUE)
+  const [filterAppState, setFilterAppState] = useState<string>(DEFAULT_APP_STATE)
 
   const filteredApps = useMemo(() => {
     return apps.filter((app) => {
@@ -109,9 +119,12 @@ export function ManagePermissionsModal({
       const publisherMatch =
         filterAdmobAccount === ALL_ADMOB_ACCOUNTS_VALUE ||
         (app.publisherId && app.publisherId === filterAdmobAccount)
-      return typeMatch && platformMatch && publisherMatch
+      const appStateMatch =
+        filterAppState === ALL_APP_STATES_VALUE ||
+        (app.approvalState?.toUpperCase() ?? "") === filterAppState
+      return typeMatch && platformMatch && publisherMatch && appStateMatch
     })
-  }, [apps, filterType, filterPlatform, filterAdmobAccount])
+  }, [apps, filterType, filterPlatform, filterAdmobAccount, filterAppState])
 
   const selectedMetaAdAccountIdSet = useMemo(() => new Set(metaAdAccountIds), [metaAdAccountIds])
   const initiallyAssignedMetaAdAccountIdSet = useMemo(
@@ -151,6 +164,7 @@ export function ManagePermissionsModal({
       setFilterType("all")
       setFilterPlatform("all")
       setFilterAdmobAccount(ALL_ADMOB_ACCOUNTS_VALUE)
+      setFilterAppState(DEFAULT_APP_STATE)
       return
     }
 
@@ -354,25 +368,42 @@ export function ManagePermissionsModal({
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="mt-3 space-y-2">
+                    <Label className="text-xs text-slate-600">App State</Label>
+                    <Select value={filterAppState} onValueChange={setFilterAppState}>
+                      <SelectTrigger className="h-9 bg-white">
+                        <SelectValue placeholder="App State" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {APP_STATE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <p className="mt-3 text-xs text-slate-500">
                     {filteredApps.length} of {apps.length} apps
                   </p>
                 </aside>
                 <div className="min-w-0 flex-1">
                   <AppPermissionsSelector
-                    apps={filteredApps.map(({ id, name, icon, platform, appStoreId }) => ({
+                    apps={filteredApps.map(({ id, name, icon, platform, appStoreId, approvalState }) => ({
                       id,
                       name,
                       icon,
                       platform,
                       appStoreId,
+                      approvalState,
                     }))}
-                    allAppsForDisplay={apps.map(({ id, name, icon, platform, appStoreId }) => ({
+                    allAppsForDisplay={apps.map(({ id, name, icon, platform, appStoreId, approvalState }) => ({
                       id,
                       name,
                       icon,
                       platform,
                       appStoreId,
+                      approvalState,
                     }))}
                     giveAllApps={giveAllApps}
                     onGiveAllAppsChange={setGiveAllApps}

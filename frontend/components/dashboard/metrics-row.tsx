@@ -125,10 +125,10 @@ export function MetricsRow() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               <div className="flex items-center justify-center h-24">
                 <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
               </div>
@@ -141,10 +141,10 @@ export function MetricsRow() {
 
   if (!metrics) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               <div className="text-center text-sm text-slate-500">No data available</div>
             </CardContent>
           </Card>
@@ -154,32 +154,32 @@ export function MetricsRow() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
       {metrics.map((metric) => (
         <Card key={metric.title} className="bg-white border-slate-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-slate-500 font-medium">{metric.title}</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">{metric.value}</p>
-                <div className="flex items-center gap-1.5 mt-2">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium leading-tight text-slate-500 sm:text-sm">{metric.title}</p>
+                <p className="mt-1 text-lg font-bold text-slate-900 sm:text-2xl lg:text-3xl">{metric.value}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-1 sm:gap-1.5">
                   <Badge
                     variant="secondary"
-                    className={`px-1.5 py-0.5 text-xs font-medium ${
+                    className={`px-1.5 py-0.5 text-[10px] font-medium sm:text-xs ${
                       metric.trend === "up" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                     }`}
                   >
                     {metric.trend === "up" ? (
-                      <TrendingUp className="w-3 h-3 mr-0.5" />
+                      <TrendingUp className="mr-0.5 h-3 w-3" />
                     ) : (
-                      <TrendingDown className="w-3 h-3 mr-0.5" />
+                      <TrendingDown className="mr-0.5 h-3 w-3" />
                     )}
                     {metric.change}
                   </Badge>
-                  <span className="text-xs text-slate-400">vs previous period</span>
+                  <span className="hidden text-xs text-slate-400 sm:inline">vs previous period</span>
                 </div>
               </div>
-              <div className="w-20 h-12">
+              <div className="hidden h-12 w-20 shrink-0 sm:block">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={metric.sparklineData}>
                     <defs>
