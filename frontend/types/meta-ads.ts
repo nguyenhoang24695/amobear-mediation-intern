@@ -177,8 +177,23 @@ export interface MetaAppMappingDto {
   deepLinkUrlOverride?: string | null
   storeUrlOverride?: string | null
   isActive: boolean
+  isMappedToAdmob?: boolean
+  admobAccountCount?: number
+  admobBindings?: MetaAppMappingAdmobBindingDto[]
   createdAt: string
   updatedAt: string
+}
+
+export interface MetaAppMappingAdmobBindingDto {
+  bindingId: number
+  admobAccountId?: number | null
+  admobAccountName?: string | null
+  admobAccountExternalId?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  externalAppId: string
+  isActive: boolean
 }
 
 export interface CreateMetaAppMappingRequestDto {
@@ -968,6 +983,13 @@ export interface MetaFacebookPageReferenceDto {
   name: string
   category?: string | null
   accessStatus?: string | null
+  pictureUrl?: string | null
+}
+
+export interface MetaFacebookPageProfileDto {
+  pageId: string
+  profileId: string | null
+  profileUrl: string | null
 }
 
 export interface MetaFacebookPostReferenceDto {

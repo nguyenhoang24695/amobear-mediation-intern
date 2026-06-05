@@ -427,9 +427,24 @@ export interface TikTokAppMappingDto {
   deepLinkUrlOverride?: string | null
   storeUrlOverride?: string | null
   isActive: boolean
+  isMappedToAdmob: boolean
+  admobAccountCount: number
+  admobBindings: TikTokAppMappingAdmobBindingDto[]
   advertiserIds: string[]
   createdAt: string
   updatedAt: string
+}
+
+export interface TikTokAppMappingAdmobBindingDto {
+  bindingId: number
+  admobAccountId?: number | null
+  admobAccountName?: string | null
+  admobAccountExternalId?: string | null
+  appRowId?: number | null
+  appId?: string | null
+  appDisplayName?: string | null
+  externalAppId: string
+  isActive: boolean
 }
 
 export interface CreateTikTokAppMappingRequestDto {
@@ -714,6 +729,5 @@ export interface TikTokExecutionResultDto {
   payloadPreview?: unknown
   detail?: TikTokCampaignRequestDetailDto | null
 }
-
 
 

@@ -34,6 +34,7 @@ import type {
   MetaCreateCampaignReferenceDto,
   MetaExecuteResponseDto,
   MetaFacebookPageReferenceDto,
+  MetaFacebookPageProfileDto,
   MetaFacebookPostReferencePageDto,
   MetaFacebookPostReferenceQueryDto,
   MetaGeoCityReferenceDto,
@@ -189,6 +190,10 @@ export const metaReferenceApi = {
     return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source })
   },
 
+  getFacebookPageProfileId: async (adAccountId: number, pageId: string) => {
+    return apiClient.get<MetaFacebookPageProfileDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages/${encodeURIComponent(pageId)}/profile-id`)
+  },
+
   getFacebookPagePosts: async (adAccountId: number, pageId: string, query?: MetaFacebookPostReferenceQueryDto) => {
     return apiClient.get<MetaFacebookPostReferencePageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages/${encodeURIComponent(pageId)}/posts`, query)
   },
@@ -199,6 +204,10 @@ export const metaReferenceApi = {
 
   getAdAccountVideos: async (adAccountId: number, query?: MetaReferenceMediaQueryDto) => {
     return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos`, query)
+  },
+
+  getAdAccountVideoCaptureUrl: async (adAccountId: number, videoId: string) => {
+    return apiClient.get<{ url: string }>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos/${encodeURIComponent(videoId)}/capture-url`)
   },
 
   getGeoRegions: async () => {
