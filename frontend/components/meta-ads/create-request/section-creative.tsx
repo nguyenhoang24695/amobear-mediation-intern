@@ -867,7 +867,6 @@ export function CreativeSection({
                 <TextVariationEditor
                   label="Primary Text"
                   values={form.singleImagePrimaryTexts}
-                  required
                   multiline
                   placeholder="Enter primary text variation"
                   onChange={(values) => updateTextVariations("singleImagePrimaryTexts", "singleImagePrimaryText", values)}
@@ -875,7 +874,6 @@ export function CreativeSection({
                 <TextVariationEditor
                   label="Headline"
                   values={form.singleImageHeadlines}
-                  required
                   placeholder="Enter headline variation"
                   onChange={(values) => updateTextVariations("singleImageHeadlines", "singleImageHeadline", values)}
                 />
@@ -2220,8 +2218,6 @@ function getCreativeCompletion(form: RequestFormState) {
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
       { label: "Facebook Page ID", ok: !!form.facebookPageId },
-      { label: "Message", ok: hasAnyTextVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) },
-      { label: "Headline", ok: hasAnyTextVariation(form.singleImageHeadlines, form.singleImageHeadline) },
       { label: "CTA", ok: !!form.singleImageCallToAction },
       { label: "Media source", ok: hasMediaSource },
     ]
@@ -2231,8 +2227,6 @@ function getCreativeCompletion(form: RequestFormState) {
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
       { label: "Facebook Page ID", ok: !!form.facebookPageId },
-      { label: "Message", ok: hasAnyTextVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText) },
-      { label: "Headline", ok: hasAnyTextVariation(form.singleVideoHeadlines, form.singleVideoHeadline) },
       { label: "CTA", ok: !!form.singleVideoCallToAction },
       { label: "Video source", ok: !!(form.singleVideoVideo.uploadedAssetId || form.singleVideoVideo.videoId) },
     ]
@@ -2277,8 +2271,6 @@ function getCreativeCompletion(form: RequestFormState) {
   const items = [
     { label: "Creative name", ok: !!form.creativeName },
     { label: "Facebook Page ID", ok: !!form.facebookPageId },
-    { label: "Message", ok: hasAnyTextVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) },
-    { label: "Headline", ok: hasAnyTextVariation(form.singleImageHeadlines, form.singleImageHeadline) },
     { label: "CTA", ok: !!form.singleImageCallToAction },
     { label: "Image source", ok: !!(form.singleImageImage.uploadedAssetId || form.singleImageImage.imageHash || form.singleImageImage.imageUrl) },
   ]
