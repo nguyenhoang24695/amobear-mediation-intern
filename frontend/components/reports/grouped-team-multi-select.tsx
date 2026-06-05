@@ -39,6 +39,8 @@ export interface GroupedTeamMultiSelectProps {
   showUsersIcon?: boolean
   triggerClassName?: string
   popoverClassName?: string
+  /** Set false when the trigger sits inside a Sheet/Dialog (mobile filters). */
+  popoverModal?: boolean
 }
 
 function defaultTriggerLabel(
@@ -73,6 +75,7 @@ export function GroupedTeamMultiSelect({
   showUsersIcon = false,
   triggerClassName,
   popoverClassName = "w-[320px] p-0",
+  popoverModal,
 }: GroupedTeamMultiSelectProps) {
   const [open, setOpen] = useState(false)
   const teamGroupSections = useMemo(
@@ -113,7 +116,7 @@ export function GroupedTeamMultiSelect({
   }
 
   return (
-    <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
+    <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)} modal={popoverModal}>
       <PopoverTrigger asChild>
         <Button
           id={id}

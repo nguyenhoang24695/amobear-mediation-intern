@@ -53,6 +53,7 @@ import {
   Music2,
   Star,
   Plus,
+  Wrench,
 } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/shared/logo"
@@ -75,6 +76,7 @@ import {
   type AuthUser,
 } from "@/lib/auth"
 import { logoutUser } from "@/lib/logout"
+import { isSuperAdmin } from "@/lib/enums/user-role"
 
 interface SidebarProps {
   collapsed: boolean
@@ -179,6 +181,12 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
     isShow: () => hasScreenFunction("s-data-accounts", "view"),
   },
   { icon: Contact, label: "vCard Generator", href: "/settings/vcard-generator", isShow: true, isNew: true },
+  {
+    icon: Wrench,
+    label: "Quản lý Bảo trì",
+    href: "/settings/maintenance",
+    isShow: () => isSuperAdmin(getCurrentUser()?.role),
+  },
   {
     icon: Sparkles,
     label: "AI Insight Templates",

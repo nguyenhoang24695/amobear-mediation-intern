@@ -19,6 +19,7 @@ import {
   Shield,
   Sparkles,
   User,
+  Wrench,
 } from "lucide-react"
 
 export const MOBILE_MORE_NAV_ICONS: Record<string, ElementType> = {
@@ -42,4 +43,5 @@ export const MOBILE_MORE_NAV_ICONS: Record<string, ElementType> = {
   Help: HelpCircle,
   Settings: Settings,
   "vCard Generator": Contact,
+  Maintenance: Wrench,
 }

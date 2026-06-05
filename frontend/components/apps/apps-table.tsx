@@ -107,8 +107,8 @@ export function AppsTable({
     return apps.map((app) => ({
       id: app.id.toString(),
       appId: app.appId,
+      appStoreId: app.appStoreId ?? "",
       name: app.displayName || app.name,
-      packageName: app.appId,
       icon: app.iconUri,
       platform: app.platform || "Unknown",
       adUnits: app.adUnitsCount || 0,
@@ -448,7 +448,17 @@ export function AppsTable({
                         ) : (
                           <span className="text-sm font-medium text-slate-900">{app.name}</span>
                         )}
-                        <p className="text-xs text-slate-500">{app.packageName}</p>
+                        <p className="text-xs text-slate-500 truncate" title={app.appId}>
+                          {app.appId}
+                        </p>
+                        {app.appStoreId ? (
+                          <p
+                            className="text-[11px] font-mono text-slate-400 truncate"
+                            title={app.appStoreId}
+                          >
+                            {app.appStoreId}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </td>

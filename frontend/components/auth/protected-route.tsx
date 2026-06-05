@@ -1,6 +1,7 @@
 "use client"
 
 import { AuthGuard } from "./auth-guard"
+import { MaintenanceGuard } from "./maintenance-guard"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -17,5 +18,9 @@ interface ProtectedRouteProps {
  * - Redirects to login if unauthorized
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  return <AuthGuard>{children}</AuthGuard>
+  return (
+    <AuthGuard>
+      <MaintenanceGuard>{children}</MaintenanceGuard>
+    </AuthGuard>
+  )
 }

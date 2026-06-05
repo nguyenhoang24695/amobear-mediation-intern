@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { authApi } from "@/lib/api/services"
+import { resolvePostLoginPath } from "@/lib/api/platform-maintenance"
 import {
   authUserFromMeDto,
   clearRememberedLoginPrefs,
@@ -137,8 +138,8 @@ export default function LoginPage() {
           description: `Welcome back, ${response.data.user.firstName || response.data.user.email}!`,
         })
 
-        // Navigate to dashboard
-        router.push("/")
+        const redirectPath = await resolvePostLoginPath(u.role)
+        router.push(redirectPath)
       } else {
         // Extract error message from response
         const errorMessage = response.error?.message || "Invalid email or password. Please try again."
