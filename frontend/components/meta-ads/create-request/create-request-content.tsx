@@ -233,7 +233,7 @@ function createDefaultFormState(): RequestFormState {
     advantageAudience: true,
     startTime: formatDateTimeLocal(new Date()),
     endTime: "",
-    creativeType: "SINGLE_IMAGE",
+    creativeType: "SINGLE_MEDIA",
     creativeName: "",
     facebookPageId: "",
     instagramActorId: "",
@@ -562,13 +562,12 @@ export function CreateRequestContent({ requestId }: Props) {
         next.campaignObjective = patch.objective
       }
 
-      // Variants only supported for SINGLE_IMAGE / SINGLE_VIDEO. If user switches to another type,
+      // Variants only supported for SINGLE_MEDIA. If user switches to another type,
       // drop any additional variants (they wouldn't have meaningful per-variant media for non-supported types).
       if (
         patch.creativeType &&
         patch.creativeType !== previous.creativeType &&
-        patch.creativeType !== "SINGLE_IMAGE" &&
-        patch.creativeType !== "SINGLE_VIDEO" &&
+        patch.creativeType !== "SINGLE_MEDIA" &&
         next.additionalVariants.length > 0
       ) {
         next.additionalVariants = []
@@ -586,8 +585,8 @@ export function CreateRequestContent({ requestId }: Props) {
   const totalVariants = 1 + form.additionalVariants.length
   // Multi-variant ads only make sense when each variant has its own image/video.
   // For CAROUSEL / FLEXIBLE / EXISTING_POST, force a single variant.
-  const supportsVariants = form.creativeType === "SINGLE_IMAGE" || form.creativeType === "SINGLE_VIDEO"
-  const canAddVariant = supportsVariants && totalVariants < 6
+  const supportsVariants = form.creativeType === "SINGLE_MEDIA"
+  const canAddVariant = supportsVariants && totalVariants < 50
   const maxSeqNumber = form.additionalVariants.reduce((max, v) => Math.max(max, v.sequenceNumber), 1)
 
   // If the active variant tab disappears (e.g. user changed creative type), reset to variant-1.
@@ -604,7 +603,8 @@ export function CreateRequestContent({ requestId }: Props) {
     const newSeq = maxSeqNumber + 1
     const newVariant: AdVariantFormState = {
       sequenceNumber: newSeq,
-      creativeType: "SINGLE_IMAGE",
+      creativeType: "SINGLE_MEDIA",
+      mediaType: undefined,
       creativeName: "",
       facebookPageId: form.facebookPageId,
       instagramActorId: form.instagramActorId,
@@ -648,6 +648,7 @@ export function CreateRequestContent({ requestId }: Props) {
     const copy: AdVariantFormState = {
       sequenceNumber: newSeq,
       creativeType: form.creativeType,
+      mediaType: form.mediaType,
       creativeName: form.creativeName ? `${form.creativeName} (Copy)` : "",
       facebookPageId: form.facebookPageId,
       instagramActorId: form.instagramActorId,

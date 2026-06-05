@@ -694,8 +694,7 @@ export function CreativeSection({
                 <Select value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SINGLE_IMAGE">Single Image</SelectItem>
-                    <SelectItem value="SINGLE_VIDEO">Single Video</SelectItem>
+                    <SelectItem value="SINGLE_MEDIA">Single Image/Video</SelectItem>
                     <SelectItem value="CAROUSEL_IMAGE">Carousel</SelectItem>
                     <SelectItem value="FLEXIBLE">Flexible</SelectItem>
                     <SelectItem value="EXISTING_POST">Existing Post</SelectItem>
@@ -857,14 +856,13 @@ export function CreativeSection({
 
             <Tabs value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
               <TabsList className="h-10 bg-slate-100 p-1 w-fit">
-                <TabsTrigger value="SINGLE_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single Image</TabsTrigger>
-                <TabsTrigger value="SINGLE_VIDEO" className="text-xs px-3 data-[state=active]:bg-white"><Video className="w-3.5 h-3.5 mr-1.5" />Single Video</TabsTrigger>
+                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single Image/Video</TabsTrigger>
                 <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
                 <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible</TabsTrigger>
                 <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="SINGLE_IMAGE" className="mt-4 space-y-4">
+              <TabsContent value="SINGLE_MEDIA" className="mt-4 space-y-4">
                 {/* Shared above variations: Primary Text + Headline */}
                 <TextVariationEditor
                   label="Primary Text"
@@ -882,10 +880,11 @@ export function CreativeSection({
                   onChange={(values) => updateTextVariations("singleImageHeadlines", "singleImageHeadline", values)}
                 />
 
-                {/* Per-variant image picker(s). Each variation = one ad, sharing all text above and below. */}
-                <VariationSection
-                  label="Image Variations"
-                  helper="Add multiple images to create more ads that share the same text above and the settings below."
+                {/* Per-variant image/video picker(s). Each variation = one ad, sharing all text above and the settings below. */}
+                <VariationGallery
+                  label="Media Variations"
+                  helper="Add an image or video — or add multiple to create more ads that share the same text above and the settings below."
+                  mediaKind={form.mediaType === "VIDEO" ? "video" : "image"}
                   supportsVariants={supportsVariants}
                   canAddVariant={canAddVariant}
                   activeVariantTab={activeVariantTab}
@@ -893,52 +892,102 @@ export function CreativeSection({
                   onAddVariant={onAddVariant}
                   onDuplicateVariant={onDuplicateVariant}
                   onDeleteVariant={onDeleteVariant}
-                  additionalVariantCount={additionalVariants.length}
-                  renderPrimary={() => (
-                    <MediaSourceEditor
-                      title="Image"
-                      kind="image"
-                      selection={form.singleImageImage}
-                      uploading={uploadingKey?.startsWith("singleImageImage") ?? false}
-                      allowExternalUrl
-                      adAccountId={adAccountId ?? null}
-                      onModeChange={(mode) => handleMediaModeChange("singleImageImage", mode)}
-                      onPatch={(patch) => handleMediaPatch("singleImageImage", patch)}
-                      onUpload={(file) => handleUpload("singleImageImage", "image", file)}
-                      onMetaSelect={(media) => handleMetaSelection("singleImageImage", media)}
-                    />
-                  )}
-                  variantPanels={additionalVariants.map((variant) => ({
-                    sequenceNumber: variant.sequenceNumber,
-                    content: (
-                      <MediaSourceEditor
-                        title="Image"
-                        kind="image"
-                        selection={variant.singleImageImage}
-                        uploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleImageImage`) ?? false}
-                        allowExternalUrl
-                        adAccountId={adAccountId ?? null}
-                        onModeChange={(mode) =>
-                          onUpdateAdditionalVariant?.(variant.sequenceNumber, {
-                            singleImageImage: { ...variant.singleImageImage, mode },
-                          })
-                        }
-                        onPatch={(patch) =>
-                          onUpdateAdditionalVariant?.(variant.sequenceNumber, {
-                            singleImageImage: { ...variant.singleImageImage, ...patch },
-                          })
-                        }
-                        onUpload={(file) =>
-                          handleVariantUpload(variant.sequenceNumber, "singleImageImage", "image", file, variant.singleImageImage)
-                        }
-                        onMetaSelect={(media) =>
-                          onUpdateAdditionalVariant?.(variant.sequenceNumber, {
-                            singleImageImage: { ...variant.singleImageImage, ...buildMetaLibrarySelectionPatch(media, adAccountId) },
-                          })
-                        }
-                      />
-                    ),
-                  }))}
+                  cells={[
+                    (() => {
+                      const imgPreview = getSelectionPreviewSource(form.singleImageImage)
+                      const thumbPreview = getSelectionPreviewSource(form.singleVideoThumbnail)
+                      const videoPreview = getSelectionPreviewSource(form.singleVideoVideo)
+                      const isVideo = form.mediaType === "VIDEO"
+                      const previewUrl = isVideo ? (thumbPreview.url || videoPreview.url) : imgPreview.url
+                      const previewRequiresAuth = isVideo ? (thumbPreview.url ? thumbPreview.requiresAuth : videoPreview.requiresAuth) : imgPreview.requiresAuth
+                      const isComplete = isVideo
+                        ? !!(videoPreview.url || form.singleVideoVideo.videoId || form.singleVideoVideo.uploadedAssetId || form.singleVideoVideo.metaAssetId)
+                        : !!(imgPreview.url || form.singleImageImage.imageHash || form.singleImageImage.imageUrl || form.singleImageImage.uploadedAssetId)
+                      return {
+                        key: "variant-1",
+                        sequenceNumber: "primary" as const,
+                        previewUrl,
+                        previewRequiresAuth,
+                        isComplete,
+                        editor: (
+                          <UnifiedMediaEditor
+                            mediaType={form.mediaType}
+                            imageSelection={form.singleImageImage}
+                            videoSelection={form.singleVideoVideo}
+                            thumbnailSelection={form.singleVideoThumbnail}
+                            imageUploading={uploadingKey?.startsWith("singleImageImage") ?? false}
+                            videoUploading={uploadingKey?.startsWith("singleVideoVideo") ?? false}
+                            thumbnailUploading={uploadingKey?.startsWith("singleVideoThumbnail") ?? false}
+                            thumbnailVideoFile={form.singleVideoVideo.mode === "uploaded_asset" && form.singleVideoVideo.uploadedAssetId ? localVideoFilesByKey.singleVideoVideo ?? null : null}
+                            thumbnailVideoUrl={getFrameCaptureVideoUrl(form.singleVideoVideo)}
+                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(form.singleVideoVideo)}
+                            thumbnailEditorKey="singleVideoVideo"
+                            thumbnailOpenKey={thumbnailEditorKey}
+                            adAccountId={adAccountId ?? null}
+                            onMediaTypeChange={(type) => onChange({ mediaType: type })}
+                            onImageModeChange={(mode) => handleMediaModeChange("singleImageImage", mode)}
+                            onImagePatch={(patch) => handleMediaPatch("singleImageImage", patch)}
+                            onImageUpload={(file) => handleUpload("singleImageImage", "image", file)}
+                            onImageMetaSelect={(media) => handleMetaSelection("singleImageImage", media)}
+                            onVideoModeChange={(mode) => handleMediaModeChange("singleVideoVideo", mode)}
+                            onVideoPatch={(patch) => handleMediaPatch("singleVideoVideo", patch)}
+                            onVideoUpload={(file) => handleUpload("singleVideoVideo", "video", file)}
+                            onVideoMetaSelect={(media) => handleMetaSelection("singleVideoVideo", media)}
+                            onThumbnailOpenChange={setThumbnailEditorKey}
+                            onThumbnailUseFrame={(file) => handleUpload("singleVideoThumbnail", "image", file)}
+                            onThumbnailUpload={(file) => handleUpload("singleVideoThumbnail", "image", file)}
+                          />
+                        ),
+                      }
+                    })(),
+                    ...additionalVariants.map((variant) => {
+                      const imgPreview = getSelectionPreviewSource(variant.singleImageImage)
+                      const thumbPreview = getSelectionPreviewSource(variant.singleVideoThumbnail)
+                      const videoPreview = getSelectionPreviewSource(variant.singleVideoVideo)
+                      const isVideo = variant.mediaType === "VIDEO"
+                      const previewUrl = isVideo ? (thumbPreview.url || videoPreview.url) : imgPreview.url
+                      const previewRequiresAuth = isVideo ? (thumbPreview.url ? thumbPreview.requiresAuth : videoPreview.requiresAuth) : imgPreview.requiresAuth
+                      const isComplete = isVideo
+                        ? !!(videoPreview.url || variant.singleVideoVideo.videoId || variant.singleVideoVideo.uploadedAssetId || variant.singleVideoVideo.metaAssetId)
+                        : !!(imgPreview.url || variant.singleImageImage.imageHash || variant.singleImageImage.imageUrl || variant.singleImageImage.uploadedAssetId)
+                      return {
+                        key: `variant-${variant.sequenceNumber}`,
+                        sequenceNumber: variant.sequenceNumber,
+                        previewUrl,
+                        previewRequiresAuth,
+                        isComplete,
+                        editor: (
+                          <UnifiedMediaEditor
+                            mediaType={variant.mediaType}
+                            imageSelection={variant.singleImageImage}
+                            videoSelection={variant.singleVideoVideo}
+                            thumbnailSelection={variant.singleVideoThumbnail}
+                            imageUploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleImageImage`) ?? false}
+                            videoUploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleVideoVideo`) ?? false}
+                            thumbnailUploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleVideoThumbnail`) ?? false}
+                            thumbnailVideoFile={variant.singleVideoVideo.mode === "uploaded_asset" && variant.singleVideoVideo.uploadedAssetId ? localVideoFilesByKey[`variant-${variant.sequenceNumber}-singleVideoVideo`] ?? null : null}
+                            thumbnailVideoUrl={getFrameCaptureVideoUrl(variant.singleVideoVideo)}
+                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(variant.singleVideoVideo)}
+                            thumbnailEditorKey={`variant-${variant.sequenceNumber}-singleVideoVideo`}
+                            thumbnailOpenKey={thumbnailEditorKey}
+                            adAccountId={adAccountId ?? null}
+                            onMediaTypeChange={(type) => onUpdateAdditionalVariant?.(variant.sequenceNumber, { mediaType: type })}
+                            onImageModeChange={(mode) => onUpdateAdditionalVariant?.(variant.sequenceNumber, { singleImageImage: { ...variant.singleImageImage, mode } })}
+                            onImagePatch={(patch) => onUpdateAdditionalVariant?.(variant.sequenceNumber, { singleImageImage: { ...variant.singleImageImage, ...patch } })}
+                            onImageUpload={(file) => handleVariantUpload(variant.sequenceNumber, "singleImageImage", "image", file, variant.singleImageImage)}
+                            onImageMetaSelect={(media) => onUpdateAdditionalVariant?.(variant.sequenceNumber, { singleImageImage: { ...variant.singleImageImage, ...buildMetaLibrarySelectionPatch(media, adAccountId) }, mediaType: "IMAGE" })}
+                            onVideoModeChange={(mode) => onUpdateAdditionalVariant?.(variant.sequenceNumber, { singleVideoVideo: { ...variant.singleVideoVideo, mode } })}
+                            onVideoPatch={(patch) => onUpdateAdditionalVariant?.(variant.sequenceNumber, { singleVideoVideo: { ...variant.singleVideoVideo, ...patch } })}
+                            onVideoUpload={(file) => handleVariantUpload(variant.sequenceNumber, "singleVideoVideo", "video", file, variant.singleVideoVideo)}
+                            onVideoMetaSelect={(media) => handleVariantMetaSelection(variant.sequenceNumber, "singleVideoVideo", media, variant.singleVideoVideo)}
+                            onThumbnailOpenChange={setThumbnailEditorKey}
+                            onThumbnailUseFrame={(file) => handleVariantUpload(variant.sequenceNumber, "singleVideoThumbnail", "image", file, variant.singleVideoThumbnail)}
+                            onThumbnailUpload={(file) => handleVariantUpload(variant.sequenceNumber, "singleVideoThumbnail", "image", file, variant.singleVideoThumbnail)}
+                          />
+                        ),
+                      }
+                    }),
+                  ]}
                 />
 
                 {/* Shared below variations: Description, CTA, Link URL */}
@@ -958,124 +1007,6 @@ export function CreativeSection({
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-700">Link URL</Label>
                   <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
-                  <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="SINGLE_VIDEO" className="mt-4 space-y-4">
-                {/* Shared above variations: Primary Text + Headline */}
-                <TextVariationEditor
-                  label="Primary Text"
-                  values={form.singleVideoPrimaryTexts}
-                  required
-                  multiline
-                  placeholder="Enter primary text variation"
-                  onChange={(values) => updateTextVariations("singleVideoPrimaryTexts", "singleVideoPrimaryText", values)}
-                />
-                <TextVariationEditor
-                  label="Headline"
-                  values={form.singleVideoHeadlines}
-                  required
-                  placeholder="Enter headline variation"
-                  onChange={(values) => updateTextVariations("singleVideoHeadlines", "singleVideoHeadline", values)}
-                />
-
-                {/* Per-variant video + thumbnail picker(s). Each variation = one ad, sharing all text above and below. */}
-                <VariationSection
-                  label="Video Variations"
-                  helper="Add multiple videos to create more ads that share the same text above and the settings below."
-                  supportsVariants={supportsVariants}
-                  canAddVariant={canAddVariant}
-                  activeVariantTab={activeVariantTab}
-                  onActiveVariantTabChange={onActiveVariantTabChange}
-                  onAddVariant={onAddVariant}
-                  onDuplicateVariant={onDuplicateVariant}
-                  onDeleteVariant={onDeleteVariant}
-                  additionalVariantCount={additionalVariants.length}
-                  renderPrimary={() => (
-                    <>
-                      <MediaSourceEditor
-                        title="Video"
-                        kind="video"
-                        selection={form.singleVideoVideo}
-                        uploading={uploadingKey?.startsWith("singleVideoVideo") ?? false}
-                        thumbnailSelection={form.singleVideoThumbnail}
-                        thumbnailUploading={uploadingKey?.startsWith("singleVideoThumbnail") ?? false}
-                        thumbnailVideoFile={form.singleVideoVideo.mode === "uploaded_asset" && form.singleVideoVideo.uploadedAssetId ? localVideoFilesByKey.singleVideoVideo ?? null : null}
-                        thumbnailVideoUrl={getFrameCaptureVideoUrl(form.singleVideoVideo)}
-                        thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(form.singleVideoVideo)}
-                        thumbnailEditorKey="singleVideoVideo"
-                        thumbnailOpenKey={thumbnailEditorKey}
-                        adAccountId={adAccountId ?? null}
-                        onModeChange={(mode) => handleMediaModeChange("singleVideoVideo", mode)}
-                        onPatch={(patch) => handleMediaPatch("singleVideoVideo", patch)}
-                        onUpload={(file) => handleUpload("singleVideoVideo", "video", file)}
-                        onMetaSelect={(media) => handleMetaSelection("singleVideoVideo", media)}
-                        onThumbnailOpenChange={setThumbnailEditorKey}
-                        onThumbnailUseFrame={(file) => handleUpload("singleVideoThumbnail", "image", file)}
-                        onThumbnailUpload={(file) => handleUpload("singleVideoThumbnail", "image", file)}
-                      />
-                    </>
-                  )}
-                  variantPanels={additionalVariants.map((variant) => ({
-                    sequenceNumber: variant.sequenceNumber,
-                    content: (
-                      <>
-                        <MediaSourceEditor
-                          title="Video"
-                          kind="video"
-                          selection={variant.singleVideoVideo}
-                          uploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleVideoVideo`) ?? false}
-                          thumbnailSelection={variant.singleVideoThumbnail}
-                          thumbnailUploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleVideoThumbnail`) ?? false}
-                          thumbnailVideoFile={variant.singleVideoVideo.mode === "uploaded_asset" && variant.singleVideoVideo.uploadedAssetId ? localVideoFilesByKey[`variant-${variant.sequenceNumber}-singleVideoVideo`] ?? null : null}
-                          thumbnailVideoUrl={getFrameCaptureVideoUrl(variant.singleVideoVideo)}
-                          thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(variant.singleVideoVideo)}
-                          thumbnailEditorKey={`variant-${variant.sequenceNumber}-singleVideoVideo`}
-                          thumbnailOpenKey={thumbnailEditorKey}
-                          adAccountId={adAccountId ?? null}
-                          onModeChange={(mode) =>
-                            onUpdateAdditionalVariant?.(variant.sequenceNumber, {
-                              singleVideoVideo: { ...variant.singleVideoVideo, mode },
-                            })
-                          }
-                          onPatch={(patch) =>
-                            onUpdateAdditionalVariant?.(variant.sequenceNumber, {
-                              singleVideoVideo: { ...variant.singleVideoVideo, ...patch },
-                            })
-                          }
-                          onUpload={(file) =>
-                            handleVariantUpload(variant.sequenceNumber, "singleVideoVideo", "video", file, variant.singleVideoVideo)
-                          }
-                          onMetaSelect={(media) =>
-                            handleVariantMetaSelection(variant.sequenceNumber, "singleVideoVideo", media, variant.singleVideoVideo)
-                          }
-                          onThumbnailOpenChange={setThumbnailEditorKey}
-                          onThumbnailUseFrame={(file) => handleVariantUpload(variant.sequenceNumber, "singleVideoThumbnail", "image", file, variant.singleVideoThumbnail)}
-                          onThumbnailUpload={(file) => handleVariantUpload(variant.sequenceNumber, "singleVideoThumbnail", "image", file, variant.singleVideoThumbnail)}
-                        />
-                      </>
-                    ),
-                  }))}
-                />
-
-                {/* Shared below variations: Description, CTA, Link URL */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Description</Label>
-                    <Input value={form.singleVideoDescription} onChange={(event) => onChange({ singleVideoDescription: event.target.value })} className="h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
-                    <Select value={form.singleVideoCallToAction} onValueChange={(value) => onChange({ singleVideoCallToAction: value })}>
-                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Link URL</Label>
-                  <Input value={form.singleVideoLinkUrl} onChange={(event) => onChange({ singleVideoLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
                   <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                 </div>
               </TabsContent>
@@ -1351,7 +1282,7 @@ export function CreativeSection({
                       alt="Creative preview"
                       className="w-full h-full object-cover rounded"
                     />
-                  ) : form.creativeType === "SINGLE_VIDEO" ? <Video className="w-6 h-6 text-slate-300" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-slate-300" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
+                  ) : (form.creativeType === "SINGLE_VIDEO" || (form.creativeType === "SINGLE_MEDIA" && form.mediaType === "VIDEO")) ? <Video className="w-6 h-6 text-slate-300" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-slate-300" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-semibold text-slate-900 leading-tight line-clamp-2">{getPreviewHeadline(form) || "Creative headline"}</p>
@@ -1377,9 +1308,27 @@ export function CreativeSection({
  * This component lives between Primary Text/Headline (above) and Description/CTA (below) inside the creative section
  * — the user only differentiates ads by the image/video.
  */
-function VariationSection({
+/** Maximum number of ad variations Meta supports per ad set. */
+const MAX_AD_VARIANTS = 50
+
+/** One cell in the variation gallery. `sequenceNumber === "primary"` is Variation #1 (flat form fields). */
+export interface VariationGalleryCell {
+  /** Tab/selection key — "variant-1" for primary, `variant-${seq}` for additional variants. */
+  key: string
+  sequenceNumber: number | "primary"
+  /** Thumbnail preview URL for the variant's media (image or video poster). */
+  previewUrl?: string
+  previewRequiresAuth?: boolean
+  /** True when the variant has media selected (drives the complete/empty badge). */
+  isComplete: boolean
+  /** The full media editor for this variant, rendered in the detail pane when selected. */
+  editor: React.ReactNode
+}
+
+function VariationGallery({
   label,
   helper,
+  mediaKind,
   supportsVariants,
   canAddVariant,
   activeVariantTab,
@@ -1387,12 +1336,11 @@ function VariationSection({
   onAddVariant,
   onDuplicateVariant,
   onDeleteVariant,
-  additionalVariantCount,
-  renderPrimary,
-  variantPanels,
+  cells,
 }: {
   label: string
   helper: string
+  mediaKind: "image" | "video"
   supportsVariants: boolean
   canAddVariant: boolean
   activeVariantTab: string
@@ -1400,16 +1348,17 @@ function VariationSection({
   onAddVariant?: () => void
   onDuplicateVariant?: (sequenceNumber: number | "primary") => void
   onDeleteVariant?: (sequenceNumber: number) => void
-  additionalVariantCount: number
-  renderPrimary: () => React.ReactNode
-  variantPanels: { sequenceNumber: number; content: React.ReactNode }[]
+  cells: VariationGalleryCell[]
 }) {
-  // If variations are unsupported for this creative type, just render the single primary picker without any tab chrome.
+  // If variations are unsupported for this creative type, just render the single primary editor without any gallery chrome.
   if (!supportsVariants) {
-    return <>{renderPrimary()}</>
+    return <>{cells[0]?.editor}</>
   }
 
-  const totalVariants = 1 + additionalVariantCount
+  const totalVariants = cells.length
+  // Resolve the selected cell; fall back to the primary if the active key no longer exists.
+  const selectedCell = cells.find((cell) => cell.key === activeVariantTab) ?? cells[0]
+  const PlaceholderIcon = mediaKind === "video" ? Video : ImageIcon
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
@@ -1417,88 +1366,319 @@ function VariationSection({
         <div>
           <p className="text-xs font-semibold text-slate-700">
             {label}
-            <span className="ml-1.5 text-[11px] font-normal text-slate-500">({totalVariants}/6)</span>
+            <span className="ml-1.5 text-[11px] font-normal text-slate-500">({totalVariants}/{MAX_AD_VARIANTS})</span>
           </p>
           <p className="text-[11px] text-slate-500">{helper}</p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-[11px] flex-shrink-0"
-          onClick={onAddVariant}
-          disabled={!canAddVariant}
-          title={canAddVariant ? "Add a new variation" : "Maximum 6 variations"}
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Variation
-        </Button>
+        {canAddVariant ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[11px] flex-shrink-0"
+            onClick={onAddVariant}
+            title="Add a new variation"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Add Variation
+          </Button>
+        ) : null}
       </div>
 
-      <Tabs value={activeVariantTab} onValueChange={onActiveVariantTabChange}>
-        <TabsList className="h-8 bg-white border border-slate-200 p-0.5 flex-wrap justify-start gap-0.5">
-          <TabsTrigger value="variant-1" className="text-[11px] h-7 px-2 data-[state=active]:bg-slate-100">
-            Variation #1
-          </TabsTrigger>
-          {variantPanels.map((v, index) => (
-            <TabsTrigger
-              key={v.sequenceNumber}
-              value={`variant-${v.sequenceNumber}`}
-              className="text-[11px] h-7 px-2 data-[state=active]:bg-slate-100"
-            >
-              Variation #{index + 2}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        <TabsContent value="variant-1" className="mt-3 space-y-3">
-          <div className="flex justify-end">
-            <Button
+      {/* Gallery: one tile per variation. Click to edit it in the detail pane below. */}
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10">
+        {cells.map((cell, index) => {
+          const isActive = cell.key === selectedCell?.key
+          const isPrimary = cell.sequenceNumber === "primary"
+          return (
+            <button
+              key={cell.key}
               type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-[11px] text-slate-600 hover:text-slate-900"
-              onClick={() => onDuplicateVariant?.("primary")}
-              disabled={!canAddVariant}
-              title="Duplicate this variation"
+              onClick={() => onActiveVariantTabChange?.(cell.key)}
+              title={`Variation #${index + 1}`}
+              className={`group relative aspect-square overflow-hidden rounded-md border bg-white text-left transition ${
+                isActive ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-300"
+              }`}
             >
-              <Copy className="w-3.5 h-3.5 mr-1" />
-              Duplicate
-            </Button>
-          </div>
-          {renderPrimary()}
-        </TabsContent>
+              {cell.previewUrl ? (
+                <ProtectedMediaImage
+                  src={cell.previewUrl}
+                  requiresAuth={cell.previewRequiresAuth}
+                  alt={`Variation ${index + 1}`}
+                  className="h-full w-full object-cover"
+                  fallback={<div className="flex h-full items-center justify-center text-slate-300"><PlaceholderIcon className="h-5 w-5" /></div>}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-slate-300"><PlaceholderIcon className="h-5 w-5" /></div>
+              )}
+              {/* Index badge */}
+              <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-4 text-white">
+                #{index + 1}
+              </span>
+              {/* Complete / empty status dot */}
+              <span
+                className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-1 ring-white ${cell.isComplete ? "bg-green-500" : "bg-amber-400"}`}
+                title={cell.isComplete ? "Media selected" : "No media yet"}
+              />
+              {/* Delete (additional variants only) — appears on hover/active */}
+              {!isPrimary ? (
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onDeleteVariant?.(cell.sequenceNumber as number)
+                  }}
+                  className="absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded bg-white/90 text-red-500 shadow-sm hover:bg-red-50 group-hover:flex"
+                  title="Delete this variation"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
+        {/* Add tile — hidden once the maximum is reached */}
+        {canAddVariant ? (
+          <button
+            type="button"
+            onClick={onAddVariant}
+            title="Add a new variation"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 bg-white text-slate-400 transition hover:border-slate-400 hover:text-slate-500"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="text-[10px]">Add</span>
+          </button>
+        ) : null}
+      </div>
 
-        {variantPanels.map((v) => (
-          <TabsContent key={v.sequenceNumber} value={`variant-${v.sequenceNumber}`} className="mt-3 space-y-3">
-            <div className="flex justify-end gap-1">
+      {/* Detail pane: edit the selected variation. */}
+      {selectedCell ? (
+        <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-slate-700">
+              Editing Variation #{cells.findIndex((cell) => cell.key === selectedCell.key) + 1}
+            </p>
+            <div className="flex items-center gap-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-[11px] text-slate-600 hover:text-slate-900"
-                onClick={() => onDuplicateVariant?.(v.sequenceNumber)}
+                onClick={() => onDuplicateVariant?.(selectedCell.sequenceNumber)}
                 disabled={!canAddVariant}
-                title="Duplicate this variation"
+                title={canAddVariant ? "Duplicate this variation" : `Maximum ${MAX_AD_VARIANTS} variations`}
               >
-                <Camera className="w-3.5 h-3.5 mr-1" />
+                <Copy className="w-3.5 h-3.5 mr-1" />
                 Duplicate
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                onClick={() => onDeleteVariant?.(v.sequenceNumber)}
-                title="Delete this variation"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
+              {selectedCell.sequenceNumber !== "primary" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => onDeleteVariant?.(selectedCell.sequenceNumber as number)}
+                  title="Delete this variation"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              ) : null}
             </div>
-            {v.content}
-          </TabsContent>
-        ))}
-      </Tabs>
+          </div>
+          {selectedCell.editor}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * UnifiedMediaEditor — renders a single media picker that supports both image and video.
+ * - When no media is selected yet, shows a toggle (Image / Video) and appropriate upload UI.
+ * - Once media is selected, shows the correct editor for the detected type.
+ * - Notifies parent via onMediaTypeChange when type changes.
+ */
+function UnifiedMediaEditor({
+  mediaType,
+  imageSelection,
+  videoSelection,
+  thumbnailSelection,
+  imageUploading,
+  videoUploading,
+  thumbnailUploading,
+  thumbnailVideoFile,
+  thumbnailVideoUrl,
+  thumbnailResolveVideoUrl,
+  thumbnailEditorKey,
+  thumbnailOpenKey,
+  adAccountId,
+  onMediaTypeChange,
+  onImageModeChange,
+  onImagePatch,
+  onImageUpload,
+  onImageMetaSelect,
+  onVideoModeChange,
+  onVideoPatch,
+  onVideoUpload,
+  onVideoMetaSelect,
+  onThumbnailOpenChange,
+  onThumbnailUseFrame,
+  onThumbnailUpload,
+}: {
+  mediaType?: "IMAGE" | "VIDEO"
+  imageSelection: MetaRequestAssetSelectionState
+  videoSelection: MetaRequestAssetSelectionState
+  thumbnailSelection: MetaRequestAssetSelectionState
+  imageUploading?: boolean
+  videoUploading?: boolean
+  thumbnailUploading?: boolean
+  thumbnailVideoFile?: File | null
+  thumbnailVideoUrl?: string | null
+  thumbnailResolveVideoUrl?: () => Promise<string | null>
+  thumbnailEditorKey?: string
+  thumbnailOpenKey?: string | null
+  adAccountId: number | null
+  onMediaTypeChange: (type: "IMAGE" | "VIDEO") => void
+  onImageModeChange: (mode: MetaRequestAssetSelectionState["mode"]) => void
+  onImagePatch: (patch: Partial<MetaRequestAssetSelectionState>) => void
+  onImageUpload: (file: File | null) => void
+  onImageMetaSelect: (media: MetaReferenceMediaDto) => void
+  onVideoModeChange: (mode: MetaRequestAssetSelectionState["mode"]) => void
+  onVideoPatch: (patch: Partial<MetaRequestAssetSelectionState>) => void
+  onVideoUpload: (file: File | null) => void
+  onVideoMetaSelect: (media: MetaReferenceMediaDto) => void
+  onThumbnailOpenChange?: (key: string | null) => void
+  onThumbnailUseFrame?: (file: File) => void
+  onThumbnailUpload?: (file: File | null) => void
+}) {
+  // Detect type from file upload
+  const handleImageUpload = (file: File | null) => {
+    if (file && file.type.startsWith("video/")) {
+      // User dropped a video into image slot — switch to VIDEO mode
+      onMediaTypeChange("VIDEO")
+      onVideoUpload(file)
+    } else {
+      onMediaTypeChange("IMAGE")
+      onImageUpload(file)
+    }
+  }
+
+  const handleVideoUpload = (file: File | null) => {
+    if (file) onMediaTypeChange("VIDEO")
+    onVideoUpload(file)
+  }
+
+  const handleImageMetaSelect = (media: MetaReferenceMediaDto) => {
+    if (media.assetType === "VIDEO") {
+      onMediaTypeChange("VIDEO")
+      onVideoMetaSelect(media)
+    } else {
+      onMediaTypeChange("IMAGE")
+      onImageMetaSelect(media)
+    }
+  }
+
+  const handleVideoMetaSelect = (media: MetaReferenceMediaDto) => {
+    onMediaTypeChange("VIDEO")
+    onVideoMetaSelect(media)
+  }
+
+  if (!mediaType) {
+    // No media selected yet — show media type chooser
+    return (
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+          <span>Media</span>
+          <span className="text-red-500">*</span>
+        </div>
+        <p className="text-[11px] text-slate-500">Choose an image or a video for this ad variation.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onMediaTypeChange("IMAGE")}
+            className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-4 py-6 text-slate-500 transition hover:border-blue-400 hover:text-blue-600"
+          >
+            <ImageIcon className="h-8 w-8" />
+            <span className="text-xs font-medium">Image</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onMediaTypeChange("VIDEO")}
+            className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-4 py-6 text-slate-500 transition hover:border-blue-400 hover:text-blue-600"
+          >
+            <Video className="h-8 w-8" />
+            <span className="text-xs font-medium">Video</span>
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-400">You can also upload a file and the type will be auto-detected.</p>
+      </div>
+    )
+  }
+
+  if (mediaType === "VIDEO") {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-slate-500 font-medium">Video selected</span>
+          <button
+            type="button"
+            onClick={() => onMediaTypeChange("IMAGE")}
+            className="text-[11px] text-blue-600 hover:text-blue-700 underline"
+          >
+            Switch to image
+          </button>
+        </div>
+        <MediaSourceEditor
+          title="Video"
+          kind="video"
+          selection={videoSelection}
+          uploading={videoUploading}
+          thumbnailSelection={thumbnailSelection}
+          thumbnailUploading={thumbnailUploading}
+          thumbnailVideoFile={thumbnailVideoFile}
+          thumbnailVideoUrl={thumbnailVideoUrl}
+          thumbnailResolveVideoUrl={thumbnailResolveVideoUrl}
+          thumbnailEditorKey={thumbnailEditorKey}
+          thumbnailOpenKey={thumbnailOpenKey}
+          adAccountId={adAccountId}
+          onModeChange={onVideoModeChange}
+          onPatch={onVideoPatch}
+          onUpload={handleVideoUpload}
+          onMetaSelect={handleVideoMetaSelect}
+          onThumbnailOpenChange={onThumbnailOpenChange}
+          onThumbnailUseFrame={onThumbnailUseFrame}
+          onThumbnailUpload={onThumbnailUpload}
+        />
+      </div>
+    )
+  }
+
+  // IMAGE mode
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-slate-500 font-medium">Image selected</span>
+        <button
+          type="button"
+          onClick={() => onMediaTypeChange("VIDEO")}
+          className="text-[11px] text-blue-600 hover:text-blue-700 underline"
+        >
+          Switch to video
+        </button>
+      </div>
+      <MediaSourceEditor
+        title="Image"
+        kind="image"
+        selection={imageSelection}
+        uploading={imageUploading}
+        allowExternalUrl
+        adAccountId={adAccountId}
+        onModeChange={onImageModeChange}
+        onPatch={onImagePatch}
+        onUpload={handleImageUpload}
+        onMetaSelect={handleImageMetaSelect}
+      />
     </div>
   )
 }
@@ -2031,6 +2211,22 @@ function TextVariationEditor({
 }
 
 function getCreativeCompletion(form: RequestFormState) {
+  if (form.creativeType === "SINGLE_MEDIA") {
+    const hasMediaSource = form.mediaType === "VIDEO"
+      ? !!(form.singleVideoVideo.uploadedAssetId || form.singleVideoVideo.videoId || form.singleVideoVideo.metaAssetId)
+      : form.mediaType === "IMAGE"
+        ? !!(form.singleImageImage.uploadedAssetId || form.singleImageImage.imageHash || form.singleImageImage.imageUrl)
+        : false
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "Message", ok: hasAnyTextVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) },
+      { label: "Headline", ok: hasAnyTextVariation(form.singleImageHeadlines, form.singleImageHeadline) },
+      { label: "CTA", ok: !!form.singleImageCallToAction },
+      { label: "Media source", ok: hasMediaSource },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
   if (form.creativeType === "SINGLE_VIDEO") {
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
@@ -2106,6 +2302,10 @@ function hasAnyTextVariation(values?: string[], fallback = ""): boolean {
 }
 
 function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: boolean } {
+  if (form.creativeType === "SINGLE_MEDIA") {
+    if (form.mediaType === "VIDEO") return getSelectionPreviewSource(form.singleVideoThumbnail)
+    return getSelectionPreviewSource(form.singleImageImage)
+  }
   if (form.creativeType === "SINGLE_VIDEO") return getSelectionPreviewSource(form.singleVideoThumbnail)
   if (form.creativeType === "CAROUSEL_IMAGE") return getSelectionPreviewSource(form.carouselCards[0]?.image)
   if (form.creativeType === "FLEXIBLE") {
@@ -2117,6 +2317,7 @@ function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: b
 }
 
 function getPreviewHeadline(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoHeadlines, form.singleVideoHeadline)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexibleHeadlines)
@@ -2125,6 +2326,7 @@ function getPreviewHeadline(form: RequestFormState): string {
 }
 
 function getPreviewMessage(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexiblePrimaryTexts) || `${form.flexibleAssets.length} flexible assets`
@@ -2133,6 +2335,7 @@ function getPreviewMessage(form: RequestFormState): string {
 }
 
 function getPreviewCta(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return formatCta(form.singleImageCallToAction)
   if (form.creativeType === "SINGLE_VIDEO") return formatCta(form.singleVideoCallToAction)
   if (form.creativeType === "CAROUSEL_IMAGE") return formatCta(form.carouselCallToAction)
   if (form.creativeType === "FLEXIBLE") return formatCta(form.flexibleCallToAction)

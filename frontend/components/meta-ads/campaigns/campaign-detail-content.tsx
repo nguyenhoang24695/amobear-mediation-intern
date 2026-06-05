@@ -960,46 +960,49 @@ export function CampaignDetailContent({ campaignId }: Props) {
           <span className="font-medium text-slate-900">{detail.externalCampaignId}</span>
         </nav>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push("/meta-ads/campaigns")}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <h1 className="text-lg font-bold text-slate-900">{detail.name}</h1>
-              <Badge className={cn("border", getStatusBadgeClass(detail.effectiveStatus))}>{toTitleCase(detail.effectiveStatus)}</Badge>
-              <Badge className={cn("border", getStatusBadgeClass(detail.status))}>{toTitleCase(detail.status)}</Badge>
-              {detail.isUnmapped ? <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Unmapped Meta App</Badge> : null}
-              {detail.isSyncStale ? <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Stale Sync</Badge> : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-4 pl-11 text-xs text-slate-500">
-              <span>
-                Meta Campaign ID: <strong className="font-mono text-slate-700">{detail.externalCampaignId}</strong>
-              </span>
-              <span>
-                Source: <strong className="text-slate-700">{getSourceLabel(detail.source)}</strong>
-              </span>
-              <span>
-                Ad Sets: <strong className="text-slate-700">{detail.adSets.length}</strong>
-              </span>
-              <span>
-                Ads: <strong className="text-slate-700">{detail.ads.length}</strong>
-              </span>
-              <span>
-                Creatives: <strong className="text-slate-700">{detail.creatives.length}</strong>
-              </span>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Button variant="ghost" size="icon" className="mt-0.5 h-8 w-8 shrink-0" onClick={() => router.push("/meta-ads/campaigns")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-bold text-slate-900">{detail.name}</h1>
+                <Badge className={cn("border", getStatusBadgeClass(detail.effectiveStatus))}>{toTitleCase(detail.effectiveStatus)}</Badge>
+                <Badge className={cn("border", getStatusBadgeClass(detail.status))}>{toTitleCase(detail.status)}</Badge>
+                {detail.isUnmapped ? <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Unmapped Meta App</Badge> : null}
+                {detail.isSyncStale ? <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Stale Sync</Badge> : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                <span>
+                  Meta Campaign ID: <strong className="font-mono text-slate-700">{detail.externalCampaignId}</strong>
+                </span>
+                <span>
+                  Source: <strong className="text-slate-700">{getSourceLabel(detail.source)}</strong>
+                </span>
+                <span>
+                  Ad Sets: <strong className="text-slate-700">{detail.adSets.length}</strong>
+                </span>
+                <span>
+                  Ads: <strong className="text-slate-700">{detail.ads.length}</strong>
+                </span>
+                <span>
+                  Creatives: <strong className="text-slate-700">{detail.creatives.length}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 pl-11">
             {canDuplicate ? (
               <>
-                <Button variant="outline" className="gap-2" onClick={() => void handleCheckDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing || statusUpdating}>
-                  {checkingReadiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Check Duplicate Readiness
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => void handleCheckDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing || statusUpdating}>
+                  {checkingReadiness ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Check Readiness
                 </Button>
                 <Button
                   variant="outline"
+                  size="sm"
                   className="gap-2"
                   onClick={() => {
                     setDuplicateQuantity("1")
@@ -1007,8 +1010,8 @@ export function CampaignDetailContent({ campaignId }: Props) {
                   }}
                   disabled={duplicating || syncing || statusUpdating || readiness?.isReady !== true}
                 >
-                  {duplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
-                  Duplicate Campaign
+                  {duplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+                  Duplicate
                 </Button>
               </>
             ) : null}
@@ -1017,6 +1020,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
                 {statusAction ? (
                   <Button
                     variant="outline"
+                    size="sm"
                     className={cn(
                       "gap-2",
                       statusAction.action === "pause" ? "border-amber-200 text-amber-700 hover:bg-amber-50" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
@@ -1025,23 +1029,23 @@ export function CampaignDetailContent({ campaignId }: Props) {
                     disabled={syncing || duplicating || statusUpdating || statusActionBlocked}
                   >
                     {statusUpdating
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       : statusAction.action === "pause"
-                        ? <PauseCircle className="h-4 w-4" />
-                        : <PlayCircle className="h-4 w-4" />}
+                        ? <PauseCircle className="h-3.5 w-3.5" />
+                        : <PlayCircle className="h-3.5 w-3.5" />}
                     {statusAction.label}
                   </Button>
                 ) : null}
-                <Button variant="outline" className="gap-2" onClick={handleSync} disabled={syncing || statusUpdating}>
-                  {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Sync This Campaign
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleSync} disabled={syncing || statusUpdating}>
+                  {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Sync
                 </Button>
               </>
             ) : null}
             {detail.createdFromRequestId ? (
-              <Button asChild variant="outline" className="gap-2">
+              <Button asChild variant="outline" size="sm" className="gap-2">
                 <Link href={`/meta-ads/requests/${detail.createdFromRequestId}`}>
-                  <Link2 className="h-4 w-4" />
+                  <Link2 className="h-3.5 w-3.5" />
                   Open Request
                 </Link>
               </Button>

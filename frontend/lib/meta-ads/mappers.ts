@@ -297,7 +297,17 @@ function getFlexibleCreative(creative: MetaCreativeDraftDto) {
   }
 }
 
-/** Build a MetaCreativeDraftDto from any AdVariantFormState (or the flat fields of MetaRequestFormState). */
+/** Resolve the effective media type for a SINGLE_MEDIA variant.
+ * Falls back to detecting video signals in singleVideoVideo when mediaType is not explicitly set
+ * (handles old drafts saved before SINGLE_MEDIA existed). */
+function resolveVariantMediaType(v: Pick<AdVariantFormState, "mediaType" | "singleVideoVideo">): "IMAGE" | "VIDEO" {
+  if (v.mediaType) return v.mediaType
+  // Fallback for old drafts: if there are any video signals, treat as VIDEO
+  const vid = v.singleVideoVideo
+  if (vid?.videoId || vid?.metaAssetType === "VIDEO" || (vid?.mode === "uploaded_asset" && vid?.uploadedAssetId)) return "VIDEO"
+  return "IMAGE"
+}
+
 export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreativeDraftDto {
   const creativeCommon = {
     name: v.creativeName.trim(),
@@ -350,6 +360,35 @@ export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreati
         thumbnail: asset.assetType === "VIDEO" ? buildMediaSource(asset.thumbnail, "image") : null,
       })),
     }
+  } else if (v.creativeType === "SINGLE_MEDIA") {
+    // UI-only type: resolve to SINGLE_IMAGE or SINGLE_VIDEO based on which media was selected.
+    // Text is always read from the canonical singleImage* fields (shared across all SINGLE_MEDIA variations).
+    const effectiveMediaType = resolveVariantMediaType(v)
+    creative.type = effectiveMediaType === "VIDEO" ? "SINGLE_VIDEO" : "SINGLE_IMAGE"
+    if (effectiveMediaType === "VIDEO") {
+      creative.singleVideo = {
+        message: getFirstVariation(v.singleImagePrimaryTexts, v.singleImagePrimaryText) || null,
+        messages: sanitizeTextVariations(v.singleImagePrimaryTexts, v.singleImagePrimaryText),
+        headline: getFirstVariation(v.singleImageHeadlines, v.singleImageHeadline) || null,
+        headlines: sanitizeTextVariations(v.singleImageHeadlines, v.singleImageHeadline),
+        description: v.singleImageDescription.trim() || null,
+        callToActionType: v.singleImageCallToAction.trim() || null,
+        linkUrl: v.singleImageLinkUrl.trim() || null,
+        video: buildMediaSource(v.singleVideoVideo, "video"),
+        thumbnail: buildMediaSource(v.singleVideoThumbnail, "image"),
+      }
+    } else {
+      creative.singleImage = {
+        message: getFirstVariation(v.singleImagePrimaryTexts, v.singleImagePrimaryText) || null,
+        messages: sanitizeTextVariations(v.singleImagePrimaryTexts, v.singleImagePrimaryText),
+        headline: getFirstVariation(v.singleImageHeadlines, v.singleImageHeadline) || null,
+        headlines: sanitizeTextVariations(v.singleImageHeadlines, v.singleImageHeadline),
+        description: v.singleImageDescription.trim() || null,
+        callToActionType: v.singleImageCallToAction.trim() || null,
+        linkUrl: v.singleImageLinkUrl.trim() || null,
+        image: buildMediaSource(v.singleImageImage, "image"),
+      }
+    }
   } else {
     creative.singleImage = {
       message: getFirstVariation(v.singleImagePrimaryTexts, v.singleImagePrimaryText) || null,
@@ -384,6 +423,7 @@ function primaryVariantFromFormState(form: MetaRequestFormState): AdVariantFormS
   return {
     sequenceNumber: 1,
     creativeType: form.creativeType,
+    mediaType: form.mediaType,
     creativeName: form.creativeName,
     facebookPageId: form.facebookPageId,
     instagramActorId: form.instagramActorId,
@@ -437,7 +477,8 @@ function composeAdditionalVariantForSerialization(
     // by applyVariantNumberSuffixIfMulti so all variants follow the same naming rule.
     creativeName: form.creativeName,
     adName: form.adName,
-    // Per-variant media (only meaningful for SINGLE_IMAGE and SINGLE_VIDEO):
+    // Per-variant media and mediaType (only meaningful for SINGLE_MEDIA / SINGLE_IMAGE / SINGLE_VIDEO):
+    mediaType: v.mediaType,
     singleImageImage: v.singleImageImage,
     singleVideoVideo: v.singleVideoVideo,
     singleVideoThumbnail: v.singleVideoThumbnail,
@@ -555,26 +596,56 @@ export function formStateToUpdateDto(form: MetaRequestFormState): UpdateMetaCamp
 /** Map a single MetaAdVariantDto (from payload) → AdVariantFormState for the form. */
 function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFormState {
   const creative = variant.creative ?? {}
-  const creativeType = (creative.type ?? "SINGLE_IMAGE") as import("@/types/meta-ads").MetaCreativeType
+  const rawCreativeType = (creative.type ?? "SINGLE_IMAGE") as import("@/types/meta-ads").MetaCreativeType
   const common = getCreativeCommon(creative)
   const singleImage = getSingleImageCreative(creative)
   const singleVideo = getSingleVideoCreative(creative)
   const carousel = getCarouselCreative(creative)
   const flexible = getFlexibleCreative(creative)
 
+  // Backward compat: SINGLE_IMAGE and SINGLE_VIDEO drafts open in the merged SINGLE_MEDIA UI.
+  // Text is normalised to singleImage* (canonical) regardless of source type.
+  const isSingleMedia = rawCreativeType === "SINGLE_IMAGE" || rawCreativeType === "SINGLE_VIDEO"
+  const creativeType: import("@/types/meta-ads").MetaCreativeType = isSingleMedia ? "SINGLE_MEDIA" : rawCreativeType
+  const resolvedMediaType: "IMAGE" | "VIDEO" | undefined = isSingleMedia
+    ? (rawCreativeType === "SINGLE_VIDEO" ? "VIDEO" : "IMAGE")
+    : undefined
+
+  // For SINGLE_VIDEO drafts, copy video text → singleImage* canonical fields so the merged UI shows them correctly.
+  const canonicalPrimaryTexts = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+    ? (sanitizeTextVariations(singleVideo.messages, singleVideo.message).length > 0
+        ? sanitizeTextVariations(singleVideo.messages, singleVideo.message)
+        : sanitizeTextVariations(singleImage.messages, singleImage.message))
+    : sanitizeTextVariations(singleImage.messages, singleImage.message)
+  const canonicalHeadlines = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+    ? (sanitizeTextVariations(singleVideo.headlines, singleVideo.headline).length > 0
+        ? sanitizeTextVariations(singleVideo.headlines, singleVideo.headline)
+        : sanitizeTextVariations(singleImage.headlines, singleImage.headline))
+    : sanitizeTextVariations(singleImage.headlines, singleImage.headline)
+  const canonicalDescription = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+    ? (singleVideo.description ?? singleImage.description ?? "")
+    : (singleImage.description ?? "")
+  const canonicalCta = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+    ? (singleVideo.callToActionType ?? singleImage.callToActionType ?? "LEARN_MORE")
+    : (singleImage.callToActionType ?? "LEARN_MORE")
+  const canonicalLinkUrl = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+    ? (singleVideo.linkUrl ?? singleImage.linkUrl ?? "")
+    : (singleImage.linkUrl ?? "")
+
   return {
     sequenceNumber: variant.sequenceNumber,
     creativeType,
+    mediaType: resolvedMediaType,
     creativeName: common.name,
     facebookPageId: common.pageId,
     instagramActorId: common.instagramActorId,
-    singleImagePrimaryText: getFirstVariation(singleImage.messages, singleImage.message),
-    singleImagePrimaryTexts: sanitizeTextVariations(singleImage.messages, singleImage.message).length > 0 ? sanitizeTextVariations(singleImage.messages, singleImage.message) : [""],
-    singleImageHeadline: getFirstVariation(singleImage.headlines, singleImage.headline),
-    singleImageHeadlines: sanitizeTextVariations(singleImage.headlines, singleImage.headline).length > 0 ? sanitizeTextVariations(singleImage.headlines, singleImage.headline) : [""],
-    singleImageDescription: singleImage.description ?? "",
-    singleImageCallToAction: singleImage.callToActionType ?? "LEARN_MORE",
-    singleImageLinkUrl: singleImage.linkUrl ?? "",
+    singleImagePrimaryText: canonicalPrimaryTexts[0] ?? "",
+    singleImagePrimaryTexts: canonicalPrimaryTexts.length > 0 ? canonicalPrimaryTexts : [""],
+    singleImageHeadline: canonicalHeadlines[0] ?? "",
+    singleImageHeadlines: canonicalHeadlines.length > 0 ? canonicalHeadlines : [""],
+    singleImageDescription: canonicalDescription,
+    singleImageCallToAction: canonicalCta,
+    singleImageLinkUrl: canonicalLinkUrl,
     singleImageImage: mediaSourceToSelection(singleImage.image, "image"),
     singleVideoPrimaryText: getFirstVariation(singleVideo.messages, singleVideo.message),
     singleVideoPrimaryTexts: sanitizeTextVariations(singleVideo.messages, singleVideo.message).length > 0 ? sanitizeTextVariations(singleVideo.messages, singleVideo.message) : [""],

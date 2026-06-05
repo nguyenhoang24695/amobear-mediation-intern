@@ -198,6 +198,17 @@ function hasCreativeVariation(values?: string[], fallback?: string): boolean {
 }
 
 function getCreativeStatus(form: RequestFormState) {
+  if (form.creativeType === "SINGLE_MEDIA") {
+    const hasText = hasCreativeVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
+    const hasHeadline = hasCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline)
+    const hasCta = !!form.singleImageCallToAction
+    const hasMedia = form.mediaType === "VIDEO"
+      ? !!(form.singleVideoVideo.videoId || form.singleVideoVideo.uploadedAssetId)
+      : form.mediaType === "IMAGE"
+        ? !!(form.singleImageImage.imageHash || form.singleImageImage.imageUrl || form.singleImageImage.uploadedAssetId)
+        : false
+    return { ok: !!(form.creativeName && form.facebookPageId && hasText && hasHeadline && hasCta && hasMedia), label: "single image/video" }
+  }
   if (form.creativeType === "SINGLE_VIDEO") {
     return { ok: !!(form.creativeName && form.facebookPageId && hasCreativeVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText) && hasCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) && form.singleVideoCallToAction && (form.singleVideoVideo.videoId || form.singleVideoVideo.uploadedAssetId)), label: "single video" }
   }
@@ -227,6 +238,7 @@ function getCreativeStatus(form: RequestFormState) {
 }
 
 function getCreativeHeadline(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return getFirstCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) || "-"
   if (form.creativeType === "SINGLE_VIDEO") return getFirstCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || "-"
   if (form.creativeType === "FLEXIBLE") return getFirstCreativeVariation(form.flexibleHeadlines) || "-"
@@ -235,6 +247,7 @@ function getCreativeHeadline(form: RequestFormState): string {
 }
 
 function getCreativeCta(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImageCallToAction || "-"
   if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoCallToAction || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCallToAction || "-"
   if (form.creativeType === "FLEXIBLE") return form.flexibleCallToAction || "-"
