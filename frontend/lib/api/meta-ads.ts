@@ -26,6 +26,7 @@ import type {
   MetaCampaignStatusUpdateResultDto,
   MetaCampaignRequestDetailDto,
   MetaCampaignRequestListItemDto,
+  MetaAssetPreparationResponseDto,
   MetaCampaignBreakdownPageDto,
   MetaInsightsDailyDto,
   MetaInsightsFiltersResponseDto,
@@ -117,6 +118,18 @@ export const metaRequestsApi = {
 
   getAsset: async (id: number) => {
     return apiClient.get<MetaRequestAssetDto>(`${REQUESTS_PREFIX}/assets/${id}`)
+  },
+
+  getAssetPreparation: async (id: number) => {
+    return apiClient.get<MetaAssetPreparationResponseDto>(`${REQUESTS_PREFIX}/${id}/asset-preparation`)
+  },
+
+  queueAssetPreparation: async (id: number) => {
+    return apiClient.post<MetaAssetPreparationResponseDto>(`${REQUESTS_PREFIX}/${id}/asset-preparation/queue`, {})
+  },
+
+  retryAssetMetaUpload: async (assetId: number, metaAdAccountId: number) => {
+    return apiClient.post<{ success: boolean }>(`${REQUESTS_PREFIX}/assets/${assetId}/meta-upload/retry?metaAdAccountId=${encodeURIComponent(String(metaAdAccountId))}`, {})
   },
 }
 

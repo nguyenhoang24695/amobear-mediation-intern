@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,6 +32,7 @@ import type {
   MetaAdSetDraftValidationDto,
   MetaAppMappingDto,
   MetaCampaignRequestDetailDto,
+  MetaAssetPreparationDto,
   MetaCreateCampaignReferenceDto,
   MetaFacebookPageReferenceDto,
   GeoCountryGroupDto,
@@ -321,6 +322,46 @@ function hasSelectedMedia(selection: MetaRequestAssetSelectionState, kind: "imag
   )
 }
 
+function addUploadedAssetId(ids: Set<number>, selection?: MetaRequestAssetSelectionState | null) {
+  if (selection?.uploadedAssetId && Number.isFinite(selection.uploadedAssetId)) {
+    ids.add(selection.uploadedAssetId)
+  }
+}
+
+function collectUploadedAssetIds(form: RequestFormState): number[] {
+  const ids = new Set<number>()
+
+  addUploadedAssetId(ids, form.singleImageImage)
+  addUploadedAssetId(ids, form.singleVideoVideo)
+  addUploadedAssetId(ids, form.singleVideoThumbnail)
+
+  for (const card of form.carouselCards) {
+    addUploadedAssetId(ids, card.image)
+  }
+
+  for (const asset of form.flexibleAssets) {
+    addUploadedAssetId(ids, asset.image)
+    addUploadedAssetId(ids, asset.video)
+    addUploadedAssetId(ids, asset.thumbnail)
+  }
+
+  for (const variant of form.additionalVariants) {
+    addUploadedAssetId(ids, variant.singleImageImage)
+    addUploadedAssetId(ids, variant.singleVideoVideo)
+    addUploadedAssetId(ids, variant.singleVideoThumbnail)
+    for (const card of variant.carouselCards) {
+      addUploadedAssetId(ids, card.image)
+    }
+    for (const asset of variant.flexibleAssets) {
+      addUploadedAssetId(ids, asset.image)
+      addUploadedAssetId(ids, asset.video)
+      addUploadedAssetId(ids, asset.thumbnail)
+    }
+  }
+
+  return Array.from(ids)
+}
+
 function buildUploadedMediaSelection(asset: { id: number; fileName: string }, file: File, kind: "image" | "video"): MetaRequestAssetSelectionState {
   return {
     ...createEmptyMediaSelection("uploaded_asset"),
@@ -519,6 +560,47 @@ export function CreateRequestContent({ requestId }: Props) {
     () => metaReferenceApi.getGeoCountryGroups(),
     { cacheKey: "meta-reference:geo:country-groups" }
   )
+
+  const assetPreparationCacheKey = draftId ? `meta-request:${draftId}:asset-preparation` : "meta-request:new:asset-preparation"
+  const {
+    data: assetPreparation,
+    loading: assetPreparationLoading,
+    refetch: refetchAssetPreparation,
+  } = useApi(
+    () => metaRequestsApi.getAssetPreparation(draftId as number),
+    {
+      enabled: draftId != null,
+      cacheKey: assetPreparationCacheKey,
+    }
+  )
+
+  const assetPreparationById = useMemo(() => {
+    const map = new Map<number, MetaAssetPreparationDto>()
+    const parsedAdAccountId = form.adAccountId ? Number(form.adAccountId) : null
+    const currentAdAccountId = parsedAdAccountId != null && Number.isFinite(parsedAdAccountId) ? parsedAdAccountId : null
+    for (const asset of assetPreparation?.assets ?? []) {
+      if (currentAdAccountId != null && asset.metaAdAccountId != null && asset.metaAdAccountId !== currentAdAccountId) {
+        continue
+      }
+      map.set(asset.requestAssetId, asset)
+    }
+    return map
+  }, [assetPreparation, form.adAccountId])
+
+  const hasActiveAssetPreparation = useMemo(() => {
+    return (assetPreparation?.assets ?? []).some((asset) => ["pending", "uploading", "processing"].includes(asset.status))
+  }, [assetPreparation])
+
+  useEffect(() => {
+    if (!draftId || !hasActiveAssetPreparation) return
+
+    const intervalId = window.setInterval(() => {
+      void refetchAssetPreparation()
+    }, 7000)
+
+    return () => window.clearInterval(intervalId)
+  }, [draftId, hasActiveAssetPreparation, refetchAssetPreparation])
+
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
@@ -895,6 +977,19 @@ export function CreateRequestContent({ requestId }: Props) {
     invalidateCache("meta-reference:create-campaign")
     invalidateCache(`meta-request:${response.id}`)
 
+    if (response.metaAdAccountId && collectUploadedAssetIds(form).length > 0) {
+      try {
+        const queued = await metaRequestsApi.queueAssetPreparation(response.id)
+        invalidateCache(`meta-request:${response.id}:asset-preparation`)
+        if (draftId === response.id) {
+          await refetchAssetPreparation(() => Promise.resolve(queued))
+        }
+      } catch (queueError) {
+        const message = queueError instanceof Error ? queueError.message : "Asset preparation queue failed."
+        toast({ title: "Meta asset preparation not queued", description: message, variant: "destructive" })
+      }
+    }
+
     if (!silent) {
       const sentBackForApproval = !!previousStatus && previousStatus !== "draft" && response.status === "pending_approval"
       toast({
@@ -906,6 +1001,25 @@ export function CreateRequestContent({ requestId }: Props) {
     }
 
     return response
+  }
+
+  const handleRetryAssetPreparation = async (assetId: number) => {
+    if (!form.adAccountId) {
+      toast({ title: "Select a Meta ad account", description: "Assets are uploaded to Meta per ad account before execution.", variant: "destructive" })
+      return
+    }
+
+    try {
+      await metaRequestsApi.retryAssetMetaUpload(assetId, Number(form.adAccountId))
+      if (draftId) {
+        invalidateCache(`meta-request:${draftId}:asset-preparation`)
+        await refetchAssetPreparation()
+      }
+      toast({ title: "Retry queued", description: "The asset will be uploaded to Meta again." })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to retry Meta upload."
+      toast({ title: "Retry failed", description: message, variant: "destructive" })
+    }
   }
 
   const handleSaveDraft = async () => {
@@ -1127,6 +1241,9 @@ export function CreateRequestContent({ requestId }: Props) {
               onBulkMediaUpload={handleBulkMediaUpload}
               bulkUploading={bulkUploading}
               bulkProgress={bulkProgress}
+              assetPreparationById={assetPreparationById}
+              assetPreparationLoading={assetPreparationLoading}
+              onRetryAssetPreparation={handleRetryAssetPreparation}
             />
           </div>
           {/* Ad section — shared. Ad Name for additional variants is auto-suffixed `_v{N}` by the mapper. */}
@@ -1196,4 +1313,3 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
