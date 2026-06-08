@@ -718,8 +718,12 @@ export function RequestDetailContent({ requestId }: Props) {
           <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-red-800">Request execution failed</p>
-              <p className="text-xs text-red-600 mt-0.5">{detail.failureSummary ?? "Execution failed. Check operation logs for more details."}</p>
+              <p className="text-sm font-semibold text-red-800">
+                {latestFailedLog?.metaErrorUserTitle ?? "Request execution failed"}
+              </p>
+              <p className="text-xs text-red-600 mt-0.5">
+                {latestFailedLog?.metaErrorUserMsg ?? detail.failureSummary ?? "Execution failed. Check operation logs for more details."}
+              </p>
             </div>
           </div>
 
@@ -749,6 +753,14 @@ export function RequestDetailContent({ requestId }: Props) {
                   ) : null}
                 </div>
                 {latestFailedLog.resourcePath ? <ValueBlock label="Resource Path" value={latestFailedLog.resourcePath} mono breakAll /> : null}
+                {latestFailedLog.metaErrorUserTitle ? (
+                  <div className="text-sm font-semibold text-red-800 bg-red-100/30 border border-red-200/50 rounded-md px-3 py-2.5">
+                    {latestFailedLog.metaErrorUserTitle}
+                  </div>
+                ) : null}
+                {latestFailedLog.metaErrorUserMsg ? (
+                  <ValueBlock label="What happened" value={latestFailedLog.metaErrorUserMsg} preserveWhitespace />
+                ) : null}
                 <ValueBlock label="Summary" value={latestFailedLog.summaryMessage ?? latestFailedLog.errorMessage ?? detail.failureSummary ?? "-"} preserveWhitespace />
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" onClick={() => jumpToOperationLog(latestFailedLog.id)}>

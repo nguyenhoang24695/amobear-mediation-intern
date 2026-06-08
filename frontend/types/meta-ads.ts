@@ -905,6 +905,8 @@ export interface MetaOperationLogDto {
   metaErrorSubcode?: string | null
   metaErrorType?: string | null
   metaTraceId?: string | null
+  metaErrorUserTitle?: string | null
+  metaErrorUserMsg?: string | null
   summaryMessage?: string | null
   requestJson?: string | null
   responseJson?: string | null
