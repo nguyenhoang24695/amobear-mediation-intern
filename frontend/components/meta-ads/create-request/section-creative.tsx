@@ -126,6 +126,9 @@ interface Props {
   canAddVariant?: boolean
   /** True for SINGLE_IMAGE / SINGLE_VIDEO. When false, variations UI is hidden entirely. */
   supportsVariants?: boolean
+  onBulkMediaUpload?: (files: File[]) => void
+  bulkUploading?: boolean
+  bulkProgress?: { done: number; total: number } | null
 }
 
 export function CreativeSection({
@@ -147,6 +150,9 @@ export function CreativeSection({
   onUpdateAdditionalVariant,
   canAddVariant = false,
   supportsVariants = false,
+  onBulkMediaUpload,
+  bulkUploading = false,
+  bulkProgress = null,
 }: Props) {
   const { toast } = useToast()
   const [uploadingKey, setUploadingKey] = useState<string | null>(null)
@@ -890,6 +896,9 @@ export function CreativeSection({
                   onAddVariant={onAddVariant}
                   onDuplicateVariant={onDuplicateVariant}
                   onDeleteVariant={onDeleteVariant}
+                  onBulkMediaUpload={onBulkMediaUpload}
+                  bulkUploading={bulkUploading}
+                  bulkProgress={bulkProgress}
                   cells={[
                     (() => {
                       const imgPreview = getSelectionPreviewSource(form.singleImageImage)
@@ -1334,6 +1343,9 @@ function VariationGallery({
   onAddVariant,
   onDuplicateVariant,
   onDeleteVariant,
+  onBulkMediaUpload,
+  bulkUploading,
+  bulkProgress,
   cells,
 }: {
   label: string
@@ -1346,8 +1358,13 @@ function VariationGallery({
   onAddVariant?: () => void
   onDuplicateVariant?: (sequenceNumber: number | "primary") => void
   onDeleteVariant?: (sequenceNumber: number) => void
+  onBulkMediaUpload?: (files: File[]) => void
+  bulkUploading?: boolean
+  bulkProgress?: { done: number; total: number } | null
   cells: VariationGalleryCell[]
 }) {
+  const bulkInputRef = useRef<HTMLInputElement | null>(null)
+
   // If variations are unsupported for this creative type, just render the single primary editor without any gallery chrome.
   if (!supportsVariants) {
     return <>{cells[0]?.editor}</>
@@ -1357,6 +1374,10 @@ function VariationGallery({
   // Resolve the selected cell; fall back to the primary if the active key no longer exists.
   const selectedCell = cells.find((cell) => cell.key === activeVariantTab) ?? cells[0]
   const PlaceholderIcon = mediaKind === "video" ? Video : ImageIcon
+  const bulkUploadLabel = bulkUploading && bulkProgress
+    ? `Uploading ${bulkProgress.done}/${bulkProgress.total}...`
+    : "Upload multiple files"
+  const canBulkMediaUpload = !!onBulkMediaUpload && (canAddVariant || cells[0]?.isComplete === false)
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
@@ -1368,18 +1389,51 @@ function VariationGallery({
           </p>
           <p className="text-[11px] text-slate-500">{helper}</p>
         </div>
-        {canAddVariant ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-[11px] flex-shrink-0"
-            onClick={onAddVariant}
-            title="Add a new variation"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Add Variation
-          </Button>
+        {canAddVariant || canBulkMediaUpload ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canBulkMediaUpload ? (
+              <>
+                <input
+                  ref={bulkInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? [])
+                    if (files.length > 0) onBulkMediaUpload(files)
+                    event.currentTarget.value = ""
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-[11px] flex-shrink-0"
+                  onClick={() => bulkInputRef.current?.click()}
+                  disabled={bulkUploading}
+                  title="Upload multiple image or video files"
+                >
+                  {bulkUploading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Plus className="w-3.5 h-3.5 mr-1" />}
+                  {bulkUploadLabel}
+                </Button>
+              </>
+            ) : null}
+            {canAddVariant ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-[11px] flex-shrink-0"
+                onClick={onAddVariant}
+                disabled={bulkUploading}
+                title="Add a new variation"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add Variation
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -1441,8 +1495,9 @@ function VariationGallery({
           <button
             type="button"
             onClick={onAddVariant}
+            disabled={bulkUploading}
             title="Add a new variation"
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 bg-white text-slate-400 transition hover:border-slate-400 hover:text-slate-500"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 bg-white text-slate-400 transition hover:border-slate-400 hover:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-300 disabled:hover:text-slate-400"
           >
             <Plus className="h-5 w-5" />
             <span className="text-[10px]">Add</span>
