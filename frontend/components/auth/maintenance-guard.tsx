@@ -1,14 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/enums/user-role"
-import { getMaintenanceStatus } from "@/lib/api/platform-maintenance"
+import { getMaintenanceStatus, type PlatformMaintenanceStatus } from "@/lib/api/platform-maintenance"
+import { MaintenanceUpcomingAlert } from "@/components/maintenance/maintenance-upcoming-alert"
 
 const MAINTENANCE_NOTICE_PATH = "/maintenance"
 const MAINTENANCE_ADMIN_PATH = "/settings/maintenance"
 const POLL_INTERVAL_MS = 30_000
+const POLL_INTERVAL_UPCOMING_MS = 10_000
 
 interface MaintenanceGuardProps {
   children: React.ReactNode
@@ -19,59 +21,80 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
   const router = useRouter()
   const [isChecking, setIsChecking] = useState(true)
   const [canRender, setCanRender] = useState(false)
+  const [status, setStatus] = useState<PlatformMaintenanceStatus | null>(null)
+  const pollDelayRef = useRef(POLL_INTERVAL_MS)
+
+  const applyStatus = useCallback(
+    (nextStatus: PlatformMaintenanceStatus) => {
+      setStatus(nextStatus)
+      pollDelayRef.current = nextStatus.isUpcoming ? POLL_INTERVAL_UPCOMING_MS : POLL_INTERVAL_MS
+
+      if (!nextStatus.enabled || nextStatus.isUpcoming) {
+        setCanRender(true)
+        return
+      }
+
+      if (!nextStatus.isActive) {
+        setCanRender(true)
+        return
+      }
+
+      const user = getCurrentUser()
+      const superAdmin = isSuperAdmin(user?.role)
+
+      if (superAdmin) {
+        if (pathname !== MAINTENANCE_ADMIN_PATH) {
+          router.replace(MAINTENANCE_ADMIN_PATH)
+          setCanRender(false)
+        } else {
+          setCanRender(true)
+        }
+        return
+      }
+
+      if (pathname !== MAINTENANCE_NOTICE_PATH) {
+        router.replace(MAINTENANCE_NOTICE_PATH)
+        setCanRender(false)
+      } else {
+        setCanRender(true)
+      }
+    },
+    [pathname, router],
+  )
 
   useEffect(() => {
     let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const checkMaintenance = async () => {
       try {
-        const status = await getMaintenanceStatus()
+        const nextStatus = await getMaintenanceStatus()
         if (cancelled) return
-
-        if (!status.enabled) {
-          setCanRender(true)
-          setIsChecking(false)
-          return
-        }
-
-        const user = getCurrentUser()
-        const superAdmin = isSuperAdmin(user?.role)
-
-        if (superAdmin) {
-          if (pathname !== MAINTENANCE_ADMIN_PATH) {
-            router.replace(MAINTENANCE_ADMIN_PATH)
-            setCanRender(false)
-          } else {
-            setCanRender(true)
-          }
-        } else {
-          if (pathname !== MAINTENANCE_NOTICE_PATH) {
-            router.replace(MAINTENANCE_NOTICE_PATH)
-            setCanRender(false)
-          } else {
-            setCanRender(true)
-          }
-        }
+        applyStatus(nextStatus)
       } catch {
-        if (!cancelled) {
-          setCanRender(true)
-        }
+        if (!cancelled) setCanRender(true)
       } finally {
-        if (!cancelled) {
-          setIsChecking(false)
-        }
+        if (!cancelled) setIsChecking(false)
       }
     }
 
-    setIsChecking(true)
-    checkMaintenance()
+    const schedulePoll = () => {
+      timeoutId = setTimeout(async () => {
+        await checkMaintenance()
+        if (!cancelled) schedulePoll()
+      }, pollDelayRef.current)
+    }
 
-    const intervalId = setInterval(checkMaintenance, POLL_INTERVAL_MS)
+    setIsChecking(true)
+    checkMaintenance().then(() => {
+      if (!cancelled) schedulePoll()
+    })
+
     return () => {
       cancelled = true
-      clearInterval(intervalId)
+      if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [pathname, router])
+  }, [applyStatus])
 
   if (isChecking) {
     return (
@@ -88,5 +111,10 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
     return null
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {status?.isUpcoming && <MaintenanceUpcomingAlert status={status} />}
+      {children}
+    </>
+  )
 }

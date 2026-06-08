@@ -33,7 +33,7 @@ export function MaintenanceNoticeContent() {
     try {
       const data = await getMaintenanceStatus()
       setStatus(data)
-      if (!data.enabled) {
+      if (!data.enabled || !data.isActive) {
         router.replace("/")
       }
     } catch {
@@ -97,22 +97,26 @@ export function MaintenanceNoticeContent() {
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-2 sm:flex-row">
+        <CardFooter className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full min-w-0"
             onClick={() => loadStatus(true)}
             disabled={isRefreshing}
           >
             {isRefreshing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 h-4 w-4 shrink-0" />
             )}
             Try again
           </Button>
-          <Button variant="ghost" className="w-full" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
+          <Button
+            variant="ghost"
+            className="w-full min-w-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4 shrink-0" />
             Sign out
           </Button>
         </CardFooter>

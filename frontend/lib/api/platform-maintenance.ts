@@ -3,6 +3,8 @@ import { apiClient } from "./client"
 export type PlatformMaintenanceStatus = {
   enabled: boolean
   enabledAt: string | null
+  isActive: boolean
+  isUpcoming: boolean
   estimatedEndAt: string | null
   updatedAt: string
   updatedByEmail: string | null
@@ -10,11 +12,13 @@ export type PlatformMaintenanceStatus = {
 
 export type PlatformMaintenanceHistoryItem = {
   id: number
-  enabled: boolean
-  maintenanceStartedAt: string | null
+  startedAt: string
+  endedAt: string | null
   estimatedEndAt: string | null
-  changedAt: string
-  changedByEmail: string | null
+  isActive: boolean
+  isScheduled: boolean
+  startedByEmail: string | null
+  endedByEmail: string | null
 }
 
 type MaintenanceResponse = {
@@ -49,8 +53,14 @@ export async function getAdminMaintenanceStatus(): Promise<PlatformMaintenanceSt
   return response.data
 }
 
-export async function setMaintenanceEnabled(enabled: boolean): Promise<PlatformMaintenanceStatus> {
-  const response = await apiClient.put<MaintenanceResponse>("/api/v1/admin/platform/maintenance", { enabled })
+export async function setMaintenanceEnabled(
+  enabled: boolean,
+  scheduledStartAt?: string | null,
+): Promise<PlatformMaintenanceStatus> {
+  const response = await apiClient.put<MaintenanceResponse>("/api/v1/admin/platform/maintenance", {
+    enabled,
+    scheduledStartAt: scheduledStartAt ?? undefined,
+  })
   return response.data
 }
 
@@ -69,9 +79,18 @@ const MAINTENANCE_ADMIN_PATH = "/settings/maintenance"
 export async function resolvePostLoginPath(role: string | undefined | null): Promise<string> {
   try {
     const status = await getMaintenanceStatus()
-    if (!status.enabled) return "/"
+    if (!status.isActive) return "/"
     return role === "super_admin" ? MAINTENANCE_ADMIN_PATH : MAINTENANCE_NOTICE_PATH
   } catch {
     return "/"
   }
+}
+
+export function toDatetimeLocalValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function datetimeLocalToIso(value: string): string {
+  return new Date(value).toISOString()
 }

@@ -5,6 +5,7 @@ import { Construction, History, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -26,9 +27,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import {
+  datetimeLocalToIso,
   getAdminMaintenanceStatus,
   getMaintenanceHistory,
   setMaintenanceEnabled,
+  toDatetimeLocalValue,
   type PlatformMaintenanceHistoryItem,
   type PlatformMaintenanceStatus,
 } from "@/lib/api/platform-maintenance"
@@ -44,6 +47,18 @@ function formatDateTime(iso: string | null): string {
   })
 }
 
+function statusBadge(status: PlatformMaintenanceStatus | null) {
+  if (!status?.enabled) return { label: "OFF", variant: "secondary" as const }
+  if (status.isUpcoming) return { label: "SCHEDULED", variant: "outline" as const }
+  return { label: "ON", variant: "destructive" as const }
+}
+
+function historyStatusBadge(item: PlatformMaintenanceHistoryItem) {
+  if (item.isScheduled) return { label: "Scheduled", variant: "outline" as const }
+  if (item.isActive) return { label: "In progress", variant: "destructive" as const }
+  return { label: "Completed", variant: "secondary" as const }
+}
+
 export function MaintenanceManagementContent() {
   const { toast } = useToast()
   const [status, setStatus] = useState<PlatformMaintenanceStatus | null>(null)
@@ -52,6 +67,7 @@ export function MaintenanceManagementContent() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [confirmEnableOpen, setConfirmEnableOpen] = useState(false)
+  const [scheduledStartLocal, setScheduledStartLocal] = useState(() => toDatetimeLocalValue(new Date()))
 
   const loadHistory = useCallback(async () => {
     setIsHistoryLoading(true)
@@ -83,16 +99,18 @@ export function MaintenanceManagementContent() {
     loadHistory()
   }, [loadStatus, loadHistory])
 
-  const applyEnabled = async (enabled: boolean) => {
+  const applyEnabled = async (enabled: boolean, scheduledStartAt?: string) => {
     setIsSaving(true)
     try {
-      const data = await setMaintenanceEnabled(enabled)
+      const data = await setMaintenanceEnabled(enabled, scheduledStartAt)
       setStatus(data)
       await loadHistory()
       toast({
         title: enabled ? "Maintenance mode enabled" : "Maintenance mode disabled",
         description: enabled
-          ? "Non–super admin users will be redirected to the maintenance notice page."
+          ? data.isUpcoming
+            ? "Users can continue working until the scheduled start time. They will see a warning when navigating."
+            : "Non–super admin users will be redirected to the maintenance notice page."
           : "The system is operating normally.",
       })
     } catch (err: unknown) {
@@ -106,11 +124,14 @@ export function MaintenanceManagementContent() {
 
   const handleToggle = (checked: boolean) => {
     if (checked) {
+      setScheduledStartLocal(toDatetimeLocalValue(new Date()))
       setConfirmEnableOpen(true)
     } else {
       applyEnabled(false)
     }
   }
+
+  const badge = statusBadge(status)
 
   if (isLoading) {
     return (
@@ -125,7 +146,7 @@ export function MaintenanceManagementContent() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Maintenance Management</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Enable maintenance mode to redirect users while the system is being upgraded.
+          Schedule or enable maintenance mode to redirect users while the system is being upgraded.
         </p>
       </div>
 
@@ -138,12 +159,11 @@ export function MaintenanceManagementContent() {
             <div className="flex-1">
               <CardTitle className="text-lg">Maintenance Mode</CardTitle>
               <CardDescription>
-                When enabled, non–super admin users see a maintenance notice (~10 minutes ETA).
+                Users can keep working until the scheduled start. After that, non–super admins see
+                the maintenance notice (~10 minutes ETA).
               </CardDescription>
             </div>
-            <Badge variant={status?.enabled ? "destructive" : "secondary"}>
-              {status?.enabled ? "ON" : "OFF"}
-            </Badge>
+            <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
         </CardHeader>
 
@@ -167,7 +187,7 @@ export function MaintenanceManagementContent() {
 
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-lg border bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Started at</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Scheduled start</p>
               <p className="mt-1 font-medium">{formatDateTime(status?.enabledAt ?? null)}</p>
             </div>
             <div className="rounded-lg border bg-slate-50 p-3">
@@ -194,7 +214,7 @@ export function MaintenanceManagementContent() {
             </div>
             <div>
               <CardTitle className="text-lg">History</CardTitle>
-              <CardDescription>Recent maintenance mode changes</CardDescription>
+              <CardDescription>Maintenance sessions (each ON → OFF cycle)</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -210,31 +230,34 @@ export function MaintenanceManagementContent() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>Action</TableHead>
-                    <TableHead>Changed at</TableHead>
-                    <TableHead>Changed by</TableHead>
-                    <TableHead>Maintenance started</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Started at</TableHead>
+                    <TableHead>Started by</TableHead>
+                    <TableHead>Ended at</TableHead>
+                    <TableHead>Ended by</TableHead>
                     <TableHead>Est. completion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {history.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Badge variant={item.enabled ? "destructive" : "secondary"}>
-                          {item.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{formatDateTime(item.changedAt)}</TableCell>
-                      <TableCell>{item.changedByEmail ?? "—"}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDateTime(item.maintenanceStartedAt)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {item.enabled ? formatDateTime(item.estimatedEndAt) : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {history.map((item) => {
+                    const itemBadge = historyStatusBadge(item)
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <Badge variant={itemBadge.variant}>{itemBadge.label}</Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDateTime(item.startedAt)}</TableCell>
+                        <TableCell>{item.startedByEmail ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {item.endedAt ? formatDateTime(item.endedAt) : "—"}
+                        </TableCell>
+                        <TableCell>{item.endedByEmail ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {item.isActive || item.isScheduled ? formatDateTime(item.estimatedEndAt) : "—"}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -246,18 +269,36 @@ export function MaintenanceManagementContent() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Enable maintenance mode?</AlertDialogTitle>
-            <AlertDialogDescription>
-              All users except super admins will be redirected to the maintenance notice page.
-              Estimated completion is within 10 minutes from the time maintenance is enabled.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-sm text-muted-foreground">
+                <p>
+                  Set when maintenance should begin. Before that time, users can continue working
+                  normally but will see a warning when navigating between pages.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled-start">Scheduled start</Label>
+                  <Input
+                    id="scheduled-start"
+                    type="datetime-local"
+                    value={scheduledStartLocal}
+                    onChange={(e) => setScheduledStartLocal(e.target.value)}
+                    disabled={isSaving}
+                  />
+                  <p className="text-xs">
+                    Use the current time to start maintenance immediately. Estimated completion is
+                    10 minutes after the scheduled start.
+                  </p>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isSaving}
+              disabled={isSaving || !scheduledStartLocal}
               onClick={(e) => {
                 e.preventDefault()
-                applyEnabled(true)
+                applyEnabled(true, datetimeLocalToIso(scheduledStartLocal))
               }}
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enable maintenance"}
