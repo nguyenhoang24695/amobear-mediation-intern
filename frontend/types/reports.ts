@@ -11,6 +11,8 @@ export interface CustomReportQueryRequest {
   commissionTeamIds?: string[] | null
   sortBy?: string | null
   sortDir?: string
+  iapRevenueModeDefault?: number | null
+  iapRevenueModeOverrides?: Record<string, number> | null
 }
 
 export interface CustomReportMetricFilter {

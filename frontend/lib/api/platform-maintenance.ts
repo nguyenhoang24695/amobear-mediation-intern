@@ -8,9 +8,23 @@ export type PlatformMaintenanceStatus = {
   updatedByEmail: string | null
 }
 
+export type PlatformMaintenanceHistoryItem = {
+  id: number
+  enabled: boolean
+  maintenanceStartedAt: string | null
+  estimatedEndAt: string | null
+  changedAt: string
+  changedByEmail: string | null
+}
+
 type MaintenanceResponse = {
   success: boolean
   data: PlatformMaintenanceStatus
+}
+
+type MaintenanceHistoryResponse = {
+  success: boolean
+  data: PlatformMaintenanceHistoryItem[]
 }
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "")
@@ -37,6 +51,14 @@ export async function getAdminMaintenanceStatus(): Promise<PlatformMaintenanceSt
 
 export async function setMaintenanceEnabled(enabled: boolean): Promise<PlatformMaintenanceStatus> {
   const response = await apiClient.put<MaintenanceResponse>("/api/v1/admin/platform/maintenance", { enabled })
+  return response.data
+}
+
+export async function getMaintenanceHistory(limit = 50): Promise<PlatformMaintenanceHistoryItem[]> {
+  const response = await apiClient.get<MaintenanceHistoryResponse>(
+    "/api/v1/admin/platform/maintenance/history",
+    { limit },
+  )
   return response.data
 }
 

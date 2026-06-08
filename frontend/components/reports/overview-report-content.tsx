@@ -20,12 +20,19 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { format, parse, parseISO } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, GripVertical, Loader2, RefreshCw, Save, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Copy, Filter, GripVertical, Loader2, RefreshCw, Save, X } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -55,6 +62,8 @@ import { cn } from "@/lib/utils"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
+import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams"
 import type {
   OverviewMetricId,
@@ -70,6 +79,7 @@ import type {
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const APPS_PER_PAGE = 20
+const OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY = "overview-report-mobile-filters-sticker-top-v1"
 const SHARED_APP_CONFLICTS_DISPLAY_MAX = 5
 
 const OVERVIEW_METRICS: { id: OverviewMetricId; label: string }[] = [
@@ -714,6 +724,19 @@ export function OverviewReportContent() {
     DEFAULT_OVERVIEW_PARAMETERS,
   )
   const [metricsCollapsed, setMetricsCollapsed] = useState(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const isMobile = useIsMobile()
+  const {
+    containerRef: mobileFiltersStickerRef,
+    topPx: mobileFiltersStickerTop,
+    consumeDragClick: consumeMobileFiltersStickerDragClick,
+    dragProps: mobileFiltersStickerDragProps,
+  } = useDraggableVerticalFixed(OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY)
+  const overviewStickyFirstColWidth = isMobile
+    ? "min-w-[112px] max-w-[112px] w-[112px]"
+    : "min-w-[280px]"
+  const overviewStickyNestedRowPadding = isMobile ? "pl-6" : "pl-10"
+  const overviewStickyPagerPadding = isMobile ? "pl-7" : "pl-12"
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -739,6 +762,9 @@ export function OverviewReportContent() {
   )
 
   const colsPerMonth = visibleMetrics.length * visibleParameters.length
+
+  const hasPendingApply = fromMonth !== appliedFrom || toMonth !== appliedTo
+  const selectedMetricsCount = visibleMetrics.length + visibleParameters.length
 
   const toggleMetric = (metricId: OverviewMetricId) => {
     setSelectedMetrics((prev) => {
@@ -1020,6 +1046,13 @@ export function OverviewReportContent() {
     }, 150)
   }
 
+  const handleApplyFilters = async () => {
+    await applyRange()
+    if (isMobile) {
+      setMobileFiltersOpen(false)
+    }
+  }
+
   const saveFilter = async () => {
     if (fromMonth > toMonth) {
       toast.error("From month must be on or before to month.")
@@ -1172,6 +1205,188 @@ export function OverviewReportContent() {
     })
   }, [allTeams, teamAppsCache])
 
+  const renderOverviewFilterFields = () => (
+    <>
+      <div className="space-y-1">
+        <Label htmlFor="overview-year" className="text-xs">
+          Year
+        </Label>
+        <Select value={selectYearValue} onValueChange={handleYearChange}>
+          <SelectTrigger id="overview-year" className={cn("h-9", isMobile ? "w-full" : "w-[120px]")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className={cn(isMobile && "z-[100]")}>
+            {yearOptions.map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="overview-from" className="text-xs">
+          From
+        </Label>
+        <Input
+          id="overview-from"
+          type="month"
+          value={fromMonth || defaultRange.from}
+          onChange={(e) => setFromMonth(e.target.value || defaultRange.from)}
+          className={cn("h-9", isMobile ? "w-full" : "w-[160px]")}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="overview-to" className="text-xs">
+          To
+        </Label>
+        <Input
+          id="overview-to"
+          type="month"
+          value={toMonth || defaultRange.to}
+          onChange={(e) => setToMonth(e.target.value || defaultRange.to)}
+          className={cn("h-9", isMobile ? "w-full" : "w-[160px]")}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="overview-teams" className="text-xs">
+          Teams
+        </Label>
+        <GroupedTeamMultiSelect
+          id="overview-teams"
+          teams={filterTeams}
+          teamGroups={filterTeamGroups}
+          selectedTeamIds={selectedTeamIds}
+          onSelectedTeamIdsChange={setSelectedTeamIds}
+          disabled={loadingFilterTeams}
+          placeholder={canScopeManagedTeams ? "Teams in your scope" : "All teams"}
+          searchPlaceholder="Search teams..."
+          emptySearchMessage="No teams found."
+          emptyTeamsMessage="No teams found."
+          triggerClassName={cn(
+            "h-9 min-h-9",
+            isMobile ? "w-full max-w-none" : "w-[200px] max-w-[200px]",
+          )}
+          popoverClassName={cn("w-[320px] p-0", isMobile && "z-[100]")}
+          popoverModal={isMobile ? false : undefined}
+        />
+      </div>
+    </>
+  )
+
+  const renderOverviewFilterActions = (mobileLayout = false) => (
+    <>
+      <Button
+        type="button"
+        className={cn("h-9 bg-blue-600 hover:bg-blue-700", mobileLayout && "flex-1")}
+        disabled={loading}
+        onClick={() => void (mobileLayout ? handleApplyFilters() : applyRange())}
+      >
+        Apply
+      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            disabled={savingFilter}
+            onClick={() => void saveFilter()}
+            aria-label="Save filter"
+          >
+            {savingFilter ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Save current filter to your settings</TooltipContent>
+      </Tooltip>
+    </>
+  )
+
+  const renderOverviewFiltersBody = () => (
+    <div
+      className={cn(
+        "gap-3 [&_label]:leading-none",
+        isMobile ? "flex flex-col" : "flex flex-wrap items-end",
+      )}
+    >
+      {renderOverviewFilterFields()}
+      {renderOverviewFilterActions(isMobile)}
+    </div>
+  )
+
+  const renderOverviewMobileFiltersAndMetricsBody = () => (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 [&_label]:leading-none">{renderOverviewFilterFields()}</div>
+      <div className="border-t border-slate-100 pt-4">{renderOverviewMetricsBody("px-0 py-0")}</div>
+      <div className="flex gap-2 border-t border-slate-100 pt-4">{renderOverviewFilterActions(true)}</div>
+    </div>
+  )
+
+  const renderOverviewMetricsBody = (className?: string) => (
+    <div className={cn("space-y-1", className ?? "p-4")}>
+      <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+        Metrics ({visibleMetrics.length})
+      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleMetricDragEnd}
+      >
+        <SortableContext items={metricOrder} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1">
+            {metricOrder.map((metricId) => {
+              const metric = OVERVIEW_METRICS.find((item) => item.id === metricId)
+              if (!metric) return null
+              return (
+                <SortableOverviewMetricItem
+                  key={metric.id}
+                  id={metric.id}
+                  label={metric.label}
+                  selected={selectedMetrics.includes(metric.id)}
+                  onToggle={toggleMetric}
+                />
+              )
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      <div className="my-4 border-t border-slate-100" />
+
+      <div className="mb-3 text-xs font-medium uppercase tracking-wider text-emerald-700">
+        Parameters ({visibleParameters.length})
+      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleParameterDragEnd}
+      >
+        <SortableContext items={parameterOrder} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1">
+            {parameterOrder.map((parameterId) => {
+              const parameter = OVERVIEW_PARAMETERS.find((item) => item.id === parameterId)
+              if (!parameter) return null
+              return (
+                <SortableOverviewParameterItem
+                  key={parameter.id}
+                  id={parameter.id}
+                  label={parameter.label}
+                  selected={selectedParameters.includes(parameter.id)}
+                  onToggle={toggleParameter}
+                />
+              )
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  )
+
   return (
     <div className="space-y-6">
       <Card className="gap-0 overflow-hidden border-slate-200 py-0 shadow-sm">
@@ -1188,7 +1403,10 @@ export function OverviewReportContent() {
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 shrink-0 border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                className={cn(
+                  "h-9 w-9 shrink-0 border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900",
+                  isMobile && "hidden",
+                )}
                 onClick={() => setFilterExpanded((prev) => !prev)}
                 aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
                 aria-expanded={filterExpanded}
@@ -1199,99 +1417,73 @@ export function OverviewReportContent() {
             <TooltipContent>{filterExpanded ? "Hide filters" : "Show filters"}</TooltipContent>
           </Tooltip>
         </CardHeader>
-        {filterExpanded ? (
+        {!isMobile && filterExpanded ? (
           <CardContent className="flex flex-wrap items-end gap-3 px-4 py-3 [&_label]:leading-none">
-            <div className="space-y-1">
-              <Label htmlFor="overview-year" className="text-xs">
-                Year
-              </Label>
-              <Select value={selectYearValue} onValueChange={handleYearChange}>
-                <SelectTrigger id="overview-year" className="h-9 w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="overview-from" className="text-xs">
-                From
-              </Label>
-              <Input
-                id="overview-from"
-                type="month"
-                value={fromMonth || defaultRange.from}
-                onChange={(e) => setFromMonth(e.target.value || defaultRange.from)}
-                className="h-9 w-[160px]"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="overview-to" className="text-xs">
-                To
-              </Label>
-              <Input
-                id="overview-to"
-                type="month"
-                value={toMonth || defaultRange.to}
-                onChange={(e) => setToMonth(e.target.value || defaultRange.to)}
-                className="h-9 w-[160px]"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="overview-teams" className="text-xs">
-                Teams
-              </Label>
-              <GroupedTeamMultiSelect
-                id="overview-teams"
-                teams={filterTeams}
-                teamGroups={filterTeamGroups}
-                selectedTeamIds={selectedTeamIds}
-                onSelectedTeamIdsChange={setSelectedTeamIds}
-                disabled={loadingFilterTeams}
-                placeholder={canScopeManagedTeams ? "Teams in your scope" : "All teams"}
-                searchPlaceholder="Search teams..."
-                emptySearchMessage="No teams found."
-                emptyTeamsMessage="No teams found."
-                triggerClassName="h-9 min-h-9 w-[200px] max-w-[200px]"
-                popoverClassName="w-[320px] p-0"
-              />
-            </div>
-            <Button
-              type="button"
-              className="h-9 bg-blue-600 hover:bg-blue-700"
-              disabled={loading}
-              onClick={() => void applyRange()}
-            >
-              Apply
-            </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  disabled={savingFilter}
-                  onClick={() => void saveFilter()}
-                  aria-label="Save filter"
-                >
-                  {savingFilter ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Save current filter to your settings</TooltipContent>
-            </Tooltip>
+            {renderOverviewFiltersBody()}
           </CardContent>
         ) : null}
       </Card>
+
+      {isMobile ? (
+        <>
+          <div
+            ref={mobileFiltersStickerRef}
+            className="fixed right-0 z-40 flex touch-none flex-col items-end gap-2"
+            style={
+              mobileFiltersStickerTop == null
+                ? { top: "50%", transform: "translateY(-50%)" }
+                : { top: mobileFiltersStickerTop }
+            }
+          >
+            <button
+              type="button"
+              {...mobileFiltersStickerDragProps}
+              onClick={() => {
+                if (consumeMobileFiltersStickerDragClick()) return
+                setMobileFiltersOpen(true)
+              }}
+              className={cn(
+                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg active:cursor-grabbing",
+                hasPendingApply && "ring-2 ring-blue-300",
+              )}
+              aria-label="Open filters and metrics. Drag up or down to reposition."
+            >
+              <Filter className="h-4 w-4 text-slate-600" aria-hidden />
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                style={{ writingMode: "vertical-rl" }}
+              >
+                Filters & Metrics
+              </span>
+              <Badge
+                variant="secondary"
+                className="h-5 min-w-5 justify-center px-1 text-[10px] font-semibold"
+              >
+                {selectedMetricsCount}
+              </Badge>
+            </button>
+          </div>
+
+          <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+            <SheetContent
+              side="right"
+              className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
+            >
+              <SheetHeader className="shrink-0 border-b border-slate-100 px-4 py-4 text-left">
+                <SheetTitle className="text-base">Filters & Metrics</SheetTitle>
+                <SheetDescription>
+                  Period, teams, metrics, and parameters. Click Apply to refresh data.
+                </SheetDescription>
+              </SheetHeader>
+              <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+                <div className="box-border min-w-0 max-w-full overflow-x-hidden p-4">
+                  {renderOverviewMobileFiltersAndMetricsBody()}
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : null}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -1320,7 +1512,7 @@ export function OverviewReportContent() {
         <div
           className={cn(
             "grid grid-cols-1 gap-6",
-            metricsCollapsed ? "xl:grid-cols-[1fr_3.5rem]" : "xl:grid-cols-[1fr_18rem]",
+            !isMobile && (metricsCollapsed ? "xl:grid-cols-[1fr_3.5rem]" : "xl:grid-cols-[1fr_18rem]"),
           )}
         >
           <Card className="overflow-hidden border-slate-200">
@@ -1387,7 +1579,10 @@ export function OverviewReportContent() {
                     <TableRow className="h-10 bg-slate-50/95 hover:bg-slate-50/95">
                       <TableHead
                         rowSpan={3}
-                        className="sticky left-0 top-0 z-50 min-w-[280px] border-r bg-slate-50 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
+                        className={cn(
+                          "sticky left-0 top-0 z-50 border-r bg-slate-50 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
+                          overviewStickyFirstColWidth,
+                        )}
                       >
                       </TableHead>
                       {months.map((month) => (
@@ -1479,8 +1674,13 @@ export function OverviewReportContent() {
                       return (
                         <Fragment key={team.teamId}>
                           <TableRow className="hover:bg-slate-50/60">
-                            <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-white py-2 font-semibold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
-                              <div className="flex items-center gap-1">
+                            <TableCell
+                              className={cn(
+                                "sticky left-0 z-20 border-r bg-white py-2 font-semibold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                overviewStickyFirstColWidth,
+                              )}
+                            >
+                              <div className="flex min-w-0 items-center gap-1">
                                 {canExpand ? (
                                   <Button
                                     type="button"
@@ -1504,7 +1704,9 @@ export function OverviewReportContent() {
                                 ) : (
                                   <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
                                 )}
-                                <span>{team.teamName}</span>
+                                <span className="min-w-0 flex-1 truncate" title={team.teamName}>
+                                  {team.teamName}
+                                </span>
                               </div>
                             </TableCell>
                             <OverviewMonthCells
@@ -1516,8 +1718,14 @@ export function OverviewReportContent() {
                           </TableRow>
                           {expanded && appsLoading ? (
                             <TableRow className="bg-slate-50/40 hover:bg-slate-50/60">
-                              <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-slate-50 py-4 pl-10 text-sm text-slate-500 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
-                                <span className="inline-flex items-center gap-2">
+                              <TableCell
+                                className={cn(
+                                  "sticky left-0 z-20 border-r bg-slate-50 py-4 text-sm text-slate-500 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  overviewStickyFirstColWidth,
+                                  overviewStickyNestedRowPadding,
+                                )}
+                              >
+                                <span className="inline-flex min-w-0 items-center gap-2 truncate">
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                   Loading apps…
                                 </span>
@@ -1544,8 +1752,16 @@ export function OverviewReportContent() {
                           ) : null}
                           {expanded && appLoadError ? (
                             <TableRow className="bg-red-50/40 hover:bg-red-50/60">
-                              <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-red-50 py-4 pl-10 text-sm text-red-700 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
-                                Error loading apps: {appLoadError}
+                              <TableCell
+                                className={cn(
+                                  "sticky left-0 z-20 border-r bg-red-50 py-4 text-sm text-red-700 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  overviewStickyFirstColWidth,
+                                  overviewStickyNestedRowPadding,
+                                )}
+                              >
+                                <span className="block truncate" title={`Error loading apps: ${appLoadError}`}>
+                                  Error loading apps: {appLoadError}
+                                </span>
                               </TableCell>
                               {months.map((month) =>
                                 visibleMetrics.map((metric, metricIndex) => {
@@ -1575,7 +1791,13 @@ export function OverviewReportContent() {
                                 key={`${team.teamId}-${app.appId}`}
                                 className="bg-slate-50/40 hover:bg-slate-50/60"
                               >
-                                <TableCell className="sticky left-0 z-20 min-w-[280px] border-r bg-slate-50 py-2 pl-10 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
+                                <TableCell
+                                  className={cn(
+                                    "sticky left-0 z-20 border-r bg-slate-50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                    overviewStickyFirstColWidth,
+                                    overviewStickyNestedRowPadding,
+                                  )}
+                                >
                                   <div className="flex min-w-0 items-center justify-between gap-3">
                                     <div className="flex min-w-0 flex-1 items-center gap-2">
                                       <Avatar className="h-8 w-8 shrink-0 rounded-lg">
@@ -1629,7 +1851,13 @@ export function OverviewReportContent() {
                             ))}
                           {expanded && !appLoadError && appCount > APPS_PER_PAGE ? (
                             <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
-                              <TableCell className="sticky left-0 z-20 border-r bg-slate-50 py-2 pl-12 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]">
+                              <TableCell
+                                className={cn(
+                                  "sticky left-0 z-20 border-r bg-slate-50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  overviewStickyFirstColWidth,
+                                  overviewStickyPagerPadding,
+                                )}
+                              >
                                 <TeamAppsPager
                                   currentPage={safeAppPage}
                                   totalPages={totalAppPages}
@@ -1666,7 +1894,7 @@ export function OverviewReportContent() {
             </CardContent>
           </Card>
 
-          <Card className="flex min-h-[320px] flex-col border-slate-200 xl:min-h-0">
+          <Card className={cn("flex min-h-[320px] flex-col border-slate-200 xl:min-h-0", isMobile && "hidden")}>
             <CardHeader
               className={cn(
                 "border-b border-slate-100",
@@ -1717,63 +1945,7 @@ export function OverviewReportContent() {
             ) : (
               <CardContent className="flex min-h-0 flex-1 flex-col p-0">
                 <ScrollArea className="max-h-[min(70vh,640px)] flex-1">
-                  <div className="space-y-1 p-4">
-                    <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Metrics ({visibleMetrics.length})
-                    </div>
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleMetricDragEnd}
-                    >
-                      <SortableContext items={metricOrder} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-1">
-                          {metricOrder.map((metricId) => {
-                            const metric = OVERVIEW_METRICS.find((item) => item.id === metricId)
-                            if (!metric) return null
-                            return (
-                              <SortableOverviewMetricItem
-                                key={metric.id}
-                                id={metric.id}
-                                label={metric.label}
-                                selected={selectedMetrics.includes(metric.id)}
-                                onToggle={toggleMetric}
-                              />
-                            )
-                          })}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-
-                    <div className="my-4 border-t border-slate-100" />
-
-                    <div className="mb-3 text-xs font-medium uppercase tracking-wider text-emerald-700">
-                      Parameters ({visibleParameters.length})
-                    </div>
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleParameterDragEnd}
-                    >
-                      <SortableContext items={parameterOrder} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-1">
-                          {parameterOrder.map((parameterId) => {
-                            const parameter = OVERVIEW_PARAMETERS.find((item) => item.id === parameterId)
-                            if (!parameter) return null
-                            return (
-                              <SortableOverviewParameterItem
-                                key={parameter.id}
-                                id={parameter.id}
-                                label={parameter.label}
-                                selected={selectedParameters.includes(parameter.id)}
-                                onToggle={toggleParameter}
-                              />
-                            )
-                          })}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  </div>
+                  {renderOverviewMetricsBody()}
                 </ScrollArea>
               </CardContent>
             )}
