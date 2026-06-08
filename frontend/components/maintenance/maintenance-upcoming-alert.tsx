@@ -1,7 +1,5 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { usePathname } from "next/navigation"
 import { Construction } from "lucide-react"
 import {
   AlertDialog,
@@ -27,51 +25,39 @@ function formatDateTime(iso: string | null): string {
 
 interface MaintenanceUpcomingAlertProps {
   status: PlatformMaintenanceStatus
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-export function MaintenanceUpcomingAlert({ status }: MaintenanceUpcomingAlertProps) {
-  const pathname = usePathname()
-  const previousPathRef = useRef<string | null>(null)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!status.isUpcoming) return
-
-    if (previousPathRef.current !== null && previousPathRef.current !== pathname) {
-      setOpen(true)
-    }
-
-    previousPathRef.current = pathname
-  }, [pathname, status.isUpcoming])
-
-  if (!status.isUpcoming) return null
-
+export function MaintenanceUpcomingAlert({ status, open, onOpenChange }: MaintenanceUpcomingAlertProps) {
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
             <Construction className="h-6 w-6 text-amber-600" />
           </div>
           <AlertDialogTitle className="text-center">Maintenance starting soon</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2 text-center">
-            <span className="block">
-              System maintenance is scheduled to begin at{" "}
-              <strong>{formatDateTime(status.enabledAt)}</strong>.
-            </span>
-            <span className="block">
-              Please finish your current work quickly or wait until maintenance is complete to avoid
-              errors or having to redo your work.
-            </span>
-            {status.estimatedEndAt && (
-              <span className="block text-xs text-slate-500">
-                Estimated completion: {formatDateTime(status.estimatedEndAt)}
-              </span>
-            )}
+          <AlertDialogDescription asChild>
+            <div className="space-y-2 text-center text-sm text-muted-foreground">
+              <p>
+                System maintenance is scheduled to begin at{" "}
+                <strong className="text-foreground">{formatDateTime(status.enabledAt)}</strong>.
+              </p>
+              <p>
+                Please finish your current work quickly or wait until maintenance is complete to avoid
+                errors or having to redo your work.
+              </p>
+              {status.estimatedEndAt && (
+                <p className="text-xs text-slate-500">
+                  Estimated completion: {formatDateTime(status.estimatedEndAt)}
+                </p>
+              )}
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="sm:justify-center">
-          <AlertDialogAction onClick={() => setOpen(false)}>Got it</AlertDialogAction>
+          <AlertDialogAction onClick={() => onOpenChange(false)}>Got it</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

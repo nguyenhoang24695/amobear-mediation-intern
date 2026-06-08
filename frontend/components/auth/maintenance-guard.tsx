@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/enums/user-role"
-import { getMaintenanceStatus, type PlatformMaintenanceStatus } from "@/lib/api/platform-maintenance"
+import {
+  getMaintenanceStatus,
+  type PlatformMaintenanceStatus,
+} from "@/lib/api/platform-maintenance"
 import { MaintenanceUpcomingAlert } from "@/components/maintenance/maintenance-upcoming-alert"
 
 const MAINTENANCE_NOTICE_PATH = "/maintenance"
@@ -22,11 +25,15 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
   const [isChecking, setIsChecking] = useState(true)
   const [canRender, setCanRender] = useState(false)
   const [status, setStatus] = useState<PlatformMaintenanceStatus | null>(null)
-  const pollDelayRef = useRef(POLL_INTERVAL_MS)
+  const [upcomingAlertOpen, setUpcomingAlertOpen] = useState(false)
 
-  const applyStatus = useCallback(
-    (nextStatus: PlatformMaintenanceStatus) => {
-      setStatus(nextStatus)
+  const pollDelayRef = useRef(POLL_INTERVAL_MS)
+  const prevPathRef = useRef<string | null>(null)
+  const pathnameRef = useRef(pathname)
+  pathnameRef.current = pathname
+
+  const evaluateAccess = useCallback(
+    (nextStatus: PlatformMaintenanceStatus, path: string) => {
       pollDelayRef.current = nextStatus.isUpcoming ? POLL_INTERVAL_UPCOMING_MS : POLL_INTERVAL_MS
 
       if (!nextStatus.enabled || nextStatus.isUpcoming) {
@@ -43,7 +50,7 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
       const superAdmin = isSuperAdmin(user?.role)
 
       if (superAdmin) {
-        if (pathname !== MAINTENANCE_ADMIN_PATH) {
+        if (path !== MAINTENANCE_ADMIN_PATH) {
           router.replace(MAINTENANCE_ADMIN_PATH)
           setCanRender(false)
         } else {
@@ -52,16 +59,17 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
         return
       }
 
-      if (pathname !== MAINTENANCE_NOTICE_PATH) {
+      if (path !== MAINTENANCE_NOTICE_PATH) {
         router.replace(MAINTENANCE_NOTICE_PATH)
         setCanRender(false)
       } else {
         setCanRender(true)
       }
     },
-    [pathname, router],
+    [router],
   )
 
+  // Poll maintenance status (mount only — do not reset on route change)
   useEffect(() => {
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -70,7 +78,8 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
       try {
         const nextStatus = await getMaintenanceStatus()
         if (cancelled) return
-        applyStatus(nextStatus)
+        setStatus(nextStatus)
+        evaluateAccess(nextStatus, pathnameRef.current)
       } catch {
         if (!cancelled) setCanRender(true)
       } finally {
@@ -85,7 +94,6 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
       }, pollDelayRef.current)
     }
 
-    setIsChecking(true)
     checkMaintenance().then(() => {
       if (!cancelled) schedulePoll()
     })
@@ -94,7 +102,23 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
       cancelled = true
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [applyStatus])
+  }, [evaluateAccess])
+
+  // Route change: show upcoming warning + re-evaluate active redirects
+  useEffect(() => {
+    if (!status?.isUpcoming) {
+      prevPathRef.current = pathname
+      if (status) evaluateAccess(status, pathname)
+      return
+    }
+
+    if (prevPathRef.current !== null && prevPathRef.current !== pathname) {
+      setUpcomingAlertOpen(true)
+    }
+
+    prevPathRef.current = pathname
+    evaluateAccess(status, pathname)
+  }, [pathname, status, evaluateAccess])
 
   if (isChecking) {
     return (
@@ -113,7 +137,13 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
 
   return (
     <>
-      {status?.isUpcoming && <MaintenanceUpcomingAlert status={status} />}
+      {status?.isUpcoming && (
+        <MaintenanceUpcomingAlert
+          status={status}
+          open={upcomingAlertOpen}
+          onOpenChange={setUpcomingAlertOpen}
+        />
+      )}
       {children}
     </>
   )

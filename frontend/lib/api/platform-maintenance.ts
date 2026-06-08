@@ -33,6 +33,38 @@ type MaintenanceHistoryResponse = {
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "")
 
+/** Normalize API payload (camelCase or PascalCase) and derive flags from enabledAt. */
+export function normalizeMaintenanceStatus(raw: Record<string, unknown>): PlatformMaintenanceStatus {
+  const enabled = Boolean(raw.enabled ?? raw.Enabled)
+  const enabledAt = (raw.enabledAt ?? raw.EnabledAt ?? null) as string | null
+  const now = Date.now()
+  const startMs = enabledAt ? new Date(enabledAt).getTime() : null
+
+  const isUpcoming =
+    typeof raw.isUpcoming === "boolean"
+      ? raw.isUpcoming
+      : typeof raw.IsUpcoming === "boolean"
+        ? raw.IsUpcoming
+        : enabled && startMs != null && now < startMs
+
+  const isActive =
+    typeof raw.isActive === "boolean"
+      ? raw.isActive
+      : typeof raw.IsActive === "boolean"
+        ? raw.IsActive
+        : enabled && startMs != null && now >= startMs
+
+  return {
+    enabled,
+    enabledAt,
+    isActive,
+    isUpcoming,
+    estimatedEndAt: (raw.estimatedEndAt ?? raw.EstimatedEndAt ?? null) as string | null,
+    updatedAt: (raw.updatedAt ?? raw.UpdatedAt ?? "") as string,
+    updatedByEmail: (raw.updatedByEmail ?? raw.UpdatedByEmail ?? null) as string | null,
+  }
+}
+
 /** Public — no auth required. */
 export async function getMaintenanceStatus(): Promise<PlatformMaintenanceStatus> {
   const response = await fetch(`${API_BASE_URL}/api/v1/platform/maintenance`, {
@@ -44,24 +76,26 @@ export async function getMaintenanceStatus(): Promise<PlatformMaintenanceStatus>
     throw new Error(`Failed to fetch maintenance status: HTTP ${response.status}`)
   }
 
-  const json = (await response.json()) as MaintenanceResponse
-  return json.data
+  const json = (await response.json()) as { success: boolean; data: Record<string, unknown> }
+  return normalizeMaintenanceStatus(json.data)
 }
 
 export async function getAdminMaintenanceStatus(): Promise<PlatformMaintenanceStatus> {
-  const response = await apiClient.get<MaintenanceResponse>("/api/v1/admin/platform/maintenance")
-  return response.data
+  const response = await apiClient.get<{ success: boolean; data: Record<string, unknown> }>(
+    "/api/v1/admin/platform/maintenance",
+  )
+  return normalizeMaintenanceStatus(response.data)
 }
 
 export async function setMaintenanceEnabled(
   enabled: boolean,
   scheduledStartAt?: string | null,
 ): Promise<PlatformMaintenanceStatus> {
-  const response = await apiClient.put<MaintenanceResponse>("/api/v1/admin/platform/maintenance", {
-    enabled,
-    scheduledStartAt: scheduledStartAt ?? undefined,
-  })
-  return response.data
+  const response = await apiClient.put<{ success: boolean; data: Record<string, unknown> }>(
+    "/api/v1/admin/platform/maintenance",
+    { enabled, scheduledStartAt: scheduledStartAt ?? undefined },
+  )
+  return normalizeMaintenanceStatus(response.data)
 }
 
 export async function getMaintenanceHistory(limit = 50): Promise<PlatformMaintenanceHistoryItem[]> {
