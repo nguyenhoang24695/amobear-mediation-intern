@@ -99,7 +99,7 @@ function getActionCopy(action: ConfirmAction) {
     case "execute":
       return {
         title: "Execute request?",
-        description: "This will create Meta objects through the backend. Campaign, ad set, creative, and ad will start in PAUSED state.",
+        description: "This will create Meta objects through the backend. Campaign starts PAUSED; Ad Set and Ads start ACTIVE.",
       }
     case "retry":
       return {
