@@ -97,6 +97,13 @@ export const MOBILE_NAV_HUBS: Record<string, MobileNavHub> = {
         description: "Custom and saved reports",
         isShow: () => hasScreenFunction("s-reports", "view"),
       },
+      {
+        label: "My Reports",
+        href: "/reports/my-reports",
+        icon: PieChart,
+        description: "Adjust-style flat report builder",
+        isShow: () => hasScreenFunction("s-my-reports", "view"),
+      },
     ],
   },
   "meta-ads": {
@@ -408,7 +415,7 @@ export const MOBILE_NAV_HUBS: Record<string, MobileNavHub> = {
         label: "App Mappings",
         href: "/admob-ads/app-mappings",
         icon: GitMerge,
-        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-apps", fn)),
+        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-admob-app-mappings", fn)),
       },
     ],
   },

@@ -19,19 +19,10 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
-  BarChart2,
-  Download,
   Filter,
   GripVertical,
   Loader2,
-  Mail,
-  MoreHorizontal,
-  Pencil,
-  RefreshCw,
-  Share2,
   SlidersHorizontal,
-  Star,
-  Table2,
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -47,15 +38,17 @@ import {
 } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
+import { MyReportsTableActionBar, MyReportsToolbar } from "@/components/my-reports/my-reports-toolbar"
+import { MyReportCharts } from "@/components/my-reports/my-report-charts"
 import { exportReportTableExcel } from "@/lib/reports/export-report-table"
 import {
+  MY_REPORT_ADJUST_METRIC_IDS,
   MY_REPORT_ADMOB_METRIC_IDS,
   MY_REPORT_DIMENSION_IDS,
   MY_REPORT_SUMMARY_METRIC_IDS,
@@ -77,17 +70,15 @@ import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams
 import type { CommissionTeamOption } from "@/lib/reports/commission-team-utils"
 import type { OrgTeamGroup } from "@/lib/api/services"
 import type { App } from "@/types/api"
+import { useMyReportTeamAppGroups } from "@/components/my-reports/hooks/use-my-report-team-app-groups"
+import {
+  resolveAppSelectionLabel,
+  resolveMyReportAppPool,
+  resolveTeamAppIdsForTeams,
+} from "@/lib/reports/my-report-app-selection"
+import { isCompareActive } from "@/lib/reports/my-report-compare-utils"
 
 const MY_REPORT_MOBILE_STICKER_KEY = "my-report-mobile-filters-sticker-top-v1"
-
-function resolveAppSelectionLabel(appIds: string[], availableApps: App[]): string {
-  if (appIds.length === 0) return "All apps"
-  if (appIds.length === 1) {
-    const app = availableApps.find((a) => a.appId === appIds[0])
-    return app?.displayName ?? appIds[0]
-  }
-  return `${appIds.length} apps`
-}
 
 function resolveTeamsSelectionLabel(
   teamIds: string[],
@@ -96,16 +87,48 @@ function resolveTeamsSelectionLabel(
   if (teamIds.length === 0) return "All teams"
   if (teamIds.length === 1) {
     const team = teams.find((t) => t.teamId === teamIds[0])
-    return team?.teamName ?? teamIds[0]
+    return team?.label ?? teamIds[0]
   }
   return `${teamIds.length} teams`
 }
 
-function buildFilterTagContext(config: MyReportConfig, availableApps: App[], teams: CommissionTeamOption[]) {
+function buildFilterTagContext(
+  config: MyReportConfig,
+  permittedApps: App[],
+  teamAppsUnion: App[],
+  teams: CommissionTeamOption[],
+) {
+  const appPool = resolveMyReportAppPool(config.appSelectionMode, permittedApps, teamAppsUnion)
   return {
-    selectedAppLabel: resolveAppSelectionLabel(config.selectedAppIds, availableApps),
+    selectedAppLabel: resolveAppSelectionLabel(
+      config.selectedAppIds,
+      appPool,
+      config.appSelectionMode,
+    ),
     selectedTeamsLabel: resolveTeamsSelectionLabel(config.selectedCommissionTeamIds, teams),
   }
+}
+
+function SortableDimensionItem({
+  id,
+  label,
+}: {
+  id: string
+  label: string
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
+      className="flex items-center gap-2 rounded bg-gray-50 px-2 py-2"
+    >
+      <button type="button" className="cursor-grab touch-none text-gray-300" {...attributes} {...listeners}>
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <span className="flex-1 truncate text-sm text-gray-700">{label}</span>
+    </div>
+  )
 }
 
 function SortableMetricItem({
@@ -135,30 +158,6 @@ function SortableMetricItem({
   )
 }
 
-function Phase2DisabledButton({
-  children,
-  className,
-}: {
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex">
-          <button
-            type="button"
-            disabled
-            className={cn("cursor-not-allowed opacity-50", className)}
-          >
-            {children}
-          </button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>Coming in Phase 2</TooltipContent>
-    </Tooltip>
-  )
-}
 
 export function MyReportsContent() {
   const isMobile = useIsMobile()
@@ -167,7 +166,7 @@ export function MyReportsContent() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTableOpen, setEditTableOpen] = useState(true)
   const [editTab, setEditTab] = useState<"dimensions" | "metrics">("metrics")
-  const [metricTab, setMetricTab] = useState<"summary" | "admob">("summary")
+  const [metricTab, setMetricTab] = useState<"summary" | "admob" | "adjust">("summary")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [dataConfigOpen, setDataConfigOpen] = useState(false)
   const [autoApplied, setAutoApplied] = useState(false)
@@ -256,14 +255,47 @@ export function MyReportsContent() {
     toggleDimension,
     toggleMetric,
     reorderMetrics,
+    reorderDimensions,
+    togglePinColumn,
     applySort,
     toggleConfigKey,
     resetConfigVisibility,
     hasPendingApply,
   } = useMyReportConfig(catalogDimensionsPlaceholder)
 
-  const { catalog, catalogLoading, catalogError, data, loading, error, refetch } =
-    useMyReportQuery(applied)
+  const needsTeamAppGroups =
+    draft.appSelectionMode === "by_team" ||
+    applied?.appSelectionMode === "by_team" ||
+    draft.selectedCommissionTeamIds.length > 0 ||
+    (applied?.selectedCommissionTeamIds.length ?? 0) > 0
+  const { groups: teamAppGroups, unionApps: teamAppsUnion } = useMyReportTeamAppGroups(
+    filterTeams,
+    needsTeamAppGroups,
+  )
+
+  const teamScopedAppIds = useMemo(
+    () =>
+      resolveTeamAppIdsForTeams(
+        applied?.selectedCommissionTeamIds ?? draft.selectedCommissionTeamIds,
+        teamAppGroups,
+      ),
+    [applied?.selectedCommissionTeamIds, draft.selectedCommissionTeamIds, teamAppGroups],
+  )
+
+  const {
+    catalog,
+    catalogLoading,
+    catalogError,
+    data,
+    mergedRows,
+    mergedTotals,
+    compareTotals,
+    totalsDeltaPct,
+    loading,
+    error,
+    emptyAppIntersection,
+    refetch,
+  } = useMyReportQuery(applied, teamScopedAppIds)
 
   useEffect(() => {
     if (autoApplied || catalogLoading || catalogError) return
@@ -284,9 +316,11 @@ export function MyReportsContent() {
     return map
   }, [metricCatalog])
 
+  const compareActive = Boolean(applied && isCompareActive(applied.compareToPreset))
+
   const draftFilterContext = useMemo(
-    () => buildFilterTagContext(draft, availableApps, filterTeams),
-    [draft, availableApps, filterTeams],
+    () => buildFilterTagContext(draft, availableApps, teamAppsUnion, filterTeams),
+    [draft, availableApps, teamAppsUnion, filterTeams],
   )
 
   const externalFilterTags = useMemo(() => {
@@ -307,13 +341,14 @@ export function MyReportsContent() {
         filterTeams={filterTeams}
         filterTeamGroups={filterTeamGroups}
         loadingFilterTeams={loadingFilterTeams}
+        teamAppsUnion={teamAppsUnion}
       />
     ))
 
   const displayConfig = applied ?? draft
 
-  const tableRows = data?.rows ?? []
-  const tableTotals = data?.totals ?? {}
+  const tableRows = mergedRows
+  const tableTotals = mergedTotals
 
   useEffect(() => {
     setColumnFiltersByColumn({})
@@ -373,6 +408,12 @@ export function MyReportsContent() {
     reorderMetrics(String(active.id), String(over.id))
   }
 
+  const handleDimensionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    reorderDimensions(String(active.id), String(over.id))
+  }
+
   const handleDataConfigReset = useCallback(() => {
     resetConfigVisibility()
   }, [resetConfigVisibility])
@@ -396,6 +437,11 @@ export function MyReportsContent() {
       rows: tableRows,
       totals: tableTotals,
       filenamePrefix: "my-report",
+      compareActive,
+      compareTotals,
+      totalsDeltaPct,
+      rowCompare: tableRows.map((row) => row.__compare ?? {}),
+      rowDeltaPct: tableRows.map((row) => row.__deltaPct ?? {}),
     })
   }
 
@@ -471,24 +517,48 @@ export function MyReportsContent() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">
           {editTab === "dimensions" ? (
-            <div className="space-y-1">
-              {dimensionCatalog.map((dim) => (
-                <label
-                  key={dim.id}
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
-                >
-                  <Checkbox
-                    checked={draft.dimensions.includes(dim.id)}
-                    onCheckedChange={() => toggleDimension(dim.id)}
-                  />
-                  <span className="text-sm text-gray-700">{dim.label}</span>
-                </label>
-              ))}
-            </div>
+            <>
+              <div className="space-y-1">
+                {dimensionCatalog.map((dim) => (
+                  <label
+                    key={dim.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+                  >
+                    <Checkbox
+                      checked={draft.dimensions.includes(dim.id)}
+                      onCheckedChange={() => toggleDimension(dim.id)}
+                    />
+                    <span className="text-sm text-gray-700">{dim.label}</span>
+                  </label>
+                ))}
+              </div>
+              {draft.dimensions.length > 0 ? (
+                <div className="mt-4 space-y-1">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Dimension order
+                  </p>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDimensionDragEnd}
+                  >
+                    <SortableContext items={draft.dimensions} strategy={verticalListSortingStrategy}>
+                      {draft.dimensions.map((dimId) => (
+                        <SortableDimensionItem
+                          key={dimId}
+                          id={dimId}
+                          label={dimensionCatalog.find((d) => d.id === dimId)?.label ?? dimId}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              ) : null}
+            </>
           ) : (
             <>
-              <div className="mb-3 flex gap-2">
-                {(["summary", "admob"] as const).map((tab) => (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {(["summary", "admob", "adjust"] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -504,7 +574,9 @@ export function MyReportsContent() {
               </div>
               {metricTab === "summary"
                 ? renderMetricPickerList(MY_REPORT_SUMMARY_METRIC_IDS)
-                : renderMetricPickerList(MY_REPORT_ADMOB_METRIC_IDS)}
+                : metricTab === "admob"
+                  ? renderMetricPickerList(MY_REPORT_ADMOB_METRIC_IDS)
+                  : renderMetricPickerList(MY_REPORT_ADJUST_METRIC_IDS)}
               <div className="mt-4 space-y-1">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
                   Column order
@@ -539,52 +611,17 @@ export function MyReportsContent() {
         <span className="text-xs text-gray-600">My Reports</span>
       </div>
 
-      <div className="flex items-center justify-between gap-3 px-6 pb-4">
-        <div className="flex min-w-0 items-center gap-2">
-          {isEditingTitle ? (
-            <input
-              autoFocus
-              value={reportTitle}
-              onChange={(e) => setReportTitle(e.target.value)}
-              onBlur={() => setIsEditingTitle(false)}
-              onKeyDown={(e) => e.key === "Enter" && setIsEditingTitle(false)}
-              className="border-b-2 border-blue-500 bg-transparent text-2xl font-semibold outline-none"
-            />
-          ) : (
-            <h1 className="truncate text-2xl font-semibold text-gray-900">{reportTitle}</h1>
-          )}
-          <button type="button" onClick={() => setIsEditingTitle(true)} className="rounded p-1 hover:bg-gray-100">
-            <Pencil className="h-4 w-4 text-gray-400" />
-          </button>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Phase2DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-            <Star className="h-5 w-5 text-gray-400" />
-          </Phase2DisabledButton>
-          <Phase2DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-            <Mail className="h-5 w-5 text-gray-400" />
-          </Phase2DisabledButton>
-          <Phase2DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-            <Share2 className="h-5 w-5 text-gray-400" />
-          </Phase2DisabledButton>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            disabled={!canExportReports || tableRows.length === 0}
-            onClick={handleExport}
-          >
-            <Download className="h-5 w-5 text-gray-400" />
-          </Button>
-          <Phase2DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-            <MoreHorizontal className="h-5 w-5 text-gray-400" />
-          </Phase2DisabledButton>
-          <Phase2DisabledButton className="ml-2 h-9 rounded-md bg-blue-600 px-5 text-sm font-medium text-white">
-            Save
-          </Phase2DisabledButton>
-        </div>
-      </div>
+      <MyReportsToolbar
+        reportTitle={reportTitle}
+        isEditingTitle={isEditingTitle}
+        onTitleChange={setReportTitle}
+        onEditingTitleChange={setIsEditingTitle}
+        canExport={canExportReports}
+        exportDisabled={tableRows.length === 0}
+        onExport={handleExport}
+        appliedConfig={applied}
+        orgId={orgId}
+      />
 
       {!isMobile ? (
         <div className="flex flex-wrap items-center gap-2 px-6 pb-3">
@@ -610,47 +647,25 @@ export function MyReportsContent() {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between border-y border-gray-100 bg-gray-50/50 px-6 py-2">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn("h-9 gap-1.5", editTableOpen && "border-2 border-blue-600 text-blue-600")}
-            onClick={() => setEditTableOpen((v) => !v)}
-          >
-            <Table2 className="h-4 w-4" />
-            Edit table
-          </Button>
-          <Phase2DisabledButton className="inline-flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-4 text-sm font-medium">
-            <BarChart2 className="h-4 w-4" />
-            Charts
-          </Phase2DisabledButton>
-          <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => refetch?.()}>
-            <RefreshCw className={cn("h-4 w-4 text-gray-500", loading && "animate-spin")} />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasPendingApply ? (
-            <Badge variant="secondary" className="text-xs">
-              Unapplied changes
-            </Badge>
-          ) : null}
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 bg-blue-600 hover:bg-blue-700"
-            disabled={loading}
-            onClick={handleApply}
-          >
-            Apply
-          </Button>
-        </div>
-      </div>
+      <MyReportsTableActionBar
+        editTableOpen={editTableOpen}
+        onEditTableToggle={() => setEditTableOpen((v) => !v)}
+        chartsVisible={draft.chartsVisible}
+        onChartsVisibleChange={(chartsVisible) => updateDraft({ chartsVisible })}
+        loading={loading}
+        hasPendingApply={hasPendingApply}
+        onApply={handleApply}
+        onRefresh={() => refetch?.()}
+      />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-h-0 flex-1 overflow-auto">
-          {catalogLoading ? (
+          {emptyAppIntersection ? (
+            <div className="px-6 py-12 text-center text-sm text-amber-700">
+              No apps match the intersection of selected teams and app filters. Adjust filters and
+              click Apply.
+            </div>
+          ) : catalogLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
@@ -669,19 +684,58 @@ export function MyReportsContent() {
           ) : tableRows.length === 0 ? (
             <div className="px-6 py-12 text-center text-sm text-gray-500">No data for the selected filters.</div>
           ) : (
-            <MyReportTable
-              columns={tableColumns}
-              rows={tableRows}
-              totals={tableTotals}
-              metricCatalog={metricCatalog}
-              filtersByColumn={columnFiltersByColumn}
-              filtersLive={columnFiltersLive}
-              showReloadFab={showColumnFilterReloadFab}
-              reloadLabel={reloadColumnFiltersLabel}
-              onSortColumn={handleSortColumn}
-              onApplyColumnFilter={handleApplyColumnFilter}
-              onReloadData={handleReloadColumnFilters}
-            />
+            <>
+              {draft.chartsVisible ? (
+                <MyReportCharts
+                  rows={tableRows}
+                  dimensions={displayConfig.dimensions}
+                  metrics={displayConfig.metrics}
+                  metricCatalog={metricCatalog}
+                  dimensionCatalog={dimensionCatalog}
+                  chartMetricId={draft.chartMetricId}
+                  chartType={draft.chartType}
+                  breakdownChartMetricId={draft.breakdownChartMetricId}
+                  breakdownChartType={draft.breakdownChartType}
+                  trendChartDimensionIds={draft.trendChartDimensionIds}
+                  breakdownChartDimensionIds={draft.breakdownChartDimensionIds}
+                  panelLayout={draft.panelLayout}
+                  compareActive={compareActive}
+                  onChartMetricChange={(metricId) => updateDraft({ chartMetricId: metricId })}
+                  onChartTypeChange={(chartType) => updateDraft({ chartType })}
+                  onBreakdownChartMetricChange={(metricId) =>
+                    updateDraft({ breakdownChartMetricId: metricId })
+                  }
+                  onBreakdownChartTypeChange={(breakdownChartType) =>
+                    updateDraft({ breakdownChartType })
+                  }
+                  onTrendChartDimensionIdsChange={(trendChartDimensionIds) =>
+                    updateDraft({ trendChartDimensionIds })
+                  }
+                  onBreakdownChartDimensionIdsChange={(breakdownChartDimensionIds) =>
+                    updateDraft({ breakdownChartDimensionIds })
+                  }
+                  onPanelLayoutChange={(panelLayout) => updateDraft({ panelLayout })}
+                />
+              ) : null}
+              <MyReportTable
+                columns={tableColumns}
+                rows={tableRows}
+                totals={tableTotals}
+                metricCatalog={metricCatalog}
+                compareActive={compareActive}
+                compareTotals={compareTotals}
+                totalsDeltaPct={totalsDeltaPct}
+                pinnedColumnIds={draft.pinnedColumnIds}
+                filtersByColumn={columnFiltersByColumn}
+                filtersLive={columnFiltersLive}
+                showReloadFab={showColumnFilterReloadFab}
+                reloadLabel={reloadColumnFiltersLabel}
+                onSortColumn={handleSortColumn}
+                onApplyColumnFilter={handleApplyColumnFilter}
+                onReloadData={handleReloadColumnFilters}
+                onTogglePin={togglePinColumn}
+              />
+            </>
           )}
         </div>
         {editTableOpen && !isMobile ? renderEditPanel() : null}

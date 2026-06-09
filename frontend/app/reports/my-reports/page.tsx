@@ -5,7 +5,7 @@ import { MyReportsContent } from "@/components/my-reports/my-reports-content"
 export default function MyReportsPage() {
   return (
     <DashboardLayout>
-      <ScreenFunctionGuard screenKey="s-reports" functionKey="view">
+      <ScreenFunctionGuard screenKey="s-my-reports" functionKey="view">
         <MyReportsContent />
       </ScreenFunctionGuard>
     </DashboardLayout>

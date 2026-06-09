@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
+import { MyReportAppFilterEditor } from "@/components/my-reports/my-report-app-filter-editor"
+import { MyReportComparePicker } from "@/components/my-reports/my-report-compare-picker"
+import { MyReportIapFilterEditor } from "@/components/my-reports/my-report-iap-filter-editor"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
@@ -12,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Tooltip,
   TooltipContent,
@@ -21,16 +22,17 @@ import {
 import { GroupedTeamMultiSelect } from "@/components/reports/grouped-team-multi-select"
 import { ReportDatePeriodPicker } from "@/components/reports/report-date-period-picker"
 import {
-  IAP_REVENUE_MODE_OPTIONS,
   REVENUE_SOURCE_OPTIONS,
 } from "@/lib/reports/my-report-defaults"
 import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config"
 import {
   MY_REPORT_CONFIG_KEY,
   MY_REPORT_EXTERNAL_EDITABLE_CONFIG_KEYS,
+  MY_REPORT_PHASE2B_CONFIG_KEYS,
   MY_REPORT_PHASE2_CONFIG_KEYS,
   type MyReportConfigKey,
 } from "@/lib/reports/my-report-data-config-catalog"
+import { resolveMyReportAppPool } from "@/lib/reports/my-report-app-selection"
 import type { MyReportAppliedFilterTag } from "@/lib/reports/my-report-config-tag-utils"
 import type { CommissionTeamOption } from "@/lib/reports/commission-team-utils"
 import type { OrgTeamGroup } from "@/lib/api/services"
@@ -46,6 +48,7 @@ export type ExternalFilterTagProps = {
   filterTeams: CommissionTeamOption[]
   filterTeamGroups: OrgTeamGroup[]
   loadingFilterTeams: boolean
+  teamAppsUnion?: App[]
 }
 
 function FilterTagButton({
@@ -66,7 +69,15 @@ function FilterTagButton({
   )
 }
 
-function Phase2FilterTag({ label, value }: { label: string; value: string }) {
+function Phase2FilterTag({
+  label,
+  value,
+  phase2b = false,
+}: {
+  label: string
+  value: string
+  phase2b?: boolean
+}) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -74,8 +85,44 @@ function Phase2FilterTag({ label, value }: { label: string; value: string }) {
           <FilterTagButton label={label} value={value} showChevron />
         </span>
       </TooltipTrigger>
-      <TooltipContent>Coming in Phase 2</TooltipContent>
+      <TooltipContent>
+        {phase2b ? "Requires Gold country/channel grain — Phase 2b" : "Coming in Phase 2"}
+      </TooltipContent>
     </Tooltip>
+  )
+}
+
+function CompareToFilterTag({
+  tag,
+  draft,
+  updateDraft,
+}: {
+  tag: { label: string; value: string }
+  draft: MyReportConfig
+  updateDraft: (patch: Partial<MyReportConfig>) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="inline-flex">
+          <FilterTagButton label={tag.label} value={tag.value} showChevron />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start" collisionPadding={16}>
+        {open ? (
+          <MyReportComparePicker
+            draft={draft}
+            onApply={(patch) => {
+              updateDraft(patch)
+              setOpen(false)
+            }}
+            onCancel={() => setOpen(false)}
+          />
+        ) : null}
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -113,54 +160,18 @@ function DatePeriodFilterTag({
   )
 }
 
-function AppFilterEditor({
-  draft,
-  updateDraft,
-  availableApps,
-  appsLoading,
-  onToggleAppSelection,
-}: Pick<
-  ExternalFilterTagProps,
-  "draft" | "updateDraft" | "availableApps" | "appsLoading" | "onToggleAppSelection"
->) {
-  return (
-    <div className="space-y-2">
-      <Label className="text-xs font-medium text-gray-500">Apps</Label>
-      <ScrollArea className="max-h-64">
-        <div className="pr-2">
-          {appsLoading ? (
-            <p className="py-4 text-sm text-gray-500">Loading apps…</p>
-          ) : (
-            availableApps.map((app) => (
-              <label
-                key={app.appId}
-                className="flex cursor-pointer items-center gap-2 rounded px-1 py-2 hover:bg-gray-50"
-              >
-                <Checkbox
-                  checked={
-                    draft.selectedAppIds.length === 0 ||
-                    draft.selectedAppIds.includes(app.appId)
-                  }
-                  onCheckedChange={() => {
-                    if (draft.selectedAppIds.length === 0) {
-                      updateDraft({
-                        selectedAppIds: availableApps
-                          .map((a) => a.appId)
-                          .filter((id) => id !== app.appId),
-                      })
-                    } else {
-                      onToggleAppSelection(app.appId)
-                    }
-                  }}
-                />
-                <span className="truncate text-sm">{app.displayName ?? app.appId}</span>
-              </label>
-            ))
-          )}
-        </div>
-      </ScrollArea>
-    </div>
-  )
+function AppFilterEditor(
+  props: Pick<
+    ExternalFilterTagProps,
+    | "draft"
+    | "updateDraft"
+    | "availableApps"
+    | "appsLoading"
+    | "onToggleAppSelection"
+    | "filterTeams"
+  >,
+) {
+  return <MyReportAppFilterEditor {...props} />
 }
 
 function renderFilterEditor(
@@ -193,24 +204,15 @@ function renderFilterEditor(
       )
     case MY_REPORT_CONFIG_KEY.iapRevenueMode:
       return (
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-gray-500">IAP revenue mode</Label>
-          <Select
-            value={String(draft.iapRevenueMode)}
-            onValueChange={(v) => updateDraft({ iapRevenueMode: Number(v) })}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {IAP_REVENUE_MODE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={String(o.value)}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <MyReportIapFilterEditor
+          draft={draft}
+          updateDraft={updateDraft}
+          appPool={resolveMyReportAppPool(
+            draft.appSelectionMode,
+            props.availableApps,
+            props.teamAppsUnion ?? props.availableApps,
+          )}
+        />
       )
     case MY_REPORT_CONFIG_KEY.revenueSource:
       return (
@@ -241,12 +243,39 @@ function renderFilterEditor(
 export function ExternalFilterTag(props: ExternalFilterTagProps) {
   const { tag, draft, updateDraft } = props
 
+  if (MY_REPORT_PHASE2B_CONFIG_KEYS.has(tag.key)) {
+    return <Phase2FilterTag label={tag.label} value={tag.value} phase2b />
+  }
+
   if (MY_REPORT_PHASE2_CONFIG_KEYS.has(tag.key)) {
     return <Phase2FilterTag label={tag.label} value={tag.value} />
   }
 
+  if (tag.key === MY_REPORT_CONFIG_KEY.compareTo) {
+    return <CompareToFilterTag tag={tag} draft={draft} updateDraft={updateDraft} />
+  }
+
   if (tag.key === MY_REPORT_CONFIG_KEY.datePeriod) {
     return <DatePeriodFilterTag tag={tag} draft={draft} updateDraft={updateDraft} />
+  }
+
+  if (tag.key === MY_REPORT_CONFIG_KEY.app) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button type="button" className="inline-flex">
+            <FilterTagButton label={tag.label} value={tag.value} showChevron />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[min(95vw,440px)] overflow-hidden p-4"
+          align="start"
+          collisionPadding={16}
+        >
+          <AppFilterEditor {...props} />
+        </PopoverContent>
+      </Popover>
+    )
   }
 
   if (!MY_REPORT_EXTERNAL_EDITABLE_CONFIG_KEYS.has(tag.key)) {
@@ -265,7 +294,7 @@ export function ExternalFilterTag(props: ExternalFilterTagProps) {
           <FilterTagButton label={tag.label} value={tag.value} showChevron />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="start">
+      <PopoverContent className="w-[min(95vw,480px)] overflow-hidden p-4" align="start">
         {editor}
       </PopoverContent>
     </Popover>

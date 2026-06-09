@@ -91,6 +91,8 @@ type NavItem = {
   badge?: number
   /** Show "New" badge for new features */
   isNew?: boolean
+  /** Show "Testing" badge for features in QA */
+  isTesting?: boolean
   /** Star + flame marker (e.g. AI Assistant) — tiêu điểm cần chú ý */
   spotlight?: boolean
   /** If false or returns false, item is hidden in sidebar. Default true. */
@@ -221,7 +223,8 @@ const navItems: NavItem[] = [
     icon: PieChart,
     label: "My Reports",
     href: "/reports/my-reports",
-    isShow: () => hasScreenFunction("s-reports", "view"),
+    isShow: () => hasScreenFunction("s-my-reports", "view"),
+    isTesting: true,
   },
   {
     icon: Bell,
@@ -347,13 +350,14 @@ const navItems: NavItem[] = [
     label: "AdMob Ads",
     href: "#",
     hasSubmenu: true,
-    isShow: () => hasScreenFunction("s-apps", "view"),
+    isShow: () =>
+      ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-admob-app-mappings", fn)),
     children: [
       {
         icon: GitMerge,
         label: "App Mappings",
         href: "/admob-ads/app-mappings",
-        isShow: () => ["view", "create", "edit", "disable-enable"].some((fn) => hasScreenFunction("s-apps", fn)),
+        isShow: () => hasScreenFunction("s-admob-app-mappings", "view"),
       },
     ],
   },
@@ -593,6 +597,11 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                     {item.isNew && (
                       <Badge className="h-5 px-1.5 text-xs bg-green-500 hover:bg-green-600">
                         New
+                      </Badge>
+                    )}
+                    {item.isTesting && (
+                      <Badge className="h-5 px-1.5 text-xs bg-amber-500 hover:bg-amber-600">
+                        Testing
                       </Badge>
                     )}
                     {hasSubmenu && (

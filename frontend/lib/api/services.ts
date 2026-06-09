@@ -1000,7 +1000,7 @@ export const teamMembersApi = {
 
     updateUser: async (
         userId: string,
-        data: { firstName?: string; lastName?: string; phone?: string; role?: string; status?: string }
+        data: { firstName?: string; lastName?: string; phone?: string; role?: string; roles?: string[]; status?: string }
     ): Promise<{ success: boolean; data?: TeamMember }> => {
         return apiClient.put(`/api/v1/team-members/update-user/${userId}`, data)
     },
@@ -1870,6 +1870,7 @@ export interface CreateOrganizationUserRequest {
     firstName?: string
     lastName?: string
     role?: string
+    roles?: string[]
     mustChangePassword?: boolean
     sendWelcomeEmail?: boolean
 }
@@ -1883,6 +1884,8 @@ export interface OrgUserItem {
     fullName: string
     avatarUrl?: string
     role: string
+    roles?: string[]
+    roleNames?: string[]
     status: string
     createdAt: string
     lastLoginAt?: string

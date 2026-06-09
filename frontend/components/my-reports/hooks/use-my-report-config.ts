@@ -17,7 +17,9 @@ import {
   resolvePresetDateRange,
   toApiDateString,
 } from "@/lib/reports/report-date-filter-utils"
+import { resolveEffectiveAppIds } from "@/lib/reports/my-report-app-selection"
 import { MY_REPORT_DIMENSION_IDS } from "@/lib/reports/my-report-catalog-groups"
+import type { CompareToPreset } from "@/lib/reports/my-report-compare-utils"
 import {
   MY_REPORT_DEFAULT_ENABLED_CONFIG_KEYS,
   MY_REPORT_LOCKED_CONFIG_KEYS,
@@ -26,13 +28,34 @@ import {
   type MyReportConfigKey,
 } from "@/lib/reports/my-report-data-config-catalog"
 
+export type MyReportAppSelectionMode = "permission" | "by_team"
+
+export type MyReportChartType = "line" | "bar" | "area"
+
+/** Side-by-side vs stacked layout for the two chart panels. */
+export type MyReportPanelLayout = "side-by-side" | "stacked"
+
 export type MyReportConfig = {
   dimensions: string[]
   metrics: string[]
   selectedAppIds: string[]
+  appSelectionMode: MyReportAppSelectionMode
   selectedCommissionTeamIds: string[]
   revenueSource: string
   iapRevenueMode: number
+  iapRevenueModeOverrides: Record<string, number>
+  compareToPreset: CompareToPreset
+  compareCustomStart: Date
+  compareCustomEnd: Date
+  pinnedColumnIds: string[]
+  chartsVisible: boolean
+  chartMetricId: string
+  chartType: MyReportChartType
+  breakdownChartMetricId: string
+  breakdownChartType: MyReportChartType
+  trendChartDimensionIds: string[]
+  breakdownChartDimensionIds: string[]
+  panelLayout: MyReportPanelLayout
   dateFilterMode: ReportDateFilterMode
   activePresetDays: number
   selectedMonth: Date
@@ -53,6 +76,12 @@ function cloneConfig(config: MyReportConfig): MyReportConfig {
     selectedAppIds: [...config.selectedAppIds],
     selectedCommissionTeamIds: [...config.selectedCommissionTeamIds],
     enabledConfigKeys: [...config.enabledConfigKeys],
+    iapRevenueModeOverrides: { ...config.iapRevenueModeOverrides },
+    compareCustomStart: new Date(config.compareCustomStart),
+    compareCustomEnd: new Date(config.compareCustomEnd),
+    pinnedColumnIds: [...config.pinnedColumnIds],
+    trendChartDimensionIds: [...config.trendChartDimensionIds],
+    breakdownChartDimensionIds: [...config.breakdownChartDimensionIds],
     selectedMonth: new Date(config.selectedMonth),
     startDate: new Date(config.startDate),
     endDate: new Date(config.endDate),
@@ -65,9 +94,23 @@ export function createDefaultMyReportConfig(): MyReportConfig {
     dimensions: [...MY_REPORT_DEFAULT_DIMENSIONS],
     metrics: [...MY_REPORT_DEFAULT_METRICS],
     selectedAppIds: [],
+    appSelectionMode: "permission",
     selectedCommissionTeamIds: [],
     revenueSource: MY_REPORT_DEFAULT_REVENUE_SOURCE,
     iapRevenueMode: MY_REPORT_DEFAULT_IAP_MODE,
+    iapRevenueModeOverrides: {},
+    compareToPreset: "none" as CompareToPreset,
+    compareCustomStart: start,
+    compareCustomEnd: end,
+    pinnedColumnIds: [],
+    chartsVisible: false,
+    chartMetricId: MY_REPORT_DEFAULT_METRICS[0],
+    chartType: "line",
+    breakdownChartMetricId: MY_REPORT_DEFAULT_METRICS[0],
+    breakdownChartType: "line",
+    trendChartDimensionIds: ["date"],
+    breakdownChartDimensionIds: ["date", "app"],
+    panelLayout: "side-by-side",
     dateFilterMode: MY_REPORT_DEFAULT_DATE.dateFilterMode,
     activePresetDays: MY_REPORT_DEFAULT_DATE.activePresetDays,
     selectedMonth: startOfMonth(new Date()),
@@ -91,12 +134,30 @@ export function resolveMyReportDateRange(config: MyReportConfig): { start: Date;
 
 export function buildMyReportQueryRequest(
   config: AppliedMyReportConfig,
+  options?: {
+    teamScopedAppIds?: string[]
+    dateOverride?: { from: string; to: string }
+  },
 ): CustomReportQueryRequest {
-  const { start, end } = resolveMyReportDateRange(config)
+  const { start, end } = options?.dateOverride
+    ? { start: new Date(options.dateOverride.from), end: new Date(options.dateOverride.to) }
+    : resolveMyReportDateRange(config)
+
+  const teamScoped = options?.teamScopedAppIds ?? []
+  const { appIds, emptyIntersection } = resolveEffectiveAppIds(
+    config.selectedAppIds,
+    config.selectedCommissionTeamIds,
+    teamScoped,
+  )
+
+  const overrideEntries = Object.entries(config.iapRevenueModeOverrides).filter(
+    ([, rate]) => rate != null && Number.isFinite(rate),
+  )
+
   return {
-    from: toApiDateString(start),
-    to: toApiDateString(end),
-    appIds: config.selectedAppIds,
+    from: options?.dateOverride?.from ?? toApiDateString(start),
+    to: options?.dateOverride?.to ?? toApiDateString(end),
+    appIds: emptyIntersection ? [] : appIds,
     dimensions: config.dimensions,
     metrics: config.metrics,
     revenueSource: config.revenueSource,
@@ -105,6 +166,8 @@ export function buildMyReportQueryRequest(
     sortBy: config.sortBy,
     sortDir: config.sortDir,
     iapRevenueModeDefault: config.iapRevenueMode,
+    iapRevenueModeOverrides:
+      overrideEntries.length > 0 ? Object.fromEntries(overrideEntries) : null,
   }
 }
 
@@ -152,6 +215,42 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
         return { ...prev, metrics: next.length > 0 ? next : prev.metrics }
       }
       return { ...prev, metrics: [...prev.metrics, id] }
+    })
+  }, [])
+
+  const reorderDimensions = useCallback((activeId: string, overId: string) => {
+    setDraft((prev) => {
+      const oldIndex = prev.dimensions.indexOf(activeId)
+      const newIndex = prev.dimensions.indexOf(overId)
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev
+      const next = [...prev.dimensions]
+      next.splice(oldIndex, 1)
+      next.splice(newIndex, 0, activeId)
+      return { ...prev, dimensions: next }
+    })
+  }, [])
+
+  const togglePinColumn = useCallback((columnId: string) => {
+    setDraft((prev) => {
+      const has = prev.pinnedColumnIds.includes(columnId)
+      return {
+        ...prev,
+        pinnedColumnIds: has
+          ? prev.pinnedColumnIds.filter((id) => id !== columnId)
+          : [...prev.pinnedColumnIds, columnId],
+      }
+    })
+  }, [])
+
+  const reorderPinnedColumns = useCallback((activeId: string, overId: string) => {
+    setDraft((prev) => {
+      const oldIndex = prev.pinnedColumnIds.indexOf(activeId)
+      const newIndex = prev.pinnedColumnIds.indexOf(overId)
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev
+      const next = [...prev.pinnedColumnIds]
+      next.splice(oldIndex, 1)
+      next.splice(newIndex, 0, activeId)
+      return { ...prev, pinnedColumnIds: next }
     })
   }, [])
 
@@ -217,6 +316,9 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
     toggleDimension,
     toggleMetric,
     reorderMetrics,
+    reorderDimensions,
+    togglePinColumn,
+    reorderPinnedColumns,
     setSort,
     applySort,
     toggleConfigKey,

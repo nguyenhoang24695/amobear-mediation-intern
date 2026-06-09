@@ -38,7 +38,6 @@ import { NoPermissionView } from "@/components/shared/no-permission-view"
 import type { App, WaterfallAdUnit } from "@/types/api"
 
 const SCREEN_APPS = "s-apps"
-const FN_VIEW_DETAILS = "view-details"
 const FN_SYNC_FROM_ADMOB = "sync-from-admob"
 import { AppOverviewTab } from "./app-detail/app-overview-tab"
 import { AppDashboardTab } from "./app-detail/app-dashboard-tab"
@@ -92,11 +91,7 @@ export function AppDetailContent() {
   // --- Permissions ---------------------------------------------------------
   const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
 
-  // Per-tab visibility: sub-perm `view-details:<tab>` la single source of truth
-  // (parent `view-details` la shortcut all-in-one, da xu ly trong hasAppDetailTab).
-  // Cac quyen action nhu `configure-insight` / `regenerate-insight` chi gate
-  // THAO TAC ben trong tab (da co check rieng trong cac tab component), khong
-  // anh huong viec hien thi tab.
+  // Per-tab visibility: mỗi tab map `view-details:<suffix>` (hasAppDetailTab).
   const canViewOverview = hasAppDetailTab("overview")
   const canViewDashboard = hasAppDetailTab("dashboard")
   const canViewAdUnits = hasAppDetailTab("ad-units")

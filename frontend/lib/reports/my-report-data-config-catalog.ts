@@ -89,14 +89,17 @@ export const MY_REPORT_CONFIG_LABELS: Record<MyReportConfigKey, string> = {
   [MY_REPORT_CONFIG_KEY.legacyFilters]: "Legacy filters",
 }
 
-/** Phase 2 — chỉ hiện checkbox + giá trị cố định, chưa chỉnh được. */
-export const MY_REPORT_PHASE2_CONFIG_KEYS = new Set<MyReportConfigKey>([
-  MY_REPORT_CONFIG_KEY.compareTo,
-  MY_REPORT_CONFIG_KEY.monetizationPartners,
+/** Phase 2b — cần mở rộng Gold grain (country/channel). */
+export const MY_REPORT_PHASE2B_CONFIG_KEYS = new Set<MyReportConfigKey>([
   MY_REPORT_CONFIG_KEY.channel,
+  MY_REPORT_CONFIG_KEY.country,
+])
+
+/** Phase 2+ — chưa chỉnh được hoặc defer. */
+export const MY_REPORT_PHASE2_CONFIG_KEYS = new Set<MyReportConfigKey>([
+  MY_REPORT_CONFIG_KEY.monetizationPartners,
   MY_REPORT_CONFIG_KEY.currency,
   MY_REPORT_CONFIG_KEY.platform,
-  MY_REPORT_CONFIG_KEY.country,
   MY_REPORT_CONFIG_KEY.storeType,
   MY_REPORT_CONFIG_KEY.attributionTypes,
   MY_REPORT_CONFIG_KEY.legacyFilters,
@@ -105,6 +108,7 @@ export const MY_REPORT_PHASE2_CONFIG_KEYS = new Set<MyReportConfigKey>([
 /** Chỉnh giá trị qua filter tag bên ngoài dropdown. */
 export const MY_REPORT_EXTERNAL_EDITABLE_CONFIG_KEYS = new Set<MyReportConfigKey>([
   MY_REPORT_CONFIG_KEY.datePeriod,
+  MY_REPORT_CONFIG_KEY.compareTo,
   MY_REPORT_CONFIG_KEY.app,
   MY_REPORT_CONFIG_KEY.teams,
   MY_REPORT_CONFIG_KEY.iapRevenueMode,

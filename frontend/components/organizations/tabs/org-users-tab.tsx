@@ -47,6 +47,7 @@ import { organizationsApi, teamMembersApi, type OrgUserItem, type OrgTeam } from
 import { getCurrentUser } from "@/lib/auth"
 import { toast } from "sonner"
 import { useRoles } from "@/hooks/use-roles"
+import { hasPrivilegedRole, normalizeUserRoles } from "@/lib/enums/user-role"
 
 interface OrgUsersTabProps {
   org: {
@@ -179,6 +180,8 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
           fullName: m.fullName || m.email,
           avatarUrl: m.avatarUrl,
           role: m.role,
+          roles: m.roles,
+          roleNames: m.roleNames,
           status: (m.status ?? "active") as string,
           createdAt: teamEntry?.joinedAt ?? m.lastLoginAt ?? new Date().toISOString(),
           lastLoginAt: m.lastLoginAt,
@@ -399,10 +402,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => {
-                    const matchedRole = roles.find(r => r.roleKey === user.role)
-                    const roleLabel = matchedRole?.name || user.role
-                    const roleColor = roleColorConfig[user.role] || "bg-slate-100 text-slate-700"
-
+                    const userRoles = normalizeUserRoles(user.role, user.roles)
                     const status = statusConfig[user.status] || statusConfig.active
                     return (
                       <TableRow 
@@ -426,7 +426,17 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={roleColor}>{roleLabel}</Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {userRoles.map((roleKey, index) => {
+                              const roleLabel = user.roleNames?.[index] || roles.find((r) => r.roleKey === roleKey)?.name || roleKey
+                              const roleColor = roleColorConfig[roleKey] || "bg-slate-100 text-slate-700"
+                              return (
+                                <Badge key={`${user.id}-${roleKey}`} className={roleColor}>
+                                  {roleLabel}
+                                </Badge>
+                              )
+                            })}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -451,7 +461,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
                               {canManage && (
                                 <>
                                   <DropdownMenuItem onClick={() => {
-                                    if (!canAssignAdmin && (user.role === "admin" || user.role === "super_admin")) {
+                                    if (!canAssignAdmin && hasPrivilegedRole(user.role, user.roles)) {
                                       toast.error("Only super admin can edit admin users")
                                       return
                                     }
@@ -571,6 +581,7 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
           firstName: editUser.firstName,
           lastName: editUser.lastName,
           role: editUser.role,
+          roles: editUser.roles,
           status: editUser.status
         } : undefined}
         onSuccess={() => {

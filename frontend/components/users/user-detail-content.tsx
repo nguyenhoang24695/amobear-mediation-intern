@@ -40,10 +40,21 @@ import { useApi } from "@/hooks/use-api"
 import { teamMembersApi, structureApi } from "@/lib/api/services"
 import { buildActivityLogsHref } from "@/lib/activity-logs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 import { useRoles } from "@/hooks/use-roles"
+import { hasPrivilegedRole, hasSuperAdminRole, normalizeUserRoles } from "@/lib/enums/user-role"
 import { AddUserToTeamModal } from "../organizations/add-user-to-team-modal"
 import { AddEditUserModal } from "../organizations/modals/add-edit-user-modal"
 import { ResetUserPasswordModal } from "./reset-user-password-modal"
@@ -127,8 +138,19 @@ function formatDateTime(value?: string) {
   })
 }
 
-function isPrivilegedRole(role?: string) {
-  return role?.toLowerCase() === "admin" || role?.toLowerCase() === "super_admin"
+function isPrivilegedRole(role?: string, roles?: string[]) {
+  return hasPrivilegedRole(role, roles)
+}
+
+function extractTeamActionError(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message.trim()) return err.message
+  const anyErr = err as { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string }
+  return (
+    anyErr?.response?.data?.error?.message ||
+    anyErr?.response?.data?.message ||
+    anyErr?.message ||
+    fallback
+  )
 }
 
 export function UserDetailContent({ userId, backHref = "/team-members" }: UserDetailContentProps) {
@@ -145,6 +167,10 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const [addToTeamOpen, setAddToTeamOpen] = useState(false)
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [removeTeamConfirmOpen, setRemoveTeamConfirmOpen] = useState(false)
+  const [teamPendingRemoval, setTeamPendingRemoval] = useState<{ id: string; name: string } | null>(null)
+  const [removingFromTeam, setRemovingFromTeam] = useState(false)
+  const [removeTeamError, setRemoveTeamError] = useState<string | null>(null)
 
   const { data: rolesData } = useRoles()
   const roles = rolesData || []
@@ -164,6 +190,10 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
   )
 
   const user = userResponse?.data
+  const userRoleKeys = useMemo(
+    () => normalizeUserRoles(user?.role, user?.roles),
+    [user?.role, user?.roles],
+  )
   const metaAdAccountOptions = metaAdAccountOptionsResponse?.data || []
   const allApps = appsResponse?.apps
   const userStatus = user?.status || "inactive"
@@ -184,11 +214,71 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
       }
     })
   }, [metaAdAccountOptions, user?.metaAdAccountIds])
-  const canManageTargetUser = !!user && canEdit && (isSuperAdmin || !isPrivilegedRole(user.role))
-  const canResetTargetPassword = !!user && canResetPassword && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role))
-  const canToggleTargetStatus = !!user && canEnableDisable && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role))
+  const canManageTargetUser = !!user && canEdit && (isSuperAdmin || !isPrivilegedRole(user.role, user.roles))
+  const canResetTargetPassword = !!user && canResetPassword && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role, user.roles))
+  const canToggleTargetStatus = !!user && canEnableDisable && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role, user.roles))
   const canAddToTeam = !!user?.organization?.id && canManageTargetUser
   const canAssignPrivilegedRole = isSuperAdmin // Explicitly pass down if needed, but let's just pass this as canManage for the modal.
+  const isSelfProfile = !!user && currentUser?.id === user.id
+  const canRemoveFromTeam = isSelfProfile || canManageTargetUser
+
+  const handleRemoveTeamClick = (team: { id: string; name: string }) => {
+    if (!canRemoveFromTeam) return
+    setTeamPendingRemoval(team)
+    setRemoveTeamError(null)
+    setRemoveTeamConfirmOpen(true)
+  }
+
+  const handleConfirmRemoveFromTeam = async () => {
+    if (!user || !teamPendingRemoval) return
+
+    setRemovingFromTeam(true)
+    setRemoveTeamError(null)
+    const isLeaveAction = isSelfProfile
+
+    try {
+      const response = isLeaveAction
+        ? await teamMembersApi.leaveTeam(teamPendingRemoval.id)
+        : await teamMembersApi.removeUserFromTeam(user.id, teamPendingRemoval.id)
+
+      if (!response.success) {
+        const message = extractTeamActionError(
+          { message: response.message },
+          isLeaveAction ? "Failed to leave team" : "Failed to remove user from team",
+        )
+        setRemoveTeamError(message)
+        toast({
+          title: isLeaveAction ? "Could not leave team" : "Could not remove from team",
+          description: message,
+          variant: "destructive",
+        })
+        return
+      }
+
+      toast({
+        title: isLeaveAction ? "Left team" : "Removed from team",
+        description: isLeaveAction
+          ? `You have left ${teamPendingRemoval.name}.`
+          : `${user.fullName || user.email} was removed from ${teamPendingRemoval.name}.`,
+      })
+      setRemoveTeamConfirmOpen(false)
+      setTeamPendingRemoval(null)
+      await refetch()
+    } catch (err) {
+      const message = extractTeamActionError(
+        err,
+        isLeaveAction ? "Failed to leave team" : "Failed to remove user from team",
+      )
+      setRemoveTeamError(message)
+      toast({
+        title: isLeaveAction ? "Could not leave team" : "Could not remove from team",
+        description: message,
+        variant: "destructive",
+      })
+    } finally {
+      setRemovingFromTeam(false)
+    }
+  }
 
   const copyEmail = () => {
     if (user?.email) {
@@ -263,7 +353,6 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
     )
   }
 
-  // Parse permissions if they are not already an object (API might return JSON string or object)
   const permissionsList = Object.entries(user.permissions || {})
     .filter(([appId]) => !allApps || allApps.some(a => a.appId === appId))
     .map(([appId, level]) => {
@@ -303,9 +392,13 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{user.fullName || "User"}</h1>
-              <Badge className="bg-purple-100 text-purple-700 capitalize">
-                {roles.find(r => r.roleKey === user.role)?.name || user.role}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                {userRoleKeys.map((roleKey, index) => (
+                  <Badge key={roleKey} className="bg-purple-100 text-purple-700 capitalize">
+                    {user.roleNames?.[index] || roles.find((r) => r.roleKey === roleKey)?.name || roleKey}
+                  </Badge>
+                ))}
+              </div>
               <Badge variant="outline" className={statusMeta.badge}>
                 {statusMeta.label}
               </Badge>
@@ -417,19 +510,19 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                       <p className="text-sm font-medium text-slate-900">{user.phone || "-"}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Role</p>
-                      <Select defaultValue={user.role} disabled>
-                        <SelectTrigger className="w-32 h-8 mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.map((r) => (
-                            <SelectItem key={r.roleKey} value={r.roleKey}>
-                              {r.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <p className="text-xs text-slate-500">Roles</p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {userRoleKeys.map((roleKey, index) => (
+                          <Badge key={roleKey} variant="outline" className="capitalize">
+                            {user.roleNames?.[index] || roles.find((r) => r.roleKey === roleKey)?.name || roleKey}
+                          </Badge>
+                        ))}
+                      </div>
+                      {hasSuperAdminRole(user.role, user.roles) && (
+                        <p className="mt-2 text-xs text-amber-700">
+                          Role assignment is locked for super_admin users.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Organization</p>
@@ -464,9 +557,17 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                           <Badge variant="outline" className="text-xs capitalize">
                             {team.role}
                           </Badge>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <X className="w-4 h-4 text-slate-400" />
-                          </Button>
+                          {canRemoveFromTeam && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              aria-label={`Remove from ${team.name}`}
+                              onClick={() => handleRemoveTeamClick({ id: team.id, name: team.name })}
+                            >
+                              <X className="w-4 h-4 text-slate-400" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -837,6 +938,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
             lastName: user.lastName,
             phone: user.phone,
             role: user.role,
+            roles: userRoleKeys,
             status: user.status || "active",
           }}
           onSuccess={() => {
@@ -871,6 +973,68 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
           }}
         />
       )}
+
+      <AlertDialog
+        open={removeTeamConfirmOpen}
+        onOpenChange={(open) => {
+          setRemoveTeamConfirmOpen(open)
+          if (!open) {
+            setTeamPendingRemoval(null)
+            setRemoveTeamError(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isSelfProfile ? "Leave Team" : "Remove from Team"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {isSelfProfile ? (
+                  <p>
+                    Are you sure you want to leave{" "}
+                    <span className="font-medium text-slate-900">{teamPendingRemoval?.name}</span>? You will lose
+                    access to this team&apos;s resources.
+                  </p>
+                ) : (
+                  <p>
+                    Are you sure you want to remove{" "}
+                    <span className="font-medium text-slate-900">{user.fullName || user.email}</span> from{" "}
+                    <span className="font-medium text-slate-900">{teamPendingRemoval?.name}</span>? This action cannot
+                    be undone.
+                  </p>
+                )}
+                {removeTeamError && (
+                  <p className="whitespace-pre-wrap rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700">
+                    {removeTeamError}
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingFromTeam}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void handleConfirmRemoveFromTeam()
+              }}
+              disabled={removingFromTeam}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {removingFromTeam && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {removingFromTeam
+                ? isSelfProfile
+                  ? "Leaving..."
+                  : "Removing..."
+                : isSelfProfile
+                  ? "Leave"
+                  : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

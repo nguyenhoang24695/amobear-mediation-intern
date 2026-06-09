@@ -64,10 +64,10 @@ const bottomNavItems: BottomNavItem[] = [
     icon: BarChart3,
     label: "Reports",
     href: "/nav/reports",
-    isShow: () => hasScreenFunction("s-reports", "view"),
+    isShow: () =>
+      hasScreenFunction("s-reports", "view") || hasScreenFunction("s-my-reports", "view"),
     match: (pathname) =>
-      pathname === "/nav/reports" ||
-      (pathname.startsWith("/reports") && !pathname.startsWith("/reports/my-reports")),
+      pathname === "/nav/reports" || pathname.startsWith("/reports"),
   },
 ]
 
@@ -84,7 +84,7 @@ function canShowMoreItem(label: string): boolean {
     case "Activity":
       return hasScreenFunction("s-activity-logs", "view")
     case "My Reports":
-      return hasScreenFunction("s-reports", "view")
+      return hasScreenFunction("s-my-reports", "view")
     case "Meta Ads":
       return hasScreenFunction("s-meta-campaigns", "view") || hasScreenFunction("s-meta-requests", "view")
     case "TikTok Ads":

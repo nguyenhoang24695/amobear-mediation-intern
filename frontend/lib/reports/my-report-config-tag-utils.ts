@@ -1,14 +1,16 @@
-import { format } from "date-fns"
-import { enUS } from "date-fns/locale"
 import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config"
-import { IAP_REVENUE_MODE_OPTIONS } from "@/lib/reports/my-report-defaults"
 import { resolveMyReportDateRange } from "@/components/my-reports/hooks/use-my-report-config"
+import { IAP_REVENUE_MODE_OPTIONS } from "@/lib/reports/my-report-defaults"
+import {
+  formatAdjustStyleDateRange,
+} from "@/lib/reports/report-date-filter-utils"
 import {
   MY_REPORT_CONFIG_KEY,
   MY_REPORT_CONFIG_LABELS,
   type MyReportConfigKey,
   normalizeEnabledConfigKeys,
 } from "@/lib/reports/my-report-data-config-catalog"
+import { formatCompareRangeLabel } from "@/lib/reports/my-report-compare-utils"
 
 export type MyReportAppliedFilterTag = {
   key: MyReportConfigKey
@@ -16,12 +18,7 @@ export type MyReportAppliedFilterTag = {
   value: string
 }
 
-function formatAdjustStyleDateRange(start: Date, end: Date): string {
-  const sameYear = start.getFullYear() === end.getFullYear()
-  const startFmt = format(start, sameYear ? "MMM dd" : "MMM dd, yyyy", { locale: enUS })
-  const endFmt = format(end, "MMM dd, yyyy", { locale: enUS })
-  return `${startFmt} – ${endFmt}`
-}
+export { formatAdjustStyleDateRange }
 
 export function resolveConfigItemDisplayValue(
   key: MyReportConfigKey,
@@ -33,8 +30,16 @@ export function resolveConfigItemDisplayValue(
       const { start, end } = resolveMyReportDateRange(config)
       return formatAdjustStyleDateRange(start, end)
     }
-    case MY_REPORT_CONFIG_KEY.compareTo:
-      return "No comparison"
+    case MY_REPORT_CONFIG_KEY.compareTo: {
+      const { start, end } = resolveMyReportDateRange(config)
+      return formatCompareRangeLabel(
+        start,
+        end,
+        config.compareToPreset,
+        config.compareCustomStart,
+        config.compareCustomEnd,
+      )
+    }
     case MY_REPORT_CONFIG_KEY.app:
       return ctx.selectedAppLabel
     case MY_REPORT_CONFIG_KEY.monetizationPartners:
@@ -51,11 +56,14 @@ export function resolveConfigItemDisplayValue(
       return "All"
     case MY_REPORT_CONFIG_KEY.teams:
       return ctx.selectedTeamsLabel
-    case MY_REPORT_CONFIG_KEY.iapRevenueMode:
-      return (
-        IAP_REVENUE_MODE_OPTIONS.find((o) => o.value === config.iapRevenueMode)?.label ??
-        "70% of Gross"
-      )
+    case MY_REPORT_CONFIG_KEY.iapRevenueMode: {
+      const preset = IAP_REVENUE_MODE_OPTIONS.find((o) => o.value === config.iapRevenueMode)
+      if (preset) return preset.label
+      const pct = Math.round(config.iapRevenueMode * 1000) / 10
+      const overrideCount = Object.keys(config.iapRevenueModeOverrides).length
+      const base = `${pct}% of Gross`
+      return overrideCount > 0 ? `${base} · ${overrideCount} app override(s)` : base
+    }
     case MY_REPORT_CONFIG_KEY.revenueSource:
       return config.revenueSource
     case MY_REPORT_CONFIG_KEY.attributionTypes:

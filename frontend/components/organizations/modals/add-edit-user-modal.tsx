@@ -16,8 +16,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 import { teamMembersApi } from "@/lib/api/services"
-import { toast } from "sonner" // Assuming we have sonner or some toast
+import { toast } from "sonner"
 import { RoleSelector } from "../role-selector"
+import { hasSuperAdminRole, normalizeUserRoles } from "@/lib/enums/user-role"
 
 interface AddEditUserModalProps {
     open: boolean
@@ -32,12 +33,11 @@ interface AddEditUserModalProps {
         lastName?: string
         phone?: string
         role: string
+        roles?: string[]
         status: string
     }
     onSuccess?: () => void
 }
-
-
 
 export function AddEditUserModal({
     open,
@@ -51,10 +51,12 @@ export function AddEditUserModal({
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
     const [phone, setPhone] = useState("")
-    const [role, setRole] = useState("viewer")
+    const [roles, setRoles] = useState<string[]>(["viewer"])
     const [status, setStatus] = useState("active")
     const [saving, setSaving] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
+
+    const roleEditDisabled = mode === "edit" && hasSuperAdminRole(user?.role, user?.roles)
 
     useEffect(() => {
         if (mode === "edit" && user) {
@@ -63,14 +65,14 @@ export function AddEditUserModal({
             setLastName(user.lastName ?? parts.slice(1).join(" ") ?? "")
             setEmail(user.email)
             setPhone(user.phone ?? "")
-            setRole(user.role)
+            setRoles(normalizeUserRoles(user.role, user.roles))
             setStatus(user.status)
         } else {
             setFirstName("")
             setLastName("")
             setEmail("")
             setPhone("")
-            setRole("viewer")
+            setRoles(["viewer"])
             setStatus("active")
         }
         setErrors({})
@@ -84,6 +86,9 @@ export function AddEditUserModal({
             newErrors.email = "Email is required"
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             newErrors.email = "Invalid email address"
+        }
+        if (!roleEditDisabled && roles.length === 0) {
+            newErrors.roles = "Select at least one role"
         }
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -100,21 +105,19 @@ export function AddEditUserModal({
                     firstName,
                     lastName,
                     phone: phone.trim() || undefined,
-                    role,
-                    status
+                    ...(roleEditDisabled ? {} : { roles }),
+                    status,
                 })
                 toast.success("User updated successfully")
                 onSuccess?.()
                 onOpenChange(false)
             } else {
-                // Add mode implementation (if needed later)
-                // For now, only Edit is fully supported via this modal for existing users
                 console.warn("Add mode not fully implemented in this modal integration")
                 onOpenChange(false)
             }
         } catch (error) {
             console.error("Failed to update user:", error)
-            toast.error("Failed to update user")
+            toast.error(error instanceof Error ? error.message : "Failed to update user")
         } finally {
             setSaving(false)
         }
@@ -127,13 +130,14 @@ export function AddEditUserModal({
                     <DialogTitle>{mode === "add" ? "Add New User" : "Edit User"}</DialogTitle>
                     <DialogDescription>
                         {mode === "add"
-                            ? "Create a new user account and assign a role."
-                            : "Update the user's information and role."}
+                            ? "Create a new user account and assign roles."
+                            : roleEditDisabled
+                              ? "Update the user's information. Roles are locked for super_admin users."
+                              : "Update the user's information and roles."}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 py-2 flex-1 overflow-y-auto pr-2 min-h-0">
-                    {/* First & Last Name */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="firstName">First Name</Label>
@@ -159,7 +163,6 @@ export function AddEditUserModal({
                         </div>
                     </div>
 
-                    {/* Email */}
                     <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
                         <Input
@@ -169,7 +172,7 @@ export function AddEditUserModal({
                             value={email}
                             onChange={(e) => { setEmail(e.target.value); setErrors((prev) => ({ ...prev, email: "" })) }}
                             className={errors.email ? "border-red-500" : ""}
-                            disabled={mode === "edit"} // Email usually cannot be changed in edit mode
+                            disabled={mode === "edit"}
                         />
                         {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                     </div>
@@ -185,17 +188,22 @@ export function AddEditUserModal({
                         />
                     </div>
 
-                    {/* Role */}
                     <div className="space-y-3">
-                        <Label>Role</Label>
+                        <Label>Roles</Label>
+                        {roleEditDisabled ? (
+                            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                Role assignment is locked for super_admin users.
+                            </p>
+                        ) : null}
                         <RoleSelector
-                            value={role}
-                            onChange={setRole}
+                            value={roles}
+                            onChange={setRoles}
                             canManage={canManage}
+                            disabled={roleEditDisabled}
                         />
+                        {errors.roles && <p className="text-xs text-red-500">{errors.roles}</p>}
                     </div>
 
-                    {/* Status (only for edit mode) */}
                     {mode === "edit" && (
                         <div className="space-y-2">
                             <Label>Status</Label>

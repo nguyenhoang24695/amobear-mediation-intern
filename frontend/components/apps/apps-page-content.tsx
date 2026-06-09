@@ -20,7 +20,6 @@ const FN_EXPORT = "export"
 const FN_SYNC_FROM_ADMOB = "sync-from-admob"
 const FN_PAUSE = "pause"
 const FN_RESUME = "resume"
-const FN_VIEW_DETAILS = "view-details"
 const FN_VIEW_IN_ADMOB = "view-in-admob"
 const FN_SET_TYPE = "set-type"
 
@@ -190,7 +189,7 @@ export function AppsPageContent() {
   const canSyncFromAdmob = hasScreenFunction(SCREEN_APPS, FN_SYNC_FROM_ADMOB)
   const canPause = hasScreenFunction(SCREEN_APPS, FN_PAUSE)
   const canResume = hasScreenFunction(SCREEN_APPS, FN_RESUME)
-  // Co the click sang trang detail neu co view-details HOAC bat ky view-details:<tab> nao
+  // Có thể click sang trang detail nếu có ít nhất một quyền tab view-details:*
   const canViewDetails = canEnterAppDetail()
   const canViewInAdmob = hasScreenFunction(SCREEN_APPS, FN_VIEW_IN_ADMOB)
   const canSetType = hasScreenFunction(SCREEN_APPS, FN_SET_TYPE)

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { addDays, format, isAfter, startOfDay, subDays } from "date-fns"
 import { insightApi } from "@/lib/api/services"
-import { hasScreenFunction } from "@/lib/auth"
+import { hasScreenFunction, hasAppDetailTab } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import type { AppDailyInsight, AppInsightHistoryDay } from "@/types/api"
 import { InsightHeader } from "./ai-insights/insight-header"
@@ -46,9 +46,7 @@ export function AppAiInsightsTab({ appId, appRowId, initialDateYmd }: Props) {
   const [insightHistory, setInsightHistory] = useState<AppInsightHistoryDay[]>([])
   const [feedbackGiven, setFeedbackGiven] = useState<"up" | "down" | null>(null)
 
-  const canView =
-    hasScreenFunction("s-apps", "view-details") ||
-    hasScreenFunction("s-apps", "view-details:ai-insight")
+  const canView = hasAppDetailTab("ai-insight")
   const canRegenerate = hasScreenFunction("s-apps", "regenerate-insight")
   const canConfigureAuto = hasScreenFunction("s-apps", "configure-insight")
 

@@ -1,7 +1,7 @@
 // Authentication utilities
 // Helper functions for managing authentication state
 
-import { getRoleDisplayName } from "@/lib/enums/user-role"
+import { getRoleDisplayName, hasSuperAdminRole } from "@/lib/enums/user-role"
 
 export interface AuthUser {
   id: string
@@ -12,6 +12,8 @@ export interface AuthUser {
   avatarUrl?: string
   role: string
   roleName?: string
+  roles?: string[]
+  roleNames?: string[]
   /** Direct Message — webhook mặc định khi URL theo tần suất trống */
   slackWebhookUrl?: string
   slackWebhookUrlRealtime?: string
@@ -44,6 +46,8 @@ export function authUserFromMeDto(d: {
   avatarUrl?: string
   role: string
   roleName?: string
+  roles?: string[]
+  roleNames?: string[]
   slackWebhookUrl?: string
   slackWebhookUrlRealtime?: string
   slackWebhookUrlHourly?: string
@@ -66,6 +70,8 @@ export function authUserFromMeDto(d: {
     avatarUrl: d.avatarUrl,
     role: d.role,
     roleName: d.roleName,
+    roles: d.roles,
+    roleNames: d.roleNames,
     slackWebhookUrl: d.slackWebhookUrl,
     slackWebhookUrlRealtime: d.slackWebhookUrlRealtime,
     slackWebhookUrlHourly: d.slackWebhookUrlHourly,
@@ -289,27 +295,35 @@ export function getCurrentUser(): AuthUser | null {
 export function hasScreenFunction(screenKey: string, functionKey: string): boolean {
   const user = getCurrentUser()
   if (!user) return false
-  if (user.role?.toLowerCase() === "super_admin") return true
+  if (hasSuperAdminRole(user.role, user.roles)) return true
   if (!user.rolePermissions) return false
   return (user.rolePermissions[screenKey] ?? []).includes(functionKey)
 }
 
-// --- App Detail tab permissions ------------------------------------------------
+// --- App Detail tab permissions (s-apps) ---------------------------------------
 //
-// Quy uoc:
-//   - "view-details"          : shortcut "all-in-one".
-//   - "view-details:<suffix>" : quyen per-tab. Tab PG (Ad Units / Mediation Groups) dung suffix *-deprecated;
-//     tab Bronze (ad-units-mediation / mediation-groups-mediation) dung view-details:ad-units / :mediation-groups.
+// Mỗi tab App Detail map 1:1 tới function `view-details:<suffix>`.
+// Tab PG (Ad Units / Mediation Groups deprecated) dùng suffix *-deprecated;
+// tab Bronze (ad-units-mediation / mediation-groups-mediation) dùng view-details:ad-units / :mediation-groups.
 
-/** Function keys on screen s-apps — giu sync voi PermissionScreensConstant backend. */
-export const APPS_VIEW_DETAILS_FUNCTIONS = {
-  viewDetails: "view-details",
-  dashboardTab: "view-details:dashboard",
-  adUnitsTab: "view-details:ad-units",
-  adUnitsTabDeprecated: "view-details:ad-units-deprecated",
-  mediationGroupsTab: "view-details:mediation-groups",
-  mediationGroupsTabDeprecated: "view-details:mediation-groups-deprecated",
+/** Function keys on screen s-apps — giữ sync với PermissionScreensConstant backend. */
+export const APPS_APP_DETAIL_TAB_FUNCTIONS = {
+  overview: "view-details:overview",
+  dashboard: "view-details:dashboard",
+  adUnits: "view-details:ad-units",
+  adUnitsDeprecated: "view-details:ad-units-deprecated",
+  mediationGroups: "view-details:mediation-groups",
+  mediationGroupsDeprecated: "view-details:mediation-groups-deprecated",
+  waterfallAdUnits: "view-details:waterfall-ad-units",
+  performance: "view-details:performance",
+  aiInsight: "view-details:ai-insight",
+  insightConfig: "view-details:insight-config",
+  playbook: "view-details:playbook",
+  settings: "view-details:settings",
 } as const
+
+/** @deprecated Use APPS_APP_DETAIL_TAB_FUNCTIONS */
+export const APPS_VIEW_DETAILS_FUNCTIONS = APPS_APP_DETAIL_TAB_FUNCTIONS
 
 export const APP_DETAIL_TABS = [
   "overview",
@@ -328,7 +342,6 @@ export const APP_DETAIL_TABS = [
 export type AppDetailTab = (typeof APP_DETAIL_TABS)[number]
 
 const SCREEN_APPS_KEY = "s-apps"
-const FN_VIEW_DETAILS_KEY = "view-details"
 
 function appDetailTabPermissionSuffix(tab: AppDetailTab): string {
   switch (tab) {
@@ -345,43 +358,18 @@ function appDetailTabPermissionSuffix(tab: AppDetailTab): string {
   }
 }
 
-function isDeprecatedAppDetailTab(tab: AppDetailTab): boolean {
-  return tab === "ad-units" || tab === "mediation-groups"
+function appDetailTabFunctionKey(tab: AppDetailTab): string {
+  return `view-details:${appDetailTabPermissionSuffix(tab)}`
 }
 
-function hasAppDetailScreenFunctionForSuffix(suffix: string): boolean {
-  const fnKey = `${FN_VIEW_DETAILS_KEY}:${suffix}`
-  return (
-    hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.viewDetails) ||
-    hasScreenFunction(SCREEN_APPS_KEY, fnKey)
-  )
-}
-
-/**
- * Check user co quyen xem 1 tab cu the trong App Detail.
- * Co "view-details" => full tab. Khong thi check "view-details:<suffix>" (xem appDetailTabPermissionSuffix).
- */
+/** Check user có quyền xem một tab cụ thể trong App Detail. */
 export function hasAppDetailTab(tab: AppDetailTab): boolean {
-  const suffix = appDetailTabPermissionSuffix(tab)
-  if (tab === "dashboard") {
-    return hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.dashboardTab)
-  }
-
-  if (isDeprecatedAppDetailTab(tab)) {
-    return hasScreenFunction(SCREEN_APPS_KEY, `${FN_VIEW_DETAILS_KEY}:${suffix}`)
-  }
-
-  return hasAppDetailScreenFunctionForSuffix(suffix)
+  return hasScreenFunction(SCREEN_APPS_KEY, appDetailTabFunctionKey(tab))
 }
 
-/**
- * Co vao duoc trang App Detail khong? (it nhat 1 tab duoc phep)
- */
+/** Có vào được trang App Detail không? (ít nhất 1 tab được phép) */
 export function canEnterAppDetail(): boolean {
-  if (hasScreenFunction(SCREEN_APPS_KEY, APPS_VIEW_DETAILS_FUNCTIONS.viewDetails)) return true
-  return APP_DETAIL_TABS.some((t) =>
-    hasAppDetailScreenFunctionForSuffix(appDetailTabPermissionSuffix(t)),
-  )
+  return APP_DETAIL_TABS.some((tab) => hasAppDetailTab(tab))
 }
 
 /**
