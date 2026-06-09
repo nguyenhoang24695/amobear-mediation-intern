@@ -594,6 +594,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [retryingAssetId, setRetryingAssetId] = useState<number | null>(null)
+  const [retryingAllFailedAssets, setRetryingAllFailedAssets] = useState(false)
   const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({})
 
   const { data: detail, loading, error, refetch } = useApi(
@@ -622,6 +623,9 @@ export function RequestDetailContent({ requestId }: Props) {
   const assetPreparationById = useMemo(() => buildPreparationByAssetId(assetPreparation), [assetPreparation])
   const activeAssetPreparation = useMemo(() => {
     return (assetPreparation?.assets ?? []).some((asset) => ["pending", "uploading", "processing"].includes(asset.status))
+  }, [assetPreparation])
+  const failedAssetPreparations = useMemo(() => {
+    return (assetPreparation?.assets ?? []).filter((asset) => asset.status === "failed")
   }, [assetPreparation])
 
   useEffect(() => {
@@ -763,6 +767,45 @@ export function RequestDetailContent({ requestId }: Props) {
     }
   }
 
+  const handleRetryAllFailedAssetPreparations = async () => {
+    if (!detail || failedAssetPreparations.length === 0) return
+
+    const failedAssetIds = Array.from(new Set(failedAssetPreparations.map((asset) => asset.requestAssetId)))
+    let failedQueueCount = 0
+
+    try {
+      setRetryingAllFailedAssets(true)
+      for (const assetId of failedAssetIds) {
+        try {
+          setRetryingAssetId(assetId)
+          await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId)
+        } catch {
+          failedQueueCount += 1
+        }
+      }
+
+      invalidateCache(`meta-request:${detail.id}:asset-preparation`)
+      await refetchAssetPreparation()
+
+      const queuedCount = failedAssetIds.length - failedQueueCount
+      if (failedQueueCount > 0) {
+        toast({
+          title: "Some retries could not be queued",
+          description: `${queuedCount}/${failedAssetIds.length} failed assets were queued for Meta upload retry.`,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Retries queued",
+          description: `${failedAssetIds.length} failed asset${failedAssetIds.length === 1 ? "" : "s"} will be uploaded to Meta again.`,
+        })
+      }
+    } finally {
+      setRetryingAssetId(null)
+      setRetryingAllFailedAssets(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
@@ -788,6 +831,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const hasValidationErrors = Object.keys(groupedValidationErrors).length > 0
   const preparedAssetIds = new Set((assetPreparation?.assets ?? []).filter((asset) => asset.status === "ready").map((asset) => asset.requestAssetId))
   const readyAssetCount = uploadedAssetSlots.filter((slot) => preparedAssetIds.has(slot.requestAssetId)).length
+  const failedAssetCount = failedAssetPreparations.length
   const assetsReadyForExecution = !hasUploadedAssets || assetPreparation?.isReadyForExecution === true
   const assetPreparationBlocked = hasUploadedAssets && !assetsReadyForExecution
 
@@ -892,11 +936,32 @@ export function RequestDetailContent({ requestId }: Props) {
       ) : null}
 
       {assetPreparationBlocked ? (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-800">
-            Assets are still uploading to Meta. Execution will be available when all assets are ready.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            {failedAssetCount > 0 ? (
+              <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            ) : (
+              <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+            )}
+            <p className="text-sm text-amber-800">
+              {failedAssetCount > 0
+                ? `${failedAssetCount} asset upload${failedAssetCount === 1 ? "" : "s"} failed on Meta. Retry failed uploads before execution.`
+                : "Assets are still uploading to Meta. Execution will be available when all assets are ready."}
+            </p>
+          </div>
+          {failedAssetCount > 0 && canCreate ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+              disabled={retryingAllFailedAssets}
+              onClick={() => void handleRetryAllFailedAssetPreparations()}
+            >
+              {retryingAllFailedAssets ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-2 h-3.5 w-3.5" />}
+              Retry all failed uploads
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
