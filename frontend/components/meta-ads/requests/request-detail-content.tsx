@@ -98,7 +98,7 @@ function getConfirmDescription(action: ConfirmAction): string {
     case "reject":
       return "Reject this request. The requester can revise and submit again."
     case "execute":
-      return "This will create Meta objects through the backend. All objects will start in PAUSED state."
+      return "This will create Meta objects through the backend. Campaign starts PAUSED; Ad Set and Ads start ACTIVE."
     case "retry":
       return "Retry execution of this failed request and reuse any objects already created."
   }
@@ -1029,7 +1029,7 @@ export function RequestDetailContent({ requestId }: Props) {
         <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
           <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-green-800">
-            All Meta objects created successfully. They start in <strong>PAUSED</strong> state on Meta.
+            Meta objects created successfully. Campaign starts in <strong>PAUSED</strong> state; Ad Set and Ads start in <strong>ACTIVE</strong> state on Meta.
           </p>
         </div>
       ) : null}
@@ -1455,7 +1455,7 @@ export function RequestDetailContent({ requestId }: Props) {
                 ))
               )}
               {createdObjects.length > 0 ? (
-                <p className="text-[11px] text-slate-400 pt-1">All created objects are expected to be in <strong>PAUSED</strong> state on Meta.</p>
+                <p className="text-[11px] text-slate-400 pt-1">Campaign is expected to be <strong>PAUSED</strong>; Ad Set and Ads are expected to be <strong>ACTIVE</strong> on Meta.</p>
               ) : null}
             </CardContent>
           </Card>
