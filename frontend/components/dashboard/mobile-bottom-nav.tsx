@@ -19,6 +19,8 @@ import {
   isAnyMoreNavSectionActive,
   isMoreNavSectionActive,
   MOBILE_MORE_NAV_ITEMS,
+  resolveMobileMoreNavHref,
+  resolveMobileMoreNavItemHref,
 } from "@/lib/navigation/dashboard-nav"
 import { MOBILE_MORE_NAV_ICONS } from "@/lib/navigation/mobile-nav-icons"
 import {
@@ -61,9 +63,11 @@ const bottomNavItems: BottomNavItem[] = [
   {
     icon: BarChart3,
     label: "Reports",
-    href: "/reports",
+    href: "/nav/reports",
     isShow: () => hasScreenFunction("s-reports", "view"),
-    match: (pathname) => pathname.startsWith("/reports"),
+    match: (pathname) =>
+      pathname === "/nav/reports" ||
+      (pathname.startsWith("/reports") && !pathname.startsWith("/reports/my-reports")),
   },
 ]
 
@@ -79,6 +83,8 @@ function canShowMoreItem(label: string): boolean {
       return hasScreenFunction("s-monitoring-admob", "view")
     case "Activity":
       return hasScreenFunction("s-activity-logs", "view")
+    case "My Reports":
+      return hasScreenFunction("s-reports", "view")
     case "Meta Ads":
       return hasScreenFunction("s-meta-campaigns", "view") || hasScreenFunction("s-meta-requests", "view")
     case "TikTok Ads":
@@ -143,12 +149,13 @@ function MobileBottomNavInner() {
       >
         <div className="flex h-[4.25rem] min-w-0 flex-1 items-center justify-around rounded-full border border-slate-200/80 bg-white/95 px-1 shadow-[0_4px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
           {visibleBottomItems.map((item) => {
-            const isActive = item.match ? item.match(pathname) : pathname === item.href
+            const href = resolveMobileMoreNavHref(item.label, item.href)
+            const isActive = item.match ? item.match(pathname) : pathname === href
 
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={item.label}
+                href={href}
                 className={cn(
                   "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition-colors",
                   isActive
@@ -210,11 +217,12 @@ function MobileBottomNavInner() {
           <div className="mt-4 grid max-h-[55dvh] grid-cols-4 gap-2 overflow-y-auto">
             {visibleMoreItems.map((item) => {
               const Icon = MOBILE_MORE_NAV_ICONS[item.label] ?? LayoutGrid
+              const href = resolveMobileMoreNavItemHref(item)
               const isActive = isMoreNavSectionActive(pathname, item)
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={item.label}
+                  href={href}
                   onClick={() => {
                     if (item.href === "/alert-center") {
                       void markAlertsViewed(openAlertIds)
