@@ -8,7 +8,7 @@ export default function MaintenanceManagementPage() {
   return (
     <RoleGuard allowedRoles={[UserRole.SuperAdmin]}>
       <DashboardLayout>
-        <Suspense fallback={<div className="p-6 text-sm text-slate-500">Đang tải…</div>}>
+        <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading…</div>}>
           <MaintenanceManagementContent />
         </Suspense>
       </DashboardLayout>

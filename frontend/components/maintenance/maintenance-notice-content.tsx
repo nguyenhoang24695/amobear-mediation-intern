@@ -13,9 +13,9 @@ const POLL_INTERVAL_MS = 30_000
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return "—"
-  return new Date(iso).toLocaleString("vi-VN", {
+  return new Date(iso).toLocaleString("en-US", {
     day: "2-digit",
-    month: "2-digit",
+    month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
@@ -33,7 +33,7 @@ export function MaintenanceNoticeContent() {
     try {
       const data = await getMaintenanceStatus()
       setStatus(data)
-      if (!data.enabled) {
+      if (!data.enabled || !data.isActive) {
         router.replace("/")
       }
     } catch {
@@ -66,9 +66,9 @@ export function MaintenanceNoticeContent() {
             <Construction className="h-7 w-7 text-amber-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Hệ thống đang bảo trì</h1>
+            <h1 className="text-xl font-semibold text-slate-900">System under maintenance</h1>
             <p className="mt-2 text-sm text-slate-600">
-              Chúng tôi đang nâng cấp hệ thống. Vui lòng quay lại sau.
+              We are upgrading the system. Please check back shortly.
             </p>
           </div>
         </CardHeader>
@@ -82,7 +82,7 @@ export function MaintenanceNoticeContent() {
             <>
               <div className="rounded-lg border bg-slate-50 p-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Thời gian dự kiến hoàn thành
+                  Estimated completion
                 </p>
                 <p className="mt-1 text-base font-medium text-slate-900">
                   {formatDateTime(status?.estimatedEndAt ?? null)}
@@ -90,30 +90,34 @@ export function MaintenanceNoticeContent() {
               </div>
               {status?.enabledAt && (
                 <p className="text-xs text-slate-500 text-center">
-                  Bảo trì bắt đầu lúc {formatDateTime(status.enabledAt)}
+                  Maintenance started at {formatDateTime(status.enabledAt)}
                 </p>
               )}
             </>
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-2 sm:flex-row">
+        <CardFooter className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full min-w-0"
             onClick={() => loadStatus(true)}
             disabled={isRefreshing}
           >
             {isRefreshing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 h-4 w-4 shrink-0" />
             )}
-            Thử lại
+            Try again
           </Button>
-          <Button variant="ghost" className="w-full" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Đăng xuất
+          <Button
+            variant="ghost"
+            className="w-full min-w-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4 shrink-0" />
+            Sign out
           </Button>
         </CardFooter>
       </Card>

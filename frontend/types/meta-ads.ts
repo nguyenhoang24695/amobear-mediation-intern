@@ -827,6 +827,28 @@ export interface MetaRequestAssetDto {
   createdAt: string
 }
 
+export type MetaAssetPreparationStatus = "pending" | "uploading" | "processing" | "ready" | "failed"
+
+export interface MetaAssetPreparationDto {
+  requestAssetId: number
+  slotKey: string
+  kind: "image" | "video"
+  status: MetaAssetPreparationStatus
+  metaAdAccountId?: number | null
+  metaImageHash?: string | null
+  metaVideoId?: string | null
+  errorMessage?: string | null
+  attemptCount: number
+  lastAttemptAt?: string | null
+  lastCheckedAt?: string | null
+}
+
+export interface MetaAssetPreparationResponseDto {
+  requestId: number
+  isReadyForExecution: boolean
+  assets: MetaAssetPreparationDto[]
+}
+
 export interface MetaAdDraftDto {
   name: string
   status: string

@@ -183,7 +183,7 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
   { icon: Contact, label: "vCard Generator", href: "/settings/vcard-generator", isShow: true, isNew: true },
   {
     icon: Wrench,
-    label: "Quản lý Bảo trì",
+    label: "Maintenance Management",
     href: "/settings/maintenance",
     isShow: () => isSuperAdmin(getCurrentUser()?.role),
   },
@@ -217,6 +217,12 @@ const navItems: NavItem[] = [
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
   { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") },
+  {
+    icon: PieChart,
+    label: "My Reports",
+    href: "/reports/my-reports",
+    isShow: () => hasScreenFunction("s-reports", "view"),
+  },
   {
     icon: Bell,
     label: "Alert Center",

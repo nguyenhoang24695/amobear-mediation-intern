@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
+import { useApi } from "@/hooks/use-api"
 import { hasScreenFunction } from "@/lib/auth"
 import { tiktokCampaignsApi } from "@/lib/api/tiktok-ads"
 import type { TikTokCampaignAdGroupSummaryDto, TikTokCampaignAdSummaryDto, TikTokCampaignDetailDto, TikTokCampaignDuplicateReadinessResultDto } from "@/types/tiktok-ads"
@@ -334,8 +335,6 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
   const canSync = hasScreenFunction("s-tiktok-campaigns", "edit")
   const canDuplicate = hasScreenFunction("s-tiktok-campaigns", "edit")
   const numericCampaignId = Number(campaignId)
-  const [detail, setDetail] = useState<TikTokCampaignDetailDto | null>(null)
-  const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [checkingReadiness, setCheckingReadiness] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
@@ -343,32 +342,19 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
   const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
   const [readiness, setReadiness] = useState<TikTokCampaignDuplicateReadinessResultDto | null>(null)
   const [duplicateError, setDuplicateError] = useState("")
-  const [error, setError] = useState("")
-
-  const load = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const nextDetail = await tiktokCampaignsApi.getById(numericCampaignId)
-      setDetail(nextDetail)
-    } catch (ex: any) {
-      setError(ex.message ?? "Failed to load TikTok campaign.")
-    } finally {
-      setLoading(false)
+  const isValidCampaignId = Number.isFinite(numericCampaignId) && numericCampaignId > 0
+  const { data: detail, loading, error, refetch } = useApi<TikTokCampaignDetailDto>(
+    () => tiktokCampaignsApi.getById(numericCampaignId),
+    {
+      enabled: isValidCampaignId,
+      cacheKey: `tiktok-campaign:${numericCampaignId}`,
     }
-  }
+  )
 
   useEffect(() => {
-    if (!Number.isFinite(numericCampaignId)) {
-      setError("Invalid TikTok campaign id.")
-      setLoading(false)
-      return
-    }
     setReadiness(null)
     setDuplicateError("")
     setDuplicateConfirmOpen(false)
-    void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numericCampaignId])
 
   const sync = async () => {
@@ -376,7 +362,7 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
     try {
       setSyncing(true)
       const result = await tiktokCampaignsApi.sync({ tikTokAdAccountIds: [detail.tikTokAdAccountRowId] })
-      await load()
+      await refetch()
       toast({
         title: "TikTok account synced",
         description: `${result.accountsScanned} account(s), ${result.rowsWritten} row(s), ${result.failedAccounts} failed.`,
@@ -429,7 +415,7 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
       if (result.newLocalCampaignId) {
         router.push(`/tiktok-ads/campaigns/${result.newLocalCampaignId}`)
       } else {
-        await load()
+        await refetch()
       }
     } catch (ex: any) {
       const message = ex.message ?? "TikTok campaign duplicate failed."
@@ -462,8 +448,9 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
 
   const tiktokUrl = detail ? buildTikTokCampaignUrl(detail.advertiserId, detail.tikTokCampaignId) : null
 
+  if (!isValidCampaignId) return <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">Invalid TikTok campaign id.</div>
   if (loading) return <div className="p-6 text-sm text-slate-500">Loading TikTok campaign...</div>
-  if (error || !detail) return <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error || "TikTok campaign not found."}</div>
+  if (error || !detail) return <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error?.message || "TikTok campaign not found."}</div>
 
   return (
     <div className="space-y-5">
