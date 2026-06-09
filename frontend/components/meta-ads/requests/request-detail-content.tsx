@@ -26,6 +26,8 @@ import { copyTextToClipboard } from "@/lib/utils"
 import type {
   CreateMetaCampaignRequestDto,
   MetaAdVariantDto,
+  MetaAssetPreparationDto,
+  MetaAssetPreparationResponseDto,
   MetaCampaignRequestDetailDto,
   MetaCreatedObjectDto,
   MetaCreativeDraftDto,
@@ -64,6 +66,7 @@ const SCREEN_META_REQUESTS = "s-meta-requests"
 type ConfirmAction = "approve" | "reject" | "execute" | "retry"
 type LogStatus = "success" | "error" | "pending"
 type ChecklistItem = { label: string; ok: boolean }
+type UploadedAssetSlot = { requestAssetId: number; slotKey: string; kind: "image" | "video"; label: string }
 
 const statusConfig: Record<MetaRequestStatus, { label: string; className: string }> = {
   draft: { label: "Draft", className: "bg-slate-100 text-slate-600" },
@@ -216,6 +219,100 @@ function getRequestValueEventLabel(value?: string | null): string {
   const normalized = value?.trim().toUpperCase()
   if (normalized === "IN_APP_AD_IMPRESSION" || normalized === "AD_IMPRESSION") return "In-app ad impression"
   return "In-app purchase"
+}
+
+function getShortMetaAssetId(value?: string | null): string | null {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  return trimmed.length <= 18 ? trimmed : `${trimmed.slice(0, 8)}...${trimmed.slice(-6)}`
+}
+
+function addUploadedAssetSlot(slots: UploadedAssetSlot[], source: MetaCreativeMediaSourceDto | null | undefined, kind: "image" | "video", slotKey: string, label: string) {
+  if (!source?.uploadedAssetId || source.uploadedAssetId <= 0) return
+  slots.push({ requestAssetId: source.uploadedAssetId, slotKey, kind, label })
+}
+
+function collectUploadedAssetSlots(payload?: CreateMetaCampaignRequestDto | null): UploadedAssetSlot[] {
+  if (!payload) return []
+  const slots: UploadedAssetSlot[] = []
+
+  for (const variant of getAllVariants(payload)) {
+    const sequence = variant.sequenceNumber || 1
+    const prefix = `variant-${sequence}`
+    const creative = variant.creative ?? {}
+    const creativeType = getCreativeType(creative)
+
+    if (creativeType === "SINGLE_VIDEO") {
+      const video = getSingleVideoCreative(creative)
+      addUploadedAssetSlot(slots, video.video, "video", `${prefix}.singleVideo.video`, `Variation ${sequence} video`)
+      addUploadedAssetSlot(slots, video.thumbnail, "image", `${prefix}.singleVideo.thumbnail`, `Variation ${sequence} thumbnail`)
+      continue
+    }
+
+    if (creativeType === "CAROUSEL_IMAGE") {
+      const carousel = getCarouselCreative(creative)
+      ;(carousel.cards ?? []).forEach((card, index) => {
+        addUploadedAssetSlot(slots, card.image, "image", `${prefix}.carousel.cards[${index}].image`, `Variation ${sequence} card ${index + 1}`)
+      })
+      continue
+    }
+
+    if (creativeType === "FLEXIBLE") {
+      const flexible = getFlexibleCreative(creative)
+      ;(flexible.assets ?? []).forEach((asset, index) => {
+        addUploadedAssetSlot(slots, asset.image, "image", `${prefix}.flexible.assets[${index}].image`, `Variation ${sequence} flexible ${index + 1} image`)
+        addUploadedAssetSlot(slots, asset.video, "video", `${prefix}.flexible.assets[${index}].video`, `Variation ${sequence} flexible ${index + 1} video`)
+        addUploadedAssetSlot(slots, asset.thumbnail, "image", `${prefix}.flexible.assets[${index}].thumbnail`, `Variation ${sequence} flexible ${index + 1} thumbnail`)
+      })
+      continue
+    }
+
+    if (creativeType !== "EXISTING_POST") {
+      const image = getSingleImageCreative(creative)
+      addUploadedAssetSlot(slots, image.image, "image", `${prefix}.singleImage.image`, `Variation ${sequence} image`)
+    }
+  }
+
+  return slots
+}
+
+function buildPreparationByAssetId(response?: MetaAssetPreparationResponseDto | null): Map<number, MetaAssetPreparationDto> {
+  const map = new Map<number, MetaAssetPreparationDto>()
+  for (const asset of response?.assets ?? []) {
+    map.set(asset.requestAssetId, asset)
+  }
+  return map
+}
+
+function getAssetPreparationClasses(status?: string): string {
+  switch (status) {
+    case "ready":
+      return "border-green-200 bg-green-50 text-green-700"
+    case "failed":
+      return "border-red-200 bg-red-50 text-red-700"
+    case "uploading":
+    case "processing":
+      return "border-blue-200 bg-blue-50 text-blue-700"
+    default:
+      return "border-amber-200 bg-amber-50 text-amber-700"
+  }
+}
+
+function getAssetPreparationLabel(status?: string): string {
+  switch (status) {
+    case "ready":
+      return "Ready on Meta"
+    case "failed":
+      return "Failed"
+    case "uploading":
+      return "Uploading to Meta"
+    case "processing":
+      return "Processing video"
+    case "pending":
+      return "Queued"
+    default:
+      return "Queued after save"
+  }
 }
 
 function getRequestPerformanceGoalSummary(detail: MetaCampaignRequestDetailDto): string {
@@ -496,6 +593,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const numericRequestId = Number(requestId)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [retryingAssetId, setRetryingAssetId] = useState<number | null>(null)
   const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({})
 
   const { data: detail, loading, error, refetch } = useApi(
@@ -505,6 +603,48 @@ export function RequestDetailContent({ requestId }: Props) {
       cacheKey: `meta-request:${numericRequestId}`,
     }
   )
+
+  const uploadedAssetSlots = useMemo(() => collectUploadedAssetSlots(detail?.payload), [detail?.payload])
+  const hasUploadedAssets = uploadedAssetSlots.length > 0
+
+  const {
+    data: assetPreparation,
+    loading: assetPreparationLoading,
+    refetch: refetchAssetPreparation,
+  } = useApi<MetaAssetPreparationResponseDto>(
+    () => metaRequestsApi.getAssetPreparation(numericRequestId),
+    {
+      enabled: !isCreate && Number.isFinite(numericRequestId) && hasUploadedAssets,
+      cacheKey: `meta-request:${numericRequestId}:asset-preparation`,
+    }
+  )
+
+  const assetPreparationById = useMemo(() => buildPreparationByAssetId(assetPreparation), [assetPreparation])
+  const activeAssetPreparation = useMemo(() => {
+    return (assetPreparation?.assets ?? []).some((asset) => ["pending", "uploading", "processing"].includes(asset.status))
+  }, [assetPreparation])
+
+  useEffect(() => {
+    if (!hasUploadedAssets || !activeAssetPreparation) return
+
+    const intervalId = window.setInterval(() => {
+      void refetchAssetPreparation()
+    }, 7000)
+
+    return () => window.clearInterval(intervalId)
+  }, [activeAssetPreparation, hasUploadedAssets, refetchAssetPreparation])
+
+  // Auto-poll the request while it is being executed in the background (variant creative+ad jobs run on Hangfire).
+  // Stops automatically once the finalizer marks it completed or a variant marks it failed.
+  useEffect(() => {
+    if (detail?.status !== "executing") return
+
+    const intervalId = window.setInterval(() => {
+      void refetch()
+    }, 7000)
+
+    return () => window.clearInterval(intervalId)
+  }, [detail?.status, refetch])
 
   useEffect(() => {
     if (!isCreate) return
@@ -606,6 +746,23 @@ export function RequestDetailContent({ requestId }: Props) {
     }
   }
 
+  const handleRetryAssetPreparation = async (assetId: number) => {
+    if (!detail) return
+
+    try {
+      setRetryingAssetId(assetId)
+      await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId)
+      invalidateCache(`meta-request:${detail.id}:asset-preparation`)
+      await refetchAssetPreparation()
+      toast({ title: "Retry queued", description: "The asset will be uploaded to Meta again." })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to retry Meta upload."
+      toast({ title: "Retry failed", description: message, variant: "destructive" })
+    } finally {
+      setRetryingAssetId(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
@@ -629,6 +786,10 @@ export function RequestDetailContent({ requestId }: Props) {
   const creativeCommon = getCreativeCommon(primaryCreative)
   const createdObjects = sortCreatedObjects(detail.createdObjects)
   const hasValidationErrors = Object.keys(groupedValidationErrors).length > 0
+  const preparedAssetIds = new Set((assetPreparation?.assets ?? []).filter((asset) => asset.status === "ready").map((asset) => asset.requestAssetId))
+  const readyAssetCount = uploadedAssetSlots.filter((slot) => preparedAssetIds.has(slot.requestAssetId)).length
+  const assetsReadyForExecution = !hasUploadedAssets || assetPreparation?.isReadyForExecution === true
+  const assetPreparationBlocked = hasUploadedAssets && !assetsReadyForExecution
 
   return (
     <div className="space-y-5">
@@ -652,6 +813,12 @@ export function RequestDetailContent({ requestId }: Props) {
               </Button>
               <h1 className="text-lg font-bold text-slate-900">{formatMetaRequestId(detail.id)}</h1>
               <Badge className={`text-xs ${statusConfig[detail.status].className}`}>{statusConfig[detail.status].label}</Badge>
+              {hasUploadedAssets ? (
+                <Badge variant="outline" className={assetPreparationBlocked ? "border-amber-200 bg-amber-50 text-amber-700" : "border-green-200 bg-green-50 text-green-700"}>
+                  {assetPreparationLoading && !assetPreparation ? <Loader2 className="h-3 w-3 animate-spin" /> : assetPreparationBlocked ? <Clock className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                  {assetPreparationBlocked ? `Assets preparing on Meta (${readyAssetCount}/${uploadedAssetSlots.length} ready)` : "All Meta assets ready"}
+                </Badge>
+              ) : null}
             </div>
             <p className="text-sm text-slate-600 pl-11">{detail.campaignName}</p>
             <div className="flex items-center gap-4 pl-11 text-xs text-slate-500 flex-wrap">
@@ -689,13 +856,24 @@ export function RequestDetailContent({ requestId }: Props) {
               </>
             ) : null}
             {detail.status === "approved" && canExecute ? (
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setConfirmAction("execute")}>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setConfirmAction("execute")}
+                disabled={assetPreparationBlocked}
+                title={assetPreparationBlocked ? "Assets are still uploading to Meta. Execution will be available when all assets are ready." : undefined}
+              >
                 <PlayCircle className="w-4 h-4 mr-2" />
                 Execute Request
               </Button>
             ) : null}
             {detail.status === "failed" && canRetry ? (
-              <Button variant="outline" className="text-amber-700 border-amber-300 hover:bg-amber-50" onClick={() => setConfirmAction("retry")}>
+              <Button
+                variant="outline"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={() => setConfirmAction("retry")}
+                disabled={assetPreparationBlocked}
+                title={assetPreparationBlocked ? "Assets are still uploading to Meta. Retry will be available when all assets are ready." : undefined}
+              >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Retry
               </Button>
@@ -709,6 +887,15 @@ export function RequestDetailContent({ requestId }: Props) {
           <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-amber-800">
             Editing this request will return it to <strong>Pending Approval</strong> after changes are saved.
+          </p>
+        </div>
+      ) : null}
+
+      {assetPreparationBlocked ? (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-800">
+            Assets are still uploading to Meta. Execution will be available when all assets are ready.
           </p>
         </div>
       ) : null}
@@ -892,7 +1079,13 @@ export function RequestDetailContent({ requestId }: Props) {
                               <DetailRow label="Facebook Page ID" value={vcCommon.pageId || "-"} mono />
                               <DetailRow label="Instagram Actor ID" value={vcCommon.instagramActorId || "-"} mono />
                             </div>
-                            <CreativeTypeSnapshot creative={vc} />
+                            <CreativeTypeSnapshot
+                              creative={vc}
+                              assetPreparationById={assetPreparationById}
+                              canRetryAssetPreparation={canCreate}
+                              retryingAssetId={retryingAssetId}
+                              onRetryAssetPreparation={handleRetryAssetPreparation}
+                            />
                             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
                               <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -991,7 +1184,13 @@ export function RequestDetailContent({ requestId }: Props) {
                           <DetailRow label="Instagram Actor ID" value={vcCommon.instagramActorId || "-"} mono />
                         </div>
 
-                        <CreativeTypeSnapshot creative={vc} />
+                        <CreativeTypeSnapshot
+                          creative={vc}
+                          assetPreparationById={assetPreparationById}
+                          canRetryAssetPreparation={canCreate}
+                          retryingAssetId={retryingAssetId}
+                          onRetryAssetPreparation={handleRetryAssetPreparation}
+                        />
 
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
@@ -1225,9 +1424,79 @@ export function RequestDetailContent({ requestId }: Props) {
   )
 }
 
-function CreativeTypeSnapshot({ creative }: { creative: MetaCreativeDraftDto }) {
+function AssetPreparationStatusLine({
+  source,
+  label,
+  preparationById,
+  canRetry,
+  retryingAssetId,
+  onRetry,
+}: {
+  source?: MetaCreativeMediaSourceDto | null
+  label: string
+  preparationById: Map<number, MetaAssetPreparationDto>
+  canRetry: boolean
+  retryingAssetId: number | null
+  onRetry: (assetId: number) => void | Promise<void>
+}) {
+  const assetId = source?.uploadedAssetId
+  if (!assetId) return null
+
+  const preparation = preparationById.get(assetId)
+  const status = preparation?.status
+  const isFailed = status === "failed"
+  const metaId = getShortMetaAssetId(preparation?.metaImageHash ?? preparation?.metaVideoId)
+
+  return (
+    <div className="mt-2 space-y-1 rounded-md border border-slate-200 bg-white px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+        <Badge variant="outline" className={getAssetPreparationClasses(status)}>
+          {status === "ready" ? <CheckCircle2 className="h-3 w-3" /> : status === "failed" ? <AlertTriangle className="h-3 w-3" /> : status === "uploading" || status === "processing" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Clock className="h-3 w-3" />}
+          {getAssetPreparationLabel(status)}
+        </Badge>
+        <span>{label}</span>
+        <span className="font-mono text-slate-400">Asset #{assetId}</span>
+        {metaId ? <span className="font-mono text-slate-400">Meta {metaId}</span> : null}
+        {isFailed && canRetry ? (
+          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" disabled={retryingAssetId === assetId} onClick={() => void onRetry(assetId)}>
+            {retryingAssetId === assetId ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
+            Retry upload to Meta
+          </Button>
+        ) : null}
+      </div>
+      {isFailed && preparation?.errorMessage ? (
+        <p className="text-[11px] text-red-600">{preparation.errorMessage}</p>
+      ) : null}
+    </div>
+  )
+}
+
+function CreativeTypeSnapshot({
+  creative,
+  assetPreparationById,
+  canRetryAssetPreparation,
+  retryingAssetId,
+  onRetryAssetPreparation,
+}: {
+  creative: MetaCreativeDraftDto
+  assetPreparationById: Map<number, MetaAssetPreparationDto>
+  canRetryAssetPreparation: boolean
+  retryingAssetId: number | null
+  onRetryAssetPreparation: (assetId: number) => void | Promise<void>
+}) {
   const creativeType = getCreativeType(creative)
   const common = getCreativeCommon(creative)
+
+  const renderAssetPreparation = (source: MetaCreativeMediaSourceDto | null | undefined, label: string) => (
+    <AssetPreparationStatusLine
+      source={source}
+      label={label}
+      preparationById={assetPreparationById}
+      canRetry={canRetryAssetPreparation}
+      retryingAssetId={retryingAssetId}
+      onRetry={onRetryAssetPreparation}
+    />
+  )
 
   if (creativeType === "SINGLE_VIDEO") {
     const video = getSingleVideoCreative(creative)
@@ -1238,6 +1507,10 @@ function CreativeTypeSnapshot({ creative }: { creative: MetaCreativeDraftDto }) 
           <DetailRow label="Call To Action" value={formatCallToAction(video.callToActionType)} mono />
           <DetailRow label="Video Source" value={getMediaSourceValue(video.video, "video")} mono />
           <DetailRow label="Thumbnail Source" value={getMediaSourceValue(video.thumbnail)} mono />
+        </div>
+        <div className="space-y-2">
+          {renderAssetPreparation(video.video, "Video asset")}
+          {renderAssetPreparation(video.thumbnail, "Thumbnail asset")}
         </div>
         <ValueBlock label="Link URL" value={video.linkUrl} breakAll />
         <ValueBlock label="Primary Text" value={video.message} preserveWhitespace />
@@ -1288,6 +1561,7 @@ function CreativeTypeSnapshot({ creative }: { creative: MetaCreativeDraftDto }) 
                     <ValueBlock label="Description" value={card.description} />
                     <ValueBlock label="Link URL" value={card.linkUrl} breakAll />
                     <ValueBlock label="Image Source" value={getMediaSourceValue(card.image)} mono breakAll />
+                    {renderAssetPreparation(card.image, `Card ${index + 1} image asset`)}
                   </div>
                 </div>
               </div>
@@ -1316,6 +1590,14 @@ function CreativeTypeSnapshot({ creative }: { creative: MetaCreativeDraftDto }) 
             <div key={`${asset.assetType}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
               <p className="font-medium">Asset {index + 1} ({asset.assetType ?? "IMAGE"})</p>
               <p className="font-mono text-[12px] text-slate-500 break-all">{asset.assetType === "VIDEO" ? getMediaSourceValue(asset.video, "video") : getMediaSourceValue(asset.image)}</p>
+              {asset.assetType === "VIDEO" ? (
+                <div className="space-y-2">
+                  {renderAssetPreparation(asset.video, `Flexible asset ${index + 1} video`)}
+                  {renderAssetPreparation(asset.thumbnail, `Flexible asset ${index + 1} thumbnail`)}
+                </div>
+              ) : (
+                renderAssetPreparation(asset.image, `Flexible asset ${index + 1} image`)
+              )}
             </div>
           ))}
         </div>
@@ -1347,7 +1629,10 @@ function CreativeTypeSnapshot({ creative }: { creative: MetaCreativeDraftDto }) 
       <ValueBlock label="Primary Text" value={image.message} preserveWhitespace />
       <ValueBlock label="Description" value={image.description} preserveWhitespace />
       <div className="grid gap-4 md:grid-cols-2">
-        <ValueBlock label="Image Source" value={getMediaSourceValue(image.image)} mono breakAll />
+        <div>
+          <ValueBlock label="Image Source" value={getMediaSourceValue(image.image)} mono breakAll />
+          {renderAssetPreparation(image.image, "Image asset")}
+        </div>
         <ValueBlock label="Link URL" value={image.linkUrl} breakAll />
       </div>
     </div>
