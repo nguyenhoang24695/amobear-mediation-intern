@@ -1126,7 +1126,7 @@ export function CreateRequestContent({ requestId }: Props) {
           <p className="text-sm text-slate-500 mt-0.5">
             {isEditMode
               ? "Update the request payload. Saving changes for a non-draft request sends it back for approval."
-              : "Internal request only. Meta objects are created after approval and execution, and all objects start in PAUSED state."}
+              : "Internal request only. Meta objects are created after approval and execution. Campaign starts PAUSED; Ad Set and Ads start ACTIVE."}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -1162,7 +1162,7 @@ export function CreateRequestContent({ requestId }: Props) {
             </>
           ) : (
             <>
-              <strong>This request will NOT create a live campaign.</strong> Meta objects (Campaign, Ad Set, Ad) are created only after internal approval and execution, all starting in <strong>PAUSED</strong> state.
+              <strong>This request will NOT create a live campaign.</strong> Meta objects are created only after internal approval and execution. Campaign starts in <strong>PAUSED</strong> state; Ad Set and Ads start in <strong>ACTIVE</strong> state.
             </>
           )}
         </div>
@@ -1271,7 +1271,7 @@ export function CreateRequestContent({ requestId }: Props) {
             <AlertDialogHeader>
               <AlertDialogTitle>Submit for Approval?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will submit your campaign request for internal review. No Meta objects will be created at this stage. After approval, Campaign, Ad Set, Creative, and Ad will be created in <strong>PAUSED</strong> state.
+                This will submit your campaign request for internal review. No Meta objects will be created at this stage. After approval and execution, Campaign will be created in <strong>PAUSED</strong> state while Ad Set and Ads are created in <strong>ACTIVE</strong> state.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

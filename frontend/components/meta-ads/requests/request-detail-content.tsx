@@ -98,7 +98,7 @@ function getConfirmDescription(action: ConfirmAction): string {
     case "reject":
       return "Reject this request. The requester can revise and submit again."
     case "execute":
-      return "This will create Meta objects through the backend. All objects will start in PAUSED state."
+      return "This will create Meta objects through the backend. Campaign starts PAUSED; Ad Set and Ads start ACTIVE."
     case "retry":
       return "Retry execution of this failed request and reuse any objects already created."
   }
@@ -594,6 +594,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [retryingAssetId, setRetryingAssetId] = useState<number | null>(null)
+  const [retryingAllFailedAssets, setRetryingAllFailedAssets] = useState(false)
   const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({})
 
   const { data: detail, loading, error, refetch } = useApi(
@@ -622,6 +623,9 @@ export function RequestDetailContent({ requestId }: Props) {
   const assetPreparationById = useMemo(() => buildPreparationByAssetId(assetPreparation), [assetPreparation])
   const activeAssetPreparation = useMemo(() => {
     return (assetPreparation?.assets ?? []).some((asset) => ["pending", "uploading", "processing"].includes(asset.status))
+  }, [assetPreparation])
+  const failedAssetPreparations = useMemo(() => {
+    return (assetPreparation?.assets ?? []).filter((asset) => asset.status === "failed")
   }, [assetPreparation])
 
   useEffect(() => {
@@ -763,6 +767,45 @@ export function RequestDetailContent({ requestId }: Props) {
     }
   }
 
+  const handleRetryAllFailedAssetPreparations = async () => {
+    if (!detail || failedAssetPreparations.length === 0) return
+
+    const failedAssetIds = Array.from(new Set(failedAssetPreparations.map((asset) => asset.requestAssetId)))
+    let failedQueueCount = 0
+
+    try {
+      setRetryingAllFailedAssets(true)
+      for (const assetId of failedAssetIds) {
+        try {
+          setRetryingAssetId(assetId)
+          await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId)
+        } catch {
+          failedQueueCount += 1
+        }
+      }
+
+      invalidateCache(`meta-request:${detail.id}:asset-preparation`)
+      await refetchAssetPreparation()
+
+      const queuedCount = failedAssetIds.length - failedQueueCount
+      if (failedQueueCount > 0) {
+        toast({
+          title: "Some retries could not be queued",
+          description: `${queuedCount}/${failedAssetIds.length} failed assets were queued for Meta upload retry.`,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Retries queued",
+          description: `${failedAssetIds.length} failed asset${failedAssetIds.length === 1 ? "" : "s"} will be uploaded to Meta again.`,
+        })
+      }
+    } finally {
+      setRetryingAssetId(null)
+      setRetryingAllFailedAssets(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
@@ -788,6 +831,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const hasValidationErrors = Object.keys(groupedValidationErrors).length > 0
   const preparedAssetIds = new Set((assetPreparation?.assets ?? []).filter((asset) => asset.status === "ready").map((asset) => asset.requestAssetId))
   const readyAssetCount = uploadedAssetSlots.filter((slot) => preparedAssetIds.has(slot.requestAssetId)).length
+  const failedAssetCount = failedAssetPreparations.length
   const assetsReadyForExecution = !hasUploadedAssets || assetPreparation?.isReadyForExecution === true
   const assetPreparationBlocked = hasUploadedAssets && !assetsReadyForExecution
 
@@ -892,11 +936,32 @@ export function RequestDetailContent({ requestId }: Props) {
       ) : null}
 
       {assetPreparationBlocked ? (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-800">
-            Assets are still uploading to Meta. Execution will be available when all assets are ready.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            {failedAssetCount > 0 ? (
+              <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            ) : (
+              <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+            )}
+            <p className="text-sm text-amber-800">
+              {failedAssetCount > 0
+                ? `${failedAssetCount} asset upload${failedAssetCount === 1 ? "" : "s"} failed on Meta. Retry failed uploads before execution.`
+                : "Assets are still uploading to Meta. Execution will be available when all assets are ready."}
+            </p>
+          </div>
+          {failedAssetCount > 0 && canCreate ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+              disabled={retryingAllFailedAssets}
+              onClick={() => void handleRetryAllFailedAssetPreparations()}
+            >
+              {retryingAllFailedAssets ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-2 h-3.5 w-3.5" />}
+              Retry all failed uploads
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -964,7 +1029,7 @@ export function RequestDetailContent({ requestId }: Props) {
         <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
           <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-green-800">
-            All Meta objects created successfully. They start in <strong>PAUSED</strong> state on Meta.
+            Meta objects created successfully. Campaign starts in <strong>PAUSED</strong> state; Ad Set and Ads start in <strong>ACTIVE</strong> state on Meta.
           </p>
         </div>
       ) : null}
@@ -1390,7 +1455,7 @@ export function RequestDetailContent({ requestId }: Props) {
                 ))
               )}
               {createdObjects.length > 0 ? (
-                <p className="text-[11px] text-slate-400 pt-1">All created objects are expected to be in <strong>PAUSED</strong> state on Meta.</p>
+                <p className="text-[11px] text-slate-400 pt-1">Campaign is expected to be <strong>PAUSED</strong>; Ad Set and Ads are expected to be <strong>ACTIVE</strong> on Meta.</p>
               ) : null}
             </CardContent>
           </Card>
