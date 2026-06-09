@@ -143,7 +143,7 @@ export function AppDetailContent() {
 
   const initialTab = normalizeTab(searchParams.get("tab"))
   const [activeTab, setActiveTab] = useState(initialTab)
-  const [copied, setCopied] = useState(false)
+  const [copiedField, setCopiedField] = useState<"appId" | "appStoreId" | null>(null)
   const [syncPerformanceModalOpen, setSyncPerformanceModalOpen] = useState(false)
 
   const tabScrollRef = useRef<HTMLDivElement>(null)
@@ -245,15 +245,15 @@ export function AppDetailContent() {
     }
   }, [searchParams, activeTab])
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, field: "appId" | "appStoreId") => {
     try {
       const copiedText = await copyTextToClipboard(text)
       if (!copiedText) return
 
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
     } catch (error) {
-      console.error("Failed to copy app ID", error)
+      console.error(`Failed to copy ${field}`, error)
     }
   }
 
@@ -284,9 +284,18 @@ export function AppDetailContent() {
             />
             <div className="flex flex-col gap-2">
               <div>
-                <h1 className="text-2xl font-semibold text-slate-900">
-                  {appLoading ? "Loading..." : app?.displayName || app?.name || "Unnamed App"}
-                </h1>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <h1 className="text-2xl font-semibold text-slate-900">
+                    {appLoading ? "Loading..." : app?.displayName || app?.name || "Unnamed App"}
+                  </h1>
+                  <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200">
+                    <Apple className="w-3 h-3" />
+                    {app?.platform || "Unknown"}
+                  </Badge>
+                  <Badge className="bg-green-100 text-green-700 border-0">
+                    {app?.approvalState || "Unknown"}
+                  </Badge>
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <code className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-mono">
                     {app?.appId || "--"}
@@ -294,32 +303,41 @@ export function AppDetailContent() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => { if (app?.appId) { void copyToClipboard(app.appId) } }}
+                        onClick={() => { if (app?.appId) { void copyToClipboard(app.appId, "appId") } }}
                         className="p-1 hover:bg-slate-100 rounded transition-colors"
                       >
-                        {copied ? (
+                        {copiedField === "appId" ? (
                           <Check className="w-3.5 h-3.5 text-green-600" />
                         ) : (
                           <Copy className="w-3.5 h-3.5 text-slate-400" />
                         )}
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>{copied ? "Copied!" : "Copy App ID"}</TooltipContent>
+                    <TooltipContent>{copiedField === "appId" ? "Copied!" : "Copy App ID"}</TooltipContent>
                   </Tooltip>
                 </div>
-              </div>
-              {/* Badges */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200">
-                  <Apple className="w-3 h-3" />
-                  {app?.platform || "Unknown"}
-                </Badge>
-                <Badge className="bg-green-100 text-green-700 border-0">
-                  {app?.approvalState || "Unknown"}
-                </Badge>
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-mono text-xs">
-                  {app?.appId || "--"}
-                </Badge>
+                {app?.appStoreId ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <code className="text-sm text-slate-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-mono text-amber-800">
+                      {app.appStoreId}
+                    </code>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => { void copyToClipboard(app.appStoreId!, "appStoreId") }}
+                          className="p-1 hover:bg-slate-100 rounded transition-colors"
+                        >
+                          {copiedField === "appStoreId" ? (
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{copiedField === "appStoreId" ? "Copied!" : "Copy App Store ID"}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -376,7 +394,7 @@ export function AppDetailContent() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2"
-                  onClick={() => { if (app?.appId) { void copyToClipboard(app.appId) } }}
+                  onClick={() => { if (app?.appId) { void copyToClipboard(app.appId, "appId") } }}
                   disabled={!app?.appId}
                 >
                   <Copy className="w-4 h-4" />

@@ -106,6 +106,7 @@ import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
 import { useApi, invalidateCache } from "@/hooks/use-api"
+import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
@@ -138,6 +139,7 @@ import {
   type CustomReportRowExpandParameter,
 } from "@/components/reports/custom-report-row-expand-panel"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
+import { escapeExcelHtml, formatMetricValue } from "@/lib/reports/report-format-utils"
 import { toast } from "sonner"
 import type { PersonnelNode } from "@/lib/organizations/personnel-chart-types"
 
@@ -171,6 +173,17 @@ const DEFAULT_METRICS: CustomReportCatalogItem[] = [
   { id: "impressions", label: "Impressions", category: "Volume", format: "number" },
   { id: "arpdau_ads", label: "ARPDAU (ads)", category: "Revenue", format: "currency" },
   { id: "ua_cost", label: "UA cost", category: "Cost", format: "currency" },
+  { id: "adjust_network_impressions", label: "Adjust network impressions", category: "Adjust", format: "number" },
+  { id: "adjust_network_clicks", label: "Adjust network clicks", category: "Adjust", format: "number" },
+  { id: "adjust_installs", label: "Adjust installs", category: "Adjust", format: "number" },
+  { id: "adjust_network_installs", label: "Adjust network installs", category: "Adjust", format: "number" },
+  { id: "adjust_ctr", label: "Adjust CTR", category: "Adjust", format: "percent" },
+  { id: "adjust_click_conversion_rate", label: "Adjust click CVR", category: "Adjust", format: "percent" },
+  { id: "adjust_impression_conversion_rate", label: "Adjust impression CVR", category: "Adjust", format: "percent" },
+  { id: "adjust_network_cost", label: "Adjust network cost", category: "Adjust", format: "currency" },
+  { id: "adjust_network_ecpi", label: "Adjust network eCPI", category: "Adjust", format: "currency" },
+  { id: "adjust_network_ecpm", label: "Adjust network eCPM", category: "Adjust", format: "currency" },
+  { id: "adjust_ecpc", label: "Adjust eCPC", category: "Adjust", format: "currency" },
   { id: "iap_net_revenue", label: "IAP net revenue", category: "Revenue", format: "currency" },
   { id: "total_revenue_usd", label: "Total revenue (IAA + IAP)", category: "Revenue", format: "currency" },
   { id: "profit", label: "Profit", category: "Revenue", format: "currency" },
@@ -187,9 +200,25 @@ const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
 const MOBILE_APP_COLUMN_WIDTH = 52
 const MOBILE_DATE_COLUMN_WIDTH = 72
 const MOBILE_PLATFORM_COLUMN_WIDTH = 40
+const CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY = "custom-report-mobile-stickers-top-v1"
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
+
+const APP_STORE_MERGED_METRIC_IDS = new Set([
+  "ua_cost",
+  "adjust_network_impressions",
+  "adjust_network_clicks",
+  "adjust_installs",
+  "adjust_network_installs",
+  "adjust_ctr",
+  "adjust_click_conversion_rate",
+  "adjust_impression_conversion_rate",
+  "adjust_network_cost",
+  "adjust_network_ecpi",
+  "adjust_network_ecpm",
+  "adjust_ecpc",
+])
 
 interface ActiveFilter {
   type: string
@@ -298,30 +327,6 @@ function SortableReportFieldItem({
       <span className="flex-1 leading-snug">{label}</span>
     </button>
   )
-}
-
-function formatMetricValue(
-  value: number | string | null | undefined,
-  metricId: string,
-  metricCatalog: CustomReportCatalogItem[],
-): string {
-  if (value === undefined || value === null) return "—"
-  const metric = metricCatalog.find((m) => m.id === metricId)
-  if (!metric || typeof value === "string") return String(value)
-
-  const num = typeof value === "number" ? value : Number(value)
-  if (Number.isNaN(num)) return String(value)
-
-  switch (metric.format) {
-    case "currency":
-      return `$${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    case "percent":
-      return `${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
-    case "number":
-      return num.toLocaleString("en-US")
-    default:
-      return String(num)
-  }
 }
 
 function renderPlatformIcon(isAndroid: boolean, className?: string) {
@@ -629,15 +634,15 @@ function getMetricColumnStyle(): CSSProperties {
   }
 }
 
-function buildUaCostRowSpanMap(
+function buildAppStoreMergedMetricRowSpanMap(
   rows: Array<Record<string, string | number | null>>,
   selectedParameters: string[],
 ): Map<number, MetricRowSpanState> {
-  const shouldMergeUaCost =
+  const shouldMergeMetrics =
     selectedParameters.includes("date") &&
     (selectedParameters.includes("app") || selectedParameters.includes("app_store_id"))
 
-  if (!shouldMergeUaCost || rows.length === 0) {
+  if (!shouldMergeMetrics || rows.length === 0) {
     return new Map()
   }
 
@@ -700,16 +705,14 @@ function getMonthDateRange(month: Date): { start: Date; end: Date } {
   }
 }
 
-function escapeExcelHtml(value: unknown): string {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-}
-
 export function CustomReportBuilderContent() {
   const isMobile = useIsMobile()
+  const {
+    containerRef: mobileStickersRef,
+    topPx: mobileStickersTop,
+    consumeDragClick: consumeMobileStickersDragClick,
+    dragProps: mobileStickersDragProps,
+  } = useDraggableVerticalFixed(CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY, { capture: true })
   const router = useRouter()
   const searchParams = useSearchParams()
   const reportIdFromUrl = searchParams.get("reportId")
@@ -1811,8 +1814,8 @@ export function CustomReportBuilderContent() {
 
   const tableRows = reportData?.rows ?? []
   const tableTotals = reportData?.totals ?? {}
-  const uaCostRowSpanMap = useMemo(
-    () => buildUaCostRowSpanMap(tableRows, displayedParameters),
+  const appStoreMergedMetricRowSpanMap = useMemo(
+    () => buildAppStoreMergedMetricRowSpanMap(tableRows, displayedParameters),
     [tableRows, displayedParameters],
   )
 
@@ -2157,8 +2160,8 @@ export function CustomReportBuilderContent() {
                   </TableCell>
                 ))}
                 {displayedMetrics.map((metricId, index) => {
-                  if (metricId === "ua_cost") {
-                    const spanState = uaCostRowSpanMap.get(idx)
+                  if (APP_STORE_MERGED_METRIC_IDS.has(metricId)) {
+                    const spanState = appStoreMergedMetricRowSpanMap.get(idx)
                     if (spanState?.hidden) return null
 
                     return (
@@ -3295,17 +3298,33 @@ export function CustomReportBuilderContent() {
 
         {isMobile ? (
           <>
-            <div className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-end gap-2">
+            <div
+              ref={mobileStickersRef}
+              className="fixed right-0 z-40 flex touch-none cursor-grab flex-col items-end gap-2 active:cursor-grabbing"
+              style={
+                mobileStickersTop == null
+                  ? { top: "50%", transform: "translateY(-50%)" }
+                  : { top: mobileStickersTop }
+              }
+              {...mobileStickersDragProps}
+            >
               {hasReportActions ? (
                 <div className="flex flex-row-reverse items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setMobileReportActionsOpen((open) => !open)}
+                    onClick={() => {
+                      if (consumeMobileStickersDragClick()) return
+                      setMobileReportActionsOpen((open) => !open)
+                    }}
                     className={cn(
                       "flex h-12 w-12 items-center justify-center rounded-l-xl border border-r-0 border-slate-200 bg-white shadow-lg",
                       mobileReportActionsOpen && "ring-2 ring-blue-300",
                     )}
-                    aria-label={mobileReportActionsOpen ? "Hide report actions" : "Show report actions"}
+                    aria-label={
+                      mobileReportActionsOpen
+                        ? "Hide report actions. Drag the sticker group up or down to reposition."
+                        : "Show report actions. Drag the sticker group up or down to reposition."
+                    }
                     aria-expanded={mobileReportActionsOpen}
                   >
                     <MoreHorizontal className="h-5 w-5 text-slate-600" aria-hidden />
@@ -3319,12 +3338,15 @@ export function CustomReportBuilderContent() {
               ) : null}
               <button
                 type="button"
-                onClick={() => setMobileFiltersOpen(true)}
+                onClick={() => {
+                  if (consumeMobileStickersDragClick()) return
+                  setMobileFiltersOpen(true)
+                }}
                 className={cn(
                   "flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg",
                   hasPendingApply && "ring-2 ring-blue-300",
                 )}
-                aria-label="Open filters"
+                aria-label="Open filters. Drag the sticker group up or down to reposition."
               >
                 <Filter className="h-4 w-4 text-slate-600" aria-hidden />
                 <span
@@ -3345,9 +3367,12 @@ export function CustomReportBuilderContent() {
 
               <button
                 type="button"
-                onClick={() => setMobileColumnsOpen(true)}
+                onClick={() => {
+                  if (consumeMobileStickersDragClick()) return
+                  setMobileColumnsOpen(true)
+                }}
                 className="flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg"
-                aria-label="Open parameters and metrics"
+                aria-label="Open parameters and metrics. Drag the sticker group up or down to reposition."
               >
                 <Columns3 className="h-4 w-4 text-slate-600" aria-hidden />
                 <span
