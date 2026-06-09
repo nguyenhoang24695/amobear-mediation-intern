@@ -137,6 +137,8 @@ function buildCreativeTypeToken(creativeType: MetaCreativeType) {
       return "FLEX"
     case "SINGLE_VIDEO":
       return "VID"
+    case "SINGLE_MEDIA":
+      return "MEDIA"
     case "CAROUSEL_IMAGE":
       return "CAROUSEL"
     case "EXISTING_POST":

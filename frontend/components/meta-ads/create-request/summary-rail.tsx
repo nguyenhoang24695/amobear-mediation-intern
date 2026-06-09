@@ -198,8 +198,17 @@ function hasCreativeVariation(values?: string[], fallback?: string): boolean {
 }
 
 function getCreativeStatus(form: RequestFormState) {
+  if (form.creativeType === "SINGLE_MEDIA") {
+    const hasCta = !!form.singleImageCallToAction
+    const hasMedia = form.mediaType === "VIDEO"
+      ? !!(form.singleVideoVideo.videoId || form.singleVideoVideo.uploadedAssetId)
+      : form.mediaType === "IMAGE"
+        ? !!(form.singleImageImage.imageHash || form.singleImageImage.imageUrl || form.singleImageImage.uploadedAssetId)
+        : false
+    return { ok: !!(form.creativeName && form.facebookPageId && hasCta && hasMedia), label: "single image/video" }
+  }
   if (form.creativeType === "SINGLE_VIDEO") {
-    return { ok: !!(form.creativeName && form.facebookPageId && hasCreativeVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText) && hasCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) && form.singleVideoCallToAction && (form.singleVideoVideo.videoId || form.singleVideoVideo.uploadedAssetId)), label: "single video" }
+    return { ok: !!(form.creativeName && form.facebookPageId && form.singleVideoCallToAction && (form.singleVideoVideo.videoId || form.singleVideoVideo.uploadedAssetId)), label: "single video" }
   }
   if (form.creativeType === "CAROUSEL_IMAGE") {
     return { ok: !!(form.creativeName && form.facebookPageId && form.carouselCallToAction && form.carouselCards.length >= 2 && form.carouselCards.every((card) => card.headline && (card.image.imageHash || card.image.imageUrl || card.image.uploadedAssetId))), label: "carousel" }
@@ -223,10 +232,11 @@ function getCreativeStatus(form: RequestFormState) {
   if (form.creativeType === "EXISTING_POST") {
     return { ok: !!(form.creativeName && form.facebookPageId && form.existingPostId), label: "existing post" }
   }
-  return { ok: !!(form.creativeName && form.facebookPageId && hasCreativeVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText) && hasCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) && form.singleImageCallToAction && (form.singleImageImage.imageHash || form.singleImageImage.imageUrl || form.singleImageImage.uploadedAssetId)), label: "single image" }
+  return { ok: !!(form.creativeName && form.facebookPageId && form.singleImageCallToAction && (form.singleImageImage.imageHash || form.singleImageImage.imageUrl || form.singleImageImage.uploadedAssetId)), label: "single image" }
 }
 
 function getCreativeHeadline(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return getFirstCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) || "-"
   if (form.creativeType === "SINGLE_VIDEO") return getFirstCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || "-"
   if (form.creativeType === "FLEXIBLE") return getFirstCreativeVariation(form.flexibleHeadlines) || "-"
@@ -235,6 +245,7 @@ function getCreativeHeadline(form: RequestFormState): string {
 }
 
 function getCreativeCta(form: RequestFormState): string {
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImageCallToAction || "-"
   if (form.creativeType === "SINGLE_VIDEO") return form.singleVideoCallToAction || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCallToAction || "-"
   if (form.creativeType === "FLEXIBLE") return form.flexibleCallToAction || "-"
@@ -281,6 +292,5 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-
 
 

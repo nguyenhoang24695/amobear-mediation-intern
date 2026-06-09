@@ -19,7 +19,8 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   adAccountId: number | null
-  targetKind: "image" | "video"
+  /** "image" restricts to images only, "video" to videos only, "both" allows selecting either. */
+  targetKind: "image" | "video" | "both"
   selectedAssetId?: string | null
   onSelect: (media: MetaReferenceMediaDto) => void
 }
@@ -38,7 +39,7 @@ function mergeUnique(existing: MetaReferenceMediaDto[], incoming: MetaReferenceM
   return next
 }
 
-function getInitialTab(targetKind: "image" | "video"): AssetTab {
+function getInitialTab(targetKind: "image" | "video" | "both"): AssetTab {
   return targetKind === "video" ? "videos" : "images"
 }
 
@@ -111,7 +112,7 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
     setHasMore(mediaApi.data.hasMore)
   }, [after, mediaApi.data])
 
-  const selectableAssetType = targetKind === "video" ? "VIDEO" : "IMAGE"
+  const selectableAssetType = targetKind === "video" ? "VIDEO" : targetKind === "image" ? "IMAGE" : null // null = both selectable
   const emptyMessage = search
     ? `No ${activeTab === "images" ? "images" : "videos"} matched your search.`
     : `No ${activeTab === "images" ? "images" : "videos"} were found in this Meta ad account.`
@@ -188,7 +189,7 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
             </div>
           ) : (
             <div className="space-y-4">
-              {activeTab !== getInitialTab(targetKind) ? (
+              {activeTab !== getInitialTab(targetKind) && targetKind !== "both" ? (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
                   You are currently selecting a {targetKind}. Switch back to the {getInitialTab(targetKind) === "images" ? "Images" : "Videos"} tab to apply a selection.
                 </div>
@@ -196,7 +197,7 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
 
               <div className="grid max-h-[420px] grid-cols-2 gap-4 overflow-y-auto pr-1 md:grid-cols-3 xl:grid-cols-4">
                 {items.map((item) => {
-                  const isSelectable = item.assetType === selectableAssetType
+                  const isSelectable = selectableAssetType === null ? true : item.assetType === selectableAssetType
                   const isSelected = selectedAssetId != null && selectedAssetId === item.id
                   const canPreviewVideo = item.assetType === "VIDEO"
                   return (

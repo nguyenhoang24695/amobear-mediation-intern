@@ -7,7 +7,7 @@ export type MetaRequestStatus =
   | "completed"
   | "failed"
 
-export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE"
+export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE"
 export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "COUNTRY_GROUP" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
@@ -1114,6 +1114,8 @@ export interface AdVariantFormState {
   // Stable key used for retry idempotency (1-based, auto-incremented)
   sequenceNumber: number
   creativeType: MetaCreativeType
+  /** UI-only: resolved media type for SINGLE_MEDIA mode. undefined = no media selected yet. */
+  mediaType?: "IMAGE" | "VIDEO"
   creativeName: string
   facebookPageId: string
   instagramActorId: string
@@ -1187,6 +1189,8 @@ export interface MetaRequestFormState {
   startTime: string
   endTime: string
   creativeType: MetaCreativeType
+  /** UI-only: resolved media type for SINGLE_MEDIA mode (primary variant). undefined = no media selected yet. */
+  mediaType?: "IMAGE" | "VIDEO"
   creativeName: string
   facebookPageId: string
   instagramActorId: string
