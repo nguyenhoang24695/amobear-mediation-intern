@@ -18,6 +18,13 @@ import {
   toApiDateString,
 } from "@/lib/reports/report-date-filter-utils"
 import { MY_REPORT_DIMENSION_IDS } from "@/lib/reports/my-report-catalog-groups"
+import {
+  MY_REPORT_DEFAULT_ENABLED_CONFIG_KEYS,
+  MY_REPORT_LOCKED_CONFIG_KEYS,
+  normalizeEnabledConfigKeys,
+  resetEnabledConfigKeys,
+  type MyReportConfigKey,
+} from "@/lib/reports/my-report-data-config-catalog"
 
 export type MyReportConfig = {
   dimensions: string[]
@@ -33,6 +40,7 @@ export type MyReportConfig = {
   endDate: Date
   sortBy: string
   sortDir: "asc" | "desc"
+  enabledConfigKeys: MyReportConfigKey[]
 }
 
 export type AppliedMyReportConfig = MyReportConfig
@@ -44,6 +52,7 @@ function cloneConfig(config: MyReportConfig): MyReportConfig {
     metrics: [...config.metrics],
     selectedAppIds: [...config.selectedAppIds],
     selectedCommissionTeamIds: [...config.selectedCommissionTeamIds],
+    enabledConfigKeys: [...config.enabledConfigKeys],
     selectedMonth: new Date(config.selectedMonth),
     startDate: new Date(config.startDate),
     endDate: new Date(config.endDate),
@@ -66,6 +75,7 @@ export function createDefaultMyReportConfig(): MyReportConfig {
     endDate: end,
     sortBy: MY_REPORT_DEFAULT_SORT.sortBy,
     sortDir: MY_REPORT_DEFAULT_SORT.sortDir,
+    enabledConfigKeys: [...MY_REPORT_DEFAULT_ENABLED_CONFIG_KEYS],
   }
 }
 
@@ -177,6 +187,23 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
     })
   }, [])
 
+  const toggleConfigKey = useCallback((key: MyReportConfigKey) => {
+    if (MY_REPORT_LOCKED_CONFIG_KEYS.includes(key)) return
+    setDraft((prev) => {
+      const current = normalizeEnabledConfigKeys(prev.enabledConfigKeys)
+      const has = current.includes(key)
+      const next = has ? current.filter((k) => k !== key) : [...current, key]
+      return { ...prev, enabledConfigKeys: normalizeEnabledConfigKeys(next) }
+    })
+  }, [])
+
+  const resetConfigVisibility = useCallback(() => {
+    setDraft((prev) => ({
+      ...prev,
+      enabledConfigKeys: resetEnabledConfigKeys(),
+    }))
+  }, [])
+
   const hasPendingApply = useMemo(() => {
     if (!applied) return true
     return JSON.stringify(draft) !== JSON.stringify(applied)
@@ -192,6 +219,8 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
     reorderMetrics,
     setSort,
     applySort,
+    toggleConfigKey,
+    resetConfigVisibility,
     hasPendingApply,
   }
 }

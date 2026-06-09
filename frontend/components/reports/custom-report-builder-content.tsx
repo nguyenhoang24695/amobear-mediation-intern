@@ -173,6 +173,17 @@ const DEFAULT_METRICS: CustomReportCatalogItem[] = [
   { id: "impressions", label: "Impressions", category: "Volume", format: "number" },
   { id: "arpdau_ads", label: "ARPDAU (ads)", category: "Revenue", format: "currency" },
   { id: "ua_cost", label: "UA cost", category: "Cost", format: "currency" },
+  { id: "adjust_network_impressions", label: "Adjust network impressions", category: "Adjust", format: "number" },
+  { id: "adjust_network_clicks", label: "Adjust network clicks", category: "Adjust", format: "number" },
+  { id: "adjust_installs", label: "Adjust installs", category: "Adjust", format: "number" },
+  { id: "adjust_network_installs", label: "Adjust network installs", category: "Adjust", format: "number" },
+  { id: "adjust_ctr", label: "Adjust CTR", category: "Adjust", format: "percent" },
+  { id: "adjust_click_conversion_rate", label: "Adjust click CVR", category: "Adjust", format: "percent" },
+  { id: "adjust_impression_conversion_rate", label: "Adjust impression CVR", category: "Adjust", format: "percent" },
+  { id: "adjust_network_cost", label: "Adjust network cost", category: "Adjust", format: "currency" },
+  { id: "adjust_network_ecpi", label: "Adjust network eCPI", category: "Adjust", format: "currency" },
+  { id: "adjust_network_ecpm", label: "Adjust network eCPM", category: "Adjust", format: "currency" },
+  { id: "adjust_ecpc", label: "Adjust eCPC", category: "Adjust", format: "currency" },
   { id: "iap_net_revenue", label: "IAP net revenue", category: "Revenue", format: "currency" },
   { id: "total_revenue_usd", label: "Total revenue (IAA + IAP)", category: "Revenue", format: "currency" },
   { id: "profit", label: "Profit", category: "Revenue", format: "currency" },
@@ -193,6 +204,21 @@ const CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY = "custom-report-mobile-stickers-top
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
+
+const APP_STORE_MERGED_METRIC_IDS = new Set([
+  "ua_cost",
+  "adjust_network_impressions",
+  "adjust_network_clicks",
+  "adjust_installs",
+  "adjust_network_installs",
+  "adjust_ctr",
+  "adjust_click_conversion_rate",
+  "adjust_impression_conversion_rate",
+  "adjust_network_cost",
+  "adjust_network_ecpi",
+  "adjust_network_ecpm",
+  "adjust_ecpc",
+])
 
 interface ActiveFilter {
   type: string
@@ -608,15 +634,15 @@ function getMetricColumnStyle(): CSSProperties {
   }
 }
 
-function buildUaCostRowSpanMap(
+function buildAppStoreMergedMetricRowSpanMap(
   rows: Array<Record<string, string | number | null>>,
   selectedParameters: string[],
 ): Map<number, MetricRowSpanState> {
-  const shouldMergeUaCost =
+  const shouldMergeMetrics =
     selectedParameters.includes("date") &&
     (selectedParameters.includes("app") || selectedParameters.includes("app_store_id"))
 
-  if (!shouldMergeUaCost || rows.length === 0) {
+  if (!shouldMergeMetrics || rows.length === 0) {
     return new Map()
   }
 
@@ -1788,8 +1814,8 @@ export function CustomReportBuilderContent() {
 
   const tableRows = reportData?.rows ?? []
   const tableTotals = reportData?.totals ?? {}
-  const uaCostRowSpanMap = useMemo(
-    () => buildUaCostRowSpanMap(tableRows, displayedParameters),
+  const appStoreMergedMetricRowSpanMap = useMemo(
+    () => buildAppStoreMergedMetricRowSpanMap(tableRows, displayedParameters),
     [tableRows, displayedParameters],
   )
 
@@ -2134,8 +2160,8 @@ export function CustomReportBuilderContent() {
                   </TableCell>
                 ))}
                 {displayedMetrics.map((metricId, index) => {
-                  if (metricId === "ua_cost") {
-                    const spanState = uaCostRowSpanMap.get(idx)
+                  if (APP_STORE_MERGED_METRIC_IDS.has(metricId)) {
+                    const spanState = appStoreMergedMetricRowSpanMap.get(idx)
                     if (spanState?.hidden) return null
 
                     return (
