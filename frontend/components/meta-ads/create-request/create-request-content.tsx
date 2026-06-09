@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,11 +32,13 @@ import type {
   MetaAdSetDraftValidationDto,
   MetaAppMappingDto,
   MetaCampaignRequestDetailDto,
+  MetaAssetPreparationDto,
   MetaCreateCampaignReferenceDto,
   MetaFacebookPageReferenceDto,
   GeoCountryGroupDto,
   MetaGeoRegionDto,
   MetaIntegrationDto,
+  MetaRequestAssetSelectionState,
   MetaPerformanceGoalReferenceDto,
   MetaRequestFormState,
   MetaRequestStatus,
@@ -52,9 +54,11 @@ import { CreativeSection } from "./section-creative"
 import { AdSection } from "./section-ad"
 import { RequestSummaryRail } from "./summary-rail"
 import { resolveMetaAppMappingPlatform } from "./platform"
+import { captureVideoFrameToFile } from "./video-frame-capture"
 export type RequestFormState = MetaRequestFormState
 
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
+const MAX_AD_VARIANTS = 50
 
 const requestSectionIds: Record<RequestSectionTarget, string> = {
   "account-app": "meta-request-section-account-app",
@@ -269,6 +273,108 @@ function createDefaultFormState(): RequestFormState {
   })
 }
 
+function createEmptyAdVariant(seq: number, form: Pick<RequestFormState, "facebookPageId" | "instagramActorId">): AdVariantFormState {
+  return {
+    sequenceNumber: seq,
+    creativeType: "SINGLE_MEDIA",
+    mediaType: undefined,
+    creativeName: "",
+    facebookPageId: form.facebookPageId,
+    instagramActorId: form.instagramActorId,
+    singleImagePrimaryText: "",
+    singleImagePrimaryTexts: [""],
+    singleImageHeadline: "",
+    singleImageHeadlines: [""],
+    singleImageDescription: "",
+    singleImageCallToAction: "LEARN_MORE",
+    singleImageLinkUrl: "",
+    singleImageImage: createEmptyMediaSelection("meta_ref"),
+    singleVideoPrimaryText: "",
+    singleVideoPrimaryTexts: [""],
+    singleVideoHeadline: "",
+    singleVideoHeadlines: [""],
+    singleVideoDescription: "",
+    singleVideoCallToAction: "LEARN_MORE",
+    singleVideoLinkUrl: "",
+    singleVideoVideo: createEmptyMediaSelection("meta_ref"),
+    singleVideoThumbnail: createEmptyMediaSelection("meta_ref"),
+    carouselPrimaryText: "",
+    carouselCallToAction: "LEARN_MORE",
+    carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
+    flexiblePrimaryTexts: [""],
+    flexibleHeadlines: [""],
+    flexibleCallToAction: "LEARN_MORE",
+    flexibleLinkUrl: "",
+    flexibleAssets: [createEmptyFlexibleAsset()],
+    existingPostId: "",
+    adName: "",
+    trackingSpecs: "",
+  }
+}
+
+function hasSelectedMedia(selection: MetaRequestAssetSelectionState, kind: "image" | "video") {
+  return !!(
+    selection.uploadedAssetId ||
+    selection.metaAssetId ||
+    selection.metaPreviewUrl ||
+    selection.uploadedAssetPreviewUrl ||
+    (kind === "video" ? selection.videoId || selection.metaPlayableUrl : selection.imageHash || selection.imageUrl)
+  )
+}
+
+function addUploadedAssetId(ids: Set<number>, selection?: MetaRequestAssetSelectionState | null) {
+  if (selection?.uploadedAssetId && Number.isFinite(selection.uploadedAssetId)) {
+    ids.add(selection.uploadedAssetId)
+  }
+}
+
+function collectUploadedAssetIds(form: RequestFormState): number[] {
+  const ids = new Set<number>()
+
+  addUploadedAssetId(ids, form.singleImageImage)
+  addUploadedAssetId(ids, form.singleVideoVideo)
+  addUploadedAssetId(ids, form.singleVideoThumbnail)
+
+  for (const card of form.carouselCards) {
+    addUploadedAssetId(ids, card.image)
+  }
+
+  for (const asset of form.flexibleAssets) {
+    addUploadedAssetId(ids, asset.image)
+    addUploadedAssetId(ids, asset.video)
+    addUploadedAssetId(ids, asset.thumbnail)
+  }
+
+  for (const variant of form.additionalVariants) {
+    addUploadedAssetId(ids, variant.singleImageImage)
+    addUploadedAssetId(ids, variant.singleVideoVideo)
+    addUploadedAssetId(ids, variant.singleVideoThumbnail)
+    for (const card of variant.carouselCards) {
+      addUploadedAssetId(ids, card.image)
+    }
+    for (const asset of variant.flexibleAssets) {
+      addUploadedAssetId(ids, asset.image)
+      addUploadedAssetId(ids, asset.video)
+      addUploadedAssetId(ids, asset.thumbnail)
+    }
+  }
+
+  return Array.from(ids)
+}
+
+function buildUploadedMediaSelection(asset: { id: number; fileName: string }, file: File, kind: "image" | "video"): MetaRequestAssetSelectionState {
+  return {
+    ...createEmptyMediaSelection("uploaded_asset"),
+    mode: "uploaded_asset",
+    uploadedAssetId: asset.id,
+    uploadedAssetName: asset.fileName,
+    uploadedAssetPreviewUrl: kind === "image" ? URL.createObjectURL(file) : "",
+    imageHash: "",
+    imageUrl: "",
+    videoId: "",
+  }
+}
+
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
 
 function buildIdempotencyKey() {
@@ -360,6 +466,8 @@ export function CreateRequestContent({ requestId }: Props) {
   const [facebookPageSource, setFacebookPageSource] = useState<"promote_pages" | "access_token_all">("promote_pages")
   const [highlightedSection, setHighlightedSection] = useState<RequestSectionTarget | null>(null)
   const [activeVariantTab, setActiveVariantTab] = useState("variant-1")
+  const [bulkUploading, setBulkUploading] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null)
   const [adSetDraftValidation, setAdSetDraftValidation] = useState<MetaAdSetDraftValidationDto | null>(null)
   const [adSetDraftValidationLoading, setAdSetDraftValidationLoading] = useState(false)
   const highlightTimeoutRef = useRef<number | null>(null)
@@ -452,6 +560,47 @@ export function CreateRequestContent({ requestId }: Props) {
     () => metaReferenceApi.getGeoCountryGroups(),
     { cacheKey: "meta-reference:geo:country-groups" }
   )
+
+  const assetPreparationCacheKey = draftId ? `meta-request:${draftId}:asset-preparation` : "meta-request:new:asset-preparation"
+  const {
+    data: assetPreparation,
+    loading: assetPreparationLoading,
+    refetch: refetchAssetPreparation,
+  } = useApi(
+    () => metaRequestsApi.getAssetPreparation(draftId as number),
+    {
+      enabled: draftId != null,
+      cacheKey: assetPreparationCacheKey,
+    }
+  )
+
+  const assetPreparationById = useMemo(() => {
+    const map = new Map<number, MetaAssetPreparationDto>()
+    const parsedAdAccountId = form.adAccountId ? Number(form.adAccountId) : null
+    const currentAdAccountId = parsedAdAccountId != null && Number.isFinite(parsedAdAccountId) ? parsedAdAccountId : null
+    for (const asset of assetPreparation?.assets ?? []) {
+      if (currentAdAccountId != null && asset.metaAdAccountId != null && asset.metaAdAccountId !== currentAdAccountId) {
+        continue
+      }
+      map.set(asset.requestAssetId, asset)
+    }
+    return map
+  }, [assetPreparation, form.adAccountId])
+
+  const hasActiveAssetPreparation = useMemo(() => {
+    return (assetPreparation?.assets ?? []).some((asset) => ["pending", "uploading", "processing"].includes(asset.status))
+  }, [assetPreparation])
+
+  useEffect(() => {
+    if (!draftId || !hasActiveAssetPreparation) return
+
+    const intervalId = window.setInterval(() => {
+      void refetchAssetPreparation()
+    }, 7000)
+
+    return () => window.clearInterval(intervalId)
+  }, [draftId, hasActiveAssetPreparation, refetchAssetPreparation])
+
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
@@ -586,7 +735,7 @@ export function CreateRequestContent({ requestId }: Props) {
   // Multi-variant ads only make sense when each variant has its own image/video.
   // For CAROUSEL / FLEXIBLE / EXISTING_POST, force a single variant.
   const supportsVariants = form.creativeType === "SINGLE_MEDIA"
-  const canAddVariant = supportsVariants && totalVariants < 50
+  const canAddVariant = supportsVariants && totalVariants < MAX_AD_VARIANTS
   const maxSeqNumber = form.additionalVariants.reduce((max, v) => Math.max(max, v.sequenceNumber), 1)
 
   // If the active variant tab disappears (e.g. user changed creative type), reset to variant-1.
@@ -601,44 +750,122 @@ export function CreateRequestContent({ requestId }: Props) {
   const handleAddVariant = () => {
     if (!canAddVariant) return
     const newSeq = maxSeqNumber + 1
-    const newVariant: AdVariantFormState = {
-      sequenceNumber: newSeq,
-      creativeType: "SINGLE_MEDIA",
-      mediaType: undefined,
-      creativeName: "",
-      facebookPageId: form.facebookPageId,
-      instagramActorId: form.instagramActorId,
-      singleImagePrimaryText: "",
-      singleImagePrimaryTexts: [""],
-      singleImageHeadline: "",
-      singleImageHeadlines: [""],
-      singleImageDescription: "",
-      singleImageCallToAction: "LEARN_MORE",
-      singleImageLinkUrl: "",
-      singleImageImage: createEmptyMediaSelection("meta_ref"),
-      singleVideoPrimaryText: "",
-      singleVideoPrimaryTexts: [""],
-      singleVideoHeadline: "",
-      singleVideoHeadlines: [""],
-      singleVideoDescription: "",
-      singleVideoCallToAction: "LEARN_MORE",
-      singleVideoLinkUrl: "",
-      singleVideoVideo: createEmptyMediaSelection("meta_ref"),
-      singleVideoThumbnail: createEmptyMediaSelection("meta_ref"),
-      carouselPrimaryText: "",
-      carouselCallToAction: "LEARN_MORE",
-      carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
-      flexiblePrimaryTexts: [""],
-      flexibleHeadlines: [""],
-      flexibleCallToAction: "LEARN_MORE",
-      flexibleLinkUrl: "",
-      flexibleAssets: [createEmptyFlexibleAsset()],
-      existingPostId: "",
-      adName: "",
-      trackingSpecs: "",
-    }
+    const newVariant = createEmptyAdVariant(newSeq, form)
     updateForm({ additionalVariants: [...form.additionalVariants, newVariant] })
     setActiveVariantTab(`variant-${newSeq}`)
+  }
+
+  const handleBulkMediaUpload = async (files: File[]) => {
+    if (!supportsVariants || bulkUploading) return
+
+    const inputFiles = files.filter(Boolean)
+    if (inputFiles.length === 0) return
+
+    const primaryHasMedia = hasSelectedMedia(form.singleImageImage, "image") || hasSelectedMedia(form.singleVideoVideo, "video")
+    const primaryCanBeFilled = !primaryHasMedia
+    const remainingAdditionalSlots = Math.max(0, MAX_AD_VARIANTS - (1 + form.additionalVariants.length))
+    const capacity = remainingAdditionalSlots + (primaryCanBeFilled ? 1 : 0)
+
+    if (capacity <= 0) {
+      toast({ title: "Maximum variations reached", description: `Meta supports up to ${MAX_AD_VARIANTS} media variations.` })
+      return
+    }
+
+    const acceptedFiles = inputFiles.slice(0, capacity)
+    if (acceptedFiles.length < inputFiles.length) {
+      toast({
+        title: "Some files were skipped",
+        description: `Added ${acceptedFiles.length}/${inputFiles.length} files. Maximum is ${MAX_AD_VARIANTS} variations.`,
+      })
+    }
+
+    setBulkUploading(true)
+    setBulkProgress({ done: 0, total: acceptedFiles.length })
+
+    const primaryPatch: Partial<RequestFormState> = {}
+    const newVariants: AdVariantFormState[] = []
+    const failedFiles: string[] = []
+    let fillPrimaryNext = primaryCanBeFilled
+    let nextSeq = maxSeqNumber + 1
+    let firstNewVariantSeq: number | null = null
+    let uploadedCount = 0
+
+    for (const [index, file] of acceptedFiles.entries()) {
+      const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image"
+      const mediaType = kind === "video" ? "VIDEO" : "IMAGE"
+
+      try {
+        const asset = await metaRequestsApi.uploadAsset(file, kind)
+        const mediaSelection = buildUploadedMediaSelection(asset, file, kind)
+        let thumbnailSelection: MetaRequestAssetSelectionState | null = null
+
+        if (kind === "video") {
+          try {
+            const thumbnailFile = await captureVideoFrameToFile({ videoFile: file, timestampSeconds: 5 })
+            const thumbnailAsset = await metaRequestsApi.uploadAsset(thumbnailFile, "image")
+            thumbnailSelection = buildUploadedMediaSelection(thumbnailAsset, thumbnailFile, "image")
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Cannot generate thumbnail from this video."
+            toast({ title: "Thumbnail generation failed", description: `${file.name}: ${message}`, variant: "destructive" })
+          }
+        }
+
+        if (fillPrimaryNext) {
+          if (kind === "video") {
+            primaryPatch.mediaType = "VIDEO"
+            primaryPatch.singleVideoVideo = mediaSelection
+            if (thumbnailSelection) primaryPatch.singleVideoThumbnail = thumbnailSelection
+          } else {
+            primaryPatch.mediaType = "IMAGE"
+            primaryPatch.singleImageImage = mediaSelection
+          }
+          fillPrimaryNext = false
+        } else {
+          const variant = createEmptyAdVariant(nextSeq++, form)
+          variant.mediaType = mediaType
+          if (kind === "video") {
+            variant.singleVideoVideo = mediaSelection
+            if (thumbnailSelection) variant.singleVideoThumbnail = thumbnailSelection
+          } else {
+            variant.singleImageImage = mediaSelection
+          }
+          newVariants.push(variant)
+          firstNewVariantSeq ??= variant.sequenceNumber
+        }
+
+        uploadedCount += 1
+      } catch {
+        failedFiles.push(file.name)
+      } finally {
+        setBulkProgress({ done: index + 1, total: acceptedFiles.length })
+      }
+    }
+
+    if (uploadedCount > 0) {
+      updateForm({
+        ...primaryPatch,
+        additionalVariants: [...form.additionalVariants, ...newVariants],
+      })
+
+      if (firstNewVariantSeq != null) {
+        setActiveVariantTab(`variant-${firstNewVariantSeq}`)
+      } else if (Object.keys(primaryPatch).length > 0) {
+        setActiveVariantTab("variant-1")
+      }
+    }
+
+    if (failedFiles.length > 0) {
+      toast({
+        title: "Some files failed",
+        description: `Added ${uploadedCount} variation${uploadedCount === 1 ? "" : "s"}. Failed: ${failedFiles.slice(0, 3).join(", ")}${failedFiles.length > 3 ? "..." : ""}`,
+        variant: "destructive",
+      })
+    } else if (uploadedCount > 0) {
+      toast({ title: "Media variations added", description: `Added ${uploadedCount} file${uploadedCount === 1 ? "" : "s"}.` })
+    }
+
+    setBulkUploading(false)
+    setBulkProgress(null)
   }
 
   /** Duplicate the primary variant (Variation #1 — backed by flat form fields). */
@@ -750,6 +977,19 @@ export function CreateRequestContent({ requestId }: Props) {
     invalidateCache("meta-reference:create-campaign")
     invalidateCache(`meta-request:${response.id}`)
 
+    if (response.metaAdAccountId && collectUploadedAssetIds(form).length > 0) {
+      try {
+        const queued = await metaRequestsApi.queueAssetPreparation(response.id)
+        invalidateCache(`meta-request:${response.id}:asset-preparation`)
+        if (draftId === response.id) {
+          await refetchAssetPreparation(() => Promise.resolve(queued))
+        }
+      } catch (queueError) {
+        const message = queueError instanceof Error ? queueError.message : "Asset preparation queue failed."
+        toast({ title: "Meta asset preparation not queued", description: message, variant: "destructive" })
+      }
+    }
+
     if (!silent) {
       const sentBackForApproval = !!previousStatus && previousStatus !== "draft" && response.status === "pending_approval"
       toast({
@@ -761,6 +1001,25 @@ export function CreateRequestContent({ requestId }: Props) {
     }
 
     return response
+  }
+
+  const handleRetryAssetPreparation = async (assetId: number) => {
+    if (!form.adAccountId) {
+      toast({ title: "Select a Meta ad account", description: "Assets are uploaded to Meta per ad account before execution.", variant: "destructive" })
+      return
+    }
+
+    try {
+      await metaRequestsApi.retryAssetMetaUpload(assetId, Number(form.adAccountId))
+      if (draftId) {
+        invalidateCache(`meta-request:${draftId}:asset-preparation`)
+        await refetchAssetPreparation()
+      }
+      toast({ title: "Retry queued", description: "The asset will be uploaded to Meta again." })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to retry Meta upload."
+      toast({ title: "Retry failed", description: message, variant: "destructive" })
+    }
   }
 
   const handleSaveDraft = async () => {
@@ -979,6 +1238,12 @@ export function CreateRequestContent({ requestId }: Props) {
               onUpdateAdditionalVariant={handleUpdateAdditionalVariant}
               canAddVariant={canAddVariant}
               supportsVariants={supportsVariants}
+              onBulkMediaUpload={handleBulkMediaUpload}
+              bulkUploading={bulkUploading}
+              bulkProgress={bulkProgress}
+              assetPreparationById={assetPreparationById}
+              assetPreparationLoading={assetPreparationLoading}
+              onRetryAssetPreparation={handleRetryAssetPreparation}
             />
           </div>
           {/* Ad section — shared. Ad Name for additional variants is auto-suffixed `_v{N}` by the mapper. */}
@@ -1048,13 +1313,3 @@ export function CreateRequestContent({ requestId }: Props) {
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
