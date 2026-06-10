@@ -397,6 +397,7 @@ export interface MetaCampaignCreativeSummaryDto {
   externalCreativeId: string
   name: string
   status: string
+  creativeFormat?: "single" | "flexible" | string
   objectType?: string | null
   pageId?: string | null
   instagramActorId?: string | null
@@ -408,10 +409,28 @@ export interface MetaCampaignCreativeSummaryDto {
   thumbnailUrl?: string | null
   linkUrl?: string | null
   effectiveObjectStoryId?: string | null
+  assetGroups?: MetaCampaignCreativeAssetGroupDto[] | null
   usedByAdCount: number
   usedByAds: MetaCampaignCreativeUsageAdDto[]
   lastSyncedAt?: string | null
   configJson?: string | null
+}
+
+export interface MetaCampaignCreativeAssetGroupDto {
+  groupUuid?: string | null
+  linkUrl?: string | null
+  callToActionType?: string | null
+  primaryTexts: string[]
+  headlines: string[]
+  assets: MetaCampaignCreativeAssetDto[]
+}
+
+export interface MetaCampaignCreativeAssetDto {
+  assetType: string
+  imageHash?: string | null
+  imageUrl?: string | null
+  videoId?: string | null
+  thumbnailUrl?: string | null
 }
 
 export interface MetaCampaignPreviewDto {
@@ -716,6 +735,7 @@ export interface MetaAdSetDraftDto {
   endTime?: string | null
   geoMode?: MetaGeoMode | null
   countries: string[]
+  excludedCountries: string[]
   regionKeys: string[]
   countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
@@ -797,8 +817,30 @@ export interface MetaFlexibleCreativeDraftDto {
   linkUrl?: string | null
   assets: MetaFlexibleCreativeAssetDraftDto[]
 }
+
+export type MetaAdvantageCreativeEnrollStatus = "OPT_IN" | "OPT_OUT"
+
+export interface MetaCreativeFeatureEnrollStatusDto {
+  enrollStatus: MetaAdvantageCreativeEnrollStatus
+}
+
+export interface MetaCreativeFeaturesSpecDto {
+  advantagePlusCreative?: MetaCreativeFeatureEnrollStatusDto | null
+  imageTouchups?: MetaCreativeFeatureEnrollStatusDto | null
+  musicGeneration?: MetaCreativeFeatureEnrollStatusDto | null
+  textOptimizations?: MetaCreativeFeatureEnrollStatusDto | null
+  imageAnimation?: MetaCreativeFeatureEnrollStatusDto | null
+  addTextOverlay?: MetaCreativeFeatureEnrollStatusDto | null
+  inlineComment?: MetaCreativeFeatureEnrollStatusDto | null
+}
+
+export interface MetaDegreesOfFreedomSpecDto {
+  creativeFeaturesSpec?: MetaCreativeFeaturesSpecDto | null
+}
+
 export interface MetaCreativeDraftDto {
   type?: MetaCreativeType | null
+  degreesOfFreedomSpec?: MetaDegreesOfFreedomSpecDto | null
   common?: MetaCreativeCommonDraftDto | null
   singleImage?: MetaSingleImageCreativeDraftDto | null
   singleVideo?: MetaSingleVideoCreativeDraftDto | null
@@ -1171,6 +1213,13 @@ export interface AdVariantFormState {
   existingPostId: string
   adName: string
   trackingSpecs: string
+  advantageCreativeAllOptimizations: boolean
+  advantageCreativeAddTextOverlay: boolean
+  advantageCreativeImageTouchups: boolean
+  advantageCreativeMusicGeneration: boolean
+  advantageCreativeTextOptimizations: boolean
+  advantageCreativeImageAnimation: boolean
+  advantageCreativeInlineComment: boolean
 }
 
 export interface MetaRequestFormState {
@@ -1190,6 +1239,7 @@ export interface MetaRequestFormState {
   adSetName: string
   geoMode: MetaGeoMode
   countries: string[]
+  excludedCountries: string[]
   regionKeys: string[]
   countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
@@ -1246,6 +1296,13 @@ export interface MetaRequestFormState {
   existingPostId: string
   adName: string
   trackingSpecs: string
+  advantageCreativeAllOptimizations: boolean
+  advantageCreativeAddTextOverlay: boolean
+  advantageCreativeImageTouchups: boolean
+  advantageCreativeMusicGeneration: boolean
+  advantageCreativeTextOptimizations: boolean
+  advantageCreativeImageAnimation: boolean
+  advantageCreativeInlineComment: boolean
   // Additional ad variants (variant 2, 3, ...). Variant 1 is represented by the flat creative/ad fields above.
   additionalVariants: AdVariantFormState[]
 }

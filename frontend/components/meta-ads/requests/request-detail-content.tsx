@@ -35,6 +35,7 @@ import type {
   MetaCreativeType,
   MetaOperationLogDto,
   MetaRequestStatus,
+  MetaDegreesOfFreedomSpecDto,
 } from "@/types/meta-ads"
 import {
   ChevronRight,
@@ -57,10 +58,12 @@ import {
   Copy,
   Bug,
   Braces,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ProtectedMediaImage } from "../shared/protected-media-image"
+import { AdvantageCreativeSummary } from "../shared/advantage-creative-summary"
 const SCREEN_META_REQUESTS = "s-meta-requests"
 
 type ConfirmAction = "approve" | "reject" | "execute" | "retry"
@@ -1055,6 +1058,9 @@ export function RequestDetailContent({ requestId }: Props) {
                 <DetailRow label="Objective" value={detail.payload.campaign.objective} mono />
                 <DetailRow label="Buying Type" value={detail.payload.campaign.buyingType ?? "-"} mono />
                 <DetailRow label="Countries" value={detail.payload.adSet.countries.join(", ") || "-"} />
+                {detail.payload.adSet.excludedCountries && detail.payload.adSet.excludedCountries.length > 0 && (
+                  <DetailRow label="Excluded Countries" value={detail.payload.adSet.excludedCountries.join(", ")} />
+                )}
                 <DetailRow label="Age Range" value={`${detail.payload.adSet.ageMin ?? "-"}-${detail.payload.adSet.ageMax ?? "-"}`} />
                 <DetailRow label="Gender" value={getGenderLabel(detail)} />
                 <DetailRow label="Placement" value={getPlacementLabel(detail)} />
@@ -1072,6 +1078,11 @@ export function RequestDetailContent({ requestId }: Props) {
               </div>
             </CardContent>
           </Card>
+
+          <AdvantageCreativeSummary
+            degreesOfFreedomSpec={primaryCreative.degreesOfFreedomSpec}
+            creativeType={creativeType}
+          />
 
           {/* Creative card — tabs when multiple variants, plain card when single */}
           {allVariants.length > 1 ? (
@@ -1776,6 +1787,9 @@ function ObjectRow({ label, metaId, localId }: { label: string; metaId: string; 
     </div>
   )
 }
+
+
+
 
 
 

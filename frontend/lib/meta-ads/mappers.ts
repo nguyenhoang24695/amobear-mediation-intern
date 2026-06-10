@@ -13,6 +13,7 @@ import type {
   MetaRequestAssetSelectionState,
   MetaRequestFormState,
   UpdateMetaCampaignRequestDto,
+  MetaDegreesOfFreedomSpecDto,
 } from "@/types/meta-ads"
 import { buildMetaRequestAssetContentUrl } from "@/lib/meta-ads/media-preview"
 
@@ -320,6 +321,20 @@ export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreati
     common: creativeCommon,
   }
 
+  if (v.creativeType !== "EXISTING_POST") {
+    creative.degreesOfFreedomSpec = {
+      creativeFeaturesSpec: {
+        advantagePlusCreative: { enrollStatus: v.advantageCreativeAllOptimizations ? "OPT_IN" : "OPT_OUT" },
+        imageTouchups: { enrollStatus: v.advantageCreativeImageTouchups ? "OPT_IN" : "OPT_OUT" },
+        musicGeneration: { enrollStatus: v.advantageCreativeMusicGeneration ? "OPT_IN" : "OPT_OUT" },
+        textOptimizations: { enrollStatus: v.advantageCreativeTextOptimizations ? "OPT_IN" : "OPT_OUT" },
+        imageAnimation: { enrollStatus: v.advantageCreativeImageAnimation ? "OPT_IN" : "OPT_OUT" },
+        addTextOverlay: { enrollStatus: v.advantageCreativeAddTextOverlay ? "OPT_IN" : "OPT_OUT" },
+        inlineComment: { enrollStatus: v.advantageCreativeInlineComment ? "OPT_IN" : "OPT_OUT" },
+      }
+    }
+  }
+
   if (v.creativeType === "SINGLE_VIDEO") {
     creative.singleVideo = {
       message: getFirstVariation(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText) || null,
@@ -455,6 +470,13 @@ function primaryVariantFromFormState(form: MetaRequestFormState): AdVariantFormS
     existingPostId: form.existingPostId,
     adName: form.adName,
     trackingSpecs: form.trackingSpecs,
+    advantageCreativeAllOptimizations: form.advantageCreativeAllOptimizations,
+    advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+    advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+    advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+    advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+    advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+    advantageCreativeInlineComment: form.advantageCreativeInlineComment,
   }
 }
 
@@ -555,6 +577,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       endTime: parseOptionalDate(form.endTime),
       geoMode: form.geoMode,
       countries: form.geoMode === "COUNTRY" ? form.countries : [],
+      excludedCountries: form.excludedCountries || [],
       regionKeys: form.geoMode === "REGION" ? form.regionKeys : [],
       countryGroupIds: form.geoMode === "COUNTRY_GROUP" ? form.countryGroupIds : [],
       cityTargets: form.geoMode === "CITY"
@@ -632,6 +655,8 @@ function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFor
     ? (singleVideo.linkUrl ?? singleImage.linkUrl ?? "")
     : (singleImage.linkUrl ?? "")
 
+  const spec = creative.degreesOfFreedomSpec?.creativeFeaturesSpec
+
   return {
     sequenceNumber: variant.sequenceNumber,
     creativeType,
@@ -679,6 +704,13 @@ function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFor
     existingPostId: creative.existingPost?.sourcePostId ?? "",
     adName: variant.ad?.name ?? "",
     trackingSpecs: variant.ad?.trackingSpecsJson ?? "",
+    advantageCreativeAllOptimizations: spec?.advantagePlusCreative?.enrollStatus === "OPT_IN",
+    advantageCreativeAddTextOverlay: spec?.addTextOverlay?.enrollStatus === "OPT_IN",
+    advantageCreativeImageTouchups: spec?.imageTouchups?.enrollStatus === "OPT_IN",
+    advantageCreativeMusicGeneration: spec?.musicGeneration?.enrollStatus === "OPT_IN",
+    advantageCreativeTextOptimizations: spec?.textOptimizations?.enrollStatus === "OPT_IN",
+    advantageCreativeImageAnimation: spec?.imageAnimation?.enrollStatus === "OPT_IN",
+    advantageCreativeInlineComment: spec?.inlineComment?.enrollStatus === "OPT_IN",
   }
 }
 
@@ -725,6 +757,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     adSetName: payload.adSet.name ?? "",
     geoMode,
     countries: payload.adSet.countries ?? [],
+    excludedCountries: payload.adSet.excludedCountries ?? [],
     regionKeys: payload.adSet.regionKeys ?? [],
     countryGroupIds: payload.adSet.countryGroupIds ?? [],
     cityTargets: (payload.adSet.cityTargets ?? []).map((city) => ({
@@ -788,14 +821,40 @@ export function formatUserGuidShort(value?: string | null): string {
   return `${value.slice(0, 8)}...${value.slice(-4)}`
 }
 
-
-
-
-
-
-
-
-
-
-
+export function normalizeDegreesOfFreedomSpec(configJson: string | null | undefined): MetaDegreesOfFreedomSpecDto | null {
+  if (!configJson) return null
+  try {
+    const raw = JSON.parse(configJson)
+    
+    const rawSpec = raw.degrees_of_freedom_spec || raw.degreesOfFreedomSpec
+    if (!rawSpec) return null
+    
+    const rawFeatures = rawSpec.creative_features_spec || rawSpec.creativeFeaturesSpec
+    if (!rawFeatures) return { creativeFeaturesSpec: null }
+    
+    const getEnrollStatus = (obj: any) => {
+      if (!obj) return null
+      const status = obj.enroll_status || obj.enrollStatus
+      if (status === "OPT_IN" || status === "OPT_OUT") {
+        return { enrollStatus: status as any }
+      }
+      return null
+    }
+    
+    return {
+      creativeFeaturesSpec: {
+        advantagePlusCreative: getEnrollStatus(rawFeatures.advantage_plus_creative || rawFeatures.advantagePlusCreative),
+        imageTouchups: getEnrollStatus(rawFeatures.image_touchups || rawFeatures.imageTouchups),
+        musicGeneration: getEnrollStatus(rawFeatures.music_generation || rawFeatures.musicGeneration),
+        textOptimizations: getEnrollStatus(rawFeatures.text_optimizations || rawFeatures.textOptimizations),
+        imageAnimation: getEnrollStatus(rawFeatures.image_animation || rawFeatures.imageAnimation),
+        addTextOverlay: getEnrollStatus(rawFeatures.add_text_overlay || rawFeatures.addTextOverlay),
+        inlineComment: getEnrollStatus(rawFeatures.inline_comment || rawFeatures.inlineComment),
+      }
+    }
+  } catch (err) {
+    console.error("Failed to parse configJson for Advantage+ Creative spec:", err)
+    return null
+  }
+}
 

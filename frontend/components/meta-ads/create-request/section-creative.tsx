@@ -872,6 +872,223 @@ export function CreativeSection({
               </div>
             </div>
 
+            {form.creativeType !== "EXISTING_POST" && (
+              <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600">
+                      <Wand2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                        Advantage+ Creative
+                        <Badge variant="secondary" className="bg-blue-100/70 text-blue-700 text-[9px] hover:bg-blue-100/70 font-semibold uppercase tracking-wider px-1.5 py-0">
+                          Meta AI
+                        </Badge>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">Automatically optimize your creative assets to get more conversions.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                    <Label htmlFor="all-optimizations" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      All optimizations
+                    </Label>
+                    <Switch
+                      id="all-optimizations"
+                      checked={form.advantageCreativeAllOptimizations}
+                      onCheckedChange={(checked) => {
+                        onChange({
+                          advantageCreativeAllOptimizations: checked,
+                          advantageCreativeAddTextOverlay: checked,
+                          advantageCreativeImageTouchups: checked,
+                          advantageCreativeMusicGeneration: checked,
+                          advantageCreativeTextOptimizations: checked,
+                          advantageCreativeImageAnimation: checked,
+                          advantageCreativeInlineComment: checked,
+                        })
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2 border-t border-slate-100">
+                  {/* Add overlays */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="add-text-overlay" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add overlays
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Add info overlays, like price or rating, automatically.</p>
+                    </div>
+                    <Switch
+                      id="add-text-overlay"
+                      checked={form.advantageCreativeAddTextOverlay}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: checked,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Visual touch-ups */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="image-touchups" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Visual touch-ups
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Adjust brightness, contrast, or apply visual templates.</p>
+                    </div>
+                    <Switch
+                      id="image-touchups"
+                      checked={form.advantageCreativeImageTouchups}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: checked,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Add music */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="music-generation" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add music
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Generate background music matching your image or video.</p>
+                    </div>
+                    <Switch
+                      id="music-generation"
+                      checked={form.advantageCreativeMusicGeneration}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: checked,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Text improvements */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="text-optimizations" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Text improvements
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Swap primary text and headlines to boost response rate.</p>
+                    </div>
+                    <Switch
+                      id="text-optimizations"
+                      checked={form.advantageCreativeTextOptimizations}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: checked,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Add animation */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="image-animation" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add animation
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Create subtle motion effects on static image assets.</p>
+                    </div>
+                    <Switch
+                      id="image-animation"
+                      checked={form.advantageCreativeImageAnimation}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: checked,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Add details to ad layout */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="inline-comment" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add details to ad layout
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Display relevant social comments directly under the ad.</p>
+                    </div>
+                    <Switch
+                      id="inline-comment"
+                      checked={form.advantageCreativeInlineComment}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: checked,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Tabs value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
               <TabsList className="h-10 bg-slate-100 p-1 w-fit">
                 <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single image or video</TabsTrigger>

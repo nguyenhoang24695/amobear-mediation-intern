@@ -210,11 +210,12 @@ function createDefaultFormState(): RequestFormState {
     specialAdCategories: [],
     bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     isAdSetBudgetSharingEnabled: true,
-    campaignDailyBudget: "",
+    campaignDailyBudget: "20",
     campaignLifetimeBudget: "",
     adSetName: "",
     geoMode: "GLOBAL",
     countries: [],
+    excludedCountries: [],
     regionKeys: [],
     countryGroupIds: [],
     cityTargets: [],
@@ -225,7 +226,7 @@ function createDefaultFormState(): RequestFormState {
     publisherPlatforms: [],
     facebookPositions: [],
     instagramPositions: [],
-    adSetDailyBudget: "",
+    adSetDailyBudget: "20",
     adSetLifetimeBudget: "",
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "APP_INSTALLS",
@@ -269,6 +270,13 @@ function createDefaultFormState(): RequestFormState {
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
+    advantageCreativeAllOptimizations: true,
+    advantageCreativeAddTextOverlay: true,
+    advantageCreativeImageTouchups: true,
+    advantageCreativeMusicGeneration: true,
+    advantageCreativeTextOptimizations: true,
+    advantageCreativeImageAnimation: true,
+    advantageCreativeInlineComment: true,
     additionalVariants: [],
   })
 }
@@ -309,6 +317,13 @@ function createEmptyAdVariant(seq: number, form: Pick<RequestFormState, "faceboo
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
+    advantageCreativeAllOptimizations: true,
+    advantageCreativeAddTextOverlay: true,
+    advantageCreativeImageTouchups: true,
+    advantageCreativeMusicGeneration: true,
+    advantageCreativeTextOptimizations: true,
+    advantageCreativeImageAnimation: true,
+    advantageCreativeInlineComment: true,
   }
 }
 
@@ -907,6 +922,13 @@ export function CreateRequestContent({ requestId }: Props) {
       existingPostId: form.existingPostId,
       adName: form.adName ? `${form.adName} (Copy)` : "",
       trackingSpecs: form.trackingSpecs,
+      advantageCreativeAllOptimizations: form.advantageCreativeAllOptimizations,
+      advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+      advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+      advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+      advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+      advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+      advantageCreativeInlineComment: form.advantageCreativeInlineComment,
     }
     updateForm({ additionalVariants: [...form.additionalVariants, copy] })
     setActiveVariantTab(`variant-${newSeq}`)

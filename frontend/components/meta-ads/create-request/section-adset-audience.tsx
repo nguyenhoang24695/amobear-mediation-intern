@@ -100,6 +100,7 @@ export function AdSetAudienceSection({
   metaAdAccountId,
 }: Props) {
   const [countryPopoverOpen, setCountryPopoverOpen] = useState(false)
+  const [excludeCountryPopoverOpen, setExcludeCountryPopoverOpen] = useState(false)
   const [cityQuery, setCityQuery] = useState("")
   const [cityResults, setCityResults] = useState<MetaGeoCityReferenceDto[]>([])
   const [cityLoading, setCityLoading] = useState(false)
@@ -159,14 +160,27 @@ export function AdSetAudienceSection({
   }
 
   const setGeoMode = (geoMode: RequestFormState["geoMode"]) => {
+    const nextCountries = geoMode === "COUNTRY" ? form.countries : []
+    const nextCityTargets = geoMode === "CITY" ? form.cityTargets : []
+
+    // Filter excluded countries to avoid conflicts
+    let nextExcluded = form.excludedCountries || []
+    if (geoMode === "COUNTRY") {
+      nextExcluded = nextExcluded.filter((c) => !nextCountries.includes(c))
+    } else if (geoMode === "CITY") {
+      nextExcluded = nextExcluded.filter((c) => !nextCityTargets.some((city) => city.countryCode?.toUpperCase() === c))
+    }
+
     onChange({
       geoMode,
-      countries: geoMode === "COUNTRY" ? form.countries : [],
+      countries: nextCountries,
       regionKeys: geoMode === "REGION" ? form.regionKeys : [],
       countryGroupIds: geoMode === "COUNTRY_GROUP" ? form.countryGroupIds : [],
-      cityTargets: geoMode === "CITY" ? form.cityTargets : [],
+      cityTargets: nextCityTargets,
+      excludedCountries: nextExcluded,
     })
     setCountryPopoverOpen(false)
+    setExcludeCountryPopoverOpen(false)
     setCityQuery("")
     setCityResults([])
     setCityError(null)
@@ -174,6 +188,9 @@ export function AdSetAudienceSection({
 
   const toggleCountry = (countryCode: string) => {
     const country = countryCode.toUpperCase()
+    const isExcluded = form.excludedCountries?.includes(country)
+    if (isExcluded) return
+
     onChange({
       countries: form.countries.includes(country)
         ? form.countries.filter((value) => value !== country)
@@ -181,6 +198,18 @@ export function AdSetAudienceSection({
     })
   }
 
+  const toggleExcludedCountry = (countryCode: string) => {
+    const country = countryCode.toUpperCase()
+    const isIncluded = form.geoMode === "COUNTRY" && form.countries.includes(country)
+    const isCityConflict = form.geoMode === "CITY" && form.cityTargets.some((city) => city.countryCode?.toUpperCase() === country)
+    if (isIncluded || isCityConflict) return
+
+    onChange({
+      excludedCountries: form.excludedCountries.includes(country)
+        ? form.excludedCountries.filter((value) => value !== country)
+        : [...form.excludedCountries, country],
+    })
+  }
 
   const toggleRegion = (regionKey: string) => {
     const normalized = regionKey.trim().toUpperCase()
@@ -193,6 +222,7 @@ export function AdSetAudienceSection({
 
   const addCity = (city: MetaGeoCityReferenceDto) => {
     if (form.cityTargets.some((item) => item.key === city.key)) return
+    if (city.countryCode && form.excludedCountries?.includes(city.countryCode.toUpperCase())) return
     onChange({ cityTargets: [...form.cityTargets, city] })
     setCityQuery("")
     setCityResults([])
@@ -347,14 +377,17 @@ export function AdSetAudienceSection({
                     <CommandGroup heading="Countries">
                       {countryOptions.map((country) => {
                         const isSelected = form.countries.includes(country.code)
+                        const isExcluded = form.excludedCountries?.includes(country.code) ?? false
                         return (
                           <CommandItem
                             key={country.code}
                             value={country.searchValue}
-                            onSelect={() => toggleCountry(country.code)}
+                            onSelect={() => !isExcluded && toggleCountry(country.code)}
+                            className={cn(isExcluded && "opacity-50 pointer-events-none")}
                           >
                             <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                             <span className="min-w-0 flex-1 truncate">{country.label}</span>
+                            {isExcluded && <span className="text-[10px] text-red-500 font-medium ml-2">Excluded</span>}
                           </CommandItem>
                         )
                       })}
@@ -450,22 +483,32 @@ export function AdSetAudienceSection({
             </div>
             {cityResults.length > 0 ? (
               <div className="rounded-lg border border-slate-200 bg-white max-h-56 overflow-auto divide-y divide-slate-100">
-                {cityResults.map((city) => (
-                  <button
-                    key={city.key}
-                    type="button"
-                    onClick={() => addCity(city)}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 truncate">{city.name}</p>
-                        <p className="text-[11px] text-slate-500 truncate">{[city.region, city.countryName, city.countryCode].filter(Boolean).join(" - ")}</p>
+                {cityResults.map((city) => {
+                  const isExcluded = !!(city.countryCode && form.excludedCountries?.includes(city.countryCode.toUpperCase()))
+                  return (
+                    <button
+                      key={city.key}
+                      type="button"
+                      disabled={isExcluded}
+                      onClick={() => addCity(city)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors",
+                        isExcluded && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">{city.name}</p>
+                          <p className="text-[11px] text-slate-500 truncate">
+                            {[city.region, city.countryName, city.countryCode].filter(Boolean).join(" - ")}
+                            {isExcluded && " (Country Excluded)"}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">{city.key}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-400">{city.key}</span>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             ) : null}
             {form.cityTargets.length > 0 ? (
@@ -483,6 +526,79 @@ export function AdSetAudienceSection({
             ) : null}
           </div>
         ) : null}
+
+        {/* Exclude Countries Section */}
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-3">
+            <Label className="text-xs font-medium text-slate-700">Exclude Countries</Label>
+            <span className="text-[11px] text-slate-400">Optional</span>
+          </div>
+          <Popover open={excludeCountryPopoverOpen} onOpenChange={setExcludeCountryPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={excludeCountryPopoverOpen}
+                className="h-9 w-full justify-between bg-white px-3 text-left font-normal"
+              >
+                <span className="min-w-0 flex-1 truncate text-left text-sm text-slate-700">
+                  {!form.excludedCountries || form.excludedCountries.length === 0
+                    ? "Select countries to exclude"
+                    : form.excludedCountries.length <= 2
+                      ? form.excludedCountries.map((country) => getCountryLabel(country)).join(", ")
+                      : `${form.excludedCountries.length} countries excluded`}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search countries to exclude..." />
+                <CommandList>
+                  <CommandEmpty>No country found.</CommandEmpty>
+                  <CommandGroup heading="Countries to Exclude">
+                    {countryOptions.map((country) => {
+                      const isSelected = form.excludedCountries?.includes(country.code) ?? false
+                      const isIncluded = form.geoMode === "COUNTRY" && form.countries.includes(country.code)
+                      const isCityConflict = form.geoMode === "CITY" && form.cityTargets.some(c => c.countryCode?.toUpperCase() === country.code)
+                      const isDisabled = isIncluded || isCityConflict
+
+                      return (
+                        <CommandItem
+                          key={country.code}
+                          value={country.searchValue}
+                          onSelect={() => !isDisabled && toggleExcludedCountry(country.code)}
+                          className={cn(isDisabled && "opacity-50 pointer-events-none")}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                          <span className="min-w-0 flex-1 truncate">{country.label}</span>
+                          {isIncluded && <span className="text-[10px] text-red-500 font-medium ml-2">Currently Included</span>}
+                          {isCityConflict && <span className="text-[10px] text-red-500 font-medium ml-2">City Target Conflict</span>}
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <p className="text-[11px] text-slate-500">Exclude one or more countries from your geo targeting. Excluded countries cannot overlap with included locations.</p>
+          {form.excludedCountries && form.excludedCountries.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {[...form.excludedCountries]
+                .sort((left, right) => getCountryLabel(left).localeCompare(getCountryLabel(right)))
+                .map((country) => (
+                  <Badge key={country} className="bg-red-50 text-red-800 border-red-200 gap-1 pr-1 text-xs max-w-full">
+                    <span className="truncate">{getCountryLabel(country)}</span>
+                    <button type="button" onClick={() => toggleExcludedCountry(country)}>
+                      <X className="w-3 h-3 text-red-500 hover:text-red-700" />
+                    </button>
+                  </Badge>
+                ))}
+            </div>
+          ) : null}
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
