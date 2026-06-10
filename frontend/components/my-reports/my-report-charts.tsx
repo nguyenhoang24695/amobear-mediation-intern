@@ -7,9 +7,13 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  ComposedChart,
   Legend,
   Line,
   LineChart,
+  PieChart,
+  Pie,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -78,24 +82,28 @@ export type MyReportChartsProps = {
   metrics: string[]
   metricCatalog: CustomReportCatalogItem[]
   dimensionCatalog: CustomReportCatalogItem[]
-  chartMetricId: string
+  chartMetricIds: string[]
   chartType: MyReportChartType
-  breakdownChartMetricId: string
+  breakdownChartMetricIds: string[]
   breakdownChartType: MyReportChartType
   trendChartDimensionIds: string[]
   breakdownChartDimensionIds: string[]
   panelLayout: MyReportPanelLayout
   compareActive: boolean
-  onChartMetricChange: (metricId: string) => void
+  onChartMetricIdsChange: (metricIds: string[]) => void
   onChartTypeChange: (type: MyReportChartType) => void
-  onBreakdownChartMetricChange: (metricId: string) => void
+  onBreakdownChartMetricIdsChange: (metricIds: string[]) => void
   onBreakdownChartTypeChange: (type: MyReportChartType) => void
   onTrendChartDimensionIdsChange: (dimensionIds: string[]) => void
   onBreakdownChartDimensionIdsChange: (dimensionIds: string[]) => void
   onPanelLayoutChange: (layout: MyReportPanelLayout) => void
 }
 
-type TrendPoint = { label: string; current: number; previous: number }
+/** Unified chart data point: label + one numeric key per metricId (+ optional __prev for compare) */
+type ChartDataPoint = {
+  label: string
+  [key: string]: string | number
+}
 
 type BreakdownPoint = Record<string, string | number> & { label: string }
 
@@ -115,35 +123,58 @@ function dimensionTitlePart(
 }
 
 function buildChartTitle(
-  metricLabel: string,
+  metricIds: string[],
+  metricCatalog: CustomReportCatalogItem[],
   dimensionIds: string[],
   dimensionCatalog: CustomReportCatalogItem[],
 ): string {
+  const metricLabel = metricIds
+    .map((id) => metricCatalog.find((m) => m.id === id)?.label ?? id)
+    .join(", ")
   if (dimensionIds.length === 0) return metricLabel
   const parts = dimensionIds.map((id) => dimensionTitlePart(id, dimensionCatalog))
   return `${metricLabel} by ${parts.join(", ")}`
 }
 
-function buildTrendByDate(
+function buildTrendMultiMetric(
   rows: CompareEnrichedRow[],
-  metricId: string,
+  metricIds: string[],
   compareActive: boolean,
-): TrendPoint[] {
-  const byDate = new Map<string, TrendPoint>()
+): ChartDataPoint[] {
+  const byDate = new Map<string, ChartDataPoint>()
   for (const row of rows) {
     const label = String(row.date ?? "")
     if (!label) continue
-    const current = toChartNumber(row[metricId])
-    const previous = compareActive ? toChartNumber(row.__compare?.[metricId]) : 0
-    const existing = byDate.get(label)
-    if (existing) {
-      existing.current += current
-      existing.previous += previous
-    } else {
-      byDate.set(label, { label, current, previous })
+    const point = byDate.get(label) ?? { label }
+    for (const mId of metricIds) {
+      point[mId] = toChartNumber(point[mId]) + toChartNumber(row[mId])
     }
+    if (compareActive && metricIds.length === 1) {
+      const prevKey = `${metricIds[0]}__prev`
+      point[prevKey] = toChartNumber(point[prevKey]) + toChartNumber(row.__compare?.[metricIds[0]])
+    }
+    byDate.set(label, point)
   }
-  return [...byDate.values()].sort((a, b) => a.label.localeCompare(b.label))
+  return [...byDate.values()].sort((a, b) => String(a.label).localeCompare(String(b.label)))
+}
+
+function buildBreakdownByAppBarMulti(
+  rows: CompareEnrichedRow[],
+  metricIds: string[],
+): ChartDataPoint[] {
+  const primaryId = metricIds[0]
+  const byApp = new Map<string, ChartDataPoint>()
+  for (const row of rows) {
+    const label = String(row.app ?? row.app_id ?? "Unknown")
+    const point = byApp.get(label) ?? { label }
+    for (const mId of metricIds) {
+      point[mId] = toChartNumber(point[mId]) + toChartNumber(row[mId])
+    }
+    byApp.set(label, point)
+  }
+  return [...byApp.values()]
+    .sort((a, b) => toChartNumber(b[primaryId]) - toChartNumber(a[primaryId]))
+    .slice(0, BREAKDOWN_TOP_N)
 }
 
 function buildBreakdownByAppOverDate(
@@ -180,20 +211,6 @@ function buildBreakdownByAppOverDate(
   return { data, seriesKeys: topApps }
 }
 
-function buildBreakdownByAppBar(
-  rows: CompareEnrichedRow[],
-  metricId: string,
-): TrendPoint[] {
-  const byApp = new Map<string, TrendPoint>()
-  for (const row of rows) {
-    const label = String(row.app ?? row.app_id ?? "Unknown")
-    const current = toChartNumber(row[metricId])
-    const existing = byApp.get(label)
-    if (existing) existing.current += current
-    else byApp.set(label, { label, current, previous: 0 })
-  }
-  return [...byApp.values()].sort((a, b) => b.current - a.current).slice(0, BREAKDOWN_TOP_N)
-}
 
 function PanelLayoutToggle({
   layout,
@@ -357,22 +374,79 @@ function ChartPanel({
   )
 }
 
-function TrendChart({
+const PIE_MAX_CATEGORIES = 5
+
+function PieUnsupportedMsg({ reason }: { reason: string }) {
+  return (
+    <div className="flex items-center justify-center px-6 text-center text-sm text-gray-500" style={{ height: CHART_HEIGHT }}>
+      {reason}
+    </div>
+  )
+}
+
+function DonutPie({
   data,
   metricId,
   metricCatalog,
+}: {
+  data: { name: string; value: number }[]
+  metricId: string
+  metricCatalog: CustomReportCatalogItem[]
+}) {
+  const capped = data.slice(0, PIE_MAX_CATEGORIES)
+  return (
+    <ChartFrame>
+      <PieChart margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+        <Pie
+          data={capped}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          innerRadius="52%"
+          outerRadius="78%"
+          label={false}
+          labelLine={false}
+        >
+          {capped.map((_, index) => (
+            <Cell key={index} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(v: number) => formatMetricValue(v, metricId, metricCatalog)} />
+        <Legend verticalAlign="bottom" height={48} iconType="circle" iconSize={8} />
+      </PieChart>
+    </ChartFrame>
+  )
+}
+
+function TrendChart({
+  data,
+  metricIds,
+  metricCatalog,
   chartType,
   compareActive,
+  dimensionIds,
 }: {
-  data: TrendPoint[]
-  metricId: string
+  data: ChartDataPoint[]
+  metricIds: string[]
   metricCatalog: CustomReportCatalogItem[]
   chartType: MyReportChartType
   compareActive: boolean
+  dimensionIds: string[]
 }) {
-  const tickFmt = (v: number) => formatAxisTick(v, metricId, metricCatalog)
-  const tooltipFmt = (v: number, name: string) =>
-    [formatMetricValue(v, metricId, metricCatalog), name] as [string, string]
+  const primaryId = metricIds[0]
+  const tickFmt = (v: number) => formatAxisTick(v, primaryId, metricCatalog)
+  const tooltipFmt = (v: number, name: string) => {
+    const mId = name.replace(/__prev$/, "")
+    const isCompare = name.endsWith("__prev")
+    const label = isCompare
+      ? `${metricCatalog.find((m) => m.id === mId)?.label ?? mId} (Compare)`
+      : (metricCatalog.find((m) => m.id === name)?.label ?? name)
+    return [formatMetricValue(v, mId, metricCatalog), label] as [string, string]
+  }
+
+  const showLegend = metricIds.length > 1 || compareActive
+  const singleCompare = compareActive && metricIds.length === 1
 
   if (data.length === 0) {
     return (
@@ -382,7 +456,47 @@ function TrendChart({
     )
   }
 
-  if (chartType === "bar") {
+  if (chartType === "scorecard") {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-8 px-4" style={{ height: CHART_HEIGHT }}>
+        {metricIds.map((mId, i) => {
+          const total = data.reduce((sum, d) => sum + toChartNumber(d[mId]), 0)
+          const prevTotal = singleCompare ? data.reduce((sum, d) => sum + toChartNumber(d[`${mId}__prev`]), 0) : null
+          const delta = prevTotal != null && prevTotal !== 0 ? ((total - prevTotal) / prevTotal) * 100 : null
+          return (
+            <div key={mId} className="flex flex-col items-center gap-1.5">
+              <div className="text-xs font-medium text-gray-500">
+                {metricCatalog.find((m) => m.id === mId)?.label ?? mId}
+              </div>
+              <div
+                className="text-4xl font-bold tabular-nums"
+                style={{ color: SERIES_COLORS[i % SERIES_COLORS.length] }}
+              >
+                {formatMetricValue(total, mId, metricCatalog)}
+              </div>
+              {delta != null && (
+                <div className={cn("flex items-center gap-1 text-sm font-medium", delta >= 0 ? "text-green-600" : "text-red-500")}>
+                  <span>{delta >= 0 ? "▲" : "▼"}</span>
+                  <span>{Math.abs(delta).toFixed(1)}%</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (chartType === "pie") {
+    if (dimensionIds.length >= 2) {
+      return <PieUnsupportedMsg reason="Pie chart chỉ hỗ trợ 1 dimension. Vui lòng bỏ bớt dimension trong phần chỉnh sửa." />
+    }
+    const pieData = data.map((d) => ({ name: d.label, value: toChartNumber(d[primaryId]) }))
+    return <DonutPie data={pieData} metricId={primaryId} metricCatalog={metricCatalog} />
+  }
+
+  if (chartType === "bar" || chartType === "stacked-bar") {
+    const stacked = chartType === "stacked-bar"
     return (
       <ChartFrame>
         <BarChart data={data} margin={CHART_MARGIN}>
@@ -390,9 +504,14 @@ function TrendChart({
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
           <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
           <Tooltip formatter={tooltipFmt} />
-          {compareActive ? <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} /> : null}
-          <Bar dataKey="current" name="Current" fill="#2563eb" />
-          {compareActive ? <Bar dataKey="previous" name="Compare" fill="#94a3b8" /> : null}
+          {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
+          {metricIds.map((mId, i) => (
+            <Bar key={mId} dataKey={mId} name={metricCatalog.find((m) => m.id === mId)?.label ?? mId}
+              fill={SERIES_COLORS[i % SERIES_COLORS.length]} stackId={stacked ? "s" : undefined} />
+          ))}
+          {singleCompare && (
+            <Bar dataKey={`${primaryId}__prev`} name="Compare" fill="#94a3b8" stackId={stacked ? "s" : undefined} />
+          )}
         </BarChart>
       </ChartFrame>
     )
@@ -406,14 +525,48 @@ function TrendChart({
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
           <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
           <Tooltip formatter={tooltipFmt} />
-          {compareActive ? <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} /> : null}
-          <Area type="monotone" dataKey="current" name="Current" stroke="#2563eb" fill="#93c5fd" />
-          {compareActive ? <Area type="monotone" dataKey="previous" name="Compare" stroke="#64748b" fill="#cbd5e1" /> : null}
+          {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
+          {metricIds.map((mId, i) => (
+            <Area key={mId} type="monotone" dataKey={mId}
+              name={metricCatalog.find((m) => m.id === mId)?.label ?? mId}
+              stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+              fill={`${SERIES_COLORS[i % SERIES_COLORS.length]}33`} />
+          ))}
+          {singleCompare && (
+            <Area type="monotone" dataKey={`${primaryId}__prev`} name="Compare" stroke="#64748b" fill="#cbd5e1" />
+          )}
         </AreaChart>
       </ChartFrame>
     )
   }
 
+  if (chartType === "combo") {
+    return (
+      <ChartFrame>
+        <ComposedChart data={data} margin={CHART_MARGIN}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+          <Tooltip formatter={tooltipFmt} />
+          {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
+          {/* First metric as bar, rest as lines */}
+          <Bar dataKey={primaryId} name={metricCatalog.find((m) => m.id === primaryId)?.label ?? primaryId} fill={`${SERIES_COLORS[0]}88`} />
+          {metricIds.slice(1).map((mId, i) => (
+            <Line key={mId} type="monotone" dataKey={mId}
+              name={metricCatalog.find((m) => m.id === mId)?.label ?? mId}
+              stroke={SERIES_COLORS[(i + 1) % SERIES_COLORS.length]} strokeWidth={2} dot={false} />
+          ))}
+          <Line type="monotone" dataKey={primaryId} name={`${metricCatalog.find((m) => m.id === primaryId)?.label ?? primaryId} (trend)`}
+            stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} />
+          {singleCompare && (
+            <Bar dataKey={`${primaryId}__prev`} name="Compare" fill="#e2e8f0" />
+          )}
+        </ComposedChart>
+      </ChartFrame>
+    )
+  }
+
+  // default: line
   return (
     <ChartFrame>
       <LineChart data={data} margin={CHART_MARGIN}>
@@ -421,9 +574,16 @@ function TrendChart({
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
         <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
         <Tooltip formatter={tooltipFmt} />
-        {compareActive ? <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} /> : null}
-        <Line type="monotone" dataKey="current" name="Current" stroke="#2563eb" strokeWidth={2} dot={false} />
-        {compareActive ? <Line type="monotone" dataKey="previous" name="Compare" stroke="#64748b" strokeWidth={2} dot={false} /> : null}
+        {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
+        {metricIds.map((mId, i) => (
+          <Line key={mId} type="monotone" dataKey={mId}
+            name={metricCatalog.find((m) => m.id === mId)?.label ?? mId}
+            stroke={SERIES_COLORS[i % SERIES_COLORS.length]} strokeWidth={2} dot={false} />
+        ))}
+        {singleCompare && (
+          <Line type="monotone" dataKey={`${primaryId}__prev`} name="Compare"
+            stroke="#64748b" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+        )}
       </LineChart>
     </ChartFrame>
   )
@@ -433,25 +593,59 @@ function BreakdownChart({
   seriesData,
   seriesKeys,
   barData,
-  metricId,
+  metricIds,
   metricCatalog,
   chartType,
   useMultiSeries,
+  dimensionIds,
 }: {
   seriesData: BreakdownPoint[]
   seriesKeys: string[]
-  barData: TrendPoint[]
-  metricId: string
+  barData: ChartDataPoint[]
+  metricIds: string[]
   metricCatalog: CustomReportCatalogItem[]
   chartType: MyReportChartType
   useMultiSeries: boolean
+  dimensionIds: string[]
 }) {
-  const tickFmt = (v: number) => formatAxisTick(v, metricId, metricCatalog)
+  const primaryId = metricIds[0]
+  const tickFmt = (v: number) => formatAxisTick(v, primaryId, metricCatalog)
   const tooltipFmt = (v: number, name: string) =>
-    [formatMetricValue(v, metricId, metricCatalog), name] as [string, string]
+    [formatMetricValue(v, primaryId, metricCatalog), name] as [string, string]
 
   if (useMultiSeries && seriesData.length > 0 && seriesKeys.length > 0) {
-    if (chartType === "bar") {
+    if (chartType === "pie") {
+      if (dimensionIds.length >= 2) {
+        return <PieUnsupportedMsg reason="Pie chart chỉ hỗ trợ 1 dimension. Vui lòng bỏ bớt dimension trong phần chỉnh sửa." />
+      }
+      const pieData = seriesKeys.map((key) => ({
+        name: key,
+        value: seriesData.reduce((sum, row) => sum + toChartNumber(row[key]), 0),
+      }))
+      return <DonutPie data={pieData} metricId={primaryId} metricCatalog={metricCatalog} />
+    }
+
+    if (chartType === "scorecard") {
+      const totals = seriesKeys.map((key) => ({
+        label: key,
+        value: seriesData.reduce((sum, row) => sum + toChartNumber(row[key]), 0),
+      }))
+      return (
+        <div className="flex flex-wrap items-center justify-center gap-6 px-4" style={{ height: CHART_HEIGHT }}>
+          {totals.map((item, index) => (
+            <div key={item.label} className="flex flex-col items-center gap-1">
+              <div className="text-3xl font-bold tabular-nums" style={{ color: SERIES_COLORS[index % SERIES_COLORS.length] }}>
+                {formatMetricValue(item.value, primaryId, metricCatalog)}
+              </div>
+              <div className="text-xs text-gray-500 truncate max-w-[120px]">{item.label}</div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (chartType === "bar" || chartType === "stacked-bar") {
+      const stacked = chartType === "stacked-bar"
       return (
         <ChartFrame>
           <BarChart data={seriesData} margin={CHART_MARGIN}>
@@ -461,13 +655,33 @@ function BreakdownChart({
             <Tooltip formatter={tooltipFmt} />
             <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />
             {seriesKeys.map((key, index) => (
-              <Bar key={key} dataKey={key} name={key} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />
+              <Bar key={key} dataKey={key} name={key} fill={SERIES_COLORS[index % SERIES_COLORS.length]} stackId={stacked ? "s" : undefined} />
             ))}
           </BarChart>
         </ChartFrame>
       )
     }
 
+    if (chartType === "combo") {
+      return (
+        <ChartFrame>
+          <ComposedChart data={seriesData} margin={CHART_MARGIN}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+            <Tooltip formatter={tooltipFmt} />
+            <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />
+            {seriesKeys.map((key, index) => (
+              index === 0
+                ? <Bar key={key} dataKey={key} name={key} fill={SERIES_COLORS[index % SERIES_COLORS.length]} fillOpacity={0.7} />
+                : <Line key={key} type="monotone" dataKey={key} name={key} stroke={SERIES_COLORS[index % SERIES_COLORS.length]} strokeWidth={2} dot={false} />
+            ))}
+          </ComposedChart>
+        </ChartFrame>
+      )
+    }
+
+    // default: line (covers "line" and "area" for multi-series)
     return (
       <ChartFrame>
         <LineChart data={seriesData} margin={CHART_MARGIN}>
@@ -492,14 +706,48 @@ function BreakdownChart({
     )
   }
 
+  const showLegend = metricIds.length > 1
+
+  if (chartType === "scorecard") {
+    const totals = metricIds.map((mId) => ({
+      mId,
+      label: metricCatalog.find((m) => m.id === mId)?.label ?? mId,
+      value: barData.reduce((sum, d) => sum + toChartNumber(d[mId]), 0),
+    }))
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-8 px-4" style={{ height: CHART_HEIGHT }}>
+        {totals.map((item, i) => (
+          <div key={item.mId} className="flex flex-col items-center gap-1.5">
+            <div className="text-xs font-medium text-gray-500">{item.label}</div>
+            <div className="text-4xl font-bold tabular-nums" style={{ color: SERIES_COLORS[i % SERIES_COLORS.length] }}>
+              {formatMetricValue(item.value, item.mId, metricCatalog)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (chartType === "pie") {
+    if (dimensionIds.length >= 2) {
+      return <PieUnsupportedMsg reason="Pie chart chỉ hỗ trợ 1 dimension. Vui lòng bỏ bớt dimension trong phần chỉnh sửa." />
+    }
+    const pieData = barData.map((d) => ({ name: String(d.label), value: toChartNumber(d[primaryId]) }))
+    return <DonutPie data={pieData} metricId={primaryId} metricCatalog={metricCatalog} />
+  }
+
   return (
     <ChartFrame>
       <BarChart data={barData} margin={{ ...CHART_MARGIN, bottom: 32 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} interval={0} angle={-25} textAnchor="end" height={52} dy={4} />
         <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
-        <Tooltip formatter={(v: number) => formatMetricValue(v, metricId, metricCatalog)} />
-        <Bar dataKey="current" name="Current" fill="#2563eb" />
+        <Tooltip formatter={(v: number, name: string) => [formatMetricValue(v, name, metricCatalog), metricCatalog.find((m) => m.id === name)?.label ?? name] as [string, string]} />
+        {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
+        {metricIds.map((mId, i) => (
+          <Bar key={mId} dataKey={mId} name={metricCatalog.find((m) => m.id === mId)?.label ?? mId}
+            fill={SERIES_COLORS[i % SERIES_COLORS.length]} />
+        ))}
       </BarChart>
     </ChartFrame>
   )
@@ -511,17 +759,17 @@ export function MyReportCharts({
   metrics,
   metricCatalog,
   dimensionCatalog,
-  chartMetricId,
+  chartMetricIds,
   chartType,
-  breakdownChartMetricId,
+  breakdownChartMetricIds,
   breakdownChartType,
   trendChartDimensionIds,
   breakdownChartDimensionIds,
   panelLayout,
   compareActive,
-  onChartMetricChange,
+  onChartMetricIdsChange,
   onChartTypeChange,
-  onBreakdownChartMetricChange,
+  onBreakdownChartMetricIdsChange,
   onBreakdownChartTypeChange,
   onTrendChartDimensionIdsChange,
   onBreakdownChartDimensionIdsChange,
@@ -541,61 +789,62 @@ export function MyReportCharts({
     [breakdownChartDimensionIds, dimensions],
   )
 
+  // Filter metric IDs to only those present in the active metric catalog
+  const effectiveTrendMetricIds = useMemo(
+    () => chartMetricIds.filter((id) => metrics.includes(id)),
+    [chartMetricIds, metrics],
+  )
+  const effectiveBreakdownMetricIds = useMemo(
+    () => breakdownChartMetricIds.filter((id) => metrics.includes(id)),
+    [breakdownChartMetricIds, metrics],
+  )
+
   const hasDateTrend = effectiveTrendDims.includes("date")
   const hasDateBreakdown = effectiveBreakdownDims.includes("date")
   const hasAppBreakdown = effectiveBreakdownDims.includes("app")
 
-  const trendMetricLabel =
-    metricCatalog.find((m) => m.id === chartMetricId)?.label ?? chartMetricId
-  const breakdownMetricLabel =
-    metricCatalog.find((m) => m.id === breakdownChartMetricId)?.label ?? breakdownChartMetricId
-
   const trendData = useMemo(
-    () => (hasDateTrend ? buildTrendByDate(rows, chartMetricId, compareActive) : []),
-    [rows, chartMetricId, compareActive, hasDateTrend],
+    () => (hasDateTrend ? buildTrendMultiMetric(rows, effectiveTrendMetricIds, compareActive) : []),
+    [rows, effectiveTrendMetricIds, compareActive, hasDateTrend],
   )
 
   const breakdownMulti = useMemo(
     () =>
       hasDateBreakdown && hasAppBreakdown
-        ? buildBreakdownByAppOverDate(rows, breakdownChartMetricId)
+        ? buildBreakdownByAppOverDate(rows, effectiveBreakdownMetricIds[0])
         : { data: [], seriesKeys: [] },
-    [rows, breakdownChartMetricId, hasDateBreakdown, hasAppBreakdown],
+    [rows, effectiveBreakdownMetricIds, hasDateBreakdown, hasAppBreakdown],
   )
 
   const breakdownBar = useMemo(
-    () => (hasAppBreakdown ? buildBreakdownByAppBar(rows, breakdownChartMetricId) : []),
-    [rows, breakdownChartMetricId, hasAppBreakdown],
+    () => (hasAppBreakdown ? buildBreakdownByAppBarMulti(rows, effectiveBreakdownMetricIds) : []),
+    [rows, effectiveBreakdownMetricIds, hasAppBreakdown],
   )
 
   const useMultiSeries = breakdownMulti.seriesKeys.length > 0
 
-  const trendTitle = buildChartTitle(trendMetricLabel, effectiveTrendDims, dimensionCatalog)
-  const breakdownTitle = buildChartTitle(
-    breakdownMetricLabel,
-    effectiveBreakdownDims,
-    dimensionCatalog,
-  )
+  const trendTitle = buildChartTitle(effectiveTrendMetricIds, metricCatalog, effectiveTrendDims, dimensionCatalog)
+  const breakdownTitle = buildChartTitle(effectiveBreakdownMetricIds, metricCatalog, effectiveBreakdownDims, dimensionCatalog)
 
   const chartsStacked = panelLayout === "stacked"
 
   const trendEditDraft = useMemo(
     (): MyReportChartEditDraft => ({
       chartType,
-      metricId: chartMetricId,
+      metricIds: effectiveTrendMetricIds.length > 0 ? effectiveTrendMetricIds : [metrics[0]],
       dimensionIds: effectiveTrendDims.length > 0 ? effectiveTrendDims : ["date"],
     }),
-    [chartType, chartMetricId, effectiveTrendDims],
+    [chartType, effectiveTrendMetricIds, effectiveTrendDims, metrics],
   )
 
   const breakdownEditDraft = useMemo(
     (): MyReportChartEditDraft => ({
       chartType: breakdownChartType,
-      metricId: breakdownChartMetricId,
+      metricIds: effectiveBreakdownMetricIds.length > 0 ? effectiveBreakdownMetricIds : [metrics[0]],
       dimensionIds:
         effectiveBreakdownDims.length > 0 ? effectiveBreakdownDims : ["date", "app"],
     }),
-    [breakdownChartType, breakdownChartMetricId, effectiveBreakdownDims],
+    [breakdownChartType, effectiveBreakdownMetricIds, effectiveBreakdownDims, metrics],
   )
 
   const handleExportTrendImage = useCallback(async () => {
@@ -613,11 +862,16 @@ export function MyReportCharts({
   const handleDownloadTrend = useCallback(() => {
     const columns = [
       { id: "label", label: "Date" },
-      { id: "current", label: "Current" },
+      ...effectiveTrendMetricIds.map((mId) => ({
+        id: mId,
+        label: metricCatalog.find((m) => m.id === mId)?.label ?? mId,
+      })),
     ]
-    if (compareActive) columns.push({ id: "previous", label: "Compare" })
+    if (compareActive && effectiveTrendMetricIds.length === 1) {
+      columns.push({ id: `${effectiveTrendMetricIds[0]}__prev`, label: "Compare" })
+    }
     exportRowsAsCsv(trendData, columns, "my-report-trend-chart.csv")
-  }, [trendData, compareActive])
+  }, [trendData, effectiveTrendMetricIds, metricCatalog, compareActive])
 
   const handleDownloadBreakdown = useCallback(() => {
     if (useMultiSeries && breakdownMulti.data.length > 0) {
@@ -628,33 +882,33 @@ export function MyReportCharts({
       exportRowsAsCsv(breakdownMulti.data, columns, "my-report-breakdown-chart.csv")
       return
     }
-    exportRowsAsCsv(
-      breakdownBar.map((row) => ({ label: row.label, current: row.current })),
-      [
-        { id: "label", label: "App" },
-        { id: "current", label: breakdownMetricLabel },
-      ],
-      "my-report-breakdown-chart.csv",
-    )
-  }, [useMultiSeries, breakdownMulti, breakdownBar, breakdownMetricLabel])
+    const columns = [
+      { id: "label", label: "App" },
+      ...effectiveBreakdownMetricIds.map((mId) => ({
+        id: mId,
+        label: metricCatalog.find((m) => m.id === mId)?.label ?? mId,
+      })),
+    ]
+    exportRowsAsCsv(breakdownBar, columns, "my-report-breakdown-chart.csv")
+  }, [useMultiSeries, breakdownMulti, breakdownBar, effectiveBreakdownMetricIds, metricCatalog])
 
   const handleApplyTrendEdit = useCallback(
     (draft: MyReportChartEditDraft) => {
-      onChartMetricChange(draft.metricId)
+      onChartMetricIdsChange(draft.metricIds)
       onChartTypeChange(draft.chartType)
       onTrendChartDimensionIdsChange(draft.dimensionIds)
     },
-    [onChartMetricChange, onChartTypeChange, onTrendChartDimensionIdsChange],
+    [onChartMetricIdsChange, onChartTypeChange, onTrendChartDimensionIdsChange],
   )
 
   const handleApplyBreakdownEdit = useCallback(
     (draft: MyReportChartEditDraft) => {
-      onBreakdownChartMetricChange(draft.metricId)
+      onBreakdownChartMetricIdsChange(draft.metricIds)
       onBreakdownChartTypeChange(draft.chartType)
       onBreakdownChartDimensionIdsChange(draft.dimensionIds)
     },
     [
-      onBreakdownChartMetricChange,
+      onBreakdownChartMetricIdsChange,
       onBreakdownChartTypeChange,
       onBreakdownChartDimensionIdsChange,
     ],
@@ -690,10 +944,11 @@ export function MyReportCharts({
         >
           <TrendChart
             data={trendData}
-            metricId={chartMetricId}
+            metricIds={effectiveTrendMetricIds.length > 0 ? effectiveTrendMetricIds : [metrics[0]]}
             metricCatalog={metricCatalog}
             chartType={chartType}
             compareActive={compareActive}
+            dimensionIds={effectiveTrendDims}
           />
         </ChartPanel>
         <ChartPanel
@@ -716,10 +971,11 @@ export function MyReportCharts({
             seriesData={breakdownMulti.data}
             seriesKeys={breakdownMulti.seriesKeys}
             barData={breakdownBar}
-            metricId={breakdownChartMetricId}
+            metricIds={effectiveBreakdownMetricIds.length > 0 ? effectiveBreakdownMetricIds : [metrics[0]]}
             metricCatalog={metricCatalog}
             chartType={breakdownChartType}
             useMultiSeries={useMultiSeries}
+            dimensionIds={effectiveBreakdownDims}
           />
         </ChartPanel>
       </div>

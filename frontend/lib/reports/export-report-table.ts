@@ -11,6 +11,7 @@ function formatDeltaPctExport(value: number | null | undefined): string {
 export function exportReportTableExcel(options: {
   dimensions: string[]
   metrics: string[]
+  formulaMetricIds?: string[]
   dimensionCatalog: CustomReportCatalogItem[]
   metricCatalog: CustomReportCatalogItem[]
   rows: Record<string, string | number | null>[]
@@ -25,6 +26,7 @@ export function exportReportTableExcel(options: {
   const {
     dimensions,
     metrics,
+    formulaMetricIds = [],
     dimensionCatalog,
     metricCatalog,
     rows,
@@ -33,17 +35,19 @@ export function exportReportTableExcel(options: {
     compareActive = false,
     compareTotals = {},
     totalsDeltaPct = {},
-    rowCompare = {},
-    rowDeltaPct = {},
+    rowCompare = [],
+    rowDeltaPct = [],
   } = options
 
   if (rows.length === 0) return
+
+  const allMetricIds = [...metrics, ...formulaMetricIds]
 
   const dimensionHeaders = dimensions.map((id) => {
     const item = dimensionCatalog.find((d) => d.id === id)
     return item?.label ?? id
   })
-  const metricHeaders = metrics.flatMap((id) => {
+  const metricHeaders = allMetricIds.flatMap((id) => {
     const item = metricCatalog.find((m) => m.id === id)
     const label = item?.label ?? id
     if (!compareActive) return [label]
@@ -56,7 +60,7 @@ export function exportReportTableExcel(options: {
 
   const totalHtml = [
     ...dimensions.map((_, index) => (index === 0 ? "Total" : "")),
-    ...metrics.flatMap((metricId) => {
+    ...allMetricIds.flatMap((metricId) => {
       const cells = [formatMetricValue(totals[metricId], metricId, metricCatalog)]
       if (!compareActive) return cells
       return [
@@ -74,7 +78,7 @@ export function exportReportTableExcel(options: {
       const dimensionCells = dimensions.map((dimId) =>
         escapeExcelHtml(formatDimensionCell(dimId, row)),
       )
-      const metricCells = metrics.flatMap((metricId) => {
+      const metricCells = allMetricIds.flatMap((metricId) => {
         const cells = [formatMetricValue(row[metricId], metricId, metricCatalog)]
         if (!compareActive) return cells
         const compare = rowCompare[rowIndex]?.[metricId]

@@ -74,3 +74,38 @@ export interface PerformanceSyncCompareRecompareResponse {
   failed: number
   results: PerformanceSyncCompareRecompareResultItem[]
 }
+
+export interface AdmobApiTrafficFilterOptions {
+  callTypes: string[]
+  publishers: string[]
+  httpStatuses: (number | null)[]
+}
+
+export interface AdmobApiTrafficChartPoint {
+  bucketStart: string
+  count: number
+  breakdown: Record<string, number>
+}
+
+export type AdmobApiTrafficBucket = "minute" | "hour" | "day"
+export type AdmobApiTrafficDimension = "none" | "publisher" | "type" | "http_status"
+
+export interface AdmobApiTrafficChartResponse {
+  bucket: AdmobApiTrafficBucket | string
+  dimension: AdmobApiTrafficDimension | string
+  createdFrom: string
+  createdTo: string
+  totalCalls: number
+  series: string[]
+  points: AdmobApiTrafficChartPoint[]
+}
+
+export interface AdmobApiTrafficChartQuery {
+  createdFrom?: string
+  createdTo?: string
+  callType?: string
+  publisherId?: string
+  responseHttpStatus?: string
+  bucket?: AdmobApiTrafficBucket
+  dimension?: AdmobApiTrafficDimension
+}

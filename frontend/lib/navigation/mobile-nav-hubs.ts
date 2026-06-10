@@ -104,6 +104,13 @@ export const MOBILE_NAV_HUBS: Record<string, MobileNavHub> = {
         description: "Adjust-style flat report builder",
         isShow: () => hasScreenFunction("s-my-reports", "view"),
       },
+      {
+        label: "Waterfall Report",
+        href: "/reports/waterfall",
+        icon: BarChart3,
+        description: "SoW and network performance by app",
+        isShow: () => hasScreenFunction("s-reports", "view"),
+      },
     ],
   },
   "meta-ads": {

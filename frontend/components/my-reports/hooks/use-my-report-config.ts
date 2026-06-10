@@ -30,10 +30,26 @@ import {
 
 export type MyReportAppSelectionMode = "permission" | "by_team"
 
-export type MyReportChartType = "line" | "bar" | "area"
+export type MyReportChartType =
+  | "line"
+  | "combo"
+  | "bar"
+  | "stacked-bar"
+  | "area"
+  | "scorecard"
+  | "pie"
 
 /** Side-by-side vs stacked layout for the two chart panels. */
 export type MyReportPanelLayout = "side-by-side" | "stacked"
+
+export type MyReportTableViewMode = "flat" | "pivot"
+
+export type CustomFormulaMetric = {
+  id: string
+  name: string
+  expression: string
+  color?: string
+}
 
 export type MyReportConfig = {
   dimensions: string[]
@@ -49,9 +65,9 @@ export type MyReportConfig = {
   compareCustomEnd: Date
   pinnedColumnIds: string[]
   chartsVisible: boolean
-  chartMetricId: string
+  chartMetricIds: string[]
   chartType: MyReportChartType
-  breakdownChartMetricId: string
+  breakdownChartMetricIds: string[]
   breakdownChartType: MyReportChartType
   trendChartDimensionIds: string[]
   breakdownChartDimensionIds: string[]
@@ -64,6 +80,11 @@ export type MyReportConfig = {
   sortBy: string
   sortDir: "asc" | "desc"
   enabledConfigKeys: MyReportConfigKey[]
+  customFormulas: CustomFormulaMetric[]
+  tableViewMode: MyReportTableViewMode
+  pivotRowDim: string
+  pivotColDim: string
+  pivotMetricId: string
 }
 
 export type AppliedMyReportConfig = MyReportConfig
@@ -80,11 +101,14 @@ function cloneConfig(config: MyReportConfig): MyReportConfig {
     compareCustomStart: new Date(config.compareCustomStart),
     compareCustomEnd: new Date(config.compareCustomEnd),
     pinnedColumnIds: [...config.pinnedColumnIds],
+    chartMetricIds: [...config.chartMetricIds],
+    breakdownChartMetricIds: [...config.breakdownChartMetricIds],
     trendChartDimensionIds: [...config.trendChartDimensionIds],
     breakdownChartDimensionIds: [...config.breakdownChartDimensionIds],
     selectedMonth: new Date(config.selectedMonth),
     startDate: new Date(config.startDate),
     endDate: new Date(config.endDate),
+    customFormulas: config.customFormulas.map((formula) => ({ ...formula })),
   }
 }
 
@@ -104,9 +128,9 @@ export function createDefaultMyReportConfig(): MyReportConfig {
     compareCustomEnd: end,
     pinnedColumnIds: [],
     chartsVisible: false,
-    chartMetricId: MY_REPORT_DEFAULT_METRICS[0],
+    chartMetricIds: [MY_REPORT_DEFAULT_METRICS[0]],
     chartType: "line",
-    breakdownChartMetricId: MY_REPORT_DEFAULT_METRICS[0],
+    breakdownChartMetricIds: [MY_REPORT_DEFAULT_METRICS[0]],
     breakdownChartType: "line",
     trendChartDimensionIds: ["date"],
     breakdownChartDimensionIds: ["date", "app"],
@@ -119,6 +143,11 @@ export function createDefaultMyReportConfig(): MyReportConfig {
     sortBy: MY_REPORT_DEFAULT_SORT.sortBy,
     sortDir: MY_REPORT_DEFAULT_SORT.sortDir,
     enabledConfigKeys: [...MY_REPORT_DEFAULT_ENABLED_CONFIG_KEYS],
+    customFormulas: [],
+    tableViewMode: "flat",
+    pivotRowDim: MY_REPORT_DEFAULT_DIMENSIONS[0] ?? "date",
+    pivotColDim: "app",
+    pivotMetricId: MY_REPORT_DEFAULT_METRICS[0] ?? "ua_cost",
   }
 }
 
@@ -191,6 +220,12 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
   const applyDraft = useCallback(() => {
     setApplied(cloneConfig(draft))
   }, [draft])
+
+  const loadConfig = useCallback((config: MyReportConfig, applyImmediately = true) => {
+    const next = cloneConfig(config)
+    setDraft(next)
+    if (applyImmediately) setApplied(cloneConfig(next))
+  }, [])
 
   const toggleDimension = useCallback(
     (id: string) => {
@@ -324,6 +359,7 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
     toggleConfigKey,
     resetConfigVisibility,
     hasPendingApply,
+    loadConfig,
   }
 }
 

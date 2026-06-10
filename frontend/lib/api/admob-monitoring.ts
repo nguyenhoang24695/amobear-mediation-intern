@@ -1,5 +1,8 @@
 import { apiClient } from "./client"
 import type {
+  AdmobApiTrafficChartQuery,
+  AdmobApiTrafficChartResponse,
+  AdmobApiTrafficFilterOptions,
   PerformanceSyncCompareListResponse,
   PerformanceSyncCompareQuery,
   PerformanceSyncCompareRecompareRequest,
@@ -34,6 +37,22 @@ function buildListQueryString(params?: PerformanceSyncCompareQuery): string {
   return qs ? `?${qs}` : ""
 }
 
+function buildTrafficQueryString(params?: AdmobApiTrafficChartQuery): string {
+  if (!params) return ""
+
+  const search = new URLSearchParams()
+  if (params.createdFrom) search.set("createdFrom", params.createdFrom)
+  if (params.createdTo) search.set("createdTo", params.createdTo)
+  if (params.callType) search.set("callType", params.callType)
+  if (params.publisherId) search.set("publisherId", params.publisherId)
+  if (params.responseHttpStatus) search.set("responseHttpStatus", params.responseHttpStatus)
+  if (params.bucket) search.set("bucket", params.bucket)
+  if (params.dimension) search.set("dimension", params.dimension)
+
+  const qs = search.toString()
+  return qs ? `?${qs}` : ""
+}
+
 export const admobMonitoringApi = {
   listPerformanceSyncCompare: async (params?: PerformanceSyncCompareQuery) => {
     return apiClient.get<PerformanceSyncCompareListResponse>(
@@ -52,6 +71,18 @@ export const admobMonitoringApi = {
     return apiClient.post<PerformanceSyncCompareRecompareResponse>(
       `${PREFIX}/performance-sync-compare/recompare`,
       request,
+    )
+  },
+
+  getApiTrafficFilterOptions: async (params?: Pick<AdmobApiTrafficChartQuery, "createdFrom" | "createdTo">) => {
+    return apiClient.get<AdmobApiTrafficFilterOptions>(
+      `${PREFIX}/api-traffic/filter-options${buildTrafficQueryString(params)}`,
+    )
+  },
+
+  getApiTrafficChart: async (params?: AdmobApiTrafficChartQuery) => {
+    return apiClient.get<AdmobApiTrafficChartResponse>(
+      `${PREFIX}/api-traffic/chart${buildTrafficQueryString(params)}`,
     )
   },
 }

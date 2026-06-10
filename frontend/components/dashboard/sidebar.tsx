@@ -470,6 +470,11 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
           },
           {
             icon: BarChart3,
+            label: "Waterfall Report",
+            href: "/reports/waterfall",
+          },
+          {
+            icon: BarChart3,
             label: "All reports",
             href: "/reports",
             reportId: null,

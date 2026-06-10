@@ -2811,6 +2811,12 @@ export const reportsApi = {
         return apiClient.delete(`/api/v1/reports/saved/${id}`)
     },
 
+    queryWaterfall: async (
+        request: import('@/types/reports').WaterfallReportRequest,
+    ): Promise<import('@/types/reports').WaterfallReportResponse> => {
+        return apiClient.post('/api/v1/reports/waterfall', request)
+    },
+
     getProfitOverview: async (params?: {
         from?: string
         to?: string

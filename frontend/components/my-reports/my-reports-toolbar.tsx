@@ -5,6 +5,7 @@ import {
   BarChart2,
   Download,
   ExternalLink,
+  LayoutGrid,
   Mail,
   MoreHorizontal,
   Pencil,
@@ -21,6 +22,7 @@ import { resolveMyReportDateRange } from "@/components/my-reports/hooks/use-my-r
 import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config"
 import { toApiDateString } from "@/lib/reports/report-date-filter-utils"
 import { hasScreenFunction } from "@/lib/auth"
+import { MyReportTemplatePicker } from "@/components/my-reports/my-report-template-picker"
 
 function Phase3DisabledButton({
   children,
@@ -69,6 +71,8 @@ export type MyReportsToolbarProps = {
   onEditTableToggle: () => void
   chartsVisible: boolean
   onChartsVisibleChange: (visible: boolean) => void
+  tableViewMode: "flat" | "pivot"
+  onTableViewModeChange: (mode: "flat" | "pivot") => void
   loading: boolean
   hasPendingApply: boolean
   onApply: () => void
@@ -76,6 +80,8 @@ export type MyReportsToolbarProps = {
   canExport: boolean
   exportDisabled: boolean
   onExport: () => void
+  onSave: () => void
+  onLoadTemplate: (templateId: string) => void | Promise<void>
   appliedConfig: MyReportConfig | null
   orgId?: string | null
 }
@@ -88,6 +94,8 @@ export function MyReportsToolbar({
   canExport,
   exportDisabled,
   onExport,
+  onSave,
+  onLoadTemplate,
   appliedConfig,
   orgId,
 }: Pick<
@@ -99,6 +107,8 @@ export function MyReportsToolbar({
   | "canExport"
   | "exportDisabled"
   | "onExport"
+  | "onSave"
+  | "onLoadTemplate"
   | "appliedConfig"
   | "orgId"
 >) {
@@ -156,6 +166,7 @@ export function MyReportsToolbar({
             <TooltipContent>Import and edit team profit plans</TooltipContent>
           </Tooltip>
         ) : null}
+        <MyReportTemplatePicker onLoadTemplate={onLoadTemplate} />
         <Phase3DisabledButton className="rounded-md p-2 hover:bg-gray-100">
           <Star className="h-5 w-5 text-gray-400" />
         </Phase3DisabledButton>
@@ -178,9 +189,14 @@ export function MyReportsToolbar({
         <Phase3DisabledButton className="rounded-md p-2 hover:bg-gray-100">
           <MoreHorizontal className="h-5 w-5 text-gray-400" />
         </Phase3DisabledButton>
-        <Phase3DisabledButton className="ml-2 h-9 rounded-md bg-blue-600 px-5 text-sm font-medium text-white">
+        <Button
+          type="button"
+          size="sm"
+          className="ml-2 h-9 bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700"
+          onClick={onSave}
+        >
           Save
-        </Phase3DisabledButton>
+        </Button>
       </div>
     </div>
   )
@@ -191,6 +207,8 @@ export function MyReportsTableActionBar({
   onEditTableToggle,
   chartsVisible,
   onChartsVisibleChange,
+  tableViewMode,
+  onTableViewModeChange,
   loading,
   hasPendingApply,
   onApply,
@@ -201,6 +219,8 @@ export function MyReportsTableActionBar({
   | "onEditTableToggle"
   | "chartsVisible"
   | "onChartsVisibleChange"
+  | "tableViewMode"
+  | "onTableViewModeChange"
   | "loading"
   | "hasPendingApply"
   | "onApply"
@@ -218,6 +238,32 @@ export function MyReportsTableActionBar({
         >
           <Table2 className="h-4 w-4" />
           Edit table
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-9 gap-1.5",
+            tableViewMode === "flat" && "border-2 border-blue-600 text-blue-600",
+          )}
+          onClick={() => onTableViewModeChange("flat")}
+        >
+          <Table2 className="h-4 w-4" />
+          Flat
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-9 gap-1.5",
+            tableViewMode === "pivot" && "border-2 border-blue-600 text-blue-600",
+          )}
+          onClick={() => onTableViewModeChange("pivot")}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Pivot
         </Button>
         <Button
           type="button"

@@ -48,11 +48,23 @@ import { MyReportsTableActionBar, MyReportsToolbar } from "@/components/my-repor
 import { MyReportCharts } from "@/components/my-reports/my-report-charts"
 import { exportReportTableExcel } from "@/lib/reports/export-report-table"
 import {
-  MY_REPORT_ADJUST_METRIC_IDS,
-  MY_REPORT_ADMOB_METRIC_IDS,
   MY_REPORT_DIMENSION_IDS,
-  MY_REPORT_SUMMARY_METRIC_IDS,
+  getVisibleMetricTabs,
+  resolveMetricIdsForSource,
+  type MyReportMetricSourceTab,
 } from "@/lib/reports/my-report-catalog-groups"
+import { FormulaMetricEditor } from "@/components/my-reports/formula-metric-editor"
+import { MyReportSaveDialog } from "@/components/my-reports/my-report-save-dialog"
+import { MyReportPivotTable } from "@/components/my-reports/my-report-pivot-table"
+import { PivotConfigPanel } from "@/components/my-reports/pivot-config-panel"
+import {
+  applyCustomFormulasToRows,
+  applyCustomFormulasToTotals,
+  buildFormulaMetricCatalog,
+} from "@/lib/reports/my-report-formula-utils"
+import { deserializeMyReportConfig } from "@/lib/reports/my-report-config-serializer"
+import { myReportSavedApi } from "@/lib/api/my-report-saved"
+import { pivotRows } from "@/lib/reports/pivot-utils"
 import { MyReportDataConfigurationPanel } from "@/components/my-reports/data-configuration-panel"
 import { ExternalFilterTag } from "@/components/my-reports/external-filter-tag"
 import { MyReportTable } from "@/components/my-reports/my-report-table"
@@ -166,7 +178,8 @@ export function MyReportsContent() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTableOpen, setEditTableOpen] = useState(true)
   const [editTab, setEditTab] = useState<"dimensions" | "metrics">("metrics")
-  const [metricTab, setMetricTab] = useState<"summary" | "admob" | "adjust">("summary")
+  const [metricTab, setMetricTab] = useState<MyReportMetricSourceTab>("summary")
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [dataConfigOpen, setDataConfigOpen] = useState(false)
   const [autoApplied, setAutoApplied] = useState(false)
@@ -261,6 +274,7 @@ export function MyReportsContent() {
     toggleConfigKey,
     resetConfigVisibility,
     hasPendingApply,
+    loadConfig,
   } = useMyReportConfig(catalogDimensionsPlaceholder)
 
   const needsTeamAppGroups =
@@ -309,12 +323,31 @@ export function MyReportsContent() {
   }, [catalog?.dimensions])
 
   const metricCatalog = catalog?.metrics ?? []
+  const formulaMetricCatalog = useMemo(
+    () => buildFormulaMetricCatalog((applied ?? draft).customFormulas),
+    [applied, draft.customFormulas],
+  )
+  const extendedMetricCatalog = useMemo(
+    () => [...metricCatalog, ...formulaMetricCatalog],
+    [metricCatalog, formulaMetricCatalog],
+  )
+
+  const visibleMetricTabs = useMemo(() => {
+    const tabs = getVisibleMetricTabs(metricCatalog)
+    return [...tabs, "custom" as const]
+  }, [metricCatalog])
+
+  useEffect(() => {
+    if (!visibleMetricTabs.includes(metricTab)) {
+      setMetricTab(visibleMetricTabs[0] ?? "summary")
+    }
+  }, [metricTab, visibleMetricTabs])
 
   const metricLabelById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const m of metricCatalog) map.set(m.id, m.label)
+    for (const m of extendedMetricCatalog) map.set(m.id, m.label)
     return map
-  }, [metricCatalog])
+  }, [extendedMetricCatalog])
 
   const compareActive = Boolean(applied && isCompareActive(applied.compareToPreset))
 
@@ -347,8 +380,27 @@ export function MyReportsContent() {
 
   const displayConfig = applied ?? draft
 
-  const tableRows = mergedRows
-  const tableTotals = mergedTotals
+  const formulaRows = useMemo(
+    () =>
+      applyCustomFormulasToRows(
+        mergedRows,
+        displayConfig.customFormulas,
+        metricCatalog,
+      ),
+    [mergedRows, displayConfig.customFormulas, metricCatalog],
+  )
+  const formulaTotals = useMemo(
+    () =>
+      applyCustomFormulasToTotals(
+        mergedTotals,
+        displayConfig.customFormulas,
+        metricCatalog,
+      ),
+    [mergedTotals, displayConfig.customFormulas, metricCatalog],
+  )
+
+  const tableRows = formulaRows
+  const tableTotals = formulaTotals
 
   useEffect(() => {
     setColumnFiltersByColumn({})
@@ -363,12 +415,34 @@ export function MyReportsContent() {
       return { id: dimId, label: dim?.label ?? dimId, kind: "dimension" as const }
     })
     const metrics = displayConfig.metrics.map((metricId) => {
-      const metric = metricCatalog.find((m) => m.id === metricId)
+      const metric = extendedMetricCatalog.find((m) => m.id === metricId)
       return { id: metricId, label: metric?.label ?? metricId, kind: "metric" as const }
     })
-    return [...dims, ...metrics]
-  }, [displayConfig, dimensionCatalog, metricCatalog])
+    const formulaColumns = displayConfig.customFormulas.map((formula) => ({
+      id: formula.id,
+      label: formula.name,
+      kind: "metric" as const,
+    }))
+    return [...dims, ...metrics, ...formulaColumns]
+  }, [displayConfig, dimensionCatalog, extendedMetricCatalog])
 
+  const pivotData = useMemo(() => {
+    if (displayConfig.tableViewMode !== "pivot") return null
+    return pivotRows(
+      tableRows,
+      displayConfig.pivotRowDim,
+      displayConfig.pivotColDim,
+      displayConfig.pivotMetricId,
+    )
+  }, [
+    displayConfig.tableViewMode,
+    displayConfig.pivotRowDim,
+    displayConfig.pivotColDim,
+    displayConfig.pivotMetricId,
+    tableRows,
+  ])
+
+  const formulaMetricIds = displayConfig.customFormulas.map((formula) => formula.id)
   const hasColumnFilters = hasActiveColumnFilters(columnFiltersByColumn)
   const showColumnFilterReloadFab = hasColumnFilters
 
@@ -418,6 +492,27 @@ export function MyReportsContent() {
     resetConfigVisibility()
   }, [resetConfigVisibility])
 
+  const handleLoadTemplate = useCallback(
+    async (templateId: string) => {
+      if (hasPendingApply) {
+        const confirmed = window.confirm(
+          "You have unapplied changes. Loading a template will replace the current configuration. Continue?",
+        )
+        if (!confirmed) return
+      }
+
+      try {
+        const template = await myReportSavedApi.get(templateId)
+        loadConfig(deserializeMyReportConfig(template.config))
+        setReportTitle(template.name)
+        toast.success(`Loaded template "${template.name}"`)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to load template")
+      }
+    },
+    [hasPendingApply, loadConfig],
+  )
+
   const handleApply = useCallback(() => {
     applyDraft()
     setMobileFiltersOpen(false)
@@ -432,8 +527,9 @@ export function MyReportsContent() {
     exportReportTableExcel({
       dimensions: applied.dimensions,
       metrics: applied.metrics,
+      formulaMetricIds: applied.customFormulas.map((formula) => formula.id),
       dimensionCatalog,
-      metricCatalog,
+      metricCatalog: extendedMetricCatalog,
       rows: tableRows,
       totals: tableTotals,
       filenamePrefix: "my-report",
@@ -488,6 +584,11 @@ export function MyReportsContent() {
       applyDisabled={loading}
       displayContext={draftFilterContext}
     />
+  )
+
+  const availableFormulaMetricIds = useMemo(
+    () => [...new Set([...draft.metrics, ...metricCatalog.map((m) => m.id)])],
+    [draft.metrics, metricCatalog],
   )
 
   const renderEditPanel = (embedded = false) => (
@@ -558,7 +659,7 @@ export function MyReportsContent() {
           ) : (
             <>
               <div className="mb-3 flex flex-wrap gap-2">
-                {(["summary", "admob", "adjust"] as const).map((tab) => (
+                {visibleMetricTabs.map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -572,11 +673,18 @@ export function MyReportsContent() {
                   </button>
                 ))}
               </div>
-              {metricTab === "summary"
-                ? renderMetricPickerList(MY_REPORT_SUMMARY_METRIC_IDS)
-                : metricTab === "admob"
-                  ? renderMetricPickerList(MY_REPORT_ADMOB_METRIC_IDS)
-                  : renderMetricPickerList(MY_REPORT_ADJUST_METRIC_IDS)}
+              {metricTab === "custom" ? (
+                <FormulaMetricEditor
+                  formulas={draft.customFormulas}
+                  availableMetricIds={availableFormulaMetricIds}
+                  metricLabels={Object.fromEntries(
+                    extendedMetricCatalog.map((metric) => [metric.id, metric.label]),
+                  )}
+                  onChange={(customFormulas) => updateDraft({ customFormulas })}
+                />
+              ) : (
+                renderMetricPickerList(resolveMetricIdsForSource(metricCatalog, metricTab))
+              )}
               <div className="mt-4 space-y-1">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
                   Column order
@@ -589,6 +697,18 @@ export function MyReportsContent() {
                         id={metricId}
                         label={metricLabelById.get(metricId) ?? metricId}
                         onRemove={() => toggleMetric(metricId)}
+                      />
+                    ))}
+                    {draft.customFormulas.map((formula) => (
+                      <SortableMetricItem
+                        key={formula.id}
+                        id={formula.id}
+                        label={formula.name}
+                        onRemove={() =>
+                          updateDraft({
+                            customFormulas: draft.customFormulas.filter((f) => f.id !== formula.id),
+                          })
+                        }
                       />
                     ))}
                   </SortableContext>
@@ -619,8 +739,21 @@ export function MyReportsContent() {
         canExport={canExportReports}
         exportDisabled={tableRows.length === 0}
         onExport={handleExport}
+        onSave={() => setSaveDialogOpen(true)}
+        onLoadTemplate={handleLoadTemplate}
         appliedConfig={applied}
         orgId={orgId}
+      />
+
+      <MyReportSaveDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        config={draft}
+        reportTitle={reportTitle}
+        onSaved={(item) => {
+          setReportTitle(item.name)
+          toast.success(`Saved template "${item.name}"`)
+        }}
       />
 
       {!isMobile ? (
@@ -652,6 +785,8 @@ export function MyReportsContent() {
         onEditTableToggle={() => setEditTableOpen((v) => !v)}
         chartsVisible={draft.chartsVisible}
         onChartsVisibleChange={(chartsVisible) => updateDraft({ chartsVisible })}
+        tableViewMode={draft.tableViewMode}
+        onTableViewModeChange={(tableViewMode) => updateDraft({ tableViewMode })}
         loading={loading}
         hasPendingApply={hasPendingApply}
         onApply={handleApply}
@@ -692,18 +827,18 @@ export function MyReportsContent() {
                   metrics={displayConfig.metrics}
                   metricCatalog={metricCatalog}
                   dimensionCatalog={dimensionCatalog}
-                  chartMetricId={draft.chartMetricId}
+                  chartMetricIds={draft.chartMetricIds}
                   chartType={draft.chartType}
-                  breakdownChartMetricId={draft.breakdownChartMetricId}
+                  breakdownChartMetricIds={draft.breakdownChartMetricIds}
                   breakdownChartType={draft.breakdownChartType}
                   trendChartDimensionIds={draft.trendChartDimensionIds}
                   breakdownChartDimensionIds={draft.breakdownChartDimensionIds}
                   panelLayout={draft.panelLayout}
                   compareActive={compareActive}
-                  onChartMetricChange={(metricId) => updateDraft({ chartMetricId: metricId })}
+                  onChartMetricIdsChange={(chartMetricIds) => updateDraft({ chartMetricIds })}
                   onChartTypeChange={(chartType) => updateDraft({ chartType })}
-                  onBreakdownChartMetricChange={(metricId) =>
-                    updateDraft({ breakdownChartMetricId: metricId })
+                  onBreakdownChartMetricIdsChange={(breakdownChartMetricIds) =>
+                    updateDraft({ breakdownChartMetricIds })
                   }
                   onBreakdownChartTypeChange={(breakdownChartType) =>
                     updateDraft({ breakdownChartType })
@@ -717,24 +852,46 @@ export function MyReportsContent() {
                   onPanelLayoutChange={(panelLayout) => updateDraft({ panelLayout })}
                 />
               ) : null}
-              <MyReportTable
-                columns={tableColumns}
-                rows={tableRows}
-                totals={tableTotals}
-                metricCatalog={metricCatalog}
-                compareActive={compareActive}
-                compareTotals={compareTotals}
-                totalsDeltaPct={totalsDeltaPct}
-                pinnedColumnIds={draft.pinnedColumnIds}
-                filtersByColumn={columnFiltersByColumn}
-                filtersLive={columnFiltersLive}
-                showReloadFab={showColumnFilterReloadFab}
-                reloadLabel={reloadColumnFiltersLabel}
-                onSortColumn={handleSortColumn}
-                onApplyColumnFilter={handleApplyColumnFilter}
-                onReloadData={handleReloadColumnFilters}
-                onTogglePin={togglePinColumn}
-              />
+              {displayConfig.tableViewMode === "pivot" ? (
+                <>
+                  <PivotConfigPanel
+                    dimensions={displayConfig.dimensions}
+                    metrics={[...displayConfig.metrics, ...formulaMetricIds]}
+                    dimensionCatalog={dimensionCatalog}
+                    metricCatalog={extendedMetricCatalog}
+                    pivotRowDim={draft.pivotRowDim}
+                    pivotColDim={draft.pivotColDim}
+                    pivotMetricId={draft.pivotMetricId}
+                    onChange={(patch) => updateDraft(patch)}
+                  />
+                  {pivotData ? (
+                    <MyReportPivotTable
+                      pivot={pivotData}
+                      metricId={displayConfig.pivotMetricId}
+                      metricCatalog={extendedMetricCatalog}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <MyReportTable
+                  columns={tableColumns}
+                  rows={tableRows}
+                  totals={tableTotals}
+                  metricCatalog={extendedMetricCatalog}
+                  compareActive={compareActive}
+                  compareTotals={compareTotals}
+                  totalsDeltaPct={totalsDeltaPct}
+                  pinnedColumnIds={draft.pinnedColumnIds}
+                  filtersByColumn={columnFiltersByColumn}
+                  filtersLive={columnFiltersLive}
+                  showReloadFab={showColumnFilterReloadFab}
+                  reloadLabel={reloadColumnFiltersLabel}
+                  onSortColumn={handleSortColumn}
+                  onApplyColumnFilter={handleApplyColumnFilter}
+                  onReloadData={handleReloadColumnFilters}
+                  onTogglePin={togglePinColumn}
+                />
+              )}
             </>
           )}
         </div>
