@@ -156,6 +156,13 @@ export function formatReportDatePeriodFooterLabel(start: Date, end: Date): strin
   return `${format(start, "dd MMM", { locale: enUS })} - ${format(end, "dd MMM", { locale: enUS })}`
 }
 
+export function formatAdjustStyleDateRange(start: Date, end: Date): string {
+  const sameYear = start.getFullYear() === end.getFullYear()
+  const startFmt = format(start, sameYear ? "MMM dd" : "MMM dd, yyyy", { locale: enUS })
+  const endFmt = format(end, "MMM dd, yyyy", { locale: enUS })
+  return `${startFmt} – ${endFmt}`
+}
+
 export function detectReportDatePeriodPresetId(
   start: Date,
   end: Date,

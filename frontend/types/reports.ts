@@ -190,3 +190,28 @@ export interface OverviewReportFilter {
   selectedYear?: string | null
   teamIds: string[]
 }
+
+export interface WaterfallReportRequest {
+  from: string
+  to: string
+  appIds: string[]
+}
+
+export interface WaterfallNetworkRow {
+  adSourceId: string
+  adSourceLabel: string
+  impressions: number
+  revenue: number
+  ecpm: number
+  fillRate: number
+  sowPct: number
+}
+
+export interface WaterfallReportResponse {
+  from: string
+  to: string
+  appIds: string[]
+  networks: WaterfallNetworkRow[]
+  totalRevenue: number
+  totalImpressions: number
+}

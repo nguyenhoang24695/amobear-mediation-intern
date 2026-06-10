@@ -55,7 +55,7 @@ import {
   Trash2,
 } from "lucide-react"
 
-const SCREEN_APPS = "s-apps"
+const SCREEN_ADMOB_APP_MAPPINGS = "s-admob-app-mappings"
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
 
 type DataAccountLike = {
@@ -418,9 +418,9 @@ function buildPayload(form: BindingFormState): UpsertAdmobAppMappingRequestDto {
 
 export function AdmobAppMappingsContent() {
   const { toast } = useToast()
-  const canCreate = hasScreenFunction(SCREEN_APPS, "create")
-  const canEdit = hasScreenFunction(SCREEN_APPS, "edit")
-  const canDisableEnable = hasScreenFunction(SCREEN_APPS, "disable-enable")
+  const canCreate = hasScreenFunction(SCREEN_ADMOB_APP_MAPPINGS, "create")
+  const canEdit = hasScreenFunction(SCREEN_ADMOB_APP_MAPPINGS, "edit")
+  const canDisableEnable = hasScreenFunction(SCREEN_ADMOB_APP_MAPPINGS, "disable-enable")
 
   const {
     data: mappings,

@@ -66,3 +66,26 @@ export function getRoleDisplayName(role: UserRole | string): string {
             return role
     }
 }
+
+export function normalizeUserRoles(role?: string | null, roles?: string[] | null): string[] {
+    if (roles && roles.length > 0) {
+        return Array.from(new Set(roles.filter(Boolean)))
+    }
+    return role ? [role] : []
+}
+
+export function hasSuperAdminRole(role?: string | null, roles?: string[] | null): boolean {
+    return normalizeUserRoles(role, roles).some((item) => item === UserRole.SuperAdmin)
+}
+
+export function hasPrivilegedRole(role?: string | null, roles?: string[] | null): boolean {
+    return normalizeUserRoles(role, roles).some((item) => item === UserRole.Admin || item === UserRole.SuperAdmin)
+}
+
+export function isAdminOrHigher(role?: string | null, roles?: string[] | null): boolean {
+    return normalizeUserRoles(role, roles).some((item) => isAdmin(item))
+}
+
+export function canEditWithRoles(role?: string | null, roles?: string[] | null): boolean {
+    return normalizeUserRoles(role, roles).some((item) => canEdit(item))
+}

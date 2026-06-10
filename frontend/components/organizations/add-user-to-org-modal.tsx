@@ -44,7 +44,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
   const [emails, setEmails] = useState<string[]>([])
   const [emailInput, setEmailInput] = useState("")
   const [emailError, setEmailError] = useState("")
-  const [inviteRole, setInviteRole] = useState<string>("viewer")
+  const [inviteRoles, setInviteRoles] = useState<string[]>(["viewer"])
   const [personalMessage, setPersonalMessage] = useState("")
 
   // Create user fields
@@ -53,7 +53,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
   const [showPassword, setShowPassword] = useState(false)
   const [createFirstName, setCreateFirstName] = useState("")
   const [createLastName, setCreateLastName] = useState("")
-  const [createRole, setCreateRole] = useState<string>("viewer")
+  const [createRoles, setCreateRoles] = useState<string[]>(["viewer"])
   const [mustChangePassword, setMustChangePassword] = useState(true)
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true)
 
@@ -68,7 +68,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
       setEmails([])
       setEmailInput("")
       setEmailError("")
-      setInviteRole("viewer")
+      setInviteRoles(["viewer"])
       setPersonalMessage("")
       // Reset create fields
       setCreateEmail("")
@@ -76,7 +76,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
       setShowPassword(false)
       setCreateFirstName("")
       setCreateLastName("")
-      setCreateRole("viewer")
+      setCreateRoles(["viewer"])
       setMustChangePassword(true)
       setSendWelcomeEmail(true)
       setSaving(false)
@@ -154,7 +154,8 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
         password: createPassword,
         firstName: createFirstName.trim() || undefined,
         lastName: createLastName.trim() || undefined,
-        role: createRole,
+        role: createRoles[0] ?? "viewer",
+        roles: createRoles,
         mustChangePassword,
         sendWelcomeEmail,
       })
@@ -274,7 +275,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
             {/* Role */}
             <div className="space-y-3">
               <Label>Role</Label>
-              <RoleSelector value={inviteRole} onChange={setInviteRole} canManage={canManage} />
+              <RoleSelector value={inviteRoles} onChange={setInviteRoles} canManage={canManage} />
             </div>
 
             {/* Personal Message */}
@@ -357,7 +358,7 @@ export function AddUserToOrgModal({ open, onOpenChange, orgId, orgName, canManag
             {/* Role */}
             <div className="space-y-3">
               <Label>Role</Label>
-              <RoleSelector value={createRole} onChange={setCreateRole} canManage={canManage} />
+              <RoleSelector value={createRoles} onChange={setCreateRoles} canManage={canManage} />
             </div>
 
             {/* Options */}

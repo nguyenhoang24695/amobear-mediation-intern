@@ -239,11 +239,15 @@ export function AlertCenterContentV2() {
 
   const showDailyInsights = hasScreenFunction("s-alerts", "view-daily-insights")
   const showMyAlertsTab = hasScreenFunction("s-alerts", "setting-my-alerts")
-  const canCreateAlertRule = hasScreenFunction("s-alerts", "create-rule")
-  const canEditAlertRule = hasScreenFunction("s-alerts", "edit-rule")
-  const canDeleteAlertRule = hasScreenFunction("s-alerts", "delete-rule")
+  const canCreateOrgAlertRule = hasScreenFunction("s-alerts", "create-rule")
+  const canEditOrgAlertRule = hasScreenFunction("s-alerts", "edit-rule")
+  const canDeleteOrgAlertRule = hasScreenFunction("s-alerts", "delete-rule")
   const [centerTab, setCenterTab] = useState<AlertCenterTab>("alerts")
   const isMyAlertsTab = centerTab === "my-alerts"
+  /** Tab My Alerts: quyền setting-my-alerts bao trùm CRUD rule PRIVATE (khớp backend). Tab Alerts: dùng create/edit/delete-rule. */
+  const canCreateAlertRule = isMyAlertsTab ? showMyAlertsTab : canCreateOrgAlertRule
+  const canEditAlertRule = isMyAlertsTab ? showMyAlertsTab : canEditOrgAlertRule
+  const canDeleteAlertRule = isMyAlertsTab ? showMyAlertsTab : canDeleteOrgAlertRule
   const rulesVisibilityForApi: "ORG" | "PRIVATE" = isMyAlertsTab ? "PRIVATE" : "ORG"
 
   useEffect(() => {

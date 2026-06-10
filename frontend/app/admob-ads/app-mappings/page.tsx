@@ -5,7 +5,7 @@ import { AdmobAppMappingsContent } from "@/components/admob-ads/app-mappings/app
 export default function AdmobAppMappingsPage() {
   return (
     <DashboardLayout>
-      <ScreenFunctionGuard screenKey="s-apps" functionKey="view">
+      <ScreenFunctionGuard screenKey="s-admob-app-mappings" functionKey="view">
         <AdmobAppMappingsContent />
       </ScreenFunctionGuard>
     </DashboardLayout>

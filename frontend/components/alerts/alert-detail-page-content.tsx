@@ -158,7 +158,9 @@ function AlertTrendTooltip({
 
 export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps) {
   const { toast } = useToast()
-  const canEditAlertRule = useMemo(() => hasScreenFunction("s-alerts", "edit-rule"), [])
+  const canEditOrgAlertRule = useMemo(() => hasScreenFunction("s-alerts", "edit-rule"), [])
+  const canManageMyAlerts = useMemo(() => hasScreenFunction("s-alerts", "setting-my-alerts"), [])
+  const canShowEditRule = canEditOrgAlertRule || canManageMyAlerts
   const [actionLoading, setActionLoading] = useState<"ack" | "resolve" | "snooze" | null>(null)
   const [editRuleOpen, setEditRuleOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
@@ -329,7 +331,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
   }
 
   const handleOpenEditRule = async () => {
-    if (!canEditAlertRule) return
+    if (!canShowEditRule) return
     const ruleId = detailData?.alert?.alertRuleId
     if (!ruleId) {
       toast({ title: "Không tìm thấy Alert Rule", variant: "destructive" })
@@ -339,6 +341,15 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
     try {
       setEditRuleLoading(true)
       const rule = await alertsApi.getAlertRule(ruleId)
+      const isPrivateRule = String(rule.visibility ?? "").toUpperCase() === "PRIVATE"
+      if (isPrivateRule && !canManageMyAlerts) {
+        toast({ title: "Không có quyền", description: "Bạn cần quyền My Alerts để sửa rule cá nhân.", variant: "destructive" })
+        return
+      }
+      if (!isPrivateRule && !canEditOrgAlertRule) {
+        toast({ title: "Không có quyền", description: "Bạn cần quyền Edit Alert Rule để sửa rule tổ chức.", variant: "destructive" })
+        return
+      }
       if (rule.ruleType.toUpperCase() !== "MANUAL") {
         toast({
           title: "Chưa hỗ trợ",
@@ -390,7 +401,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
             <Separator orientation="vertical" className="hidden h-6 sm:block" />
             <p className="truncate text-sm text-slate-500">Alerts &gt; Alert Detail</p>
           </div>
-          {canEditAlertRule ? (
+          {canShowEditRule ? (
             <Button
               variant="outline"
               size="sm"
@@ -681,7 +692,7 @@ export function AlertDetailPageContent({ alertId }: AlertDetailPageContentProps)
       <ManualAlertCreatorModal
         open={editRuleOpen}
         onOpenChange={(nextOpen) => {
-          if (nextOpen && !canEditAlertRule) return
+          if (nextOpen && !canShowEditRule) return
           setEditRuleOpen(nextOpen)
           if (!nextOpen) setEditingRule(null)
         }}

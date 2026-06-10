@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from "react"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { permissionApi, type PermissionRoleDto } from "@/lib/api/services"
 
 export interface RoleSelectorProps {
-    value: string
-    onChange: (value: string) => void
+    value: string[]
+    onChange: (value: string[]) => void
     canManage?: boolean
     availableRoles?: string[]
+    disabled?: boolean
 }
 
-export function RoleSelector({ value, onChange, canManage = false, availableRoles }: RoleSelectorProps) {
+export function RoleSelector({
+    value,
+    onChange,
+    canManage = false,
+    availableRoles,
+    disabled = false,
+}: RoleSelectorProps) {
     const [roles, setRoles] = useState<PermissionRoleDto[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
@@ -52,30 +59,50 @@ export function RoleSelector({ value, onChange, canManage = false, availableRole
         return <div className="p-3 text-sm text-red-500">Failed to load roles.</div>
     }
 
-    // Filter logic based on canManage or availableRoles constraint
     let filteredRoles = roles
 
     if (availableRoles && availableRoles.length > 0) {
         filteredRoles = roles.filter(r => availableRoles.includes(r.roleKey))
     } else if (!canManage) {
-        // Basic fallback: if cannot manage, hide super_admin/admin unless specifically provided
         filteredRoles = roles.filter(r => r.roleKey !== "super_admin" && r.roleKey !== "admin")
     }
 
+    const toggleRole = (roleKey: string, checked: boolean) => {
+        if (disabled) return
+
+        if (checked) {
+            if (!value.includes(roleKey)) {
+                onChange([...value, roleKey])
+            }
+            return
+        }
+
+        const next = value.filter(role => role !== roleKey)
+        onChange(next.length > 0 ? next : value)
+    }
+
     return (
-        <RadioGroup value={value} onValueChange={onChange} className="space-y-2 max-h-64 overflow-y-auto pr-2">
-            {filteredRoles.map(role => (
-                <label
-                    key={role.roleKey}
-                    className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50"
-                >
-                    <RadioGroupItem value={role.roleKey} className="mt-0.5" />
-                    <div>
-                        <p className="text-sm font-medium text-slate-900">{role.name}</p>
-                        <p className="text-xs text-slate-500">{role.description || "No description available"}</p>
-                    </div>
-                </label>
-            ))}
-        </RadioGroup>
+        <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+            {filteredRoles.map(role => {
+                const checked = value.includes(role.roleKey)
+                return (
+                    <label
+                        key={role.roleKey}
+                        className={`flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 has-[input:checked]:border-blue-500 has-[input:checked]:bg-blue-50/50 ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                        <Checkbox
+                            checked={checked}
+                            disabled={disabled}
+                            onCheckedChange={(nextChecked) => toggleRole(role.roleKey, nextChecked === true)}
+                            className="mt-0.5"
+                        />
+                        <div>
+                            <p className="text-sm font-medium text-slate-900">{role.name}</p>
+                            <p className="text-xs text-slate-500">{role.description || "No description available"}</p>
+                        </div>
+                    </label>
+                )
+            })}
+        </div>
     )
 }

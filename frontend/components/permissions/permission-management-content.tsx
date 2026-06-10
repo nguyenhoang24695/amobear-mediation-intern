@@ -490,91 +490,73 @@ export function PermissionManagementContent() {
           {error}
         </div>
       )}
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-50">
-            <Shield className="w-6 h-6 text-blue-600" />
+      {/* Header + compact stats */}
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="rounded-lg bg-blue-50 p-2">
+            <Shield className="h-6 w-6 text-blue-600" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl text-balance">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-balance text-slate-900 lg:text-3xl">
               Permission Management
             </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="mt-0.5 text-sm text-slate-500">
               Define role-based access control for screens and functions
             </p>
           </div>
         </div>
+
+        <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:gap-3">
+          <Card className="border-slate-200 bg-slate-50 py-0 shadow-none">
+            <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-medium text-slate-500">Total Roles</p>
+                <p className="text-lg font-bold leading-tight text-slate-900">{totalRoles}</p>
+              </div>
+              <Shield className="h-4 w-4 shrink-0 text-slate-400" />
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200 bg-slate-50 py-0 shadow-none">
+            <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-medium text-slate-500">Screens</p>
+                <p className="text-lg font-bold leading-tight text-slate-900">{totalScreens}</p>
+              </div>
+              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+            </CardContent>
+          </Card>
+          <Card className="border-blue-200 bg-blue-50 py-0 shadow-none">
+            <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-medium text-blue-700">Granted</p>
+                <p className="text-lg font-bold leading-tight text-blue-600">
+                  {totalPermissionsGranted}
+                  <span className="ml-0.5 text-[11px] font-normal text-blue-400">/ {maxPermissions}</span>
+                </p>
+              </div>
+              <Lock className="h-4 w-4 shrink-0 text-blue-500" />
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200 bg-slate-50 py-0 shadow-none">
+            <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-medium text-slate-500">Users in Role</p>
+                <p className="text-lg font-bold leading-tight text-slate-900">{selectedRole.userCount}</p>
+              </div>
+              <Users className="h-4 w-4 shrink-0 text-slate-400" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Success toast */}
       {showSavedToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="fixed bottom-6 right-6 z-50 flex animate-in fade-in slide-in-from-bottom-4 items-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-white shadow-lg duration-300">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           <span className="text-sm font-medium">Permissions saved successfully</span>
         </div>
       )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 bg-slate-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Total Roles</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{totalRoles}</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <Shield className="w-5 h-5 text-slate-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200 bg-slate-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Screens</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{totalScreens}</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <Layers className="w-5 h-5 text-slate-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">Granted</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">
-                  {totalPermissionsGranted}
-                  <span className="text-sm font-normal text-blue-400 ml-1">/ {maxPermissions}</span>
-                </p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-blue-200">
-                <Lock className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200 bg-slate-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Users in Role</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{selectedRole.userCount}</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <Users className="w-5 h-5 text-slate-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <Tabs
         value={activeTab}

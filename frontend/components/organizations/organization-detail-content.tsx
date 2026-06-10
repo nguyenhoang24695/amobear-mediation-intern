@@ -37,6 +37,8 @@ const FN_VIEW_PERSONNEL_CHART = "view-personnel-chart"
 const FN_MANAGE_PERSONNEL_CHART = "manage-personnel-chart"
 const FN_MANAGE_USERS = "manage-users"
 const FN_MANAGE_TEAMS = "manage-teams"
+const FN_VIEW_PROFIT_PLAN = "view-profit-plan"
+const FN_MANAGE_PROFIT_PLAN = "manage-profit-plan"
 
 interface OrganizationDetailContentProps {
   orgId: string
@@ -65,6 +67,8 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   const canManagePersonnelChart = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_PERSONNEL_CHART)
   const canManageUsers = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_USERS)
   const canManageTeams = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_TEAMS)
+  const canViewProfitPlan = hasScreenFunction(SCREEN_ORGS, FN_VIEW_PROFIT_PLAN)
+  const canManageProfitPlan = hasScreenFunction(SCREEN_ORGS, FN_MANAGE_PROFIT_PLAN)
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -234,7 +238,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
           {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
           {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
-          {canViewTeams && <TabsTrigger value="profit-plan">Profit Plan</TabsTrigger>}
+          {canViewProfitPlan && <TabsTrigger value="profit-plan">Profit Plan</TabsTrigger>}
           {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
 
@@ -266,9 +270,9 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           </TabsContent>
         )}
 
-        {canViewTeams && (
+        {canViewProfitPlan && (
           <TabsContent value="profit-plan">
-            <OrgProfitPlanTab orgId={orgId} canManage={canManageTeams} />
+            <OrgProfitPlanTab orgId={orgId} canManage={canManageProfitPlan} />
           </TabsContent>
         )}
 

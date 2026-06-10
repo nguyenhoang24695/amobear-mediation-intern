@@ -116,9 +116,9 @@ export function QuickMappingGrid({
   const gridTemplateColumns = `minmax(340px, 1fr) repeat(${rolesSorted.length}, minmax(160px, 220px))`
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
-      {/* Sticky must NOT sit inside a parent with overflow-x/y auto — that breaks viewport stickiness */}
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-white/85">
+    <div className="flex max-h-[calc(100dvh-18rem)] min-h-[24rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+      {/* Header stays fixed; body scrolls vertically below */}
+      <div className="z-30 shrink-0 border-b border-slate-200 bg-white shadow-sm">
         {toolbar != null && (
           <div className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-200/80 px-3 py-3 sm:px-4">
             {toolbar}
@@ -126,7 +126,7 @@ export function QuickMappingGrid({
         )}
         <div
           ref={headerScrollRef}
-          className="overflow-x-auto overscroll-x-contain"
+          className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           onScroll={onHeaderScroll}
         >
           <div className="grid bg-slate-50" style={{ gridTemplateColumns }}>
@@ -146,11 +146,11 @@ export function QuickMappingGrid({
         </div>
       </div>
 
-      {notice != null && <div className="bg-white px-3 pb-3 pt-0 sm:px-4">{notice}</div>}
+      {notice != null && <div className="shrink-0 bg-white px-3 pb-3 pt-0 sm:px-4">{notice}</div>}
 
       <div
         ref={bodyScrollRef}
-        className="overflow-x-auto overscroll-x-contain"
+        className="min-h-0 flex-1 overflow-auto overscroll-contain"
         onScroll={onBodyScroll}
       >
         <div className="grid bg-white" style={{ gridTemplateColumns }}>

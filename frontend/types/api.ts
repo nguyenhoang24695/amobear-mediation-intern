@@ -548,6 +548,8 @@ export interface TeamMember {
   avatarUrl?: string
   phone?: string
   role: string
+  roles?: string[]
+  roleNames?: string[]
   status?: string
   emailVerified?: boolean
   emailVerifiedAt?: string

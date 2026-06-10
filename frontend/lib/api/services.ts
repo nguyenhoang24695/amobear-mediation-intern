@@ -1000,7 +1000,7 @@ export const teamMembersApi = {
 
     updateUser: async (
         userId: string,
-        data: { firstName?: string; lastName?: string; phone?: string; role?: string; status?: string }
+        data: { firstName?: string; lastName?: string; phone?: string; role?: string; roles?: string[]; status?: string }
     ): Promise<{ success: boolean; data?: TeamMember }> => {
         return apiClient.put(`/api/v1/team-members/update-user/${userId}`, data)
     },
@@ -1686,6 +1686,24 @@ export interface UpdateOrganizationRequest {
     settings?: string
 }
 
+export interface OrganizationEmailSettings {
+    host: string
+    port: number
+    username: string
+    displayName: string
+    enableSsl: boolean
+    hasAppPassword: boolean
+}
+
+export interface UpdateOrganizationEmailSettingsRequest {
+    host: string
+    port: number
+    username: string
+    appPassword?: string
+    displayName: string
+    enableSsl: boolean
+}
+
 // Organization statistics types
 export interface RoleDistribution {
     role: string
@@ -1725,6 +1743,20 @@ export const organizationsApi = {
     // Update organization
     update: async (id: string, request: UpdateOrganizationRequest): Promise<OrganizationDetail> => {
         return apiClient.put<OrganizationDetail>(`/api/v1/organizations/${id}`, request)
+    },
+
+    getEmailSettings: async (orgId: string): Promise<OrganizationEmailSettings> => {
+        return apiClient.get<OrganizationEmailSettings>(`/api/v1/organizations/${orgId}/email-settings`)
+    },
+
+    updateEmailSettings: async (
+        orgId: string,
+        request: UpdateOrganizationEmailSettingsRequest,
+    ): Promise<OrganizationEmailSettings> => {
+        return apiClient.put<OrganizationEmailSettings>(
+            `/api/v1/organizations/${orgId}/email-settings`,
+            request,
+        )
     },
 
     uploadLogo: async (id: string, file: File): Promise<OrganizationDetail> => {
@@ -1870,6 +1902,7 @@ export interface CreateOrganizationUserRequest {
     firstName?: string
     lastName?: string
     role?: string
+    roles?: string[]
     mustChangePassword?: boolean
     sendWelcomeEmail?: boolean
 }
@@ -1883,6 +1916,8 @@ export interface OrgUserItem {
     fullName: string
     avatarUrl?: string
     role: string
+    roles?: string[]
+    roleNames?: string[]
     status: string
     createdAt: string
     lastLoginAt?: string
@@ -2806,6 +2841,12 @@ export const reportsApi = {
 
     deleteSaved: async (id: string): Promise<{ deleted: boolean }> => {
         return apiClient.delete(`/api/v1/reports/saved/${id}`)
+    },
+
+    queryWaterfall: async (
+        request: import('@/types/reports').WaterfallReportRequest,
+    ): Promise<import('@/types/reports').WaterfallReportResponse> => {
+        return apiClient.post('/api/v1/reports/waterfall', request)
     },
 
     getProfitOverview: async (params?: {
