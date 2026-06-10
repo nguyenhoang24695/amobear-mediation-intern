@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 import { resolveMyReportDateRange } from "@/components/my-reports/hooks/use-my-report-config"
 import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config"
 import { toApiDateString } from "@/lib/reports/report-date-filter-utils"
+import { hasScreenFunction } from "@/lib/auth"
 
 function Phase3DisabledButton({
   children,
@@ -101,6 +102,10 @@ export function MyReportsToolbar({
   | "appliedConfig"
   | "orgId"
 >) {
+  const canViewOverviewReport = hasScreenFunction("s-reports", "view")
+  const canViewOrgDetails = hasScreenFunction("s-orgs", "view-details")
+  const canViewProfitPlan = hasScreenFunction("s-orgs", "view-profit-plan")
+
   return (
     <div className="flex items-center justify-between gap-3 px-6 pb-4">
       <div className="flex min-w-0 items-center gap-2">
@@ -125,18 +130,20 @@ export function MyReportsToolbar({
         </button>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-gray-600" asChild>
-              <Link href={buildOverviewHref(appliedConfig)}>
-                <ExternalLink className="h-4 w-4" />
-                Profit Overview
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Open KPI plan vs actual on Overview</TooltipContent>
-        </Tooltip>
-        {orgId ? (
+        {canViewOverviewReport && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-gray-600" asChild>
+                <Link href={buildOverviewHref(appliedConfig)}>
+                  <ExternalLink className="h-4 w-4" />
+                  Profit Overview
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Open KPI plan vs actual on Overview</TooltipContent>
+          </Tooltip>
+        )}
+        {orgId && canViewOrgDetails && canViewProfitPlan ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-gray-600" asChild>
