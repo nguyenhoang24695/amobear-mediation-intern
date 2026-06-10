@@ -9,8 +9,10 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts"
@@ -18,7 +20,9 @@ import { admobMonitoringApi } from "@/lib/api/admob-monitoring"
 import type {
   AdmobApiTrafficBucket,
   AdmobApiTrafficChartResponse,
+  AdmobApiTrafficChartType,
   AdmobApiTrafficDimension,
+  AdmobApiTrafficUnit,
 } from "@/types/admob-monitoring"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const SERIES_COLORS = ["#2563eb", "#f97316", "#14b8a6", "#6366f1", "#22c55e", "#ec4899", "#eab308", "#64748b", "#94a3b8"]
 
@@ -43,12 +48,40 @@ const BUCKET_OPTIONS: Array<{ value: AdmobApiTrafficBucket; label: string }> = [
   { value: "day", label: "Day" },
 ]
 
+const CHART_TYPE_OPTIONS: Array<{ value: AdmobApiTrafficChartType; label: string }> = [
+  { value: "line", label: "Line Chart" },
+  { value: "bar", label: "Bar Chart" },
+]
+
 const DIMENSION_OPTIONS: Array<{ value: AdmobApiTrafficDimension; label: string; description: string }> = [
   { value: "none", label: "Total", description: "Single series — total API calls" },
   { value: "publisher", label: "Publisher", description: "Stack by admob_publisher_id" },
   { value: "type", label: "Type", description: "Stack by call type" },
   { value: "http_status", label: "HTTP status", description: "Stack by response_http_status" },
 ]
+
+const UNIT_OPTIONS: Array<{ value: AdmobApiTrafficUnit; label: string; description: string }> = [
+  { value: "count", label: "Count", description: "Number of API calls per bucket" },
+  { value: "tps", label: "TPS", description: "Calls per second (count ÷ bucket duration)" },
+]
+
+function bucketSeconds(bucket: AdmobApiTrafficBucket | string) {
+  if (bucket === "minute") return 60
+  if (bucket === "hour") return 3600
+  return 86400
+}
+
+function toTrafficUnitValue(count: number, unit: AdmobApiTrafficUnit, bucket: AdmobApiTrafficBucket | string) {
+  if (unit === "count") return count
+  return count / bucketSeconds(bucket)
+}
+
+function formatTrafficValue(value: number, unit: AdmobApiTrafficUnit) {
+  if (unit === "count") return formatCount(value)
+  if (value >= 100) return value.toFixed(1)
+  if (value >= 1) return value.toFixed(2)
+  return value.toFixed(3)
+}
 
 function defaultCreatedFromLocal() {
   const date = new Date()
@@ -107,6 +140,8 @@ export function AdmobMonitoringTrafficChartTab() {
   const [publisherId, setPublisherId] = useState("all")
   const [responseHttpStatus, setResponseHttpStatus] = useState("all")
   const [bucketMode, setBucketMode] = useState<AdmobApiTrafficBucket>("hour")
+  const [chartType, setChartType] = useState<AdmobApiTrafficChartType>("line")
+  const [chartUnit, setChartUnit] = useState<AdmobApiTrafficUnit>("count")
   const [chartDimension, setChartDimension] = useState<AdmobApiTrafficDimension>("none")
 
   const [callTypeOptions, setCallTypeOptions] = useState<string[]>([])
@@ -176,23 +211,25 @@ export function AdmobMonitoringTrafficChartTab() {
 
   const chartRows = useMemo<ChartRow[]>(() => {
     if (!chart?.points?.length) return []
+    const bucket = chart.bucket as AdmobApiTrafficBucket
     return chart.points.map((point) => {
       const row: ChartRow = {
         bucketStart: point.bucketStart,
-        label: formatBucketLabel(point.bucketStart, chart.bucket as AdmobApiTrafficBucket),
-        count: point.count,
+        label: formatBucketLabel(point.bucketStart, bucket),
+        count: toTrafficUnitValue(point.count, chartUnit, bucket),
       }
       if (isStacked) {
         for (const key of seriesKeys) {
-          row[key] = point.breakdown?.[key] ?? 0
+          row[key] = toTrafficUnitValue(point.breakdown?.[key] ?? 0, chartUnit, bucket)
         }
       }
       return row
     })
-  }, [chart, isStacked, seriesKeys])
+  }, [chart, chartUnit, isStacked, seriesKeys])
 
   const seriesSummary = useMemo(() => {
-    if (!chart?.points?.length || !isStacked) return [] as Array<{ key: string; count: number }>
+    if (!chart?.points?.length || !isStacked) return [] as Array<{ key: string; value: number }>
+    const bucket = chart.bucket as AdmobApiTrafficBucket
     const totals = new Map<string, number>()
     for (const key of seriesKeys) totals.set(key, 0)
     for (const point of chart.points) {
@@ -201,9 +238,24 @@ export function AdmobMonitoringTrafficChartTab() {
       }
     }
     return [...totals.entries()]
-      .map(([key, count]) => ({ key, count }))
-      .sort((a, b) => b.count - a.count)
-  }, [chart, isStacked, seriesKeys])
+      .map(([key, count]) => ({
+        key,
+        value:
+          chartUnit === "tps"
+            ? toTrafficUnitValue(count, "tps", bucket) / chart.points.length
+            : count,
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [chart, chartUnit, isStacked, seriesKeys])
+
+  const totalSummaryValue = useMemo(() => {
+    if (!chart) return null
+    if (chartUnit === "count") return chart.totalCalls
+    const bucket = chart.bucket as AdmobApiTrafficBucket
+    if (!chart.points.length) return 0
+    const avgCountPerBucket = chart.totalCalls / chart.points.length
+    return toTrafficUnitValue(avgCountPerBucket, "tps", bucket)
+  }, [chart, chartUnit])
 
   const applyFilters = () => {
     void loadFilterOptions()
@@ -317,24 +369,42 @@ export function AdmobMonitoringTrafficChartTab() {
             </CardDescription>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
-            <div className="flex rounded-lg border border-slate-200 bg-white p-1">
-              {BUCKET_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  size="sm"
-                  variant={bucketMode === option.value ? "default" : "ghost"}
-                  className={cn("h-8 px-3", bucketMode !== option.value && "text-slate-600")}
-                  onClick={() => setBucketMode(option.value)}
-                  disabled={loading}
-                >
-                  {option.label}
-                </Button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+                {BUCKET_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={bucketMode === option.value ? "default" : "ghost"}
+                    className={cn("h-8 px-3", bucketMode !== option.value && "text-slate-600")}
+                    onClick={() => setBucketMode(option.value)}
+                    disabled={loading}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+                {CHART_TYPE_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={chartType === option.value ? "default" : "ghost"}
+                    className={cn("h-8 px-3", chartType !== option.value && "text-slate-600")}
+                    onClick={() => setChartType(option.value)}
+                    disabled={loading}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-            {chart ? (
+            {chart && totalSummaryValue != null ? (
               <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
-                Total: {formatCount(chart.totalCalls)}
+                {chartUnit === "tps" ? "Avg TPS" : "Total"}: {formatTrafficValue(totalSummaryValue, chartUnit)}
+                {chartUnit === "tps" ? "/s" : ""}
               </Badge>
             ) : null}
           </div>
@@ -357,29 +427,14 @@ export function AdmobMonitoringTrafficChartTab() {
               ) : (
                 <div className="h-[360px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartRows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={formatCount} tickLine={false} axisLine={false} allowDecimals={false} />
-                      <Tooltip content={<TrafficTooltip dimension={activeDimension} seriesKeys={seriesKeys} />} />
-                      {isStacked ? (
-                        <>
-                          {seriesKeys.map((key, index) => (
-                            <Bar
-                              key={key}
-                              dataKey={key}
-                              name={formatSeriesLabel(key, activeDimension)}
-                              fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-                              stackId="traffic"
-                              radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                            />
-                          ))}
-                          <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} />
-                        </>
-                      ) : (
-                        <Bar dataKey="count" name="API calls" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                      )}
-                    </BarChart>
+                    <TrafficChartPlot
+                      chartType={chartType}
+                      chartRows={chartRows}
+                      chartUnit={chartUnit}
+                      isStacked={isStacked}
+                      seriesKeys={seriesKeys}
+                      activeDimension={activeDimension}
+                    />
                   </ResponsiveContainer>
                 </div>
               )}
@@ -388,6 +443,33 @@ export function AdmobMonitoringTrafficChartTab() {
             <aside className="w-full border-t border-slate-200 bg-slate-50/80 p-4 lg:w-72 lg:border-t-0 lg:border-l">
               <div className="space-y-4">
                 <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Unit</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {UNIT_OPTIONS.map((option) => (
+                    <Tooltip key={option.value}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant={chartUnit === option.value ? "default" : "outline"}
+                          className={cn(
+                            "h-10 w-full",
+                            chartUnit !== option.value && "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                          )}
+                          onClick={() => setChartUnit(option.value)}
+                        >
+                          {option.label}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[220px] text-xs">
+                        {option.description}
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
                   <h3 className="text-sm font-semibold text-slate-900">Dimension</h3>
                   <p className="mt-1 text-xs text-slate-500">Break down stacked bars by series.</p>
                 </div>
@@ -432,7 +514,10 @@ export function AdmobMonitoringTrafficChartTab() {
                               {formatSeriesLabel(item.key, activeDimension)}
                             </span>
                           </span>
-                          <span className="font-medium text-slate-900">{formatCount(item.count)}</span>
+                          <span className="font-medium text-slate-900">
+                            {formatTrafficValue(item.value, chartUnit)}
+                            {chartUnit === "tps" ? "/s" : ""}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -447,18 +532,108 @@ export function AdmobMonitoringTrafficChartTab() {
   )
 }
 
+function TrafficChartPlot({
+  chartType,
+  chartRows,
+  chartUnit,
+  isStacked,
+  seriesKeys,
+  activeDimension,
+}: {
+  chartType: AdmobApiTrafficChartType
+  chartRows: ChartRow[]
+  chartUnit: AdmobApiTrafficUnit
+  isStacked: boolean
+  seriesKeys: string[]
+  activeDimension: AdmobApiTrafficDimension | string
+}) {
+  const margin = { top: 8, right: 16, left: 0, bottom: 0 }
+  const axes = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
+      <YAxis
+        tick={{ fontSize: 12 }}
+        tickFormatter={(value) => formatTrafficValue(Number(value), chartUnit)}
+        tickLine={false}
+        axisLine={false}
+        allowDecimals={chartUnit === "tps"}
+      />
+      <RechartsTooltip content={<TrafficTooltip dimension={activeDimension} unit={chartUnit} />} />
+    </>
+  )
+
+  if (chartType === "line") {
+    return (
+      <LineChart data={chartRows} margin={margin}>
+        {axes}
+        {isStacked ? (
+          <>
+            {seriesKeys.map((key, index) => (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                name={formatSeriesLabel(key, activeDimension)}
+                stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+            ))}
+            <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} />
+          </>
+        ) : (
+          <Line
+            type="monotone"
+            dataKey="count"
+            name={chartUnit === "tps" ? "TPS" : "API calls"}
+            stroke="#3b82f6"
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
+        )}
+      </LineChart>
+    )
+  }
+
+  return (
+    <BarChart data={chartRows} margin={margin}>
+      {axes}
+      {isStacked ? (
+        <>
+          {seriesKeys.map((key, index) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              name={formatSeriesLabel(key, activeDimension)}
+              fill={SERIES_COLORS[index % SERIES_COLORS.length]}
+              stackId="traffic"
+              radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+            />
+          ))}
+          <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} />
+        </>
+      ) : (
+        <Bar dataKey="count" name={chartUnit === "tps" ? "TPS" : "API calls"} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+      )}
+    </BarChart>
+  )
+}
+
 function TrafficTooltip({
   active,
   payload,
   label,
   dimension,
-  seriesKeys,
+  unit,
 }: {
   active?: boolean
   payload?: Array<{ name?: string; value?: number; color?: string; dataKey?: string }>
   label?: string
   dimension: AdmobApiTrafficDimension | string
-  seriesKeys: string[]
+  unit: AdmobApiTrafficUnit
 }) {
   if (!active || !payload?.length) return null
 
@@ -467,13 +642,18 @@ function TrafficTooltip({
     .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
 
   const total = entries.reduce((sum, item) => sum + (item.value ?? 0), 0)
+  const totalLabel = unit === "tps" ? "Total TPS" : "Total calls"
+  const valueSuffix = unit === "tps" ? "/s" : ""
 
   return (
     <div className="max-w-xs rounded-md border border-slate-200 bg-white p-3 text-xs shadow-lg">
       <p className="mb-2 font-medium text-slate-700">{label}</p>
       <div className="mb-2 flex items-center justify-between gap-4">
-        <span className="text-slate-600">Total calls</span>
-        <span className="font-medium text-slate-950">{formatCount(total)}</span>
+        <span className="text-slate-600">{totalLabel}</span>
+        <span className="font-medium text-slate-950">
+          {formatTrafficValue(total, unit)}
+          {valueSuffix}
+        </span>
       </div>
       {dimension !== "none" && entries.length > 0 ? (
         <div className="space-y-1 border-t border-slate-100 pt-2">
@@ -483,7 +663,10 @@ function TrafficTooltip({
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                 {item.name}
               </span>
-              <span className="font-medium text-slate-950">{formatCount(item.value ?? 0)}</span>
+              <span className="font-medium text-slate-950">
+                {formatTrafficValue(item.value ?? 0, unit)}
+                {valueSuffix}
+              </span>
             </div>
           ))}
         </div>

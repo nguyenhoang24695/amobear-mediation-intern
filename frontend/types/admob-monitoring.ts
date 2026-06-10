@@ -89,6 +89,8 @@ export interface AdmobApiTrafficChartPoint {
 
 export type AdmobApiTrafficBucket = "minute" | "hour" | "day"
 export type AdmobApiTrafficDimension = "none" | "publisher" | "type" | "http_status"
+export type AdmobApiTrafficUnit = "count" | "tps"
+export type AdmobApiTrafficChartType = "line" | "bar"
 
 export interface AdmobApiTrafficChartResponse {
   bucket: AdmobApiTrafficBucket | string
