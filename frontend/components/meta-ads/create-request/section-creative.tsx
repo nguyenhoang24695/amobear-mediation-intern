@@ -189,6 +189,12 @@ export function CreativeSection({
   additionalVariantsRef.current = additionalVariants
   flexibleAssetsRef.current = form.flexibleAssets
 
+  const hasMultipleSingleTexts =
+    (Array.isArray(form.singleImagePrimaryTexts) && form.singleImagePrimaryTexts.filter((t) => t.trim()).length > 1) ||
+    (Array.isArray(form.singleImageHeadlines) && form.singleImageHeadlines.filter((h) => h.trim()).length > 1) ||
+    (Array.isArray(form.singleVideoPrimaryTexts) && form.singleVideoPrimaryTexts.filter((t) => t.trim()).length > 1) ||
+    (Array.isArray(form.singleVideoHeadlines) && form.singleVideoHeadlines.filter((h) => h.trim()).length > 1)
+
   const cancelAutoThumbnail = (tokenKey: string) => {
     autoThumbnailTokensRef.current[tokenKey] = `cancelled:${Date.now()}:${Math.random()}`
   }
@@ -706,9 +712,9 @@ export function CreativeSection({
                 <Select value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SINGLE_MEDIA">Single Image/Video</SelectItem>
+                    <SelectItem value="SINGLE_MEDIA">Single image or video</SelectItem>
                     <SelectItem value="CAROUSEL_IMAGE">Carousel</SelectItem>
-                    <SelectItem value="FLEXIBLE">Flexible</SelectItem>
+                    <SelectItem value="FLEXIBLE">Flexible ad</SelectItem>
                     <SelectItem value="EXISTING_POST">Existing Post</SelectItem>
                   </SelectContent>
                 </Select>
@@ -868,32 +874,65 @@ export function CreativeSection({
 
             <Tabs value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
               <TabsList className="h-10 bg-slate-100 p-1 w-fit">
-                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single Image/Video</TabsTrigger>
+                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single image or video</TabsTrigger>
                 <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
-                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible</TabsTrigger>
+                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible ad</TabsTrigger>
                 <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
               </TabsList>
 
               <TabsContent value="SINGLE_MEDIA" className="mt-4 space-y-4">
-                {/* Shared above variations: Primary Text + Headline */}
-                <TextVariationEditor
-                  label="Primary Text"
-                  values={form.singleImagePrimaryTexts}
-                  multiline
-                  placeholder="Enter primary text variation"
-                  onChange={(values) => updateTextVariations("singleImagePrimaryTexts", "singleImagePrimaryText", values)}
-                />
-                <TextVariationEditor
-                  label="Headline"
-                  values={form.singleImageHeadlines}
-                  placeholder="Enter headline variation"
-                  onChange={(values) => updateTextVariations("singleImageHeadlines", "singleImageHeadline", values)}
-                />
+                {hasMultipleSingleTexts && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-800 flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600" />
+                    <div>
+                      Single image or video uses the first primary text and headline only. Use Flexible ad for multiple text variations.
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Primary Text <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    rows={3}
+                    value={form.singleImagePrimaryText || getFirstFilledVariation(form.singleImagePrimaryTexts, "")}
+                    placeholder="Enter primary text"
+                    onChange={(event) => {
+                      const val = event.target.value
+                      onChange({
+                        singleImagePrimaryText: val,
+                        singleImagePrimaryTexts: [val],
+                        singleVideoPrimaryText: val,
+                        singleVideoPrimaryTexts: [val],
+                      })
+                    }}
+                    className="text-sm resize-none bg-white"
+                  />
+                  <p className="text-[11px] text-slate-400">Enter the primary text for your ad.</p>
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={form.singleImageHeadline || getFirstFilledVariation(form.singleImageHeadlines, "")}
+                    placeholder="Enter headline"
+                    onChange={(event) => {
+                      const val = event.target.value
+                      onChange({
+                        singleImageHeadline: val,
+                        singleImageHeadlines: [val],
+                        singleVideoHeadline: val,
+                        singleVideoHeadlines: [val],
+                      })
+                    }}
+                    className="h-9 text-sm bg-white"
+                  />
+                  <p className="text-[11px] text-slate-400">Enter the headline for your ad.</p>
+                </div>
 
                 {/* Per-variant image/video picker(s). Each variation = one ad, sharing all text above and the settings below. */}
                 <VariationGallery
-                  label="Media Variations"
-                  helper="Add an image or video — or add multiple to create more ads that share the same text above and the settings below."
+                  label="Media Variations (Multiple Separate Ads)"
+                  helper="Add an image or video to create a single ad, or add multiple to create multiple separate ads. Each variation represents a separate ad that shares the same primary text and headline above. For a single ad with multiple text/media options, use Flexible ad instead."
                   mediaKind={form.mediaType === "VIDEO" ? "video" : "image"}
                   supportsVariants={supportsVariants}
                   canAddVariant={canAddVariant}
@@ -1086,7 +1125,7 @@ export function CreativeSection({
 
               <TabsContent value="FLEXIBLE" className="mt-4 space-y-4">
                 <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-[11px] text-blue-700">
-                  Flexible lets Meta choose the best-performing format from the images and videos you provide in one group.
+                  <strong>Flexible ad:</strong> Use multiple assets and text variations in one ad. Meta delivers the best-performing combination automatically.
                 </div>
                 <TextVariationEditor
                   label="Primary Text"
@@ -1120,10 +1159,10 @@ export function CreativeSection({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-slate-700">Flexible Assets</p>
-                      <p className="text-[11px] text-slate-400">Add at least 1 image or video for the flexible group.</p>
+                      <p className="text-xs font-medium text-slate-700">Assets <span className="text-slate-400 font-normal">({form.flexibleAssets.length}/10)</span></p>
+                      <p className="text-[11px] text-slate-400">Add 1–10 images or videos for this flexible ad group.</p>
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onChange({ flexibleAssets: [...form.flexibleAssets, createEmptyFlexibleAsset()] })}>
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onChange({ flexibleAssets: [...form.flexibleAssets, createEmptyFlexibleAsset()] })} disabled={form.flexibleAssets.length >= 10}>
                       <Plus className="w-3.5 h-3.5 mr-1" />Add Asset
                     </Button>
                   </div>
@@ -2404,9 +2443,13 @@ function getCreativeCompletion(form: RequestFormState) {
       : form.mediaType === "IMAGE"
         ? !!(form.singleImageImage.uploadedAssetId || form.singleImageImage.imageHash || form.singleImageImage.imageUrl)
         : false
+    const hasPrimaryText = !!(form.singleImagePrimaryText?.trim() || (form.singleImagePrimaryTexts ?? []).some((t) => t.trim()))
+    const hasHeadline = !!(form.singleImageHeadline?.trim() || (form.singleImageHeadlines ?? []).some((h) => h.trim()))
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
       { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "Primary text", ok: hasPrimaryText },
+      { label: "Headline", ok: hasHeadline },
       { label: "CTA", ok: !!form.singleImageCallToAction },
       { label: "Media source", ok: hasMediaSource },
     ]
@@ -2439,7 +2482,7 @@ function getCreativeCompletion(form: RequestFormState) {
       { label: "Headline", ok: hasAnyTextVariation(form.flexibleHeadlines) },
       { label: "CTA", ok: !!form.flexibleCallToAction },
       { label: "Link URL or app fallback", ok: true },
-      { label: "At least 1 asset", ok: form.flexibleAssets.length >= 1 },
+      { label: `Assets (${form.flexibleAssets.length}/10)`, ok: form.flexibleAssets.length >= 1 && form.flexibleAssets.length <= 10 },
       {
         label: "Assets complete",
         ok: form.flexibleAssets.length > 0 && form.flexibleAssets.every((asset) => asset.assetType === "VIDEO"
@@ -2498,7 +2541,7 @@ function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: b
 }
 
 function getPreviewHeadline(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_MEDIA") return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImageHeadline || getFirstFilledVariation(form.singleImageHeadlines, "")
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoHeadlines, form.singleVideoHeadline)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexibleHeadlines)
@@ -2507,7 +2550,7 @@ function getPreviewHeadline(form: RequestFormState): string {
 }
 
 function getPreviewMessage(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_MEDIA") return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImagePrimaryText || getFirstFilledVariation(form.singleImagePrimaryTexts, "")
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexiblePrimaryTexts) || `${form.flexibleAssets.length} flexible assets`

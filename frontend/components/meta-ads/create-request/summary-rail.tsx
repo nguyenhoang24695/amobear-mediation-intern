@@ -236,7 +236,7 @@ function getCreativeStatus(form: RequestFormState) {
 }
 
 function getCreativeHeadline(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_MEDIA") return getFirstCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) || "-"
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImageHeadline || getFirstCreativeVariation(form.singleImageHeadlines) || "-"
   if (form.creativeType === "SINGLE_VIDEO") return getFirstCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || "-"
   if (form.creativeType === "FLEXIBLE") return getFirstCreativeVariation(form.flexibleHeadlines) || "-"

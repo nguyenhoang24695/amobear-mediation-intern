@@ -377,31 +377,7 @@ export function RequestListContent() {
                             Edit Request
                           </DropdownMenuItem>
                         ) : null}
-                        {request.status === "pending_approval" && canApprove ? (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-green-700"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                setConfirmAction({ type: "approve", request })
-                              }}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                setConfirmAction({ type: "reject", request })
-                              }}
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Reject
-                            </DropdownMenuItem>
-                          </>
-                        ) : null}
+
                         {request.status === "approved" && canExecute ? (
                           <DropdownMenuItem
                             className="text-blue-700"

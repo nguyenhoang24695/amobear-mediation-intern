@@ -887,18 +887,7 @@ export function RequestDetailContent({ requestId }: Props) {
                 Edit Request
               </Button>
             ) : null}
-            {detail.status === "pending_approval" && canApprove ? (
-              <>
-                <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setConfirmAction("reject")}>
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Reject
-                </Button>
-                <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => setConfirmAction("approve")}>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Approve
-                </Button>
-              </>
-            ) : null}
+
             {detail.status === "approved" && canExecute ? (
               <Button
                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -930,7 +919,7 @@ export function RequestDetailContent({ requestId }: Props) {
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
           <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-amber-800">
-            Editing this request will return it to <strong>Pending Approval</strong> after changes are saved.
+            Editing this request will re-validate it, and it will be ready to execute immediately after changes are saved.
           </p>
         </div>
       ) : null}
@@ -1435,8 +1424,8 @@ export function RequestDetailContent({ requestId }: Props) {
             <CardContent className="space-y-2">
               <TimelineEntry label="Created" value={formatDateTime(detail.createdAt)} done />
               <TimelineEntry label="Submitted" value={formatDateTime(detail.submittedAt)} done={!!detail.submittedAt} />
-              <TimelineEntry label="Approved" value={formatDateTime(detail.approvedAt)} done={!!detail.approvedAt} />
-              <TimelineEntry label="Rejected" value={formatDateTime(detail.rejectedAt)} done={!!detail.rejectedAt} />
+
+
               <TimelineEntry label="Executed" value={formatDateTime(detail.executedAt)} done={!!detail.executedAt} />
               <TimelineEntry label="Failed" value={formatDateTime(detail.failedAt)} done={!!detail.failedAt} />
             </CardContent>
