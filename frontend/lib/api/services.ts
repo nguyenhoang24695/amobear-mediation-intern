@@ -1686,6 +1686,24 @@ export interface UpdateOrganizationRequest {
     settings?: string
 }
 
+export interface OrganizationEmailSettings {
+    host: string
+    port: number
+    username: string
+    displayName: string
+    enableSsl: boolean
+    hasAppPassword: boolean
+}
+
+export interface UpdateOrganizationEmailSettingsRequest {
+    host: string
+    port: number
+    username: string
+    appPassword?: string
+    displayName: string
+    enableSsl: boolean
+}
+
 // Organization statistics types
 export interface RoleDistribution {
     role: string
@@ -1725,6 +1743,20 @@ export const organizationsApi = {
     // Update organization
     update: async (id: string, request: UpdateOrganizationRequest): Promise<OrganizationDetail> => {
         return apiClient.put<OrganizationDetail>(`/api/v1/organizations/${id}`, request)
+    },
+
+    getEmailSettings: async (orgId: string): Promise<OrganizationEmailSettings> => {
+        return apiClient.get<OrganizationEmailSettings>(`/api/v1/organizations/${orgId}/email-settings`)
+    },
+
+    updateEmailSettings: async (
+        orgId: string,
+        request: UpdateOrganizationEmailSettingsRequest,
+    ): Promise<OrganizationEmailSettings> => {
+        return apiClient.put<OrganizationEmailSettings>(
+            `/api/v1/organizations/${orgId}/email-settings`,
+            request,
+        )
     },
 
     uploadLogo: async (id: string, file: File): Promise<OrganizationDetail> => {

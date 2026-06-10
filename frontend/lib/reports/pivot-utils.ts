@@ -1,90 +1,147 @@
-export type PivotCellValue = number | null
+import { computeDeltaPercent, toNumeric, type CompareEnrichedRow } from "@/lib/reports/my-report-compare-utils"
+import { formatDimensionCell } from "@/lib/reports/report-format-utils"
 
-export type PivotRow = {
-  rowKey: string
-  rowLabel: string
-  cells: Record<string, PivotCellValue>
-  rowTotal: PivotCellValue
+export type PivotTreeNode = {
+  /** Stable path key for expand/collapse state */
+  key: string
+  depth: number
+  dimensionId: string
+  label: string
+  metrics: Record<string, number | null>
+  compare: Record<string, number | null>
+  deltaPct: Record<string, number | null>
+  children: PivotTreeNode[]
+  isLeaf: boolean
 }
 
-export type PivotResult = {
-  columns: Array<{ id: string; label: string }>
-  rows: PivotRow[]
-  rowTotals: Record<string, PivotCellValue>
-  colTotals: Record<string, PivotCellValue>
-  grandTotal: PivotCellValue
+export type AggregatedMetrics = {
+  metrics: Record<string, number | null>
+  compare: Record<string, number | null>
+  deltaPct: Record<string, number | null>
 }
 
-function toNumeric(value: string | number | null | undefined): number | null {
-  if (value == null) return null
-  if (typeof value === "number") return Number.isFinite(value) ? value : null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
+export function aggregatePivotMetrics(
+  rows: CompareEnrichedRow[],
+  metricIds: string[],
+): AggregatedMetrics {
+  const metrics: Record<string, number | null> = {}
+  const compare: Record<string, number | null> = {}
+  const deltaPct: Record<string, number | null> = {}
 
-function formatPivotLabel(value: string | number | null | undefined): string {
-  if (value == null || value === "") return "(blank)"
-  return String(value)
-}
+  for (const metricId of metricIds) {
+    let sum = 0
+    let hasValue = false
+    let compareSum = 0
+    let hasCompare = false
 
-export function pivotRows(
-  rows: Record<string, string | number | null>[],
-  rowDim: string,
-  colDim: string,
-  metricId: string,
-  maxCols = 50,
-): PivotResult {
-  const colKeyCounts = new Map<string, number>()
-  for (const row of rows) {
-    const colKey = formatPivotLabel(row[colDim])
-    colKeyCounts.set(colKey, (colKeyCounts.get(colKey) ?? 0) + 1)
-  }
-
-  const sortedColKeys = [...colKeyCounts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, maxCols)
-    .map(([key]) => key)
-
-  const columns = sortedColKeys.map((key) => ({ id: key, label: key }))
-  const colTotals: Record<string, PivotCellValue> = Object.fromEntries(
-    sortedColKeys.map((key) => [key, 0]),
-  )
-  const rowTotals: Record<string, PivotCellValue> = {}
-
-  const rowMap = new Map<string, PivotRow>()
-
-  for (const row of rows) {
-    const rowKey = formatPivotLabel(row[rowDim])
-    const colKey = formatPivotLabel(row[colDim])
-    if (!sortedColKeys.includes(colKey)) continue
-
-    const value = toNumeric(row[metricId]) ?? 0
-    let pivotRow = rowMap.get(rowKey)
-    if (!pivotRow) {
-      pivotRow = {
-        rowKey,
-        rowLabel: rowKey,
-        cells: Object.fromEntries(sortedColKeys.map((key) => [key, null])),
-        rowTotal: 0,
+    for (const row of rows) {
+      const value = toNumeric(row[metricId])
+      if (value != null) {
+        sum += value
+        hasValue = true
       }
-      rowMap.set(rowKey, pivotRow)
+      const compareValue = row.__compare?.[metricId]
+      if (compareValue != null) {
+        compareSum += compareValue
+        hasCompare = true
+      }
     }
 
-    const prevCell = pivotRow.cells[colKey]
-    pivotRow.cells[colKey] = (prevCell ?? 0) + value
-    pivotRow.rowTotal = (pivotRow.rowTotal ?? 0) + value
-    colTotals[colKey] = (colTotals[colKey] ?? 0) + value
-    rowTotals[rowKey] = (rowTotals[rowKey] ?? 0) + value
+    const current = hasValue ? sum : null
+    const previous = hasCompare ? compareSum : null
+    metrics[metricId] = current
+    compare[metricId] = previous
+    deltaPct[metricId] = computeDeltaPercent(current, previous)
   }
 
-  const pivotRowsResult = [...rowMap.values()].sort((a, b) => a.rowLabel.localeCompare(b.rowLabel))
-  const grandTotal = pivotRowsResult.reduce((sum, row) => sum + (row.rowTotal ?? 0), 0)
+  return { metrics, compare, deltaPct }
+}
 
-  return {
-    columns,
-    rows: pivotRowsResult,
-    rowTotals,
-    colTotals,
-    grandTotal,
+function groupRowsByDimension(
+  rows: CompareEnrichedRow[],
+  dimensionId: string,
+): Map<string, CompareEnrichedRow[]> {
+  const groups = new Map<string, CompareEnrichedRow[]>()
+  for (const row of rows) {
+    const key = String(row[dimensionId] ?? "")
+    const bucket = groups.get(key)
+    if (bucket) bucket.push(row)
+    else groups.set(key, [row])
   }
+  return groups
+}
+
+function buildPivotLevel(
+  rows: CompareEnrichedRow[],
+  dimensions: string[],
+  metricIds: string[],
+  depth: number,
+  pathPrefix: string,
+): PivotTreeNode[] {
+  if (depth >= dimensions.length || rows.length === 0) return []
+
+  const dimensionId = dimensions[depth]
+  const groups = groupRowsByDimension(rows, dimensionId)
+  const isLeafLevel = depth === dimensions.length - 1
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(([dimensionValue, groupRows]) => {
+      const sampleRow = groupRows[0]
+      const nodeKey = pathPrefix ? `${pathPrefix}\u001f${dimensionValue}` : dimensionValue
+      const { metrics, compare, deltaPct } = aggregatePivotMetrics(groupRows, metricIds)
+      const children = isLeafLevel
+        ? []
+        : buildPivotLevel(groupRows, dimensions, metricIds, depth + 1, nodeKey)
+
+      return {
+        key: nodeKey,
+        depth,
+        dimensionId,
+        label: formatDimensionCell(dimensionId, sampleRow),
+        metrics,
+        compare,
+        deltaPct,
+        children,
+        isLeaf: isLeafLevel,
+      }
+    })
+}
+
+/** Build hierarchical pivot tree grouped by dimensions in order (dim1 → dim2 → … → dimN). */
+export function buildPivotTree(
+  rows: CompareEnrichedRow[],
+  dimensions: string[],
+  metricIds: string[],
+): PivotTreeNode[] {
+  if (dimensions.length < 2 || rows.length === 0 || metricIds.length === 0) return []
+  return buildPivotLevel(rows, dimensions, metricIds, 0, "")
+}
+
+export function flattenVisiblePivotNodes(
+  nodes: PivotTreeNode[],
+  expandedKeys: ReadonlySet<string>,
+): PivotTreeNode[] {
+  const visible: PivotTreeNode[] = []
+
+  const walk = (level: PivotTreeNode[]) => {
+    for (const node of level) {
+      visible.push(node)
+      if (!node.isLeaf && node.children.length > 0 && expandedKeys.has(node.key)) {
+        walk(node.children)
+      }
+    }
+  }
+
+  walk(nodes)
+  return visible
+}
+
+export function buildPivotDimensionHeader(
+  dimensions: string[],
+  dimensionCatalog: Array<{ id: string; label: string }>,
+): string {
+  return dimensions
+    .map((id) => dimensionCatalog.find((d) => d.id === id)?.label ?? id)
+    .join(" > ")
 }

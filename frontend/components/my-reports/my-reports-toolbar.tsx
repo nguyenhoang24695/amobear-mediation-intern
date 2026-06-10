@@ -62,6 +62,53 @@ function buildOverviewHref(config: MyReportConfig | null): string {
   return `/reports/overview?${params.toString()}`
 }
 
+export type MyReportTableViewMode = "flat" | "pivot"
+
+export function MyReportTableViewModeToggle({
+  tableViewMode,
+  onTableViewModeChange,
+  className,
+  disabled = false,
+}: {
+  tableViewMode: MyReportTableViewMode
+  onTableViewModeChange: (mode: MyReportTableViewMode) => void
+  className?: string
+  disabled?: boolean
+}) {
+  return (
+    <div className={cn("flex gap-2", className)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        className={cn(
+          "h-9 flex-1 gap-1.5",
+          tableViewMode === "flat" && "border-2 border-blue-600 text-blue-600",
+        )}
+        onClick={() => onTableViewModeChange("flat")}
+      >
+        <Table2 className="h-4 w-4" />
+        Flat
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        className={cn(
+          "h-9 flex-1 gap-1.5",
+          tableViewMode === "pivot" && "border-2 border-blue-600 text-blue-600",
+        )}
+        onClick={() => onTableViewModeChange("pivot")}
+      >
+        <LayoutGrid className="h-4 w-4" />
+        Pivot
+      </Button>
+    </div>
+  )
+}
+
 export type MyReportsToolbarProps = {
   reportTitle: string
   isEditingTitle: boolean
@@ -71,8 +118,6 @@ export type MyReportsToolbarProps = {
   onEditTableToggle: () => void
   chartsVisible: boolean
   onChartsVisibleChange: (visible: boolean) => void
-  tableViewMode: "flat" | "pivot"
-  onTableViewModeChange: (mode: "flat" | "pivot") => void
   loading: boolean
   hasPendingApply: boolean
   onApply: () => void
@@ -207,8 +252,6 @@ export function MyReportsTableActionBar({
   onEditTableToggle,
   chartsVisible,
   onChartsVisibleChange,
-  tableViewMode,
-  onTableViewModeChange,
   loading,
   hasPendingApply,
   onApply,
@@ -219,8 +262,6 @@ export function MyReportsTableActionBar({
   | "onEditTableToggle"
   | "chartsVisible"
   | "onChartsVisibleChange"
-  | "tableViewMode"
-  | "onTableViewModeChange"
   | "loading"
   | "hasPendingApply"
   | "onApply"
@@ -238,32 +279,6 @@ export function MyReportsTableActionBar({
         >
           <Table2 className="h-4 w-4" />
           Edit table
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            "h-9 gap-1.5",
-            tableViewMode === "flat" && "border-2 border-blue-600 text-blue-600",
-          )}
-          onClick={() => onTableViewModeChange("flat")}
-        >
-          <Table2 className="h-4 w-4" />
-          Flat
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            "h-9 gap-1.5",
-            tableViewMode === "pivot" && "border-2 border-blue-600 text-blue-600",
-          )}
-          onClick={() => onTableViewModeChange("pivot")}
-        >
-          <LayoutGrid className="h-4 w-4" />
-          Pivot
         </Button>
         <Button
           type="button"

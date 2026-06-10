@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { OrganizationActionModal, type OrganizationActionType } from "../modals/organization-action-modal"
 import { OrganizationLogoAvatar } from "../organization-logo-avatar"
+import { OrgEmailSettingsSection } from "./org-email-settings-section"
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
 
@@ -201,6 +202,8 @@ export function OrgSettingsTab({
           )}
         </CardContent>
       </Card>
+
+      <OrgEmailSettingsSection orgId={orgId} canEdit={canEdit} />
 
       {canEdit && (
         <Card className="border-red-200">

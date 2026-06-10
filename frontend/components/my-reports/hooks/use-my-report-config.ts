@@ -89,6 +89,20 @@ export type MyReportConfig = {
 
 export type AppliedMyReportConfig = MyReportConfig
 
+/** View-only fields — toggle without Apply or re-fetch. */
+export const MY_REPORT_VIEW_ONLY_CONFIG_KEYS = [
+  "tableViewMode",
+  "chartsVisible",
+] as const satisfies readonly (keyof MyReportConfig)[]
+
+function stripViewOnlyConfigKeys(config: MyReportConfig): Omit<MyReportConfig, (typeof MY_REPORT_VIEW_ONLY_CONFIG_KEYS)[number]> {
+  const next = { ...config }
+  for (const key of MY_REPORT_VIEW_ONLY_CONFIG_KEYS) {
+    delete (next as Partial<MyReportConfig>)[key]
+  }
+  return next as Omit<MyReportConfig, (typeof MY_REPORT_VIEW_ONLY_CONFIG_KEYS)[number]>
+}
+
 function cloneConfig(config: MyReportConfig): MyReportConfig {
   return {
     ...config,
@@ -340,7 +354,10 @@ export function useMyReportConfig(catalogDimensions: CustomReportCatalogItem[]) 
 
   const hasPendingApply = useMemo(() => {
     if (!applied) return true
-    return JSON.stringify(draft) !== JSON.stringify(applied)
+    return (
+      JSON.stringify(stripViewOnlyConfigKeys(draft)) !==
+      JSON.stringify(stripViewOnlyConfigKeys(applied))
+    )
   }, [applied, draft])
 
   return {

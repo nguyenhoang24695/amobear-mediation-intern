@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import {
   closestCenter,
@@ -44,7 +44,7 @@ import { authApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
-import { MyReportsTableActionBar, MyReportsToolbar } from "@/components/my-reports/my-reports-toolbar"
+import { MyReportsTableActionBar, MyReportTableViewModeToggle, MyReportsToolbar } from "@/components/my-reports/my-reports-toolbar"
 import { MyReportCharts } from "@/components/my-reports/my-report-charts"
 import { exportReportTableExcel } from "@/lib/reports/export-report-table"
 import {
@@ -56,7 +56,6 @@ import {
 import { FormulaMetricEditor } from "@/components/my-reports/formula-metric-editor"
 import { MyReportSaveDialog } from "@/components/my-reports/my-report-save-dialog"
 import { MyReportPivotTable } from "@/components/my-reports/my-report-pivot-table"
-import { PivotConfigPanel } from "@/components/my-reports/pivot-config-panel"
 import {
   applyCustomFormulasToRows,
   applyCustomFormulasToTotals,
@@ -64,19 +63,22 @@ import {
 } from "@/lib/reports/my-report-formula-utils"
 import { deserializeMyReportConfig } from "@/lib/reports/my-report-config-serializer"
 import { myReportSavedApi } from "@/lib/api/my-report-saved"
-import { pivotRows } from "@/lib/reports/pivot-utils"
+import {
+  computeFilteredMetricTotals,
+  filterReportRowsByColumnFilters,
+  filterReportRowsForPivotView,
+  hasActiveColumnFilters,
+  type ColumnFilterCondition,
+} from "@/lib/reports/column-filter-utils"
 import { MyReportDataConfigurationPanel } from "@/components/my-reports/data-configuration-panel"
 import { ExternalFilterTag } from "@/components/my-reports/external-filter-tag"
 import { MyReportTable } from "@/components/my-reports/my-report-table"
 import {
   useMyReportConfig,
+  type MyReportTableViewMode,
 } from "@/components/my-reports/hooks/use-my-report-config"
 import { useMyReportQuery } from "@/components/my-reports/hooks/use-my-report-query"
 import { buildExternalFilterTags } from "@/lib/reports/my-report-config-tag-utils"
-import {
-  hasActiveColumnFilters,
-  type ColumnFilterCondition,
-} from "@/lib/reports/column-filter-utils"
 import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config"
 import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams"
 import type { CommissionTeamOption } from "@/lib/reports/commission-team-utils"
@@ -91,6 +93,38 @@ import {
 import { isCompareActive } from "@/lib/reports/my-report-compare-utils"
 
 const MY_REPORT_MOBILE_STICKER_KEY = "my-report-mobile-filters-sticker-top-v1"
+
+function MyReportTableViewShell({
+  isTransitioning,
+  children,
+}: {
+  isTransitioning: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative min-h-[280px]">
+      <div
+        className={cn(
+          "transition-opacity duration-200",
+          isTransitioning && "pointer-events-none select-none opacity-40",
+        )}
+        aria-busy={isTransitioning}
+      >
+        {children}
+      </div>
+      {isTransitioning ? (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-white/40"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading table view"
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 function resolveTeamsSelectionLabel(
   teamIds: string[],
@@ -277,6 +311,38 @@ export function MyReportsContent() {
     loadConfig,
   } = useMyReportConfig(catalogDimensionsPlaceholder)
 
+  const [isTableViewTransitioning, startTableViewTransition] = useTransition()
+  const [tableViewOverlayVisible, setTableViewOverlayVisible] = useState(false)
+  const tableViewOverlayStartedAtRef = useRef<number | null>(null)
+
+  const handleTableViewModeChange = useCallback(
+    (tableViewMode: MyReportTableViewMode) => {
+      if (tableViewMode === draft.tableViewMode) return
+      tableViewOverlayStartedAtRef.current = Date.now()
+      setTableViewOverlayVisible(true)
+      startTableViewTransition(() => {
+        updateDraft({ tableViewMode })
+      })
+    },
+    [draft.tableViewMode, updateDraft],
+  )
+
+  useEffect(() => {
+    if (isTableViewTransitioning || !tableViewOverlayVisible) return
+
+    const minOverlayMs = 200
+    const startedAt = tableViewOverlayStartedAtRef.current ?? Date.now()
+    const remainingMs = Math.max(0, minOverlayMs - (Date.now() - startedAt))
+    const timer = window.setTimeout(() => {
+      setTableViewOverlayVisible(false)
+      tableViewOverlayStartedAtRef.current = null
+    }, remainingMs)
+
+    return () => window.clearTimeout(timer)
+  }, [isTableViewTransitioning, tableViewOverlayVisible])
+
+  const isTableViewLoading = isTableViewTransitioning || tableViewOverlayVisible
+
   const needsTeamAppGroups =
     draft.appSelectionMode === "by_team" ||
     applied?.appSelectionMode === "by_team" ||
@@ -426,20 +492,53 @@ export function MyReportsContent() {
     return [...dims, ...metrics, ...formulaColumns]
   }, [displayConfig, dimensionCatalog, extendedMetricCatalog])
 
-  const pivotData = useMemo(() => {
-    if (displayConfig.tableViewMode !== "pivot") return null
-    return pivotRows(
+  const metricTableColumns = useMemo(
+    () => tableColumns.filter((column) => column.kind === "metric"),
+    [tableColumns],
+  )
+
+  const activeDimensions = applied?.dimensions ?? draft.dimensions
+  const usePivotTreeView =
+    draft.tableViewMode === "pivot" && activeDimensions.length >= 2
+
+  const displayTableRows = useMemo(() => {
+    if (!columnFiltersLive || !hasActiveColumnFilters(columnFiltersByColumn)) return tableRows
+    if (usePivotTreeView) {
+      return filterReportRowsForPivotView(
+        tableRows,
+        columnFiltersByColumn,
+        activeDimensions,
+        metricTableColumns,
+      ) as typeof tableRows
+    }
+    return filterReportRowsByColumnFilters(
       tableRows,
-      displayConfig.pivotRowDim,
-      displayConfig.pivotColDim,
-      displayConfig.pivotMetricId,
-    )
+      columnFiltersByColumn,
+      tableColumns,
+    ) as typeof tableRows
   }, [
-    displayConfig.tableViewMode,
-    displayConfig.pivotRowDim,
-    displayConfig.pivotColDim,
-    displayConfig.pivotMetricId,
     tableRows,
+    columnFiltersByColumn,
+    columnFiltersLive,
+    tableColumns,
+    usePivotTreeView,
+    activeDimensions,
+    metricTableColumns,
+  ])
+
+  const displayTableTotals = useMemo(() => {
+    if (!columnFiltersLive || !hasActiveColumnFilters(columnFiltersByColumn)) return tableTotals
+    const computed = computeFilteredMetricTotals(
+      displayTableRows,
+      metricTableColumns.map((column) => column.id),
+    )
+    return { ...tableTotals, ...computed }
+  }, [
+    tableTotals,
+    displayTableRows,
+    columnFiltersLive,
+    columnFiltersByColumn,
+    metricTableColumns,
   ])
 
   const formulaMetricIds = displayConfig.customFormulas.map((formula) => formula.id)
@@ -465,8 +564,14 @@ export function MyReportsContent() {
       setColumnFiltersNeedReload(false)
       return
     }
-    setColumnFiltersLive((live) => !live)
-  }, [columnFiltersNeedReload])
+    if (columnFiltersLive) {
+      setColumnFiltersLive(false)
+      setColumnFiltersByColumn({})
+      setColumnFiltersNeedReload(false)
+      return
+    }
+    setColumnFiltersLive(true)
+  }, [columnFiltersNeedReload, columnFiltersLive])
 
   const reloadColumnFiltersLabel =
     columnFiltersLive && !columnFiltersNeedReload ? "Show all rows" : "Reload Data"
@@ -619,6 +724,23 @@ export function MyReportsContent() {
         <div className="p-4">
           {editTab === "dimensions" ? (
             <>
+              <MyReportTableViewModeToggle
+                className="mb-4"
+                tableViewMode={draft.tableViewMode}
+                disabled={isTableViewLoading}
+                onTableViewModeChange={handleTableViewModeChange}
+              />
+              {draft.tableViewMode === "pivot" && activeDimensions.length < 2 ? (
+                <p className="mb-4 text-xs text-amber-700">
+                  Pivot cần từ 2 dimensions trở lên (theo thứ tự bên dưới). Khi chưa đủ, bảng vẫn hiển thị
+                  dạng Flat.
+                </p>
+              ) : draft.tableViewMode === "pivot" ? (
+                <p className="mb-4 text-xs text-gray-500">
+                  Pivot gom dữ liệu theo thứ tự dimension: cột đầu expand từng cấp, metrics được cộng dồn
+                  trên frontend.
+                </p>
+              ) : null}
               <div className="space-y-1">
                 {dimensionCatalog.map((dim) => (
                   <label
@@ -785,8 +907,6 @@ export function MyReportsContent() {
         onEditTableToggle={() => setEditTableOpen((v) => !v)}
         chartsVisible={draft.chartsVisible}
         onChartsVisibleChange={(chartsVisible) => updateDraft({ chartsVisible })}
-        tableViewMode={draft.tableViewMode}
-        onTableViewModeChange={(tableViewMode) => updateDraft({ tableViewMode })}
         loading={loading}
         hasPendingApply={hasPendingApply}
         onApply={handleApply}
@@ -852,46 +972,48 @@ export function MyReportsContent() {
                   onPanelLayoutChange={(panelLayout) => updateDraft({ panelLayout })}
                 />
               ) : null}
-              {displayConfig.tableViewMode === "pivot" ? (
-                <>
-                  <PivotConfigPanel
-                    dimensions={displayConfig.dimensions}
-                    metrics={[...displayConfig.metrics, ...formulaMetricIds]}
+              <MyReportTableViewShell isTransitioning={isTableViewLoading}>
+                {usePivotTreeView ? (
+                  <MyReportPivotTable
+                    dimensions={activeDimensions}
                     dimensionCatalog={dimensionCatalog}
+                    metricColumns={metricTableColumns}
+                    rows={displayTableRows}
+                    totals={displayTableTotals}
                     metricCatalog={extendedMetricCatalog}
-                    pivotRowDim={draft.pivotRowDim}
-                    pivotColDim={draft.pivotColDim}
-                    pivotMetricId={draft.pivotMetricId}
-                    onChange={(patch) => updateDraft(patch)}
+                    compareActive={compareActive}
+                    compareTotals={compareTotals}
+                    totalsDeltaPct={totalsDeltaPct}
+                    pinnedColumnIds={draft.pinnedColumnIds}
+                    filtersByColumn={columnFiltersByColumn}
+                    showReloadFab={showColumnFilterReloadFab}
+                    reloadLabel={reloadColumnFiltersLabel}
+                    onSortColumn={handleSortColumn}
+                    onApplyColumnFilter={handleApplyColumnFilter}
+                    onReloadData={handleReloadColumnFilters}
+                    onTogglePin={togglePinColumn}
                   />
-                  {pivotData ? (
-                    <MyReportPivotTable
-                      pivot={pivotData}
-                      metricId={displayConfig.pivotMetricId}
-                      metricCatalog={extendedMetricCatalog}
-                    />
-                  ) : null}
-                </>
-              ) : (
-                <MyReportTable
-                  columns={tableColumns}
-                  rows={tableRows}
-                  totals={tableTotals}
-                  metricCatalog={extendedMetricCatalog}
-                  compareActive={compareActive}
-                  compareTotals={compareTotals}
-                  totalsDeltaPct={totalsDeltaPct}
-                  pinnedColumnIds={draft.pinnedColumnIds}
-                  filtersByColumn={columnFiltersByColumn}
-                  filtersLive={columnFiltersLive}
-                  showReloadFab={showColumnFilterReloadFab}
-                  reloadLabel={reloadColumnFiltersLabel}
-                  onSortColumn={handleSortColumn}
-                  onApplyColumnFilter={handleApplyColumnFilter}
-                  onReloadData={handleReloadColumnFilters}
-                  onTogglePin={togglePinColumn}
-                />
-              )}
+                ) : (
+                  <MyReportTable
+                    columns={tableColumns}
+                    rows={displayTableRows}
+                    totals={displayTableTotals}
+                    metricCatalog={extendedMetricCatalog}
+                    compareActive={compareActive}
+                    compareTotals={compareTotals}
+                    totalsDeltaPct={totalsDeltaPct}
+                    pinnedColumnIds={draft.pinnedColumnIds}
+                    filtersByColumn={columnFiltersByColumn}
+                    filtersLive={columnFiltersLive}
+                    showReloadFab={showColumnFilterReloadFab}
+                    reloadLabel={reloadColumnFiltersLabel}
+                    onSortColumn={handleSortColumn}
+                    onApplyColumnFilter={handleApplyColumnFilter}
+                    onReloadData={handleReloadColumnFilters}
+                    onTogglePin={togglePinColumn}
+                  />
+                )}
+              </MyReportTableViewShell>
             </>
           )}
         </div>

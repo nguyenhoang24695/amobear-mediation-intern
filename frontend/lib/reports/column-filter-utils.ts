@@ -16,7 +16,12 @@ export type ColumnFilterCondition = {
   id: string
   operator: ColumnFilterOperator
   value: string
+  /** Pivot combined dimension column — which dimension this condition targets. */
+  dimensionId?: string
 }
+
+/** Synthetic column id for the combined dimension tree column in pivot view. */
+export const PIVOT_DIMENSION_COLUMN_ID = "__pivot_dimensions__"
 
 export type ColumnKind = "dimension" | "metric"
 
@@ -40,11 +45,13 @@ export const DIMENSION_COLUMN_FILTER_OPERATORS: Array<{ value: ColumnFilterOpera
 
 export function createEmptyColumnFilterCondition(
   columnKind: ColumnKind,
+  options?: { dimensionId?: string },
 ): ColumnFilterCondition {
   return {
     id: crypto.randomUUID(),
     operator: columnKind === "metric" ? "gt" : "contains",
     value: "",
+    ...(options?.dimensionId ? { dimensionId: options.dimensionId } : {}),
   }
 }
 
@@ -52,6 +59,49 @@ export function normalizeColumnFilterConditions(
   conditions: ColumnFilterCondition[],
 ): ColumnFilterCondition[] {
   return conditions.filter((c) => c.value.trim() !== "")
+}
+
+function rowMatchesPivotDimensionConditions(
+  row: Record<string, string | number | null>,
+  conditions: ColumnFilterCondition[],
+  defaultDimensionId: string,
+): boolean {
+  if (conditions.length === 0) return true
+  return conditions.every((condition) => {
+    const dimensionId = condition.dimensionId ?? defaultDimensionId
+    const cellText = formatDimensionCell(dimensionId, row)
+    return matchTextCondition(cellText, condition.operator, condition.value)
+  })
+}
+
+export function filterReportRowsForPivotView(
+  rows: Record<string, string | number | null>[],
+  filtersByColumn: Record<string, ColumnFilterCondition[]>,
+  dimensions: string[],
+  metricColumns: Array<{ id: string }>,
+): Record<string, string | number | null>[] {
+  const pivotDimensionConditions = filtersByColumn[PIVOT_DIMENSION_COLUMN_ID] ?? []
+  const activeMetricFilters = metricColumns
+    .map((col) => ({ ...col, conditions: filtersByColumn[col.id] ?? [] }))
+    .filter((col) => col.conditions.length > 0)
+
+  if (pivotDimensionConditions.length === 0 && activeMetricFilters.length === 0) {
+    return rows
+  }
+
+  const defaultDimensionId = dimensions[0] ?? "date"
+
+  return rows.filter((row) => {
+    if (
+      pivotDimensionConditions.length > 0 &&
+      !rowMatchesPivotDimensionConditions(row, pivotDimensionConditions, defaultDimensionId)
+    ) {
+      return false
+    }
+    return activeMetricFilters.every((col) =>
+      rowMatchesColumnConditions(row, col.id, "metric", col.conditions),
+    )
+  })
 }
 
 export function hasActiveColumnFilters(

@@ -28,6 +28,8 @@ export type ColumnFilterPopoverProps = {
   savedConditions: ColumnFilterCondition[]
   trigger: React.ReactNode
   onApply: (conditions: ColumnFilterCondition[]) => void
+  /** Pivot dimension column — pick which dimension each condition applies to. */
+  dimensionOptions?: Array<{ id: string; label: string }>
 }
 
 export function ColumnFilterPopover({
@@ -37,7 +39,11 @@ export function ColumnFilterPopover({
   savedConditions,
   trigger,
   onApply,
+  dimensionOptions,
 }: ColumnFilterPopoverProps) {
+  const defaultDimensionId = dimensionOptions?.[0]?.id
+  const hasDimensionPicker = Boolean(dimensionOptions && dimensionOptions.length > 0)
+
   const [open, setOpen] = useState(false)
   const [draftConditions, setDraftConditions] = useState<ColumnFilterCondition[]>([])
 
@@ -49,9 +55,13 @@ export function ColumnFilterPopover({
     setDraftConditions(
       savedConditions.length > 0
         ? savedConditions.map((c) => ({ ...c, id: crypto.randomUUID() }))
-        : [createEmptyColumnFilterCondition(columnKind)],
+        : [
+            createEmptyColumnFilterCondition(columnKind, {
+              dimensionId: defaultDimensionId,
+            }),
+          ],
     )
-  }, [open, savedConditions, columnKind])
+  }, [open, savedConditions, columnKind, defaultDimensionId])
 
   const updateCondition = (id: string, patch: Partial<ColumnFilterCondition>) => {
     setDraftConditions((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
@@ -60,16 +70,23 @@ export function ColumnFilterPopover({
   const removeCondition = (id: string) => {
     setDraftConditions((prev) => {
       const next = prev.filter((c) => c.id !== id)
-      return next.length > 0 ? next : [createEmptyColumnFilterCondition(columnKind)]
+      return next.length > 0
+        ? next
+        : [createEmptyColumnFilterCondition(columnKind, { dimensionId: defaultDimensionId })]
     })
   }
 
   const addCondition = () => {
-    setDraftConditions((prev) => [...prev, createEmptyColumnFilterCondition(columnKind)])
+    setDraftConditions((prev) => [
+      ...prev,
+      createEmptyColumnFilterCondition(columnKind, { dimensionId: defaultDimensionId }),
+    ])
   }
 
   const handleReset = () => {
-    setDraftConditions([createEmptyColumnFilterCondition(columnKind)])
+    setDraftConditions([
+      createEmptyColumnFilterCondition(columnKind, { dimensionId: defaultDimensionId }),
+    ])
     onApply([])
     setOpen(false)
   }
@@ -93,11 +110,34 @@ export function ColumnFilterPopover({
 
         <div className="space-y-2 px-4 py-3">
           {draftConditions.map((condition) => (
-            <div
-              key={condition.id}
-              className="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50/80 p-2"
-            >
-              <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+              <div
+                key={condition.id}
+                className="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50/80 p-2"
+              >
+              <div className="grid min-w-0 flex-1 gap-2">
+                {hasDimensionPicker ? (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-medium text-gray-500">Dimension</span>
+                    <Select
+                      value={condition.dimensionId ?? defaultDimensionId ?? ""}
+                      onValueChange={(value) =>
+                        updateCondition(condition.id, { dimensionId: value })
+                      }
+                    >
+                      <SelectTrigger className="h-8 bg-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dimensionOptions!.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+                <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <span className="text-[11px] font-medium text-gray-500">Condition type</span>
                   <Select
@@ -128,6 +168,7 @@ export function ColumnFilterPopover({
                     onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
                     placeholder={columnKind === "metric" ? "0" : "Text"}
                   />
+                </div>
                 </div>
               </div>
               <Button
