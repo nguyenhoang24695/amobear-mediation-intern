@@ -742,6 +742,7 @@ export interface MetaAdSetDraftDto {
   ageMin?: number | null
   ageMax?: number | null
   genders: string[]
+  locales: number[]
   devicePlatforms: string[]
   userOs: string[]
   publisherPlatforms: string[]
@@ -868,7 +869,28 @@ export interface MetaRequestAssetDto {
   contentType: string
   sizeBytes: number
   previewUrl: string
+  ownerUsername?: string | null
   createdAt: string
+}
+
+export interface MetaRequestAssetPageDto {
+  items: MetaRequestAssetDto[]
+  total: number
+  page: number
+  pageSize: number
+  hasMore: boolean
+}
+
+export interface MetaRequestAssetOwnerDto {
+  ownerUsername: string
+  imageCount: number
+  videoCount: number
+  totalCount: number
+}
+
+export interface MetaRequestAssetOwnersDto {
+  rootPrefix: string
+  owners: MetaRequestAssetOwnerDto[]
 }
 
 export type MetaAssetPreparationStatus = "pending" | "uploading" | "processing" | "ready" | "failed"
@@ -1138,6 +1160,11 @@ export interface UpsertGeoCountryGroupDto {
 
 export interface MetaGeoCityReferenceDto extends MetaGeoCityTargetDto {}
 
+export interface MetaAdLocaleReferenceDto {
+  key: number
+  name: string
+}
+
 export interface MetaExecuteResponseDto {
   success: boolean
   message?: string | null
@@ -1245,6 +1272,7 @@ export interface MetaRequestFormState {
   regionKeys: string[]
   countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
+  localeKeys: number[]
   ageMin: number
   ageMax: number
   gender: string

@@ -21,8 +21,12 @@ interface Props {
   adAccountId: number | null
   /** "image" restricts to images only, "video" to videos only, "both" allows selecting either. */
   targetKind: "image" | "video" | "both"
+  selectionMode?: "single" | "multiple"
+  maxSelectionCount?: number
   selectedAssetId?: string | null
-  onSelect: (media: MetaReferenceMediaDto) => void
+  selectedAssetIds?: string[]
+  onSelect?: (media: MetaReferenceMediaDto) => void
+  onSelectMany?: (media: MetaReferenceMediaDto[]) => void
 }
 
 const pageSize = 24
@@ -43,8 +47,24 @@ function getInitialTab(targetKind: "image" | "video" | "both"): AssetTab {
   return targetKind === "video" ? "videos" : "images"
 }
 
-export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetKind, selectedAssetId, onSelect }: Props) {
+function getMetaMediaSelectionKey(item: MetaReferenceMediaDto): string {
+  return `${item.assetType}:${item.id}`
+}
+
+export function MetaMediaPickerDialog({
+  open,
+  onOpenChange,
+  adAccountId,
+  targetKind,
+  selectionMode = "single",
+  maxSelectionCount,
+  selectedAssetId,
+  selectedAssetIds,
+  onSelect,
+  onSelectMany,
+}: Props) {
   const [activeTab, setActiveTab] = useState<AssetTab>(getInitialTab(targetKind))
+  const [multiSelectedItems, setMultiSelectedItems] = useState<Map<string, MetaReferenceMediaDto>>(new Map())
   const [searchInput, setSearchInput] = useState("")
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState("created_time_desc")
@@ -55,10 +75,13 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [previewItem, setPreviewItem] = useState<MetaReferenceMediaDto | null>(null)
+  const isMultiple = selectionMode === "multiple"
+  const selectionLimit = Math.max(0, maxSelectionCount ?? Number.MAX_SAFE_INTEGER)
 
   useEffect(() => {
     if (!open) return
     setActiveTab(getInitialTab(targetKind))
+    setMultiSelectedItems(new Map())
   }, [open, targetKind])
 
   useEffect(() => {
@@ -113,9 +136,41 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
   }, [after, mediaApi.data])
 
   const selectableAssetType = targetKind === "video" ? "VIDEO" : targetKind === "image" ? "IMAGE" : null // null = both selectable
+  const externalSelectedIds = new Set(selectedAssetIds ?? [])
+  const selectedAssetIdsKey = (selectedAssetIds ?? []).join(":")
+  const multiSelectedCount = multiSelectedItems.size
   const emptyMessage = search
     ? `No ${activeTab === "images" ? "images" : "videos"} matched your search.`
     : `No ${activeTab === "images" ? "images" : "videos"} were found in this Meta ad account.`
+
+  const toggleMediaSelection = (item: MetaReferenceMediaDto, disabled: boolean) => {
+    if (disabled) return
+    setMultiSelectedItems((current) => {
+      const key = getMetaMediaSelectionKey(item)
+      const next = new Map(current)
+      if (next.has(key)) {
+        next.delete(key)
+      } else if (next.size < selectionLimit) {
+        next.set(key, item)
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
+    if (!isMultiple || !selectedAssetIds?.length) return
+    setMultiSelectedItems((current) => {
+      const next = new Map(current)
+      for (const item of items) {
+        if (next.size >= selectionLimit) break
+        const key = getMetaMediaSelectionKey(item)
+        if (selectedAssetIds.includes(key)) {
+          next.set(key, item)
+        }
+      }
+      return next
+    })
+  }, [isMultiple, items, selectedAssetIds, selectedAssetIdsKey, selectionLimit])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +178,9 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
         <DialogHeader className="border-b px-6 pt-6 pb-4">
           <DialogTitle>From Meta</DialogTitle>
           <DialogDescription>
-            Browse images and videos from the selected Meta ad account. Choose one asset to fill the current creative field.
+            {isMultiple
+              ? "Browse images and videos from the selected Meta ad account. Choose multiple assets for this creative section."
+              : "Browse images and videos from the selected Meta ad account. Choose one asset to fill the current creative field."}
           </DialogDescription>
         </DialogHeader>
 
@@ -198,12 +255,29 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
               <div className="grid max-h-[420px] grid-cols-2 gap-4 overflow-y-auto pr-1 md:grid-cols-3 xl:grid-cols-4">
                 {items.map((item) => {
                   const isSelectable = selectableAssetType === null ? true : item.assetType === selectableAssetType
-                  const isSelected = selectedAssetId != null && selectedAssetId === item.id
+                  const selectionKey = getMetaMediaSelectionKey(item)
+                  const isSelected = isMultiple
+                    ? multiSelectedItems.has(selectionKey) || externalSelectedIds.has(selectionKey)
+                    : selectedAssetId != null && selectedAssetId === item.id
+                  const isAtCapacity = isMultiple && multiSelectedCount >= selectionLimit
+                  const isDisabled = !isSelectable || (isMultiple && !isSelected && isAtCapacity)
                   const canPreviewVideo = item.assetType === "VIDEO"
                   return (
                     <div
                       key={`${item.assetType}:${item.id}`}
-                      className={`group flex flex-col overflow-hidden rounded-xl border bg-white text-left transition ${isSelectable ? "hover:border-blue-300 hover:shadow-sm" : "opacity-70"} ${isSelected ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200"}`}
+                      role={isMultiple ? "button" : undefined}
+                      tabIndex={isMultiple && !isDisabled ? 0 : undefined}
+                      onClick={() => {
+                        if (isMultiple) toggleMediaSelection(item, isDisabled)
+                      }}
+                      onKeyDown={(event) => {
+                        if (!isMultiple || isDisabled) return
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          toggleMediaSelection(item, false)
+                        }
+                      }}
+                      className={`group flex flex-col overflow-hidden rounded-xl border bg-white text-left transition ${!isDisabled ? "hover:border-blue-300 hover:shadow-sm" : "opacity-60"} ${isSelected ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200"} ${isMultiple && !isDisabled ? "cursor-pointer" : ""}`}
                     >
                       <div className="relative aspect-square overflow-hidden bg-slate-100">
                         {item.thumbnailUrl ? (
@@ -235,7 +309,7 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
                       </div>
                       <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-3 py-2">
                         {canPreviewVideo ? (
-                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setPreviewItem(item)}>
+                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={(event) => { event.stopPropagation(); setPreviewItem(item) }}>
                             Preview
                           </Button>
                         ) : null}
@@ -244,14 +318,19 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
                           variant={isSelected ? "secondary" : "outline"}
                           size="sm"
                           className="h-8 text-xs"
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            if (isMultiple) {
+                              toggleMediaSelection(item, isDisabled)
+                              return
+                            }
                             if (!isSelectable) return
-                            onSelect(item)
+                            onSelect?.(item)
                             onOpenChange(false)
                           }}
-                          disabled={!isSelectable}
+                          disabled={isDisabled}
                         >
-                          {isSelected ? "Selected" : "Select"}
+                          {isMultiple ? (isSelected ? "Remove" : "Add") : (isSelected ? "Selected" : "Select")}
                         </Button>
                       </div>
                     </div>
@@ -260,13 +339,34 @@ export function MetaMediaPickerDialog({ open, onOpenChange, adAccountId, targetK
               </div>
 
               <div className="flex items-center justify-between gap-3 border-t pt-3">
-                <p className="text-xs text-slate-500">Showing {items.length} {activeTab === "images" ? "images" : "videos"}.</p>
-                {hasMore && nextCursor ? (
-                  <Button type="button" variant="outline" onClick={() => setAfter(nextCursor)} disabled={mediaApi.loading}>
-                    {mediaApi.loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Load more
-                  </Button>
-                ) : null}
+                <p className="text-xs text-slate-500">
+                  Showing {items.length} {activeTab === "images" ? "images" : "videos"}.
+                  {isMultiple ? ` Selected ${multiSelectedCount}/${selectionLimit}.` : ""}
+                </p>
+                <div className="flex items-center gap-2">
+                  {hasMore && nextCursor ? (
+                    <Button type="button" variant="outline" onClick={() => setAfter(nextCursor)} disabled={mediaApi.loading}>
+                      {mediaApi.loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Load more
+                    </Button>
+                  ) : null}
+                  {isMultiple ? (
+                    <>
+                      <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                      <Button
+                        type="button"
+                        disabled={multiSelectedCount === 0}
+                        onClick={() => {
+                          if (multiSelectedCount === 0) return
+                          onSelectMany?.(Array.from(multiSelectedItems.values()))
+                          onOpenChange(false)
+                        }}
+                      >
+                        Apply selected
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
               </div>
             </div>
           )}
