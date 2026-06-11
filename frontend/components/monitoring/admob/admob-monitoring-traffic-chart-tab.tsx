@@ -16,9 +16,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { TrafficTimeRangePicker } from "@/components/monitoring/admob/traffic-time-range-picker"
 import { admobMonitoringApi } from "@/lib/api/admob-monitoring"
+import {
+  defaultTrafficTimeRange,
+  localInputToIso,
+  type TrafficTimeRangeValue,
+} from "@/lib/monitoring/traffic-time-range-utils"
 import type {
   AdmobApiTrafficBucket,
+  AdmobApiTrafficChartPoint,
   AdmobApiTrafficChartResponse,
   AdmobApiTrafficChartType,
   AdmobApiTrafficDimension,
@@ -27,7 +34,6 @@ import type {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
@@ -65,6 +71,10 @@ const UNIT_OPTIONS: Array<{ value: AdmobApiTrafficUnit; label: string; descripti
   { value: "tps", label: "TPS", description: "Calls per second (count ÷ bucket duration)" },
 ]
 
+const CHART_MARGIN = { top: 12, right: 16, left: 8, bottom: 20 }
+const AXIS_TICK_STYLE = { fontSize: 11, fill: "#64748b" }
+const AXIS_LINE_STYLE = { stroke: "#cbd5e1" }
+
 function bucketSeconds(bucket: AdmobApiTrafficBucket | string) {
   if (bucket === "minute") return 60
   if (bucket === "hour") return 3600
@@ -83,26 +93,139 @@ function formatTrafficValue(value: number, unit: AdmobApiTrafficUnit) {
   return value.toFixed(3)
 }
 
-function defaultCreatedFromLocal() {
-  const date = new Date()
-  date.setDate(date.getDate() - 7)
-  return toDateTimeLocalValue(date)
+function parseChartRangeDate(value: string | undefined, fallbackLocal?: string) {
+  if (value) {
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  if (fallbackLocal) {
+    const parsed = new Date(fallbackLocal)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  return null
 }
 
-function defaultCreatedToLocal() {
-  return toDateTimeLocalValue(new Date())
+/** Khớp backend TruncateToBucket — truncate theo UTC. */
+function truncateToBucketUtc(date: Date, bucket: AdmobApiTrafficBucket) {
+  const year = date.getUTCFullYear()
+  const month = date.getUTCMonth()
+  const day = date.getUTCDate()
+  const hour = date.getUTCHours()
+  const minute = date.getUTCMinutes()
+
+  if (bucket === "day") return new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+  if (bucket === "hour") return new Date(Date.UTC(year, month, day, hour, 0, 0, 0))
+  return new Date(Date.UTC(year, month, day, hour, minute, 0, 0))
 }
 
-function toDateTimeLocalValue(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+function bucketStartKey(value: string | Date, bucket: AdmobApiTrafficBucket) {
+  const date = typeof value === "string" ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return ""
+  return String(truncateToBucketUtc(date, bucket).getTime())
 }
 
-function localInputToIso(value: string) {
-  if (!value) return undefined
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return undefined
-  return date.toISOString()
+function enumerateTrafficBuckets(from: Date, to: Date, bucket: AdmobApiTrafficBucket) {
+  const stepMs = bucketSeconds(bucket) * 1000
+  const buckets: Date[] = []
+  let cursor = truncateToBucketUtc(from, bucket)
+  const end = truncateToBucketUtc(to, bucket)
+
+  while (cursor.getTime() <= end.getTime() && buckets.length < 2_000) {
+    buckets.push(new Date(cursor))
+    cursor = new Date(cursor.getTime() + stepMs)
+  }
+
+  return buckets
+}
+
+function resolveChartSeries(chart: AdmobApiTrafficChartResponse) {
+  const dimension = chart.dimension ?? "none"
+  if (dimension === "none") {
+    return { dimension, seriesKeys: [] as string[], seriesFieldKeys: [] as string[], isStacked: false }
+  }
+
+  const seriesKeys = (chart.series ?? []).filter(Boolean)
+  return {
+    dimension,
+    seriesKeys,
+    seriesFieldKeys: seriesKeys.map((_, index) => seriesFieldKey(index)),
+    isStacked: seriesKeys.length > 0,
+  }
+}
+
+function buildTrafficChartRows({
+  chart,
+  bucketMode,
+  createdFrom,
+  createdTo,
+  chartUnit,
+}: {
+  chart: AdmobApiTrafficChartResponse
+  bucketMode: AdmobApiTrafficBucket
+  createdFrom: string
+  createdTo: string
+  chartUnit: AdmobApiTrafficUnit
+}): ChartRow[] {
+  const bucket = (chart.bucket || bucketMode) as AdmobApiTrafficBucket
+  const rangeFrom = parseChartRangeDate(chart.createdFrom, createdFrom)
+  const rangeTo = parseChartRangeDate(chart.createdTo, createdTo)
+  if (!rangeFrom || !rangeTo || rangeFrom.getTime() > rangeTo.getTime()) return []
+
+  const { seriesKeys, seriesFieldKeys, isStacked } = resolveChartSeries(chart)
+
+  const pointByBucket = new Map<string, AdmobApiTrafficChartPoint>()
+  for (const point of chart.points ?? []) {
+    const key = bucketStartKey(point.bucketStart, bucket)
+    if (key) pointByBucket.set(key, point)
+  }
+
+  return enumerateTrafficBuckets(rangeFrom, rangeTo, bucket).map((bucketStartDate) => {
+    const iso = bucketStartDate.toISOString()
+    const point = pointByBucket.get(bucketStartKey(bucketStartDate, bucket))
+    const row: ChartRow = {
+      bucketStart: iso,
+      label: formatBucketLabel(iso, bucket),
+      count: toTrafficUnitValue(point?.count ?? 0, chartUnit, bucket),
+    }
+
+    if (isStacked) {
+      seriesKeys.forEach((seriesKey, index) => {
+        row[seriesFieldKeys[index]] = toTrafficUnitValue(point?.breakdown?.[seriesKey] ?? 0, chartUnit, bucket)
+      })
+    }
+
+    return row
+  })
+}
+
+function computeChartYDomain(
+  chartRows: ChartRow[],
+  isStacked: boolean,
+  seriesFieldKeys: string[],
+  chartType: AdmobApiTrafficChartType,
+): [number, number | "auto"] {
+  if (!chartRows.length) return [0, 1]
+
+  let max = 0
+  for (const row of chartRows) {
+    if (isStacked) {
+      if (chartType === "bar") {
+        let bucketTotal = 0
+        for (const fieldKey of seriesFieldKeys) {
+          bucketTotal += Number(row[fieldKey] ?? 0)
+        }
+        max = Math.max(max, bucketTotal)
+      } else {
+        for (const fieldKey of seriesFieldKeys) {
+          max = Math.max(max, Number(row[fieldKey] ?? 0))
+        }
+      }
+    } else {
+      max = Math.max(max, Number(row.count ?? 0))
+    }
+  }
+
+  return max <= 0 ? [0, 1] : [0, "auto"]
 }
 
 function formatBucketLabel(value: string, bucket: AdmobApiTrafficBucket | string) {
@@ -133,9 +256,14 @@ type ChartRow = Record<string, string | number> & {
   count: number
 }
 
+function seriesFieldKey(index: number) {
+  return `series_${index}`
+}
+
 export function AdmobMonitoringTrafficChartTab() {
-  const [createdFrom, setCreatedFrom] = useState(defaultCreatedFromLocal)
-  const [createdTo, setCreatedTo] = useState(defaultCreatedToLocal)
+  const [timeRange, setTimeRange] = useState<TrafficTimeRangeValue>(defaultTrafficTimeRange)
+  const createdFrom = timeRange.from
+  const createdTo = timeRange.to
   const [callType, setCallType] = useState("all")
   const [publisherId, setPublisherId] = useState("all")
   const [responseHttpStatus, setResponseHttpStatus] = useState("all")
@@ -205,31 +333,28 @@ export function AdmobMonitoringTrafficChartTab() {
     void loadChart()
   }, [loadChart])
 
-  const seriesKeys = useMemo(() => chart?.series ?? [], [chart?.series])
+  const chartSeries = useMemo(
+    () => (chart ? resolveChartSeries(chart) : { dimension: chartDimension, seriesKeys: [], seriesFieldKeys: [], isStacked: false }),
+    [chart, chartDimension],
+  )
+  const { seriesKeys, seriesFieldKeys, isStacked } = chartSeries
   const activeDimension = (chart?.dimension ?? chartDimension) as AdmobApiTrafficDimension
-  const isStacked = activeDimension !== "none" && seriesKeys.length > 0
 
   const chartRows = useMemo<ChartRow[]>(() => {
-    if (!chart?.points?.length) return []
-    const bucket = chart.bucket as AdmobApiTrafficBucket
-    return chart.points.map((point) => {
-      const row: ChartRow = {
-        bucketStart: point.bucketStart,
-        label: formatBucketLabel(point.bucketStart, bucket),
-        count: toTrafficUnitValue(point.count, chartUnit, bucket),
-      }
-      if (isStacked) {
-        for (const key of seriesKeys) {
-          row[key] = toTrafficUnitValue(point.breakdown?.[key] ?? 0, chartUnit, bucket)
-        }
-      }
-      return row
+    if (!chart) return []
+    return buildTrafficChartRows({
+      chart,
+      bucketMode,
+      createdFrom,
+      createdTo,
+      chartUnit,
     })
-  }, [chart, chartUnit, isStacked, seriesKeys])
+  }, [bucketMode, chart, chartUnit, createdFrom, createdTo])
 
   const seriesSummary = useMemo(() => {
     if (!chart?.points?.length || !isStacked) return [] as Array<{ key: string; value: number }>
     const bucket = chart.bucket as AdmobApiTrafficBucket
+    const bucketCount = chartRows.length || chart.points.length
     const totals = new Map<string, number>()
     for (const key of seriesKeys) totals.set(key, 0)
     for (const point of chart.points) {
@@ -242,20 +367,32 @@ export function AdmobMonitoringTrafficChartTab() {
         key,
         value:
           chartUnit === "tps"
-            ? toTrafficUnitValue(count, "tps", bucket) / chart.points.length
+            ? toTrafficUnitValue(count, "tps", bucket) / bucketCount
             : count,
       }))
       .sort((a, b) => b.value - a.value)
-  }, [chart, chartUnit, isStacked, seriesKeys])
+  }, [chart, chartRows.length, chartUnit, isStacked, seriesKeys])
 
   const totalSummaryValue = useMemo(() => {
     if (!chart) return null
     if (chartUnit === "count") return chart.totalCalls
     const bucket = chart.bucket as AdmobApiTrafficBucket
-    if (!chart.points.length) return 0
-    const avgCountPerBucket = chart.totalCalls / chart.points.length
+    const bucketCount = chartRows.length
+    if (!bucketCount) return 0
+    const avgCountPerBucket = chart.totalCalls / bucketCount
     return toTrafficUnitValue(avgCountPerBucket, "tps", bucket)
-  }, [chart, chartUnit])
+  }, [chart, chartRows.length, chartUnit])
+
+  const chartYDomain = useMemo(
+    () => computeChartYDomain(chartRows, isStacked, seriesFieldKeys, chartType),
+    [chartRows, chartType, isStacked, seriesFieldKeys],
+  )
+
+  const showChartDots = chartRows.length <= 24
+  const xAxisInterval = useMemo(() => {
+    if (chartRows.length <= 12) return 0
+    return Math.max(1, Math.floor(chartRows.length / 12))
+  }, [chartRows.length])
 
   const applyFilters = () => {
     void loadFilterOptions()
@@ -272,91 +409,82 @@ export function AdmobMonitoringTrafficChartTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-6">
-            <div className="space-y-1.5">
-              <Label htmlFor="traffic-created-from">Created from</Label>
-              <Input
-                id="traffic-created-from"
-                type="datetime-local"
-                value={createdFrom}
-                onChange={(e) => setCreatedFrom(e.target.value)}
-              />
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px] flex-1 space-y-1.5">
+              <Label>Created time range</Label>
+              <TrafficTimeRangePicker value={timeRange} onChange={setTimeRange} maxDays={90} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="traffic-created-to">Created to</Label>
-              <Input
-                id="traffic-created-to"
-                type="datetime-local"
-                value={createdTo}
-                onChange={(e) => setCreatedTo(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Type</Label>
-              <Select value={callType} onValueChange={setCallType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {callTypeOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {formatCallTypeLabel(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Publisher</Label>
-              <Select value={publisherId} onValueChange={setPublisherId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All publishers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All publishers</SelectItem>
-                  {publisherOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>HTTP status</Label>
-              <Select value={responseHttpStatus} onValueChange={setResponseHttpStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  {httpStatusOptions.map((option) => {
-                    const value = option == null ? "null" : String(option)
-                    return (
-                      <SelectItem key={value} value={value}>
-                        {option == null ? "No HTTP response" : String(option)}
+            <div className="flex shrink-0 flex-wrap items-end gap-2">
+              <div className="w-[150px] space-y-1.5">
+                <Label>Type</Label>
+                <Select value={callType} onValueChange={setCallType}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    {callTypeOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {formatCallTypeLabel(option)}
                       </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[170px] space-y-1.5">
+                <Label>Publisher</Label>
+                <Select value={publisherId} onValueChange={setPublisherId}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="All publishers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All publishers</SelectItem>
+                    {publisherOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[150px] space-y-1.5">
+                <Label>HTTP status</Label>
+                <Select value={responseHttpStatus} onValueChange={setResponseHttpStatus}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    {httpStatusOptions.map((option) => {
+                      const value = option == null ? "null" : String(option)
+                      return (
+                        <SelectItem key={value} value={value}>
+                          {option == null ? "No HTTP response" : String(option)}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex items-end">
-              <Button type="button" variant="outline" className="w-full" onClick={applyFilters} disabled={loading || loadingOptions}>
-                {loading || loadingOptions ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="mr-2 h-4 w-4" />
-                )}
-                Apply
-              </Button>
-            </div>
+            <Button
+              type="button"
+              className="h-10 shrink-0 bg-blue-600 px-4 hover:bg-blue-700"
+              onClick={applyFilters}
+              disabled={loading || loadingOptions}
+            >
+              {loading || loadingOptions ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              <span className="ml-1.5">Apply</span>
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card>
         <CardHeader className="flex flex-col gap-3 border-b bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -422,19 +550,103 @@ export function AdmobMonitoringTrafficChartTab() {
                 </div>
               ) : !chartRows.length ? (
                 <div className="flex h-72 items-center justify-center text-sm text-slate-500">
-                  No API log entries for the selected filters.
+                  Unable to build chart for the selected date range.
                 </div>
               ) : (
-                <div className="h-[360px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <TrafficChartPlot
-                      chartType={chartType}
-                      chartRows={chartRows}
-                      chartUnit={chartUnit}
-                      isStacked={isStacked}
-                      seriesKeys={seriesKeys}
-                      activeDimension={activeDimension}
-                    />
+                <div className="h-[360px] w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                    {chartType === "line" ? (
+                      <LineChart key={`line-${activeDimension}-${seriesKeys.join("|")}`} data={chartRows} margin={CHART_MARGIN}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis
+                          dataKey="label"
+                          tick={AXIS_TICK_STYLE}
+                          tickLine={AXIS_LINE_STYLE}
+                          axisLine={AXIS_LINE_STYLE}
+                          minTickGap={24}
+                          interval={xAxisInterval}
+                        />
+                        <YAxis
+                          width={48}
+                          tick={AXIS_TICK_STYLE}
+                          tickFormatter={(value) => formatTrafficValue(Number(value), chartUnit)}
+                          tickLine={AXIS_LINE_STYLE}
+                          axisLine={AXIS_LINE_STYLE}
+                          allowDecimals={chartUnit === "tps"}
+                          domain={chartYDomain}
+                        />
+                        <RechartsTooltip content={<TrafficTooltip dimension={activeDimension} unit={chartUnit} />} />
+                        {isStacked
+                          ? seriesKeys.map((key, index) => (
+                              <Line
+                                key={key}
+                                type="monotone"
+                                dataKey={seriesFieldKeys[index]}
+                                name={formatSeriesLabel(key, activeDimension)}
+                                stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
+                                strokeWidth={2}
+                                dot={showChartDots ? { r: 3 } : false}
+                                connectNulls
+                              />
+                            ))
+                          : (
+                              <Line
+                                type="monotone"
+                                dataKey="count"
+                                name={chartUnit === "tps" ? "TPS" : "API calls"}
+                                stroke="#3b82f6"
+                                strokeWidth={2}
+                                dot={showChartDots ? { r: 3 } : false}
+                                connectNulls
+                              />
+                            )}
+                        {isStacked ? <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} /> : null}
+                      </LineChart>
+                    ) : (
+                      <BarChart key={`bar-${activeDimension}-${seriesKeys.join("|")}`} data={chartRows} margin={CHART_MARGIN}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis
+                          dataKey="label"
+                          tick={AXIS_TICK_STYLE}
+                          tickLine={AXIS_LINE_STYLE}
+                          axisLine={AXIS_LINE_STYLE}
+                          minTickGap={24}
+                          interval={xAxisInterval}
+                        />
+                        <YAxis
+                          width={48}
+                          tick={AXIS_TICK_STYLE}
+                          tickFormatter={(value) => formatTrafficValue(Number(value), chartUnit)}
+                          tickLine={AXIS_LINE_STYLE}
+                          axisLine={AXIS_LINE_STYLE}
+                          allowDecimals={chartUnit === "tps"}
+                          domain={chartYDomain}
+                        />
+                        <RechartsTooltip content={<TrafficTooltip dimension={activeDimension} unit={chartUnit} />} />
+                        {isStacked
+                          ? seriesKeys.map((key, index) => (
+                              <Bar
+                                key={key}
+                                dataKey={seriesFieldKeys[index]}
+                                name={formatSeriesLabel(key, activeDimension)}
+                                fill={SERIES_COLORS[index % SERIES_COLORS.length]}
+                                stackId="traffic"
+                                maxBarSize={32}
+                                radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                              />
+                            ))
+                          : (
+                              <Bar
+                                dataKey="count"
+                                name={chartUnit === "tps" ? "TPS" : "API calls"}
+                                fill="#3b82f6"
+                                maxBarSize={32}
+                                radius={[4, 4, 0, 0]}
+                              />
+                            )}
+                        {isStacked ? <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} /> : null}
+                      </BarChart>
+                    )}
                   </ResponsiveContainer>
                 </div>
               )}
@@ -529,96 +741,6 @@ export function AdmobMonitoringTrafficChartTab() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function TrafficChartPlot({
-  chartType,
-  chartRows,
-  chartUnit,
-  isStacked,
-  seriesKeys,
-  activeDimension,
-}: {
-  chartType: AdmobApiTrafficChartType
-  chartRows: ChartRow[]
-  chartUnit: AdmobApiTrafficUnit
-  isStacked: boolean
-  seriesKeys: string[]
-  activeDimension: AdmobApiTrafficDimension | string
-}) {
-  const margin = { top: 8, right: 16, left: 0, bottom: 0 }
-  const axes = (
-    <>
-      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
-      <YAxis
-        tick={{ fontSize: 12 }}
-        tickFormatter={(value) => formatTrafficValue(Number(value), chartUnit)}
-        tickLine={false}
-        axisLine={false}
-        allowDecimals={chartUnit === "tps"}
-      />
-      <RechartsTooltip content={<TrafficTooltip dimension={activeDimension} unit={chartUnit} />} />
-    </>
-  )
-
-  if (chartType === "line") {
-    return (
-      <LineChart data={chartRows} margin={margin}>
-        {axes}
-        {isStacked ? (
-          <>
-            {seriesKeys.map((key, index) => (
-              <Line
-                key={key}
-                type="monotone"
-                dataKey={key}
-                name={formatSeriesLabel(key, activeDimension)}
-                stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
-                strokeWidth={2}
-                dot={false}
-                connectNulls
-              />
-            ))}
-            <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} />
-          </>
-        ) : (
-          <Line
-            type="monotone"
-            dataKey="count"
-            name={chartUnit === "tps" ? "TPS" : "API calls"}
-            stroke="#3b82f6"
-            strokeWidth={2}
-            dot={false}
-            connectNulls
-          />
-        )}
-      </LineChart>
-    )
-  }
-
-  return (
-    <BarChart data={chartRows} margin={margin}>
-      {axes}
-      {isStacked ? (
-        <>
-          {seriesKeys.map((key, index) => (
-            <Bar
-              key={key}
-              dataKey={key}
-              name={formatSeriesLabel(key, activeDimension)}
-              fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-              stackId="traffic"
-              radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-            />
-          ))}
-          <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => String(value)} />
-        </>
-      ) : (
-        <Bar dataKey="count" name={chartUnit === "tps" ? "TPS" : "API calls"} fill="#3b82f6" radius={[4, 4, 0, 0]} />
-      )}
-    </BarChart>
   )
 }
 
