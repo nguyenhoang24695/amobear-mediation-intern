@@ -33,6 +33,7 @@ export type DashboardWarning =
   | "adjust_ad_revenue_missing"
   | "admob_revenue_not_configured"
   | "qonversion_not_configured"
+  | "qonversion_charts_not_configured"
 
 export interface DashboardDateRange {
   range: DashboardRange
@@ -156,4 +157,36 @@ export interface AdjustReportResponse {
   date_range: DashboardDateRange
   available: boolean
   rows: AdjustReportRow[]
+}
+
+/* ---------- /qonversion-products ---------- */
+export type QonversionProductReport = "subscriptions" | "new_user_to_trial" | "trial_to_paid" | "refunds"
+
+export interface QonversionProductRow {
+  productId: string
+  activeSubscriptions?: number | null
+  newSubscriptions?: number | null
+  conversionRate?: number | null
+  revenueUsd?: number | null
+  refundsUsd?: number | null
+  refundRate?: number | null
+}
+
+export interface QonversionProductsResponse {
+  report: QonversionProductReport
+  dateRange: DashboardDateRange
+  rows: QonversionProductRow[]
+  meta: Pick<DashboardMeta, "warnings">
+}
+
+/* ---------- /qonversion-products-series ---------- */
+export interface QonversionProductSeriesRow extends QonversionProductRow {
+  reportDate: string
+}
+
+export interface QonversionProductSeriesResponse {
+  report: QonversionProductReport
+  dateRange: DashboardDateRange
+  rows: QonversionProductSeriesRow[]
+  meta: Pick<DashboardMeta, "warnings">
 }

@@ -4,6 +4,9 @@ import type {
   DashboardRangeInput,
   DashboardSummary,
   EngagementTrendSeries,
+  QonversionProductReport,
+  QonversionProductSeriesResponse,
+  QonversionProductsResponse,
   RetentionResponse,
   RevenueTrendSeries,
   TopCountriesResponse,
@@ -48,6 +51,28 @@ export const appDashboardApi = {
 
   adjustReport: (appId: string, range: DashboardRangeInput, refresh?: boolean) =>
     apiClient.get<AdjustReportResponse>(`${prefix(appId)}/adjust-report`, withRefresh(rangeParams(range), refresh)),
+
+  getQonversionProducts: (
+    appId: string,
+    report: QonversionProductReport,
+    range: DashboardRangeInput,
+    refresh?: boolean,
+  ) =>
+    apiClient.get<QonversionProductsResponse>(`${prefix(appId)}/qonversion-products`, withRefresh({
+      ...rangeParams(range),
+      report,
+    }, refresh)),
+
+  getQonversionProductSeries: (
+    appId: string,
+    report: QonversionProductReport,
+    range: DashboardRangeInput,
+    refresh?: boolean,
+  ) =>
+    apiClient.get<QonversionProductSeriesResponse>(`${prefix(appId)}/qonversion-products-series`, withRefresh({
+      ...rangeParams(range),
+      report,
+    }, refresh)),
 }
 
 function rangeParams(rangeInput: DashboardRangeInput) {

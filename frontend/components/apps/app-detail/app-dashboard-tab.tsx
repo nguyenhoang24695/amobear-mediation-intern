@@ -6,6 +6,8 @@ import { EngagementTrendChart } from "./dashboard/charts/engagement-trend-chart"
 import { MetricCards } from "./dashboard/metric-cards"
 import { RetentionChart } from "./dashboard/charts/retention-chart"
 import { RevenueChart } from "./dashboard/charts/revenue-chart"
+import { QONVERSION_PRODUCT_DAILY_CHARTS, QonversionProductDailyReportPanel } from "./dashboard/charts/qonversion-product-daily-chart"
+import { QONVERSION_PRODUCT_TABLES } from "./dashboard/tables/qonversion-product-table"
 import { TopCountryTable } from "./dashboard/tables/top-country-table"
 import { UserTrendChart } from "./dashboard/charts/user-trend-chart"
 import { DashboardRefreshProvider, useDashboardRefresh } from "./dashboard/hooks/use-dashboard-refresh"
@@ -72,8 +74,8 @@ function DashboardTabContent({
         <UserTrendChart appId={appId} range={range} />
         <EngagementTrendChart appId={appId} range={range} />
       </div>
-        <RetentionChart appId={appId} range={range} />
-        <RevenueChart appId={appId} range={range} />
+      <RetentionChart appId={appId} range={range} />
+      <RevenueChart appId={appId} range={range} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TopCountryTable appId={appId} range={range} metric="iaa" title="Top Country by IAA Revenue" />
@@ -83,6 +85,28 @@ function DashboardTabContent({
       </div>
 
       <AdjustReportTable appId={appId} range={range} />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-slate-950">Qonversion report</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {QONVERSION_PRODUCT_DAILY_CHARTS.map((chart) => {
+            const table = QONVERSION_PRODUCT_TABLES.find((item) => item.report === chart.report)
+            if (!table) return null
+
+            return (
+              <QonversionProductDailyReportPanel
+                key={chart.report}
+                appId={appId}
+                range={range}
+                chart={chart}
+                table={table}
+              />
+            )
+          })}
+        </div>
+      </section>
 
       <p className="text-xs text-slate-400">
         Active app: <code className="font-mono">{appId}</code> · range:{" "}

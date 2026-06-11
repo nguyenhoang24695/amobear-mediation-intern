@@ -39,6 +39,8 @@ import { useDuplicateOperationPolling } from "@/hooks/use-duplicate-operation-po
 import { useToast } from "@/hooks/use-toast"
 import { hasScreenFunction } from "@/lib/auth"
 import { metaCampaignsApi } from "@/lib/api/meta-ads"
+import { normalizeDegreesOfFreedomSpec } from "@/lib/meta-ads/mappers"
+import { AdvantageCreativeSummary } from "../shared/advantage-creative-summary"
 import { DuplicateOperationStatus } from "@/components/meta-ads/campaigns/duplicate-operation-status"
 import { DuplicateReadinessStatus } from "@/components/meta-ads/campaigns/duplicate-readiness-status"
 import { getCampaignStatusAction, isCampaignStatusActionBlocked } from "@/components/meta-ads/campaigns/campaign-status-action"
@@ -55,6 +57,8 @@ import type {
   MetaCampaignCreativeSummaryDto,
   MetaCampaignCreativeUsageAdDto,
   MetaCampaignDuplicateReadinessResultDto,
+  MetaDegreesOfFreedomSpecDto,
+  MetaCreativeType,
 } from "@/types/meta-ads"
 import {
   AlertTriangle,
@@ -64,6 +68,7 @@ import {
   Copy,
   Code2,
   ExternalLink,
+  ImageIcon,
   Layers3,
   Link2,
   Loader2,
@@ -71,7 +76,9 @@ import {
   Palette,
   PlayCircle,
   RefreshCw,
+  Video,
   X,
+  Sparkles,
 } from "lucide-react"
 
 const issueStatuses = new Set(["WITH_ISSUES", "DISAPPROVED", "ARCHIVED", "DELETED", "PENDING_BILLING_INFO"])
@@ -422,6 +429,101 @@ function AdTable({ items }: { items: MetaCampaignAdSummaryDto[] }) {
   )
 }
 
+function getCreativeFormatLabel(item: MetaCampaignCreativeSummaryDto): "Flexible format" | "Single" {
+  return item.creativeFormat === "flexible" || (item.assetGroups?.length ?? 0) > 0 ? "Flexible format" : "Single"
+}
+
+function getAssetPreviewUrl(asset: { imageUrl?: string | null; thumbnailUrl?: string | null }): string | null {
+  return asset.thumbnailUrl || asset.imageUrl || null
+}
+
+function CreativeAssetThumb({
+  asset,
+  fallbackImageUrl,
+}: {
+  asset: { assetType: string; imageHash?: string | null; imageUrl?: string | null; videoId?: string | null; thumbnailUrl?: string | null }
+  fallbackImageUrl?: string | null
+}) {
+  const assetType = (asset.assetType ?? "").toLowerCase()
+  const isVideo = assetType === "video"
+  const previewUrl = getAssetPreviewUrl(asset) || (!isVideo ? fallbackImageUrl : null)
+  const label = isVideo ? asset.videoId : asset.imageHash
+  const altText = (label ?? assetType) || "Creative asset"
+
+  return (
+    <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
+      <div className="relative h-16 w-full bg-slate-100">
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={previewUrl} alt={altText} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-slate-400">
+            {isVideo ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
+          </div>
+        )}
+        <Badge className="absolute left-1 top-1 border border-white/60 bg-slate-900/75 px-1.5 py-0 text-[10px] font-medium text-white">
+          {isVideo ? "Video" : "Image"}
+        </Badge>
+      </div>
+      <div className="space-y-1 px-2 py-1.5">
+        <div className="truncate font-mono text-[11px] text-slate-600">{label ?? "No id"}</div>
+        {!previewUrl ? <div className="text-[10px] text-amber-600">No thumbnail URL</div> : null}
+      </div>
+    </div>
+  )
+}
+
+function CreativeTextChips({ label, values }: { label: string; values?: string[] | null }) {
+  const visibleValues = (values ?? []).filter(Boolean)
+  if (visibleValues.length === 0) return null
+
+  return (
+    <div className="space-y-1">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {visibleValues.map((value, index) => (
+          <span key={`${label}-${index}-${value}`} className="max-w-[220px] truncate rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+            {value}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FlexibleCreativeSummary({ item, compact = false }: { item: MetaCampaignCreativeSummaryDto; compact?: boolean }) {
+  const groups = item.assetGroups ?? []
+  if (groups.length === 0) return null
+
+  return (
+    <div className={cn("space-y-2", compact ? "mt-2" : undefined)}>
+      {groups.map((group, groupIndex) => (
+        <div key={group.groupUuid ?? groupIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-slate-700">Asset group {groupIndex + 1}</div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+              {(group.primaryTexts ?? []).length > 0 ? <span>{group.primaryTexts.length} primary</span> : null}
+              {(group.headlines ?? []).length > 0 ? <span>{group.headlines.length} headline</span> : null}
+              {(group.assets ?? []).length > 0 ? <span>{group.assets.length} media</span> : null}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <CreativeTextChips label="Primary text" values={group.primaryTexts} />
+            <CreativeTextChips label="Headline" values={group.headlines} />
+            {(group.assets ?? []).length > 0 ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {(group.assets ?? []).map((asset, assetIndex) => (
+                  <CreativeAssetThumb key={`${asset.assetType}-${asset.videoId ?? asset.imageHash ?? assetIndex}`} asset={asset} fallbackImageUrl={assetIndex === 0 ? item.imageUrl || item.thumbnailUrl : null} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSummaryDto[]; campaignId: number }) {
   const { toast } = useToast()
   const [selectedCreative, setSelectedCreative] = useState<MetaCampaignCreativeSummaryDto | null>(null)
@@ -500,6 +602,10 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
               const previewImage = item.thumbnailUrl || item.imageUrl
               const rawOnly = !hasCreativeReviewFields(item) && Boolean(item.configJson)
               const previewBusy = item.usedByAds.some((ad) => ad.id === previewingAdId)
+              const spec = item.objectType !== "EXISTING_POST" ? normalizeDegreesOfFreedomSpec(item.configJson) : null
+              const isAdvantagePlusOn = spec?.creativeFeaturesSpec?.advantagePlusCreative?.enrollStatus === "OPT_IN"
+              const isAdvantagePlusOff = spec?.creativeFeaturesSpec?.advantagePlusCreative?.enrollStatus === "OPT_OUT"
+              const creativeFormatLabel = getCreativeFormatLabel(item)
               return (
                 <TableRow key={item.id}>
                   <TableCell>
@@ -524,14 +630,38 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                           >
                             {item.name}
                           </button>
+                          <Badge className={cn(
+                            "border",
+                            creativeFormatLabel === "Flexible format"
+                              ? "border-violet-200 bg-violet-50 text-violet-700"
+                              : "border-slate-200 bg-slate-50 text-slate-600"
+                          )}>
+                            {creativeFormatLabel}
+                          </Badge>
                           {rawOnly ? <Badge className="border border-slate-200 bg-slate-50 text-slate-600">Raw only</Badge> : null}
                           {item.objectType ? <Badge className="border border-blue-200 bg-blue-50 text-blue-700">{toTitleCase(item.objectType)}</Badge> : null}
                         </div>
                         {item.message ? <p className="line-clamp-2 text-sm text-slate-600">{item.message}</p> : null}
                         {!item.message && item.description ? <p className="line-clamp-2 text-sm text-slate-600">{item.description}</p> : null}
+                        {creativeFormatLabel === "Flexible format" ? <FlexibleCreativeSummary item={item} compact /> : null}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                           {item.effectiveObjectStoryId ? <span className="font-mono">Story {item.effectiveObjectStoryId}</span> : null}
                           {item.status ? <span>{toTitleCase(item.status)}</span> : null}
+                          {item.objectType !== "EXISTING_POST" && (
+                            <span className="inline-flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-blue-500" />
+                              <span className="font-medium text-slate-600">Advantage+ Creative:</span>
+                              {isAdvantagePlusOn && (
+                                <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 text-[10px] px-1.5 py-0 font-semibold">On</Badge>
+                              )}
+                              {isAdvantagePlusOff && (
+                                <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500 text-[10px] px-1.5 py-0">Off</Badge>
+                              )}
+                              {!isAdvantagePlusOn && !isAdvantagePlusOff && (
+                                <span className="text-slate-400 italic">Not configured</span>
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -638,6 +768,19 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs uppercase tracking-wide text-slate-500">Meta Creative ID</div>
                 <div className="mt-1 font-mono text-sm text-slate-900">{selectedCreative?.externalCreativeId ?? "-"}</div>
+                <div className="mt-3 text-xs uppercase tracking-wide text-slate-500">Format</div>
+                <div className="mt-1">
+                  {selectedCreative ? (
+                    <Badge className={cn(
+                      "border",
+                      getCreativeFormatLabel(selectedCreative) === "Flexible format"
+                        ? "border-violet-200 bg-violet-50 text-violet-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600"
+                    )}>
+                      {getCreativeFormatLabel(selectedCreative)}
+                    </Badge>
+                  ) : null}
+                </div>
                 <div className="mt-3 text-xs uppercase tracking-wide text-slate-500">Used By</div>
                 <div className="mt-1 space-y-1 text-sm text-slate-700">
                   {selectedCreative?.usedByAds.map((ad) => (
@@ -655,6 +798,12 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
               </div>
             </div>
             <div className="space-y-4">
+              {selectedCreative && getCreativeFormatLabel(selectedCreative) === "Flexible format" ? (
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="mb-2 text-sm font-medium text-slate-900">Flexible Asset Groups</div>
+                  <FlexibleCreativeSummary item={selectedCreative} />
+                </div>
+              ) : null}
               <div className="rounded-lg border border-slate-200 p-4">
                 <div className="mb-2 text-sm font-medium text-slate-900">Object Story Spec</div>
                 <pre className="max-h-[240px] overflow-auto rounded-md bg-slate-950 p-4 text-xs text-slate-100">{objectStorySpecJson ?? "No object_story_spec snapshot available."}</pre>
@@ -782,6 +931,34 @@ export function CampaignDetailContent({ campaignId }: Props) {
     })
   }, [duplicateCompleted, duplicateFailed, duplicateOperation, handledDuplicateOperationId, numericCampaignId, router, toast])
 
+  const relevantCreatives = useMemo(() => {
+    return (detail?.creatives ?? []).filter((c) => c.objectType !== "EXISTING_POST")
+  }, [detail])
+
+  const parsedSpecs = useMemo(() => {
+    return relevantCreatives.map((c) => ({
+      creative: c,
+      spec: normalizeDegreesOfFreedomSpec(c.configJson),
+    }))
+  }, [relevantCreatives])
+
+  const { allIdentical, sharedSpec, firstCreativeType } = useMemo(() => {
+    if (parsedSpecs.length === 0) {
+      return { allIdentical: true, sharedSpec: null, firstCreativeType: null }
+    }
+    const serializeSpec = (spec: MetaDegreesOfFreedomSpecDto | null) => {
+      if (!spec?.creativeFeaturesSpec) return ""
+      return JSON.stringify(spec.creativeFeaturesSpec)
+    }
+    const firstSerialized = serializeSpec(parsedSpecs[0].spec)
+    const identical = parsedSpecs.every((p) => serializeSpec(p.spec) === firstSerialized)
+    return {
+      allIdentical: identical,
+      sharedSpec: identical ? parsedSpecs[0].spec : null,
+      firstCreativeType: parsedSpecs[0].creative.objectType as MetaCreativeType,
+    }
+  }, [parsedSpecs])
+
   const duplicateQuantityValue = Number(duplicateQuantity)
   const duplicateQuantityValid = Number.isInteger(duplicateQuantityValue) && duplicateQuantityValue >= 1 && duplicateQuantityValue <= 10
 
@@ -890,7 +1067,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
       invalidateCache(`meta-campaign:${numericCampaignId}`)
       invalidateCache("meta-campaigns:list")
       await refetch()
-      
+
       setDuplicateAdSetTarget(null)
       toast({
         title: "Ad set duplicated",
@@ -1140,6 +1317,91 @@ export function CampaignDetailContent({ campaignId }: Props) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Advantage+ Creative section */}
+          {relevantCreatives.length === 0 ? (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-500" />
+                  Advantage+ Creative
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[9px] hover:bg-blue-50 font-semibold uppercase tracking-wider px-1.5 py-0">
+                    Meta AI
+                  </Badge>
+                </CardTitle>
+                <div className="flex flex-col gap-1 mt-1">
+                  <p className="text-[11px] text-slate-400">
+                    Creative-level settings saved for this campaign/request.
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center">
+                  <p className="text-xs text-slate-500 italic">No Advantage+ Creative settings were captured for this campaign.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : allIdentical ? (
+            <AdvantageCreativeSummary
+              degreesOfFreedomSpec={sharedSpec}
+              creativeType={firstCreativeType}
+              sourceLabel="executed creative snapshot"
+              fallbackMessage="No Advantage+ Creative settings were captured for this campaign."
+            />
+          ) : (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-500" />
+                    Advantage+ Creative
+                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[9px] hover:bg-blue-50 font-semibold uppercase tracking-wider px-1.5 py-0">
+                      Meta AI
+                    </Badge>
+                  </CardTitle>
+                </div>
+                <div className="flex flex-col gap-1 mt-1">
+                  <p className="text-[11px] text-slate-450 font-medium text-amber-700">
+                    Advantage+ Creative settings vary by ad creative.
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Source: executed creative snapshot (Creative-level settings)
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {parsedSpecs.map(({ creative, spec }) => {
+                    const isOn = spec?.creativeFeaturesSpec?.advantagePlusCreative?.enrollStatus === "OPT_IN"
+                    const isOff = spec?.creativeFeaturesSpec?.advantagePlusCreative?.enrollStatus === "OPT_OUT"
+                    return (
+                      <div key={creative.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-semibold text-slate-700 truncate">{creative.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">Meta ID: {creative.externalCreativeId}</p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-500">All optimizations:</span>
+                          {isOn && (
+                            <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 text-[10px] font-semibold px-2 py-0.5">On</Badge>
+                          )}
+                          {isOff && (
+                            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500 text-[10px] px-2 py-0.5">Off</Badge>
+                          )}
+                          {!isOn && !isOff && (
+                            <Badge variant="outline" className="border-slate-100 bg-slate-50/50 text-slate-400 italic text-[10px] px-2 py-0.5">Not configured</Badge>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <p className="text-[11px] text-slate-400 italic mt-2 text-center">
+                    See the Structure Drilldown &gt; Creatives tab below for details on individual creative settings.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {detail.issuesInfoSummary || detail.recommendationsSummary ? (
             <Card className="border-amber-200">

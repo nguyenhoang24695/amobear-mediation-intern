@@ -28,7 +28,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const allowedGoals = getAllowedPerformanceGoalTypes(form.campaignObjective)
   const resolvedOptimizationGoal = resolveOptimizationGoal(form.performanceGoalType)
   const isGoalCompatible = allowedGoals.length === 0 || allowedGoals.includes(form.performanceGoalType)
-  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride
+  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
   const roasGoalRequired = bidStrategyRequiresRoasGoal(form.bidStrategy)
   const allowedBillingEvents = getAllowedBillingEvents(resolvedOptimizationGoal)
@@ -120,6 +120,12 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
             <SummaryLine label="Performance Goal" value={getPerformanceGoalSummary(form)} />
             <SummaryLine label="Bid Strategy" value={form.bidStrategy || "-"} />
             <SummaryLine label="ROAS Goal" value={roasGoalRequired && form.roasAverageFloor ? `${form.roasAverageFloor}x` : "-"} />
+            {form.deferredDeepLinkUrl ? (
+              <SummaryLine label="Deferred deep link" value="Set" />
+            ) : null}
+            {form.customStoreListingId ? (
+              <SummaryLine label="Custom store listing" value={form.customStoreListingId} />
+            ) : null}
           </div>
           <div className="pt-2 border-t border-slate-200">
             <p className="font-semibold text-slate-900 mb-1">Creative</p>
@@ -157,20 +163,35 @@ function getGeoStatus(form: RequestFormState): CheckState {
 }
 
 function getGeoSummary(form: RequestFormState): string {
-  if (form.geoMode === "GLOBAL") return "Global"
-  if (form.geoMode === "REGION") {
-    if (form.regionKeys.length === 0) return "-"
-    return `${form.regionKeys.length} region(s): ${form.regionKeys.slice(0, 3).join(", ")}${form.regionKeys.length > 3 ? "..." : ""}`
+  let baseSummary = ""
+  if (form.geoMode === "GLOBAL") {
+    baseSummary = "Global"
+  } else if (form.geoMode === "REGION") {
+    baseSummary = form.regionKeys.length === 0
+      ? "-"
+      : `${form.regionKeys.length} region(s): ${form.regionKeys.slice(0, 3).join(", ")}${form.regionKeys.length > 3 ? "..." : ""}`
+  } else if (form.geoMode === "COUNTRY_GROUP") {
+    baseSummary = form.countryGroupIds.length === 0 ? "-" : `${form.countryGroupIds.length} country group(s)`
+  } else if (form.geoMode === "CITY") {
+    baseSummary = form.cityTargets.length === 0
+      ? "-"
+      : `${form.cityTargets.length} city(s): ${form.cityTargets.slice(0, 2).map((city) => city.name).join(", ")}${form.cityTargets.length > 2 ? "..." : ""}`
+  } else {
+    baseSummary = form.countries.length > 0
+      ? `${form.countries.length} (${form.countries.slice(0, 3).join(", ")}${form.countries.length > 3 ? "..." : ""})`
+      : "-"
   }
-  if (form.geoMode === "COUNTRY_GROUP") {
-    if (form.countryGroupIds.length === 0) return "-"
-    return `${form.countryGroupIds.length} country group(s)`
+
+  if (form.excludedCountries && form.excludedCountries.length > 0) {
+    const exclStr = `Excl. ${form.excludedCountries.slice(0, 2).join(", ")}${form.excludedCountries.length > 2 ? "..." : ""}`
+    baseSummary = baseSummary === "-" ? `Excluding ${form.excludedCountries.join(", ")}` : `${baseSummary} (${exclStr})`
   }
-  if (form.geoMode === "CITY") {
-    if (form.cityTargets.length === 0) return "-"
-    return `${form.cityTargets.length} city(s): ${form.cityTargets.slice(0, 2).map((city) => city.name).join(", ")}${form.cityTargets.length > 2 ? "..." : ""}`
+
+  if (form.localeKeys.length > 0) {
+    return `${baseSummary}; Languages: ${form.localeKeys.length} selected`
   }
-  return form.countries.length > 0 ? `${form.countries.length} (${form.countries.slice(0, 3).join(", ")}${form.countries.length > 3 ? "..." : ""})` : "-"
+
+  return baseSummary
 }
 
 function getValueEventLabel(value?: string | null): string {
@@ -236,7 +257,7 @@ function getCreativeStatus(form: RequestFormState) {
 }
 
 function getCreativeHeadline(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_MEDIA") return getFirstCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) || "-"
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImageHeadline || getFirstCreativeVariation(form.singleImageHeadlines) || "-"
   if (form.creativeType === "SINGLE_VIDEO") return getFirstCreativeVariation(form.singleVideoHeadlines, form.singleVideoHeadline) || "-"
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || "-"
   if (form.creativeType === "FLEXIBLE") return getFirstCreativeVariation(form.flexibleHeadlines) || "-"
@@ -292,5 +313,4 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-
 
