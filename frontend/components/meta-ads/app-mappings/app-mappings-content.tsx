@@ -150,7 +150,7 @@ function getStoreIdentifier(app?: App | null, mapping?: MetaAppMappingDto | null
 }
 
 function getPrimaryStoreUrl(mapping: MetaAppMappingDto) {
-  return mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.normalizedStoreIdentifier || mapping.deepLinkUrlOverride || "-"
+  return mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.normalizedStoreIdentifier || "-"
 }
 
 function isHttpUrl(value?: string | null) {
@@ -856,7 +856,7 @@ export function AppMappingsContent() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Deep Link URL Override</Label>
+                <Label className="text-xs font-medium text-slate-700">Legacy Deep Link URL Override</Label>
                 <Input
                   className="h-9 text-sm"
                   value={form.deepLinkUrlOverride}

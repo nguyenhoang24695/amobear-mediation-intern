@@ -133,6 +133,9 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
   next.countryGroupIds = Array.isArray(next.countryGroupIds)
     ? next.countryGroupIds.filter((id) => Number.isFinite(id) && id > 0)
     : []
+  next.localeKeys = Array.isArray(next.localeKeys)
+    ? Array.from(new Set(next.localeKeys.filter((id) => Number.isFinite(id) && id > 0)))
+    : []
 
   if (!Array.isArray(next.flexiblePrimaryTexts) || next.flexiblePrimaryTexts.length === 0) next.flexiblePrimaryTexts = [""]
   if (!Array.isArray(next.flexibleHeadlines) || next.flexibleHeadlines.length === 0) next.flexibleHeadlines = [""]
@@ -210,14 +213,16 @@ function createDefaultFormState(): RequestFormState {
     specialAdCategories: [],
     bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     isAdSetBudgetSharingEnabled: true,
-    campaignDailyBudget: "",
+    campaignDailyBudget: "20",
     campaignLifetimeBudget: "",
     adSetName: "",
     geoMode: "GLOBAL",
     countries: [],
+    excludedCountries: [],
     regionKeys: [],
     countryGroupIds: [],
     cityTargets: [],
+    localeKeys: [],
     ageMin: 18,
     ageMax: 65,
     gender: "ALL",
@@ -225,7 +230,7 @@ function createDefaultFormState(): RequestFormState {
     publisherPlatforms: [],
     facebookPositions: [],
     instagramPositions: [],
-    adSetDailyBudget: "",
+    adSetDailyBudget: "20",
     adSetLifetimeBudget: "",
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "APP_INSTALLS",
@@ -269,6 +274,13 @@ function createDefaultFormState(): RequestFormState {
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
+    advantageCreativeAllOptimizations: true,
+    advantageCreativeAddTextOverlay: true,
+    advantageCreativeImageTouchups: true,
+    advantageCreativeMusicGeneration: true,
+    advantageCreativeTextOptimizations: true,
+    advantageCreativeImageAnimation: true,
+    advantageCreativeInlineComment: true,
     additionalVariants: [],
   })
 }
@@ -309,6 +321,13 @@ function createEmptyAdVariant(seq: number, form: Pick<RequestFormState, "faceboo
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
+    advantageCreativeAllOptimizations: true,
+    advantageCreativeAddTextOverlay: true,
+    advantageCreativeImageTouchups: true,
+    advantageCreativeMusicGeneration: true,
+    advantageCreativeTextOptimizations: true,
+    advantageCreativeImageAnimation: true,
+    advantageCreativeInlineComment: true,
   }
 }
 
@@ -907,6 +926,13 @@ export function CreateRequestContent({ requestId }: Props) {
       existingPostId: form.existingPostId,
       adName: form.adName ? `${form.adName} (Copy)` : "",
       trackingSpecs: form.trackingSpecs,
+      advantageCreativeAllOptimizations: form.advantageCreativeAllOptimizations,
+      advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+      advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+      advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+      advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+      advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+      advantageCreativeInlineComment: form.advantageCreativeInlineComment,
     }
     updateForm({ additionalVariants: [...form.additionalVariants, copy] })
     setActiveVariantTab(`variant-${newSeq}`)
@@ -1026,7 +1052,7 @@ export function CreateRequestContent({ requestId }: Props) {
     try {
       setSaving(true)
       const saved = await persistDraft()
-      if (isEditMode && saved.status === "pending_approval") {
+      if (isEditMode && saved.status !== "draft") {
         router.push(`/meta-ads/requests/${saved.id}`)
       }
     } catch (apiError) {

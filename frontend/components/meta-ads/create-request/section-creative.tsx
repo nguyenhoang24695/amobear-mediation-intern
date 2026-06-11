@@ -86,6 +86,23 @@ function clearMetaReferenceDecoration(patch?: Partial<MetaRequestAssetSelectionS
   }
 }
 const maxCreativeTextVariations = 5
+const maxFlexibleAssets = 10
+
+function hasSelectedAssetMedia(selection: MetaRequestAssetSelectionState, kind: "image" | "video") {
+  return !!(
+    selection.uploadedAssetId ||
+    selection.metaAssetId ||
+    selection.metaPreviewUrl ||
+    selection.uploadedAssetPreviewUrl ||
+    (kind === "video" ? selection.videoId || selection.metaPlayableUrl : selection.imageHash || selection.imageUrl)
+  )
+}
+
+function hasSelectedFlexibleAssetMedia(asset: RequestFormState["flexibleAssets"][number]) {
+  return asset.assetType === "VIDEO"
+    ? hasSelectedAssetMedia(asset.video, "video")
+    : hasSelectedAssetMedia(asset.image, "image")
+}
 
 function getExistingPostOptionLabel(post: MetaFacebookPostReferenceDto) {
   const primaryText = (post.message?.trim() || post.story?.trim() || post.id).replace(/\s+/g, " ")
@@ -174,6 +191,10 @@ export function CreativeSection({
   const resolvedKeysRef = useRef<Record<string, boolean>>({})
   const [localVideoFilesByKey, setLocalVideoFilesByKey] = useState<Record<string, File>>({})
   const [thumbnailEditorKey, setThumbnailEditorKey] = useState<string | null>(null)
+  const [flexibleBulkUploading, setFlexibleBulkUploading] = useState(false)
+  const [flexibleBulkProgress, setFlexibleBulkProgress] = useState<{ done: number; total: number } | null>(null)
+  const [activeFlexibleAssetId, setActiveFlexibleAssetId] = useState<string | null>(null)
+  const flexibleBulkInputRef = useRef<HTMLInputElement | null>(null)
   const completion = getCreativeCompletion(form)
   const previewImage = getPreviewImage(form)
   const generatedCreativeName = buildCreativeName(form, selectedAppMapping)
@@ -189,6 +210,18 @@ export function CreativeSection({
   additionalVariantsRef.current = additionalVariants
   flexibleAssetsRef.current = form.flexibleAssets
 
+  const hasMultipleSingleTexts =
+    (Array.isArray(form.singleImagePrimaryTexts) && form.singleImagePrimaryTexts.filter((t) => t.trim()).length > 1) ||
+    (Array.isArray(form.singleImageHeadlines) && form.singleImageHeadlines.filter((h) => h.trim()).length > 1) ||
+    (Array.isArray(form.singleVideoPrimaryTexts) && form.singleVideoPrimaryTexts.filter((t) => t.trim()).length > 1) ||
+    (Array.isArray(form.singleVideoHeadlines) && form.singleVideoHeadlines.filter((h) => h.trim()).length > 1)
+
+  useEffect(() => {
+    if (form.flexibleAssets.length === 0) return
+    if (activeFlexibleAssetId && form.flexibleAssets.some((asset) => asset.id === activeFlexibleAssetId)) return
+    setActiveFlexibleAssetId(form.flexibleAssets[0].id)
+  }, [activeFlexibleAssetId, form.flexibleAssets])
+
   const cancelAutoThumbnail = (tokenKey: string) => {
     autoThumbnailTokensRef.current[tokenKey] = `cancelled:${Date.now()}:${Math.random()}`
   }
@@ -198,6 +231,17 @@ export function CreativeSection({
     uploadedAssetId: asset.id,
     uploadedAssetName: asset.fileName,
     uploadedAssetPreviewUrl: URL.createObjectURL(file),
+    metaPlayableUrl: "",
+    imageHash: "",
+    imageUrl: "",
+    videoId: "",
+  })
+
+  const buildUploadedMediaPatch = (asset: { id: number; fileName: string }, file: File, kind: "image" | "video"): Partial<MetaRequestAssetSelectionState> => ({
+    mode: "uploaded_asset",
+    uploadedAssetId: asset.id,
+    uploadedAssetName: asset.fileName,
+    uploadedAssetPreviewUrl: kind === "video" ? "" : URL.createObjectURL(file),
     metaPlayableUrl: "",
     imageHash: "",
     imageUrl: "",
@@ -630,6 +674,105 @@ export function CreativeSection({
     }
   }
 
+  const handleFlexibleBulkUpload = async (files: File[]) => {
+    if (flexibleBulkUploading) return
+
+    const inputFiles = files.filter(Boolean)
+    if (inputFiles.length === 0) return
+
+    const supportedFiles = inputFiles.filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"))
+    const unsupportedFiles = inputFiles.filter((file) => !supportedFiles.includes(file))
+    if (supportedFiles.length === 0) {
+      toast({ title: "No supported media files", description: "Choose image or video files for flexible assets.", variant: "destructive" })
+      return
+    }
+
+    const emptyAssetIndices = form.flexibleAssets
+      .map((asset, index) => (hasSelectedFlexibleAssetMedia(asset) ? null : index))
+      .filter((index): index is number => index != null)
+    const capacity = Math.max(0, maxFlexibleAssets - form.flexibleAssets.length + emptyAssetIndices.length)
+
+    if (capacity <= 0) {
+      toast({ title: "Maximum flexible assets reached", description: `Meta supports up to ${maxFlexibleAssets} image or video assets in one flexible ad.` })
+      return
+    }
+
+    const acceptedFiles = supportedFiles.slice(0, capacity)
+    const skippedCount = inputFiles.length - acceptedFiles.length
+    if (skippedCount > 0 || unsupportedFiles.length > 0) {
+      toast({
+        title: "Some files were skipped",
+        description: `Added up to ${acceptedFiles.length}/${inputFiles.length} files. Flexible ads support ${maxFlexibleAssets} image/video assets.`,
+      })
+    }
+
+    setFlexibleBulkUploading(true)
+    setFlexibleBulkProgress({ done: 0, total: acceptedFiles.length })
+
+    const nextAssets = [...form.flexibleAssets]
+    const fillIndices = [...emptyAssetIndices]
+    const failedFiles: string[] = []
+    const videoFilesByKey: Record<string, File> = {}
+    let uploadedCount = 0
+    let firstUploadedAssetId: string | null = null
+
+    for (const [fileIndex, file] of acceptedFiles.entries()) {
+      const kind: "image" | "video" = file.type.startsWith("video/") ? "video" : "image"
+      const nextAsset = createEmptyFlexibleAsset(kind === "video" ? "VIDEO" : "IMAGE")
+
+      try {
+        const asset = await metaRequestsApi.uploadAsset(file, kind)
+        if (kind === "video") {
+          nextAsset.video = { ...nextAsset.video, ...buildUploadedMediaPatch(asset, file, "video") }
+          videoFilesByKey[`flexible:${nextAsset.id}`] = file
+
+          try {
+            const thumbnailFile = await captureVideoFrameToFile({ videoFile: file, timestampSeconds: 5 })
+            const thumbnailAsset = await metaRequestsApi.uploadAsset(thumbnailFile, "image")
+            nextAsset.thumbnail = { ...nextAsset.thumbnail, ...buildUploadedThumbnailPatch(thumbnailAsset, thumbnailFile) }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Cannot generate thumbnail from this video."
+            toast({ title: "Thumbnail generation failed", description: `${file.name}: ${message}`, variant: "destructive" })
+          }
+        } else {
+          nextAsset.image = { ...nextAsset.image, ...buildUploadedMediaPatch(asset, file, "image") }
+        }
+
+        const fillIndex = fillIndices.shift()
+        if (fillIndex != null) {
+          nextAssets[fillIndex] = nextAsset
+        } else {
+          nextAssets.push(nextAsset)
+        }
+        firstUploadedAssetId ??= nextAsset.id
+        uploadedCount += 1
+      } catch {
+        failedFiles.push(file.name)
+      } finally {
+        setFlexibleBulkProgress({ done: fileIndex + 1, total: acceptedFiles.length })
+      }
+    }
+
+    if (uploadedCount > 0) {
+      setLocalVideoFilesByKey((current) => ({ ...current, ...videoFilesByKey }))
+      if (firstUploadedAssetId) setActiveFlexibleAssetId(firstUploadedAssetId)
+      onChange({ flexibleAssets: nextAssets.slice(0, maxFlexibleAssets) })
+    }
+
+    if (failedFiles.length > 0) {
+      toast({
+        title: "Some files failed",
+        description: `Added ${uploadedCount} flexible asset${uploadedCount === 1 ? "" : "s"}. Failed: ${failedFiles.slice(0, 3).join(", ")}${failedFiles.length > 3 ? "..." : ""}`,
+        variant: "destructive",
+      })
+    } else if (uploadedCount > 0) {
+      toast({ title: "Flexible assets added", description: `Added ${uploadedCount} file${uploadedCount === 1 ? "" : "s"} to one flexible ad.` })
+    }
+
+    setFlexibleBulkUploading(false)
+    setFlexibleBulkProgress(null)
+  }
+
   const updateTextVariations = (
     valuesField: "singleImagePrimaryTexts" | "singleImageHeadlines" | "singleVideoPrimaryTexts" | "singleVideoHeadlines",
     firstField: "singleImagePrimaryText" | "singleImageHeadline" | "singleVideoPrimaryText" | "singleVideoHeadline",
@@ -640,6 +783,31 @@ export function CreativeSection({
       [valuesField]: nextValues,
       [firstField]: getFirstFilledVariation(nextValues),
     } as Partial<RequestFormState>)
+  }
+
+  const flexibleBulkCapacity = Math.max(
+    0,
+    maxFlexibleAssets - form.flexibleAssets.length + form.flexibleAssets.filter((asset) => !hasSelectedFlexibleAssetMedia(asset)).length
+  )
+  const activeFlexibleAssetIndex = form.flexibleAssets.findIndex((asset) => asset.id === activeFlexibleAssetId)
+  const resolvedActiveFlexibleAssetIndex = activeFlexibleAssetIndex >= 0 ? activeFlexibleAssetIndex : 0
+  const activeFlexibleAsset = form.flexibleAssets[resolvedActiveFlexibleAssetIndex]
+
+  const handleAddFlexibleAsset = () => {
+    if (flexibleBulkUploading || form.flexibleAssets.length >= maxFlexibleAssets) return
+    const nextAsset = createEmptyFlexibleAsset()
+    setActiveFlexibleAssetId(nextAsset.id)
+    onChange({ flexibleAssets: [...form.flexibleAssets, nextAsset] })
+  }
+
+  const handleRemoveFlexibleAsset = (index: number) => {
+    if (flexibleBulkUploading || form.flexibleAssets.length <= 1) return
+    const removedAsset = form.flexibleAssets[index]
+    const nextAssets = form.flexibleAssets.filter((_, assetIndex) => assetIndex !== index)
+    if (removedAsset?.id === activeFlexibleAsset?.id) {
+      setActiveFlexibleAssetId(nextAssets[0]?.id ?? null)
+    }
+    onChange({ flexibleAssets: nextAssets })
   }
 
   return (
@@ -706,9 +874,9 @@ export function CreativeSection({
                 <Select value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SINGLE_MEDIA">Single Image/Video</SelectItem>
+                    <SelectItem value="SINGLE_MEDIA">Single image or video</SelectItem>
                     <SelectItem value="CAROUSEL_IMAGE">Carousel</SelectItem>
-                    <SelectItem value="FLEXIBLE">Flexible</SelectItem>
+                    <SelectItem value="FLEXIBLE">Flexible ad</SelectItem>
                     <SelectItem value="EXISTING_POST">Existing Post</SelectItem>
                   </SelectContent>
                 </Select>
@@ -866,34 +1034,284 @@ export function CreativeSection({
               </div>
             </div>
 
+            {form.creativeType !== "EXISTING_POST" && (
+              <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600">
+                      <Wand2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                        Advantage+ Creative
+                        <Badge variant="secondary" className="bg-blue-100/70 text-blue-700 text-[9px] hover:bg-blue-100/70 font-semibold uppercase tracking-wider px-1.5 py-0">
+                          Meta AI
+                        </Badge>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">Automatically optimize your creative assets to get more conversions.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                    <Label htmlFor="all-optimizations" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      All optimizations
+                    </Label>
+                    <Switch
+                      id="all-optimizations"
+                      checked={form.advantageCreativeAllOptimizations}
+                      onCheckedChange={(checked) => {
+                        onChange({
+                          advantageCreativeAllOptimizations: checked,
+                          advantageCreativeAddTextOverlay: checked,
+                          advantageCreativeImageTouchups: checked,
+                          advantageCreativeMusicGeneration: checked,
+                          advantageCreativeTextOptimizations: checked,
+                          advantageCreativeImageAnimation: checked,
+                          advantageCreativeInlineComment: checked,
+                        })
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2 border-t border-slate-100">
+                  {/* Add overlays */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="add-text-overlay" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add overlays
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Add info overlays, like price or rating, automatically.</p>
+                    </div>
+                    <Switch
+                      id="add-text-overlay"
+                      checked={form.advantageCreativeAddTextOverlay}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: checked,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Visual touch-ups */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="image-touchups" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Visual touch-ups
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Adjust brightness, contrast, or apply visual templates.</p>
+                    </div>
+                    <Switch
+                      id="image-touchups"
+                      checked={form.advantageCreativeImageTouchups}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: checked,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Add music */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="music-generation" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add music
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Generate background music matching your image or video.</p>
+                    </div>
+                    <Switch
+                      id="music-generation"
+                      checked={form.advantageCreativeMusicGeneration}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: checked,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Text improvements */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="text-optimizations" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Text improvements
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Swap primary text and headlines to boost response rate.</p>
+                    </div>
+                    <Switch
+                      id="text-optimizations"
+                      checked={form.advantageCreativeTextOptimizations}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: checked,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Add animation */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="image-animation" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add animation
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Create subtle motion effects on static image assets.</p>
+                    </div>
+                    <Switch
+                      id="image-animation"
+                      checked={form.advantageCreativeImageAnimation}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: checked,
+                          advantageCreativeInlineComment: form.advantageCreativeInlineComment,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {/* Add details to ad layout */}
+                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="inline-comment" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Add details to ad layout
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Display relevant social comments directly under the ad.</p>
+                    </div>
+                    <Switch
+                      id="inline-comment"
+                      checked={form.advantageCreativeInlineComment}
+                      onCheckedChange={(checked) => {
+                        const nextValues = {
+                          advantageCreativeAddTextOverlay: form.advantageCreativeAddTextOverlay,
+                          advantageCreativeImageTouchups: form.advantageCreativeImageTouchups,
+                          advantageCreativeMusicGeneration: form.advantageCreativeMusicGeneration,
+                          advantageCreativeTextOptimizations: form.advantageCreativeTextOptimizations,
+                          advantageCreativeImageAnimation: form.advantageCreativeImageAnimation,
+                          advantageCreativeInlineComment: checked,
+                        }
+                        const allEnabled = Object.values(nextValues).every(Boolean)
+                        onChange({
+                          ...nextValues,
+                          advantageCreativeAllOptimizations: allEnabled,
+                        })
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Tabs value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
               <TabsList className="h-10 bg-slate-100 p-1 w-fit">
-                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single Image/Video</TabsTrigger>
+                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single image or video</TabsTrigger>
                 <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
-                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible</TabsTrigger>
+                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible ad</TabsTrigger>
                 <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
               </TabsList>
 
               <TabsContent value="SINGLE_MEDIA" className="mt-4 space-y-4">
-                {/* Shared above variations: Primary Text + Headline */}
-                <TextVariationEditor
-                  label="Primary Text"
-                  values={form.singleImagePrimaryTexts}
-                  multiline
-                  placeholder="Enter primary text variation"
-                  onChange={(values) => updateTextVariations("singleImagePrimaryTexts", "singleImagePrimaryText", values)}
-                />
-                <TextVariationEditor
-                  label="Headline"
-                  values={form.singleImageHeadlines}
-                  placeholder="Enter headline variation"
-                  onChange={(values) => updateTextVariations("singleImageHeadlines", "singleImageHeadline", values)}
-                />
+                {hasMultipleSingleTexts && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-800 flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600" />
+                    <div>
+                      Single image or video uses the first primary text and headline only. Use Flexible ad for multiple text variations.
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Primary Text <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    rows={3}
+                    value={form.singleImagePrimaryText || getFirstFilledVariation(form.singleImagePrimaryTexts, "")}
+                    placeholder="Enter primary text"
+                    onChange={(event) => {
+                      const val = event.target.value
+                      onChange({
+                        singleImagePrimaryText: val,
+                        singleImagePrimaryTexts: [val],
+                        singleVideoPrimaryText: val,
+                        singleVideoPrimaryTexts: [val],
+                      })
+                    }}
+                    className="text-sm resize-none bg-white"
+                  />
+                  <p className="text-[11px] text-slate-400">Enter the primary text for your ad.</p>
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={form.singleImageHeadline || getFirstFilledVariation(form.singleImageHeadlines, "")}
+                    placeholder="Enter headline"
+                    onChange={(event) => {
+                      const val = event.target.value
+                      onChange({
+                        singleImageHeadline: val,
+                        singleImageHeadlines: [val],
+                        singleVideoHeadline: val,
+                        singleVideoHeadlines: [val],
+                      })
+                    }}
+                    className="h-9 text-sm bg-white"
+                  />
+                  <p className="text-[11px] text-slate-400">Enter the headline for your ad.</p>
+                </div>
 
                 {/* Per-variant image/video picker(s). Each variation = one ad, sharing all text above and the settings below. */}
                 <VariationGallery
-                  label="Media Variations"
-                  helper="Add an image or video — or add multiple to create more ads that share the same text above and the settings below."
+                  label="Media Variations (Multiple Separate Ads)"
+                  helper="Add an image or video to create a single ad, or add multiple to create multiple separate ads. Each variation represents a separate ad that shares the same primary text and headline above. For a single ad with multiple text/media options, use Flexible ad instead."
                   mediaKind={form.mediaType === "VIDEO" ? "video" : "image"}
                   supportsVariants={supportsVariants}
                   canAddVariant={canAddVariant}
@@ -1086,7 +1504,7 @@ export function CreativeSection({
 
               <TabsContent value="FLEXIBLE" className="mt-4 space-y-4">
                 <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-[11px] text-blue-700">
-                  Flexible lets Meta choose the best-performing format from the images and videos you provide in one group.
+                  <strong>Flexible ad:</strong> Use multiple assets and text variations in one ad. Meta delivers the best-performing combination automatically.
                 </div>
                 <TextVariationEditor
                   label="Primary Text"
@@ -1120,62 +1538,164 @@ export function CreativeSection({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-slate-700">Flexible Assets</p>
-                      <p className="text-[11px] text-slate-400">Add at least 1 image or video for the flexible group.</p>
+                      <p className="text-xs font-medium text-slate-700">Assets <span className="text-slate-400 font-normal">({form.flexibleAssets.length}/{maxFlexibleAssets})</span></p>
+                      <p className="text-[11px] text-slate-400">Add 1-{maxFlexibleAssets} images or videos for this flexible ad group.</p>
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onChange({ flexibleAssets: [...form.flexibleAssets, createEmptyFlexibleAsset()] })}>
-                      <Plus className="w-3.5 h-3.5 mr-1" />Add Asset
-                    </Button>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <input
+                        ref={flexibleBulkInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        multiple
+                        className="hidden"
+                        onChange={(event) => {
+                          void handleFlexibleBulkUpload(Array.from(event.target.files ?? []))
+                          event.currentTarget.value = ""
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => flexibleBulkInputRef.current?.click()}
+                        disabled={flexibleBulkUploading || flexibleBulkCapacity <= 0}
+                        title="Upload multiple image or video files into this flexible ad"
+                      >
+                        {flexibleBulkUploading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Plus className="w-3.5 h-3.5 mr-1" />}
+                        {flexibleBulkUploading && flexibleBulkProgress ? `Uploading ${flexibleBulkProgress.done}/${flexibleBulkProgress.total}...` : "Upload multiple files"}
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={handleAddFlexibleAsset} disabled={flexibleBulkUploading || form.flexibleAssets.length >= maxFlexibleAssets}>
+                        <Plus className="w-3.5 h-3.5 mr-1" />Add Asset
+                      </Button>
+                    </div>
                   </div>
-                  {form.flexibleAssets.map((asset, index) => (
-                    <div key={asset.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10">
+                    {form.flexibleAssets.map((asset, index) => {
+                      const isVideoAsset = asset.assetType === "VIDEO"
+                      const thumbnailPreview = getSelectionPreviewSource(asset.thumbnail)
+                      const videoPreview = getSelectionPreviewSource(asset.video)
+                      const imagePreview = getSelectionPreviewSource(asset.image)
+                      const previewUrl = isVideoAsset ? (thumbnailPreview.url || videoPreview.url) : imagePreview.url
+                      const previewRequiresAuth = isVideoAsset
+                        ? (thumbnailPreview.url ? thumbnailPreview.requiresAuth : videoPreview.requiresAuth)
+                        : imagePreview.requiresAuth
+                      const isActive = asset.id === activeFlexibleAsset?.id
+                      const isComplete = hasSelectedFlexibleAssetMedia(asset)
+                      const AssetIcon = isVideoAsset ? Video : ImageIcon
+
+                      return (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          onClick={() => setActiveFlexibleAssetId(asset.id)}
+                          title={`Asset #${index + 1} (${isVideoAsset ? "Video" : "Image"})`}
+                          className={`group relative aspect-square overflow-hidden rounded-md border bg-white text-left transition ${
+                            isActive ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          {previewUrl ? (
+                            <ProtectedMediaImage
+                              src={previewUrl}
+                              requiresAuth={previewRequiresAuth}
+                              alt={`Flexible asset ${index + 1}`}
+                              className="h-full w-full object-cover"
+                              fallback={<div className="flex h-full items-center justify-center text-slate-300"><AssetIcon className="h-5 w-5" /></div>}
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-slate-300"><AssetIcon className="h-5 w-5" /></div>
+                          )}
+                          <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-4 text-white">
+                            #{index + 1}
+                          </span>
+                          <span
+                            className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-1 ring-white ${isComplete ? "bg-green-500" : "bg-amber-400"}`}
+                            title={isComplete ? "Media selected" : "No media yet"}
+                          />
+                          <span className="absolute bottom-1 left-1 flex h-5 w-5 items-center justify-center rounded bg-white/90 text-slate-500 shadow-sm">
+                            <AssetIcon className="h-3 w-3" />
+                          </span>
+                          {form.flexibleAssets.length > 1 ? (
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleRemoveFlexibleAsset(index)
+                              }}
+                              className="absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded bg-white/90 text-red-500 shadow-sm hover:bg-red-50 group-hover:flex"
+                              title="Delete this asset"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </span>
+                          ) : null}
+                        </button>
+                      )
+                    })}
+                    {form.flexibleAssets.length < maxFlexibleAssets ? (
+                      <button
+                        type="button"
+                        onClick={handleAddFlexibleAsset}
+                        disabled={flexibleBulkUploading}
+                        title="Add a new flexible asset"
+                        className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 bg-white text-slate-400 transition hover:border-slate-400 hover:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-300 disabled:hover:text-slate-400"
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span className="text-[10px]">Add</span>
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {activeFlexibleAsset ? (
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold text-slate-700">Asset {index + 1}</p>
+                        <p className="text-xs font-semibold text-slate-700">Editing Asset #{resolvedActiveFlexibleAssetIndex + 1}</p>
                         <div className="flex items-center gap-2">
-                          <Select value={asset.assetType} onValueChange={(value) => updateFlexibleAsset(index, { assetType: value as "IMAGE" | "VIDEO" })}>
+                          <Select value={activeFlexibleAsset.assetType} onValueChange={(value) => updateFlexibleAsset(resolvedActiveFlexibleAssetIndex, { assetType: value as "IMAGE" | "VIDEO" })} disabled={flexibleBulkUploading}>
                             <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="IMAGE">Image</SelectItem>
                               <SelectItem value="VIDEO">Video</SelectItem>
                             </SelectContent>
                           </Select>
-                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600" onClick={() => onChange({ flexibleAssets: form.flexibleAssets.filter((_, assetIndex) => assetIndex !== index) })} disabled={form.flexibleAssets.length <= 1}>
+                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600" onClick={() => handleRemoveFlexibleAsset(resolvedActiveFlexibleAssetIndex)} disabled={flexibleBulkUploading || form.flexibleAssets.length <= 1}>
                             <Trash2 className="w-3.5 h-3.5 mr-1" />Remove
                           </Button>
                         </div>
                       </div>
-                      {asset.assetType === "VIDEO" ? (
+                      {activeFlexibleAsset.assetType === "VIDEO" ? (
                         <div className="space-y-3">
                           <MediaSourceEditor
                             title="Video Asset"
                             kind="video"
-                            selection={asset.video}
-                            uploading={uploadingKey?.startsWith(`flexible:${index}:video:`) ?? false}
-                            thumbnailSelection={asset.thumbnail}
-                            thumbnailUploading={uploadingKey?.startsWith(`flexible:${index}:thumbnail:`) ?? false}
-                            thumbnailVideoFile={asset.video.mode === "uploaded_asset" && asset.video.uploadedAssetId ? localVideoFilesByKey[`flexible:${asset.id}`] ?? null : null}
-                            thumbnailVideoUrl={getFrameCaptureVideoUrl(asset.video)}
-                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(asset.video)}
-                            thumbnailEditorKey={`flexible:${asset.id}`}
+                            selection={activeFlexibleAsset.video}
+                            uploading={uploadingKey?.startsWith(`flexible:${resolvedActiveFlexibleAssetIndex}:video:`) ?? false}
+                            thumbnailSelection={activeFlexibleAsset.thumbnail}
+                            thumbnailUploading={uploadingKey?.startsWith(`flexible:${resolvedActiveFlexibleAssetIndex}:thumbnail:`) ?? false}
+                            thumbnailVideoFile={activeFlexibleAsset.video.mode === "uploaded_asset" && activeFlexibleAsset.video.uploadedAssetId ? localVideoFilesByKey[`flexible:${activeFlexibleAsset.id}`] ?? null : null}
+                            thumbnailVideoUrl={getFrameCaptureVideoUrl(activeFlexibleAsset.video)}
+                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(activeFlexibleAsset.video)}
+                            thumbnailEditorKey={`flexible:${activeFlexibleAsset.id}`}
                             thumbnailOpenKey={thumbnailEditorKey}
                             adAccountId={adAccountId ?? null}
                             assetPreparationById={assetPreparationById}
                             assetPreparationLoading={assetPreparationLoading}
                             onRetryAssetPreparation={onRetryAssetPreparation}
                             onModeChange={() => {}}
-                            onPatch={(patch) => updateFlexibleAssetMedia(index, "video", patch)}
-                            onUpload={(file) => handleFlexibleUpload(index, "video", file)}
-                            onMetaSelect={(media) => handleFlexibleMetaSelection(index, "video", media)}
+                            onPatch={(patch) => updateFlexibleAssetMedia(resolvedActiveFlexibleAssetIndex, "video", patch)}
+                            onUpload={(file) => handleFlexibleUpload(resolvedActiveFlexibleAssetIndex, "video", file)}
+                            onMetaSelect={(media) => handleFlexibleMetaSelection(resolvedActiveFlexibleAssetIndex, "video", media)}
                             onThumbnailOpenChange={setThumbnailEditorKey}
-                            onThumbnailUseFrame={(file) => handleFlexibleUpload(index, "thumbnail", file)}
-                            onThumbnailUpload={(file) => handleFlexibleUpload(index, "thumbnail", file)}
+                            onThumbnailUseFrame={(file) => handleFlexibleUpload(resolvedActiveFlexibleAssetIndex, "thumbnail", file)}
+                            onThumbnailUpload={(file) => handleFlexibleUpload(resolvedActiveFlexibleAssetIndex, "thumbnail", file)}
                           />
                         </div>
                       ) : (
-                        <MediaSourceEditor title="Image Asset" kind="image" selection={asset.image} uploading={uploadingKey?.startsWith(`flexible:${index}:image:`) ?? false} allowExternalUrl adAccountId={adAccountId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(index, "image", patch)} onUpload={(file) => handleFlexibleUpload(index, "image", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(index, "image", media)} />
+                        <MediaSourceEditor title="Image Asset" kind="image" selection={activeFlexibleAsset.image} uploading={uploadingKey?.startsWith(`flexible:${resolvedActiveFlexibleAssetIndex}:image:`) ?? false} allowExternalUrl adAccountId={adAccountId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(resolvedActiveFlexibleAssetIndex, "image", patch)} onUpload={(file) => handleFlexibleUpload(resolvedActiveFlexibleAssetIndex, "image", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(resolvedActiveFlexibleAssetIndex, "image", media)} />
                       )}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               </TabsContent>
               <TabsContent value="EXISTING_POST" className="mt-4 space-y-4">
@@ -2404,9 +2924,13 @@ function getCreativeCompletion(form: RequestFormState) {
       : form.mediaType === "IMAGE"
         ? !!(form.singleImageImage.uploadedAssetId || form.singleImageImage.imageHash || form.singleImageImage.imageUrl)
         : false
+    const hasPrimaryText = !!(form.singleImagePrimaryText?.trim() || (form.singleImagePrimaryTexts ?? []).some((t) => t.trim()))
+    const hasHeadline = !!(form.singleImageHeadline?.trim() || (form.singleImageHeadlines ?? []).some((h) => h.trim()))
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
       { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "Primary text", ok: hasPrimaryText },
+      { label: "Headline", ok: hasHeadline },
       { label: "CTA", ok: !!form.singleImageCallToAction },
       { label: "Media source", ok: hasMediaSource },
     ]
@@ -2439,7 +2963,7 @@ function getCreativeCompletion(form: RequestFormState) {
       { label: "Headline", ok: hasAnyTextVariation(form.flexibleHeadlines) },
       { label: "CTA", ok: !!form.flexibleCallToAction },
       { label: "Link URL or app fallback", ok: true },
-      { label: "At least 1 asset", ok: form.flexibleAssets.length >= 1 },
+      { label: `Assets (${form.flexibleAssets.length}/${maxFlexibleAssets})`, ok: form.flexibleAssets.length >= 1 && form.flexibleAssets.length <= maxFlexibleAssets },
       {
         label: "Assets complete",
         ok: form.flexibleAssets.length > 0 && form.flexibleAssets.every((asset) => asset.assetType === "VIDEO"
@@ -2498,7 +3022,7 @@ function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: b
 }
 
 function getPreviewHeadline(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_MEDIA") return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImageHeadline || getFirstFilledVariation(form.singleImageHeadlines, "")
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoHeadlines, form.singleVideoHeadline)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexibleHeadlines)
@@ -2507,7 +3031,7 @@ function getPreviewHeadline(form: RequestFormState): string {
 }
 
 function getPreviewMessage(form: RequestFormState): string {
-  if (form.creativeType === "SINGLE_MEDIA") return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
+  if (form.creativeType === "SINGLE_MEDIA") return form.singleImagePrimaryText || getFirstFilledVariation(form.singleImagePrimaryTexts, "")
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexiblePrimaryTexts) || `${form.flexibleAssets.length} flexible assets`
