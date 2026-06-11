@@ -57,7 +57,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
-        <Analytics />
+        {process.env.VERCEL === "1" ? <Analytics /> : null}
       </body>
     </html>
   )
