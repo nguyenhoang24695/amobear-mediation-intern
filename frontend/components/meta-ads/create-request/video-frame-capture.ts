@@ -58,6 +58,7 @@ export async function captureVideoFrameToFile({
 }: CaptureVideoFrameOptions): Promise<File> {
   const objectUrl = videoFile ? URL.createObjectURL(videoFile) : null
   const resolvedUrl = objectUrl ?? (resolveVideoUrl ? await resolveVideoUrl() : videoUrl)
+  const resolverObjectUrl = !objectUrl && resolveVideoUrl && resolvedUrl?.startsWith("blob:") ? resolvedUrl : null
   const sourceUrl = resolvedUrl?.trim()
   if (!sourceUrl) {
     throw new Error("No playable video available for thumbnail capture.")
@@ -113,6 +114,9 @@ export async function captureVideoFrameToFile({
     video.remove()
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl)
+    }
+    if (resolverObjectUrl) {
+      URL.revokeObjectURL(resolverObjectUrl)
     }
   }
 }
