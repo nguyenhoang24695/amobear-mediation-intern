@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -208,6 +210,37 @@ interface AppPerformanceTabProps {
 }
 
 type PresetKey = "24h" | "7d" | "30d" | "last-month" | "this-month" | "custom"
+type ChartBreakdownGranularity = "day" | "hour"
+type ChartBreakdownVisualType = "line" | "bar"
+type ChartSeriesKey = "revenue" | "cost" | "net"
+
+const DAILY_BREAKDOWN_CHART_SERIES_COUNT = 3
+const DAILY_BREAKDOWN_METRIC_COLORS = {
+  revenue: "#22c55e",
+  cost: "#ef4444",
+  net: "#3b82f6",
+} as const
+
+const DAILY_BREAKDOWN_METRICS: { key: ChartSeriesKey; label: string; color: string }[] = [
+  { key: "revenue", label: "Revenue", color: DAILY_BREAKDOWN_METRIC_COLORS.revenue },
+  { key: "cost", label: "UA Cost", color: DAILY_BREAKDOWN_METRIC_COLORS.cost },
+  { key: "net", label: "Net", color: DAILY_BREAKDOWN_METRIC_COLORS.net },
+]
+
+const DEFAULT_METRIC_VISUAL_TYPES: Record<ChartSeriesKey, ChartBreakdownVisualType> = {
+  revenue: "line",
+  cost: "line",
+  net: "line",
+}
+
+interface ChartBreakdownPoint {
+  label: string
+  tooltipLabel: string
+  hasData: boolean
+  revenue: number | null
+  cost: number | null
+  net: number | null
+}
 
 const presets: { key: PresetKey; label: string }[] = [
   { key: "24h", label: "Last 24 hours" },
@@ -262,6 +295,10 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
   const [tableSearchDate, setTableSearchDate] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [chartBreakdownGranularity, setChartBreakdownGranularity] = useState<ChartBreakdownGranularity>("day")
+  const [metricVisualTypes, setMetricVisualTypes] =
+    useState<Record<ChartSeriesKey, ChartBreakdownVisualType>>(DEFAULT_METRIC_VISUAL_TYPES)
+  const [hiddenChartSeries, setHiddenChartSeries] = useState<Set<ChartSeriesKey>>(() => new Set())
   /** Offset (+7) hoặc UTC — gửi API; ngày trong range là lịch tại offset đó */
   const [queryTimeZoneId, setQueryTimeZoneId] = useState(() => {
     const fromAccount = performanceQueryTimeZoneIdFromPublisherOffsetHours(publisherTimezoneOffsetHours)
@@ -580,17 +617,67 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
     return filteredTableData.slice(start, start + pageSize)
   }, [filteredTableData, currentPage])
 
-  const chartData = useMemo(() => {
+  const chartData = useMemo<ChartBreakdownPoint[]>(() => {
     return dailyData
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((d) => ({
         label: format(parseISO(d.date), "MMM dd"),
+        tooltipLabel: d.dateLabel,
         hasData: d.hasData,
         revenue: d.hasData ? d.revenue : null,
         cost: d.hasData ? d.cost : null,
         net: d.hasData ? d.net : null,
       }))
   }, [dailyData])
+
+  const hourlyChartData = useMemo<ChartBreakdownPoint[]>(() => {
+    const points: ChartBreakdownPoint[] = []
+    for (const day of [...dailyData].sort((a, b) => a.date.localeCompare(b.date))) {
+      for (const h of day.hourlyData) {
+        points.push({
+          label: `${format(parseISO(day.date), "MMM dd")} ${h.hour}`,
+          tooltipLabel: `${day.dateLabel} · ${h.hour}`,
+          hasData: true,
+          revenue: h.revenue,
+          cost: h.cost,
+          net: h.net,
+        })
+      }
+    }
+    return points
+  }, [dailyData])
+
+  const activeChartData = chartBreakdownGranularity === "day" ? chartData : hourlyChartData
+  const chartBreakdownByHour = chartBreakdownGranularity === "hour"
+  const canToggleBreakdownLegend = DAILY_BREAKDOWN_CHART_SERIES_COUNT > 1
+
+  const setMetricVisualType = useCallback((key: ChartSeriesKey, visualType: ChartBreakdownVisualType) => {
+    setMetricVisualTypes((prev) => ({ ...prev, [key]: visualType }))
+  }, [])
+
+  const toggleChartSeries = useCallback((seriesKey: ChartSeriesKey) => {
+    setHiddenChartSeries((prev) => {
+      const next = new Set(prev)
+      if (next.has(seriesKey)) next.delete(seriesKey)
+      else next.add(seriesKey)
+      return next
+    })
+  }, [])
+
+  const handleChartLegendClick = useCallback(
+    (entry: { dataKey?: string | number }) => {
+      const key = String(entry.dataKey ?? "")
+      if (key === "revenue" || key === "cost" || key === "net") {
+        toggleChartSeries(key)
+      }
+    },
+    [toggleChartSeries],
+  )
+
+  const isChartSeriesHidden = useCallback(
+    (seriesKey: ChartSeriesKey) => hiddenChartSeries.has(seriesKey),
+    [hiddenChartSeries],
+  )
 
   const summary = useMemo(() => {
     const buckets = data.length
@@ -864,104 +951,232 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
 
       <Card className="border-slate-200">
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-semibold text-slate-900">Daily Breakdown</CardTitle>
-              <CardDescription className="text-sm text-slate-500">Revenue and UA cost by day</CardDescription>
-            </div>
-          </div>
+          <CardTitle className="text-base font-semibold text-slate-900">Daily Breakdown</CardTitle>
+          <CardDescription className="text-sm text-slate-500">
+            Revenue, UA cost và Net
+            {chartBreakdownByHour ? " theo giờ" : " theo ngày"} — tùy chỉnh Line/Bar từng metric ở sidebar
+            {canToggleBreakdownLegend ? (
+              <>
+                {" · "}
+                Click legend to show or hide a series
+              </>
+            ) : null}
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
-          {chartData.length === 0 ? (
-            <div className="flex h-80 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
-              No days in range
-            </div>
-          ) : (
-            <div className="h-80 lg:h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    dy={10}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    tickFormatter={(v) => `$${v}`}
-                    dx={-5}
-                  />
-                  <RechartsTooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const row = payload[0]?.payload as {
-                          hasData?: boolean
-                          revenue: number | null
-                          cost: number | null
-                          net: number | null
-                        }
-                        const revenue = row?.revenue ?? null
-                        const cost = row?.cost ?? null
-                        const net = row?.net ?? null
-                        return (
-                          <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 min-w-[160px]">
-                            <p className="text-sm font-medium text-slate-900 mb-2">{label}</p>
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">Revenue:</span>
-                                <span className="font-medium text-green-600">{fmtUsd(revenue)}</span>
-                              </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">UA Cost:</span>
-                                <span className="font-medium text-red-500">{fmtUsd(cost)}</span>
-                              </div>
-                              <div className="border-t border-slate-100 pt-1 mt-1">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-slate-600">Net:</span>
-                                  <span
-                                    className={`font-semibold ${
-                                      net === null ? "text-slate-700" : net >= 0 ? "text-green-600" : "text-red-600"
-                                    }`}
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 min-w-0 h-80 lg:h-96">
+              {activeChartData.length === 0 ? (
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500 px-4 text-center">
+                  {chartBreakdownByHour ? "No hourly buckets in range" : "No days in range"}
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={activeChartData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: chartBreakdownByHour ? 48 : 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fontSize: chartBreakdownByHour ? 10 : 11,
+                        fill: "#64748b",
+                      }}
+                      dy={10}
+                      interval="preserveStartEnd"
+                      angle={chartBreakdownByHour ? -45 : 0}
+                      textAnchor={chartBreakdownByHour ? "end" : "middle"}
+                      height={chartBreakdownByHour ? 56 : 30}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      tickFormatter={(v) => `$${v}`}
+                      dx={-5}
+                    />
+                    <RechartsTooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const row = payload[0]?.payload as ChartBreakdownPoint
+                          const revenue = row?.revenue ?? null
+                          const cost = row?.cost ?? null
+                          const net = row?.net ?? null
+                          const tooltipTitle = row?.tooltipLabel ?? row?.label ?? ""
+                          return (
+                            <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 min-w-[160px]">
+                              <p className="text-sm font-medium text-slate-900 mb-2">{tooltipTitle}</p>
+                              <div className="space-y-1">
+                                {!(canToggleBreakdownLegend && isChartSeriesHidden("revenue")) ? (
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-600">Revenue:</span>
+                                    <span className="font-medium text-green-600">{fmtUsd(revenue)}</span>
+                                  </div>
+                                ) : null}
+                                {!(canToggleBreakdownLegend && isChartSeriesHidden("cost")) ? (
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-600">UA Cost:</span>
+                                    <span className="font-medium text-red-500">{fmtUsd(cost)}</span>
+                                  </div>
+                                ) : null}
+                                {!(canToggleBreakdownLegend && isChartSeriesHidden("net")) ? (
+                                  <div
+                                    className={
+                                      !(canToggleBreakdownLegend && isChartSeriesHidden("revenue")) ||
+                                      !(canToggleBreakdownLegend && isChartSeriesHidden("cost"))
+                                        ? "border-t border-slate-100 pt-1 mt-1"
+                                        : ""
+                                    }
                                   >
-                                    {fmtUsd(net, true)}
-                                  </span>
-                                </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-slate-600">Net:</span>
+                                      <span
+                                        className={`font-semibold ${
+                                          net === null ? "text-slate-700" : net >= 0 ? "text-green-600" : "text-red-600"
+                                        }`}
+                                      >
+                                        {fmtUsd(net, true)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : null}
                               </div>
                             </div>
-                          </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="top"
+                      height={36}
+                      onClick={canToggleBreakdownLegend ? handleChartLegendClick : undefined}
+                      wrapperStyle={canToggleBreakdownLegend ? { cursor: "pointer" } : undefined}
+                      formatter={(value, entry) => {
+                        const dataKey = String(entry?.dataKey ?? value)
+                        const hidden =
+                          canToggleBreakdownLegend &&
+                          (dataKey === "revenue" || dataKey === "cost" || dataKey === "net") &&
+                          isChartSeriesHidden(dataKey)
+                        return (
+                          <span
+                            className={`text-sm capitalize select-none ${
+                              hidden ? "text-slate-400 line-through" : "text-slate-600"
+                            }`}
+                          >
+                            {value}
+                          </span>
+                        )
+                      }}
+                    />
+                    <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                    {DAILY_BREAKDOWN_METRICS.map((metric) => {
+                      const hidden = canToggleBreakdownLegend && isChartSeriesHidden(metric.key)
+                      const isLine = metricVisualTypes[metric.key] === "line"
+                      if (isLine) {
+                        return (
+                          <Line
+                            key={`line-${metric.key}`}
+                            yAxisId="left"
+                            type="monotone"
+                            dataKey={metric.key}
+                            stroke={metric.color}
+                            strokeWidth={2}
+                            dot={{ r: 2, fill: metric.color }}
+                            activeDot={{ r: 4 }}
+                            name={metric.label}
+                            connectNulls={false}
+                            hide={hidden}
+                          />
                         )
                       }
-                      return null
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={36}
-                    formatter={(value) => <span className="text-sm text-slate-600 capitalize">{value}</span>}
-                  />
-                  <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="3 3" />
-                  <Bar yAxisId="left" dataKey="revenue" fill="#22c55e" radius={[3, 3, 0, 0]} name="Revenue" />
-                  <Bar yAxisId="left" dataKey="cost" fill="#ef4444" radius={[3, 3, 0, 0]} name="UA Cost" />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="net"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Net"
-                    connectNulls={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+                      return (
+                        <Bar
+                          key={`bar-${metric.key}`}
+                          yAxisId="left"
+                          dataKey={metric.key}
+                          fill={metric.color}
+                          radius={[3, 3, 0, 0]}
+                          name={metric.label}
+                          maxBarSize={chartBreakdownByHour ? 10 : 18}
+                          hide={hidden}
+                        />
+                      )
+                    })}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
-          )}
+
+            <aside className="lg:w-56 shrink-0 border-l border-slate-200 pl-4 flex flex-col justify-center gap-5 lg:min-h-80">
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-slate-700">Chart style</p>
+                  {DAILY_BREAKDOWN_METRICS.map((metric) => (
+                    <div key={metric.key} className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: metric.color }}
+                          aria-hidden
+                        />
+                        <span className="truncate text-xs text-slate-600">{metric.label}</span>
+                      </div>
+                      <ToggleGroup
+                        type="single"
+                        variant="outline"
+                        value={metricVisualTypes[metric.key]}
+                        onValueChange={(v) => {
+                          if (v === "line" || v === "bar") setMetricVisualType(metric.key, v)
+                        }}
+                        className="h-7 shrink-0 rounded-md bg-slate-100 p-0.5 shadow-none"
+                      >
+                        <ToggleGroupItem
+                          value="line"
+                          aria-label={`${metric.label} line chart`}
+                          className="h-6 min-w-[2.75rem] rounded-[4px] border-0 px-2 text-[11px] font-medium shadow-none data-[state=off]:bg-transparent data-[state=off]:text-slate-500 data-[state=on]:bg-white data-[state=on]:font-semibold data-[state=on]:text-slate-900 data-[state=on]:shadow-sm"
+                        >
+                          Line
+                        </ToggleGroupItem>
+                        <ToggleGroupItem
+                          value="bar"
+                          aria-label={`${metric.label} bar chart`}
+                          className="h-6 min-w-[2.75rem] rounded-[4px] border-0 px-2 text-[11px] font-medium shadow-none data-[state=off]:bg-transparent data-[state=off]:text-slate-500 data-[state=on]:bg-white data-[state=on]:font-semibold data-[state=on]:text-slate-900 data-[state=on]:shadow-sm"
+                        >
+                          Bar
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-xs font-medium text-slate-700 mb-2.5">Breakdown</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-xs shrink-0 ${chartBreakdownGranularity === "day" ? "font-medium text-slate-900" : "text-slate-500"}`}
+                    >
+                      By day
+                    </span>
+                    <Switch
+                      checked={chartBreakdownGranularity === "hour"}
+                      onCheckedChange={(checked) =>
+                        setChartBreakdownGranularity(checked ? "hour" : "day")
+                      }
+                      aria-label="Toggle breakdown by hour"
+                    />
+                    <span
+                      className={`text-xs shrink-0 ${chartBreakdownGranularity === "hour" ? "font-medium text-slate-900" : "text-slate-500"}`}
+                    >
+                      By hour
+                    </span>
+                  </div>
+                </div>
+            </aside>
+          </div>
         </CardContent>
       </Card>
 
