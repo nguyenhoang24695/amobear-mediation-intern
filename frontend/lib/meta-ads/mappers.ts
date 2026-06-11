@@ -563,6 +563,8 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
     },
     adSet: {
       name: form.adSetName.trim(),
+      deferredDeepLinkUrl: form.deferredDeepLinkUrl?.trim() || null,
+      customStoreListingId: form.customStoreListingId?.trim() || null,
       dailyBudget: budgets.adSetDailyBudget,
       lifetimeBudget: budgets.adSetLifetimeBudget,
       billingEvent: form.billingEvent.trim(),
@@ -594,6 +596,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       ageMin: Number.isFinite(form.ageMin) ? form.ageMin : null,
       ageMax: Number.isFinite(form.ageMax) ? form.ageMax : null,
       genders: parseGender(form.gender),
+      locales: Array.from(new Set((form.localeKeys ?? []).filter((key) => Number.isFinite(key) && key > 0))),
       devicePlatforms: [],
       userOs: [],
       publisherPlatforms: form.placementMode === "MANUAL" ? form.publisherPlatforms : [],
@@ -742,6 +745,8 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
 
   return {
     adAccountId: detail.metaAdAccountId.toString(),
+    deferredDeepLinkUrl: payload.adSet.deferredDeepLinkUrl ?? "",
+    customStoreListingId: payload.adSet.customStoreListingId ?? "",
     appRowId: detail.appRowId?.toString() ?? "",
     paidMediaAppBindingId: detail.paidMediaAppBindingId?.toString() ?? detail.payload.paidMediaAppBindingId?.toString() ?? "",
     objective: payload.campaign.objective,
@@ -769,6 +774,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
       countryName: city.countryName ?? null,
       type: city.type ?? null,
     })),
+    localeKeys: payload.adSet.locales ?? [],
     ageMin: payload.adSet.ageMin ?? 18,
     ageMax: payload.adSet.ageMax ?? 65,
     gender,
@@ -857,4 +863,3 @@ export function normalizeDegreesOfFreedomSpec(configJson: string | null | undefi
     return null
   }
 }
-

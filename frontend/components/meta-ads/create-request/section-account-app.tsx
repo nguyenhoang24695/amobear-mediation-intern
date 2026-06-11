@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -162,7 +163,7 @@ export function AccountAppSection({
   objectives,
   integrationName,
 }: Props) {
-  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride || ""
+  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || ""
   const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
   const hasMappingIssue = !selectedAppMapping?.metaApplicationId || !mappingUrl
   const isTokenBlocking = tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
@@ -281,7 +282,7 @@ export function AccountAppSection({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `Store ${mapping.id}`}</span>
-                      {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride || mapping.deepLinkUrlOverride)) ? (
+                      {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride)) ? (
                         <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Missing Mapping</Badge>
                       ) : null}
                     </div>
@@ -351,6 +352,59 @@ export function AccountAppSection({
             {selectedAppPlatform ? (
               <p className="text-[11px] text-slate-600">
                 {selectedAppPlatform === "ANDROID" ? "Android" : "iOS"} targeting will be derived automatically for app promotion ad sets.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {selectedAppMapping ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="deferredDeepLinkUrl" className="text-xs font-medium text-slate-700">
+                Deferred deep link
+              </Label>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-slate-200 text-slate-500 font-normal">
+                Optional
+              </Badge>
+            </div>
+            <Input
+              id="deferredDeepLinkUrl"
+              type="text"
+              value={form.deferredDeepLinkUrl ?? ""}
+              onChange={(e) => onChange({ deferredDeepLinkUrl: e.target.value })}
+              placeholder="Enter the deferred deep link URL"
+            />
+            <p className="text-[11px] text-slate-500 leading-normal">
+              Use Android App Link, custom URL scheme, or Facebook App Link. Requires app deep linking setup.
+            </p>
+          </div>
+        ) : null}
+
+        {selectedAppMapping ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="customStoreListingId" className="text-xs font-medium text-slate-700">
+                Custom store listing
+              </Label>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-slate-200 text-slate-500 font-normal">
+                Optional
+              </Badge>
+            </div>
+            <Input
+              id="customStoreListingId"
+              type="text"
+              value={form.customStoreListingId ?? ""}
+              onChange={(e) => onChange({ customStoreListingId: e.target.value })}
+              placeholder={selectedAppPlatform === "ANDROID" ? "Enter custom store listing ID" : "Custom store listing is only supported for Google Play apps."}
+              disabled={selectedAppPlatform !== "ANDROID"}
+            />
+            {selectedAppPlatform === "ANDROID" ? (
+              <p className="text-[11px] text-slate-500 leading-normal">
+                For Google Play custom store listings. The ID is appended to the Play Store URL as <code className="text-slate-800 bg-slate-100 px-0.5 rounded font-mono">listing=...</code>.
+              </p>
+            ) : selectedAppPlatform === "IOS" ? (
+              <p className="text-[11px] text-amber-600 leading-normal">
+                Custom store listing is only supported for Google Play apps (Android).
               </p>
             ) : null}
           </div>

@@ -747,6 +747,8 @@ export interface MetaAdSetDraftDto {
   publisherPlatforms: string[]
   facebookPositions: string[]
   instagramPositions: string[]
+  deferredDeepLinkUrl?: string | null
+  customStoreListingId?: string | null
 }
 
 export interface MetaCreativeMediaSourceDto {
@@ -1303,6 +1305,8 @@ export interface MetaRequestFormState {
   advantageCreativeTextOptimizations: boolean
   advantageCreativeImageAnimation: boolean
   advantageCreativeInlineComment: boolean
+  deferredDeepLinkUrl?: string | null
+  customStoreListingId?: string | null
   // Additional ad variants (variant 2, 3, ...). Variant 1 is represented by the flat creative/ad fields above.
   additionalVariants: AdVariantFormState[]
 }

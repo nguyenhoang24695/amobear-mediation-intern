@@ -28,7 +28,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const allowedGoals = getAllowedPerformanceGoalTypes(form.campaignObjective)
   const resolvedOptimizationGoal = resolveOptimizationGoal(form.performanceGoalType)
   const isGoalCompatible = allowedGoals.length === 0 || allowedGoals.includes(form.performanceGoalType)
-  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || selectedAppMapping?.deepLinkUrlOverride
+  const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
   const roasGoalRequired = bidStrategyRequiresRoasGoal(form.bidStrategy)
   const allowedBillingEvents = getAllowedBillingEvents(resolvedOptimizationGoal)
@@ -120,6 +120,12 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
             <SummaryLine label="Performance Goal" value={getPerformanceGoalSummary(form)} />
             <SummaryLine label="Bid Strategy" value={form.bidStrategy || "-"} />
             <SummaryLine label="ROAS Goal" value={roasGoalRequired && form.roasAverageFloor ? `${form.roasAverageFloor}x` : "-"} />
+            {form.deferredDeepLinkUrl ? (
+              <SummaryLine label="Deferred deep link" value="Set" />
+            ) : null}
+            {form.customStoreListingId ? (
+              <SummaryLine label="Custom store listing" value={form.customStoreListingId} />
+            ) : null}
           </div>
           <div className="pt-2 border-t border-slate-200">
             <p className="font-semibold text-slate-900 mb-1">Creative</p>
@@ -178,7 +184,11 @@ function getGeoSummary(form: RequestFormState): string {
 
   if (form.excludedCountries && form.excludedCountries.length > 0) {
     const exclStr = `Excl. ${form.excludedCountries.slice(0, 2).join(", ")}${form.excludedCountries.length > 2 ? "..." : ""}`
-    return baseSummary === "-" ? `Excluding ${form.excludedCountries.join(", ")}` : `${baseSummary} (${exclStr})`
+    baseSummary = baseSummary === "-" ? `Excluding ${form.excludedCountries.join(", ")}` : `${baseSummary} (${exclStr})`
+  }
+
+  if (form.localeKeys.length > 0) {
+    return `${baseSummary}; Languages: ${form.localeKeys.length} selected`
   }
 
   return baseSummary
@@ -303,5 +313,4 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-
 

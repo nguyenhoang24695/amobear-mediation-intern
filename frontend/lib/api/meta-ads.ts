@@ -7,6 +7,7 @@ import type {
   CreateMetaIntegrationRequestDto,
   ExecuteMetaCampaignRequestDto,
   MetaAdAccountDto,
+  MetaAdLocaleReferenceDto,
   MetaAdSetDraftValidationDto,
   MetaAppMappingCandidateDto,
   MetaAppMappingCandidateQueryDto,
@@ -245,6 +246,10 @@ export const metaReferenceApi = {
 
   searchGeoCities: async (metaAdAccountId: number, q: string) => {
     return apiClient.get<MetaGeoCityReferenceDto[]>(`${REFERENCE_PREFIX}/geo/cities`, { metaAdAccountId, q })
+  },
+
+  searchLanguages: async (metaAdAccountId: number, q: string) => {
+    return apiClient.get<MetaAdLocaleReferenceDto[]>(`${REFERENCE_PREFIX}/languages`, { metaAdAccountId, q })
   },
 
   getAppPerformanceGoals: async (appRowId: number, metaAdAccountId?: number | null, paidMediaAppBindingId?: number | null) => {

@@ -133,6 +133,9 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
   next.countryGroupIds = Array.isArray(next.countryGroupIds)
     ? next.countryGroupIds.filter((id) => Number.isFinite(id) && id > 0)
     : []
+  next.localeKeys = Array.isArray(next.localeKeys)
+    ? Array.from(new Set(next.localeKeys.filter((id) => Number.isFinite(id) && id > 0)))
+    : []
 
   if (!Array.isArray(next.flexiblePrimaryTexts) || next.flexiblePrimaryTexts.length === 0) next.flexiblePrimaryTexts = [""]
   if (!Array.isArray(next.flexibleHeadlines) || next.flexibleHeadlines.length === 0) next.flexibleHeadlines = [""]
@@ -219,6 +222,7 @@ function createDefaultFormState(): RequestFormState {
     regionKeys: [],
     countryGroupIds: [],
     cityTargets: [],
+    localeKeys: [],
     ageMin: 18,
     ageMax: 65,
     gender: "ALL",
@@ -1048,7 +1052,7 @@ export function CreateRequestContent({ requestId }: Props) {
     try {
       setSaving(true)
       const saved = await persistDraft()
-      if (isEditMode && saved.status === "pending_approval") {
+      if (isEditMode && saved.status !== "draft") {
         router.push(`/meta-ads/requests/${saved.id}`)
       }
     } catch (apiError) {

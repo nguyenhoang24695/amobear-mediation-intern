@@ -831,6 +831,7 @@ export function RequestDetailContent({ requestId }: Props) {
   const creativeType = getCreativeType(primaryCreative)
   const creativeCommon = getCreativeCommon(primaryCreative)
   const createdObjects = sortCreatedObjects(detail.createdObjects)
+  const campaignLocalId = detail.createdObjects.find((o) => o.entityType === "campaign")?.localId
   const hasValidationErrors = Object.keys(groupedValidationErrors).length > 0
   const preparedAssetIds = new Set((assetPreparation?.assets ?? []).filter((asset) => asset.status === "ready").map((asset) => asset.requestAssetId))
   const readyAssetCount = uploadedAssetSlots.filter((slot) => preparedAssetIds.has(slot.requestAssetId)).length
@@ -884,6 +885,17 @@ export function RequestDetailContent({ requestId }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {campaignLocalId ? (
+              <Button
+                variant="outline"
+                className="text-slate-700 border-slate-300 hover:bg-slate-50"
+                onClick={() => router.push(`/meta-ads/campaigns/${campaignLocalId}`)}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open Campaign
+              </Button>
+            ) : null}
+
             {canCreate && detail.status !== "executing" ? (
               <Button variant="outline" onClick={() => router.push(`/meta-ads/requests/${detail.id}/edit`)}>
                 <Pencil className="w-4 h-4 mr-2" />
@@ -1061,11 +1073,23 @@ export function RequestDetailContent({ requestId }: Props) {
                 {detail.payload.adSet.excludedCountries && detail.payload.adSet.excludedCountries.length > 0 && (
                   <DetailRow label="Excluded Countries" value={detail.payload.adSet.excludedCountries.join(", ")} />
                 )}
+                {detail.payload.adSet.locales && detail.payload.adSet.locales.length > 0 && (
+                  <DetailRow
+                    label="Languages"
+                    value={`${detail.payload.adSet.locales.length} language${detail.payload.adSet.locales.length === 1 ? "" : "s"}`}
+                  />
+                )}
                 <DetailRow label="Age Range" value={`${detail.payload.adSet.ageMin ?? "-"}-${detail.payload.adSet.ageMax ?? "-"}`} />
                 <DetailRow label="Gender" value={getGenderLabel(detail)} />
                 <DetailRow label="Placement" value={getPlacementLabel(detail)} />
                 <DetailRow label="Performance Goal" value={getRequestPerformanceGoalSummary(detail)} mono />
                 <DetailRow label="Budget" value={getBudgetSummary(detail)} />
+                {detail.payload.adSet.deferredDeepLinkUrl && (
+                  <DetailRow label="Deferred Deep Link" value={detail.payload.adSet.deferredDeepLinkUrl} mono />
+                )}
+                {detail.payload.adSet.customStoreListingId && (
+                  <DetailRow label="Custom Store Listing" value={detail.payload.adSet.customStoreListingId} mono />
+                )}
                 <DetailRow label="Creative Type" value={creativeType.replaceAll("_", " ")} mono />
                 <DetailRow label="Creative Name" value={creativeCommon.name || "-"} />
                 <DetailRow label="Facebook Page ID" value={creativeCommon.pageId || "-"} mono />
@@ -1451,7 +1475,13 @@ export function RequestDetailContent({ requestId }: Props) {
                 <p className="text-[11px] text-slate-400">No Meta objects created yet.</p>
               ) : (
                 createdObjects.map((object) => (
-                  <ObjectRow key={`${object.entityType}-${object.localId}`} label={object.entityType} metaId={object.externalId} localId={object.localId.toString()} />
+                  <ObjectRow
+                    key={`${object.entityType}-${object.localId}`}
+                    label={object.entityType}
+                    metaId={object.externalId}
+                    localId={object.localId.toString()}
+                    metaAdAccountId={detail.metaAdAccountId}
+                  />
                 ))
               )}
               {createdObjects.length > 0 ? (
@@ -1775,19 +1805,57 @@ function TimelineEntry({ label, value, done }: { label: string; value: string; d
   )
 }
 
-function ObjectRow({ label, metaId, localId }: { label: string; metaId: string; localId: string }) {
+function ObjectRow({
+  label,
+  metaId,
+  localId,
+  metaAdAccountId,
+}: {
+  label: string
+  metaId: string
+  localId: string
+  metaAdAccountId?: number
+}) {
+  const router = useRouter()
+  let url: string | null = null
+  let isInternal = false
+
+  if (label === "campaign" && localId) {
+    url = `/meta-ads/campaigns/${localId}`
+    isInternal = true
+  } else if (metaAdAccountId && metaId) {
+    const actId = metaAdAccountId.toString().replace(/^act_/i, "")
+    if (label === "adset") {
+      url = `https://adsmanager.facebook.com/adsmanager/manage/adsets?act=${actId}&selected_adset_ids=${metaId}`
+    } else if (label === "ad") {
+      url = `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${actId}&selected_ad_ids=${metaId}`
+    }
+  }
+
   return (
-    <div className="border border-slate-200 rounded-md px-3 py-2">
+    <div
+      className={`border border-slate-200 rounded-md px-3 py-2 ${url ? "hover:bg-slate-50 transition-colors cursor-pointer" : ""}`}
+      onClick={() => {
+        if (url) {
+          if (isInternal) {
+            router.push(url)
+          } else {
+            window.open(url, "_blank", "noopener,noreferrer")
+          }
+        }
+      }}
+    >
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-slate-700 capitalize">{label}</p>
-        <ExternalLink className="w-3 h-3 text-slate-400" />
+        {url ? (
+          <ExternalLink className={`w-3 h-3 ${isInternal ? "text-blue-500" : "text-slate-400"}`} />
+        ) : null}
       </div>
       <p className="text-[11px] font-mono text-blue-700 mt-0.5">Meta ID: {metaId}</p>
       <p className="text-[11px] font-mono text-slate-400">Local ID: {localId}</p>
     </div>
   )
 }
-
 
 
 
