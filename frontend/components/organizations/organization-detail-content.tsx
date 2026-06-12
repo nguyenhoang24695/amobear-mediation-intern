@@ -238,7 +238,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
           {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
           {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
-          {canViewProfitPlan && <TabsTrigger value="profit-plan">Profit Plan</TabsTrigger>}
+          {canViewProfitPlan && <TabsTrigger value="profit-plan">Revenue Plan</TabsTrigger>}
           {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
 

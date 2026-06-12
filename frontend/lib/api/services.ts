@@ -1976,7 +1976,11 @@ export interface TeamMonthlyProfitPlan {
     appLabel: string
     appPlatform?: string | null
     appIconUri?: string | null
+    plannedRevenue: number
+    plannedCost: number
     plannedProfit: number
+    actualRevenue: number
+    actualCost: number
     actualProfit: number
     completionPercent?: number | null
     createdAt: string

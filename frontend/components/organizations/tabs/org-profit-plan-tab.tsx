@@ -1,9 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { addMonths, format, parse } from "date-fns"
-import { enUS } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Download, Loader2, Target, Upload } from "lucide-react"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ChevronLeft, ChevronRight, Download, ImageIcon, Loader2, Target, Upload } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,9 +24,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Pagination as DataPagination } from "@/components/shared/pagination"
+import {
+  createDefaultMonthRange,
+  enumerateMonthKeys,
+  formatMonthRangeLabel,
+  formatMonthTableHeader,
+  RevenuePlanMonthRangePicker,
+  shiftMonthRange,
+  type MonthRange,
+} from "@/components/organizations/revenue-plan-month-range-picker"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -36,6 +42,20 @@ import {
   type OrgTeam,
   type TeamMonthlyProfitPlan,
 } from "@/lib/api/services"
+
+const METRICS_PER_MONTH = 6
+const REVENUE_COLUMNS_PER_MONTH = 3
+const PAGE_SIZE_OPTIONS = [30, 100, "all"] as const
+type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number]
+
+interface AppPlanRow {
+  appStoreId: string
+  appLabel: string
+  appPlatform?: string | null
+  appIconUri?: string | null
+  admobAppId?: string | null
+  months: Record<string, TeamMonthlyProfitPlan>
+}
 
 interface OrgProfitPlanTabProps {
   orgId: string
@@ -47,24 +67,26 @@ function formatCurrency(value: number | null | undefined) {
   return `$${safe.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+function getNetProfitMargin(actualProfit: number, actualRevenue: number): number | null {
+  if (actualRevenue <= 0) return null
+  return (actualProfit / actualRevenue) * 100
+}
+
+function formatNetProfitMarginDisplay(margin: number | null): string {
+  if (margin == null) return "—"
+  return `${Math.round(margin)}%`
+}
+
+function formatNetProfitMarginTooltip(margin: number | null): string {
+  if (margin == null) return "No revenue"
+  return `${margin.toFixed(2)}%`
+}
+
 function getStatus(completion?: number | null) {
   if (completion == null) return { label: "No target", className: "bg-slate-100 text-slate-600" }
   if (completion >= 100) return { label: "Achieved", className: "bg-green-100 text-green-700" }
   if (completion >= 80) return { label: "On track", className: "bg-blue-100 text-blue-700" }
   return { label: "Behind", className: "bg-amber-100 text-amber-700" }
-}
-
-function parseMonthValue(month: string): Date {
-  const parsed = parse(month, "yyyy-MM", new Date())
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed
-}
-
-function shiftMonth(month: string, delta: number): string {
-  return format(addMonths(parseMonthValue(month), delta), "yyyy-MM")
-}
-
-function formatMonthLabel(month: string): string {
-  return format(parseMonthValue(month), "MMMM yyyy", { locale: enUS })
 }
 
 function escapeCsvValue(value: string | number | null | undefined) {
@@ -84,11 +106,82 @@ function sanitizeFileNamePart(value: string) {
     .replace(/^-|-$/g, "")
 }
 
+function renderPlatformIcon(platformValue?: string | null, className?: string) {
+  const isAndroid = (platformValue ?? "").toUpperCase() === "ANDROID"
+  if (isAndroid) {
+    return (
+      <svg className={cn("h-3 w-3", className)} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className={cn("h-3 w-3", className)} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
+    </svg>
+  )
+}
+
+function renderPlatformBadge(platformValue?: string | null) {
+  const platform = platformValue?.trim() || "Unknown"
+  const isAndroid = platform.toUpperCase() === "ANDROID"
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-5 shrink-0 gap-1 px-1.5 text-[10px] font-medium",
+        isAndroid
+          ? "border-green-200 bg-green-50 text-green-700"
+          : "border-slate-200 bg-slate-50 text-slate-700",
+      )}
+      title={platform}
+    >
+      {renderPlatformIcon(platform)}
+    </Badge>
+  )
+}
+
+function RevenuePlanAppCell({ row }: { row: AppPlanRow }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Avatar className="h-7 w-7 shrink-0 rounded-md">
+        {row.appIconUri ? (
+          <AvatarImage src={row.appIconUri} alt={row.appLabel} className="rounded-md object-cover" />
+        ) : null}
+        <AvatarFallback className="rounded-md bg-slate-100">
+          <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-xs font-medium text-slate-900" title={row.appLabel}>
+          {row.appLabel}
+        </div>
+        <div
+          className="truncate font-mono text-[10px] text-slate-500"
+          title={row.appStoreId || row.admobAppId || undefined}
+        >
+          {row.appStoreId || row.admobAppId || "—"}
+        </div>
+      </div>
+      {renderPlatformBadge(row.appPlatform)}
+    </div>
+  )
+}
+
+const APP_COLUMN_CLASS =
+  "sticky left-0 z-10 min-w-[148px] max-w-[148px] border-r bg-white px-2 py-1.5 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]"
+
+const APP_HEADER_CLASS =
+  "sticky left-0 top-0 z-30 min-w-[148px] max-w-[148px] border-r border-slate-200 bg-slate-50/95 px-2 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
+
 export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabProps) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [month, setMonth] = useState(format(new Date(), "yyyy-MM"))
+  const [monthRange, setMonthRange] = useState<MonthRange>(() => createDefaultMonthRange())
+  const { startMonth, endMonth } = monthRange
   const [teamFilter, setTeamFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [teams, setTeams] = useState<OrgTeam[]>([])
@@ -96,7 +189,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [loading, setLoading] = useState(true)
 
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSizeOption, setPageSizeOption] = useState<PageSizeOption>(100)
 
   const [importOpen, setImportOpen] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -108,7 +201,10 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const planParams = teamFilter === "all" ? { from: month, to: month } : { from: month, to: month, teamId: teamFilter }
+      const planParams =
+        teamFilter === "all"
+          ? { from: startMonth, to: endMonth }
+          : { from: startMonth, to: endMonth, teamId: teamFilter }
 
       const [teamList, planList] = await Promise.all([
         organizationsApi.getTeams(orgId),
@@ -123,7 +219,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     } finally {
       setLoading(false)
     }
-  }, [orgId, month, teamFilter])
+  }, [orgId, startMonth, endMonth, teamFilter])
 
   useEffect(() => {
     void loadData()
@@ -140,23 +236,51 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     )
   }, [plans, searchQuery])
 
-  const totals = useMemo(() => {
-    const planned = filteredPlans.reduce((sum, plan) => sum + plan.plannedProfit, 0)
-    const actual = filteredPlans.reduce((sum, plan) => sum + plan.actualProfit, 0)
-    const completion = planned > 0 ? Math.round((actual / planned) * 10000) / 100 : null
-    return { planned, actual, completion }
+  const monthKeys = useMemo(
+    () => enumerateMonthKeys(startMonth, endMonth),
+    [startMonth, endMonth],
+  )
+
+  const appRows = useMemo(() => {
+    const map = new Map<string, AppPlanRow>()
+    for (const plan of filteredPlans) {
+      const existing = map.get(plan.appStoreId)
+      if (existing) {
+        existing.months[plan.month] = plan
+        if (!existing.appIconUri && plan.appIconUri) existing.appIconUri = plan.appIconUri
+        continue
+      }
+      map.set(plan.appStoreId, {
+        appStoreId: plan.appStoreId,
+        appLabel: plan.appLabel,
+        appPlatform: plan.appPlatform,
+        appIconUri: plan.appIconUri,
+        admobAppId: plan.admobAppId,
+        months: { [plan.month]: plan },
+      })
+    }
+    return Array.from(map.values()).sort((a, b) => a.appLabel.localeCompare(b.appLabel))
   }, [filteredPlans])
 
-  const summaryStatus = getStatus(totals.completion)
-  const totalPages = Math.max(1, Math.ceil(filteredPlans.length / pageSize))
-  const paginatedPlans = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return filteredPlans.slice(startIndex, startIndex + pageSize)
-  }, [filteredPlans, currentPage, pageSize])
+  const overallCompletion = useMemo(() => {
+    const planned = filteredPlans.reduce((sum, plan) => sum + plan.plannedRevenue, 0)
+    const actual = filteredPlans.reduce((sum, plan) => sum + plan.actualRevenue, 0)
+    return planned > 0 ? Math.round((actual / planned) * 10000) / 100 : null
+  }, [filteredPlans])
+
+  const summaryStatus = getStatus(overallCompletion)
+  const effectivePageSize = pageSizeOption === "all" ? Math.max(appRows.length, 1) : pageSizeOption
+  const totalPages = Math.max(1, Math.ceil(appRows.length / effectivePageSize))
+  const pageStart = appRows.length === 0 ? 0 : (currentPage - 1) * effectivePageSize + 1
+  const pageEnd = Math.min(currentPage * effectivePageSize, appRows.length)
+  const paginatedAppRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * effectivePageSize
+    return appRows.slice(startIndex, startIndex + effectivePageSize)
+  }, [appRows, currentPage, effectivePageSize])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [month, teamFilter, pageSize, searchQuery])
+  }, [startMonth, endMonth, teamFilter, pageSizeOption, searchQuery])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -199,11 +323,11 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const handleExportTemplate = async () => {
     setExportingTemplate(true)
     try {
-      const { blob } = await organizationsApi.exportProfitPlanTemplate(orgId, month)
+      const { blob } = await organizationsApi.exportProfitPlanTemplate(orgId, endMonth)
       const objectUrl = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = objectUrl
-      link.download = `profit-plan-template-${month}.xlsx`
+      link.download = `revenue-plan-template-${endMonth}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -211,7 +335,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
       toast({
         title: "Template exported",
-        description: `Downloaded profit plan template for ${month}.`,
+        description: `Downloaded revenue plan template for ${formatMonthRangeLabel({ startMonth: endMonth, endMonth })}.`,
       })
     } catch (err) {
       console.error("Failed to export profit plan template:", err)
@@ -237,20 +361,29 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           "App Store ID",
           "Platform",
           "AdMob App ID",
-          "Planned Profit",
-          "Actual Profit",
+          "Planned Revenue",
+          "Actual Revenue",
           "Completion Percent",
+          "Actual Cost",
+          "Actual Profit",
+          "Net Profit Margin Percent",
         ],
-        ...filteredPlans.map((plan) => [
-          plan.month,
-          plan.appLabel,
-          plan.appStoreId,
-          plan.appPlatform ?? "",
-          plan.admobAppId ?? "",
-          plan.plannedProfit,
-          plan.actualProfit,
-          plan.completionPercent == null ? "" : plan.completionPercent.toFixed(2),
-        ]),
+        ...filteredPlans.map((plan) => {
+          const margin = getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
+          return [
+            plan.month,
+            plan.appLabel,
+            plan.appStoreId,
+            plan.appPlatform ?? "",
+            plan.admobAppId ?? "",
+            plan.plannedRevenue,
+            plan.actualRevenue,
+            plan.completionPercent == null ? "" : plan.completionPercent.toFixed(2),
+            plan.actualCost,
+            plan.actualProfit,
+            margin == null ? "" : margin.toFixed(2),
+          ]
+        }),
       ]
 
       const csv = rows
@@ -262,9 +395,12 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           ? "all-teams"
           : teams.find((team) => team.id === teamFilter)?.name || "team"
 
+      const monthLabel =
+        startMonth === endMonth ? startMonth : `${startMonth}_to_${endMonth}`
+
       const fileName = [
-        "profit-plan",
-        month,
+        "revenue-plan",
+        monthLabel,
         sanitizeFileNamePart(teamLabel),
         searchQuery.trim() ? "filtered" : null,
       ]
@@ -282,8 +418,8 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       URL.revokeObjectURL(objectUrl)
 
       toast({
-        title: "Profit plans exported",
-        description: `Downloaded ${filteredPlans.length} row(s) for ${formatMonthLabel(month)}.`,
+        title: "Revenue plans exported",
+        description: `Downloaded ${filteredPlans.length} row(s) for ${formatMonthRangeLabel(monthRange)}.`,
       })
     } catch (err) {
       console.error("Failed to export profit plans:", err)
@@ -305,10 +441,10 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Target className="h-5 w-5 shrink-0 text-blue-600" />
-                Profit Plan
+                Revenue Plan
               </CardTitle>
               <CardDescription className="mt-1.5">
-                Monthly profit targets by app across teams in this organization.
+                Monthly revenue targets by app across teams in this organization.
               </CardDescription>
             </div>
 
@@ -319,26 +455,19 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   variant="outline"
                   size="icon"
                   className="h-9 w-9 shrink-0 bg-white"
-                  onClick={() => setMonth((current) => shiftMonth(current, -1))}
+                  onClick={() => setMonthRange((current) => shiftMonthRange(current, -1))}
                   aria-label="Previous month"
                   title="Previous month"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Input
-                  id="org-profit-month"
-                  type="month"
-                  value={month}
-                  onChange={(event) => setMonth(event.target.value)}
-                  className="h-9 w-[148px] bg-white"
-                  aria-label="Select month"
-                />
+                <RevenuePlanMonthRangePicker value={monthRange} onChange={setMonthRange} />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
                   className="h-9 w-9 shrink-0 bg-white"
-                  onClick={() => setMonth((current) => shiftMonth(current, 1))}
+                  onClick={() => setMonthRange((current) => shiftMonthRange(current, 1))}
                   aria-label="Next month"
                   title="Next month"
                 >
@@ -398,7 +527,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  Export the current month's visible profit plan data.
+                  Export the visible revenue plan data for the selected month range.
                 </TooltipContent>
               </Tooltip>
               {canManage ? (
@@ -417,7 +546,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      Download an Excel template for this month.
+                      Download an Excel template for the end month in the selected range.
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>
@@ -428,7 +557,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      Upload an Excel file to update this month's plans.
+                      Upload an Excel file to update revenue plans in the selected range.
                     </TooltipContent>
                   </Tooltip>
                 </>
@@ -436,94 +565,210 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Total Planned</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(totals.planned)}</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Total Actual</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(totals.actual)}</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium text-slate-500">Overall Completion</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {totals.completion == null ? "—" : `${totals.completion.toFixed(2)}%`}
-              </p>
-              <Progress value={Math.max(0, Math.min(100, totals.completion ?? 0))} className="mt-3" />
-            </div>
-          </div>
-
           {loading ? (
             <div className="flex items-center justify-center py-10 text-sm text-slate-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading profit plans...
+              Loading revenue plans...
             </div>
           ) : (
             <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead>Month</TableHead>
-                    <TableHead>App</TableHead>
-                    <TableHead className="text-right">Planned</TableHead>
-                    <TableHead className="text-right">Actual</TableHead>
-                    <TableHead className="text-right">Completion</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPlans.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">
-                        {searchQuery.trim()
-                          ? "No profit plans match your search."
-                          : "No profit plans found for the selected filters."}
-                      </TableCell>
+              <div className="max-h-[min(70vh,720px)] overflow-auto">
+                <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                      <TableHead rowSpan={3} className={APP_HEADER_CLASS}>
+                        App
+                      </TableHead>
+                      {monthKeys.map((month) => (
+                        <TableHead
+                          key={month}
+                          colSpan={METRICS_PER_MONTH}
+                          className="sticky top-0 z-20 min-w-[480px] border-b border-r border-slate-200 bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
+                        >
+                          {formatMonthTableHeader(month)}
+                        </TableHead>
+                      ))}
                     </TableRow>
-                  ) : (
-                    paginatedPlans.map((plan) => {
-                      const status = getStatus(plan.completionPercent)
-                      return (
-                        <TableRow key={plan.id}>
-                          <TableCell className="whitespace-nowrap text-sm text-slate-700">{plan.month}</TableCell>
-                          <TableCell>
-                            <div className="min-w-0">
-                              <div className="font-medium text-slate-900 truncate">{plan.appLabel}</div>
-                              <div className="text-xs text-slate-500 truncate">
-                                {plan.appPlatform ?? "Unknown"} · {plan.appStoreId || plan.admobAppId || "—"}
-                              </div>
-                            </div>
+                    <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                      {monthKeys.map((month) => (
+                        <Fragment key={`${month}-groups`}>
+                          <TableHead
+                            colSpan={REVENUE_COLUMNS_PER_MONTH}
+                            className="sticky top-10 z-20 border-b border-r border-l border-slate-200 bg-blue-50/80 text-center text-xs font-semibold text-blue-700"
+                          >
+                            Revenue
+                          </TableHead>
+                          <TableHead
+                            colSpan={REVENUE_COLUMNS_PER_MONTH}
+                            className="sticky top-10 z-20 border-b border-r border-slate-200 bg-emerald-50/80 text-center text-xs font-semibold text-emerald-700"
+                          >
+                            Performance
+                          </TableHead>
+                        </Fragment>
+                      ))}
+                    </TableRow>
+                    <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                      {monthKeys.map((month) => (
+                        <Fragment key={`${month}-metrics`}>
+                          <TableHead className="sticky top-[72px] z-20 min-w-[80px] border-l border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
+                            Planned
+                          </TableHead>
+                          <TableHead className="sticky top-[72px] z-20 min-w-[80px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
+                            Actual
+                          </TableHead>
+                          <TableHead className="sticky top-[72px] z-20 min-w-[88px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
+                            Completion
+                          </TableHead>
+                          <TableHead className="sticky top-[72px] z-20 min-w-[88px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
+                            Actual Cost
+                          </TableHead>
+                          <TableHead className="sticky top-[72px] z-20 min-w-[88px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
+                            Actual Profit
+                          </TableHead>
+                          <TableHead className="sticky top-[72px] z-20 min-w-[104px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
+                            Net Profit Margin
+                          </TableHead>
+                        </Fragment>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {appRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={1 + monthKeys.length * METRICS_PER_MONTH}
+                          className="py-10 text-center text-sm text-slate-500"
+                        >
+                          {searchQuery.trim()
+                            ? "No revenue plans match your search."
+                            : "No revenue plans found for the selected filters."}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedAppRows.map((row) => (
+                        <TableRow key={row.appStoreId} className="hover:bg-slate-50/60">
+                          <TableCell className={APP_COLUMN_CLASS}>
+                            <RevenuePlanAppCell row={row} />
                           </TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(plan.plannedProfit)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(plan.actualProfit)}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge className={cn("w-fit", status.className)} variant="secondary">
-                              {plan.completionPercent == null ? "—" : `${plan.completionPercent.toFixed(2)}%`}
-                            </Badge>
-                          </TableCell>
+                          {monthKeys.map((month) => {
+                            const plan = row.months[month]
+                            const status = getStatus(plan?.completionPercent)
+                            const netProfitMargin =
+                              plan == null
+                                ? null
+                                : getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
+                            return (
+                              <Fragment key={`${row.appStoreId}-${month}`}>
+                                <TableCell className="min-w-[80px] border-l border-slate-200 text-right text-sm tabular-nums">
+                                  {plan ? formatCurrency(plan.plannedRevenue) : "—"}
+                                </TableCell>
+                                <TableCell className="min-w-[80px] text-right text-sm tabular-nums">
+                                  {plan ? formatCurrency(plan.actualRevenue) : "—"}
+                                </TableCell>
+                                <TableCell className="min-w-[88px] border-r border-slate-200 text-right">
+                                  {plan ? (
+                                    <Badge className={cn("w-fit", status.className)} variant="secondary">
+                                      {plan.completionPercent == null
+                                        ? "—"
+                                        : `${plan.completionPercent.toFixed(2)}%`}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-sm text-slate-400">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="min-w-[88px] text-right text-sm tabular-nums">
+                                  {plan ? formatCurrency(plan.actualCost) : "—"}
+                                </TableCell>
+                                <TableCell className="min-w-[88px] text-right text-sm tabular-nums">
+                                  {plan ? formatCurrency(plan.actualProfit) : "—"}
+                                </TableCell>
+                                <TableCell className="min-w-[104px] border-r border-slate-200 text-right text-sm tabular-nums">
+                                  {plan ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+                                          {formatNetProfitMarginDisplay(netProfitMargin)}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        {formatNetProfitMarginTooltip(netProfitMargin)}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </TableCell>
+                              </Fragment>
+                            )
+                          })}
                         </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                      ))
+                    )}
+                  </TableBody>
+                </table>
+              </div>
+              {appRows.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <span>Rows per page</span>
+                    <Select
+                      value={pageSizeOption === "all" ? "all" : String(pageSizeOption)}
+                      onValueChange={(value) => {
+                        setPageSizeOption(value === "all" ? "all" : (Number(value) as 30 | 100))
+                        setCurrentPage(1)
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-20 bg-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAGE_SIZE_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={String(option)}>
+                            {option === "all" ? "All" : option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="ml-auto flex items-center gap-3">
+                    <span>
+                      {pageStart}-{pageEnd} of {appRows.length}
+                    </span>
+                    {pageSizeOption !== "all" && totalPages > 1 ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 bg-white"
+                          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                          disabled={currentPage <= 1}
+                          aria-label="Previous page"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="min-w-16 text-center">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 bg-white"
+                          onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                          disabled={currentPage >= totalPages}
+                          aria-label="Next page"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
-          {!loading && filteredPlans.length > 0 ? (
-            <DataPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredPlans.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size)
-                setCurrentPage(1)
-              }}
-              itemName="plans"
-            />
-          ) : null}
         </CardContent>
       </Card>
 
@@ -532,7 +777,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           <DialogHeader>
             <DialogTitle>Import profit plans</DialogTitle>
             <DialogDescription>
-              Upload an Excel file (.xlsx) with columns: Month, App Store ID, Planned Profit.
+              Upload an Excel file (.xlsx) with columns: Month, App Store ID, Planned Revenue (and optional cost/profit columns).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
