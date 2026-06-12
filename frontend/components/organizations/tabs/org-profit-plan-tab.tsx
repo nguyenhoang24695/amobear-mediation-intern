@@ -321,11 +321,16 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const handleExportTemplate = async () => {
     setExportingTemplate(true)
     try {
-      const { blob } = await organizationsApi.exportProfitPlanTemplate(orgId, endMonth)
+      const { blob } = await organizationsApi.exportProfitPlanTemplate(orgId, {
+        from: startMonth,
+        to: endMonth,
+      })
+      const monthLabel =
+        startMonth === endMonth ? startMonth : `${startMonth}_to_${endMonth}`
       const objectUrl = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = objectUrl
-      link.download = `revenue-plan-template-${endMonth}.xlsx`
+      link.download = `revenue-plan-template-${monthLabel}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -333,7 +338,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
       toast({
         title: "Template exported",
-        description: `Downloaded revenue plan template for ${formatMonthRangeLabel({ startMonth: endMonth, endMonth })}.`,
+        description: `Downloaded revenue plan template for ${formatMonthRangeLabel(monthRange)}.`,
       })
     } catch (err) {
       console.error("Failed to export profit plan template:", err)

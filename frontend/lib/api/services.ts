@@ -1819,10 +1819,15 @@ export const organizationsApi = {
         )
     },
 
-    exportProfitPlanTemplate: async (orgId: string, month: string): Promise<{ blob: Blob; contentType: string | null }> => {
-        return apiClient.getBlob(
-            `/api/v1/organizations/${orgId}/profit-plans/template?month=${encodeURIComponent(month)}`,
-        )
+    exportProfitPlanTemplate: async (
+        orgId: string,
+        params?: { from?: string; to?: string },
+    ): Promise<{ blob: Blob; contentType: string | null }> => {
+        const query = new URLSearchParams()
+        if (params?.from) query.set("from", params.from)
+        if (params?.to) query.set("to", params.to)
+        const suffix = query.toString() ? `?${query.toString()}` : ""
+        return apiClient.getBlob(`/api/v1/organizations/${orgId}/profit-plans/template${suffix}`)
     },
 
     exportProfitPlansData: async (
