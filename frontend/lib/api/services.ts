@@ -1849,6 +1849,16 @@ export const organizationsApi = {
         return apiClient.post<ImportTeamProfitPlansResult>(`/api/v1/organizations/${orgId}/profit-plans/import`, fd)
     },
 
+    importProfitPlanItems: async (
+        orgId: string,
+        items: ImportTeamProfitPlanItem[],
+    ): Promise<ImportTeamProfitPlansResult> => {
+        return apiClient.post<ImportTeamProfitPlansResult>(
+            `/api/v1/organizations/${orgId}/profit-plans/import-items`,
+            { items },
+        )
+    },
+
     // Create a new team
     createTeam: async (orgId: string, data: CreateTeamRequest): Promise<OrgTeam> => {
         return apiClient.post<OrgTeam>(`/api/v1/organizations/${orgId}/teams`, data)
@@ -2015,6 +2025,12 @@ export interface ImportTeamProfitPlansResult {
     updated: number
     skipped: number
     errors: string[]
+}
+
+export interface ImportTeamProfitPlanItem {
+    appStoreId: string
+    month: string
+    plannedRevenue: number
 }
 
 export interface BulkProfitPlanItem {

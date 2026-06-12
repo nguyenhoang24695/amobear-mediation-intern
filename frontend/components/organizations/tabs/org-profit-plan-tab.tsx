@@ -34,14 +34,22 @@ import {
   shiftMonthRange,
   type MonthRange,
 } from "@/components/organizations/revenue-plan-month-range-picker"
+import {
+  buildImportItemsFromPreview,
+  extractMonthKeysFromWorkbook,
+  parseRevenuePlanImportWorkbook,
+  type RevenuePlanImportPreview,
+} from "@/lib/revenue-plan/revenue-plan-import-parser"
+import { RevenuePlanImportPreviewDialog } from "@/components/organizations/revenue-plan-import-preview-dialog"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
   organizationsApi,
-  type ImportTeamProfitPlansResult,
+  structureApi,
   type OrgTeam,
   type TeamMonthlyProfitPlan,
 } from "@/lib/api/services"
+import * as XLSX from "xlsx"
 
 const METRICS_PER_MONTH = 6
 const REVENUE_COLUMNS_PER_MONTH = 3
@@ -189,9 +197,11 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [pageSizeOption, setPageSizeOption] = useState<PageSizeOption>(100)
 
   const [importOpen, setImportOpen] = useState(false)
-  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false)
+  const [importPreview, setImportPreview] = useState<RevenuePlanImportPreview | null>(null)
+  const [importTeamAppStoreIds, setImportTeamAppStoreIds] = useState<Record<string, Set<string>>>({})
+  const [parsingImport, setParsingImport] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<ImportTeamProfitPlansResult | null>(null)
   const [exportingData, setExportingData] = useState(false)
   const [exportingTemplate, setExportingTemplate] = useState(false)
 
@@ -286,16 +296,90 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     }
   }, [currentPage, totalPages])
 
-  const handleImport = async () => {
-    if (!importFile) return
+  const handleImportFileSelected = async (file: File | null) => {
+    if (!file) {
+      setImportPreview(null)
+      return
+    }
+
+    setParsingImport(true)
+
+    try {
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: false })
+      const monthKeys = extractMonthKeysFromWorkbook(workbook)
+      const fromMonth = monthKeys[0] ?? startMonth
+      const toMonth = monthKeys[monthKeys.length - 1] ?? endMonth
+
+      const teamList = teams.length > 0 ? teams : await organizationsApi.getTeams(orgId)
+      const [appsResponse, planList, ...teamPlanLists] = await Promise.all([
+        structureApi.getApps(),
+        organizationsApi.getProfitPlans(orgId, { from: fromMonth, to: toMonth }),
+        ...teamList.map((team) =>
+          organizationsApi.getProfitPlans(orgId, { from: fromMonth, to: toMonth, teamId: team.id }),
+        ),
+      ])
+
+      const teamAppStoreIdsByTeamId: Record<string, Set<string>> = {}
+      teamList.forEach((team, index) => {
+        teamAppStoreIdsByTeamId[team.id] = new Set(
+          teamPlanLists[index].map((plan) => plan.appStoreId.toLowerCase()),
+        )
+      })
+      setImportTeamAppStoreIds(teamAppStoreIdsByTeamId)
+      if (teams.length === 0) setTeams(teamList)
+
+      const knownAppStoreIds = new Set(
+        appsResponse.apps
+          .map((app) => app.appStoreId?.trim().toLowerCase())
+          .filter((value): value is string => Boolean(value)),
+      )
+
+      const currentPlannedRevenueByStoreMonth = new Map<string, number>()
+      for (const plan of planList) {
+        if (!hasPlanData(plan)) continue
+        currentPlannedRevenueByStoreMonth.set(
+          `${plan.appStoreId.toLowerCase()}|${plan.month}`,
+          plan.plannedRevenue,
+        )
+      }
+
+      const preview = parseRevenuePlanImportWorkbook(workbook, {
+        fileName: file.name,
+        knownAppStoreIds,
+        currentPlannedRevenueByStoreMonth,
+      })
+
+      setImportPreview(preview)
+      setImportOpen(false)
+      setImportPreviewOpen(true)
+    } catch (err) {
+      console.error("Failed to parse profit plan import file:", err)
+      toast({
+        title: "Could not read Excel file",
+        description: err instanceof Error ? err.message : "Failed to parse the selected file.",
+        variant: "destructive",
+      })
+      setImportPreview(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    } finally {
+      setParsingImport(false)
+    }
+  }
+
+  const handleConfirmImport = async (preview: RevenuePlanImportPreview) => {
+    const items = buildImportItemsFromPreview(preview)
+    if (items.length === 0) return
+
     setImporting(true)
     try {
-      const result = await organizationsApi.importProfitPlans(orgId, importFile)
-      setImportResult(result)
+      const result = await organizationsApi.importProfitPlanItems(orgId, items)
       toast({
         title: "Import completed",
         description: `Imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}.`,
       })
+      setImportPreviewOpen(false)
+      resetImportState()
       await loadData()
     } catch (err) {
       console.error("Failed to import profit plans:", err)
@@ -309,12 +393,21 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     }
   }
 
+  const resetImportState = () => {
+    setImportPreview(null)
+    setImportTeamAppStoreIds({})
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
   const resetImportDialog = (open: boolean) => {
     setImportOpen(open)
+    if (!open && !importPreviewOpen) resetImportState()
+  }
+
+  const resetImportPreviewDialog = (open: boolean) => {
+    setImportPreviewOpen(open)
     if (!open) {
-      setImportFile(null)
-      setImportResult(null)
-      if (fileInputRef.current) fileInputRef.current.value = ""
+      resetImportState()
     }
   }
 
@@ -760,7 +853,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           <DialogHeader>
             <DialogTitle>Import profit plans</DialogTitle>
             <DialogDescription>
-              Upload an Excel file (.xlsx) with columns: Month, App Store ID, Planned Revenue (and optional cost/profit columns).
+              Upload an Excel template with App Store ID, App Name, Platform, and monthly Planned Revenue columns (MM/yyyy).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -768,30 +861,36 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               ref={fileInputRef}
               type="file"
               accept=".xlsx,.xlsm"
+              disabled={parsingImport}
               onChange={(event) => {
-                setImportFile(event.target.files?.[0] ?? null)
-                setImportResult(null)
+                void handleImportFileSelected(event.target.files?.[0] ?? null)
               }}
             />
-            {importResult && importResult.errors.length > 0 ? (
-              <div className="max-h-40 overflow-y-auto rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                {importResult.errors.map((error) => (
-                  <p key={error}>{error}</p>
-                ))}
+            {parsingImport ? (
+              <div className="flex items-center text-sm text-slate-500">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Reading file and preparing preview...
               </div>
             ) : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => resetImportDialog(false)} disabled={importing}>
+            <Button type="button" variant="outline" onClick={() => resetImportDialog(false)} disabled={parsingImport}>
               Close
-            </Button>
-            <Button type="button" onClick={() => void handleImport()} disabled={importing || !importFile}>
-              {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Import
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RevenuePlanImportPreviewDialog
+        open={importPreviewOpen}
+        preview={importPreview}
+        importing={importing}
+        teams={teams}
+        teamAppStoreIdsByTeamId={importTeamAppStoreIds}
+        initialTeamFilter={teamFilter}
+        onOpenChange={resetImportPreviewDialog}
+        onConfirm={handleConfirmImport}
+      />
       </>
   )
 }
