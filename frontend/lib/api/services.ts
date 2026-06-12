@@ -1825,6 +1825,19 @@ export const organizationsApi = {
         )
     },
 
+    exportProfitPlansData: async (
+        orgId: string,
+        params?: { from?: string; to?: string; teamId?: string; search?: string },
+    ): Promise<{ blob: Blob; contentType: string | null }> => {
+        const query = new URLSearchParams()
+        if (params?.from) query.set("from", params.from)
+        if (params?.to) query.set("to", params.to)
+        if (params?.teamId) query.set("teamId", params.teamId)
+        if (params?.search?.trim()) query.set("search", params.search.trim())
+        const suffix = query.toString() ? `?${query.toString()}` : ""
+        return apiClient.getBlob(`/api/v1/organizations/${orgId}/profit-plans/export${suffix}`)
+    },
+
     importProfitPlans: async (orgId: string, file: File): Promise<ImportTeamProfitPlansResult> => {
         const fd = new FormData()
         fd.append("file", file)

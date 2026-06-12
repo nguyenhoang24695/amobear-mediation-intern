@@ -83,45 +83,6 @@ function formatNetProfitMarginTooltip(margin: number | null): string {
   return `${margin.toFixed(2)}%`
 }
 
-const EXPORT_METRIC_HEADERS = [
-  "Planned",
-  "Actual",
-  "Completion",
-  "Actual Cost",
-  "Actual Profit",
-  "Net Profit Margin",
-] as const
-
-function buildRevenuePlanExportHeaders(monthKeys: string[]): string[] {
-  const appHeaders = ["App Name", "App Store ID", "Platform"]
-  const monthHeaders = monthKeys.flatMap((month) => {
-    const monthLabel = formatMonthTableHeader(month)
-    return EXPORT_METRIC_HEADERS.map((metric) => `${monthLabel} ${metric}`)
-  })
-  return [...appHeaders, ...monthHeaders]
-}
-
-function buildRevenuePlanExportRow(row: AppPlanRow, monthKeys: string[]): Array<string | number> {
-  const monthValues = monthKeys.flatMap((month) => {
-    const plan = row.months[month]
-    if (!plan) return ["", "", "", "", "", ""]
-
-    const hasPlan = hasPlanData(plan)
-    const margin = getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
-
-    return [
-      hasPlan ? plan.plannedRevenue : "",
-      plan.actualRevenue,
-      hasPlan && plan.completionPercent != null ? plan.completionPercent.toFixed(2) : "",
-      plan.actualCost,
-      plan.actualProfit,
-      margin == null ? "" : margin.toFixed(2),
-    ]
-  })
-
-  return [row.appLabel, row.appStoreId, row.appPlatform ?? "", ...monthValues]
-}
-
 function hasPlanData(plan?: TeamMonthlyProfitPlan | null): boolean {
   return Boolean(plan?.id && plan.id !== EMPTY_PLAN_ID)
 }
@@ -131,14 +92,6 @@ function getStatus(completion?: number | null) {
   if (completion >= 100) return { label: "Achieved", className: "bg-green-100 text-green-700" }
   if (completion >= 80) return { label: "On track", className: "bg-blue-100 text-blue-700" }
   return { label: "Behind", className: "bg-amber-100 text-amber-700" }
-}
-
-function escapeCsvValue(value: string | number | null | undefined) {
-  const normalized = value == null ? "" : String(value)
-  if (/[",\n]/.test(normalized)) {
-    return `"${normalized.replace(/"/g, '""')}"`
-  }
-  return normalized
 }
 
 function sanitizeFileNamePart(value: string) {
@@ -399,14 +352,21 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
     setExportingData(true)
     try {
-      const rows = [
-        buildRevenuePlanExportHeaders(monthKeys),
-        ...appRows.map((row) => buildRevenuePlanExportRow(row, monthKeys)),
-      ]
+      const exportParams =
+        teamFilter === "all"
+          ? {
+              from: startMonth,
+              to: endMonth,
+              search: searchQuery.trim() || undefined,
+            }
+          : {
+              from: startMonth,
+              to: endMonth,
+              teamId: teamFilter,
+              search: searchQuery.trim() || undefined,
+            }
 
-      const csv = rows
-        .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
-        .join("\n")
+      const { blob } = await organizationsApi.exportProfitPlansData(orgId, exportParams)
 
       const teamLabel =
         teamFilter === "all"
@@ -425,11 +385,10 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         .filter(Boolean)
         .join("-")
 
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
       const objectUrl = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = objectUrl
-      link.download = `${fileName}.csv`
+      link.download = `${fileName}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()
