@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Download, ImageIcon, Loader2, Target, Upload } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, ImageIcon, Loader2, Settings, Target, Upload } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,6 +41,15 @@ import {
   type RevenuePlanImportPreview,
 } from "@/lib/revenue-plan/revenue-plan-import-parser"
 import { RevenuePlanImportPreviewDialog } from "@/components/organizations/revenue-plan-import-preview-dialog"
+import { RevenuePlanColumnSidebar } from "@/components/organizations/revenue-plan-column-sidebar"
+import {
+  countVisibleColumns,
+  countVisibleColumnsInGroup,
+  createDefaultColumnVisibility,
+  REVENUE_PLAN_COLUMNS,
+  type RevenuePlanColumnId,
+  type RevenuePlanColumnVisibility,
+} from "@/lib/revenue-plan/revenue-plan-column-config"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -51,8 +60,6 @@ import {
 } from "@/lib/api/services"
 import * as XLSX from "xlsx"
 
-const METRICS_PER_MONTH = 6
-const REVENUE_COLUMNS_PER_MONTH = 3
 const PAGE_SIZE_OPTIONS = [30, 100, "all"] as const
 type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number]
 const EMPTY_PLAN_ID = "00000000-0000-0000-0000-000000000000"
@@ -181,6 +188,100 @@ const APP_COLUMN_CLASS =
 const APP_HEADER_CLASS =
   "sticky left-0 top-0 z-30 min-w-[148px] max-w-[148px] border-r border-slate-200 bg-slate-50/95 px-2 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
 
+const METRIC_HEADER_CLASS =
+  "sticky top-[72px] z-20 border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600"
+
+function renderMonthMetricCell(
+  columnId: RevenuePlanColumnId,
+  plan: TeamMonthlyProfitPlan | undefined,
+  hasPlan: boolean,
+  netProfitMargin: number | null,
+  isFirst: boolean,
+  isLast: boolean,
+) {
+  const column = REVENUE_PLAN_COLUMNS.find((item) => item.id === columnId)
+  if (!column) return null
+
+  const status = getStatus(hasPlan ? plan?.completionPercent : null)
+  const edgeBorderClass = cn(
+    isFirst && "border-l border-slate-200",
+    isLast && "border-r border-slate-200",
+  )
+
+  switch (columnId) {
+    case "planned":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+        >
+          {hasPlan ? formatCurrency(plan?.plannedRevenue) : "—"}
+        </TableCell>
+      )
+    case "actual":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+        >
+          {plan ? formatCurrency(plan.actualRevenue) : "—"}
+        </TableCell>
+      )
+    case "completion":
+      return (
+        <TableCell key={columnId} className={cn(column.minWidthClass, edgeBorderClass, "text-right")}>
+          {hasPlan ? (
+            <Badge className={cn("w-fit", status.className)} variant="secondary">
+              {plan?.completionPercent == null ? "—" : `${plan.completionPercent.toFixed(2)}%`}
+            </Badge>
+          ) : (
+            <span className="text-sm text-slate-400">—</span>
+          )}
+        </TableCell>
+      )
+    case "actualCost":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+        >
+          {plan ? formatCurrency(plan.actualCost) : "—"}
+        </TableCell>
+      )
+    case "actualProfit":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+        >
+          {plan ? formatCurrency(plan.actualProfit) : "—"}
+        </TableCell>
+      )
+    case "netProfitMargin":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+        >
+          {plan ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+                  {formatNetProfitMarginDisplay(netProfitMargin)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">{formatNetProfitMarginTooltip(netProfitMargin)}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-slate-400">—</span>
+          )}
+        </TableCell>
+      )
+    default:
+      return null
+  }
+}
+
 export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabProps) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -204,6 +305,27 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [importing, setImporting] = useState(false)
   const [exportingData, setExportingData] = useState(false)
   const [exportingTemplate, setExportingTemplate] = useState(false)
+  const [columnSidebarOpen, setColumnSidebarOpen] = useState(false)
+  const [columnVisibility, setColumnVisibility] = useState<RevenuePlanColumnVisibility>(() =>
+    createDefaultColumnVisibility(),
+  )
+
+  const visibleColumnCount = useMemo(
+    () => countVisibleColumns(columnVisibility),
+    [columnVisibility],
+  )
+  const visibleRevenueColumnCount = useMemo(
+    () => countVisibleColumnsInGroup(columnVisibility, "revenue"),
+    [columnVisibility],
+  )
+  const visiblePerformanceColumnCount = useMemo(
+    () => countVisibleColumnsInGroup(columnVisibility, "performance"),
+    [columnVisibility],
+  )
+  const visibleColumns = useMemo(
+    () => REVENUE_PLAN_COLUMNS.filter((column) => columnVisibility[column.id]),
+    [columnVisibility],
+  )
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -557,6 +679,8 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex min-h-0 gap-0">
+            <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="space-y-1.5">
@@ -637,6 +761,22 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   </Tooltip>
                 </>
               ) : null}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={columnSidebarOpen ? "secondary" : "outline"}
+                    size="icon"
+                    className="h-9 w-9 shrink-0 bg-white"
+                    onClick={() => setColumnSidebarOpen((open) => !open)}
+                    aria-label={columnSidebarOpen ? "Hide column settings" : "Show column settings"}
+                    aria-pressed={columnSidebarOpen}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Configure visible columns</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
@@ -657,8 +797,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       {monthKeys.map((month) => (
                         <TableHead
                           key={month}
-                          colSpan={METRICS_PER_MONTH}
-                          className="sticky top-0 z-20 min-w-[480px] border-b border-r border-slate-200 bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
+                          colSpan={visibleColumnCount}
+                          className="sticky top-0 z-20 border-b border-r border-slate-200 bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
+                          style={{ minWidth: `${Math.max(visibleColumnCount * 80, 160)}px` }}
                         >
                           {formatMonthTableHeader(month)}
                         </TableHead>
@@ -667,42 +808,41 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                     <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
                       {monthKeys.map((month) => (
                         <Fragment key={`${month}-groups`}>
-                          <TableHead
-                            colSpan={REVENUE_COLUMNS_PER_MONTH}
-                            className="sticky top-10 z-20 border-b border-r border-l border-slate-200 bg-blue-50/80 text-center text-xs font-semibold text-blue-700"
-                          >
-                            Revenue
-                          </TableHead>
-                          <TableHead
-                            colSpan={REVENUE_COLUMNS_PER_MONTH}
-                            className="sticky top-10 z-20 border-b border-r border-slate-200 bg-emerald-50/80 text-center text-xs font-semibold text-emerald-700"
-                          >
-                            Performance
-                          </TableHead>
+                          {visibleRevenueColumnCount > 0 ? (
+                            <TableHead
+                              colSpan={visibleRevenueColumnCount}
+                              className="sticky top-10 z-20 border-b border-r border-l border-slate-200 bg-blue-50/80 text-center text-xs font-semibold text-blue-700"
+                            >
+                              Revenue
+                            </TableHead>
+                          ) : null}
+                          {visiblePerformanceColumnCount > 0 ? (
+                            <TableHead
+                              colSpan={visiblePerformanceColumnCount}
+                              className="sticky top-10 z-20 border-b border-r border-slate-200 bg-emerald-50/80 text-center text-xs font-semibold text-emerald-700"
+                            >
+                              Performance
+                            </TableHead>
+                          ) : null}
                         </Fragment>
                       ))}
                     </TableRow>
                     <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
                       {monthKeys.map((month) => (
                         <Fragment key={`${month}-metrics`}>
-                          <TableHead className="sticky top-[72px] z-20 min-w-[80px] border-l border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
-                            Planned
-                          </TableHead>
-                          <TableHead className="sticky top-[72px] z-20 min-w-[80px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
-                            Actual
-                          </TableHead>
-                          <TableHead className="sticky top-[72px] z-20 min-w-[88px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
-                            Completion
-                          </TableHead>
-                          <TableHead className="sticky top-[72px] z-20 min-w-[88px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
-                            Actual Cost
-                          </TableHead>
-                          <TableHead className="sticky top-[72px] z-20 min-w-[88px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
-                            Actual Profit
-                          </TableHead>
-                          <TableHead className="sticky top-[72px] z-20 min-w-[104px] border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600">
-                            Net Profit Margin
-                          </TableHead>
+                          {visibleColumns.map((column, index) => (
+                            <TableHead
+                              key={`${month}-${column.id}`}
+                              className={cn(
+                                METRIC_HEADER_CLASS,
+                                column.minWidthClass,
+                                index === 0 && "border-l",
+                                index === visibleColumns.length - 1 && "border-r",
+                              )}
+                            >
+                              {column.label}
+                            </TableHead>
+                          ))}
                         </Fragment>
                       ))}
                     </TableRow>
@@ -711,7 +851,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                     {appRows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={1 + monthKeys.length * METRICS_PER_MONTH}
+                          colSpan={1 + monthKeys.length * visibleColumnCount}
                           className="py-10 text-center text-sm text-slate-500"
                         >
                           {searchQuery.trim()
@@ -728,52 +868,22 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           {monthKeys.map((month) => {
                             const plan = row.months[month]
                             const hasPlan = hasPlanData(plan)
-                            const status = getStatus(hasPlan ? plan?.completionPercent : null)
                             const netProfitMargin =
                               plan == null
                                 ? null
                                 : getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
                             return (
                               <Fragment key={`${row.appStoreId}-${month}`}>
-                                <TableCell className="min-w-[80px] border-l border-slate-200 text-right text-sm tabular-nums">
-                                  {hasPlan ? formatCurrency(plan.plannedRevenue) : "—"}
-                                </TableCell>
-                                <TableCell className="min-w-[80px] text-right text-sm tabular-nums">
-                                  {plan ? formatCurrency(plan.actualRevenue) : "—"}
-                                </TableCell>
-                                <TableCell className="min-w-[88px] border-r border-slate-200 text-right">
-                                  {hasPlan ? (
-                                    <Badge className={cn("w-fit", status.className)} variant="secondary">
-                                      {plan.completionPercent == null
-                                        ? "—"
-                                        : `${plan.completionPercent.toFixed(2)}%`}
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-sm text-slate-400">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="min-w-[88px] text-right text-sm tabular-nums">
-                                  {plan ? formatCurrency(plan.actualCost) : "—"}
-                                </TableCell>
-                                <TableCell className="min-w-[88px] text-right text-sm tabular-nums">
-                                  {plan ? formatCurrency(plan.actualProfit) : "—"}
-                                </TableCell>
-                                <TableCell className="min-w-[104px] border-r border-slate-200 text-right text-sm tabular-nums">
-                                  {plan ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
-                                          {formatNetProfitMarginDisplay(netProfitMargin)}
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">
-                                        {formatNetProfitMarginTooltip(netProfitMargin)}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : (
-                                    <span className="text-slate-400">—</span>
-                                  )}
-                                </TableCell>
+                                {visibleColumns.map((column, index) =>
+                                  renderMonthMetricCell(
+                                    column.id,
+                                    plan,
+                                    hasPlan,
+                                    netProfitMargin,
+                                    index === 0,
+                                    index === visibleColumns.length - 1,
+                                  ),
+                                )}
                               </Fragment>
                             )
                           })}
@@ -844,6 +954,17 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               ) : null}
             </div>
           )}
+
+            </div>
+
+            {columnSidebarOpen ? (
+              <RevenuePlanColumnSidebar
+                visibility={columnVisibility}
+                onChange={setColumnVisibility}
+                className="max-h-[min(70vh,720px)] self-start"
+              />
+            ) : null}
+          </div>
 
         </CardContent>
       </Card>
