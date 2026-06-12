@@ -47,6 +47,7 @@ const METRICS_PER_MONTH = 6
 const REVENUE_COLUMNS_PER_MONTH = 3
 const PAGE_SIZE_OPTIONS = [30, 100, "all"] as const
 type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number]
+const EMPTY_PLAN_ID = "00000000-0000-0000-0000-000000000000"
 
 interface AppPlanRow {
   appStoreId: string
@@ -80,6 +81,49 @@ function formatNetProfitMarginDisplay(margin: number | null): string {
 function formatNetProfitMarginTooltip(margin: number | null): string {
   if (margin == null) return "No revenue"
   return `${margin.toFixed(2)}%`
+}
+
+const EXPORT_METRIC_HEADERS = [
+  "Planned",
+  "Actual",
+  "Completion",
+  "Actual Cost",
+  "Actual Profit",
+  "Net Profit Margin",
+] as const
+
+function buildRevenuePlanExportHeaders(monthKeys: string[]): string[] {
+  const appHeaders = ["App Name", "App Store ID", "Platform"]
+  const monthHeaders = monthKeys.flatMap((month) => {
+    const monthLabel = formatMonthTableHeader(month)
+    return EXPORT_METRIC_HEADERS.map((metric) => `${monthLabel} ${metric}`)
+  })
+  return [...appHeaders, ...monthHeaders]
+}
+
+function buildRevenuePlanExportRow(row: AppPlanRow, monthKeys: string[]): Array<string | number> {
+  const monthValues = monthKeys.flatMap((month) => {
+    const plan = row.months[month]
+    if (!plan) return ["", "", "", "", "", ""]
+
+    const hasPlan = hasPlanData(plan)
+    const margin = getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
+
+    return [
+      hasPlan ? plan.plannedRevenue : "",
+      plan.actualRevenue,
+      hasPlan && plan.completionPercent != null ? plan.completionPercent.toFixed(2) : "",
+      plan.actualCost,
+      plan.actualProfit,
+      margin == null ? "" : margin.toFixed(2),
+    ]
+  })
+
+  return [row.appLabel, row.appStoreId, row.appPlatform ?? "", ...monthValues]
+}
+
+function hasPlanData(plan?: TeamMonthlyProfitPlan | null): boolean {
+  return Boolean(plan?.id && plan.id !== EMPTY_PLAN_ID)
 }
 
 function getStatus(completion?: number | null) {
@@ -263,8 +307,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   }, [filteredPlans])
 
   const overallCompletion = useMemo(() => {
-    const planned = filteredPlans.reduce((sum, plan) => sum + plan.plannedRevenue, 0)
-    const actual = filteredPlans.reduce((sum, plan) => sum + plan.actualRevenue, 0)
+    const plannedRows = filteredPlans.filter(hasPlanData)
+    const planned = plannedRows.reduce((sum, plan) => sum + plan.plannedRevenue, 0)
+    const actual = plannedRows.reduce((sum, plan) => sum + plan.actualRevenue, 0)
     return planned > 0 ? Math.round((actual / planned) * 10000) / 100 : null
   }, [filteredPlans])
 
@@ -350,40 +395,13 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   }
 
   const handleExportData = async () => {
-    if (filteredPlans.length === 0) return
+    if (appRows.length === 0) return
 
     setExportingData(true)
     try {
       const rows = [
-        [
-          "Month",
-          "App",
-          "App Store ID",
-          "Platform",
-          "AdMob App ID",
-          "Planned Revenue",
-          "Actual Revenue",
-          "Completion Percent",
-          "Actual Cost",
-          "Actual Profit",
-          "Net Profit Margin Percent",
-        ],
-        ...filteredPlans.map((plan) => {
-          const margin = getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
-          return [
-            plan.month,
-            plan.appLabel,
-            plan.appStoreId,
-            plan.appPlatform ?? "",
-            plan.admobAppId ?? "",
-            plan.plannedRevenue,
-            plan.actualRevenue,
-            plan.completionPercent == null ? "" : plan.completionPercent.toFixed(2),
-            plan.actualCost,
-            plan.actualProfit,
-            margin == null ? "" : margin.toFixed(2),
-          ]
-        }),
+        buildRevenuePlanExportHeaders(monthKeys),
+        ...appRows.map((row) => buildRevenuePlanExportRow(row, monthKeys)),
       ]
 
       const csv = rows
@@ -419,7 +437,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
       toast({
         title: "Revenue plans exported",
-        description: `Downloaded ${filteredPlans.length} row(s) for ${formatMonthRangeLabel(monthRange)}.`,
+        description: `Downloaded ${appRows.length} app row(s) for ${formatMonthRangeLabel(monthRange)}.`,
       })
     } catch (err) {
       console.error("Failed to export profit plans:", err)
@@ -520,7 +538,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                     variant="outline"
                     className="bg-white"
                     onClick={() => void handleExportData()}
-                    disabled={loading || exportingData || filteredPlans.length === 0}
+                    disabled={loading || exportingData || appRows.length === 0}
                   >
                     {exportingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                     Export data
@@ -652,7 +670,8 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           </TableCell>
                           {monthKeys.map((month) => {
                             const plan = row.months[month]
-                            const status = getStatus(plan?.completionPercent)
+                            const hasPlan = hasPlanData(plan)
+                            const status = getStatus(hasPlan ? plan?.completionPercent : null)
                             const netProfitMargin =
                               plan == null
                                 ? null
@@ -660,13 +679,13 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                             return (
                               <Fragment key={`${row.appStoreId}-${month}`}>
                                 <TableCell className="min-w-[80px] border-l border-slate-200 text-right text-sm tabular-nums">
-                                  {plan ? formatCurrency(plan.plannedRevenue) : "—"}
+                                  {hasPlan ? formatCurrency(plan.plannedRevenue) : "—"}
                                 </TableCell>
                                 <TableCell className="min-w-[80px] text-right text-sm tabular-nums">
                                   {plan ? formatCurrency(plan.actualRevenue) : "—"}
                                 </TableCell>
                                 <TableCell className="min-w-[88px] border-r border-slate-200 text-right">
-                                  {plan ? (
+                                  {hasPlan ? (
                                     <Badge className={cn("w-fit", status.className)} variant="secondary">
                                       {plan.completionPercent == null
                                         ? "—"
