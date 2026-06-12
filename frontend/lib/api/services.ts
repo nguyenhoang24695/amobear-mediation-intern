@@ -1819,16 +1819,44 @@ export const organizationsApi = {
         )
     },
 
-    exportProfitPlanTemplate: async (orgId: string, month: string): Promise<{ blob: Blob; contentType: string | null }> => {
-        return apiClient.getBlob(
-            `/api/v1/organizations/${orgId}/profit-plans/template?month=${encodeURIComponent(month)}`,
-        )
+    exportProfitPlanTemplate: async (
+        orgId: string,
+        params?: { from?: string; to?: string },
+    ): Promise<{ blob: Blob; contentType: string | null }> => {
+        const query = new URLSearchParams()
+        if (params?.from) query.set("from", params.from)
+        if (params?.to) query.set("to", params.to)
+        const suffix = query.toString() ? `?${query.toString()}` : ""
+        return apiClient.getBlob(`/api/v1/organizations/${orgId}/profit-plans/template${suffix}`)
+    },
+
+    exportProfitPlansData: async (
+        orgId: string,
+        params?: { from?: string; to?: string; teamId?: string; search?: string },
+    ): Promise<{ blob: Blob; contentType: string | null }> => {
+        const query = new URLSearchParams()
+        if (params?.from) query.set("from", params.from)
+        if (params?.to) query.set("to", params.to)
+        if (params?.teamId) query.set("teamId", params.teamId)
+        if (params?.search?.trim()) query.set("search", params.search.trim())
+        const suffix = query.toString() ? `?${query.toString()}` : ""
+        return apiClient.getBlob(`/api/v1/organizations/${orgId}/profit-plans/export${suffix}`)
     },
 
     importProfitPlans: async (orgId: string, file: File): Promise<ImportTeamProfitPlansResult> => {
         const fd = new FormData()
         fd.append("file", file)
         return apiClient.post<ImportTeamProfitPlansResult>(`/api/v1/organizations/${orgId}/profit-plans/import`, fd)
+    },
+
+    importProfitPlanItems: async (
+        orgId: string,
+        items: ImportTeamProfitPlanItem[],
+    ): Promise<ImportTeamProfitPlansResult> => {
+        return apiClient.post<ImportTeamProfitPlansResult>(
+            `/api/v1/organizations/${orgId}/profit-plans/import-items`,
+            { items },
+        )
     },
 
     // Create a new team
@@ -1976,7 +2004,11 @@ export interface TeamMonthlyProfitPlan {
     appLabel: string
     appPlatform?: string | null
     appIconUri?: string | null
+    plannedRevenue: number
+    plannedCost: number
     plannedProfit: number
+    actualRevenue: number
+    actualCost: number
     actualProfit: number
     completionPercent?: number | null
     createdAt: string
@@ -1993,6 +2025,12 @@ export interface ImportTeamProfitPlansResult {
     updated: number
     skipped: number
     errors: string[]
+}
+
+export interface ImportTeamProfitPlanItem {
+    appStoreId: string
+    month: string
+    plannedRevenue: number
 }
 
 export interface BulkProfitPlanItem {
