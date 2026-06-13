@@ -165,7 +165,7 @@ export interface CurrentUser {
     /** JSON array: [{ id, name, chatId, messageThreadId? }, ...] */
     telegramDestinationsJson?: string
     organization?: { id: string; name: string; slug: string; logoUrl?: string }
-    teams?: Array<{ id: string; name: string; role: string }>
+    teams?: Array<{ id: string; name: string; role: string; isTeamLead?: boolean }>
     permissions?: Record<string, string>
     metaAdAccountIds?: number[] | null
     metaAdAccountCount?: number
@@ -2031,7 +2031,9 @@ export interface TeamMonthlyProfitPlan {
 
 export interface UpsertTeamMonthlyProfitPlanRequest {
     appStoreId: string
-    plannedProfit: number
+    plannedRevenue: number
+    plannedCost?: number
+    plannedProfit?: number
 }
 
 export interface ImportTeamProfitPlansResult {

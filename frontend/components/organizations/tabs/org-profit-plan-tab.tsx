@@ -1,8 +1,7 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Download, ImageIcon, Loader2, Settings, Target, Upload } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ChevronLeft, ChevronRight, Download, Loader2, Settings, Target, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,7 +39,9 @@ import {
   parseRevenuePlanImportWorkbook,
   type RevenuePlanImportPreview,
 } from "@/lib/revenue-plan/revenue-plan-import-parser"
+import { RevenuePlanAppCell } from "@/components/organizations/revenue-plan-app-cell"
 import { RevenuePlanImportPreviewDialog } from "@/components/organizations/revenue-plan-import-preview-dialog"
+import { RevenuePlanPlannedCell } from "@/components/organizations/revenue-plan-planned-cell"
 import { RevenuePlanColumnSidebar } from "@/components/organizations/revenue-plan-column-sidebar"
 import {
   countVisibleColumns,
@@ -99,7 +100,9 @@ function formatNetProfitMarginTooltip(margin: number | null): string {
 }
 
 function hasPlanData(plan?: TeamMonthlyProfitPlan | null): boolean {
-  return Boolean(plan?.id && plan.id !== EMPTY_PLAN_ID)
+  if (!plan) return false
+  if (plan.id && plan.id !== EMPTY_PLAN_ID) return true
+  return plan.plannedRevenue > 0
 }
 
 function getStatus(completion?: number | null) {
@@ -116,70 +119,6 @@ function sanitizeFileNamePart(value: string) {
     .replace(/[^a-z0-9-_]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-}
-
-function renderPlatformIcon(platformValue?: string | null, className?: string) {
-  const isAndroid = (platformValue ?? "").toUpperCase() === "ANDROID"
-  if (isAndroid) {
-    return (
-      <svg className={cn("h-3 w-3", className)} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
-      </svg>
-    )
-  }
-
-  return (
-    <svg className={cn("h-3 w-3", className)} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
-    </svg>
-  )
-}
-
-function renderPlatformBadge(platformValue?: string | null) {
-  const platform = platformValue?.trim() || "Unknown"
-  const isAndroid = platform.toUpperCase() === "ANDROID"
-
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "h-5 shrink-0 gap-1 px-1.5 text-[10px] font-medium",
-        isAndroid
-          ? "border-green-200 bg-green-50 text-green-700"
-          : "border-slate-200 bg-slate-50 text-slate-700",
-      )}
-      title={platform}
-    >
-      {renderPlatformIcon(platform)}
-    </Badge>
-  )
-}
-
-function RevenuePlanAppCell({ row }: { row: AppPlanRow }) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <Avatar className="h-7 w-7 shrink-0 rounded-md">
-        {row.appIconUri ? (
-          <AvatarImage src={row.appIconUri} alt={row.appLabel} className="rounded-md object-cover" />
-        ) : null}
-        <AvatarFallback className="rounded-md bg-slate-100">
-          <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-xs font-medium text-slate-900" title={row.appLabel}>
-          {row.appLabel}
-        </div>
-        <div
-          className="truncate font-mono text-[10px] text-slate-500"
-          title={row.appStoreId || row.admobAppId || undefined}
-        >
-          {row.appStoreId || row.admobAppId || "—"}
-        </div>
-      </div>
-      {renderPlatformBadge(row.appPlatform)}
-    </div>
-  )
 }
 
 const APP_COLUMN_CLASS =
@@ -210,14 +149,7 @@ function renderMonthMetricCell(
 
   switch (columnId) {
     case "planned":
-      return (
-        <TableCell
-          key={columnId}
-          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
-        >
-          {hasPlan ? formatCurrency(plan?.plannedRevenue) : "—"}
-        </TableCell>
-      )
+      return null
     case "actual":
       return (
         <TableCell
@@ -532,6 +464,21 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       resetImportState()
     }
   }
+
+  const handlePlannedRevenueSaved = useCallback((appStoreId: string, month: string, plannedRevenue: number) => {
+    setPlans((prev) =>
+      prev.map((plan) => {
+        if (plan.appStoreId !== appStoreId || plan.month !== month) return plan
+        const completion =
+          plannedRevenue > 0 ? Math.round((plan.actualRevenue / plannedRevenue) * 10000) / 100 : null
+        return {
+          ...plan,
+          plannedRevenue,
+          completionPercent: completion,
+        }
+      }),
+    )
+  }, [])
 
   const handleExportTemplate = async () => {
     setExportingTemplate(true)
@@ -863,7 +810,13 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       paginatedAppRows.map((row) => (
                         <TableRow key={row.appStoreId} className="hover:bg-slate-50/60">
                           <TableCell className={APP_COLUMN_CLASS}>
-                            <RevenuePlanAppCell row={row} />
+                            <RevenuePlanAppCell
+                              appLabel={row.appLabel}
+                              appStoreId={row.appStoreId}
+                              admobAppId={row.admobAppId}
+                              appPlatform={row.appPlatform}
+                              appIconUri={row.appIconUri}
+                            />
                           </TableCell>
                           {monthKeys.map((month) => {
                             const plan = row.months[month]
@@ -874,16 +827,38 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                                 : getNetProfitMargin(plan.actualProfit, plan.actualRevenue)
                             return (
                               <Fragment key={`${row.appStoreId}-${month}`}>
-                                {visibleColumns.map((column, index) =>
-                                  renderMonthMetricCell(
+                                {visibleColumns.map((column, index) => {
+                                  const edgeBorderClass = cn(
+                                    index === 0 && "border-l border-slate-200",
+                                    index === visibleColumns.length - 1 && "border-r border-slate-200",
+                                  )
+
+                                  if (column.id === "planned") {
+                                    return (
+                                      <RevenuePlanPlannedCell
+                                        key={column.id}
+                                        orgId={orgId}
+                                        appStoreId={row.appStoreId}
+                                        month={month}
+                                        plannedRevenue={plan?.plannedRevenue ?? 0}
+                                        hasPlan={hasPlan}
+                                        canEdit={canManage}
+                                        className={column.minWidthClass}
+                                        edgeBorderClass={edgeBorderClass}
+                                        onSaved={handlePlannedRevenueSaved}
+                                      />
+                                    )
+                                  }
+
+                                  return renderMonthMetricCell(
                                     column.id,
                                     plan,
                                     hasPlan,
                                     netProfitMargin,
                                     index === 0,
                                     index === visibleColumns.length - 1,
-                                  ),
-                                )}
+                                  )
+                                })}
                               </Fragment>
                             )
                           })}
