@@ -31,6 +31,7 @@ export interface AuthUser {
     id: string
     name: string
     role: string
+    isTeamLead?: boolean
   }>
   /** Quyen man hinh/chuc nang theo role: screenKey -> danh sach functionKey */
   rolePermissions?: Record<string, string[]>
