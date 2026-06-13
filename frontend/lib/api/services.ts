@@ -267,23 +267,37 @@ export interface UpdateAppFirebaseParamsPayload {
     serviceAccountJson?: object | string | null
 }
 
+export interface StructureAppsSummary {
+    totalApps: number
+    totalApprovedApps: number
+    totalAdUnits: number
+    totalWaterfallAdUnits: number
+    averageEcpm: number
+}
+
+export interface StructureAppsResponse {
+    apps: App[]
+    summary: StructureAppsSummary
+    page?: number
+    pageSize?: number
+    totalPages?: number
+}
+
 // Structure API Service
 export const structureApi = {
     // Apps - Returns apps with metrics from cache and summary
-    getApps: async (params?: { publisherId?: string; approvalState?: string | null }): Promise<{
-        apps: App[]
-        summary: {
-            totalApps: number
-            totalApprovedApps: number
-            totalAdUnits: number
-            totalWaterfallAdUnits: number
-            averageEcpm: number
-        }
-    }> => {
-        const { publisherId, approvalState } = params ?? {}
+    getApps: async (params?: {
+        publisherId?: string
+        approvalState?: string | null
+        page?: number
+        pageSize?: number
+    }): Promise<StructureAppsResponse> => {
+        const { publisherId, approvalState, page, pageSize } = params ?? {}
         return apiClient.get('/api/Structure/apps', {
             publisherId,
             approval_state: approvalState ?? undefined,
+            page,
+            pageSize,
         })
     },
 
