@@ -974,13 +974,35 @@ export function CreativeSection({
 
   const handlePlayableUpload = async (slot: "playableSource" | "playableLeadInVideo" | "playableThumbnail", file: File | null) => {
     if (!file) return
+    if (slot === "playableThumbnail") cancelAutoThumbnail("playableThumbnail")
     const kind = slot === "playableSource" ? "playable" : slot === "playableLeadInVideo" ? "video" : "image"
     try {
       setUploadingKey(`playable:${slot}:${file.name}`)
       const asset = await metaRequestsApi.uploadAsset(file, kind)
-      const patch = { ...(form[slot] as MetaRequestAssetSelectionState), ...buildNexusAssetSelectionPatch(asset) }
-      onChange({ [slot]: patch } as Partial<RequestFormState>)
+      if (slot === "playableLeadInVideo") {
+        setLocalVideoFilesByKey((current) => ({ ...current, ["playableLeadInVideo"]: file }))
+      }
+      handleMediaPatch(slot, {
+        mode: "uploaded_asset",
+        uploadedAssetId: asset.id,
+        uploadedAssetName: asset.fileName,
+        uploadedAssetPreviewUrl: slot === "playableThumbnail" ? URL.createObjectURL(file) : "",
+        metaPlayableUrl: "",
+        imageHash: "",
+        imageUrl: "",
+        videoId: "",
+      })
       toast({ title: "Uploaded", description: asset.fileName })
+
+      // Lead-in video upload tự sinh thumbnail (giống single video) để creative luôn có image_url.
+      if (slot === "playableLeadInVideo") {
+        await autoCaptureThumbnail({
+          tokenKey: "playableThumbnail",
+          uploadingKeyValue: "playable:playableThumbnail:auto",
+          source: { videoFile: file },
+          applyPatch: (thumbnailPatch) => handleMediaPatch("playableThumbnail", thumbnailPatch),
+        })
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed."
       toast({ title: "Upload failed", description: message, variant: "destructive" })
@@ -990,8 +1012,21 @@ export function CreativeSection({
   }
 
   const handlePlayableLeadInLibrarySelect = (asset: MetaRequestAssetDto) => {
-    const patch = { ...form.playableLeadInVideo, ...buildNexusAssetSelectionPatch(asset) }
-    onChange({ playableLeadInVideo: patch })
+    const patch = buildNexusAssetSelectionPatch(asset)
+    const nextSelection = { ...form.playableLeadInVideo, ...patch }
+    handleMediaPatch("playableLeadInVideo", patch)
+
+    if (asset.kind.toLowerCase() === "video") {
+      void autoCaptureThumbnail({
+        tokenKey: "playableThumbnail",
+        uploadingKeyValue: "playable:playableThumbnail:auto",
+        source: {
+          videoUrl: getFrameCaptureVideoUrl(nextSelection),
+          resolveVideoUrl: () => resolveNexusAssetVideoBlobUrl(asset),
+        },
+        applyPatch: (thumbnailPatch) => handleMediaPatch("playableThumbnail", thumbnailPatch),
+      })
+    }
   }
 
   const handleFlexibleUpload = async (index: number, kind: "image" | "video" | "thumbnail", file: File | null) => {
@@ -3747,6 +3782,7 @@ function getCreativeCompletion(form: RequestFormState) {
       { label: "CTA", ok: !!form.playableCallToAction },
       { label: "Playable source (HTML)", ok: !!form.playableSource.uploadedAssetId },
       { label: "Lead-in video", ok: !!form.playableLeadInVideo.uploadedAssetId },
+      { label: "Thumbnail", ok: !!(form.playableThumbnail.uploadedAssetId || form.playableThumbnail.imageHash || form.playableThumbnail.imageUrl) },
     ]
     return { complete: items.every((item) => item.ok), items }
   }

@@ -173,6 +173,23 @@ export function RequestListContent() {
       } else if (action === "reject") {
         await metaRequestsApi.reject(request.id, { reason: "Rejected from request list." })
       } else if (action === "execute") {
+        // Chặn execute khi asset chưa upload xong lên Meta (tránh lỗi "asset not ready" rồi phải retry).
+        try {
+          const prep = await metaRequestsApi.getAssetPreparation(request.id)
+          if (!prep.isReadyForExecution) {
+            const ready = prep.assets.filter((a) => a.status === "ready").length
+            toast({
+              title: "Assets đang chuẩn bị trên Meta",
+              description: `${ready}/${prep.assets.length} asset đã sẵn sàng. Mở chi tiết request để theo dõi và execute khi tất cả sẵn sàng.`,
+              variant: "destructive",
+            })
+            setActionLoading(false)
+            setConfirmAction(null)
+            return
+          }
+        } catch {
+          // Nếu không lấy được trạng thái prep, vẫn cho execute (BE sẽ chặn mềm nếu chưa ready).
+        }
         await metaRequestsApi.execute(request.id, {})
       } else {
         await metaRequestsApi.retry(request.id, {})
