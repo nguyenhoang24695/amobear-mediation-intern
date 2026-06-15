@@ -24,7 +24,8 @@ export function QonversionDetailsIntro() {
         </p>
         <p className="text-xs text-fuchsia-800/80">
           Backfill: thử các nút <span className="font-medium">Qonversion full transform</span> hoặc từng bước load MinIO / Bronze→Silver / Silver→Gold trên
-          JobsTest.
+          JobsTest. Với dữ liệu crawler cũ thiếu <span className="font-mono">event_datetime</span> / <span className="font-mono">transaction_date</span>, dùng{" "}
+          <span className="font-medium">Backfill event_datetime / transaction_date (raw_payload)</span> trên card bronze.
         </p>
       </CardContent>
     </Card>
