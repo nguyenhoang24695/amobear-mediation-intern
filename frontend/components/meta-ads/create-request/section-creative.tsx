@@ -206,6 +206,15 @@ function createEmptyAdVariantForSection(seq: number, form: Pick<RequestFormState
     flexibleCallToAction: "LEARN_MORE",
     flexibleLinkUrl: "",
     flexibleAssets: [createEmptyFlexibleAsset()],
+    playablePrimaryText: "",
+    playablePrimaryTexts: [""],
+    playableHeadline: "",
+    playableHeadlines: [""],
+    playableCallToAction: "INSTALL_MOBILE_APP",
+    playableLinkUrl: "",
+    playableSource: createEmptyMediaSelection("uploaded_asset"),
+    playableLeadInVideo: createEmptyMediaSelection("meta_ref"),
+    playableThumbnail: createEmptyMediaSelection("meta_ref"),
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
@@ -302,6 +311,7 @@ export function CreativeSection({
   const [variationMetaOpen, setVariationMetaOpen] = useState(false)
   const [flexibleLibraryOpen, setFlexibleLibraryOpen] = useState(false)
   const [flexibleMetaOpen, setFlexibleMetaOpen] = useState(false)
+  const [playableLeadInLibraryOpen, setPlayableLeadInLibraryOpen] = useState(false)
   const [activeFlexibleAssetId, setActiveFlexibleAssetId] = useState<string | null>(null)
   const flexibleBulkInputRef = useRef<HTMLInputElement | null>(null)
   const completion = getCreativeCompletion(form)
@@ -960,6 +970,28 @@ export function CreativeSection({
         applyPatch: (thumbnailPatch) => updateFlexibleAssetMedia(index, "thumbnail", thumbnailPatch),
       })
     }
+  }
+
+  const handlePlayableUpload = async (slot: "playableSource" | "playableLeadInVideo" | "playableThumbnail", file: File | null) => {
+    if (!file) return
+    const kind = slot === "playableSource" ? "playable" : slot === "playableLeadInVideo" ? "video" : "image"
+    try {
+      setUploadingKey(`playable:${slot}:${file.name}`)
+      const asset = await metaRequestsApi.uploadAsset(file, kind)
+      const patch = { ...(form[slot] as MetaRequestAssetSelectionState), ...buildNexusAssetSelectionPatch(asset) }
+      onChange({ [slot]: patch } as Partial<RequestFormState>)
+      toast({ title: "Uploaded", description: asset.fileName })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed."
+      toast({ title: "Upload failed", description: message, variant: "destructive" })
+    } finally {
+      setUploadingKey(null)
+    }
+  }
+
+  const handlePlayableLeadInLibrarySelect = (asset: MetaRequestAssetDto) => {
+    const patch = { ...form.playableLeadInVideo, ...buildNexusAssetSelectionPatch(asset) }
+    onChange({ playableLeadInVideo: patch })
   }
 
   const handleFlexibleUpload = async (index: number, kind: "image" | "video" | "thumbnail", file: File | null) => {
@@ -1670,6 +1702,7 @@ export function CreativeSection({
                 <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
                 <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible ad</TabsTrigger>
                 <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
+                <TabsTrigger value="PLAYABLE" className="text-xs px-3 data-[state=active]:bg-white"><Video className="w-3.5 h-3.5 mr-1.5" />Playable</TabsTrigger>
               </TabsList>
 
               <TabsContent value="SINGLE_MEDIA" className="mt-4 space-y-4">
@@ -2222,6 +2255,116 @@ export function CreativeSection({
                   ) : null}
                 </div>
               </TabsContent>
+
+              <TabsContent value="PLAYABLE" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-[11px] text-violet-800 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-violet-600" />
+                  <div>Playable ad: upload a self-contained <strong>index.html</strong> (≤10MB, no external requests) plus a lead-in video. App Promotion objective only; CTA is fixed to Install.</div>
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Primary Text</Label>
+                  <Textarea
+                    rows={3}
+                    value={form.playablePrimaryText || getFirstFilledVariation(form.playablePrimaryTexts, "")}
+                    placeholder="Enter primary text"
+                    onChange={(event) => { const val = event.target.value; onChange({ playablePrimaryText: val, playablePrimaryTexts: [val] }) }}
+                    className="text-sm resize-none bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Headline</Label>
+                  <Input
+                    value={form.playableHeadline || getFirstFilledVariation(form.playableHeadlines, "")}
+                    placeholder="Enter headline"
+                    onChange={(event) => { const val = event.target.value; onChange({ playableHeadline: val, playableHeadlines: [val] }) }}
+                    className="h-9 text-sm bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Call To Action</Label>
+                    <Select value={form.playableCallToAction || "INSTALL_MOBILE_APP"} onValueChange={(value) => onChange({ playableCallToAction: value })}>
+                      <SelectTrigger className="h-9 text-sm bg-white"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INSTALL_MOBILE_APP">Install Now</SelectItem>
+                        <SelectItem value="PLAY_GAME">Play Game</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                    <Input
+                      value={form.playableLinkUrl}
+                      placeholder="Store URL (optional, falls back to app mapping)"
+                      onChange={(event) => onChange({ playableLinkUrl: event.target.value })}
+                      className="h-9 text-sm bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Playable Source (HTML) <span className="text-red-500">*</span></Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept=".html,.htm,text/html"
+                      id="playable-source-input"
+                      className="hidden"
+                      onChange={(event) => { void handlePlayableUpload("playableSource", event.target.files?.[0] ?? null); event.target.value = "" }}
+                    />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" disabled={uploadingKey?.startsWith("playable:playableSource:") ?? false} onClick={() => document.getElementById("playable-source-input")?.click()}>
+                      Upload .html
+                    </Button>
+                    {form.playableSource.uploadedAssetId
+                      ? <span className="text-[11px] text-slate-600 truncate">{form.playableSource.uploadedAssetName || `Asset #${form.playableSource.uploadedAssetId}`}</span>
+                      : <span className="text-[11px] text-slate-400">No file selected</span>}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Lead-in Video <span className="text-red-500">*</span></Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      id="playable-leadin-input"
+                      className="hidden"
+                      onChange={(event) => { void handlePlayableUpload("playableLeadInVideo", event.target.files?.[0] ?? null); event.target.value = "" }}
+                    />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" disabled={uploadingKey?.startsWith("playable:playableLeadInVideo:") ?? false} onClick={() => document.getElementById("playable-leadin-input")?.click()}>
+                      Upload video
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setPlayableLeadInLibraryOpen(true)}>
+                      From Library
+                    </Button>
+                    {form.playableLeadInVideo.uploadedAssetId
+                      ? <span className="text-[11px] text-slate-600 truncate">{form.playableLeadInVideo.uploadedAssetName || `Asset #${form.playableLeadInVideo.uploadedAssetId}`}</span>
+                      : <span className="text-[11px] text-slate-400">No video selected</span>}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <Label className="text-xs font-medium text-slate-700">Thumbnail (optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="playable-thumb-input"
+                      className="hidden"
+                      onChange={(event) => { void handlePlayableUpload("playableThumbnail", event.target.files?.[0] ?? null); event.target.value = "" }}
+                    />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" disabled={uploadingKey?.startsWith("playable:playableThumbnail:") ?? false} onClick={() => document.getElementById("playable-thumb-input")?.click()}>
+                      Upload image
+                    </Button>
+                    {form.playableThumbnail.uploadedAssetId
+                      ? <span className="text-[11px] text-slate-600 truncate">{form.playableThumbnail.uploadedAssetName || `Asset #${form.playableThumbnail.uploadedAssetId}`}</span>
+                      : <span className="text-[11px] text-slate-400">Auto-generated from video if empty</span>}
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
 
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
@@ -2293,6 +2436,12 @@ export function CreativeSection({
       selectionMode="multiple"
       maxSelectionCount={flexibleBulkCapacity}
       onSelectMany={handleBulkFlexibleLibrarySelect}
+    />
+    <NexusAssetLibraryDialog
+      open={playableLeadInLibraryOpen}
+      onOpenChange={setPlayableLeadInLibraryOpen}
+      targetKind="video"
+      onSelect={handlePlayableLeadInLibrarySelect}
     />
     <MetaMediaPickerDialog
       open={flexibleMetaOpen}
@@ -3591,6 +3740,16 @@ function getCreativeCompletion(form: RequestFormState) {
     ]
     return { complete: items.every((item) => item.ok), items }
   }
+  if (form.creativeType === "PLAYABLE") {
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Facebook Page ID", ok: !!form.facebookPageId },
+      { label: "CTA", ok: !!form.playableCallToAction },
+      { label: "Playable source (HTML)", ok: !!form.playableSource.uploadedAssetId },
+      { label: "Lead-in video", ok: !!form.playableLeadInVideo.uploadedAssetId },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
   const items = [
     { label: "Creative name", ok: !!form.creativeName },
     { label: "Facebook Page ID", ok: !!form.facebookPageId },
@@ -3628,6 +3787,7 @@ function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: b
     if (!firstAsset) return { url: "", requiresAuth: false }
     return firstAsset.assetType === "VIDEO" ? getSelectionPreviewSource(firstAsset.thumbnail) : getSelectionPreviewSource(firstAsset.image)
   }
+  if (form.creativeType === "PLAYABLE") return getSelectionPreviewSource(form.playableThumbnail)
   return getSelectionPreviewSource(form.singleImageImage)
 }
 
@@ -3637,6 +3797,7 @@ function getPreviewHeadline(form: RequestFormState): string {
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexibleHeadlines)
   if (form.creativeType === "EXISTING_POST") return form.existingPostId ? `Existing Post ${form.existingPostId}` : "Existing post preview"
+  if (form.creativeType === "PLAYABLE") return getFirstFilledVariation(form.playableHeadlines, form.playableHeadline)
   return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
 }
 
@@ -3646,6 +3807,7 @@ function getPreviewMessage(form: RequestFormState): string {
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexiblePrimaryTexts) || `${form.flexibleAssets.length} flexible assets`
   if (form.creativeType === "EXISTING_POST") return "Existing post preview will be resolved from Meta post at execution time."
+  if (form.creativeType === "PLAYABLE") return getFirstFilledVariation(form.playablePrimaryTexts, form.playablePrimaryText)
   return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
 }
 
@@ -3655,6 +3817,7 @@ function getPreviewCta(form: RequestFormState): string {
   if (form.creativeType === "CAROUSEL_IMAGE") return formatCta(form.carouselCallToAction)
   if (form.creativeType === "FLEXIBLE") return formatCta(form.flexibleCallToAction)
   if (form.creativeType === "EXISTING_POST") return "OPEN POST"
+  if (form.creativeType === "PLAYABLE") return formatCta(form.playableCallToAction)
   return formatCta(form.singleImageCallToAction)
 }
 

@@ -7,7 +7,7 @@ export type MetaRequestStatus =
   | "completed"
   | "failed"
 
-export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE"
+export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE" | "PLAYABLE"
 export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "COUNTRY_GROUP" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
@@ -821,6 +821,18 @@ export interface MetaFlexibleCreativeDraftDto {
   assets: MetaFlexibleCreativeAssetDraftDto[]
 }
 
+export interface MetaPlayableCreativeDraftDto {
+  message?: string | null
+  messages?: string[] | null
+  headline?: string | null
+  headlines?: string[] | null
+  callToActionType?: string | null
+  linkUrl?: string | null
+  playableSource?: MetaCreativeMediaSourceDto | null
+  leadInVideo?: MetaCreativeMediaSourceDto | null
+  thumbnail?: MetaCreativeMediaSourceDto | null
+}
+
 export type MetaAdvantageCreativeEnrollStatus = "OPT_IN" | "OPT_OUT"
 
 export interface MetaCreativeFeatureEnrollStatusDto {
@@ -850,6 +862,7 @@ export interface MetaCreativeDraftDto {
   carousel?: MetaCarouselCreativeDraftDto | null
   existingPost?: MetaExistingPostCreativeDraftDto | null
   flexible?: MetaFlexibleCreativeDraftDto | null
+  playable?: MetaPlayableCreativeDraftDto | null
   name?: string | null
   pageId?: string | null
   instagramActorId?: string | null
@@ -864,7 +877,7 @@ export interface MetaCreativeDraftDto {
 
 export interface MetaRequestAssetDto {
   id: number
-  kind: "image" | "video" | string
+  kind: "image" | "video" | "playable" | string
   fileName: string
   contentType: string
   sizeBytes: number
@@ -898,11 +911,12 @@ export type MetaAssetPreparationStatus = "pending" | "uploading" | "processing" 
 export interface MetaAssetPreparationDto {
   requestAssetId: number
   slotKey: string
-  kind: "image" | "video"
+  kind: "image" | "video" | "playable"
   status: MetaAssetPreparationStatus
   metaAdAccountId?: number | null
   metaImageHash?: string | null
   metaVideoId?: string | null
+  metaPlayableAssetId?: string | null
   errorMessage?: string | null
   attemptCount: number
   lastAttemptAt?: string | null
@@ -1239,6 +1253,15 @@ export interface AdVariantFormState {
   flexibleCallToAction: string
   flexibleLinkUrl: string
   flexibleAssets: MetaFlexibleAssetFormState[]
+  playablePrimaryText: string
+  playablePrimaryTexts: string[]
+  playableHeadline: string
+  playableHeadlines: string[]
+  playableCallToAction: string
+  playableLinkUrl: string
+  playableSource: MetaRequestAssetSelectionState
+  playableLeadInVideo: MetaRequestAssetSelectionState
+  playableThumbnail: MetaRequestAssetSelectionState
   existingPostId: string
   adName: string
   trackingSpecs: string
@@ -1323,6 +1346,15 @@ export interface MetaRequestFormState {
   flexibleCallToAction: string
   flexibleLinkUrl: string
   flexibleAssets: MetaFlexibleAssetFormState[]
+  playablePrimaryText: string
+  playablePrimaryTexts: string[]
+  playableHeadline: string
+  playableHeadlines: string[]
+  playableCallToAction: string
+  playableLinkUrl: string
+  playableSource: MetaRequestAssetSelectionState
+  playableLeadInVideo: MetaRequestAssetSelectionState
+  playableThumbnail: MetaRequestAssetSelectionState
   existingPostId: string
   adName: string
   trackingSpecs: string

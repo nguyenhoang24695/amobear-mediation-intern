@@ -112,14 +112,14 @@ export const metaRequestsApi = {
     return apiClient.post<MetaExecuteResponseDto>(`${REQUESTS_PREFIX}/${id}/retry`, request)
   },
 
-  uploadAsset: async (file: File, kind: "image" | "video") => {
+  uploadAsset: async (file: File, kind: "image" | "video" | "playable") => {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("kind", kind)
     return apiClient.post<MetaRequestAssetDto>(`${REQUESTS_PREFIX}/assets`, formData)
   },
 
-  listAssets: async (params?: { kind?: "image" | "video"; ownerUsername?: string; q?: string; page?: number; pageSize?: number }) => {
+  listAssets: async (params?: { kind?: "image" | "video" | "playable"; ownerUsername?: string; q?: string; page?: number; pageSize?: number }) => {
     const query = new URLSearchParams()
     if (params?.kind) query.set("kind", params.kind)
     if (params?.ownerUsername) query.set("ownerUsername", params.ownerUsername)
