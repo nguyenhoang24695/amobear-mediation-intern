@@ -109,6 +109,7 @@ import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
+import { sortCustomReportRows } from "@/lib/reports/custom-report-sort"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
@@ -1312,8 +1313,6 @@ export function CustomReportBuilderContent() {
     metricFilters: appliedReportQuery?.metricFilters ?? [],
     commissionUsernames: null,
     commissionTeamIds: appliedReportQuery?.commissionTeamIds ?? null,
-    sortBy: sortColumn,
-    sortDir: sortDirection,
     enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
   })
 
@@ -1812,7 +1811,10 @@ export function CustomReportBuilderContent() {
       : availableFolders
   }, [availableFolders, saveReportFolder])
 
-  const tableRows = reportData?.rows ?? []
+  const tableRows = useMemo(
+    () => sortCustomReportRows(reportData?.rows ?? [], sortColumn, sortDirection),
+    [reportData?.rows, sortColumn, sortDirection],
+  )
   const tableTotals = reportData?.totals ?? {}
   const appStoreMergedMetricRowSpanMap = useMemo(
     () => buildAppStoreMergedMetricRowSpanMap(tableRows, displayedParameters),

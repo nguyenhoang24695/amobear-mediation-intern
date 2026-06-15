@@ -52,6 +52,11 @@ import {
   type RevenuePlanColumnVisibility,
 } from "@/lib/revenue-plan/revenue-plan-column-config"
 import { cn } from "@/lib/utils"
+import {
+  getActualProfitClass,
+  getNetProfitMargin,
+  getNetProfitMarginClass,
+} from "@/lib/metrics/profit-metric-styles"
 import { useToast } from "@/hooks/use-toast"
 import {
   organizationsApi,
@@ -84,9 +89,46 @@ function formatCurrency(value: number | null | undefined) {
   return `$${safe.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function getNetProfitMargin(actualProfit: number, actualRevenue: number): number | null {
-  if (actualRevenue <= 0) return null
-  return (actualProfit / actualRevenue) * 100
+interface AggregatedPlanMetrics {
+  plannedRevenue: number
+  actualRevenue: number
+  actualCost: number
+  actualProfit: number
+  completion: number | null
+  netProfitMargin: number | null
+  hasAnyPlan: boolean
+}
+
+function aggregatePlanMetrics(plans: (TeamMonthlyProfitPlan | undefined)[]): AggregatedPlanMetrics {
+  const validPlans = plans.filter((plan): plan is TeamMonthlyProfitPlan => plan != null)
+  const plannedRows = validPlans.filter(hasPlanData)
+  const plannedRevenue = plannedRows.reduce((sum, plan) => sum + plan.plannedRevenue, 0)
+  const actualRevenue = validPlans.reduce((sum, plan) => sum + plan.actualRevenue, 0)
+  const actualCost = validPlans.reduce((sum, plan) => sum + plan.actualCost, 0)
+  const actualProfit = validPlans.reduce((sum, plan) => sum + plan.actualProfit, 0)
+  const completion =
+    plannedRevenue > 0 ? Math.round((actualRevenue / plannedRevenue) * 10000) / 100 : null
+
+  return {
+    plannedRevenue,
+    actualRevenue,
+    actualCost,
+    actualProfit,
+    completion,
+    netProfitMargin: getNetProfitMargin(actualProfit, actualRevenue),
+    hasAnyPlan: plannedRows.length > 0,
+  }
+}
+
+function buildColumnTotalsByMonth(
+  monthKeys: string[],
+  appRows: AppPlanRow[],
+): Record<string, AggregatedPlanMetrics> {
+  const result: Record<string, AggregatedPlanMetrics> = {}
+  for (const monthKey of monthKeys) {
+    result[monthKey] = aggregatePlanMetrics(appRows.map((row) => row.months[monthKey]))
+  }
+  return result
 }
 
 function formatNetProfitMarginDisplay(margin: number | null): string {
@@ -184,7 +226,12 @@ function renderMonthMetricCell(
       return (
         <TableCell
           key={columnId}
-          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+          className={cn(
+            column.minWidthClass,
+            edgeBorderClass,
+            "text-right text-sm tabular-nums",
+            plan ? getActualProfitClass(plan.actualProfit) : "text-slate-500",
+          )}
         >
           {plan ? formatCurrency(plan.actualProfit) : "—"}
         </TableCell>
@@ -193,7 +240,12 @@ function renderMonthMetricCell(
       return (
         <TableCell
           key={columnId}
-          className={cn(column.minWidthClass, edgeBorderClass, "text-right text-sm tabular-nums")}
+          className={cn(
+            column.minWidthClass,
+            edgeBorderClass,
+            "text-right text-sm tabular-nums",
+            plan ? getNetProfitMarginClass(netProfitMargin) : "text-slate-500",
+          )}
         >
           {plan ? (
             <Tooltip>
@@ -212,6 +264,110 @@ function renderMonthMetricCell(
     default:
       return null
   }
+}
+
+function renderAggregatedMetricCell(
+  columnId: RevenuePlanColumnId,
+  metrics: AggregatedPlanMetrics,
+  isFirst: boolean,
+  isLast: boolean,
+  options?: { isTrailingTotal?: boolean; isTotalRow?: boolean },
+) {
+  const column = REVENUE_PLAN_COLUMNS.find((item) => item.id === columnId)
+  if (!column) return null
+
+  const status = getStatus(metrics.hasAnyPlan ? metrics.completion : null)
+  const edgeBorderClass = cn(
+    isFirst && cn("border-l", options?.isTrailingTotal ? "border-l-2 border-slate-400" : "border-slate-200"),
+    isLast && "border-r border-slate-200",
+  )
+  const cellClassName = cn(
+    column.minWidthClass,
+    edgeBorderClass,
+    "text-right text-sm tabular-nums",
+    options?.isTotalRow ? "bg-slate-100/80 font-semibold" : options?.isTrailingTotal ? "bg-slate-50/80" : "",
+  )
+
+  switch (columnId) {
+    case "planned":
+      return (
+        <TableCell key={columnId} className={cellClassName}>
+          {metrics.hasAnyPlan ? formatCurrency(metrics.plannedRevenue) : "—"}
+        </TableCell>
+      )
+    case "actual":
+      return (
+        <TableCell key={columnId} className={cellClassName}>
+          {formatCurrency(metrics.actualRevenue)}
+        </TableCell>
+      )
+    case "completion":
+      return (
+        <TableCell key={columnId} className={cn(column.minWidthClass, edgeBorderClass, "text-right", options?.isTotalRow && "bg-slate-100/80")}>
+          {metrics.hasAnyPlan && metrics.completion != null ? (
+            <Badge className={cn("w-fit font-semibold", status.className)} variant="secondary">
+              {metrics.completion.toFixed(2)}%
+            </Badge>
+          ) : (
+            <span className={cn("text-sm", options?.isTotalRow ? "font-semibold text-slate-400" : "text-slate-400")}>—</span>
+          )}
+        </TableCell>
+      )
+    case "actualCost":
+      return (
+        <TableCell key={columnId} className={cellClassName}>
+          {formatCurrency(metrics.actualCost)}
+        </TableCell>
+      )
+    case "actualProfit":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(cellClassName, getActualProfitClass(metrics.actualProfit))}
+        >
+          {formatCurrency(metrics.actualProfit)}
+        </TableCell>
+      )
+    case "netProfitMargin":
+      return (
+        <TableCell
+          key={columnId}
+          className={cn(cellClassName, getNetProfitMarginClass(metrics.netProfitMargin))}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+                {formatNetProfitMarginDisplay(metrics.netProfitMargin)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{formatNetProfitMarginTooltip(metrics.netProfitMargin)}</TooltipContent>
+          </Tooltip>
+        </TableCell>
+      )
+    default:
+      return null
+  }
+}
+
+function renderAggregatedMetricGroup(
+  groupKey: string,
+  metrics: AggregatedPlanMetrics,
+  visibleColumns: (typeof REVENUE_PLAN_COLUMNS)[number][],
+  options?: { isTrailingTotal?: boolean; isTotalRow?: boolean },
+) {
+  return (
+    <Fragment key={groupKey}>
+      {visibleColumns.map((column, index) =>
+        renderAggregatedMetricCell(
+          column.id,
+          metrics,
+          index === 0,
+          index === visibleColumns.length - 1,
+          options,
+        ),
+      )}
+    </Fragment>
+  )
 }
 
 export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabProps) {
@@ -322,6 +478,16 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     }
     return Array.from(map.values()).sort((a, b) => a.appLabel.localeCompare(b.appLabel))
   }, [filteredPlans])
+
+  const columnTotalsByMonth = useMemo(
+    () => buildColumnTotalsByMonth(monthKeys, appRows),
+    [monthKeys, appRows],
+  )
+
+  const grandTotalMetrics = useMemo(
+    () => aggregatePlanMetrics(appRows.flatMap((row) => monthKeys.map((monthKey) => row.months[monthKey]))),
+    [appRows, monthKeys],
+  )
 
   const overallCompletion = useMemo(() => {
     const plannedRows = filteredPlans.filter(hasPlanData)
@@ -751,6 +917,13 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           {formatMonthTableHeader(month)}
                         </TableHead>
                       ))}
+                      <TableHead
+                        colSpan={visibleColumnCount}
+                        className="sticky top-0 z-20 border-b border-l-2 border-r border-slate-400 bg-slate-100/95 text-center text-xs font-semibold text-slate-800"
+                        style={{ minWidth: `${Math.max(visibleColumnCount * 80, 160)}px` }}
+                      >
+                        Total
+                      </TableHead>
                     </TableRow>
                     <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
                       {monthKeys.map((month) => (
@@ -773,6 +946,24 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           ) : null}
                         </Fragment>
                       ))}
+                      <Fragment key="total-groups">
+                        {visibleRevenueColumnCount > 0 ? (
+                          <TableHead
+                            colSpan={visibleRevenueColumnCount}
+                            className="sticky top-10 z-20 border-b border-r border-l-2 border-slate-400 bg-blue-50/90 text-center text-xs font-semibold text-blue-700"
+                          >
+                            Revenue
+                          </TableHead>
+                        ) : null}
+                        {visiblePerformanceColumnCount > 0 ? (
+                          <TableHead
+                            colSpan={visiblePerformanceColumnCount}
+                            className="sticky top-10 z-20 border-b border-r border-slate-200 bg-emerald-50/90 text-center text-xs font-semibold text-emerald-700"
+                          >
+                            Performance
+                          </TableHead>
+                        ) : null}
+                      </Fragment>
                     </TableRow>
                     <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
                       {monthKeys.map((month) => (
@@ -792,13 +983,29 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           ))}
                         </Fragment>
                       ))}
+                      <Fragment key="total-columns">
+                        {visibleColumns.map((column, index) => (
+                          <TableHead
+                            key={`total-${column.id}`}
+                            className={cn(
+                              METRIC_HEADER_CLASS,
+                              column.minWidthClass,
+                              index === 0 && "border-l-2 border-slate-400",
+                              index === visibleColumns.length - 1 && "border-r",
+                              "bg-slate-100/95",
+                            )}
+                          >
+                            {column.label}
+                          </TableHead>
+                        ))}
+                      </Fragment>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {appRows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={1 + monthKeys.length * visibleColumnCount}
+                          colSpan={1 + monthKeys.length * visibleColumnCount + visibleColumnCount}
                           className="py-10 text-center text-sm text-slate-500"
                         >
                           {searchQuery.trim()
@@ -807,7 +1014,34 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedAppRows.map((row) => (
+                      <>
+                        <TableRow className="bg-slate-100/80 hover:bg-slate-100/80">
+                          <TableCell
+                            className={cn(APP_COLUMN_CLASS, "bg-slate-100 font-bold text-slate-900")}
+                          >
+                            Total
+                          </TableCell>
+                          {monthKeys.map((month) =>
+                            renderAggregatedMetricGroup(
+                              month,
+                              columnTotalsByMonth[month],
+                              visibleColumns,
+                              { isTotalRow: true },
+                            ),
+                          )}
+                          {renderAggregatedMetricGroup(
+                            "row-total",
+                            grandTotalMetrics,
+                            visibleColumns,
+                            { isTrailingTotal: true, isTotalRow: true },
+                          )}
+                        </TableRow>
+                        {paginatedAppRows.map((row) => {
+                          const rowTotalMetrics = aggregatePlanMetrics(
+                            monthKeys.map((monthKey) => row.months[monthKey]),
+                          )
+
+                          return (
                         <TableRow key={row.appStoreId} className="hover:bg-slate-50/60">
                           <TableCell className={APP_COLUMN_CLASS}>
                             <RevenuePlanAppCell
@@ -862,8 +1096,16 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                               </Fragment>
                             )
                           })}
+                          {renderAggregatedMetricGroup(
+                            `${row.appStoreId}-total`,
+                            rowTotalMetrics,
+                            visibleColumns,
+                            { isTrailingTotal: true },
+                          )}
                         </TableRow>
-                      ))
+                          )
+                        })}
+                      </>
                     )}
                   </TableBody>
                 </table>
