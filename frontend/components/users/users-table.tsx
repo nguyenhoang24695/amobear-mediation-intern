@@ -44,6 +44,7 @@ import { teamMembersApi } from "@/lib/api/services"
 import { ManagePermissionsModal } from "./manage-permissions-modal"
 import { AbUserAppMappingModal } from "./ab-user-app-mapping-modal"
 import { getCurrentUser } from "@/lib/auth"
+import { canRemoveUserFromTeam } from "@/lib/organizations/team-member-permissions"
 import {
   Dialog,
   DialogContent,
@@ -125,6 +126,7 @@ function formatTeamActionFailures(
 export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
   const currentUser = useMemo(() => getCurrentUser(), [])
   const currentUserId = currentUser?.id
+  const canRemoveMembersFromTeam = teamId ? canRemoveUserFromTeam(teamId, currentUser) : false
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -511,6 +513,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 const bulkIsSelfOnly =
                   Boolean(teamId && currentUserId) &&
                   selectedUsers.every((id) => id === currentUserId)
+                if (!bulkIsSelfOnly && !canRemoveMembersFromTeam) return null
                 return (
                   <Button
                     variant="outline"
@@ -843,7 +846,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                             <LogOut className="w-4 h-4 mr-2" />
                             Leave
                           </DropdownMenuItem>
-                        ) : (
+                        ) : teamId && canRemoveMembersFromTeam ? (
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-600"
                             onClick={() => handleRemoveClick([user.id])}
@@ -851,7 +854,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                             <Trash2 className="w-4 h-4 mr-2" />
                             Remove
                           </DropdownMenuItem>
-                        )}
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

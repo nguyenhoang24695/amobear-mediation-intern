@@ -16,8 +16,6 @@ export function useCustomReportQuery(options: {
   commissionUsernames?: string[] | null
   commissionTeamId?: string | null
   commissionTeamIds?: string[] | null
-  sortBy: string
-  sortDir: "asc" | "desc"
   enabled?: boolean
 }) {
   const {
@@ -30,8 +28,6 @@ export function useCustomReportQuery(options: {
     metricFilters = [],
     commissionTeamId = null,
     commissionTeamIds = null,
-    sortBy,
-    sortDir,
     enabled = true,
   } = options
 
@@ -72,8 +68,6 @@ export function useCustomReportQuery(options: {
             commissionTeamIds && commissionTeamIds.length > 0 ? null : commissionTeamId,
           commissionTeamIds:
             commissionTeamIds && commissionTeamIds.length > 0 ? commissionTeamIds : null,
-          sortBy,
-          sortDir,
         })
         if (reqId !== requestIdRef.current) return
         setData(result)
@@ -98,14 +92,6 @@ export function useCustomReportQuery(options: {
     commissionTeamId,
     commissionTeamIdsKey,
     revenueSource,
-    sortBy,
-    sortDir,
-    // Keep dependency array length stable across Fast Refresh while using canonical keys,
-    // so reordering columns does not trigger a fresh API call.
-    appIdsKey,
-    dimensionsKey,
-    metricsKey,
-    metricFiltersKey,
   ])
 
   return { data, loading, error }

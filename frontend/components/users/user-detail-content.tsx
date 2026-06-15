@@ -51,6 +51,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
+import { canRemoveUserFromTeam } from "@/lib/organizations/team-member-permissions"
 import { useToast } from "@/hooks/use-toast"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 import { useRoles } from "@/hooks/use-roles"
@@ -220,10 +221,11 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
   const canAddToTeam = !!user?.organization?.id && canManageTargetUser
   const canAssignPrivilegedRole = isSuperAdmin // Explicitly pass down if needed, but let's just pass this as canManage for the modal.
   const isSelfProfile = !!user && currentUser?.id === user.id
-  const canRemoveFromTeam = isSelfProfile || canManageTargetUser
+  const canShowTeamRemoveButton = (teamId: string) =>
+    isSelfProfile || canRemoveUserFromTeam(teamId, currentUser)
 
   const handleRemoveTeamClick = (team: { id: string; name: string }) => {
-    if (!canRemoveFromTeam) return
+    if (!canShowTeamRemoveButton(team.id)) return
     setTeamPendingRemoval(team)
     setRemoveTeamError(null)
     setRemoveTeamConfirmOpen(true)
@@ -557,7 +559,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                           <Badge variant="outline" className="text-xs capitalize">
                             {team.role}
                           </Badge>
-                          {canRemoveFromTeam && (
+                          {canShowTeamRemoveButton(team.id) && (
                             <Button
                               variant="ghost"
                               size="icon"
