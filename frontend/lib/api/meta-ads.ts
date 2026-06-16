@@ -34,6 +34,8 @@ import type {
   MetaInsightsFiltersResponseDto,
   MetaInsightsOverviewDto,
   MetaRequestAssetDto,
+  MetaRequestAssetOwnersDto,
+  MetaRequestAssetPageDto,
   MetaCreateCampaignReferenceDto,
   MetaExecuteResponseDto,
   MetaFacebookPageReferenceDto,
@@ -112,11 +114,26 @@ export const metaRequestsApi = {
     return apiClient.post<MetaExecuteResponseDto>(`${REQUESTS_PREFIX}/${id}/retry`, request)
   },
 
-  uploadAsset: async (file: File, kind: "image" | "video") => {
+  uploadAsset: async (file: File, kind: "image" | "video" | "playable") => {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("kind", kind)
     return apiClient.post<MetaRequestAssetDto>(`${REQUESTS_PREFIX}/assets`, formData)
+  },
+
+  listAssets: async (params?: { kind?: "image" | "video" | "playable"; ownerUsername?: string; q?: string; page?: number; pageSize?: number }) => {
+    const query = new URLSearchParams()
+    if (params?.kind) query.set("kind", params.kind)
+    if (params?.ownerUsername) query.set("ownerUsername", params.ownerUsername)
+    if (params?.q) query.set("q", params.q)
+    if (params?.page) query.set("page", String(params.page))
+    if (params?.pageSize) query.set("pageSize", String(params.pageSize))
+    const queryString = query.toString()
+    return apiClient.get<MetaRequestAssetPageDto>(`${REQUESTS_PREFIX}/assets${queryString ? `?${queryString}` : ""}`)
+  },
+
+  listAssetOwners: async () => {
+    return apiClient.get<MetaRequestAssetOwnersDto>(`${REQUESTS_PREFIX}/assets/owners`)
   },
 
   getAsset: async (id: number) => {

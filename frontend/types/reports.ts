@@ -125,9 +125,7 @@ export interface CustomReportFolder {
   createdAt: string
 }
 
-export type OverviewMetricId = "revenue" | "cost" | "profit"
-
-export type OverviewParameterId = "plan" | "actual" | "percent"
+export type { OverviewColumnId, OverviewColumnGroup } from "@/lib/reports/overview-column-config"
 
 export interface ProfitOverviewMetricValues {
   plan?: number | null

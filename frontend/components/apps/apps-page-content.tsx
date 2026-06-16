@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,8 @@ import Link from "next/link"
 import { AppsTable } from "./apps-table"
 import { Card } from "@/components/ui/card"
 import { useApi } from "@/hooks/use-api"
-import { structureApi } from "@/lib/api/services"
+import { structureApi, type StructureAppsResponse } from "@/lib/api/services"
+import { loadStructureAppsProgressive } from "@/lib/apps/load-structure-apps-progressive"
 import { hasScreenFunction, canEnterAppDetail } from "@/lib/auth"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 
@@ -46,16 +47,72 @@ export function AppsPageContent() {
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [selectedApps, setSelectedApps] = useState<string[]>([])
   const [updatingType, setUpdatingType] = useState<"game" | "app" | null>(null)
+  const [appsResponse, setAppsResponse] = useState<StructureAppsResponse | null>(null)
+  const [appsLoading, setAppsLoading] = useState(true)
+  const [backgroundAppsLoading, setBackgroundAppsLoading] = useState(false)
+  const loadAbortRef = useRef<AbortController | null>(null)
 
-  // Fetch apps từ API (khi chọn "All Accounts" = getApps(), khi chọn 1 tài khoản = getApps(publisherId))
-  const { data: appsResponse, loading: appsLoading, refetch: refetchApps } = useApi(
-    () =>
-      structureApi.getApps({
+  const loadApps = useCallback(async () => {
+    loadAbortRef.current?.abort()
+    const controller = new AbortController()
+    loadAbortRef.current = controller
+
+    setAppsLoading(true)
+    setBackgroundAppsLoading(false)
+    setAppsResponse(null)
+
+    try {
+      const response = await loadStructureAppsProgressive({
         ...(admobAccount !== ALL_ACCOUNTS_VALUE ? { publisherId: admobAccount } : {}),
         approvalState: "all",
-      }),
-    { enabled: true, cacheKey: `apps_list_all_states_${admobAccount}` }
-  )
+        signal: controller.signal,
+        onFirstPage: (firstPage) => {
+          if (controller.signal.aborted) return
+          setAppsResponse(firstPage)
+          setAppsLoading(false)
+
+          const totalPages =
+            firstPage.totalPages ??
+            (firstPage.summary?.totalApps
+              ? Math.ceil(firstPage.summary.totalApps / 50)
+              : 1)
+          if (totalPages > 1) setBackgroundAppsLoading(true)
+        },
+        onPage: (pageResponse, page) => {
+          if (controller.signal.aborted || page <= 1) return
+          setAppsResponse((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  apps: [...prev.apps, ...pageResponse.apps],
+                  summary: prev.summary,
+                }
+              : pageResponse,
+          )
+        },
+      })
+
+      if (!controller.signal.aborted) {
+        setAppsResponse(response)
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        console.error("Failed to load apps", error)
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setBackgroundAppsLoading(false)
+        setAppsLoading(false)
+      }
+    }
+  }, [admobAccount])
+
+  useEffect(() => {
+    void loadApps()
+    return () => {
+      loadAbortRef.current?.abort()
+    }
+  }, [loadApps])
 
   const apps = appsResponse?.apps || []
   const summary = appsResponse?.summary
@@ -177,7 +234,7 @@ export function AppsPageContent() {
     try {
       setUpdatingType(targetType)
       await structureApi.updateAppsType({ appIds, type: targetType })
-      await refetchApps()
+      await loadApps()
       setSelectedApps([])
     } finally {
       setUpdatingType(null)
@@ -210,6 +267,7 @@ export function AppsPageContent() {
             ) : (
               <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
                 {summaryStats.total}
+                {backgroundAppsLoading ? "…" : ""}
               </Badge>
             )}
           </div>
@@ -324,11 +382,11 @@ export function AppsPageContent() {
           {canSyncFromAdmob && (
             <Button 
               className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
-              onClick={() => refetchApps()}
-              disabled={appsLoading}
+              onClick={() => void loadApps()}
+              disabled={appsLoading || backgroundAppsLoading}
             >
-              <RefreshCw className={`w-4 h-4 ${appsLoading ? 'animate-spin' : ''}`} />
-              {appsLoading ? 'Syncing...' : 'Sync from AdMob'}
+              <RefreshCw className={`w-4 h-4 ${appsLoading || backgroundAppsLoading ? 'animate-spin' : ''}`} />
+              {appsLoading || backgroundAppsLoading ? 'Syncing...' : 'Sync from AdMob'}
             </Button>
           )}
         </div>

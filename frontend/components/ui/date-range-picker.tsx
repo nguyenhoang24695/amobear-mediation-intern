@@ -80,7 +80,7 @@ export function DateRangePicker({
   const initialPreset = React.useMemo(() => {
     if (value) return detectPreset(value)
     return defaultPreset ?? "7days"
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps — chỉ tính lần đầu
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- initial preset only
 
   const [selectedPreset, setSelectedPreset] = React.useState<DateRangePreset>(initialPreset)
   const [isCustomOpen, setIsCustomOpen] = React.useState(false)
@@ -91,7 +91,7 @@ export function DateRangePicker({
       const preset = defaultPreset ?? "7days"
       onChange(getPresetRange(preset))
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- initialize default range once
 
   const handlePresetChange = (preset: DateRangePreset) => {
     setSelectedPreset(preset)

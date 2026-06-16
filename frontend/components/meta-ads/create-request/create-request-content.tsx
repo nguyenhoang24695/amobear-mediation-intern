@@ -59,6 +59,7 @@ export type RequestFormState = MetaRequestFormState
 
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
 const MAX_AD_VARIANTS = 50
+const SKAN_IOS_14_USER_OS = "iOS_ver_14.0_and_above"
 
 const requestSectionIds: Record<RequestSectionTarget, string> = {
   "account-app": "meta-request-section-account-app",
@@ -140,6 +141,10 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
   if (!Array.isArray(next.flexiblePrimaryTexts) || next.flexiblePrimaryTexts.length === 0) next.flexiblePrimaryTexts = [""]
   if (!Array.isArray(next.flexibleHeadlines) || next.flexibleHeadlines.length === 0) next.flexibleHeadlines = [""]
   if (!Array.isArray(next.flexibleAssets) || next.flexibleAssets.length === 0) next.flexibleAssets = [createEmptyFlexibleAsset()]
+  next.userOs = Array.isArray(next.userOs) ? next.userOs.filter((value) => value.trim()) : []
+  if (next.isSkadnetworkAttribution) {
+    next.userOs = [SKAN_IOS_14_USER_OS]
+  }
 
   return next
 }
@@ -171,6 +176,9 @@ function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): Re
     singleImageImage: clearMetaLibrarySelection(state.singleImageImage, state.adAccountId),
     singleVideoVideo: clearMetaLibrarySelection(state.singleVideoVideo, state.adAccountId),
     singleVideoThumbnail: clearMetaLibrarySelection(state.singleVideoThumbnail, state.adAccountId),
+    playableSource: clearMetaLibrarySelection(state.playableSource, state.adAccountId),
+    playableLeadInVideo: clearMetaLibrarySelection(state.playableLeadInVideo, state.adAccountId),
+    playableThumbnail: clearMetaLibrarySelection(state.playableThumbnail, state.adAccountId),
     carouselCards: state.carouselCards.map((card) => ({
       ...card,
       image: clearMetaLibrarySelection(card.image, state.adAccountId),
@@ -187,6 +195,9 @@ function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): Re
       singleImageImage: clearMetaLibrarySelection(variant.singleImageImage, state.adAccountId),
       singleVideoVideo: clearMetaLibrarySelection(variant.singleVideoVideo, state.adAccountId),
       singleVideoThumbnail: clearMetaLibrarySelection(variant.singleVideoThumbnail, state.adAccountId),
+      playableSource: clearMetaLibrarySelection(variant.playableSource, state.adAccountId),
+      playableLeadInVideo: clearMetaLibrarySelection(variant.playableLeadInVideo, state.adAccountId),
+      playableThumbnail: clearMetaLibrarySelection(variant.playableThumbnail, state.adAccountId),
       carouselCards: variant.carouselCards.map((card) => ({
         ...card,
         image: clearMetaLibrarySelection(card.image, state.adAccountId),
@@ -214,6 +225,7 @@ function createDefaultFormState(): RequestFormState {
     specialAdCategories: [],
     bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     isAdSetBudgetSharingEnabled: true,
+    isSkadnetworkAttribution: false,
     campaignDailyBudget: "20",
     campaignLifetimeBudget: "",
     adSetName: "",
@@ -227,6 +239,7 @@ function createDefaultFormState(): RequestFormState {
     ageMin: 18,
     ageMax: 65,
     gender: "ALL",
+    userOs: [],
     placementMode: "AUTOMATIC",
     publisherPlatforms: [],
     facebookPositions: [],
@@ -272,6 +285,15 @@ function createDefaultFormState(): RequestFormState {
     flexibleCallToAction: "LEARN_MORE",
     flexibleLinkUrl: "",
     flexibleAssets: [createEmptyFlexibleAsset()],
+    playablePrimaryText: "",
+    playablePrimaryTexts: [""],
+    playableHeadline: "",
+    playableHeadlines: [""],
+    playableCallToAction: "INSTALL_MOBILE_APP",
+    playableLinkUrl: "",
+    playableSource: createEmptyMediaSelection("uploaded_asset"),
+    playableLeadInVideo: createEmptyMediaSelection("meta_ref"),
+    playableThumbnail: createEmptyMediaSelection("meta_ref"),
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
@@ -319,6 +341,15 @@ function createEmptyAdVariant(seq: number, form: Pick<RequestFormState, "faceboo
     flexibleCallToAction: "LEARN_MORE",
     flexibleLinkUrl: "",
     flexibleAssets: [createEmptyFlexibleAsset()],
+    playablePrimaryText: "",
+    playablePrimaryTexts: [""],
+    playableHeadline: "",
+    playableHeadlines: [""],
+    playableCallToAction: "INSTALL_MOBILE_APP",
+    playableLinkUrl: "",
+    playableSource: createEmptyMediaSelection("uploaded_asset"),
+    playableLeadInVideo: createEmptyMediaSelection("meta_ref"),
+    playableThumbnail: createEmptyMediaSelection("meta_ref"),
     existingPostId: "",
     adName: "",
     trackingSpecs: "",
@@ -659,6 +690,18 @@ export function CreateRequestContent({ requestId }: Props) {
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
     ?? referenceData?.appMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
   const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
+
+  const isSkanEligibleForState = (state: RequestFormState) => {
+    if (state.campaignObjective.trim().toUpperCase() !== "OUTCOME_APP_PROMOTION") return false
+    if (!state.paidMediaAppBindingId) return false
+
+    const mapping = (state.adAccountId ? (accountScopedAppMappings ?? []) : []).find((item) => item.id.toString() === state.paidMediaAppBindingId)
+      ?? referenceData?.appMappings.find((item) => item.id.toString() === state.paidMediaAppBindingId)
+    if (!mapping) return true
+
+    return resolveMetaAppMappingPlatform(mapping) === "IOS"
+  }
+
   const tokenState = deriveTokenState({
     adAccountId: form.executionIntegrationId,
     canViewMetaAccounts,
@@ -669,6 +712,16 @@ export function CreateRequestContent({ requestId }: Props) {
   })
 
   const isSubmitBlocked = submitting || saving || validating || tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
+
+  useEffect(() => {
+    const skanEligible = form.campaignObjective.trim().toUpperCase() === "OUTCOME_APP_PROMOTION"
+      && !!form.paidMediaAppBindingId
+      && (!selectedAppMapping || selectedAppPlatform === "IOS")
+    if (!skanEligible && form.isSkadnetworkAttribution) {
+      setForm((previous) => sanitizeRequestFormState({ ...previous, isSkadnetworkAttribution: false }))
+      setIsDirty(true)
+    }
+  }, [form.campaignObjective, form.isSkadnetworkAttribution, form.paidMediaAppBindingId, selectedAppMapping, selectedAppPlatform])
 
   useEffect(() => {
     const requiresValueDraftValidation =
@@ -779,6 +832,11 @@ export function CreateRequestContent({ requestId }: Props) {
         next.instagramActorId = ""
         next.existingPostId = ""
         next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "" }))
+      }
+
+
+      if (!isSkanEligibleForState(next)) {
+        next.isSkadnetworkAttribution = false
       }
 
       // Variants only supported for SINGLE_MEDIA. If user switches to another type,
@@ -977,6 +1035,15 @@ export function CreateRequestContent({ requestId }: Props) {
       flexibleCallToAction: form.flexibleCallToAction,
       flexibleLinkUrl: form.flexibleLinkUrl,
       flexibleAssets: form.flexibleAssets.map((a) => ({ ...a })),
+      playablePrimaryText: form.playablePrimaryText,
+      playablePrimaryTexts: [...form.playablePrimaryTexts],
+      playableHeadline: form.playableHeadline,
+      playableHeadlines: [...form.playableHeadlines],
+      playableCallToAction: form.playableCallToAction,
+      playableLinkUrl: form.playableLinkUrl,
+      playableSource: { ...form.playableSource },
+      playableLeadInVideo: { ...form.playableLeadInVideo },
+      playableThumbnail: { ...form.playableThumbnail },
       existingPostId: form.existingPostId,
       adName: form.adName ? `${form.adName} (Copy)` : "",
       trackingSpecs: form.trackingSpecs,
@@ -1291,6 +1358,7 @@ export function CreateRequestContent({ requestId }: Props) {
               countryGroupsMessage={geoCountryGroupsError?.message ?? null}
               onCountryGroupsChanged={() => void refetchGeoCountryGroups()}
               metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+              appPlatform={selectedAppPlatform}
             />
           </div>
           <div id={requestSectionIds["adset-budget"]} className={getSectionWrapperClass("adset-budget", highlightedSection)}>

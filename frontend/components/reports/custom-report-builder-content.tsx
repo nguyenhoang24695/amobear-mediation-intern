@@ -27,7 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { cn } from "@/lib/utils"
+import { cn, copyTextToClipboard } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -101,6 +101,7 @@ import {
   Layers,
   Columns3,
   MoreHorizontal,
+  Copy,
 } from "lucide-react"
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns"
 import { enUS } from "date-fns/locale"
@@ -109,6 +110,7 @@ import { useApi, invalidateCache } from "@/hooks/use-api"
 import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useCustomReportQuery } from "@/hooks/use-custom-report-query"
+import { sortCustomReportRows } from "@/lib/reports/custom-report-sort"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, organizationsApi, reportsApi, structureApi, teamMembersApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
@@ -400,6 +402,67 @@ function renderPlatformBadge(
   )
 }
 
+function CopyableAppStoreId({
+  appStoreId,
+  breakAll = false,
+  ariaLabel,
+}: {
+  appStoreId: string
+  breakAll?: boolean
+  ariaLabel?: string
+}) {
+  const [copied, setCopied] = useState(false)
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+    }
+  }, [])
+
+  const value = appStoreId.trim()
+  if (!value) return null
+
+  const handleCopy = async (event: React.MouseEvent) => {
+    event.stopPropagation()
+    const copiedOk = await copyTextToClipboard(value)
+    if (!copiedOk) {
+      toast.error("Failed to copy App Store ID.")
+      return
+    }
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+    setCopied(true)
+    copiedTimeoutRef.current = setTimeout(() => {
+      setCopied(false)
+      copiedTimeoutRef.current = null
+    }, 2000)
+  }
+
+  return (
+    <div className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
+      <span
+        className={cn("min-w-0 font-mono", breakAll ? "break-all" : "truncate")}
+        title={value}
+      >
+        {value}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-5 w-5 shrink-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+        aria-label={ariaLabel ?? "Copy App Store ID"}
+        onClick={(event) => {
+          void handleCopy(event)
+        }}
+      >
+        <Copy className="h-3 w-3" />
+      </Button>
+      {copied ? <span className="shrink-0 text-xs font-medium text-green-600">Copied!</span> : null}
+    </div>
+  )
+}
+
 function renderParameterCell(
   paramId: string,
   row: Record<string, string | number | null>,
@@ -443,15 +506,11 @@ function renderParameterCell(
               {appName}
             </div>
             {shouldShowAppSub ? (
-              <div
-                className={cn(
-                  "font-mono text-xs text-slate-500",
-                  forExpandPanel ? "break-all" : "truncate",
-                )}
-                title={appSub}
-              >
-                {appSub}
-              </div>
+              <CopyableAppStoreId
+                appStoreId={appSub}
+                breakAll={forExpandPanel}
+                ariaLabel={`Copy App Store ID for ${appName}`}
+              />
             ) : null}
           </div>
         ) : null}
@@ -1312,8 +1371,6 @@ export function CustomReportBuilderContent() {
     metricFilters: appliedReportQuery?.metricFilters ?? [],
     commissionUsernames: null,
     commissionTeamIds: appliedReportQuery?.commissionTeamIds ?? null,
-    sortBy: sortColumn,
-    sortDir: sortDirection,
     enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
   })
 
@@ -1812,7 +1869,10 @@ export function CustomReportBuilderContent() {
       : availableFolders
   }, [availableFolders, saveReportFolder])
 
-  const tableRows = reportData?.rows ?? []
+  const tableRows = useMemo(
+    () => sortCustomReportRows(reportData?.rows ?? [], sortColumn, sortDirection),
+    [reportData?.rows, sortColumn, sortDirection],
+  )
   const tableTotals = reportData?.totals ?? {}
   const appStoreMergedMetricRowSpanMap = useMemo(
     () => buildAppStoreMergedMetricRowSpanMap(tableRows, displayedParameters),

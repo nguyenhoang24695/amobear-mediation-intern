@@ -1287,6 +1287,12 @@ export function CampaignDetailContent({ campaignId }: Props) {
                 <DetailField label="Campaign Name" value={detail.name} />
                 <DetailField label="Meta Campaign ID" value={detail.externalCampaignId} mono />
                 <DetailField label="Objective" value={toTitleCase(detail.objective)} />
+                {detail.isSkadnetworkAttribution ? (
+                  <div className="space-y-1">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-400">Attribution</p>
+                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">iOS 14+ / SKAN</Badge>
+                  </div>
+                ) : null}
                 <DetailField label="Source" value={getSourceLabel(detail.source)} />
                 <DetailField label="Status" value={toTitleCase(detail.status)} />
                 <DetailField label="Effective Status" value={toTitleCase(detail.effectiveStatus)} />
@@ -1306,6 +1312,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
                 <DetailField label="Buying Type" value={toTitleCase(detail.buyingType)} />
                 <DetailField label="Budget Strategy" value={detail.budgetStrategy ?? "-"} />
                 <DetailField label="Bid Strategy" value={formatBidStrategy(detail.bidStrategy)} />
+                {detail.isSkadnetworkAttribution ? <DetailField label="Attribution" value="iOS 14+ / SKAN" /> : null}
                 <DetailField label="Daily Budget" value={formatRawValue(detail.dailyBudget)} mono />
                 <DetailField label="Lifetime Budget" value={formatRawValue(detail.lifetimeBudget)} mono />
                 <DetailField label="Spend Cap" value={formatRawValue(detail.spendCap)} mono />

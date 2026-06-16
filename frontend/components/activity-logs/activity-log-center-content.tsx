@@ -11,8 +11,6 @@ import {
   type ActivityLogListItem,
   type PagedResult,
 } from "@/lib/api/services"
-import { hasScreenFunction } from "@/lib/auth"
-import { NoPermissionView } from "@/components/shared/no-permission-view"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -198,9 +196,6 @@ function parsePositiveInt(value?: string | null, fallback = 1) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-const SCREEN_ACTIVITY_LOGS = "s-activity-logs"
-const FN_VIEW = "view"
-
 function ActivityLogsTableSkeleton() {
   return (
     <div className="space-y-3 p-6">
@@ -219,12 +214,6 @@ function ActivityLogsTableSkeleton() {
 }
 
 export function ActivityLogCenterContent() {
-  const canView = hasScreenFunction(SCREEN_ACTIVITY_LOGS, FN_VIEW)
-
-  if (!canView) {
-    return <NoPermissionView />
-  }
-
   return <ActivityLogCenterBody />
 }
 

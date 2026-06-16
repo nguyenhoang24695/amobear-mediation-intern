@@ -49,6 +49,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
         <CardContent className="px-3 pb-3">
           {!isPersisted ? <Badge className="bg-slate-100 text-slate-600">Unsaved Draft</Badge> : null}
           {isPersisted && serverStatus ? <Badge className="bg-blue-100 text-blue-700">{serverStatus.replace(/_/g, " ")}</Badge> : null}
+          {form.isSkadnetworkAttribution ? <Badge className="ml-1 bg-blue-100 text-blue-700">iOS 14+ / SKAN</Badge> : null}
         </CardContent>
       </Card>
 
@@ -111,6 +112,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
             <p className="font-semibold text-slate-900 mb-1">Campaign</p>
             <SummaryLine label="Name" value={form.campaignName || "-"} />
             <SummaryLine label="Objective" value={form.campaignObjective || "-"} />
+            {form.isSkadnetworkAttribution ? <SummaryLine label="Attribution" value="iOS 14+ / SKAN" /> : null}
             <SummaryLine label="Budget sharing" value={form.budgetStrategy === "ABO" ? (form.isAdSetBudgetSharingEnabled ? "Enabled" : "Disabled") : "Only applies to ad set budget"} />
           </div>
           <div className="pt-2 border-t border-slate-200">
@@ -313,4 +315,3 @@ function CheckRow({ state, label, onClick }: { state: CheckState; label: string;
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2 text-[11px] py-0.5"><span className="text-slate-500">{label}:</span><span className="text-slate-900 font-medium text-right truncate">{value}</span></div>
 }
-

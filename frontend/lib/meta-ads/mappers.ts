@@ -192,13 +192,16 @@ function parseBudgetStrategy(form: MetaRequestFormState) {
   }
 }
 
-function buildMediaSource(selection: MetaRequestAssetSelectionState, kind: "image" | "video"): MetaCreativeMediaSourceDto | null {
+function buildMediaSource(selection: MetaRequestAssetSelectionState, kind: "image" | "video" | "playable"): MetaCreativeMediaSourceDto | null {
   if (selection.uploadedAssetId) {
     return {
       mode: "uploaded_asset",
       uploadedAssetId: selection.uploadedAssetId,
     }
   }
+
+  // Playable source chỉ hỗ trợ uploaded_asset (file HTML đã upload + chuẩn bị).
+  if (kind === "playable") return null
 
   if (selection.mode === "external_url") {
     if (!selection.imageUrl.trim()) return null
@@ -224,7 +227,7 @@ function buildMediaSource(selection: MetaRequestAssetSelectionState, kind: "imag
   }
 }
 
-function mediaSourceToSelection(source: MetaCreativeMediaSourceDto | null | undefined, kind: "image" | "video"): MetaRequestAssetSelectionState {
+function mediaSourceToSelection(source: MetaCreativeMediaSourceDto | null | undefined, kind: "image" | "video" | "playable"): MetaRequestAssetSelectionState {
   const mode = source?.mode ?? (source?.uploadedAssetId ? "uploaded_asset" : source?.videoId ? "meta_ref" : source?.imageHash ? "meta_ref" : source?.imageUrl ? "external_url" : kind === "video" ? "meta_ref" : "meta_ref")
   return {
     mode,
@@ -298,6 +301,20 @@ function getFlexibleCreative(creative: MetaCreativeDraftDto) {
   }
 }
 
+function getPlayableCreative(creative: MetaCreativeDraftDto) {
+  return creative.playable ?? {
+    message: creative.message,
+    messages: [] as string[],
+    headline: creative.headline,
+    headlines: [] as string[],
+    callToActionType: creative.callToActionType ?? "INSTALL_MOBILE_APP",
+    linkUrl: creative.linkUrl,
+    playableSource: null,
+    leadInVideo: null,
+    thumbnail: null,
+  }
+}
+
 /** Resolve the effective media type for a SINGLE_MEDIA variant.
  * Falls back to detecting video signals in singleVideoVideo when mediaType is not explicitly set
  * (handles old drafts saved before SINGLE_MEDIA existed). */
@@ -361,6 +378,18 @@ export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreati
   } else if (v.creativeType === "EXISTING_POST") {
     creative.existingPost = {
       sourcePostId: v.existingPostId.trim() || null,
+    }
+  } else if (v.creativeType === "PLAYABLE") {
+    creative.playable = {
+      message: getFirstVariation(v.playablePrimaryTexts, v.playablePrimaryText) || null,
+      messages: sanitizeTextVariations(v.playablePrimaryTexts, v.playablePrimaryText),
+      headline: getFirstVariation(v.playableHeadlines, v.playableHeadline) || null,
+      headlines: sanitizeTextVariations(v.playableHeadlines, v.playableHeadline),
+      callToActionType: v.playableCallToAction.trim() || "INSTALL_MOBILE_APP",
+      linkUrl: v.playableLinkUrl.trim() || null,
+      playableSource: buildMediaSource(v.playableSource, "playable"),
+      leadInVideo: buildMediaSource(v.playableLeadInVideo, "video"),
+      thumbnail: buildMediaSource(v.playableThumbnail, "image"),
     }
   } else if (v.creativeType === "FLEXIBLE") {
     creative.flexible = {
@@ -467,6 +496,15 @@ function primaryVariantFromFormState(form: MetaRequestFormState): AdVariantFormS
     flexibleCallToAction: form.flexibleCallToAction,
     flexibleLinkUrl: form.flexibleLinkUrl,
     flexibleAssets: form.flexibleAssets,
+    playablePrimaryText: form.playablePrimaryText,
+    playablePrimaryTexts: form.playablePrimaryTexts,
+    playableHeadline: form.playableHeadline,
+    playableHeadlines: form.playableHeadlines,
+    playableCallToAction: form.playableCallToAction,
+    playableLinkUrl: form.playableLinkUrl,
+    playableSource: form.playableSource,
+    playableLeadInVideo: form.playableLeadInVideo,
+    playableThumbnail: form.playableThumbnail,
     existingPostId: form.existingPostId,
     adName: form.adName,
     trackingSpecs: form.trackingSpecs,
@@ -504,6 +542,10 @@ function composeAdditionalVariantForSerialization(
     singleImageImage: v.singleImageImage,
     singleVideoVideo: v.singleVideoVideo,
     singleVideoThumbnail: v.singleVideoThumbnail,
+    // Playable per-variant media (source/lead-in/thumbnail differ per variant; text shared).
+    playableSource: v.playableSource,
+    playableLeadInVideo: v.playableLeadInVideo,
+    playableThumbnail: v.playableThumbnail,
   }
 }
 
@@ -560,6 +602,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       lifetimeBudget: budgets.campaignLifetimeBudget,
       bidStrategy: form.bidStrategy.trim() || null,
       isAdSetBudgetSharingEnabled: form.budgetStrategy === "ABO" ? form.isAdSetBudgetSharingEnabled : false,
+      isSkadnetworkAttribution: form.isSkadnetworkAttribution,
       specialAdCategories: form.specialAdCategories,
     },
     adSet: {
@@ -599,7 +642,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       genders: parseGender(form.gender),
       locales: Array.from(new Set((form.localeKeys ?? []).filter((key) => Number.isFinite(key) && key > 0))),
       devicePlatforms: [],
-      userOs: [],
+      userOs: form.userOs ?? [],
       publisherPlatforms: form.placementMode === "MANUAL" ? form.publisherPlatforms : [],
       facebookPositions: form.placementMode === "MANUAL" ? form.facebookPositions : [],
       instagramPositions: form.placementMode === "MANUAL" ? form.instagramPositions : [],
@@ -630,6 +673,7 @@ function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFor
   const singleVideo = getSingleVideoCreative(creative)
   const carousel = getCarouselCreative(creative)
   const flexible = getFlexibleCreative(creative)
+  const playable = getPlayableCreative(creative)
 
   // Backward compat: SINGLE_IMAGE and SINGLE_VIDEO drafts open in the merged SINGLE_MEDIA UI.
   // Text is normalised to singleImage* (canonical) regardless of source type.
@@ -706,6 +750,15 @@ function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFor
       video: mediaSourceToSelection(asset.video, "video"),
       thumbnail: mediaSourceToSelection(asset.thumbnail, "image"),
     })),
+    playablePrimaryText: getFirstVariation(playable.messages, playable.message),
+    playablePrimaryTexts: sanitizeTextVariations(playable.messages, playable.message).length > 0 ? sanitizeTextVariations(playable.messages, playable.message) : [""],
+    playableHeadline: getFirstVariation(playable.headlines, playable.headline),
+    playableHeadlines: sanitizeTextVariations(playable.headlines, playable.headline).length > 0 ? sanitizeTextVariations(playable.headlines, playable.headline) : [""],
+    playableCallToAction: playable.callToActionType ?? "INSTALL_MOBILE_APP",
+    playableLinkUrl: playable.linkUrl ?? "",
+    playableSource: mediaSourceToSelection(playable.playableSource, "playable"),
+    playableLeadInVideo: mediaSourceToSelection(playable.leadInVideo, "video"),
+    playableThumbnail: mediaSourceToSelection(playable.thumbnail, "image"),
     existingPostId: creative.existingPost?.sourcePostId ?? "",
     adName: variant.ad?.name ?? "",
     trackingSpecs: variant.ad?.trackingSpecsJson ?? "",
@@ -760,6 +813,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     specialAdCategories: payload.campaign.specialAdCategories ?? [],
     bidStrategy: payload.campaign.bidStrategy || "LOWEST_COST_WITHOUT_CAP",
     isAdSetBudgetSharingEnabled: payload.campaign.isAdSetBudgetSharingEnabled ?? !(payload.campaign.dailyBudget || payload.campaign.lifetimeBudget),
+    isSkadnetworkAttribution: payload.campaign.isSkadnetworkAttribution ?? false,
     campaignDailyBudget: payload.campaign.dailyBudget?.toString() ?? "",
     campaignLifetimeBudget: payload.campaign.lifetimeBudget?.toString() ?? "",
     adSetName: payload.adSet.name ?? "",
@@ -781,6 +835,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     ageMin: payload.adSet.ageMin ?? 18,
     ageMax: payload.adSet.ageMax ?? 65,
     gender,
+    userOs: payload.adSet.userOs ?? [],
     placementMode: payload.adSet.publisherPlatforms.length > 0 || payload.adSet.facebookPositions.length > 0 || payload.adSet.instagramPositions.length > 0 ? "MANUAL" : "AUTOMATIC",
     publisherPlatforms: payload.adSet.publisherPlatforms ?? [],
     facebookPositions: payload.adSet.facebookPositions ?? [],

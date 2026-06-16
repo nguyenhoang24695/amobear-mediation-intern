@@ -1074,6 +1074,12 @@ export function RequestDetailContent({ requestId }: Props) {
             <CardContent>
               <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
                 <DetailRow label="Objective" value={detail.payload.campaign.objective} mono />
+                {detail.payload.campaign.isSkadnetworkAttribution ? (
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-1.5">
+                    <span className="text-slate-500">Attribution</span>
+                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">iOS 14+ / SKAN</Badge>
+                  </div>
+                ) : null}
                 <DetailRow label="Buying Type" value={detail.payload.campaign.buyingType ?? "-"} mono />
                 <DetailRow label="Countries" value={detail.payload.adSet.countries.join(", ") || "-"} />
                 {detail.payload.adSet.excludedCountries && detail.payload.adSet.excludedCountries.length > 0 && (
@@ -1862,8 +1868,3 @@ function ObjectRow({
     </div>
   )
 }
-
-
-
-
-

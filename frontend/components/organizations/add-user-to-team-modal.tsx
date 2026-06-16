@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,23 +12,29 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Loader2, Users, Check, ChevronsUpDown, X } from "lucide-react"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Loader2, Users, Plus, X } from "lucide-react"
 import { organizationsApi, teamMembersApi, type OrgTeam } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
-import { RoleSelector } from "@/components/users/role-selector"
-import { cn } from "@/lib/utils"
+
+type TeamRole = "admin" | "editor" | "viewer"
+
+interface TeamRoleAssignment {
+  id: string
+  teamId: string
+  role: TeamRole
+}
+
+interface UserTeamMembership {
+  userId: string
+  userName: string
+  teams: Array<{ id: string; name: string; role: string; isTeamLead?: boolean }>
+}
 
 interface AddUserToTeamModalProps {
   open: boolean
@@ -40,6 +46,20 @@ interface AddUserToTeamModalProps {
   onSuccess?: () => void
 }
 
+const TEAM_ROLES: Array<{ value: TeamRole; label: string }> = [
+  { value: "admin", label: "Admin" },
+  { value: "editor", label: "Editor" },
+  { value: "viewer", label: "Viewer" },
+]
+
+function createAssignmentRow(): TeamRoleAssignment {
+  return {
+    id: crypto.randomUUID(),
+    teamId: "",
+    role: "viewer",
+  }
+}
+
 export function AddUserToTeamModal({
   open,
   onOpenChange,
@@ -49,48 +69,131 @@ export function AddUserToTeamModal({
   excludedTeamIds = [],
   onSuccess,
 }: AddUserToTeamModalProps) {
-  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
-  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
+  const [assignments, setAssignments] = useState<TeamRoleAssignment[]>([createAssignmentRow()])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [memberships, setMemberships] = useState<UserTeamMembership[]>([])
+  const [membershipsLoading, setMembershipsLoading] = useState(false)
 
-  // Fetch teams from API
   const { data: teams, loading: teamsLoading } = useApi(
     () => organizationsApi.getTeams(orgId),
-    { enabled: open, cacheKey: `org_teams_${orgId}` }
+    { enabled: open, cacheKey: `org_teams_${orgId}` },
   )
-  const availableTeams = teams?.filter((team) => !excludedTeamIds.includes(team.id)) ?? []
-  const excludedTeams = teams?.filter((team) => excludedTeamIds.includes(team.id)) ?? []
 
-  // Reset state when modal closes
+  useEffect(() => {
+    if (!open || userIds.length === 0) {
+      setMemberships([])
+      setMembershipsLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setMembershipsLoading(true)
+
+    void Promise.all(
+      userIds.map(async (userId, index) => {
+        try {
+          const response = await teamMembersApi.viewProfile(userId)
+          return {
+            userId,
+            userName: userNames[index] || userId,
+            teams: response.success && response.data?.teams
+              ? response.data.teams.map((team) => ({
+                  id: team.id,
+                  name: team.name,
+                  role: team.role,
+                  isTeamLead: team.isTeamLead,
+                }))
+              : [],
+          }
+        } catch {
+          return {
+            userId,
+            userName: userNames[index] || userId,
+            teams: [],
+          }
+        }
+      }),
+    )
+      .then((results) => {
+        if (!cancelled) setMemberships(results)
+      })
+      .finally(() => {
+        if (!cancelled) setMembershipsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, userIds.join(","), userNames.join("|")])
+
+  const resolvedExcludedTeamIds = useMemo(() => {
+    if (userIds.length !== 1 || memberships.length !== 1) {
+      return excludedTeamIds
+    }
+
+    const fetchedTeamIds = memberships[0].teams.map((team) => team.id)
+    return [...new Set([...excludedTeamIds, ...fetchedTeamIds])]
+  }, [userIds.length, memberships, excludedTeamIds])
+
+  const selectableTeams = useMemo(
+    () => teams?.filter((team) => !resolvedExcludedTeamIds.includes(team.id)) ?? [],
+    [teams, resolvedExcludedTeamIds],
+  )
+
+  const hasExistingMemberships = memberships.some((membership) => membership.teams.length > 0)
+
   useEffect(() => {
     if (!open) {
-      setSelectedTeamIds([])
-      setRole("viewer")
+      setAssignments([createAssignmentRow()])
       setError(null)
-      setPopoverOpen(false)
     }
   }, [open])
 
-  const toggleTeam = (teamId: string) => {
-    setSelectedTeamIds(prev => 
-      prev.includes(teamId)
-        ? prev.filter(id => id !== teamId)
-        : [...prev, teamId]
+  const getTeamsForRow = useCallback(
+    (rowId: string, currentTeamId: string): OrgTeam[] => {
+      const usedTeamIds = new Set(
+        assignments
+          .filter((row) => row.id !== rowId && row.teamId)
+          .map((row) => row.teamId),
+      )
+
+      return selectableTeams.filter(
+        (team) => team.id === currentTeamId || !usedTeamIds.has(team.id),
+      )
+    },
+    [assignments, selectableTeams],
+  )
+
+  const validAssignments = useMemo(
+    () => assignments.filter((row) => row.teamId),
+    [assignments],
+  )
+
+  const canAddAssignmentRow =
+    validAssignments.length < selectableTeams.length &&
+    assignments.length < selectableTeams.length
+
+  const updateAssignment = (rowId: string, patch: Partial<TeamRoleAssignment>) => {
+    setAssignments((prev) =>
+      prev.map((row) => (row.id === rowId ? { ...row, ...patch } : row)),
     )
   }
 
-  const removeTeam = (teamId: string) => {
-    setSelectedTeamIds(prev => prev.filter(id => id !== teamId))
+  const addAssignmentRow = () => {
+    if (!canAddAssignmentRow) return
+    setAssignments((prev) => [...prev, createAssignmentRow()])
   }
 
-  const getSelectedTeams = () => {
-    return availableTeams.filter(team => selectedTeamIds.includes(team.id))
+  const removeAssignmentRow = (rowId: string) => {
+    setAssignments((prev) => {
+      if (prev.length <= 1) return [createAssignmentRow()]
+      return prev.filter((row) => row.id !== rowId)
+    })
   }
 
   const handleSave = async () => {
-    if (selectedTeamIds.length === 0) {
+    if (validAssignments.length === 0) {
       setError("Please select at least one team")
       return
     }
@@ -99,52 +202,60 @@ export function AddUserToTeamModal({
     setError(null)
 
     try {
-      // Add each user to each selected team
       const results: Array<{ userId: string; teamId: string; success: boolean; error?: string }> = []
-      
+
       for (const userId of userIds) {
-        for (const teamId of selectedTeamIds) {
+        for (const assignment of validAssignments) {
           try {
             const response = await teamMembersApi.addUserToTeam(userId, {
-              teamId: teamId,
-              role: role,
+              teamId: assignment.teamId,
+              role: assignment.role,
             })
-            
+
             if (response.success) {
-              results.push({ userId, teamId, success: true })
+              results.push({ userId, teamId: assignment.teamId, success: true })
             } else {
               results.push({
                 userId,
-                teamId,
+                teamId: assignment.teamId,
                 success: false,
-                error: response.message || "Failed to add user to team"
+                error: response.message || "Failed to add user to team",
               })
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
+            const message =
+              (err as { response?: { data?: { error?: { message?: string } } }; message?: string })
+                ?.response?.data?.error?.message ||
+              (err as { message?: string })?.message ||
+              "Failed to add user to team"
             results.push({
               userId,
-              teamId,
+              teamId: assignment.teamId,
               success: false,
-              error: err?.response?.data?.error?.message || err?.message || "Failed to add user to team"
+              error: message,
             })
           }
         }
       }
-      
-      const successCount = results.filter(r => r.success).length
-      const failCount = results.filter(r => !r.success).length
-      const totalOperations = userIds.length * selectedTeamIds.length
-      
+
+      const successCount = results.filter((result) => result.success).length
+      const failCount = results.filter((result) => !result.success).length
+      const totalOperations = userIds.length * validAssignments.length
+
       if (failCount > 0) {
         setError(`${successCount} of ${totalOperations} operations completed. ${failCount} failed.`)
-        // Still call onSuccess to refresh the list
         onSuccess?.()
       } else {
         onSuccess?.()
         onOpenChange(false)
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.message || err?.message || "Failed to add users to teams")
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: { message?: string } } }; message?: string })
+          ?.response?.data?.error?.message ||
+        (err as { message?: string })?.message ||
+        "Failed to add users to teams"
+      setError(message)
     } finally {
       setSaving(false)
     }
@@ -155,166 +266,194 @@ export function AddUserToTeamModal({
     onOpenChange(false)
   }
 
+  const renderExistingMemberships = () => {
+    const shouldShow =
+      membershipsLoading || userIds.length > 1 || hasExistingMemberships
+    if (!shouldShow) return null
+
+    return (
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-3">
+        <p className="text-xs font-medium text-slate-700">Current team memberships</p>
+        {membershipsLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+          </div>
+        ) : (
+          memberships.map((membership) => (
+            <div key={membership.userId} className="space-y-1.5">
+              {userIds.length > 1 && (
+                <p className="text-xs font-medium text-slate-600">{membership.userName}</p>
+              )}
+              {membership.teams.length === 0 ? (
+                <p className="text-xs text-slate-500">No teams assigned</p>
+              ) : (
+                <div className="space-y-1">
+                  {membership.teams.map((team) => (
+                    <div
+                      key={`${membership.userId}-${team.id}`}
+                      className="flex items-center justify-between gap-2 rounded-md bg-white px-2.5 py-2"
+                    >
+                      <span className="text-sm font-medium text-slate-900">{team.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {team.isTeamLead && (
+                          <Badge variant="secondary" className="text-xs">
+                            Lead
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {team.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    )
+  }
+
+  const assignmentPairCount = validAssignments.length
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add {userIds.length === 1 ? "User" : "Users"} to Team{selectedTeamIds.length > 1 ? "s" : ""}</DialogTitle>
+          <DialogTitle>
+            Add {userIds.length === 1 ? "User" : "Users"} to Team
+            {assignmentPairCount > 1 ? "s" : ""}
+          </DialogTitle>
           <DialogDescription>
             {userIds.length === 1 ? (
               <>
-                Select one or more teams to add <span className="font-semibold text-slate-900">{userNames[0]}</span> to.
+                Configure team and role pairs for{" "}
+                <span className="font-semibold text-slate-900">{userNames[0]}</span>.
               </>
             ) : (
               <>
-                Select one or more teams to add <span className="font-semibold text-slate-900">{userIds.length} users</span> to.
+                Configure team and role pairs for{" "}
+                <span className="font-semibold text-slate-900">{userIds.length} users</span>.
               </>
             )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Team Selection */}
-          <div className="space-y-4">
+        <div className="space-y-5 py-2">
+          {renderExistingMemberships()}
+
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-slate-700">Team assignments</label>
+
             {teamsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
               </div>
-            ) : teams && availableTeams.length > 0 ? (
+            ) : selectableTeams.length > 0 ? (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Teams</label>
-                {excludedTeams.length > 0 && (
-                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-xs font-medium text-slate-700">Already assigned</p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {excludedTeams.map((team) => (
-                        <Badge key={team.id} variant="outline" className="text-xs">
-                          {team.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                  <PopoverTrigger asChild>
+                <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_140px_72px] sm:gap-2 sm:px-0">
+                  <span className="text-xs text-slate-500">Team</span>
+                  <span className="text-xs text-slate-500">Role in team</span>
+                  <span className="sr-only">Actions</span>
+                </div>
+
+                {assignments.map((row, index) => {
+                  const rowTeams = getTeamsForRow(row.id, row.teamId)
+                  const isLastRow = index === assignments.length - 1
+
+                  return (
                     <div
-                      role="combobox"
-                      aria-expanded={popoverOpen}
-                      className="flex items-center justify-between w-full min-h-10 px-3 py-2 text-sm border rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                      key={row.id}
+                      className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_72px] sm:items-center"
                     >
-                      {selectedTeamIds.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 flex-1">
-                          {getSelectedTeams().map((team) => (
-                            <Badge
-                              key={team.id}
-                              variant="secondary"
-                              className="mr-1 mb-0.5"
-                            >
-                              {team.name}
-                              <span
-                                role="button"
-                                tabIndex={0}
-                                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
-                                onMouseDown={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                }}
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  removeTeam(team.id)
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    removeTeam(team.id)
-                                  }
-                                }}
-                              >
-                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                              </span>
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Select teams...</span>
-                      )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <div className="space-y-1 sm:space-y-0">
+                        <span className="text-xs text-slate-500 sm:hidden">Team</span>
+                        <Select
+                          value={row.teamId || undefined}
+                          onValueChange={(teamId) => updateAssignment(row.id, { teamId })}
+                        >
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue placeholder="Select team..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {rowTeams.map((team) => (
+                              <SelectItem key={team.id} value={team.id}>
+                                {team.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1 sm:space-y-0">
+                        <span className="text-xs text-slate-500 sm:hidden">Role in team</span>
+                        <Select
+                          value={row.role}
+                          onValueChange={(role) =>
+                            updateAssignment(row.id, { role: role as TeamRole })
+                          }
+                        >
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TEAM_ROLES.map((teamRole) => (
+                              <SelectItem key={teamRole.value} value={teamRole.value}>
+                                {teamRole.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1">
+                        {isLastRow ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            onClick={addAssignmentRow}
+                            disabled={!canAddAssignmentRow}
+                            aria-label="Add team assignment"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <span className="hidden h-9 w-9 shrink-0 sm:block" aria-hidden="true" />
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 shrink-0 text-slate-400 hover:text-red-600"
+                          onClick={() => removeAssignmentRow(row.id)}
+                          aria-label="Remove team assignment"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search teams..." />
-                      <CommandList>
-                        <CommandEmpty>No team found.</CommandEmpty>
-                        <CommandGroup>
-                          {availableTeams.map((team) => (
-                            <CommandItem
-                              key={team.id}
-                              value={team.name}
-                              onSelect={() => toggleTeam(team.id)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedTeamIds.includes(team.id) ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm">{team.name}</p>
-                                {team.description && (
-                                  <p className="text-xs text-slate-500 truncate">{team.description}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-xs text-slate-500 ml-2">
-                                <Users className="w-3.5 h-3.5" />
-                                <span>{team.memberCount}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                  )
+                })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="w-12 h-12 text-slate-400 mb-2" />
+              <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-slate-200 py-8 text-center">
+                <Users className="mb-2 h-10 w-10 text-slate-400" />
                 <p className="text-sm text-slate-500">
-                  {teams && teams.length > 0 && excludedTeamIds.length > 0
-                    ? "This user is already assigned to all available teams"
+                  {teams && teams.length > 0 && resolvedExcludedTeamIds.length > 0
+                    ? userIds.length === 1
+                      ? "This user is already assigned to all available teams"
+                      : "No additional teams available for this selection"
                     : "No teams available"}
                 </p>
-                {excludedTeams.length > 0 && (
-                  <div className="mt-3 flex flex-wrap justify-center gap-1">
-                    {excludedTeams.map((team) => (
-                      <Badge key={team.id} variant="outline" className="text-xs">
-                        {team.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* Role Selection */}
-          <div className="border-t pt-4">
-            <RoleSelector
-              value={role}
-              onValueChange={setRole}
-              label="Role in team"
-              idPrefix="add-to-team"
-              adminDescription="Full access to all features including user and permissions management for this team."
-              editorDescription="Can view and edit apps and reports assigned to this team."
-              viewerDescription="Read-only access to apps and reports for this team."
-            />
-          </div>
-
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
+            <p className="rounded bg-red-50 p-2 text-sm text-red-600">{error}</p>
           )}
         </div>
 
@@ -325,16 +464,15 @@ export function AddUserToTeamModal({
           <Button
             className="bg-blue-600 hover:bg-blue-700"
             onClick={handleSave}
-            disabled={saving || selectedTeamIds.length === 0}
+            disabled={saving || validAssignments.length === 0}
           >
-            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {saving
               ? `Adding ${userIds.length > 1 ? `${userIds.length} users` : "user"}...`
-              : `Add ${userIds.length > 1 ? `${userIds.length} Users` : "User"} to ${selectedTeamIds.length > 1 ? `${selectedTeamIds.length} Teams` : "Team"}`}
+              : `Add ${userIds.length > 1 ? `${userIds.length} users` : "user"} to ${assignmentPairCount || ""} team${assignmentPairCount === 1 ? "" : "s"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

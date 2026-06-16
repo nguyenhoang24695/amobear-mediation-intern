@@ -7,7 +7,7 @@ export type MetaRequestStatus =
   | "completed"
   | "failed"
 
-export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE"
+export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE" | "PLAYABLE"
 export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "COUNTRY_GROUP" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
@@ -625,6 +625,7 @@ export interface MetaCampaignDetailDto {
   budgetStrategy?: string | null
   bidStrategy?: string | null
   isAdSetBudgetSharingEnabled?: boolean | null
+  isSkadnetworkAttribution?: boolean | null
   dailyBudget?: string | null
   lifetimeBudget?: string | null
   spendCap?: string | null
@@ -736,6 +737,7 @@ export interface MetaCampaignDraftDto {
   lifetimeBudget?: number | null
   bidStrategy?: string | null
   isAdSetBudgetSharingEnabled?: boolean | null
+  isSkadnetworkAttribution?: boolean | null
   specialAdCategories: string[]
 }
 
@@ -860,6 +862,18 @@ export interface MetaFlexibleCreativeDraftDto {
   assets: MetaFlexibleCreativeAssetDraftDto[]
 }
 
+export interface MetaPlayableCreativeDraftDto {
+  message?: string | null
+  messages?: string[] | null
+  headline?: string | null
+  headlines?: string[] | null
+  callToActionType?: string | null
+  linkUrl?: string | null
+  playableSource?: MetaCreativeMediaSourceDto | null
+  leadInVideo?: MetaCreativeMediaSourceDto | null
+  thumbnail?: MetaCreativeMediaSourceDto | null
+}
+
 export type MetaAdvantageCreativeEnrollStatus = "OPT_IN" | "OPT_OUT"
 
 export interface MetaCreativeFeatureEnrollStatusDto {
@@ -889,6 +903,7 @@ export interface MetaCreativeDraftDto {
   carousel?: MetaCarouselCreativeDraftDto | null
   existingPost?: MetaExistingPostCreativeDraftDto | null
   flexible?: MetaFlexibleCreativeDraftDto | null
+  playable?: MetaPlayableCreativeDraftDto | null
   name?: string | null
   pageId?: string | null
   instagramActorId?: string | null
@@ -903,12 +918,33 @@ export interface MetaCreativeDraftDto {
 
 export interface MetaRequestAssetDto {
   id: number
-  kind: "image" | "video" | string
+  kind: "image" | "video" | "playable" | string
   fileName: string
   contentType: string
   sizeBytes: number
   previewUrl: string
+  ownerUsername?: string | null
   createdAt: string
+}
+
+export interface MetaRequestAssetPageDto {
+  items: MetaRequestAssetDto[]
+  total: number
+  page: number
+  pageSize: number
+  hasMore: boolean
+}
+
+export interface MetaRequestAssetOwnerDto {
+  ownerUsername: string
+  imageCount: number
+  videoCount: number
+  totalCount: number
+}
+
+export interface MetaRequestAssetOwnersDto {
+  rootPrefix: string
+  owners: MetaRequestAssetOwnerDto[]
 }
 
 export type MetaAssetPreparationStatus = "pending" | "uploading" | "processing" | "ready" | "failed"
@@ -916,12 +952,13 @@ export type MetaAssetPreparationStatus = "pending" | "uploading" | "processing" 
 export interface MetaAssetPreparationDto {
   requestAssetId: number
   slotKey: string
-  kind: "image" | "video"
+  kind: "image" | "video" | "playable"
   status: MetaAssetPreparationStatus
   metaAdAccountId?: number | null
   executionMetaIntegrationId?: number | null
   metaImageHash?: string | null
   metaVideoId?: string | null
+  metaPlayableAssetId?: string | null
   errorMessage?: string | null
   attemptCount: number
   lastAttemptAt?: string | null
@@ -1194,6 +1231,11 @@ export interface UpsertGeoCountryGroupDto {
 
 export interface MetaGeoCityReferenceDto extends MetaGeoCityTargetDto {}
 
+export interface MetaAdLocaleReferenceDto {
+  key: number
+  name: string
+}
+
 export interface MetaExecuteResponseDto {
   success: boolean
   message?: string | null
@@ -1268,6 +1310,15 @@ export interface AdVariantFormState {
   flexibleCallToAction: string
   flexibleLinkUrl: string
   flexibleAssets: MetaFlexibleAssetFormState[]
+  playablePrimaryText: string
+  playablePrimaryTexts: string[]
+  playableHeadline: string
+  playableHeadlines: string[]
+  playableCallToAction: string
+  playableLinkUrl: string
+  playableSource: MetaRequestAssetSelectionState
+  playableLeadInVideo: MetaRequestAssetSelectionState
+  playableThumbnail: MetaRequestAssetSelectionState
   existingPostId: string
   adName: string
   trackingSpecs: string
@@ -1293,6 +1344,7 @@ export interface MetaRequestFormState {
   specialAdCategories: string[]
   bidStrategy: string
   isAdSetBudgetSharingEnabled: boolean
+  isSkadnetworkAttribution: boolean
   campaignDailyBudget: string
   campaignLifetimeBudget: string
   adSetName: string
@@ -1306,6 +1358,7 @@ export interface MetaRequestFormState {
   ageMin: number
   ageMax: number
   gender: string
+  userOs: string[]
   placementMode: "AUTOMATIC" | "MANUAL"
   publisherPlatforms: string[]
   facebookPositions: string[]
@@ -1353,6 +1406,15 @@ export interface MetaRequestFormState {
   flexibleCallToAction: string
   flexibleLinkUrl: string
   flexibleAssets: MetaFlexibleAssetFormState[]
+  playablePrimaryText: string
+  playablePrimaryTexts: string[]
+  playableHeadline: string
+  playableHeadlines: string[]
+  playableCallToAction: string
+  playableLinkUrl: string
+  playableSource: MetaRequestAssetSelectionState
+  playableLeadInVideo: MetaRequestAssetSelectionState
+  playableThumbnail: MetaRequestAssetSelectionState
   existingPostId: string
   adName: string
   trackingSpecs: string
