@@ -52,7 +52,7 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
         </p>
       </div>
 
-      <TeamProfitPlanCard teamId={teamId} />
+      <TeamProfitPlanCard teamId={teamId} teamName={teamName} />
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">

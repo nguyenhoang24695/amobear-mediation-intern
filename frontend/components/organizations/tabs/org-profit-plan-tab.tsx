@@ -43,6 +43,7 @@ import { RevenuePlanAppCell } from "@/components/organizations/revenue-plan-app-
 import { RevenuePlanImportPreviewDialog } from "@/components/organizations/revenue-plan-import-preview-dialog"
 import { RevenuePlanPlannedCell } from "@/components/organizations/revenue-plan-planned-cell"
 import { RevenuePlanColumnSidebar } from "@/components/organizations/revenue-plan-column-sidebar"
+import { GroupedTeamMultiSelect } from "@/components/reports/grouped-team-multi-select"
 import {
   countVisibleColumns,
   countVisibleColumnsInGroup,
@@ -58,12 +59,12 @@ import {
   getNetProfitMarginClass,
 } from "@/lib/metrics/profit-metric-styles"
 import { useToast } from "@/hooks/use-toast"
-import {
-  organizationsApi,
-  structureApi,
-  type OrgTeam,
-  type TeamMonthlyProfitPlan,
-} from "@/lib/api/services"
+import { useApi } from "@/hooks/use-api"
+import { authApi, organizationsApi, structureApi, type OrgTeam, type OrgTeamGroup, type TeamMonthlyProfitPlan } from "@/lib/api/services"
+import { getCurrentUser } from "@/lib/auth"
+import { buildTeamGroupSectionsFromOrg } from "@/lib/organizations/team-group"
+import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams"
+import type { CommissionTeamOption } from "@/lib/reports/commission-team-utils"
 import * as XLSX from "xlsx"
 
 const PAGE_SIZE_OPTIONS = [30, 100, "all"] as const
@@ -161,6 +162,63 @@ function sanitizeFileNamePart(value: string) {
     .replace(/[^a-z0-9-_]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
+}
+
+function resolveEffectiveTeamIds(
+  selectedTeamIds: string[],
+  filterTeams: CommissionTeamOption[],
+  canScopeManagedTeams: boolean,
+): string[] {
+  if (selectedTeamIds.length > 0) return selectedTeamIds
+  if (canScopeManagedTeams && filterTeams.length > 0) {
+    return filterTeams.map((team) => team.teamId)
+  }
+  return []
+}
+
+function isAllTeamsSelected(
+  selectedTeamIds: string[],
+  filterTeams: CommissionTeamOption[],
+): boolean {
+  if (filterTeams.length === 0) return selectedTeamIds.length === 0
+  return selectedTeamIds.length === 0 || selectedTeamIds.length === filterTeams.length
+}
+
+async function fetchOrganizationProfitPlans(
+  orgId: string,
+  from: string,
+  to: string,
+  teamIds: string[],
+): Promise<TeamMonthlyProfitPlan[]> {
+  if (teamIds.length === 0) {
+    return organizationsApi.getProfitPlans(orgId, { from, to })
+  }
+  if (teamIds.length === 1) {
+    return organizationsApi.getProfitPlans(orgId, { from, to, teamId: teamIds[0] })
+  }
+
+  const lists = await Promise.all(
+    teamIds.map((teamId) => organizationsApi.getProfitPlans(orgId, { from, to, teamId })),
+  )
+  const merged = new Map<string, TeamMonthlyProfitPlan>()
+  for (const list of lists) {
+    for (const plan of list) {
+      merged.set(`${plan.appStoreId.toLowerCase()}|${plan.month}`, plan)
+    }
+  }
+  return [...merged.values()]
+}
+
+function mapFilterTeamsToOrgTeams(filterTeams: CommissionTeamOption[]): OrgTeam[] {
+  return filterTeams.map((team) => ({
+    id: team.teamId,
+    name: team.label,
+    teamGroup: team.teamGroup ?? null,
+    isActive: true,
+    memberCount: 0,
+    createdAt: "",
+    updatedAt: "",
+  }))
 }
 
 const APP_COLUMN_CLASS =
@@ -373,12 +431,25 @@ function renderAggregatedMetricGroup(
 export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabProps) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const storedCurrentUser = getCurrentUser()
+  const { data: currentUserResponse } = useApi(
+    () => authApi.getCurrentUser(),
+    { cacheKey: `org_profit_plan_current_user_${storedCurrentUser?.id ?? "anonymous"}` },
+  )
+  const currentUser = currentUserResponse?.data ?? storedCurrentUser
+  const currentUserTeamIds = (currentUser?.teams ?? storedCurrentUser?.teams ?? [])
+    .map((team) => team.id)
+    .filter(Boolean)
+  const currentUserTeamIdsKey = [...currentUserTeamIds].sort().join("|")
 
   const [monthRange, setMonthRange] = useState<MonthRange>(() => createDefaultMonthRange())
   const { startMonth, endMonth } = monthRange
-  const [teamFilter, setTeamFilter] = useState("all")
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
+  const [teamsFilterInitialized, setTeamsFilterInitialized] = useState(false)
+  const [filterTeams, setFilterTeams] = useState<CommissionTeamOption[]>([])
+  const [filterTeamGroups, setFilterTeamGroups] = useState<OrgTeamGroup[]>([])
+  const [loadingFilterTeams, setLoadingFilterTeams] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [teams, setTeams] = useState<OrgTeam[]>([])
   const [plans, setPlans] = useState<TeamMonthlyProfitPlan[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -415,19 +486,99 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     [columnVisibility],
   )
 
+  const canScopeManagedTeams = canManage || filterTeams.length > 0
+  const effectiveTeamIds = useMemo(
+    () => resolveEffectiveTeamIds(selectedTeamIds, filterTeams, canScopeManagedTeams),
+    [selectedTeamIds, filterTeams, canScopeManagedTeams],
+  )
+  const teamGroupSections = useMemo(
+    () => buildTeamGroupSectionsFromOrg(filterTeamGroups, filterTeams),
+    [filterTeamGroups, filterTeams],
+  )
+  const teamsForImport = useMemo(() => mapFilterTeamsToOrgTeams(filterTeams), [filterTeams])
+  const importInitialTeamFilter = useMemo(() => {
+    if (selectedTeamIds.length === 1) return selectedTeamIds[0]
+    return "all"
+  }, [selectedTeamIds])
+
+  useEffect(() => {
+    if (!orgId) {
+      setFilterTeams([])
+      setFilterTeamGroups([])
+      return
+    }
+
+    let cancelled = false
+    setLoadingFilterTeams(true)
+    void (async () => {
+      try {
+        const { teams, teamGroups } = await loadScopedCommissionTeams({
+          orgId,
+          currentUserId: currentUser?.id,
+          currentUserEmail: currentUser?.email,
+          currentUserTeamIds,
+        })
+        if (cancelled) return
+
+        if (canManage && teams.length === 0) {
+          const orgTeams = await organizationsApi.getTeams(orgId)
+          if (cancelled) return
+          setFilterTeamGroups(teamGroups)
+          setFilterTeams(
+            orgTeams.map((team) => ({
+              teamId: team.id,
+              label: team.name,
+              teamGroup: team.teamGroup ?? null,
+            })),
+          )
+          return
+        }
+
+        setFilterTeamGroups(teamGroups)
+        setFilterTeams(teams)
+      } catch {
+        if (!cancelled) {
+          setFilterTeams([])
+          setFilterTeamGroups([])
+        }
+      } finally {
+        if (!cancelled) setLoadingFilterTeams(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [orgId, currentUser?.id, currentUser?.email, currentUserTeamIdsKey, canManage])
+
+  useEffect(() => {
+    if (!canScopeManagedTeams) return
+    setSelectedTeamIds((prev) => {
+      const valid = prev.filter((id) => filterTeams.some((team) => team.teamId === id))
+      return valid.length === prev.length ? prev : valid
+    })
+  }, [canScopeManagedTeams, filterTeams])
+
+  useEffect(() => {
+    if (!canScopeManagedTeams || teamsFilterInitialized) return
+    if (filterTeams.length === 0) return
+    if (selectedTeamIds.length > 0) {
+      setTeamsFilterInitialized(true)
+      return
+    }
+    setSelectedTeamIds(filterTeams.map((team) => team.teamId))
+    setTeamsFilterInitialized(true)
+  }, [canScopeManagedTeams, teamsFilterInitialized, filterTeams, selectedTeamIds.length])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const planParams =
-        teamFilter === "all"
-          ? { from: startMonth, to: endMonth }
-          : { from: startMonth, to: endMonth, teamId: teamFilter }
-
-      const [teamList, planList] = await Promise.all([
-        organizationsApi.getTeams(orgId),
-        organizationsApi.getProfitPlans(orgId, planParams),
-      ])
-      setTeams(teamList)
+      const planList = await fetchOrganizationProfitPlans(
+        orgId,
+        startMonth,
+        endMonth,
+        effectiveTeamIds,
+      )
       setPlans(planList)
       setCurrentPage(1)
     } catch (err) {
@@ -436,7 +587,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     } finally {
       setLoading(false)
     }
-  }, [orgId, startMonth, endMonth, teamFilter])
+  }, [orgId, startMonth, endMonth, effectiveTeamIds])
 
   useEffect(() => {
     void loadData()
@@ -508,7 +659,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [startMonth, endMonth, teamFilter, pageSizeOption, searchQuery])
+  }, [startMonth, endMonth, selectedTeamIds, pageSizeOption, searchQuery])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -531,10 +682,13 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       const fromMonth = monthKeys[0] ?? startMonth
       const toMonth = monthKeys[monthKeys.length - 1] ?? endMonth
 
-      const teamList = teams.length > 0 ? teams : await organizationsApi.getTeams(orgId)
+      const teamList =
+        filterTeams.length > 0
+          ? mapFilterTeamsToOrgTeams(filterTeams)
+          : await organizationsApi.getTeams(orgId)
       const [appsResponse, planList, ...teamPlanLists] = await Promise.all([
         structureApi.getApps(),
-        organizationsApi.getProfitPlans(orgId, { from: fromMonth, to: toMonth }),
+        fetchOrganizationProfitPlans(orgId, fromMonth, toMonth, effectiveTeamIds),
         ...teamList.map((team) =>
           organizationsApi.getProfitPlans(orgId, { from: fromMonth, to: toMonth, teamId: team.id }),
         ),
@@ -547,7 +701,6 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         )
       })
       setImportTeamAppStoreIds(teamAppStoreIdsByTeamId)
-      if (teams.length === 0) setTeams(teamList)
 
       const knownAppStoreIds = new Set(
         appsResponse.apps
@@ -680,31 +833,39 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     }
   }
 
+  const exportTeamSelectionBlocked =
+    canScopeManagedTeams &&
+    selectedTeamIds.length > 1 &&
+    !isAllTeamsSelected(selectedTeamIds, filterTeams)
+
   const handleExportData = async () => {
     if (appRows.length === 0) return
+    if (exportTeamSelectionBlocked) {
+      toast({
+        title: "Export not available",
+        description: "Select one team or all teams in your scope to export.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setExportingData(true)
     try {
-      const exportParams =
-        teamFilter === "all"
-          ? {
-              from: startMonth,
-              to: endMonth,
-              search: searchQuery.trim() || undefined,
-            }
-          : {
-              from: startMonth,
-              to: endMonth,
-              teamId: teamFilter,
-              search: searchQuery.trim() || undefined,
-            }
+      const exportTeamId =
+        effectiveTeamIds.length === 1 ? effectiveTeamIds[0] : undefined
+      const exportParams = {
+        from: startMonth,
+        to: endMonth,
+        teamId: exportTeamId,
+        search: searchQuery.trim() || undefined,
+      }
 
       const { blob } = await organizationsApi.exportProfitPlansData(orgId, exportParams)
 
       const teamLabel =
-        teamFilter === "all"
+        exportTeamId == null
           ? "all-teams"
-          : teams.find((team) => team.id === teamFilter)?.name || "team"
+          : filterTeams.find((team) => team.teamId === exportTeamId)?.label || "team"
 
       const monthLabel =
         startMonth === endMonth ? startMonth : `${startMonth}_to_${endMonth}`
@@ -796,22 +957,24 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="space-y-1.5">
-                <Label htmlFor="org-profit-team">Team</Label>
-                <Select value={teamFilter} onValueChange={setTeamFilter}>
-                  <SelectTrigger id="org-profit-team" className="w-[220px] bg-white">
-                    <SelectValue placeholder="All teams" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All teams</SelectItem>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {canScopeManagedTeams ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="org-profit-team">Teams</Label>
+                  <GroupedTeamMultiSelect
+                    id="org-profit-team"
+                    teams={filterTeams}
+                    teamGroupSections={teamGroupSections}
+                    selectedTeamIds={selectedTeamIds}
+                    onSelectedTeamIdsChange={setSelectedTeamIds}
+                    disabled={loadingFilterTeams}
+                    placeholder="Teams in your scope"
+                    searchPlaceholder="Search teams..."
+                    emptySearchMessage="No teams found."
+                    emptyTeamsMessage="No teams under you or as team lead"
+                    triggerClassName="w-full max-w-none sm:w-[220px] sm:max-w-[280px]"
+                  />
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="org-profit-search">Search app</Label>
                 <Input
@@ -832,7 +995,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                     variant="outline"
                     className="bg-white"
                     onClick={() => void handleExportData()}
-                    disabled={loading || exportingData || appRows.length === 0}
+                    disabled={loading || exportingData || appRows.length === 0 || exportTeamSelectionBlocked}
                   >
                     {exportingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                     Export data
@@ -1223,9 +1386,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
         open={importPreviewOpen}
         preview={importPreview}
         importing={importing}
-        teams={teams}
+        teams={teamsForImport}
         teamAppStoreIdsByTeamId={importTeamAppStoreIds}
-        initialTeamFilter={teamFilter}
+        initialTeamFilter={importInitialTeamFilter}
         onOpenChange={resetImportPreviewDialog}
         onConfirm={handleConfirmImport}
       />

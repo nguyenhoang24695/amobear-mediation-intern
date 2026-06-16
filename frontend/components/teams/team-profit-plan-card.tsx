@@ -23,15 +23,18 @@ import { cn } from "@/lib/utils"
 import { getCurrentUser } from "@/lib/auth"
 import { canEditTeamRevenuePlan } from "@/lib/revenue-plan/team-revenue-plan-permissions"
 import { REVENUE_PLAN_COLUMNS } from "@/lib/revenue-plan/revenue-plan-column-config"
+import { useApi } from "@/hooks/use-api"
 import {
   authApi,
+  organizationsApi,
   teamProfitApi,
   type TeamMonthlyProfitPlan,
 } from "@/lib/api/services"
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, Target } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Loader2, Target } from "lucide-react"
 
 interface TeamProfitPlanCardProps {
   teamId: string
+  teamName?: string
 }
 
 const EMPTY_PLAN_ID = "00000000-0000-0000-0000-000000000000"
@@ -79,6 +82,15 @@ function parseMonthValue(month: string): Date {
 
 function shiftMonth(month: string, delta: number): string {
   return format(addMonths(parseMonthValue(month), delta), "yyyy-MM")
+}
+
+function sanitizeFileNamePart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
 function TeamProfitPlanMetricCell({
@@ -156,10 +168,19 @@ function TeamProfitPlanMetricCell({
   }
 }
 
-export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
+export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps) {
+  const storedCurrentUser = getCurrentUser()
+  const { data: currentUserResponse } = useApi(
+    () => authApi.getCurrentUser(),
+    { cacheKey: `team_profit_plan_current_user_${storedCurrentUser?.id ?? "anonymous"}` },
+  )
+  const currentUser = currentUserResponse?.data ?? storedCurrentUser
+  const orgId = currentUser?.organization?.id
+
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"))
   const [plans, setPlans] = useState<TeamMonthlyProfitPlan[]>([])
   const [loading, setLoading] = useState(true)
+  const [exportingData, setExportingData] = useState(false)
   const [expanded, setExpanded] = useState(true)
   const [canEdit, setCanEdit] = useState(false)
 
@@ -232,6 +253,41 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
   const summaryStatus = getStatus(totals.completion)
   const currentMonth = format(new Date(), "yyyy-MM")
   const canGoNextMonth = month < currentMonth
+
+  const handleExportData = async () => {
+    if (plans.length === 0) return
+    if (!orgId) {
+      toast.error("Organization context is missing. Cannot export revenue plan data.")
+      return
+    }
+
+    setExportingData(true)
+    try {
+      const { blob } = await organizationsApi.exportProfitPlansData(orgId, {
+        from: month,
+        to: month,
+        teamId,
+      })
+
+      const teamLabel = sanitizeFileNamePart(teamName || "team")
+      const fileName = `revenue-plan-${month}-${teamLabel}.xlsx`
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = objectUrl
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+
+      toast.success(`Downloaded ${plans.length} app row(s) for ${month}.`)
+    } catch (err) {
+      console.error("Failed to export team revenue plans:", err)
+      toast.error(err instanceof Error ? err.message : "Could not export revenue plan data.")
+    } finally {
+      setExportingData(false)
+    }
+  }
 
   return (
     <Card className="border-slate-200">
@@ -310,6 +366,30 @@ export function TeamProfitPlanCard({ teamId }: TeamProfitPlanCardProps) {
 
       {expanded ? (
         <CardContent className="space-y-4">
+          <div className="flex justify-end">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-white"
+                  onClick={() => void handleExportData()}
+                  disabled={loading || exportingData || plans.length === 0 || !orgId}
+                >
+                  {exportingData ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  Export data
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                Export revenue plan data for the selected month and this team.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
           {loading ? (
             <div className="flex items-center justify-center py-6 text-sm text-slate-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
