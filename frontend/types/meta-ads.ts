@@ -586,6 +586,7 @@ export interface MetaCampaignDetailDto {
   budgetStrategy?: string | null
   bidStrategy?: string | null
   isAdSetBudgetSharingEnabled?: boolean | null
+  isSkadnetworkAttribution?: boolean | null
   dailyBudget?: string | null
   lifetimeBudget?: string | null
   spendCap?: string | null
@@ -697,6 +698,7 @@ export interface MetaCampaignDraftDto {
   lifetimeBudget?: number | null
   bidStrategy?: string | null
   isAdSetBudgetSharingEnabled?: boolean | null
+  isSkadnetworkAttribution?: boolean | null
   specialAdCategories: string[]
 }
 
@@ -1286,6 +1288,7 @@ export interface MetaRequestFormState {
   specialAdCategories: string[]
   bidStrategy: string
   isAdSetBudgetSharingEnabled: boolean
+  isSkadnetworkAttribution: boolean
   campaignDailyBudget: string
   campaignLifetimeBudget: string
   adSetName: string
@@ -1299,6 +1302,7 @@ export interface MetaRequestFormState {
   ageMin: number
   ageMax: number
   gender: string
+  userOs: string[]
   placementMode: "AUTOMATIC" | "MANUAL"
   publisherPlatforms: string[]
   facebookPositions: string[]

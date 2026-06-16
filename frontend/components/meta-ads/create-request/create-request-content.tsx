@@ -59,6 +59,7 @@ export type RequestFormState = MetaRequestFormState
 
 type RequestSectionTarget = "account-app" | "campaign-settings" | "adset-audience" | "adset-budget" | "creative" | "ad"
 const MAX_AD_VARIANTS = 50
+const SKAN_IOS_14_USER_OS = "iOS_ver_14.0_and_above"
 
 const requestSectionIds: Record<RequestSectionTarget, string> = {
   "account-app": "meta-request-section-account-app",
@@ -140,6 +141,10 @@ function sanitizeRequestFormState(state: RequestFormState): RequestFormState {
   if (!Array.isArray(next.flexiblePrimaryTexts) || next.flexiblePrimaryTexts.length === 0) next.flexiblePrimaryTexts = [""]
   if (!Array.isArray(next.flexibleHeadlines) || next.flexibleHeadlines.length === 0) next.flexibleHeadlines = [""]
   if (!Array.isArray(next.flexibleAssets) || next.flexibleAssets.length === 0) next.flexibleAssets = [createEmptyFlexibleAsset()]
+  next.userOs = Array.isArray(next.userOs) ? next.userOs.filter((value) => value.trim()) : []
+  if (next.isSkadnetworkAttribution) {
+    next.userOs = [SKAN_IOS_14_USER_OS]
+  }
 
   return next
 }
@@ -219,6 +224,7 @@ function createDefaultFormState(): RequestFormState {
     specialAdCategories: [],
     bidStrategy: "LOWEST_COST_WITHOUT_CAP",
     isAdSetBudgetSharingEnabled: true,
+    isSkadnetworkAttribution: false,
     campaignDailyBudget: "20",
     campaignLifetimeBudget: "",
     adSetName: "",
@@ -232,6 +238,7 @@ function createDefaultFormState(): RequestFormState {
     ageMin: 18,
     ageMax: 65,
     gender: "ALL",
+    userOs: [],
     placementMode: "AUTOMATIC",
     publisherPlatforms: [],
     facebookPositions: [],
@@ -651,6 +658,17 @@ export function CreateRequestContent({ requestId }: Props) {
   const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
   const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
+  const isSkanEligibleForState = (state: RequestFormState) => {
+    if (state.campaignObjective.trim().toUpperCase() !== "OUTCOME_APP_PROMOTION") return false
+    if (!state.paidMediaAppBindingId) return false
+
+    const mapping = (state.adAccountId ? (accountScopedAppMappings ?? []) : []).find((item) => item.id.toString() === state.paidMediaAppBindingId)
+      ?? referenceData?.appMappings.find((item) => item.id.toString() === state.paidMediaAppBindingId)
+    if (!mapping) return true
+
+    return resolveMetaAppMappingPlatform(mapping) === "IOS"
+  }
+
   const tokenState = deriveTokenState({
     adAccountId: form.adAccountId,
     canViewMetaAccounts,
@@ -661,6 +679,16 @@ export function CreateRequestContent({ requestId }: Props) {
   })
 
   const isSubmitBlocked = submitting || saving || validating || tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
+
+  useEffect(() => {
+    const skanEligible = form.campaignObjective.trim().toUpperCase() === "OUTCOME_APP_PROMOTION"
+      && !!form.paidMediaAppBindingId
+      && (!selectedAppMapping || selectedAppPlatform === "IOS")
+    if (!skanEligible && form.isSkadnetworkAttribution) {
+      setForm((previous) => sanitizeRequestFormState({ ...previous, isSkadnetworkAttribution: false }))
+      setIsDirty(true)
+    }
+  }, [form.campaignObjective, form.isSkadnetworkAttribution, form.paidMediaAppBindingId, selectedAppMapping, selectedAppPlatform])
 
   useEffect(() => {
     const requiresValueDraftValidation =
@@ -752,6 +780,10 @@ export function CreateRequestContent({ requestId }: Props) {
 
       if (patch.objective && patch.objective !== previous.objective && !patch.campaignObjective) {
         next.campaignObjective = patch.objective
+      }
+
+      if (!isSkanEligibleForState(next)) {
+        next.isSkadnetworkAttribution = false
       }
 
       // Variants only supported for SINGLE_MEDIA. If user switches to another type,
@@ -1264,6 +1296,7 @@ export function CreateRequestContent({ requestId }: Props) {
               countryGroupsMessage={geoCountryGroupsError?.message ?? null}
               onCountryGroupsChanged={() => void refetchGeoCountryGroups()}
               metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+              appPlatform={selectedAppPlatform}
             />
           </div>
           <div id={requestSectionIds["adset-budget"]} className={getSectionWrapperClass("adset-budget", highlightedSection)}>
