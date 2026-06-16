@@ -58,7 +58,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
+import { cn, copyTextToClipboard } from "@/lib/utils"
+import {
+  getActualProfitClass,
+  getNetProfitMargin,
+  getNetProfitMarginClass,
+  getPercentClass,
+} from "@/lib/metrics/profit-metric-styles"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
@@ -121,15 +127,6 @@ const OVERVIEW_COLUMN_STYLES: Record<
   },
 }
 
-function getNetProfitMargin(
-  actualProfit: number | null | undefined,
-  actualRevenue: number | null | undefined,
-): number | null {
-  if (actualRevenue == null || actualRevenue <= 0) return null
-  if (actualProfit == null) return null
-  return (actualProfit / actualRevenue) * 100
-}
-
 function formatNetProfitMarginDisplay(margin: number | null): string {
   if (margin == null) return "—"
   return `${Math.round(margin)}%`
@@ -164,8 +161,9 @@ function overviewColumnCellClassName(
   cell: ProfitOverviewMonthCell,
 ): string {
   if (columnId === "revenuePercent") return getPercentClass(cell.revenue.completionPercent)
+  if (columnId === "actualProfit") return getActualProfitClass(cell.profit.actual)
   if (columnId === "netProfitMargin") {
-    return getPercentClass(getNetProfitMargin(cell.profit.actual, cell.revenue.actual))
+    return getNetProfitMarginClass(getNetProfitMargin(cell.profit.actual, cell.revenue.actual))
   }
   return "text-slate-700"
 }
@@ -230,13 +228,6 @@ function formatCurrency(value: number | null | undefined) {
 function formatPercent(value: number | null | undefined) {
   if (value == null) return "—"
   return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`
-}
-
-function getPercentClass(percent: number | null | undefined) {
-  if (percent == null) return "text-slate-500"
-  if (percent < 0 || percent < 50) return "text-red-600 font-medium"
-  if (percent < 80) return "text-amber-600 font-medium"
-  return "text-green-600 font-medium"
 }
 
 function formatLastUpdatedAt(value: string): string {
@@ -449,6 +440,51 @@ function getMonthCell(
   return normalizeMonthCell(months[month])
 }
 
+function sumNullableNumbers(values: (number | null | undefined)[]): number | null {
+  const numbers = values
+    .filter((value): value is number => value != null && Number.isFinite(Number(value)))
+    .map(Number)
+  if (numbers.length === 0) return null
+  return numbers.reduce((sum, value) => sum + value, 0)
+}
+
+function aggregateMonthCells(cells: ProfitOverviewMonthCell[]): ProfitOverviewMonthCell {
+  const revenuePlan = sumNullableNumbers(cells.map((cell) => cell.revenue.plan))
+  const revenueActual = sumNullableNumbers(cells.map((cell) => cell.revenue.actual))
+  const costActual = sumNullableNumbers(cells.map((cell) => cell.cost.actual))
+  const profitActual = sumNullableNumbers(cells.map((cell) => cell.profit.actual))
+  const completionPercent =
+    revenuePlan != null && revenuePlan > 0 && revenueActual != null
+      ? Math.round((revenueActual / revenuePlan) * 10000) / 100
+      : null
+
+  return {
+    revenue: { plan: revenuePlan, actual: revenueActual, completionPercent },
+    cost: { plan: null, actual: costActual, completionPercent: null },
+    profit: { plan: null, actual: profitActual, completionPercent: null },
+  }
+}
+
+function aggregateMonthsRecord(
+  months: Record<string, ProfitOverviewMonthCell>,
+  monthKeys: string[],
+): ProfitOverviewMonthCell {
+  return aggregateMonthCells(monthKeys.map((monthKey) => getMonthCell(months, monthKey)))
+}
+
+function buildColumnTotalsByMonth(
+  monthKeys: string[],
+  rows: Array<{ months: Record<string, ProfitOverviewMonthCell> }>,
+): Record<string, ProfitOverviewMonthCell> {
+  const result: Record<string, ProfitOverviewMonthCell> = {}
+  for (const monthKey of monthKeys) {
+    result[monthKey] = aggregateMonthCells(
+      rows.map((row) => getMonthCell(row.months, monthKey)),
+    )
+  }
+  return result
+}
+
 function TeamAppsPager({
   currentPage,
   totalPages,
@@ -506,42 +542,57 @@ function OverviewMonthCells({
   monthKeys,
   visibleColumns,
   rowVariant = "team",
+  trailingCell,
 }: {
   months: Record<string, ProfitOverviewMonthCell>
   monthKeys: string[]
   visibleColumns: (typeof OVERVIEW_COLUMNS)[number][]
-  rowVariant?: "team" | "app"
+  rowVariant?: "team" | "app" | "total"
+  trailingCell?: ProfitOverviewMonthCell | null
 }) {
-  return (
-    <>
-      {monthKeys.map((month) => {
-        const cell = getMonthCell(months, month)
+  const renderCellGroup = (
+    groupKey: string,
+    cell: ProfitOverviewMonthCell,
+    options?: { isTrailingTotal?: boolean },
+  ) => (
+    <Fragment key={groupKey}>
+      {visibleColumns.map((column, columnIndex) => {
+        const columnStyle = OVERVIEW_COLUMN_STYLES[column.group]
+        const bgClass =
+          rowVariant === "app"
+            ? columnStyle.cellSubtle
+            : rowVariant === "total"
+              ? "bg-slate-100/80"
+              : columnStyle.cell
+        const isFirstColumn = columnIndex === 0
+        const isLastColumnInGroup = columnIndex === visibleColumns.length - 1
+        const isTrailingTotal = options?.isTrailingTotal ?? false
         return (
-          <Fragment key={month}>
-            {visibleColumns.map((column, columnIndex) => {
-              const columnStyle = OVERVIEW_COLUMN_STYLES[column.group]
-              const bgClass = rowVariant === "app" ? columnStyle.cellSubtle : columnStyle.cell
-              const isFirstColumn = columnIndex === 0
-              const isLastColumnInMonth = columnIndex === visibleColumns.length - 1
-              return (
-                <TableCell
-                  key={`${month}-${column.id}`}
-                  className={cn(
-                    column.minWidthClass,
-                    "text-right text-sm tabular-nums",
-                    isFirstColumn ? cn("border-l", columnStyle.border) : "",
-                    isLastColumnInMonth ? "border-r-2 border-slate-300" : cn("border-r", columnStyle.border),
-                    bgClass,
-                    overviewColumnCellClassName(column.id, cell),
-                  )}
-                >
-                  {renderOverviewColumnContent(cell, column.id)}
-                </TableCell>
-              )
-            })}
-          </Fragment>
+          <TableCell
+            key={`${groupKey}-${column.id}`}
+            className={cn(
+              column.minWidthClass,
+              "text-right text-sm tabular-nums",
+              isFirstColumn
+                ? cn("border-l", isTrailingTotal ? "border-l-2 border-slate-400" : columnStyle.border)
+                : "",
+              isLastColumnInGroup ? "border-r-2 border-slate-300" : cn("border-r", columnStyle.border),
+              bgClass,
+              rowVariant === "total" ? "font-semibold" : "",
+              overviewColumnCellClassName(column.id, cell),
+            )}
+          >
+            {renderOverviewColumnContent(cell, column.id)}
+          </TableCell>
         )
       })}
+    </Fragment>
+  )
+
+  return (
+    <>
+      {monthKeys.map((month) => renderCellGroup(month, getMonthCell(months, month)))}
+      {trailingCell ? renderCellGroup("row-total", trailingCell, { isTrailingTotal: true }) : null}
     </>
   )
 }
@@ -1025,12 +1076,29 @@ export function OverviewReportContent() {
     })
   }, [allTeams, selectedTeamIds, filterTeams])
 
+  const columnTotalsByMonth = useMemo(
+    () => buildColumnTotalsByMonth(months, teams),
+    [months, teams],
+  )
+
+  const grandTotalCell = useMemo(
+    () => aggregateMonthCells(months.map((month) => columnTotalsByMonth[month])),
+    [columnTotalsByMonth, months],
+  )
+
+  const [copiedAppStoreKey, setCopiedAppStoreKey] = useState<string | null>(null)
+  const copiedAppStoreTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [sharedAppWarningDismissed, setSharedAppWarningDismissed] = useState(false)
   const [sharedAppWarningCountdown, setSharedAppWarningCountdown] = useState(10)
 
   useEffect(() => {
-    setSharedAppWarningDismissed(false)
-  }, [sharedAppConflicts.length])
+    return () => {
+      if (copiedAppStoreTimeoutRef.current) {
+        clearTimeout(copiedAppStoreTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (sharedAppConflicts.length === 0 || sharedAppWarningDismissed) return
@@ -1090,14 +1158,21 @@ export function OverviewReportContent() {
     }
   }
 
-  const copyAppStoreId = async (appStoreId: string | null | undefined) => {
+  const copyAppStoreId = async (copyKey: string, appStoreId: string | null | undefined) => {
     const value = appStoreId?.trim()
     if (!value) return
 
-    try {
-      await navigator.clipboard.writeText(value)
-      toast.success("App Store ID copied.")
-    } catch {
+    const copied = await copyTextToClipboard(value)
+    if (copied) {
+      if (copiedAppStoreTimeoutRef.current) {
+        clearTimeout(copiedAppStoreTimeoutRef.current)
+      }
+      setCopiedAppStoreKey(copyKey)
+      copiedAppStoreTimeoutRef.current = setTimeout(() => {
+        setCopiedAppStoreKey(null)
+        copiedAppStoreTimeoutRef.current = null
+      }, 2000)
+    } else {
       toast.error("Failed to copy App Store ID.")
     }
   }
@@ -1504,6 +1579,12 @@ export function OverviewReportContent() {
                           {formatMonthLabel(month)}
                         </TableHead>
                       ))}
+                      <TableHead
+                        colSpan={colsPerMonth}
+                        className="sticky top-0 z-40 border-b border-l-2 border-r border-slate-400 bg-slate-100/95 text-center text-xs font-semibold text-slate-800"
+                      >
+                        Total
+                      </TableHead>
                     </TableRow>
                     <TableRow className="h-8 bg-slate-50/95 hover:bg-slate-50/95">
                       {months.map((month) => (
@@ -1534,6 +1615,32 @@ export function OverviewReportContent() {
                           ) : null}
                         </Fragment>
                       ))}
+                      <Fragment key="total-groups">
+                        {visibleRevenueColumnCount > 0 ? (
+                          <TableHead
+                            colSpan={visibleRevenueColumnCount}
+                            className={cn(
+                              "sticky top-10 z-40 border-b border-r border-l-2 border-slate-400 text-center text-xs font-semibold",
+                              OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
+                              "bg-slate-100/95",
+                            )}
+                          >
+                            Revenue
+                          </TableHead>
+                        ) : null}
+                        {visiblePerformanceColumnCount > 0 ? (
+                          <TableHead
+                            colSpan={visiblePerformanceColumnCount}
+                            className={cn(
+                              "sticky top-10 z-40 border-b border-r border-slate-200 text-center text-xs font-semibold",
+                              OVERVIEW_COLUMN_STYLES.performance.groupHeader,
+                              "bg-slate-100/95",
+                            )}
+                          >
+                            Performance
+                          </TableHead>
+                        ) : null}
+                      </Fragment>
                     </TableRow>
                     <TableRow className="h-8 bg-slate-50/95 hover:bg-slate-50/95">
                       {months.map((month) => (
@@ -1562,9 +1669,50 @@ export function OverviewReportContent() {
                           })}
                         </Fragment>
                       ))}
+                      <Fragment key="total-columns">
+                        {visibleColumns.map((column, columnIndex) => {
+                          const columnStyle = OVERVIEW_COLUMN_STYLES[column.group]
+                          const isFirstColumn = columnIndex === 0
+                          const isLastColumnInGroup = columnIndex === visibleColumns.length - 1
+                          return (
+                            <TableHead
+                              key={`total-${column.id}`}
+                              className={cn(
+                                column.minWidthClass,
+                                "sticky top-[72px] z-40 text-right text-xs font-medium",
+                                columnStyle.header,
+                                isFirstColumn ? "border-l-2 border-slate-400" : "",
+                                isLastColumnInGroup
+                                  ? "border-r-2 border-slate-300"
+                                  : cn("border-r", columnStyle.border),
+                                "bg-slate-100/95",
+                              )}
+                            >
+                              {column.label}
+                            </TableHead>
+                          )
+                        })}
+                      </Fragment>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    <TableRow className="bg-slate-100/80 hover:bg-slate-100/80">
+                      <TableCell
+                        className={cn(
+                          "sticky left-0 z-20 border-r bg-slate-100 py-2 font-bold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                          overviewStickyFirstColWidth,
+                        )}
+                      >
+                        Total
+                      </TableCell>
+                      <OverviewMonthCells
+                        monthKeys={months}
+                        months={columnTotalsByMonth}
+                        visibleColumns={visibleColumns}
+                        rowVariant="total"
+                        trailingCell={grandTotalCell}
+                      />
+                    </TableRow>
                     {teams.map((team) => {
                       const appsCache = teamAppsCache[team.teamId]
                       const appCount = getTeamAppCount(team, appsCache)
@@ -1620,6 +1768,7 @@ export function OverviewReportContent() {
                               monthKeys={months}
                               months={team.months}
                               visibleColumns={visibleColumns}
+                              trailingCell={aggregateMonthsRecord(team.months, months)}
                             />
                           </TableRow>
                           {expanded && appsLoading ? (
@@ -1643,6 +1792,10 @@ export function OverviewReportContent() {
                                   className="border-l border-r-2 border-slate-300 bg-slate-50/55"
                                 />
                               ))}
+                              <TableCell
+                                colSpan={colsPerMonth}
+                                className="border-l-2 border-r-2 border-slate-400 bg-slate-50/55"
+                              />
                             </TableRow>
                           ) : null}
                           {expanded && appLoadError ? (
@@ -1665,12 +1818,21 @@ export function OverviewReportContent() {
                                   className="border-l border-r-2 border-slate-300 bg-red-50/40"
                                 />
                               ))}
+                              <TableCell
+                                colSpan={colsPerMonth}
+                                className="border-l-2 border-r-2 border-slate-400 bg-red-50/40"
+                              />
                             </TableRow>
                           ) : null}
                           {expanded &&
                             !appLoadError &&
                             !appsLoading &&
-                            paginatedApps.map((app: ProfitOverviewAppRow) => (
+                            paginatedApps.map((app: ProfitOverviewAppRow) => {
+                              const appStoreCopyKey = `${team.teamId}:${app.appStoreId ?? app.appId}`
+                              const appStoreCopied = copiedAppStoreKey === appStoreCopyKey
+                              const filteredAppMonths = getAppMonthsFiltered(app.months, team.months, months)
+
+                              return (
                               <TableRow
                                 key={`${team.teamId}-${app.appId}`}
                                 className="bg-slate-50/40 hover:bg-slate-50/60"
@@ -1700,8 +1862,11 @@ export function OverviewReportContent() {
                                         <div className="truncate text-sm font-medium text-slate-900">
                                           {app.appLabel}
                                         </div>
-                                        <div className="truncate text-xs text-slate-500">
-                                          <span className="font-mono" title={app.appStoreId ?? undefined}>
+                                        <div className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
+                                          <span
+                                            className="min-w-0 truncate font-mono"
+                                            title={app.appStoreId ?? undefined}
+                                          >
                                             {formatAppStoreId(app.appStoreId)}
                                           </span>
                                           {app.appStoreId ? (
@@ -1709,12 +1874,20 @@ export function OverviewReportContent() {
                                               type="button"
                                               variant="ghost"
                                               size="icon"
-                                              className="ml-1 inline-flex h-5 w-5 align-middle text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                              className="h-5 w-5 shrink-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                                               aria-label={`Copy App Store ID for ${app.appLabel}`}
-                                              onClick={() => void copyAppStoreId(app.appStoreId)}
+                                              onClick={(event) => {
+                                                event.stopPropagation()
+                                                void copyAppStoreId(appStoreCopyKey, app.appStoreId)
+                                              }}
                                             >
                                               <Copy className="h-3 w-3" />
                                             </Button>
+                                          ) : null}
+                                          {appStoreCopied ? (
+                                            <span className="shrink-0 text-xs font-medium text-green-600">
+                                              Copied!
+                                            </span>
                                           ) : null}
                                         </div>
                                       </div>
@@ -1726,12 +1899,14 @@ export function OverviewReportContent() {
                                 </TableCell>
                                 <OverviewMonthCells
                                   monthKeys={months}
-                                  months={getAppMonthsFiltered(app.months, team.months, months)}
+                                  months={filteredAppMonths}
                                   visibleColumns={visibleColumns}
                                   rowVariant="app"
+                                  trailingCell={aggregateMonthsRecord(filteredAppMonths, months)}
                                 />
                               </TableRow>
-                            ))}
+                              )
+                            })}
                           {expanded && !appLoadError && appCount > APPS_PER_PAGE ? (
                             <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
                               <TableCell
@@ -1755,6 +1930,10 @@ export function OverviewReportContent() {
                                   className="border-l border-r-2 border-slate-300 bg-slate-50/55"
                                 />
                               ))}
+                              <TableCell
+                                colSpan={colsPerMonth}
+                                className="border-l-2 border-r-2 border-slate-400 bg-slate-50/55"
+                              />
                             </TableRow>
                           ) : null}
                         </Fragment>
