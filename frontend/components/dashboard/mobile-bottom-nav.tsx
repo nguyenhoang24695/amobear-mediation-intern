@@ -45,6 +45,13 @@ function isVisible(flag?: boolean | (() => boolean)): boolean {
   return typeof flag === "function" ? flag() : flag
 }
 
+function hasMetaIntegrationListAccess(): boolean {
+  return hasScreenFunction("s-meta-accounts", "view") || (
+    hasScreenFunction("s-meta-accounts", "create") &&
+    hasScreenFunction("s-meta-accounts", "edit")
+  )
+}
+
 const bottomNavItems: BottomNavItem[] = [
   {
     icon: LayoutDashboard,
@@ -102,7 +109,7 @@ function canShowMoreItem(label: string): boolean {
     case "Data Accounts":
       return (
         hasScreenFunction("s-data-accounts", "view") ||
-        hasScreenFunction("s-meta-accounts", "view") ||
+        hasMetaIntegrationListAccess() ||
         hasScreenFunction("s-tiktok-accounts", "view")
       )
     case "Data Sources":

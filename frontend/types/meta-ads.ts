@@ -20,6 +20,8 @@ export interface MetaIntegrationDto {
   productionUsageMessage?: string | null
   metaBusinessId?: string | null
   metaBusinessName?: string | null
+  businesses?: MetaBusinessReferenceDto[]
+  businessCount?: number
   metaAppId?: string | null
   hasAppSecret: boolean
   appSecretHint?: string | null
@@ -37,6 +39,8 @@ export interface MetaIntegrationDto {
   totalSpendCap?: number | null
   isDefault: boolean
   isEnabled: boolean
+  createdBy?: string | null
+  updatedBy?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -78,9 +82,15 @@ export interface MetaAuthorizeUrlResponseDto {
   state: string
 }
 
+export interface MetaAdLocaleReferenceDto {
+  key: number
+  name: string
+}
+
 export interface MetaOAuthCallbackRequestDto {
   code: string
   redirectUri: string
+  state?: string | null
 }
 
 export interface MetaTokenStatusDto {
@@ -94,6 +104,12 @@ export interface MetaTokenStatusDto {
   tokenStatus: string
   lastCheckMessage?: string | null
   scopes: string[]
+}
+
+export interface MetaBusinessReferenceDto {
+  id: string
+  name: string
+  verificationStatus?: string | null
 }
 
 export interface MetaIntegrationTestRequestDto {
@@ -127,6 +143,12 @@ export interface MetaIntegrationTestResultDto {
 export interface MetaAdAccountDto {
   id: number
   metaIntegrationId: number
+  primaryIntegrationId: number
+  primaryIntegrationName?: string | null
+  primaryAuthMode?: string | null
+  isPrimaryIntegrationManuallySelected: boolean
+  accessibleIntegrationCount: number
+  accessibleIntegrations: MetaAdAccountIntegrationAccessDto[]
   metaAdAccountId: string
   name: string
   currency?: string | null
@@ -142,6 +164,23 @@ export interface MetaAdAccountDto {
   lastSyncedAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface MetaAdAccountIntegrationAccessDto {
+  id: number
+  integrationId: number
+  integrationName: string
+  authMode: string
+  canRead: boolean
+  canManage: boolean
+  isPrimary: boolean
+  lastSeenAt: string
+  lastValidatedAt?: string | null
+  lastError?: string | null
+}
+
+export interface SetMetaAdAccountPrimaryIntegrationRequestDto {
+  metaIntegrationId: number
 }
 
 export interface UpsertMetaAdAccountRequestDto {
@@ -739,6 +778,7 @@ export interface MetaAdSetDraftDto {
   regionKeys: string[]
   countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
+  locales?: number[] | null
   ageMin?: number | null
   ageMax?: number | null
   genders: string[]
@@ -879,6 +919,7 @@ export interface MetaAssetPreparationDto {
   kind: "image" | "video"
   status: MetaAssetPreparationStatus
   metaAdAccountId?: number | null
+  executionMetaIntegrationId?: number | null
   metaImageHash?: string | null
   metaVideoId?: string | null
   errorMessage?: string | null
@@ -907,6 +948,7 @@ export interface MetaAdVariantDto {
 
 export interface CreateMetaCampaignRequestDto {
   metaAdAccountId: number
+  executionMetaIntegrationId?: number | null
   appRowId?: number | null
   paidMediaAppBindingId?: number | null
   idempotencyKey?: string | null
@@ -920,6 +962,7 @@ export interface CreateMetaCampaignRequestDto {
 
 export interface UpdateMetaCampaignRequestDto {
   metaAdAccountId: number
+  executionMetaIntegrationId?: number | null
   appRowId?: number | null
   paidMediaAppBindingId?: number | null
   campaign: MetaCampaignDraftDto
@@ -997,6 +1040,9 @@ export interface MetaCampaignRequestListItemDto {
   status: MetaRequestStatus
   metaAdAccountId: number
   metaAdAccountName?: string | null
+  executionMetaIntegrationId?: number | null
+  executionMetaIntegrationName?: string | null
+  executionAuthMode?: string | null
   appRowId?: number | null
   paidMediaAppBindingId?: number | null
   appId?: string | null
@@ -1019,6 +1065,9 @@ export interface MetaCampaignRequestDetailDto {
   status: MetaRequestStatus
   metaAdAccountId: number
   metaAdAccountName?: string | null
+  executionMetaIntegrationId?: number | null
+  executionMetaIntegrationName?: string | null
+  executionAuthMode?: string | null
   appRowId?: number | null
   paidMediaAppBindingId?: number | null
   appId?: string | null
@@ -1046,12 +1095,19 @@ export interface MetaCampaignRequestDetailDto {
 
 
 
+export interface MetaFacebookPageAccessibleIntegrationDto {
+  integrationId: number
+  integrationName: string
+  authMode: string
+}
+
 export interface MetaFacebookPageReferenceDto {
   id: string
   name: string
   category?: string | null
   accessStatus?: string | null
   pictureUrl?: string | null
+  accessibleViaIntegrations?: MetaFacebookPageAccessibleIntegrationDto[] | null
 }
 
 export interface MetaFacebookPageProfileDto {
@@ -1225,6 +1281,7 @@ export interface AdVariantFormState {
 }
 
 export interface MetaRequestFormState {
+  executionIntegrationId: string
   adAccountId: string
   appRowId: string
   paidMediaAppBindingId: string
@@ -1245,6 +1302,7 @@ export interface MetaRequestFormState {
   regionKeys: string[]
   countryGroupIds: number[]
   cityTargets: MetaGeoCityTargetDto[]
+  localeKeys: number[]
   ageMin: number
   ageMax: number
   gender: string
@@ -1411,5 +1469,3 @@ export interface MetaInsightsFiltersResponseDto {
   campaigns: MetaInsightsFilterOptionDto[]
   countries: MetaInsightsFilterOptionDto[]
 }
-
-

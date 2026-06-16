@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 import { CheckCircle2, XCircle, AlertCircle, Building2, AlertTriangle, ShieldAlert, ShieldOff, ShieldCheck, Loader2, Check, ChevronsUpDown } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 import { resolveMetaAppMappingPlatform } from "./platform"
-import type { MetaAdAccountDto, MetaAppMappingDto, MetaObjectivePresetDto } from "@/types/meta-ads"
+import type { MetaAdAccountDto, MetaAppMappingDto, MetaIntegrationDto, MetaObjectivePresetDto } from "@/types/meta-ads"
 
 type TokenState = "none" | "ready" | "not_tested" | "expired" | "missing_permissions" | "invalid" | "disabled"
 
@@ -20,6 +20,7 @@ interface Props {
   form: RequestFormState
   onChange: (patch: Partial<RequestFormState>) => void
   tokenState: TokenState
+  integrations: MetaIntegrationDto[]
   adAccounts: MetaAdAccountDto[]
   appMappings: MetaAppMappingDto[]
   selectedAppMapping?: MetaAppMappingDto | null
@@ -27,6 +28,7 @@ interface Props {
   appMappingsMessage?: string | null
   objectives: MetaObjectivePresetDto[]
   integrationName?: string | null
+  canChangeExecutionIntegration?: boolean
 }
 
 interface SearchableSelectProps<T> {
@@ -155,6 +157,7 @@ export function AccountAppSection({
   form,
   onChange,
   tokenState,
+  integrations,
   adAccounts,
   appMappings,
   selectedAppMapping,
@@ -162,12 +165,14 @@ export function AccountAppSection({
   appMappingsMessage,
   objectives,
   integrationName,
+  canChangeExecutionIntegration = true,
 }: Props) {
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || ""
   const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
   const hasMappingIssue = !selectedAppMapping?.metaApplicationId || !mappingUrl
   const isTokenBlocking = tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
   const appSelectDisabled = !form.adAccountId || appMappingsLoading
+  const selectedIntegration = integrations.find((integration) => integration.id.toString() === form.executionIntegrationId)
 
   return (
     <Card className="border-slate-200">
@@ -182,14 +187,54 @@ export function AccountAppSection({
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-slate-700">
+                Meta Integration <span className="text-red-500">*</span>
+              </Label>
+              <SearchableSelect
+                value={form.executionIntegrationId}
+                options={integrations}
+                placeholder="Select integration..."
+                searchPlaceholder="Search by integration name, auth mode..."
+                emptyMessage="No integrations found."
+                disabled={!canChangeExecutionIntegration}
+                onValueChange={(value) => onChange({ executionIntegrationId: value })}
+                getValue={(integration) => integration.id.toString()}
+                getSearchText={(integration) => `${integration.displayName} ${integration.authMode} ${integration.metaBusinessName ?? ""}`}
+                renderValue={(integration) => (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium text-slate-900">{integration.displayName}</span>
+                    <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0 border-slate-200 text-slate-600">
+                      {integration.authMode === "system_user_token" ? "System User" : "User Token"}
+                    </Badge>
+                  </span>
+                )}
+                renderOption={(integration) => (
+                  <div className="flex items-center gap-3 py-0.5">
+                    <Badge className={integration.authMode === "system_user_token" ? "bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0" : "bg-violet-100 text-violet-700 text-[10px] px-1.5 py-0"}>
+                      {integration.authMode === "system_user_token" ? "System User" : "User Token"}
+                    </Badge>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-slate-900">{integration.displayName}</div>
+                      <div className="truncate text-xs text-slate-400">{integration.metaBusinessName ?? integration.metaBusinessId ?? integration.tokenStatus}</div>
+                    </div>
+                  </div>
+                )}
+              />
+              {!canChangeExecutionIntegration ? (
+                <p className="text-[11px] text-slate-500">Execution integration is locked after the request leaves draft.</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-700">
                 Meta Ad Account <span className="text-red-500">*</span>
               </Label>
               <SearchableSelect
                 value={form.adAccountId}
                 options={adAccounts}
-                placeholder="Select ad account..."
+                placeholder={form.executionIntegrationId ? "Select ad account..." : "Select integration first..."}
                 searchPlaceholder="Search by ad account ID, name, currency, timezone..."
-                emptyMessage="No ad accounts found."
+                emptyMessage="No ad accounts found for this integration."
+                disabled={!form.executionIntegrationId}
                 onValueChange={(value) => onChange({ adAccountId: value, appRowId: "" })}
                 getValue={(account) => account.id.toString()}
                 getSearchText={(account) => `${account.metaAdAccountId} ${account.name} ${account.currency ?? ""} ${account.timeZoneName ?? ""}`}
@@ -221,7 +266,7 @@ export function AccountAppSection({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-slate-600">
-                    Integration Status{integrationName ? ` - ${integrationName}` : ""}
+                    Integration Status{selectedIntegration?.displayName ? ` - ${selectedIntegration.displayName}` : integrationName ? ` - ${integrationName}` : ""}
                   </span>
                   <TokenStatusBadge state={tokenState} />
                 </div>
@@ -462,4 +507,3 @@ export function AccountAppSection({
     </Card>
   )
 }
-

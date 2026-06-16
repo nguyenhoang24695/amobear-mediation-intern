@@ -20,6 +20,15 @@ export function invalidateCache(key: string) {
   pendingRequests.delete(key)
 }
 
+export function invalidateCachePrefix(prefix: string) {
+  for (const key of requestCache.keys()) {
+    if (key.startsWith(prefix)) requestCache.delete(key)
+  }
+  for (const key of pendingRequests.keys()) {
+    if (key.startsWith(prefix)) pendingRequests.delete(key)
+  }
+}
+
 export function useApi<T>(
   apiCall: () => Promise<T>,
   options: UseApiOptions<T> = {}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,8 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { invalidateCache, useApi } from "@/hooks/use-api"
-import { hasScreenFunction } from "@/lib/auth"
+import { invalidateCache, invalidateCachePrefix, useApi } from "@/hooks/use-api"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { metaIntegrationsApi } from "@/lib/api/meta-ads"
 import type {
   CreateMetaIntegrationRequestDto,
@@ -57,6 +57,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   ShieldX,
+  Building2,
 } from "lucide-react"
 
 const SCREEN_META_ACCOUNTS = "s-meta-accounts"
@@ -73,9 +74,6 @@ const STABLE_SCOPE_HINT = [...REQUIRED_SCOPES, ...RECOMMENDED_SCOPES].join(", ")
 const emptyForm: CreateMetaIntegrationRequestDto = {
   displayName: "",
   authMode: "system_user_token",
-  metaBusinessId: "",
-  metaAppId: "",
-  appSecret: "",
   accessToken: "",
   tokenType: "Bearer",
   tokenExpiresAt: "",
@@ -104,12 +102,28 @@ function formatAuthMode(value: string) {
   return AUTH_MODE_OPTIONS.find((option) => option.value === value)?.label ?? value
 }
 
+function getBusinessPortfolioSummary(integration: MetaIntegrationDto) {
+  const businesses = integration.businesses ?? []
+  const count = integration.businessCount ?? businesses.length
+  if (count <= 0) return { title: "No verified BM found", subtitle: integration.hasAccessToken ? "Token valid, no verified portfolio" : "Connect token to refresh" }
+
+  const names = businesses
+    .map((business) => business.name || business.id)
+    .filter(Boolean)
+    .slice(0, 2)
+  const extra = count > names.length ? ` +${count - names.length}` : ""
+  return {
+    title: `${count.toLocaleString()} verified`,
+    subtitle: names.length > 0 ? `${names.join(", ")}${extra}` : "Verified Business Portfolios",
+  }
+}
 function getAuthModeHelper(value: string) {
   return AUTH_MODE_OPTIONS.find((option) => option.value === value)?.helper ?? ""
 }
 
 function formatTokenStatus(value?: string | null) {
   const normalized = value?.toUpperCase() ?? "NOT_TESTED"
+  if (normalized === "NO_TOKEN") return "No token connected"
   return normalized.replaceAll("_", " ")
 }
 
@@ -119,6 +133,7 @@ function getTokenStatusMessageClass(value?: string | null) {
       return "text-green-700"
     case "EXPIRED":
     case "NOT_TESTED":
+    case "NO_TOKEN":
       return "text-amber-700"
     case "MISSING_SCOPES":
     case "ACCESS_DENIED":
@@ -158,6 +173,8 @@ function deriveTokenBadge(integration: MetaIntegrationDto) {
       return { label: "Access Denied", className: "bg-red-100 text-red-700", icon: <ShieldX className="w-3 h-3" /> }
     case "INVALID":
       return { label: "Invalid", className: "bg-red-100 text-red-700", icon: <XCircle className="w-3 h-3" /> }
+    case "NO_TOKEN":
+      return { label: "No token connected", className: "bg-slate-100 text-slate-600", icon: <AlertTriangle className="w-3 h-3" /> }
     default:
       return { label: "Not Tested", className: "bg-amber-100 text-amber-700", icon: <AlertTriangle className="w-3 h-3" /> }
   }
@@ -207,13 +224,17 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const currentUser = getCurrentUser()
+  const canViewAll = hasScreenFunction(SCREEN_META_ACCOUNTS, "view")
   const canCreate = hasScreenFunction(SCREEN_META_ACCOUNTS, "create")
   const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
   const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
+  const canManageOwn = canCreate && canEdit
+  const integrationsCacheKey = `meta-integrations:list:${currentUser?.id ?? "anonymous"}:${canViewAll ? "all" : "own"}`
 
   const { data: integrations, loading, error, refetch } = useApi(
     () => metaIntegrationsApi.list(),
-    { cacheKey: "meta-integrations:list" }
+    { cacheKey: integrationsCacheKey }
   )
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -225,11 +246,23 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
   const [connectionStateDirty, setConnectionStateDirty] = useState(true)
   const [oauthLoadingId, setOauthLoadingId] = useState<number | null>(null)
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const oauthNoticeRef = useRef<string | null>(null)
 
+  const isOwnedByCurrentUser = useCallback(
+    (integration: MetaIntegrationDto | null | undefined) =>
+      !!integration?.createdBy && !!currentUser?.id && integration.createdBy.toLowerCase() === currentUser.id.toLowerCase(),
+    [currentUser?.id]
+  )
+  const canUseIntegration = (integration: MetaIntegrationDto | null | undefined) =>
+    canEdit || (canManageOwn && isOwnedByCurrentUser(integration))
+  const visibleIntegrations = useMemo(
+    () => (canViewAll ? integrations ?? [] : (integrations ?? []).filter((integration) => isOwnedByCurrentUser(integration))),
+    [canViewAll, integrations, isOwnedByCurrentUser]
+  )
   const defaultIntegration = useMemo(
-    () => integrations?.find((integration) => integration.isDefault) ?? integrations?.[0] ?? null,
-    [integrations]
+    () => visibleIntegrations.find((integration) => integration.isDefault) ?? visibleIntegrations[0] ?? null,
+    [visibleIntegrations]
   )
   useEffect(() => {
     const oauthStatus = searchParams.get("oauth")
@@ -241,6 +274,8 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
 
     const message = searchParams.get("message")
     if (oauthStatus === "success") {
+      invalidateCachePrefix("meta-integrations:list")
+      void refetch()
       toast({
         title: "Dev OAuth completed",
         description: message ?? "Meta user token exchange completed successfully.",
@@ -258,7 +293,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     nextParams.delete("message")
     const nextQuery = nextParams.toString()
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname)
-  }, [pathname, router, searchParams, toast])
+  }, [pathname, refetch, router, searchParams, toast])
 
 
   const openCreate = () => {
@@ -266,6 +301,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     setForm(emptyForm)
     setTestResult(null)
     setConnectionStateDirty(true)
+    setShowAdvanced(false)
     setDrawerOpen(true)
   }
 
@@ -274,9 +310,6 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     setForm({
       displayName: integration.displayName,
       authMode: integration.authMode,
-      metaBusinessId: integration.metaBusinessId ?? "",
-      metaAppId: integration.metaAppId ?? "",
-      appSecret: "",
       accessToken: "",
       tokenType: integration.tokenType ?? "Bearer",
       tokenExpiresAt: integration.tokenExpiresAt ? integration.tokenExpiresAt.slice(0, 16) : "",
@@ -286,13 +319,14 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     })
     setTestResult(null)
     setConnectionStateDirty(false)
+    setShowAdvanced(false)
     setDrawerOpen(true)
   }
 
   const redirectToOAuth = async (integration: MetaIntegrationDto) => {
     try {
       setOauthLoadingId(integration.id)
-      const redirectUri = `${window.location.origin}/meta-ads/integrations/callback/${integration.id}`
+      const redirectUri = `${window.location.origin}/meta-ads/integrations/callback`
       const response = await metaIntegrationsApi.getAuthorizeUrl(integration.id, redirectUri)
       window.location.href = response.authorizationUrl
     } catch (apiError) {
@@ -313,10 +347,12 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     const errors: string[] = []
 
     if (!form.displayName.trim()) errors.push("Display Name is required.")
-    if (!form.metaBusinessId?.trim()) errors.push("Meta Business ID is required.")
-    if (!form.metaAppId?.trim()) errors.push("Meta App ID is required.")
-    if (!form.appSecret?.trim() && !editTarget?.hasAppSecret) errors.push("App Secret is required.")
-    if (!form.accessToken?.trim() && !editTarget?.hasAccessToken) errors.push("Access Token is required.")
+    
+    if (form.authMode !== "oauth_user") {
+      if (!form.accessToken?.trim() && !editTarget?.hasAccessToken) {
+        errors.push("Access Token is required.")
+      }
+    }
 
     const scopes = new Set((form.scopes ?? []).map((scope) => scope.toLowerCase()))
     for (const scope of REQUIRED_SCOPES) {
@@ -332,9 +368,6 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
   const buildTestRequest = () => ({
     integrationId: editTarget?.id ?? null,
     authMode: form.authMode,
-    metaBusinessId: form.metaBusinessId || null,
-    metaAppId: form.metaAppId || null,
-    appSecret: form.appSecret || null,
     accessToken: form.accessToken || null,
     tokenType: form.tokenType || null,
     tokenExpiresAt: form.tokenExpiresAt ? new Date(form.tokenExpiresAt).toISOString() : null,
@@ -374,9 +407,6 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
       let saved: MetaIntegrationDto
       const requestPayload = {
         ...form,
-        metaBusinessId: form.metaBusinessId || null,
-        metaAppId: form.metaAppId || null,
-        appSecret: form.appSecret || null,
         accessToken: form.accessToken || null,
         tokenType: form.tokenType || null,
         tokenExpiresAt: form.tokenExpiresAt ? new Date(form.tokenExpiresAt).toISOString() : null,
@@ -401,8 +431,15 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
         }
       }
 
-      invalidateCache("meta-integrations:list")
+        invalidateCachePrefix("meta-integrations:list")
       await refetch()
+
+      if (form.authMode === "oauth_user") {
+        setDrawerOpen(false)
+        await redirectToOAuth(saved)
+        return
+      }
+
       setDrawerOpen(false)
       toast({ title: editTarget ? "Integration updated" : "Integration created" })
     } catch (apiError) {
@@ -422,7 +459,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
         await metaIntegrationsApi.enable(integration.id)
       }
 
-      invalidateCache("meta-integrations:list")
+      invalidateCachePrefix("meta-integrations:list")
       await refetch()
       toast({ title: integration.isEnabled ? "Integration disabled" : "Integration enabled" })
     } catch (apiError) {
@@ -437,7 +474,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     try {
       setRowActionLoadingId(integration.id)
       const result = await metaIntegrationsApi.testSaved(integration.id)
-      invalidateCache("meta-integrations:list")
+      invalidateCachePrefix("meta-integrations:list")
       await refetch()
       toast(getConnectionTestToast(result))
     } catch (apiError) {
@@ -452,13 +489,31 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     try {
       setRowActionLoadingId(integration.id)
       await metaIntegrationsApi.syncAdAccounts(integration.id)
-      invalidateCache("meta-integrations:list")
+      invalidateCachePrefix("meta-integrations:list")
       invalidateCache("meta-ad-accounts:list")
       await refetch()
       toast({ title: "Ad accounts synced" })
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to sync ad accounts."
       toast({ title: "Sync failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
+  const handleRefreshBusinesses = async (integration: MetaIntegrationDto) => {
+    try {
+      setRowActionLoadingId(integration.id)
+      const businesses = await metaIntegrationsApi.getBusinesses(integration.id)
+      invalidateCachePrefix("meta-integrations:list")
+      await refetch()
+      toast({
+        title: "Business Portfolios refreshed",
+        description: businesses.length > 0 ? `${businesses.length} verified Business Portfolio${businesses.length === 1 ? "" : "s"} found.` : "No verified Business Portfolio found.",
+      })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to refresh Meta Business Portfolios."
+      toast({ title: "Refresh businesses failed", description: message, variant: "destructive" })
     } finally {
       setRowActionLoadingId(null)
     }
@@ -473,6 +528,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
   const displayedWarnings = testResult?.warningMessages ?? []
   const showUserTokenWarning = form.authMode === "oauth_user"
   const canOpenDefaultDevOAuth = defaultIntegration?.authMode === "oauth_user"
+  const canUseDefaultIntegration = canUseIntegration(defaultIntegration)
 
   return (
     <div className="space-y-5">
@@ -496,7 +552,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {canEdit ? (
+          {canUseDefaultIntegration ? (
             <Button variant="outline" size="sm" onClick={() => defaultIntegration && void redirectToOAuth(defaultIntegration)} disabled={!defaultIntegration || !canOpenDefaultDevOAuth || oauthLoadingId !== null}>
               {oauthLoadingId !== null ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ExternalLink className="w-4 h-4 mr-2" />}
               Open Dev OAuth
@@ -517,9 +573,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
             <TableRow className="bg-slate-50">
               <TableHead className="text-xs text-slate-500 font-medium">Name</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-32">Auth Mode</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Business Name</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Meta App ID</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium min-w-56">Business Portfolios</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-24">Ad Accounts</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Total Spent</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Total Balance</TableHead>
@@ -535,7 +589,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={15} className="py-12">
+                <TableCell colSpan={13} className="py-12">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading integrations...
@@ -544,20 +598,23 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={13} className="text-center py-12 text-sm text-red-600">
                   {error.message}
                 </TableCell>
               </TableRow>
-            ) : (integrations ?? []).length === 0 ? (
+            ) : visibleIntegrations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={13} className="text-center py-12 text-sm text-slate-400">
                   No integrations configured yet.
                 </TableCell>
               </TableRow>
             ) : (
-              (integrations ?? []).map((integration) => {
+              visibleIntegrations.map((integration) => {
                 const badge = deriveTokenBadge(integration)
                 const isBusy = rowActionLoadingId === integration.id
+                const canUseRowIntegration = canUseIntegration(integration)
+                const canRefreshBusinesses = canUseRowIntegration && integration.hasAccessToken
+                const businessSummary = getBusinessPortfolioSummary(integration)
 
                 return (
                   <TableRow key={integration.id} className="text-sm">
@@ -573,9 +630,15 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                       <div className="font-mono">{formatAuthMode(integration.authMode)}</div>
                       <div className="text-[11px] text-slate-400">{getAuthModeHelper(integration.authMode)}</div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaBusinessId || "-"}</TableCell>
-                    <TableCell className="text-xs text-slate-500">{integration.metaBusinessName || "-"}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{integration.metaAppId || "-"}</TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      <div className="flex items-start gap-2">
+                        <Building2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-700">{businessSummary.title}</div>
+                          <div className="truncate text-[11px] text-slate-400">{businessSummary.subtitle}</div>
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs text-slate-500">{integration.syncedAdAccountCount.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-slate-500">{formatNumericTotal(integration.totalAmountSpent)}</TableCell>
                     <TableCell className="text-xs text-slate-500">{formatNumericTotal(integration.totalBalance)}</TableCell>
@@ -607,7 +670,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          {canEdit ? (
+                          {canUseRowIntegration ? (
                             <DropdownMenuItem onClick={() => openEdit(integration)}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
@@ -619,23 +682,29 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                               {integration.isEnabled ? "Disable" : "Enable"}
                             </DropdownMenuItem>
                           ) : null}
-                          {canEdit ? <DropdownMenuSeparator /> : null}
-                          {canEdit ? (
+                          {canUseRowIntegration ? <DropdownMenuSeparator /> : null}
+                          {canUseRowIntegration ? (
                             <DropdownMenuItem onClick={() => void handleTestSavedConnection(integration)}>
                               <ShieldCheck className="w-4 h-4 mr-2" />
                               Test Connection
                             </DropdownMenuItem>
                           ) : null}
-                          {canEdit ? (
+                          {canUseRowIntegration ? (
                             <DropdownMenuItem onClick={() => void handleSyncAdAccounts(integration)}>
                               <Download className="w-4 h-4 mr-2" />
                               Sync Ad Accounts
                             </DropdownMenuItem>
                           ) : null}
-                          {canEdit && integration.authMode === "oauth_user" ? (
+                          {canUseRowIntegration && integration.authMode === "oauth_user" ? (
                             <DropdownMenuItem onClick={() => void redirectToOAuth(integration)}>
                               <ExternalLink className="w-4 h-4 mr-2" />
                               Open Dev OAuth
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canRefreshBusinesses ? (
+                            <DropdownMenuItem onClick={() => void handleRefreshBusinesses(integration)}>
+                              <Building2 className="w-4 h-4 mr-2" />
+                              Refresh Businesses
                             </DropdownMenuItem>
                           ) : null}
                         </DropdownMenuContent>
@@ -696,94 +765,101 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                     USER_TOKEN should only be used for development or testing. It is not recommended for production request execution.
                   </div>
                 ) : null}
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Meta Business ID</Label>
-                    <Input className="h-9 text-sm font-mono" value={form.metaBusinessId ?? ""} onChange={(event) => updateConnectionForm({ metaBusinessId: event.target.value })} />
-                    <p className="text-[11px] text-slate-400">Business ID from Meta Business Manager.</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Meta App ID</Label>
-                    <Input className="h-9 text-sm font-mono" value={form.metaAppId ?? ""} onChange={(event) => updateConnectionForm({ metaAppId: event.target.value })} />
-                    <p className="text-[11px] text-slate-400">App ID from Meta for Developers.</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <MaskedInput
-                    label="App Secret"
-                    value={form.appSecret ?? ""}
-                    onChange={(value) => updateConnectionForm({ appSecret: value })}
-                    placeholder="Leave blank to keep current value"
-                    hint={editTarget?.appSecretHint ?? null}
-                  />
-                  <p className="text-[11px] text-slate-400">App Secret from Meta for Developers.</p>
-                </div>
               </div>
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 space-y-4 h-fit">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">Access &amp; Permissions</h3>
-                  <p className="mt-1 text-[11px] text-slate-500">Meta Marketing API does not use a standard refresh token flow like Google OAuth.</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {form.authMode === "oauth_user"
+                      ? "OAuth Connect is recommended for USER_TOKEN."
+                      : "Meta Marketing API does not use a standard refresh token flow like Google OAuth."}
+                  </p>
                 </div>
-                <MaskedInput
-                  label="Access Token"
-                  value={form.accessToken ?? ""}
-                  onChange={(value) => updateConnectionForm({ accessToken: value })}
-                  placeholder="Leave blank to keep current value"
-                  hint={editTarget?.accessTokenHint ?? null}
-                />
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Token Type</Label>
-                    <Input className="h-9 text-sm" value={form.tokenType ?? ""} onChange={(event) => updateConnectionForm({ tokenType: event.target.value })} placeholder="Bearer" />
+
+                {form.authMode === "oauth_user" && (
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                    >
+                      {showAdvanced ? "Hide Advanced Config" : "Advanced: paste token manually"}
+                    </Button>
+                    {!showAdvanced && (
+                      <p className="text-[11px] text-slate-400 text-center">
+                        Use only for debugging. OAuth Connect is recommended for USER_TOKEN.
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Token Expires At</Label>
-                    <Input type="datetime-local" className="h-9 text-sm" value={form.tokenExpiresAt ?? ""} onChange={(event) => updateConnectionForm({ tokenExpiresAt: event.target.value })} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Scopes (comma-separated)</Label>
-                  <Input
-                    className="h-9 text-sm"
-                    value={scopesToString(form.scopes ?? [])}
-                    onChange={(event) => updateConnectionForm({
-                      scopes: event.target.value
-                        .split(",")
-                        .map((value) => value.trim())
-                        .filter(Boolean),
-                    })}
-                    placeholder={STABLE_SCOPE_HINT}
-                  />
-                  <p className="text-[11px] text-slate-400">Recommended stable scopes: {STABLE_SCOPE_HINT}</p>
-                </div>
+                )}
+
+                {(form.authMode !== "oauth_user" || showAdvanced) && (
+                  <>
+                    <MaskedInput
+                      label="Access Token"
+                      value={form.accessToken ?? ""}
+                      onChange={(value) => updateConnectionForm({ accessToken: value })}
+                      placeholder="Leave blank to keep current value"
+                      hint={editTarget?.accessTokenHint ?? null}
+                    />
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-slate-700">Token Type</Label>
+                        <Input className="h-9 text-sm" value={form.tokenType ?? ""} onChange={(event) => updateConnectionForm({ tokenType: event.target.value })} placeholder="Bearer" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-slate-700">Token Expires At</Label>
+                        <Input type="datetime-local" className="h-9 text-sm" value={form.tokenExpiresAt ?? ""} onChange={(event) => updateConnectionForm({ tokenExpiresAt: event.target.value })} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700">Scopes (comma-separated)</Label>
+                      <Input
+                        className="h-9 text-sm"
+                        value={scopesToString(form.scopes ?? [])}
+                        onChange={(event) => updateConnectionForm({
+                          scopes: event.target.value
+                            .split(",")
+                            .map((value) => value.trim())
+                            .filter(Boolean),
+                        })}
+                        placeholder={STABLE_SCOPE_HINT}
+                      />
+                      <p className="text-[11px] text-slate-400">Recommended stable scopes: {STABLE_SCOPE_HINT}</p>
+                    </div>
+                  </>
+                )}
+
                 <div className="grid gap-3 rounded-md border border-slate-200 bg-white px-3 py-3 text-xs md:grid-cols-2">
-                <div>
-                  <p className="text-slate-500 mb-1">Token Status</p>
-                  <p className="font-medium text-slate-900">{formatTokenStatus(displayedTokenStatus)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 mb-1">Last Checked At</p>
-                  <p className="font-medium text-slate-900">{formatDateTime(displayedLastCheckedAt)}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-slate-500 mb-1">Resolved Scopes</p>
-                  <p className="font-mono text-slate-700 break-all">{displayedScopes.length > 0 ? scopesToString(displayedScopes) : "-"}</p>
-                </div>
-                {displayedMessage ? (
+                  <div>
+                    <p className="text-slate-500 mb-1">Token Status</p>
+                    <p className="font-medium text-slate-900">{formatTokenStatus(displayedTokenStatus)}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 mb-1">Last Checked At</p>
+                    <p className="font-medium text-slate-900">{formatDateTime(displayedLastCheckedAt)}</p>
+                  </div>
                   <div className="md:col-span-2">
-                    <p className="text-slate-500 mb-1">Last Check Message</p>
-                    <p className={`text-sm ${getTokenStatusMessageClass(displayedTokenStatus)}`}>{displayedMessage}</p>
+                    <p className="text-slate-500 mb-1">Resolved Scopes</p>
+                    <p className="font-mono text-slate-700 break-all">{displayedScopes.length > 0 ? scopesToString(displayedScopes) : "-"}</p>
                   </div>
-                ) : null}
-                {displayedWarnings.length > 0 ? (
-                  <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
-                    <p className="mb-1 text-xs font-medium text-amber-900">Warnings</p>
-                    <p className="text-sm text-amber-800">{displayedWarnings.join(" ")}</p>
-                  </div>
-                ) : null}
+                  {displayedMessage ? (
+                    <div className="md:col-span-2">
+                      <p className="text-slate-500 mb-1">Last Check Message</p>
+                      <p className={`text-sm ${getTokenStatusMessageClass(displayedTokenStatus)}`}>{displayedMessage}</p>
+                    </div>
+                  ) : null}
+                  {displayedWarnings.length > 0 ? (
+                    <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+                      <p className="mb-1 text-xs font-medium text-amber-900">Warnings</p>
+                      <p className="text-sm text-amber-800">{displayedWarnings.join(" ")}</p>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
               <div className="flex flex-wrap items-center gap-4">
@@ -808,15 +884,24 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                 Test Connection
               </Button>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
-                {submitting ? "Saving..." : editTarget ? "Save Changes" : "Create Integration"}
+                {submitting
+                  ? "Saving..."
+                  : form.authMode === "oauth_user"
+                    ? editTarget
+                      ? editTarget.hasAccessToken
+                        ? "Reconnect Meta"
+                        : "Connect Meta"
+                      : "Create & Connect Meta"
+                    : editTarget
+                      ? "Save Changes"
+                      : "Create Integration"}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
     </div>
   )
 }
-
-
-

@@ -758,7 +758,7 @@ export function RequestDetailContent({ requestId }: Props) {
 
     try {
       setRetryingAssetId(assetId)
-      await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId)
+      await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId, detail.executionMetaIntegrationId ?? null)
       invalidateCache(`meta-request:${detail.id}:asset-preparation`)
       await refetchAssetPreparation()
       toast({ title: "Retry queued", description: "The asset will be uploaded to Meta again." })
@@ -781,7 +781,7 @@ export function RequestDetailContent({ requestId }: Props) {
       for (const assetId of failedAssetIds) {
         try {
           setRetryingAssetId(assetId)
-          await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId)
+          await metaRequestsApi.retryAssetMetaUpload(assetId, detail.metaAdAccountId, detail.executionMetaIntegrationId ?? null)
         } catch {
           failedQueueCount += 1
         }
@@ -876,6 +876,12 @@ export function RequestDetailContent({ requestId }: Props) {
               <span>
                 Account: <strong className="text-slate-700 font-mono">{detail.metaAdAccountName ?? detail.metaAdAccountId}</strong>
               </span>
+              {detail.executionMetaIntegrationName ? (
+                <span>
+                  Execution: <strong className="text-slate-700">{detail.executionMetaIntegrationName}</strong>
+                  {detail.executionAuthMode ? <span className="text-slate-400"> ({detail.executionAuthMode})</span> : null}
+                </span>
+              ) : null}
               <span>
                 By: <strong className="text-slate-700">{formatUserGuidShort(detail.requestedBy)}</strong>
               </span>
@@ -1856,8 +1862,6 @@ function ObjectRow({
     </div>
   )
 }
-
-
 
 
 

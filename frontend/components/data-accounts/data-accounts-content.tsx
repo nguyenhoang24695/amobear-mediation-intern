@@ -317,7 +317,13 @@ export function DataAccountsContent() {
   const searchParamsKey = searchParams.toString()
 
   const canViewAccounts = hasScreenFunction(SCREEN_DATA_ACCOUNTS, FN_VIEW)
-  const canViewMetaIntegrations = hasScreenFunction("s-meta-accounts", FN_VIEW)
+  const canViewAllMetaIntegrations = hasScreenFunction("s-meta-accounts", FN_VIEW)
+  const canOwnerScopeMetaIntegrations =
+    hasScreenFunction("s-meta-accounts", FN_CREATE) &&
+    hasScreenFunction("s-meta-accounts", FN_EDIT)
+  const canViewMetaIntegrations =
+    canViewAllMetaIntegrations ||
+    canOwnerScopeMetaIntegrations
   const canViewTikTokIntegrations = hasScreenFunction("s-tiktok-accounts", FN_VIEW)
 
   const availableTabs = useMemo(() => {

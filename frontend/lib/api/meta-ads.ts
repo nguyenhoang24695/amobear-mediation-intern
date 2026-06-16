@@ -15,6 +15,7 @@ import type {
   MetaAppMappingDiscoveryResultDto,
   MetaAppMappingDto,
   MetaAuthorizeUrlResponseDto,
+  MetaBusinessReferenceDto,
   MetaCampaignDetailDto,
   MetaCampaignDuplicateOperationDto,
   MetaCampaignDuplicateReadinessResultDto,
@@ -49,6 +50,7 @@ import type {
   MetaIntegrationTestResultDto,
   MetaPerformanceGoalOptionDto,
   MetaPerformanceGoalReferenceDto,
+  SetMetaAdAccountPrimaryIntegrationRequestDto,
   MetaTokenStatusDto,
   MetaValidationResultDto,
   RejectMetaCampaignRequestDto,
@@ -129,8 +131,10 @@ export const metaRequestsApi = {
     return apiClient.post<MetaAssetPreparationResponseDto>(`${REQUESTS_PREFIX}/${id}/asset-preparation/queue`, {})
   },
 
-  retryAssetMetaUpload: async (assetId: number, metaAdAccountId: number) => {
-    return apiClient.post<{ success: boolean }>(`${REQUESTS_PREFIX}/assets/${assetId}/meta-upload/retry?metaAdAccountId=${encodeURIComponent(String(metaAdAccountId))}`, {})
+  retryAssetMetaUpload: async (assetId: number, metaAdAccountId: number, integrationId?: number | null) => {
+    const query = new URLSearchParams({ metaAdAccountId: String(metaAdAccountId) })
+    if (integrationId != null) query.set("integrationId", String(integrationId))
+    return apiClient.post<{ success: boolean }>(`${REQUESTS_PREFIX}/assets/${assetId}/meta-upload/retry?${query.toString()}`, {})
   },
 }
 
@@ -196,32 +200,32 @@ export const metaReferenceApi = {
     return apiClient.get<MetaCreateCampaignReferenceDto>(`${REFERENCE_PREFIX}/create-campaign`)
   },
 
-  getAdAccountAppMappings: async (adAccountId: number) => {
-    return apiClient.get<MetaAppMappingDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/app-mappings`)
+  getAdAccountAppMappings: async (adAccountId: number, integrationId?: number | null) => {
+    return apiClient.get<MetaAppMappingDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/app-mappings`, integrationId ? { integrationId } : undefined)
   },
 
-  getAdAccountFacebookPages: async (adAccountId: number, source: "promote_pages" | "access_token_all" = "promote_pages") => {
-    return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source })
+  getAdAccountFacebookPages: async (adAccountId: number, source: "promote_pages" | "access_token_all" = "promote_pages", integrationId?: number | null) => {
+    return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source, ...(integrationId ? { integrationId } : {}) })
   },
 
   getFacebookPageProfileId: async (adAccountId: number, pageId: string) => {
     return apiClient.get<MetaFacebookPageProfileDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages/${encodeURIComponent(pageId)}/profile-id`)
   },
 
-  getFacebookPagePosts: async (adAccountId: number, pageId: string, query?: MetaFacebookPostReferenceQueryDto) => {
-    return apiClient.get<MetaFacebookPostReferencePageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages/${encodeURIComponent(pageId)}/posts`, query)
+  getFacebookPagePosts: async (adAccountId: number, pageId: string, query?: MetaFacebookPostReferenceQueryDto, integrationId?: number | null) => {
+    return apiClient.get<MetaFacebookPostReferencePageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages/${encodeURIComponent(pageId)}/posts`, { ...(query ?? {}), ...(integrationId ? { integrationId } : {}) })
   },
 
-  getAdAccountImages: async (adAccountId: number, query?: MetaReferenceMediaQueryDto) => {
-    return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/images`, query)
+  getAdAccountImages: async (adAccountId: number, query?: MetaReferenceMediaQueryDto, integrationId?: number | null) => {
+    return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/images`, { ...(query ?? {}), ...(integrationId ? { integrationId } : {}) })
   },
 
-  getAdAccountVideos: async (adAccountId: number, query?: MetaReferenceMediaQueryDto) => {
-    return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos`, query)
+  getAdAccountVideos: async (adAccountId: number, query?: MetaReferenceMediaQueryDto, integrationId?: number | null) => {
+    return apiClient.get<MetaReferenceMediaPageDto>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos`, { ...(query ?? {}), ...(integrationId ? { integrationId } : {}) })
   },
 
-  getAdAccountVideoCaptureUrl: async (adAccountId: number, videoId: string) => {
-    return apiClient.get<{ url: string }>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos/${encodeURIComponent(videoId)}/capture-url`)
+  getAdAccountVideoCaptureUrl: async (adAccountId: number, videoId: string, integrationId?: number | null) => {
+    return apiClient.get<{ url: string }>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/videos/${encodeURIComponent(videoId)}/capture-url`, integrationId ? { integrationId } : undefined)
   },
 
   getGeoRegions: async () => {
@@ -252,12 +256,13 @@ export const metaReferenceApi = {
     return apiClient.get<MetaAdLocaleReferenceDto[]>(`${REFERENCE_PREFIX}/languages`, { metaAdAccountId, q })
   },
 
-  getAppPerformanceGoals: async (appRowId: number, metaAdAccountId?: number | null, paidMediaAppBindingId?: number | null) => {
+  getAppPerformanceGoals: async (appRowId: number, metaAdAccountId?: number | null, paidMediaAppBindingId?: number | null, integrationId?: number | null) => {
     return apiClient.get<MetaPerformanceGoalReferenceDto>(
       `${REFERENCE_PREFIX}/apps/${appRowId}/performance-goals`,
       {
         ...(metaAdAccountId && Number.isFinite(metaAdAccountId) ? { metaAdAccountId } : {}),
         ...(paidMediaAppBindingId && Number.isFinite(paidMediaAppBindingId) ? { paidMediaAppBindingId } : {}),
+        ...(integrationId && Number.isFinite(integrationId) ? { integrationId } : {}),
       },
     )
   },
@@ -303,10 +308,11 @@ export const metaIntegrationsApi = {
     })
   },
 
-  exchangeCode: async (integrationId: number, code: string, redirectUri: string) => {
+  exchangeCode: async (integrationId: number, code: string, redirectUri: string, state?: string | null) => {
     return apiClient.post<MetaTokenStatusDto>(`${AUTH_PREFIX}/integrations/${integrationId}/callback`, {
       code,
       redirectUri,
+      state,
     })
   },
 
@@ -321,6 +327,10 @@ export const metaIntegrationsApi = {
   getTokenStatus: async (integrationId: number) => {
     return apiClient.get<MetaTokenStatusDto>(`${AUTH_PREFIX}/integrations/${integrationId}/token-status`)
   },
+
+  getBusinesses: async (integrationId: number) => {
+    return apiClient.get<MetaBusinessReferenceDto[]>(`${AUTH_PREFIX}/integrations/${integrationId}/businesses`)
+  },
 }
 
 export const metaAdAccountsApi = {
@@ -334,6 +344,10 @@ export const metaAdAccountsApi = {
 
   update: async (id: number, request: UpsertMetaAdAccountRequestDto) => {
     return apiClient.put<MetaAdAccountDto>(`${ACCOUNTS_PREFIX}/ad-accounts/${id}`, request)
+  },
+
+  setPrimaryIntegration: async (id: number, request: SetMetaAdAccountPrimaryIntegrationRequestDto) => {
+    return apiClient.post<MetaAdAccountDto>(`${ACCOUNTS_PREFIX}/ad-accounts/${id}/set-primary-integration`, request)
   },
 
   enable: async (id: number) => {
@@ -432,12 +446,3 @@ export const metaInsightsApi = {
     return apiClient.get<MetaInsightsFiltersResponseDto>(`${INSIGHTS_PREFIX}/filters`, params)
   },
 }
-
-
-
-
-
-
-
-
-
