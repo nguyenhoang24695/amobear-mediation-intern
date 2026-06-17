@@ -930,6 +930,34 @@ export interface WaterfallBulkPolicyPreviewResponseDto {
   targets: WaterfallBulkPolicyTargetDto[]
 }
 
+export interface WaterfallActivePolicyItemDto {
+  mediationGroupId: string
+  mediationGroupName: string
+  appId: string
+  appName: string
+  appIconUri?: string | null
+  effectiveRuleGroupName?: string | null
+  applyMode: string
+  intervalDays: number
+  dueAt?: string | null
+  isDue: boolean
+  lastObservedApplyAt?: string | null
+  lastApplySource?: string | null
+  lastEvaluatedAt?: string | null
+  lastAlertResultId?: number | null
+  platform?: string | null
+  adFormat?: string | null
+  state?: string | null
+}
+
+export interface WaterfallActivePolicyListResponseDto {
+  totalCount: number
+  autoCount: number
+  semiAutoCount: number
+  dueNowCount: number
+  items: WaterfallActivePolicyItemDto[]
+}
+
 export interface BulkUpdateWaterfallApplyPoliciesRequestDto {
   applyMode: string
   intervalDays: number
@@ -1404,7 +1432,6 @@ export interface PermittedAppListItem {
   iconUri?: string | null
   platform?: string | null
 }
-
 
 
 

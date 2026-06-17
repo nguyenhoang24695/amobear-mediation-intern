@@ -30,6 +30,7 @@ import type {
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
+    WaterfallActivePolicyListResponseDto,
     AlertRule,
     AlertCenterListItem,
     AlertCenterTimelineItem,
@@ -843,6 +844,16 @@ export const waterfallManagementApi = {
         intervalDays?: number
     }): Promise<WaterfallBulkPolicyPreviewResponseDto> => {
         return apiClient.get<WaterfallBulkPolicyPreviewResponseDto>('/api/WaterfallManagement/bulk-policy-targets', params as Record<string, string | number | undefined>)
+    },
+
+    getActivePolicies: async (params: {
+        appId?: string
+        applyMode?: string
+        search?: string
+        page?: number
+        pageSize?: number
+    }): Promise<WaterfallActivePolicyListResponseDto> => {
+        return apiClient.get<WaterfallActivePolicyListResponseDto>('/api/WaterfallManagement/active-policies', params as Record<string, string | number | undefined>)
     },
 
     bulkUpdatePolicies: async (
@@ -2972,6 +2983,5 @@ export const reportsApi = {
         return apiClient.put('/api/v1/reports/overview-filter', filter)
     },
 }
-
 
 
