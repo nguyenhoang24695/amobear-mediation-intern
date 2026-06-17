@@ -115,6 +115,13 @@ function isNavChildVisible(child: { isShow?: boolean | (() => boolean) }): boole
   return typeof child.isShow === "function" ? child.isShow() : child.isShow
 }
 
+function hasMetaIntegrationListAccess(): boolean {
+  return hasScreenFunction("s-meta-accounts", "view") || (
+    hasScreenFunction("s-meta-accounts", "create") &&
+    hasScreenFunction("s-meta-accounts", "edit")
+  )
+}
+
 type ReportsNavChild = {
   href: string
   reportId?: string | null
@@ -172,7 +179,7 @@ const settingsSidebarChildren: NonNullable<NavItem["children"]> = [
     href: "/data-accounts",
     isShow: () =>
       hasScreenFunction("s-data-accounts", "view") ||
-      hasScreenFunction("s-meta-accounts", "view") ||
+      hasMetaIntegrationListAccess() ||
       hasScreenFunction("s-tiktok-accounts", "view"),
   },
   { icon: Database, label: "Data Sources", href: "/data-sources", isShow: () => hasScreenFunction("s-data-sources", "view") },

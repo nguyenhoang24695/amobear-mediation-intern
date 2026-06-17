@@ -161,6 +161,8 @@ export function RequestListContent() {
         request.appId?.toLowerCase() ?? "",
         request.metaAdAccountName?.toLowerCase() ?? "",
         request.metaAdAccountId.toString(),
+        request.executionMetaIntegrationName?.toLowerCase() ?? "",
+        request.executionAuthMode?.toLowerCase() ?? "",
       ].some((value) => value.includes(query))
     })
   }, [requests, search])
@@ -366,6 +368,12 @@ export function RequestListContent() {
                     <div className="space-y-0.5">
                       <p className="text-slate-700">{request.metaAdAccountName ?? "-"}</p>
                       <p className="font-mono">{request.metaAdAccountId}</p>
+                      {request.executionMetaIntegrationName ? (
+                        <p className="text-[10px] text-slate-400">
+                          via {request.executionMetaIntegrationName}
+                          {request.executionAuthMode ? ` (${request.executionAuthMode})` : ""}
+                        </p>
+                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -455,5 +463,4 @@ export function RequestListContent() {
     </div>
   )
 }
-
 

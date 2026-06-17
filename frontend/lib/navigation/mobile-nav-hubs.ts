@@ -46,6 +46,13 @@ export type MobileNavHub = {
   items: MobileNavHubItem[]
 }
 
+function hasMetaIntegrationListAccess(): boolean {
+  return hasScreenFunction("s-meta-accounts", "view") || (
+    hasScreenFunction("s-meta-accounts", "create") &&
+    hasScreenFunction("s-meta-accounts", "edit")
+  )
+}
+
 function isHubItemVisible(item: MobileNavHubItem): boolean {
   if (item.isShow === undefined) return true
   return typeof item.isShow === "function" ? item.isShow() : item.isShow
@@ -359,7 +366,7 @@ export const MOBILE_NAV_HUBS: Record<string, MobileNavHub> = {
         icon: KeyRound,
         isShow: () =>
           hasScreenFunction("s-data-accounts", "view") ||
-          hasScreenFunction("s-meta-accounts", "view") ||
+          hasMetaIntegrationListAccess() ||
           hasScreenFunction("s-tiktok-accounts", "view"),
       },
       {

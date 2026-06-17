@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,16 +25,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { invalidateCache, useApi } from "@/hooks/use-api"
-import { hasScreenFunction } from "@/lib/auth"
+import { invalidateCache, invalidateCachePrefix, useApi } from "@/hooks/use-api"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
 import { Pagination } from "@/components/shared/pagination"
 import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
-import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Check } from "lucide-react"
 
 const SCREEN_META_ACCOUNTS = "s-meta-accounts"
 
@@ -105,6 +110,17 @@ function formatAdAccountStatus(value?: string | null) {
   }
 }
 
+function formatAuthMode(value?: string | null) {
+  switch ((value ?? "").trim()) {
+    case "system_user_token":
+      return "SYSTEM_USER"
+    case "oauth_user":
+      return "USER_TOKEN"
+    default:
+      return value || "UNKNOWN"
+  }
+}
+
 type SortKey = "amountSpent" | "balance" | "spendCap"
 type SortDir = "asc" | "desc"
 
@@ -112,6 +128,8 @@ export function AdAccountsContent() {
   const { toast } = useToast()
   const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
   const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
+  const currentUser = getCurrentUser()
+  const canViewAllMetaIntegrations = hasScreenFunction(SCREEN_META_ACCOUNTS, "view")
 
   const {
     data: accounts,
@@ -125,7 +143,7 @@ export function AdAccountsContent() {
 
   const { data: integrations } = useApi(
     () => metaIntegrationsApi.list(),
-    { cacheKey: "meta-integrations:list" }
+    { cacheKey: `meta-integrations:list:${currentUser?.id ?? "anonymous"}:${canViewAllMetaIntegrations ? "all" : "own"}` }
   )
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -155,6 +173,29 @@ export function AdAccountsContent() {
     return new Map((integrations ?? []).map((integration) => [integration.id, integration.displayName]))
   }, [integrations])
 
+  const getPrimaryIntegrationName = useCallback((account: MetaAdAccountDto) =>
+    account.primaryIntegrationName ?? integrationById.get(account.primaryIntegrationId || account.metaIntegrationId) ?? `Integration ${account.primaryIntegrationId || account.metaIntegrationId}`,
+    [integrationById]
+  )
+
+  const getAccessibleIntegrations = useCallback((account: MetaAdAccountDto) =>
+    account.accessibleIntegrations?.length
+      ? account.accessibleIntegrations
+      : [{
+          id: 0,
+          integrationId: account.metaIntegrationId,
+          integrationName: getPrimaryIntegrationName(account),
+          authMode: account.primaryAuthMode ?? "",
+          canRead: true,
+          canManage: false,
+          isPrimary: true,
+          lastSeenAt: account.lastSyncedAt ?? account.updatedAt,
+          lastValidatedAt: null,
+          lastError: null,
+        }],
+    [getPrimaryIntegrationName]
+  )
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     const metaIdQuery = metaIdFilter.trim().toLowerCase()
@@ -166,7 +207,9 @@ export function AdAccountsContent() {
         account.metaAdAccountId.toLowerCase(),
         account.businessId?.toLowerCase() ?? "",
         account.businessName?.toLowerCase() ?? "",
-        integrationById.get(account.metaIntegrationId)?.toLowerCase() ?? "",
+        getPrimaryIntegrationName(account).toLowerCase(),
+        ...(account.accessibleIntegrations ?? []).map((access) => access.integrationName.toLowerCase()),
+        ...(account.accessibleIntegrations ?? []).map((access) => formatAuthMode(access.authMode).toLowerCase()),
       ].some((value) => value.includes(query))
 
       const matchesMetaId = !metaIdQuery || account.metaAdAccountId.toLowerCase().includes(metaIdQuery)
@@ -183,7 +226,7 @@ export function AdAccountsContent() {
       const bVal = b[key] ?? -Infinity
       return dir === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number)
     })
-  }, [accounts, businessIdFilter, integrationById, metaIdFilter, search, sortConfig])
+  }, [accounts, businessIdFilter, getPrimaryIntegrationName, metaIdFilter, search, sortConfig])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paginatedAccounts = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -277,6 +320,22 @@ export function AdAccountsContent() {
     }
   }
 
+  const handleSetPrimaryIntegration = async (account: MetaAdAccountDto, integrationId: number) => {
+    try {
+      setRowActionLoadingId(account.id)
+      await metaAdAccountsApi.setPrimaryIntegration(account.id, { metaIntegrationId: integrationId })
+      invalidateCache("meta-ad-accounts:list")
+      invalidateCachePrefix("meta-integrations:list")
+      await refetch()
+      toast({ title: "Primary integration updated" })
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to update primary integration."
+      toast({ title: "Update failed", description: message, variant: "destructive" })
+    } finally {
+      setRowActionLoadingId(null)
+    }
+  }
+
   const handleSyncIntegration = async () => {
     try {
       setSubmitting(true)
@@ -292,6 +351,8 @@ export function AdAccountsContent() {
       setSubmitting(false)
     }
   }
+
+  const primaryIntegrationOptions = editTarget ? getAccessibleIntegrations(editTarget) : []
 
   return (
     <div className="space-y-5">
@@ -350,7 +411,8 @@ export function AdAccountsContent() {
             <TableRow className="bg-slate-50">
               <TableHead className="text-xs text-slate-500 font-medium">Meta Ad Account ID</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Name</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Integration</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Primary Integration</TableHead>
+              <TableHead className="text-xs text-slate-500 font-medium">Accessible via</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium w-20">Currency</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Timezone</TableHead>
               <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
@@ -382,7 +444,7 @@ export function AdAccountsContent() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={14} className="py-12">
+                <TableCell colSpan={15} className="py-12">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading ad accounts...
@@ -391,24 +453,42 @@ export function AdAccountsContent() {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={14} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={15} className="text-center py-12 text-sm text-red-600">
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={15} className="text-center py-12 text-sm text-slate-400">
                   No ad accounts found.
                 </TableCell>
               </TableRow>
             ) : (
               paginatedAccounts.map((account) => {
                 const isBusy = rowActionLoadingId === account.id
+                const accessibleIntegrations = getAccessibleIntegrations(account)
                 return (
                   <TableRow key={account.id} className="text-sm">
                     <TableCell className="font-mono text-xs text-blue-700">{account.metaAdAccountId}</TableCell>
                     <TableCell className="font-medium text-slate-900">{account.name}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{integrationById.get(account.metaIntegrationId) ?? `Integration ${account.metaIntegrationId}`}</TableCell>
+                    <TableCell className="text-xs text-slate-600">
+                      <div className="font-medium text-slate-800">{getPrimaryIntegrationName(account)}</div>
+                      <div className="mt-0.5 text-[11px] text-slate-400">{formatAuthMode(account.primaryAuthMode)}</div>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600">
+                      <div className="flex flex-wrap gap-1 max-w-[220px]">
+                        {accessibleIntegrations.slice(0, 3).map((access) => (
+                          <Badge key={`${account.id}-${access.integrationId}`} variant="outline" className="text-[11px] font-normal border-slate-200 bg-slate-50 text-slate-600">
+                            {formatAuthMode(access.authMode)}{access.isPrimary ? " • Primary" : ""}
+                          </Badge>
+                        ))}
+                        {accessibleIntegrations.length > 3 ? (
+                          <Badge variant="outline" className="text-[11px] font-normal border-slate-200 bg-slate-50 text-slate-500">
+                            +{accessibleIntegrations.length - 3}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs text-slate-600">{account.currency ?? "-"}</TableCell>
                     <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "-"}</TableCell>
                     <TableCell className="font-mono text-xs text-slate-600">{account.businessId ?? "-"}</TableCell>
@@ -438,6 +518,28 @@ export function AdAccountsContent() {
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
+                          ) : null}
+                          {canEdit && accessibleIntegrations.length > 1 ? (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <Check className="w-4 h-4 mr-2" />
+                                Set Primary
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="min-w-56">
+                                <DropdownMenuLabel className="text-xs text-slate-500">Accessible integrations</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {accessibleIntegrations.map((access) => (
+                                  <DropdownMenuItem
+                                    key={access.integrationId}
+                                    disabled={access.integrationId === account.metaIntegrationId}
+                                    onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
+                                  >
+                                    {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
+                                    <span className="truncate">{access.integrationName}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                           ) : null}
                           {canEdit ? (
                             <DropdownMenuItem onClick={() => void handleSyncSingleAccount(account)}>
@@ -498,15 +600,15 @@ export function AdAccountsContent() {
               <Input className="h-9 text-sm" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Integration</Label>
+              <Label className="text-xs font-medium">Primary Integration</Label>
               <Select value={form.metaIntegrationId.toString()} onValueChange={(value) => setForm((current) => ({ ...current, metaIntegrationId: Number(value) }))}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Select integration..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(integrations ?? []).map((integration) => (
-                    <SelectItem key={integration.id} value={integration.id.toString()}>
-                      {integration.displayName}
+                  {primaryIntegrationOptions.map((access) => (
+                    <SelectItem key={access.integrationId} value={access.integrationId.toString()}>
+                      {access.integrationName} - {formatAuthMode(access.authMode)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -597,4 +699,3 @@ export function AdAccountsContent() {
     </div>
   )
 }
-

@@ -19,6 +19,7 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   adAccountId: number | null
+  integrationId?: number | null
   /** "image" restricts to images only, "video" to videos only, "both" allows selecting either. */
   targetKind: "image" | "video" | "both"
   selectionMode?: "single" | "multiple"
@@ -55,6 +56,7 @@ export function MetaMediaPickerDialog({
   open,
   onOpenChange,
   adAccountId,
+  integrationId,
   targetKind,
   selectionMode = "single",
   maxSelectionCount,
@@ -92,13 +94,14 @@ export function MetaMediaPickerDialog({
   const queryBaseKey = useMemo(() => {
     return [
       adAccountId ?? "none",
+      integrationId ?? "none",
       activeTab,
       search || "__empty__",
       sort,
       dateFrom || "__none__",
       dateTo || "__none__",
     ].join(":")
-  }, [activeTab, adAccountId, dateFrom, dateTo, search, sort])
+  }, [activeTab, adAccountId, dateFrom, dateTo, integrationId, search, sort])
 
   useEffect(() => {
     setAfter("")
@@ -119,8 +122,8 @@ export function MetaMediaPickerDialog({
         dateTo: dateTo || undefined,
       }
       return activeTab === "images"
-        ? metaReferenceApi.getAdAccountImages(Number(adAccountId), query)
-        : metaReferenceApi.getAdAccountVideos(Number(adAccountId), query)
+        ? metaReferenceApi.getAdAccountImages(Number(adAccountId), query, integrationId)
+        : metaReferenceApi.getAdAccountVideos(Number(adAccountId), query, integrationId)
     },
     {
       enabled: open && !!adAccountId,

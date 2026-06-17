@@ -590,6 +590,7 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
 
   return {
     metaAdAccountId: Number(form.adAccountId),
+    executionMetaIntegrationId: form.executionIntegrationId ? Number(form.executionIntegrationId) : null,
     appRowId: form.appRowId ? Number(form.appRowId) : null,
     paidMediaAppBindingId: form.paidMediaAppBindingId ? Number(form.paidMediaAppBindingId) : null,
     idempotencyKey,
@@ -654,6 +655,7 @@ export function formStateToUpdateDto(form: MetaRequestFormState): UpdateMetaCamp
   const createDto = formStateToCreateDto(form)
   return {
     metaAdAccountId: createDto.metaAdAccountId,
+    executionMetaIntegrationId: createDto.executionMetaIntegrationId,
     appRowId: createDto.appRowId,
     paidMediaAppBindingId: createDto.paidMediaAppBindingId,
     campaign: createDto.campaign,
@@ -797,6 +799,7 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     .map((v) => adVariantDtoToVariantFormState(v))
 
   return {
+    executionIntegrationId: (detail.executionMetaIntegrationId ?? payload.executionMetaIntegrationId ?? "").toString(),
     adAccountId: detail.metaAdAccountId.toString(),
     deferredDeepLinkUrl: payload.adSet.deferredDeepLinkUrl ?? "",
     customStoreListingId: payload.adSet.customStoreListingId ?? "",

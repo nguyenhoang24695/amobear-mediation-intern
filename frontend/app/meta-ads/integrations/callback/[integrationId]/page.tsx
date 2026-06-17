@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { ScreenFunctionGuard } from "@/components/auth/screen-function-guard"
-import { invalidateCache } from "@/hooks/use-api"
+import { invalidateCache, invalidateCachePrefix } from "@/hooks/use-api"
 import { metaIntegrationsApi } from "@/lib/api/meta-ads"
 import { Loader2 } from "lucide-react"
 function buildRedirectUrl(status: "success" | "error", message?: string) {
@@ -46,10 +46,12 @@ export default function MetaIntegrationOAuthCallbackPage() {
       return
     }
 
+    const state = searchParams.get("state")
+
     void (async () => {
       try {
-        await metaIntegrationsApi.exchangeCode(integrationId, code, redirectUri)
-        invalidateCache("meta-integrations:list")
+        await metaIntegrationsApi.exchangeCode(integrationId, code, redirectUri, state || "")
+        invalidateCachePrefix("meta-integrations:list")
         invalidateCache("meta-ad-accounts:list")
         router.replace(buildRedirectUrl("success", "Meta USER_TOKEN exchange completed successfully."))
       } catch (apiError) {

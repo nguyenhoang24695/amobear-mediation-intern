@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache, useApi } from "@/hooks/use-api"
-import { hasScreenFunction } from "@/lib/auth"
+import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { metaIntegrationsApi, metaReferenceApi, metaRequestsApi } from "@/lib/api/meta-ads"
 import {
   createEmptyCarouselCard,
@@ -213,6 +213,7 @@ function clearMetaLibrarySelectionsForAccountChange(state: RequestFormState): Re
 }
 function createDefaultFormState(): RequestFormState {
   return sanitizeRequestFormState({
+    executionIntegrationId: "",
     adAccountId: "",
     appRowId: "",
     paidMediaAppBindingId: "",
@@ -500,6 +501,7 @@ export function CreateRequestContent({ requestId }: Props) {
   const isEditMode = requestId != null && Number.isFinite(requestId)
   const numericRequestId = isEditMode ? Number(requestId) : null
   const canViewMetaAccounts = hasScreenFunction("s-meta-accounts", "view")
+  const currentUser = getCurrentUser()
 
   const [form, setForm] = useState<RequestFormState>(() => createDefaultFormState())
   const [draftId, setDraftId] = useState<number | null>(null)
@@ -548,7 +550,7 @@ export function CreateRequestContent({ requestId }: Props) {
     () => metaIntegrationsApi.list(),
     {
       enabled: canViewMetaAccounts,
-      cacheKey: "meta-integrations:list",
+      cacheKey: `meta-integrations:list:${currentUser?.id ?? "anonymous"}:all`,
     }
   )
 
@@ -557,10 +559,10 @@ export function CreateRequestContent({ requestId }: Props) {
     loading: accountScopedAppMappingsLoading,
     error: accountScopedAppMappingsError,
   } = useApi<MetaAppMappingDto[]>(
-    () => metaReferenceApi.getAdAccountAppMappings(Number(form.adAccountId)),
+    () => metaReferenceApi.getAdAccountAppMappings(Number(form.adAccountId), form.executionIntegrationId ? Number(form.executionIntegrationId) : null),
     {
-      enabled: !!form.adAccountId,
-      cacheKey: form.adAccountId ? `meta-reference:ad-account:${form.adAccountId}:app-mappings` : "meta-reference:ad-account:none:app-mappings",
+      enabled: !!form.adAccountId && !!form.executionIntegrationId,
+      cacheKey: form.adAccountId ? `meta-reference:ad-account:${form.adAccountId}:integration:${form.executionIntegrationId || "none"}:app-mappings` : "meta-reference:ad-account:none:app-mappings",
     }
   )
 
@@ -570,10 +572,10 @@ export function CreateRequestContent({ requestId }: Props) {
     loading: facebookPagesLoading,
     error: facebookPagesError,
   } = useApi<MetaFacebookPageReferenceDto[]>(
-    () => metaReferenceApi.getAdAccountFacebookPages(Number(form.adAccountId), facebookPageSource),
+    () => metaReferenceApi.getAdAccountFacebookPages(Number(form.adAccountId), facebookPageSource, form.executionIntegrationId ? Number(form.executionIntegrationId) : null),
     {
-      enabled: !!form.adAccountId,
-      cacheKey: form.adAccountId ? `meta-reference:ad-account:${form.adAccountId}:facebook-pages:${facebookPageSource}` : "meta-reference:ad-account:none:facebook-pages",
+      enabled: !!form.adAccountId && !!form.executionIntegrationId,
+      cacheKey: form.adAccountId ? `meta-reference:ad-account:${form.adAccountId}:integration:${form.executionIntegrationId || "none"}:facebook-pages:${facebookPageSource}` : "meta-reference:ad-account:none:facebook-pages",
     }
   )
 
@@ -587,10 +589,11 @@ export function CreateRequestContent({ requestId }: Props) {
       Number(form.appRowId),
       form.adAccountId ? Number(form.adAccountId) : null,
       form.paidMediaAppBindingId ? Number(form.paidMediaAppBindingId) : null,
+      form.executionIntegrationId ? Number(form.executionIntegrationId) : null,
     ),
     {
       enabled: !!form.appRowId && !Number.isNaN(Number(form.appRowId)),
-      cacheKey: form.appRowId ? `meta-reference:app:${form.appRowId}:ad-account:${form.adAccountId || "none"}:binding:${form.paidMediaAppBindingId || "none"}:performance-goals` : "meta-reference:app:none:performance-goals",
+      cacheKey: form.appRowId ? `meta-reference:app:${form.appRowId}:ad-account:${form.adAccountId || "none"}:integration:${form.executionIntegrationId || "none"}:binding:${form.paidMediaAppBindingId || "none"}:performance-goals` : "meta-reference:app:none:performance-goals",
     }
   )
   const {
@@ -627,15 +630,20 @@ export function CreateRequestContent({ requestId }: Props) {
   const assetPreparationById = useMemo(() => {
     const map = new Map<number, MetaAssetPreparationDto>()
     const parsedAdAccountId = form.adAccountId ? Number(form.adAccountId) : null
+    const parsedExecutionIntegrationId = form.executionIntegrationId ? Number(form.executionIntegrationId) : null
     const currentAdAccountId = parsedAdAccountId != null && Number.isFinite(parsedAdAccountId) ? parsedAdAccountId : null
+    const currentExecutionIntegrationId = parsedExecutionIntegrationId != null && Number.isFinite(parsedExecutionIntegrationId) ? parsedExecutionIntegrationId : null
     for (const asset of assetPreparation?.assets ?? []) {
       if (currentAdAccountId != null && asset.metaAdAccountId != null && asset.metaAdAccountId !== currentAdAccountId) {
+        continue
+      }
+      if (currentExecutionIntegrationId != null && asset.executionMetaIntegrationId != null && asset.executionMetaIntegrationId !== currentExecutionIntegrationId) {
         continue
       }
       map.set(asset.requestAssetId, asset)
     }
     return map
-  }, [assetPreparation, form.adAccountId])
+  }, [assetPreparation, form.adAccountId, form.executionIntegrationId])
 
   const hasActiveAssetPreparation = useMemo(() => {
     return (assetPreparation?.assets ?? []).some((asset) => ["pending", "uploading", "processing"].includes(asset.status))
@@ -651,12 +659,37 @@ export function CreateRequestContent({ requestId }: Props) {
     return () => window.clearInterval(intervalId)
   }, [draftId, hasActiveAssetPreparation, refetchAssetPreparation])
 
+  const integrationOptions = useMemo(() => {
+    const integrationIds = new Set<number>()
+    for (const account of referenceData?.adAccounts ?? []) {
+      for (const access of account.accessibleIntegrations ?? []) {
+        if (access.canManage) integrationIds.add(access.integrationId)
+      }
+    }
+    return (integrations ?? [])
+      .filter((integration) => integration.isEnabled && integrationIds.has(integration.id))
+      .sort((left, right) => {
+        const leftSystem = left.authMode === "system_user_token" ? 0 : 1
+        const rightSystem = right.authMode === "system_user_token" ? 0 : 1
+        return leftSystem - rightSystem || left.displayName.localeCompare(right.displayName)
+      })
+  }, [integrations, referenceData?.adAccounts])
+
+  const selectedIntegrationId = form.executionIntegrationId ? Number(form.executionIntegrationId) : null
+  const selectedIntegration = integrations?.find((integration) => integration.id === selectedIntegrationId)
+  const availableAdAccounts = useMemo(() => {
+    if (!selectedIntegrationId) return []
+    return (referenceData?.adAccounts ?? []).filter((account) => {
+      if (!account.isActive) return false
+      return (account.accessibleIntegrations ?? []).some((access) => access.integrationId === selectedIntegrationId && access.canManage)
+    })
+  }, [referenceData?.adAccounts, selectedIntegrationId])
+
   const selectedAdAccount = referenceData?.adAccounts.find((account) => account.id.toString() === form.adAccountId)
   const availableAppMappings = form.adAccountId ? (accountScopedAppMappings ?? []) : []
   const selectedAppMapping = availableAppMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
     ?? referenceData?.appMappings.find((mapping) => mapping.id.toString() === form.paidMediaAppBindingId)
   const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
-  const selectedIntegration = integrations?.find((integration) => integration.id === selectedAdAccount?.metaIntegrationId)
 
   const isSkanEligibleForState = (state: RequestFormState) => {
     if (state.campaignObjective.trim().toUpperCase() !== "OUTCOME_APP_PROMOTION") return false
@@ -670,7 +703,7 @@ export function CreateRequestContent({ requestId }: Props) {
   }
 
   const tokenState = deriveTokenState({
-    adAccountId: form.adAccountId,
+    adAccountId: form.executionIntegrationId,
     canViewMetaAccounts,
     selectedAdAccountActive: selectedAdAccount?.isActive,
     integrationEnabled: selectedIntegration?.isEnabled,
@@ -782,6 +815,26 @@ export function CreateRequestContent({ requestId }: Props) {
         next.campaignObjective = patch.objective
       }
 
+      if (patch.executionIntegrationId !== undefined && patch.executionIntegrationId !== previous.executionIntegrationId) {
+        next.adAccountId = ""
+        next.appRowId = ""
+        next.paidMediaAppBindingId = ""
+        next.facebookPageId = ""
+        next.instagramActorId = ""
+        next.existingPostId = ""
+        next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "" }))
+      }
+
+      if (patch.adAccountId !== undefined && patch.adAccountId !== previous.adAccountId) {
+        next.appRowId = ""
+        next.paidMediaAppBindingId = ""
+        next.facebookPageId = ""
+        next.instagramActorId = ""
+        next.existingPostId = ""
+        next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "" }))
+      }
+
+
       if (!isSkanEligibleForState(next)) {
         next.isSkadnetworkAttribution = false
       }
@@ -797,7 +850,10 @@ export function CreateRequestContent({ requestId }: Props) {
         next.additionalVariants = []
       }
 
-      const normalizedNext = patch.adAccountId && patch.adAccountId !== previous.adAccountId ? clearMetaLibrarySelectionsForAccountChange(next) : next
+      const normalizedNext = (
+        (patch.executionIntegrationId !== undefined && patch.executionIntegrationId !== previous.executionIntegrationId) ||
+        (patch.adAccountId !== undefined && patch.adAccountId !== previous.adAccountId)
+      ) ? clearMetaLibrarySelectionsForAccountChange(next) : next
 
       return sanitizeRequestFormState(normalizedNext)
     })
@@ -1101,7 +1157,11 @@ export function CreateRequestContent({ requestId }: Props) {
     }
 
     try {
-      await metaRequestsApi.retryAssetMetaUpload(assetId, Number(form.adAccountId))
+      await metaRequestsApi.retryAssetMetaUpload(
+        assetId,
+        Number(form.adAccountId),
+        form.executionIntegrationId ? Number(form.executionIntegrationId) : null
+      )
       if (draftId) {
         invalidateCache(`meta-request:${draftId}:asset-preparation`)
         await refetchAssetPreparation()
@@ -1265,13 +1325,15 @@ export function CreateRequestContent({ requestId }: Props) {
               form={form}
               onChange={updateForm}
               tokenState={tokenState}
-              adAccounts={referenceData.adAccounts}
+              integrations={integrationOptions}
+              adAccounts={availableAdAccounts}
               appMappings={availableAppMappings}
               selectedAppMapping={selectedAppMapping}
               appMappingsLoading={accountScopedAppMappingsLoading}
               appMappingsMessage={accountScopedAppMappingsError?.message ?? null}
               objectives={referenceData.objectives}
               integrationName={selectedIntegration?.displayName}
+              canChangeExecutionIntegration={!isEditMode || serverStatus === null || serverStatus === "draft"}
             />
           </div>
           <div id={requestSectionIds["campaign-settings"]} className={getSectionWrapperClass("campaign-settings", highlightedSection)}>
@@ -1312,6 +1374,7 @@ export function CreateRequestContent({ requestId }: Props) {
               facebookPagesLoading={facebookPagesLoading}
               selectedAppMapping={selectedAppMapping}
               adAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+              executionIntegrationId={form.executionIntegrationId ? Number(form.executionIntegrationId) : null}
               facebookPagesMessage={facebookPagesError?.message ?? null}
               facebookPageSource={facebookPageSource}
               onFacebookPageSourceChange={setFacebookPageSource}

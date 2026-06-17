@@ -114,12 +114,12 @@ function getFrameCaptureVideoUrl(selection: MetaRequestAssetSelectionState): str
   return selection.metaPlayableUrl
 }
 
-function getFrameCaptureVideoUrlResolver(selection: MetaRequestAssetSelectionState): (() => Promise<string | null>) | undefined {
+function getFrameCaptureVideoUrlResolver(selection: MetaRequestAssetSelectionState, executionIntegrationId?: number | null): (() => Promise<string | null>) | undefined {
   if (selection.metaRefSource === "from_meta" && selection.metaAdAccountId && selection.videoId) {
     const adAccountId = Number(selection.metaAdAccountId)
     if (Number.isFinite(adAccountId)) {
       return async () => {
-        const result = await metaReferenceApi.getAdAccountVideoCaptureUrl(adAccountId, selection.videoId)
+        const result = await metaReferenceApi.getAdAccountVideoCaptureUrl(adAccountId, selection.videoId, executionIntegrationId)
         return result.url
       }
     }
@@ -238,6 +238,7 @@ interface Props {
   onFacebookPageSourceChange: (source: "promote_pages" | "access_token_all") => void
   selectedAppMapping?: MetaAppMappingDto | null
   adAccountId?: number | null
+  executionIntegrationId?: number | null
 
   // ── Variant management (multi-image / multi-video ads sharing the same text) ──
   /** Additional variants (variation #2, #3, ...). Variant #1 is backed by the flat form fields. */
@@ -274,6 +275,7 @@ export function CreativeSection({
   onFacebookPageSourceChange,
   selectedAppMapping,
   adAccountId,
+  executionIntegrationId,
   additionalVariants = [],
   activeVariantTab = "variant-1",
   onActiveVariantTabChange,
@@ -491,7 +493,7 @@ export function CreativeSection({
       try {
         setFacebookPagePostsLoading(true)
         setFacebookPagePostsMessage(null)
-        const result = await metaReferenceApi.getFacebookPagePosts(adAccountId, pageId, { limit: 50 })
+        const result = await metaReferenceApi.getFacebookPagePosts(adAccountId, pageId, { limit: 50 }, executionIntegrationId)
         if (isCancelled) return
         setFacebookPagePosts(result.items)
         setFacebookPagePostsMessage(null)
@@ -511,7 +513,7 @@ export function CreativeSection({
     return () => {
       isCancelled = true
     }
-  }, [adAccountId, existingPostEntryMode, form.creativeType, form.facebookPageId])
+  }, [adAccountId, executionIntegrationId, existingPostEntryMode, form.creativeType, form.facebookPageId])
 
   useEffect(() => {
     const pageId = form.facebookPageId?.trim()
@@ -579,7 +581,7 @@ export function CreativeSection({
         uploadingKeyValue: "singleVideoThumbnail:auto",
         source: {
           videoUrl: getFrameCaptureVideoUrl(nextSelection),
-          resolveVideoUrl: getFrameCaptureVideoUrlResolver(nextSelection),
+          resolveVideoUrl: getFrameCaptureVideoUrlResolver(nextSelection, executionIntegrationId),
         },
         applyPatch: (thumbnailPatch) => handleMediaPatch("singleVideoThumbnail", thumbnailPatch),
       })
@@ -736,7 +738,7 @@ export function CreativeSection({
         uploadingKeyValue: `variant-${sequenceNumber}-singleVideoThumbnail:auto`,
         source: {
           videoUrl: getFrameCaptureVideoUrl(nextSelection),
-          resolveVideoUrl: getFrameCaptureVideoUrlResolver(nextSelection),
+          resolveVideoUrl: getFrameCaptureVideoUrlResolver(nextSelection, executionIntegrationId),
         },
         applyPatch: (thumbnailPatch) => {
           const variant = additionalVariantsRef.current.find((item) => item.sequenceNumber === sequenceNumber)
@@ -941,7 +943,7 @@ export function CreativeSection({
         uploadingKeyValue: `flexible:${index}:thumbnail:auto`,
         source: {
           videoUrl: getFrameCaptureVideoUrl(nextSelection),
-          resolveVideoUrl: getFrameCaptureVideoUrlResolver(nextSelection),
+          resolveVideoUrl: getFrameCaptureVideoUrlResolver(nextSelection, executionIntegrationId),
         },
         applyPatch: (thumbnailPatch) => updateFlexibleAssetMedia(index, "thumbnail", thumbnailPatch),
       })
@@ -1835,10 +1837,11 @@ export function CreativeSection({
                             thumbnailUploading={uploadingKey?.startsWith("singleVideoThumbnail") ?? false}
                             thumbnailVideoFile={form.singleVideoVideo.mode === "uploaded_asset" && form.singleVideoVideo.uploadedAssetId ? localVideoFilesByKey.singleVideoVideo ?? null : null}
                             thumbnailVideoUrl={getFrameCaptureVideoUrl(form.singleVideoVideo)}
-                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(form.singleVideoVideo)}
+                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(form.singleVideoVideo, executionIntegrationId)}
                             thumbnailEditorKey="singleVideoVideo"
                             thumbnailOpenKey={thumbnailEditorKey}
                             adAccountId={adAccountId ?? null}
+                            integrationId={executionIntegrationId ?? null}
                             assetPreparationById={assetPreparationById}
                             assetPreparationLoading={assetPreparationLoading}
                             onRetryAssetPreparation={onRetryAssetPreparation}
@@ -1888,10 +1891,11 @@ export function CreativeSection({
                             thumbnailUploading={uploadingKey?.startsWith(`variant-${variant.sequenceNumber}-singleVideoThumbnail`) ?? false}
                             thumbnailVideoFile={variant.singleVideoVideo.mode === "uploaded_asset" && variant.singleVideoVideo.uploadedAssetId ? localVideoFilesByKey[`variant-${variant.sequenceNumber}-singleVideoVideo`] ?? null : null}
                             thumbnailVideoUrl={getFrameCaptureVideoUrl(variant.singleVideoVideo)}
-                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(variant.singleVideoVideo)}
+                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(variant.singleVideoVideo, executionIntegrationId)}
                             thumbnailEditorKey={`variant-${variant.sequenceNumber}-singleVideoVideo`}
                             thumbnailOpenKey={thumbnailEditorKey}
                             adAccountId={adAccountId ?? null}
+                            integrationId={executionIntegrationId ?? null}
                             assetPreparationById={assetPreparationById}
                             assetPreparationLoading={assetPreparationLoading}
                             onRetryAssetPreparation={onRetryAssetPreparation}
@@ -1985,7 +1989,7 @@ export function CreativeSection({
                         <Label className="text-xs font-medium text-slate-700">Description</Label>
                         <Input value={card.description} onChange={(event) => updateCarouselCard(index, { description: event.target.value })} className="h-9 text-sm" />
                       </div>
-                      <InlineMediaSourceEditor selection={card.image} uploading={uploadingKey?.startsWith(`carousel:${index}:`) ?? false} adAccountId={adAccountId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={(mode) => updateCarouselCardImage(index, { mode })} onPatch={(patch) => updateCarouselCardImage(index, patch)} onUpload={(file) => handleCarouselUpload(index, file)} onMetaSelect={(media) => handleCarouselMetaSelection(index, media)} onLibrarySelect={(asset) => handleCarouselLibrarySelection(index, asset)} />
+                      <InlineMediaSourceEditor selection={card.image} uploading={uploadingKey?.startsWith(`carousel:${index}:`) ?? false} adAccountId={adAccountId ?? null} integrationId={executionIntegrationId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={(mode) => updateCarouselCardImage(index, { mode })} onPatch={(patch) => updateCarouselCardImage(index, patch)} onUpload={(file) => handleCarouselUpload(index, file)} onMetaSelect={(media) => handleCarouselMetaSelection(index, media)} onLibrarySelect={(asset) => handleCarouselLibrarySelection(index, asset)}/>
                     </div>
                   ))}
                 </div>
@@ -2171,10 +2175,11 @@ export function CreativeSection({
                             thumbnailUploading={uploadingKey?.startsWith(`flexible:${resolvedActiveFlexibleAssetIndex}:thumbnail:`) ?? false}
                             thumbnailVideoFile={activeFlexibleAsset.video.mode === "uploaded_asset" && activeFlexibleAsset.video.uploadedAssetId ? localVideoFilesByKey[`flexible:${activeFlexibleAsset.id}`] ?? null : null}
                             thumbnailVideoUrl={getFrameCaptureVideoUrl(activeFlexibleAsset.video)}
-                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(activeFlexibleAsset.video)}
+                            thumbnailResolveVideoUrl={getFrameCaptureVideoUrlResolver(activeFlexibleAsset.video, executionIntegrationId)}
                             thumbnailEditorKey={`flexible:${activeFlexibleAsset.id}`}
                             thumbnailOpenKey={thumbnailEditorKey}
                             adAccountId={adAccountId ?? null}
+                            integrationId={executionIntegrationId ?? null}
                             assetPreparationById={assetPreparationById}
                             assetPreparationLoading={assetPreparationLoading}
                             onRetryAssetPreparation={onRetryAssetPreparation}
@@ -2190,7 +2195,7 @@ export function CreativeSection({
                           />
                         </div>
                       ) : (
-                        <MediaSourceEditor title="Image Asset" kind="image" selection={activeFlexibleAsset.image} uploading={uploadingKey?.startsWith(`flexible:${resolvedActiveFlexibleAssetIndex}:image:`) ?? false} allowExternalUrl adAccountId={adAccountId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(resolvedActiveFlexibleAssetIndex, "image", patch)} onUpload={(file) => handleFlexibleUpload(resolvedActiveFlexibleAssetIndex, "image", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(resolvedActiveFlexibleAssetIndex, "image", media)} onLibrarySelect={(asset) => handleFlexibleLibrarySelection(resolvedActiveFlexibleAssetIndex, "image", asset)} />
+                        <MediaSourceEditor title="Image Asset" kind="image" selection={activeFlexibleAsset.image} uploading={uploadingKey?.startsWith(`flexible:${resolvedActiveFlexibleAssetIndex}:image:`) ?? false} allowExternalUrl adAccountId={adAccountId ?? null} integrationId={executionIntegrationId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={() => {}} onPatch={(patch) => updateFlexibleAssetMedia(resolvedActiveFlexibleAssetIndex, "image", patch)} onUpload={(file) => handleFlexibleUpload(resolvedActiveFlexibleAssetIndex, "image", file)} onMetaSelect={(media) => handleFlexibleMetaSelection(resolvedActiveFlexibleAssetIndex, "image", media)} onLibrarySelect={(asset) => handleFlexibleLibrarySelection(resolvedActiveFlexibleAssetIndex, "image", asset)} />
                       )}
                     </div>
                   ) : null}
@@ -2782,6 +2787,7 @@ function UnifiedMediaEditor({
   thumbnailEditorKey,
   thumbnailOpenKey,
   adAccountId,
+  integrationId,
   assetPreparationById,
   assetPreparationLoading,
   onRetryAssetPreparation,
@@ -2814,6 +2820,7 @@ function UnifiedMediaEditor({
   thumbnailEditorKey?: string
   thumbnailOpenKey?: string | null
   adAccountId: number | null
+  integrationId?: number | null
   assetPreparationById?: Map<number, MetaAssetPreparationDto>
   assetPreparationLoading?: boolean
   onRetryAssetPreparation?: (assetId: number) => void | Promise<void>
@@ -2968,6 +2975,7 @@ function UnifiedMediaEditor({
           thumbnailEditorKey={thumbnailEditorKey}
           thumbnailOpenKey={thumbnailOpenKey}
           adAccountId={adAccountId}
+          integrationId={integrationId}
           assetPreparationById={assetPreparationById}
           assetPreparationLoading={assetPreparationLoading}
           onRetryAssetPreparation={onRetryAssetPreparation}
@@ -3005,6 +3013,7 @@ function UnifiedMediaEditor({
         uploading={imageUploading}
         allowExternalUrl
         adAccountId={adAccountId}
+        integrationId={integrationId}
         assetPreparationById={assetPreparationById}
         assetPreparationLoading={assetPreparationLoading}
         onRetryAssetPreparation={onRetryAssetPreparation}
@@ -3101,6 +3110,7 @@ function MediaSourceEditor({
   allowExternalUrl,
   optional,
   adAccountId,
+  integrationId,
   assetPreparationById,
   assetPreparationLoading,
   onRetryAssetPreparation,
@@ -3128,6 +3138,7 @@ function MediaSourceEditor({
   allowExternalUrl?: boolean
   optional?: boolean
   adAccountId?: number | null
+  integrationId?: number | null
   assetPreparationById?: Map<number, MetaAssetPreparationDto>
   assetPreparationLoading?: boolean
   onRetryAssetPreparation?: (assetId: number) => void | Promise<void>
@@ -3359,6 +3370,7 @@ function MediaSourceEditor({
             open={pickerOpen}
             onOpenChange={setPickerOpen}
             adAccountId={adAccountId ?? null}
+            integrationId={integrationId ?? null}
             targetKind={kind}
             selectedAssetId={selection.metaAssetId || selection.videoId || null}
             onSelect={onMetaSelect}
@@ -3426,6 +3438,7 @@ function MediaSourceEditor({
             open={pickerOpen}
             onOpenChange={setPickerOpen}
             adAccountId={adAccountId ?? null}
+            integrationId={integrationId ?? null}
             targetKind={kind}
             selectedAssetId={selection.metaAssetId || (kind === "video" ? selection.videoId : selection.imageHash) || null}
             onSelect={onMetaSelect}
@@ -3486,6 +3499,7 @@ function InlineMediaSourceEditor({
   selection,
   uploading,
   adAccountId,
+  integrationId,
   assetPreparationById,
   assetPreparationLoading,
   onRetryAssetPreparation,
@@ -3498,6 +3512,7 @@ function InlineMediaSourceEditor({
   selection: MetaRequestAssetSelectionState
   uploading?: boolean
   adAccountId?: number | null
+  integrationId?: number | null
   assetPreparationById?: Map<number, MetaAssetPreparationDto>
   assetPreparationLoading?: boolean
   onRetryAssetPreparation?: (assetId: number) => void | Promise<void>
@@ -3617,6 +3632,7 @@ function InlineMediaSourceEditor({
             open={pickerOpen}
             onOpenChange={setPickerOpen}
             adAccountId={adAccountId ?? null}
+            integrationId={integrationId ?? null}
             targetKind="image"
             selectedAssetId={selection.metaAssetId || selection.imageHash || null}
             onSelect={onMetaSelect}
