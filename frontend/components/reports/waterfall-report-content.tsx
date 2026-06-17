@@ -4,12 +4,15 @@ import { useCallback, useMemo, useState } from "react"
 import Link from "next/link"
 import { subDays } from "date-fns"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Loader2 } from "lucide-react"
+import { ImageIcon, Loader2, Search } from "lucide-react"
 import { toast } from "sonner"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { reportsApi, structureApi } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
 import { toApiDateString } from "@/lib/reports/report-date-filter-utils"
+import type { App } from "@/types/api"
 import type { WaterfallNetworkRow } from "@/types/reports"
 
 const CHART_COLORS = ["#2563eb", "#f97316", "#14b8a6", "#6366f1", "#22c55e", "#ec4899", "#eab308"]
@@ -20,12 +23,74 @@ function formatCurrency(v: number): string {
   return `$${v.toFixed(2)}`
 }
 
+function matchesAppSearch(app: App, query: string): boolean {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return true
+
+  const fields = [
+    app.displayName,
+    app.name,
+    app.appId,
+    app.appStoreId,
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => value.toLowerCase())
+
+  return fields.some((value) => value.includes(normalized))
+}
+
+function WaterfallReportAppRow({
+  app,
+  checked,
+  onToggle,
+}: {
+  app: App
+  checked: boolean
+  onToggle: () => void
+}) {
+  const primaryLabel = app.displayName || app.name || app.appId
+  const appStoreId = app.appStoreId?.trim()
+
+  return (
+    <label className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 hover:bg-gray-50">
+      <input
+        type="checkbox"
+        className="mt-1 shrink-0"
+        checked={checked}
+        onChange={onToggle}
+      />
+      <Avatar className="h-8 w-8 shrink-0 rounded-md">
+        {app.iconUri?.trim() ? (
+          <AvatarImage src={app.iconUri.trim()} alt={primaryLabel} className="rounded-md object-cover" />
+        ) : null}
+        <AvatarFallback className="rounded-md bg-slate-100">
+          <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-gray-900" title={primaryLabel}>
+          {primaryLabel}
+        </p>
+        <p className="truncate font-mono text-[11px] text-gray-500" title={app.appId}>
+          {app.appId}
+        </p>
+        {appStoreId ? (
+          <p className="truncate font-mono text-[10px] text-gray-400" title={appStoreId}>
+            {appStoreId}
+          </p>
+        ) : null}
+      </div>
+    </label>
+  )
+}
+
 export function WaterfallReportContent() {
   const defaultEnd = new Date()
   const defaultStart = subDays(defaultEnd, 6)
   const [from, setFrom] = useState(toApiDateString(defaultStart))
   const [to, setTo] = useState(toApiDateString(defaultEnd))
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([])
+  const [appSearchQuery, setAppSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [networks, setNetworks] = useState<WaterfallNetworkRow[]>([])
   const [totals, setTotals] = useState<{ revenue: number; impressions: number } | null>(null)
@@ -35,6 +100,11 @@ export function WaterfallReportContent() {
     const list = appsResponse?.apps ?? []
     return list.filter((a) => a.appId && (a.approvalState === "APPROVED" || !a.approvalState))
   }, [appsResponse])
+
+  const filteredApps = useMemo(
+    () => apps.filter((app) => matchesAppSearch(app, appSearchQuery)),
+    [apps, appSearchQuery],
+  )
 
   const chartData = useMemo(
     () =>
@@ -110,19 +180,33 @@ export function WaterfallReportContent() {
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="w-64 shrink-0 overflow-y-auto border-r border-gray-100 p-4">
+        <div className="w-80 shrink-0 overflow-y-auto border-r border-gray-100 p-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Apps</p>
+          <div className="relative mb-3">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              type="search"
+              value={appSearchQuery}
+              onChange={(event) => setAppSearchQuery(event.target.value)}
+              placeholder="Search name, appId, store id..."
+              className="h-9 pl-9"
+            />
+          </div>
           <div className="space-y-1">
-            {apps.map((app) => (
-              <label key={app.appId} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50">
-                <input
-                  type="checkbox"
+            {filteredApps.length === 0 ? (
+              <p className="px-2 py-6 text-center text-sm text-gray-500">
+                {apps.length === 0 ? "No apps available." : "No apps match your search."}
+              </p>
+            ) : (
+              filteredApps.map((app) => (
+                <WaterfallReportAppRow
+                  key={app.appId}
+                  app={app}
                   checked={selectedAppIds.includes(app.appId!)}
-                  onChange={() => toggleApp(app.appId!)}
+                  onToggle={() => toggleApp(app.appId!)}
                 />
-                <span className="truncate text-sm text-gray-700">{app.displayName ?? app.appId}</span>
-              </label>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

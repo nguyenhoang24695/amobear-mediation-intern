@@ -225,7 +225,7 @@ const navItems: NavItem[] = [
     isShow: () => hasScreenFunction("s-waterfall", "view")
   },
   { icon: Layers, label: "Mediation Groups", href: "/mediation", isShow: () => hasScreenFunction("s-mediation-groups", "view") },
-  { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") },
+  { icon: BarChart3, label: "Reports", href: "/reports", isShow: () => hasScreenFunction("s-reports", "view") || hasScreenFunction("s-overview-report", "view") || hasScreenFunction("s-waterfall-report", "view") },
   {
     icon: PieChart,
     label: "My Reports",
@@ -463,7 +463,11 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
 
   const sidebarNavItems = useMemo((): NavItem[] => {
     return navItems.map((item) => {
-      if (item.label !== "Reports" || !hasScreenFunction("s-reports", "view")) return item
+      if (item.label !== "Reports") return item
+      const canViewReports = hasScreenFunction("s-reports", "view")
+      const canViewOverviewReport = hasScreenFunction("s-overview-report", "view")
+      const canViewWaterfallReport = hasScreenFunction("s-waterfall-report", "view")
+      if (!canViewReports && !canViewOverviewReport && !canViewWaterfallReport) return item
       return {
         ...item,
         href: "#",
@@ -474,11 +478,13 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
             label: "Overview Report",
             href: "/reports/overview",
             reportsView: "overview",
+            isShow: () => hasScreenFunction("s-overview-report", "view"),
           },
           {
             icon: BarChart3,
             label: "Waterfall Report",
             href: "/reports/waterfall",
+            isShow: () => hasScreenFunction("s-waterfall-report", "view"),
           },
           {
             icon: BarChart3,
@@ -486,6 +492,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
             href: "/reports",
             reportId: null,
             reportsView: "index",
+            isShow: () => hasScreenFunction("s-reports", "view"),
           },
           {
             icon: Plus,
@@ -493,12 +500,14 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
             href: "/reports?new=1",
             reportId: null,
             reportsView: "new",
+            isShow: () => hasScreenFunction("s-reports", "view"),
           },
           ...pinnedReports.map((report) => ({
             icon: FileText,
             label: report.name,
             href: `/reports?reportId=${report.id}`,
             reportId: report.id,
+            isShow: () => hasScreenFunction("s-reports", "view"),
           })),
         ],
       }

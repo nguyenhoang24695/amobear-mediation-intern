@@ -5,7 +5,7 @@ import { WaterfallReportContent } from "@/components/reports/waterfall-report-co
 export default function WaterfallReportPage() {
   return (
     <DashboardLayout>
-      <ScreenFunctionGuard screenKey="s-reports" functionKey="view">
+      <ScreenFunctionGuard screenKey="s-waterfall-report" functionKey="view">
         <WaterfallReportContent />
       </ScreenFunctionGuard>
     </DashboardLayout>
