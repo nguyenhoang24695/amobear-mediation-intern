@@ -338,7 +338,7 @@ export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreati
     common: creativeCommon,
   }
 
-  if (v.creativeType !== "EXISTING_POST") {
+  if (v.creativeType !== "EXISTING_POST" && v.creativeType !== "EXISTING_CREATIVE") {
     creative.degreesOfFreedomSpec = {
       creativeFeaturesSpec: {
         advantagePlusCreative: { enrollStatus: v.advantageCreativeAllOptimizations ? "OPT_IN" : "OPT_OUT" },
@@ -352,7 +352,15 @@ export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreati
     }
   }
 
-  if (v.creativeType === "SINGLE_VIDEO") {
+  if (v.creativeType === "EXISTING_CREATIVE") {
+    creative.existingCreative = {
+      externalCreativeId: v.existingCreativeExternalId.trim() || null,
+      sourceMetaCreativeId: v.existingCreativeSourceMetaCreativeId ?? null,
+      name: v.existingCreativeName.trim() || null,
+      originalCreativeType: v.existingCreativeOriginalType.trim() || null,
+    }
+    attachEditableCreativeFields(creative, v, v.existingCreativeOriginalType)
+  } else if (v.creativeType === "SINGLE_VIDEO") {
     creative.singleVideo = {
       message: getFirstVariation(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText) || null,
       messages: sanitizeTextVariations(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText),
@@ -449,6 +457,71 @@ export function variantFormStateToCreativeDto(v: AdVariantFormState): MetaCreati
   return creative
 }
 
+function attachEditableCreativeFields(creative: MetaCreativeDraftDto, v: AdVariantFormState, originalType?: string | null) {
+  const normalized = (originalType ?? "").trim().toUpperCase()
+  if (normalized === "SINGLE_VIDEO") {
+    creative.singleVideo = {
+      message: getFirstVariation(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText) || null,
+      messages: sanitizeTextVariations(v.singleVideoPrimaryTexts, v.singleVideoPrimaryText),
+      headline: getFirstVariation(v.singleVideoHeadlines, v.singleVideoHeadline) || null,
+      headlines: sanitizeTextVariations(v.singleVideoHeadlines, v.singleVideoHeadline),
+      description: v.singleVideoDescription.trim() || null,
+      callToActionType: v.singleVideoCallToAction.trim() || null,
+      linkUrl: v.singleVideoLinkUrl.trim() || null,
+      video: buildMediaSource(v.singleVideoVideo, "video"),
+      thumbnail: buildMediaSource(v.singleVideoThumbnail, "image"),
+    }
+    return
+  }
+
+  if (normalized === "CAROUSEL_IMAGE") {
+    creative.carousel = {
+      message: v.carouselPrimaryText.trim() || null,
+      callToActionType: v.carouselCallToAction.trim() || null,
+      cards: v.carouselCards.map((card) => ({
+        headline: card.headline.trim() || null,
+        description: card.description.trim() || null,
+        linkUrl: card.linkUrl.trim() || null,
+        image: buildMediaSource(card.image, "image"),
+      })),
+    }
+    return
+  }
+
+  if (normalized === "EXISTING_POST") {
+    creative.existingPost = {
+      sourcePostId: v.existingPostId.trim() || null,
+    }
+    return
+  }
+
+  if (normalized === "PLAYABLE") {
+    creative.playable = {
+      message: getFirstVariation(v.playablePrimaryTexts, v.playablePrimaryText) || null,
+      messages: sanitizeTextVariations(v.playablePrimaryTexts, v.playablePrimaryText),
+      headline: getFirstVariation(v.playableHeadlines, v.playableHeadline) || null,
+      headlines: sanitizeTextVariations(v.playableHeadlines, v.playableHeadline),
+      callToActionType: v.playableCallToAction.trim() || "INSTALL_MOBILE_APP",
+      linkUrl: v.playableLinkUrl.trim() || null,
+      playableSource: buildMediaSource(v.playableSource, "playable"),
+      leadInVideo: buildMediaSource(v.playableLeadInVideo, "video"),
+      thumbnail: buildMediaSource(v.playableThumbnail, "image"),
+    }
+    return
+  }
+
+  creative.singleImage = {
+    message: getFirstVariation(v.singleImagePrimaryTexts, v.singleImagePrimaryText) || null,
+    messages: sanitizeTextVariations(v.singleImagePrimaryTexts, v.singleImagePrimaryText),
+    headline: getFirstVariation(v.singleImageHeadlines, v.singleImageHeadline) || null,
+    headlines: sanitizeTextVariations(v.singleImageHeadlines, v.singleImageHeadline),
+    description: v.singleImageDescription.trim() || null,
+    callToActionType: v.singleImageCallToAction.trim() || null,
+    linkUrl: v.singleImageLinkUrl.trim() || null,
+    image: buildMediaSource(v.singleImageImage, "image"),
+  }
+}
+
 /** Build an AdVariantDto from an AdVariantFormState. */
 function variantFormStateToDto(v: AdVariantFormState): MetaAdVariantDto {
   return {
@@ -506,6 +579,10 @@ function primaryVariantFromFormState(form: MetaRequestFormState): AdVariantFormS
     playableLeadInVideo: form.playableLeadInVideo,
     playableThumbnail: form.playableThumbnail,
     existingPostId: form.existingPostId,
+    existingCreativeExternalId: form.existingCreativeExternalId,
+    existingCreativeSourceMetaCreativeId: form.existingCreativeSourceMetaCreativeId,
+    existingCreativeName: form.existingCreativeName,
+    existingCreativeOriginalType: form.existingCreativeOriginalType,
     adName: form.adName,
     trackingSpecs: form.trackingSpecs,
     advantageCreativeAllOptimizations: form.advantageCreativeAllOptimizations,
@@ -530,6 +607,16 @@ function composeAdditionalVariantForSerialization(
   v: AdVariantFormState,
   form: MetaRequestFormState,
 ): AdVariantFormState {
+  if (v.creativeType === "EXISTING_CREATIVE") {
+    return {
+      ...v,
+      facebookPageId: v.facebookPageId || form.facebookPageId,
+      instagramActorId: v.instagramActorId || form.instagramActorId,
+      adName: form.adName,
+      trackingSpecs: form.trackingSpecs,
+    }
+  }
+
   return {
     ...primaryVariantFromFormState(form), // shared: type, page, instagram, text fields, CTAs, link URLs, tracking specs
     sequenceNumber: v.sequenceNumber,
@@ -668,6 +755,10 @@ export function formStateToUpdateDto(form: MetaRequestFormState): UpdateMetaCamp
 function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFormState {
   const creative = variant.creative ?? {}
   const rawCreativeType = (creative.type ?? "SINGLE_IMAGE") as import("@/types/meta-ads").MetaCreativeType
+  const originalExistingType = (creative.existingCreative?.originalCreativeType ?? "").trim().toUpperCase()
+  const fieldCreativeType = rawCreativeType === "EXISTING_CREATIVE" && originalExistingType
+    ? originalExistingType
+    : rawCreativeType
   const common = getCreativeCommon(creative)
   const singleImage = getSingleImageCreative(creative)
   const singleVideo = getSingleVideoCreative(creative)
@@ -677,30 +768,34 @@ function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFor
 
   // Backward compat: SINGLE_IMAGE and SINGLE_VIDEO drafts open in the merged SINGLE_MEDIA UI.
   // Text is normalised to singleImage* (canonical) regardless of source type.
-  const isSingleMedia = rawCreativeType === "SINGLE_IMAGE" || rawCreativeType === "SINGLE_VIDEO"
-  const creativeType: import("@/types/meta-ads").MetaCreativeType = isSingleMedia ? "SINGLE_MEDIA" : rawCreativeType
+  const isSingleMedia = fieldCreativeType === "SINGLE_IMAGE" || fieldCreativeType === "SINGLE_VIDEO"
+  const creativeType: import("@/types/meta-ads").MetaCreativeType = rawCreativeType === "EXISTING_CREATIVE"
+    ? "EXISTING_CREATIVE"
+    : isSingleMedia
+      ? "SINGLE_MEDIA"
+      : rawCreativeType
   const resolvedMediaType: "IMAGE" | "VIDEO" | undefined = isSingleMedia
-    ? (rawCreativeType === "SINGLE_VIDEO" ? "VIDEO" : "IMAGE")
+    ? (fieldCreativeType === "SINGLE_VIDEO" ? "VIDEO" : "IMAGE")
     : undefined
 
   // For SINGLE_VIDEO drafts, copy video text → singleImage* canonical fields so the merged UI shows them correctly.
-  const canonicalPrimaryTexts = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+  const canonicalPrimaryTexts = isSingleMedia && fieldCreativeType === "SINGLE_VIDEO"
     ? (sanitizeTextVariations(singleVideo.messages, singleVideo.message).length > 0
         ? sanitizeTextVariations(singleVideo.messages, singleVideo.message)
         : sanitizeTextVariations(singleImage.messages, singleImage.message))
     : sanitizeTextVariations(singleImage.messages, singleImage.message)
-  const canonicalHeadlines = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+  const canonicalHeadlines = isSingleMedia && fieldCreativeType === "SINGLE_VIDEO"
     ? (sanitizeTextVariations(singleVideo.headlines, singleVideo.headline).length > 0
         ? sanitizeTextVariations(singleVideo.headlines, singleVideo.headline)
         : sanitizeTextVariations(singleImage.headlines, singleImage.headline))
     : sanitizeTextVariations(singleImage.headlines, singleImage.headline)
-  const canonicalDescription = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+  const canonicalDescription = isSingleMedia && fieldCreativeType === "SINGLE_VIDEO"
     ? (singleVideo.description ?? singleImage.description ?? "")
     : (singleImage.description ?? "")
-  const canonicalCta = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+  const canonicalCta = isSingleMedia && fieldCreativeType === "SINGLE_VIDEO"
     ? (singleVideo.callToActionType ?? singleImage.callToActionType ?? "LEARN_MORE")
     : (singleImage.callToActionType ?? "LEARN_MORE")
-  const canonicalLinkUrl = isSingleMedia && rawCreativeType === "SINGLE_VIDEO"
+  const canonicalLinkUrl = isSingleMedia && fieldCreativeType === "SINGLE_VIDEO"
     ? (singleVideo.linkUrl ?? singleImage.linkUrl ?? "")
     : (singleImage.linkUrl ?? "")
 
@@ -760,6 +855,10 @@ function adVariantDtoToVariantFormState(variant: MetaAdVariantDto): AdVariantFor
     playableLeadInVideo: mediaSourceToSelection(playable.leadInVideo, "video"),
     playableThumbnail: mediaSourceToSelection(playable.thumbnail, "image"),
     existingPostId: creative.existingPost?.sourcePostId ?? "",
+    existingCreativeExternalId: creative.existingCreative?.externalCreativeId ?? "",
+    existingCreativeSourceMetaCreativeId: creative.existingCreative?.sourceMetaCreativeId ?? null,
+    existingCreativeName: creative.existingCreative?.name ?? "",
+    existingCreativeOriginalType: creative.existingCreative?.originalCreativeType ?? "",
     adName: variant.ad?.name ?? "",
     trackingSpecs: variant.ad?.trackingSpecsJson ?? "",
     advantageCreativeAllOptimizations: spec?.advantagePlusCreative?.enrollStatus === "OPT_IN",

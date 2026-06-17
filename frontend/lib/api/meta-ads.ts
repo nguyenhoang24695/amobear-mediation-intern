@@ -90,6 +90,10 @@ export const metaRequestsApi = {
     return apiClient.put<MetaCampaignRequestDetailDto>(`${REQUESTS_PREFIX}/${id}`, request)
   },
 
+  duplicate: async (id: number) => {
+    return apiClient.post<MetaCampaignRequestDetailDto>(`${REQUESTS_PREFIX}/${id}/duplicate`, {})
+  },
+
   validate: async (id: number) => {
     return apiClient.post<MetaValidationResultDto>(`${REQUESTS_PREFIX}/${id}/validate`, {})
   },

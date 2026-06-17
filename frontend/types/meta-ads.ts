@@ -7,7 +7,7 @@ export type MetaRequestStatus =
   | "completed"
   | "failed"
 
-export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "FLEXIBLE" | "PLAYABLE"
+export type MetaCreativeType = "SINGLE_IMAGE" | "SINGLE_VIDEO" | "SINGLE_MEDIA" | "CAROUSEL_IMAGE" | "EXISTING_POST" | "EXISTING_CREATIVE" | "FLEXIBLE" | "PLAYABLE"
 export type MetaGeoMode = "GLOBAL" | "COUNTRY" | "REGION" | "COUNTRY_GROUP" | "CITY"
 export type MetaCreativeMediaMode = "meta_ref" | "external_url" | "uploaded_asset"
 
@@ -847,6 +847,13 @@ export interface MetaExistingPostCreativeDraftDto {
   sourcePostId?: string | null
 }
 
+export interface MetaExistingCreativeDraftDto {
+  externalCreativeId?: string | null
+  sourceMetaCreativeId?: number | null
+  name?: string | null
+  originalCreativeType?: Exclude<MetaCreativeType, "SINGLE_MEDIA" | "EXISTING_CREATIVE"> | string | null
+}
+
 export interface MetaFlexibleCreativeAssetDraftDto {
   assetType: "IMAGE" | "VIDEO"
   image?: MetaCreativeMediaSourceDto | null
@@ -902,6 +909,7 @@ export interface MetaCreativeDraftDto {
   singleVideo?: MetaSingleVideoCreativeDraftDto | null
   carousel?: MetaCarouselCreativeDraftDto | null
   existingPost?: MetaExistingPostCreativeDraftDto | null
+  existingCreative?: MetaExistingCreativeDraftDto | null
   flexible?: MetaFlexibleCreativeDraftDto | null
   playable?: MetaPlayableCreativeDraftDto | null
   name?: string | null
@@ -1110,6 +1118,7 @@ export interface MetaCampaignRequestDetailDto {
   appId?: string | null
   appDisplayName?: string | null
   metaAppMappingId?: number | null
+  duplicatedFromRequestId?: number | null
   idempotencyKey: string
   validationErrorsJson?: string | null
   failureSummary?: string | null
@@ -1320,6 +1329,10 @@ export interface AdVariantFormState {
   playableLeadInVideo: MetaRequestAssetSelectionState
   playableThumbnail: MetaRequestAssetSelectionState
   existingPostId: string
+  existingCreativeExternalId: string
+  existingCreativeSourceMetaCreativeId?: number | null
+  existingCreativeName: string
+  existingCreativeOriginalType: string
   adName: string
   trackingSpecs: string
   advantageCreativeAllOptimizations: boolean
@@ -1416,6 +1429,10 @@ export interface MetaRequestFormState {
   playableLeadInVideo: MetaRequestAssetSelectionState
   playableThumbnail: MetaRequestAssetSelectionState
   existingPostId: string
+  existingCreativeExternalId: string
+  existingCreativeSourceMetaCreativeId?: number | null
+  existingCreativeName: string
+  existingCreativeOriginalType: string
   adName: string
   trackingSpecs: string
   advantageCreativeAllOptimizations: boolean

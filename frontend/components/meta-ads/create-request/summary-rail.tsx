@@ -255,6 +255,9 @@ function getCreativeStatus(form: RequestFormState) {
   if (form.creativeType === "EXISTING_POST") {
     return { ok: !!(form.creativeName && form.facebookPageId && form.existingPostId), label: "existing post" }
   }
+  if (form.creativeType === "EXISTING_CREATIVE") {
+    return { ok: !!(form.creativeName && form.existingCreativeExternalId), label: "reused creative" }
+  }
   return { ok: !!(form.creativeName && form.facebookPageId && form.singleImageCallToAction && (form.singleImageImage.imageHash || form.singleImageImage.imageUrl || form.singleImageImage.uploadedAssetId)), label: "single image" }
 }
 
@@ -264,6 +267,7 @@ function getCreativeHeadline(form: RequestFormState): string {
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || "-"
   if (form.creativeType === "FLEXIBLE") return getFirstCreativeVariation(form.flexibleHeadlines) || "-"
   if (form.creativeType === "EXISTING_POST") return form.existingPostId || "-"
+  if (form.creativeType === "EXISTING_CREATIVE") return form.existingCreativeName || form.existingCreativeExternalId || "-"
   return getFirstCreativeVariation(form.singleImageHeadlines, form.singleImageHeadline) || "-"
 }
 
@@ -273,6 +277,7 @@ function getCreativeCta(form: RequestFormState): string {
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCallToAction || "-"
   if (form.creativeType === "FLEXIBLE") return form.flexibleCallToAction || "-"
   if (form.creativeType === "EXISTING_POST") return "EXISTING_POST"
+  if (form.creativeType === "EXISTING_CREATIVE") return "REUSE_CREATIVE"
   return form.singleImageCallToAction || "-"
 }
 

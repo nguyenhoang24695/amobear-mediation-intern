@@ -18,7 +18,7 @@ export function AdvantageCreativeSummary({
   sourceLabel,
   fallbackMessage,
 }: AdvantageCreativeSummaryProps) {
-  if (creativeType === "EXISTING_POST") return null
+  if (creativeType === "EXISTING_POST" || creativeType === "EXISTING_CREATIVE") return null
 
   const spec = degreesOfFreedomSpec?.creativeFeaturesSpec
 

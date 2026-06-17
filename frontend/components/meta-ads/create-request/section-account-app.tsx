@@ -29,6 +29,7 @@ interface Props {
   objectives: MetaObjectivePresetDto[]
   integrationName?: string | null
   canChangeExecutionIntegration?: boolean
+  canChangeAdAccount?: boolean
 }
 
 interface SearchableSelectProps<T> {
@@ -166,6 +167,7 @@ export function AccountAppSection({
   objectives,
   integrationName,
   canChangeExecutionIntegration = true,
+  canChangeAdAccount = true,
 }: Props) {
   const mappingUrl = selectedAppMapping?.objectStoreUrl || selectedAppMapping?.storeUrlOverride || ""
   const selectedAppPlatform = resolveMetaAppMappingPlatform(selectedAppMapping)
@@ -234,7 +236,7 @@ export function AccountAppSection({
                 placeholder={form.executionIntegrationId ? "Select ad account..." : "Select integration first..."}
                 searchPlaceholder="Search by ad account ID, name, currency, timezone..."
                 emptyMessage="No ad accounts found for this integration."
-                disabled={!form.executionIntegrationId}
+                disabled={!form.executionIntegrationId || !canChangeAdAccount}
                 onValueChange={(value) => onChange({ adAccountId: value, appRowId: "" })}
                 getValue={(account) => account.id.toString()}
                 getSearchText={(account) => `${account.metaAdAccountId} ${account.name} ${account.currency ?? ""} ${account.timeZoneName ?? ""}`}
@@ -260,6 +262,9 @@ export function AccountAppSection({
                   </div>
                 )}
               />
+              {!canChangeAdAccount ? (
+                <p className="text-[11px] text-slate-500">Ad account is locked while this draft reuses an existing Meta creative.</p>
+              ) : null}
             </div>
 
             {form.adAccountId ? (

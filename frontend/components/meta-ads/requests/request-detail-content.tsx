@@ -208,6 +208,10 @@ function getExistingPostCreative(creative: MetaCreativeDraftDto) {
   return creative.existingPost ?? { sourcePostId: null }
 }
 
+function getExistingCreative(creative: MetaCreativeDraftDto) {
+  return creative.existingCreative ?? { externalCreativeId: null, sourceMetaCreativeId: null, name: null, originalCreativeType: null }
+}
+
 
 function getMediaSourceValue(source?: MetaCreativeMediaSourceDto | null, kind: "image" | "video" = "image"): string {
   if (!source) return "-"
@@ -270,7 +274,7 @@ function collectUploadedAssetSlots(payload?: CreateMetaCampaignRequestDto | null
       continue
     }
 
-    if (creativeType !== "EXISTING_POST") {
+    if (creativeType !== "EXISTING_POST" && creativeType !== "EXISTING_CREATIVE") {
       const image = getSingleImageCreative(creative)
       addUploadedAssetSlot(slots, image.image, "image", `${prefix}.singleImage.image`, `Variation ${sequence} image`)
     }
@@ -338,6 +342,8 @@ function getCreativeSummaryHeadline(creative: MetaCreativeDraftDto): string {
       return getFlexibleCreative(creative).headlines?.[0] ?? "-"
     case "EXISTING_POST":
       return getExistingPostCreative(creative).sourcePostId ?? "-"
+    case "EXISTING_CREATIVE":
+      return getExistingCreative(creative).externalCreativeId ?? "-"
     default:
       return getSingleImageCreative(creative).headline ?? "-"
   }
@@ -353,6 +359,8 @@ function getCreativeSummaryCallToAction(creative: MetaCreativeDraftDto): string 
       return getFlexibleCreative(creative).callToActionType ?? "-"
     case "EXISTING_POST":
       return "EXISTING_POST"
+    case "EXISTING_CREATIVE":
+      return "REUSE_CREATIVE"
     default:
       return getSingleImageCreative(creative).callToActionType ?? "-"
   }
@@ -408,6 +416,14 @@ function getCreativeChecklist(creative: MetaCreativeDraftDto): ChecklistItem[] {
     ]
   }
 
+  if (getCreativeType(creative) === "EXISTING_CREATIVE") {
+    const existingCreative = getExistingCreative(creative)
+    return [
+      { label: "Creative name", ok: !!common.name },
+      { label: "Existing creative ID", ok: !!existingCreative.externalCreativeId },
+    ]
+  }
+
   const image = getSingleImageCreative(creative)
   return [
     { label: "Creative name", ok: !!common.name },
@@ -438,6 +454,8 @@ function getCreativePreviewImage(creative: MetaCreativeDraftDto): { url: string;
     }
     case "EXISTING_POST":
       return { url: "", requiresAuth: false }
+    case "EXISTING_CREATIVE":
+      return { url: "", requiresAuth: false }
     default:
       return getMediaPreviewSource(getSingleImageCreative(creative).image)
   }
@@ -453,6 +471,8 @@ function getCreativePreviewHeadline(creative: MetaCreativeDraftDto): string {
       return getFlexibleCreative(creative).headlines?.[0] ?? "Flexible creative"
     case "EXISTING_POST":
       return getExistingPostCreative(creative).sourcePostId ? `Existing Post ${getExistingPostCreative(creative).sourcePostId}` : "Existing post preview"
+    case "EXISTING_CREATIVE":
+      return getExistingCreative(creative).name ?? "Reused Meta creative"
     default:
       return getSingleImageCreative(creative).headline ?? "Creative headline"
   }
@@ -471,6 +491,8 @@ function getCreativePreviewMessage(creative: MetaCreativeDraftDto): string {
     }
     case "EXISTING_POST":
       return "Existing post preview will be resolved from Meta post."
+    case "EXISTING_CREATIVE":
+      return getExistingCreative(creative).externalCreativeId ? `Reuses creative ${getExistingCreative(creative).externalCreativeId}` : "Reuses an existing Meta creative."
     default:
       return getSingleImageCreative(creative).message ?? "Creative preview will update as you fill the form."
   }
@@ -486,6 +508,8 @@ function getCreativePreviewCallToAction(creative: MetaCreativeDraftDto): string 
       return formatCallToAction(getFlexibleCreative(creative).callToActionType)
     case "EXISTING_POST":
       return "VIEW POST"
+    case "EXISTING_CREATIVE":
+      return "REUSE CREATIVE"
     default:
       return formatCallToAction(getSingleImageCreative(creative).callToActionType)
   }
@@ -501,6 +525,8 @@ function getCreativePreviewIcon(creative: MetaCreativeDraftDto) {
       return <GalleryHorizontal className="w-6 h-6 text-slate-300" />
     case "EXISTING_POST":
       return <FileText className="w-6 h-6 text-slate-300" />
+    case "EXISTING_CREATIVE":
+      return <Copy className="w-6 h-6 text-slate-300" />
     default:
       return <ImageIcon className="w-6 h-6 text-slate-300" />
   }
@@ -809,6 +835,24 @@ export function RequestDetailContent({ requestId }: Props) {
     }
   }
 
+  const handleDuplicate = async () => {
+    if (!detail) return
+
+    try {
+      setActionLoading(true)
+      const duplicated = await metaRequestsApi.duplicate(detail.id)
+      invalidateCache("meta-requests:list:all:all:all")
+      invalidateCache(`meta-request:${duplicated.id}`)
+      toast({ title: "Request duplicated", description: `${formatMetaRequestId(duplicated.id)} is ready to edit.` })
+      router.push(`/meta-ads/requests/${duplicated.id}/edit`)
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to duplicate this request."
+      toast({ title: "Duplicate failed", description: message, variant: "destructive" })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
@@ -867,6 +911,13 @@ export function RequestDetailContent({ requestId }: Props) {
                   {assetPreparationBlocked ? `Assets preparing on Meta (${readyAssetCount}/${uploadedAssetSlots.length} ready)` : "All Meta assets ready"}
                 </Badge>
               ) : null}
+              {detail.duplicatedFromRequestId ? (
+                <Link href={`/meta-ads/requests/${detail.duplicatedFromRequestId}`}>
+                  <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
+                    Duplicated from #{detail.duplicatedFromRequestId}
+                  </Badge>
+                </Link>
+              ) : null}
             </div>
             <p className="text-sm text-slate-600 pl-11">{detail.campaignName}</p>
             <div className="flex items-center gap-4 pl-11 text-xs text-slate-500 flex-wrap">
@@ -906,6 +957,13 @@ export function RequestDetailContent({ requestId }: Props) {
               <Button variant="outline" onClick={() => router.push(`/meta-ads/requests/${detail.id}/edit`)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Edit Request
+              </Button>
+            ) : null}
+
+            {canCreate && detail.status === "completed" ? (
+              <Button variant="outline" onClick={() => void handleDuplicate()} disabled={actionLoading}>
+                {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Copy className="w-4 h-4 mr-2" />}
+                Duplicate
               </Button>
             ) : null}
 

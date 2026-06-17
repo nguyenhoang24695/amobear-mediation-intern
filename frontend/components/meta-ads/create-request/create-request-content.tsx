@@ -295,6 +295,10 @@ function createDefaultFormState(): RequestFormState {
     playableLeadInVideo: createEmptyMediaSelection("meta_ref"),
     playableThumbnail: createEmptyMediaSelection("meta_ref"),
     existingPostId: "",
+    existingCreativeExternalId: "",
+    existingCreativeSourceMetaCreativeId: null,
+    existingCreativeName: "",
+    existingCreativeOriginalType: "",
     adName: "",
     trackingSpecs: "",
     advantageCreativeAllOptimizations: true,
@@ -351,6 +355,10 @@ function createEmptyAdVariant(seq: number, form: Pick<RequestFormState, "faceboo
     playableLeadInVideo: createEmptyMediaSelection("meta_ref"),
     playableThumbnail: createEmptyMediaSelection("meta_ref"),
     existingPostId: "",
+    existingCreativeExternalId: "",
+    existingCreativeSourceMetaCreativeId: null,
+    existingCreativeName: "",
+    existingCreativeOriginalType: "",
     adName: "",
     trackingSpecs: "",
     advantageCreativeAllOptimizations: true,
@@ -712,6 +720,8 @@ export function CreateRequestContent({ requestId }: Props) {
   })
 
   const isSubmitBlocked = submitting || saving || validating || tokenState === "expired" || tokenState === "missing_permissions" || tokenState === "invalid" || tokenState === "disabled"
+  const hasExistingCreativeReuse = form.creativeType === "EXISTING_CREATIVE"
+    || (form.additionalVariants ?? []).some((variant) => variant.creativeType === "EXISTING_CREATIVE")
 
   useEffect(() => {
     const skanEligible = form.campaignObjective.trim().toUpperCase() === "OUTCOME_APP_PROMOTION"
@@ -822,7 +832,11 @@ export function CreateRequestContent({ requestId }: Props) {
         next.facebookPageId = ""
         next.instagramActorId = ""
         next.existingPostId = ""
-        next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "" }))
+        next.existingCreativeExternalId = ""
+        next.existingCreativeSourceMetaCreativeId = null
+        next.existingCreativeName = ""
+        next.existingCreativeOriginalType = ""
+        next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "", existingCreativeExternalId: "", existingCreativeSourceMetaCreativeId: null, existingCreativeName: "", existingCreativeOriginalType: "" }))
       }
 
       if (patch.adAccountId !== undefined && patch.adAccountId !== previous.adAccountId) {
@@ -831,7 +845,11 @@ export function CreateRequestContent({ requestId }: Props) {
         next.facebookPageId = ""
         next.instagramActorId = ""
         next.existingPostId = ""
-        next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "" }))
+        next.existingCreativeExternalId = ""
+        next.existingCreativeSourceMetaCreativeId = null
+        next.existingCreativeName = ""
+        next.existingCreativeOriginalType = ""
+        next.additionalVariants = next.additionalVariants.map((variant) => ({ ...variant, facebookPageId: "", instagramActorId: "", existingPostId: "", existingCreativeExternalId: "", existingCreativeSourceMetaCreativeId: null, existingCreativeName: "", existingCreativeOriginalType: "" }))
       }
 
 
@@ -1045,6 +1063,10 @@ export function CreateRequestContent({ requestId }: Props) {
       playableLeadInVideo: { ...form.playableLeadInVideo },
       playableThumbnail: { ...form.playableThumbnail },
       existingPostId: form.existingPostId,
+      existingCreativeExternalId: form.existingCreativeExternalId,
+      existingCreativeSourceMetaCreativeId: form.existingCreativeSourceMetaCreativeId,
+      existingCreativeName: form.existingCreativeName,
+      existingCreativeOriginalType: form.existingCreativeOriginalType,
       adName: form.adName ? `${form.adName} (Copy)` : "",
       trackingSpecs: form.trackingSpecs,
       advantageCreativeAllOptimizations: form.advantageCreativeAllOptimizations,
@@ -1334,6 +1356,7 @@ export function CreateRequestContent({ requestId }: Props) {
               objectives={referenceData.objectives}
               integrationName={selectedIntegration?.displayName}
               canChangeExecutionIntegration={!isEditMode || serverStatus === null || serverStatus === "draft"}
+              canChangeAdAccount={!hasExistingCreativeReuse}
             />
           </div>
           <div id={requestSectionIds["campaign-settings"]} className={getSectionWrapperClass("campaign-settings", highlightedSection)}>
