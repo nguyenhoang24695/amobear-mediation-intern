@@ -1018,6 +1018,18 @@ export interface UpdateMetaCampaignRequestDto {
   ad?: MetaAdDraftDto | null
 }
 
+export interface MetaCampaignRequestTemplateDto {
+  id: number
+  name: string
+  settingsJson: string
+  settings?: Partial<MetaRequestFormState> | null
+  createdAt: string
+}
+
+export interface CreateMetaCampaignRequestTemplateDto {
+  name: string
+  settingsJson: string
+}
 export interface ApproveMetaCampaignRequestDto {
   comment?: string | null
 }

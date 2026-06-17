@@ -956,6 +956,104 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     additionalVariants,
   }
 }
+function formatTemplateDateTimeLocal(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  const hours = `${date.getHours()}`.padStart(2, "0")
+  const minutes = `${date.getMinutes()}`.padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+const META_REQUEST_TEMPLATE_FIELDS = [
+  "executionIntegrationId", "adAccountId", "appRowId", "paidMediaAppBindingId",
+  "objective", "budgetStrategy", "buyingType", "campaignObjective", "specialAdCategories",
+  "bidStrategy", "isAdSetBudgetSharingEnabled", "isSkadnetworkAttribution", "campaignDailyBudget", "campaignLifetimeBudget",
+  "geoMode", "countries", "excludedCountries", "regionKeys", "countryGroupIds", "cityTargets", "localeKeys",
+  "ageMin", "ageMax", "gender", "userOs", "placementMode", "publisherPlatforms", "facebookPositions", "instagramPositions", "advantageAudience",
+  "adSetDailyBudget", "adSetLifetimeBudget", "billingEvent", "optimizationGoal", "performanceGoalType", "performanceGoalEventName", "performanceGoalValueType", "bidAmount", "roasAverageFloor",
+  "creativeType", "singleImagePrimaryText", "singleImagePrimaryTexts", "singleImageHeadline", "singleImageHeadlines", "singleImageDescription", "singleImageCallToAction", "singleImageLinkUrl",
+  "singleVideoPrimaryText", "singleVideoPrimaryTexts", "singleVideoHeadline", "singleVideoHeadlines", "singleVideoDescription", "singleVideoCallToAction", "singleVideoLinkUrl",
+  "carouselPrimaryText", "carouselCallToAction", "flexiblePrimaryTexts", "flexibleHeadlines", "flexibleCallToAction", "flexibleLinkUrl",
+  "playablePrimaryText", "playablePrimaryTexts", "playableHeadline", "playableHeadlines", "playableCallToAction", "playableLinkUrl",
+  "trackingSpecs", "advantageCreativeAllOptimizations", "advantageCreativeAddTextOverlay", "advantageCreativeImageTouchups", "advantageCreativeMusicGeneration", "advantageCreativeTextOptimizations", "advantageCreativeImageAnimation", "advantageCreativeInlineComment",
+] as const satisfies readonly (keyof MetaRequestFormState)[]
+
+function cloneTemplateValue<T>(value: T): T {
+  if (Array.isArray(value) || (value && typeof value === "object")) return JSON.parse(JSON.stringify(value)) as T
+  return value
+}
+
+export function pickTemplateableFields(form: MetaRequestFormState): Partial<MetaRequestFormState> {
+  const picked: Partial<MetaRequestFormState> = {}
+  for (const field of META_REQUEST_TEMPLATE_FIELDS) {
+    ;(picked as Record<string, unknown>)[field] = cloneTemplateValue(form[field])
+  }
+
+  // Reused-creative types (EXISTING_CREATIVE / EXISTING_POST) point at an account-bound object
+  // (creative_id / post_id) that carries no templateable copy or asset — store as SINGLE_MEDIA instead.
+  if (picked.creativeType === "EXISTING_CREATIVE" || picked.creativeType === "EXISTING_POST") {
+    picked.creativeType = "SINGLE_MEDIA"
+  }
+
+  return picked
+}
+
+/** Keep only whitelisted keys from an (possibly hand-crafted/legacy) template payload. */
+function whitelistTemplateSettings(settings: Partial<MetaRequestFormState>): Partial<MetaRequestFormState> {
+  const picked: Partial<MetaRequestFormState> = {}
+  for (const field of META_REQUEST_TEMPLATE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(settings, field)) {
+      ;(picked as Record<string, unknown>)[field] = cloneTemplateValue(settings[field])
+    }
+  }
+  return picked
+}
+
+export function parseTemplateSettings(settingsJson?: string | null): Partial<MetaRequestFormState> {
+  if (!settingsJson) return {}
+  try {
+    const parsed = JSON.parse(settingsJson)
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Partial<MetaRequestFormState> : {}
+  } catch {
+    return {}
+  }
+}
+
+export function applyTemplateToForm(form: MetaRequestFormState, templateSettings: Partial<MetaRequestFormState>, opts: { bindingStillValid: boolean }): MetaRequestFormState {
+  const preservedAssets = {
+    mediaType: form.mediaType,
+    singleImageImage: form.singleImageImage,
+    singleVideoVideo: form.singleVideoVideo,
+    singleVideoThumbnail: form.singleVideoThumbnail,
+    playableSource: form.playableSource,
+    playableLeadInVideo: form.playableLeadInVideo,
+    playableThumbnail: form.playableThumbnail,
+    facebookPageId: form.facebookPageId,
+    instagramActorId: form.instagramActorId,
+    existingPostId: form.existingPostId,
+    additionalVariants: form.additionalVariants,
+  }
+
+  const next: MetaRequestFormState = {
+    ...form,
+    ...whitelistTemplateSettings(templateSettings),
+    ...preservedAssets,
+    startTime: formatTemplateDateTimeLocal(new Date()),
+    endTime: "",
+    carouselCards: [createEmptyCarouselCard(), createEmptyCarouselCard()],
+    flexibleAssets: [createEmptyFlexibleAsset()],
+  }
+
+  if (!opts.bindingStillValid) {
+    next.executionIntegrationId = form.executionIntegrationId
+    next.adAccountId = form.adAccountId
+    next.appRowId = form.appRowId
+    next.paidMediaAppBindingId = form.paidMediaAppBindingId
+  }
+
+  return next
+}
 export function groupValidationErrors(errors: string[]): GroupedValidationErrors {
   return errors.reduce<GroupedValidationErrors>((groups, error) => {
     const normalized = error.toLowerCase()
