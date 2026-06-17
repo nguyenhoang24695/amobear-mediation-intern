@@ -59,7 +59,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Calendar } from "@/components/ui/calendar"
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -122,6 +121,7 @@ import type {
   SaveCustomReportRequest,
 } from "@/types/reports"
 import { applySavedCustomReport } from "@/lib/reports/apply-saved-custom-report"
+import { appMatchesSearchQuery } from "@/lib/reports/my-report-app-selection"
 import {
   collectMembershipManagedTeams,
   collectTeamLeadTeamsFromChart,
@@ -136,10 +136,16 @@ import { buildTeamGroupSectionsFromOrg } from "@/lib/organizations/team-group"
 import type { OrgTeamGroup } from "@/lib/api/services"
 import { GroupedTeamMultiSelect } from "@/components/reports/grouped-team-multi-select"
 import {
+  GroupedMemberMultiSelect,
+  type CommissionMemberOption,
+  type MemberGroupSection,
+} from "@/components/reports/grouped-member-multi-select"
+import {
   CustomReportRowExpandPanel,
   type CustomReportRowExpandMetric,
   type CustomReportRowExpandParameter,
 } from "@/components/reports/custom-report-row-expand-panel"
+import { useCustomReportUserAppGroups } from "@/components/reports/hooks/use-custom-report-user-app-groups"
 import { notifyPinnedCustomReportsChanged } from "@/lib/reports/pinned-custom-reports"
 import { escapeExcelHtml, formatMetricValue } from "@/lib/reports/report-format-utils"
 import { toast } from "sonner"
@@ -240,14 +246,6 @@ interface AppliedReportQueryState {
   metrics: string[]
   revenueSource: string
   metricFilters: CustomReportMetricFilter[]
-  commissionTeamIds?: string[] | null
-}
-
-interface CommissionMemberOption {
-  userId: string
-  email: string
-  label: string
-  isTeamLead: boolean
 }
 
 interface SortableReportFieldItemProps {
@@ -267,11 +265,25 @@ const metricFilterConditions: Array<{ value: CustomReportMetricFilter["condition
   { value: "neq", label: "!=" },
 ]
 
+type AppSelectorViewMode = "flat" | "by_user"
+
 function upsertActiveFilter(filters: ActiveFilter[], type: string, value: string): ActiveFilter[] {
   if (value === "All") return filters.filter((f) => f.type !== type)
   const existing = filters.find((f) => f.type === type)
   if (existing) return filters.map((f) => (f.type === type ? { type, value } : f))
   return [...filters, { type, value }]
+}
+
+function collectTeamLeadMemberIds(
+  members: CommissionMemberOption[],
+  teamIds: string[],
+): string[] {
+  const ids: string[] = []
+  for (const teamId of teamIds) {
+    const lead = members.find((member) => member.teamId === teamId && member.isTeamLead)
+    if (lead) ids.push(lead.userId)
+  }
+  return [...new Set(ids)]
 }
 
 function SortableReportFieldItem({
@@ -812,6 +824,8 @@ export function CustomReportBuilderContent() {
 
   const [selectedApps, setSelectedApps] = useState<string[]>([])
   const [appPopoverOpen, setAppPopoverOpen] = useState(false)
+  const [appSelectorViewMode, setAppSelectorViewMode] = useState<AppSelectorViewMode>("flat")
+  const [appListSearch, setAppListSearch] = useState("")
   const [appsInitialized, setAppsInitialized] = useState(false)
 
   const [selectedParameters, setSelectedParameters] = useState<string[]>(["app"])
@@ -848,7 +862,8 @@ export function CustomReportBuilderContent() {
   const [commissionTeams, setCommissionTeams] = useState<CommissionTeamOption[]>([])
   const [orgTeamGroups, setOrgTeamGroups] = useState<OrgTeamGroup[]>([])
   const [commissionMembers, setCommissionMembers] = useState<CommissionMemberOption[]>([])
-  const [commissionMember, setCommissionMember] = useState("")
+  const [selectedCommissionMemberIds, setSelectedCommissionMemberIds] = useState<string[]>([])
+  const pendingMemberRestoreRef = useRef<{ userIds?: string[]; emails?: string[] } | null>(null)
   const [teamScopeApps, setTeamScopeApps] = useState<App[] | null>(null)
   const [teamScopeAppsLoading, setTeamScopeAppsLoading] = useState(false)
   const [memberOptionsLoading, setMemberOptionsLoading] = useState(false)
@@ -872,15 +887,79 @@ export function CustomReportBuilderContent() {
     setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_TEAM, value))
   }, [])
 
+  const syncMembersActiveFilter = useCallback(
+    (memberIds: string[], members: CommissionMemberOption[]) => {
+      const uniqueMemberIds = [...new Set(members.map((member) => member.userId))]
+      const labelByUserId = new Map<string, string>()
+      for (const member of members) {
+        if (!labelByUserId.has(member.userId)) labelByUserId.set(member.userId, member.label)
+      }
+      const value =
+        memberIds.length === 0
+          ? "Select members"
+          : memberIds.length === uniqueMemberIds.length
+            ? "All members"
+            : memberIds.length === 1
+              ? labelByUserId.get(memberIds[0]) ?? "1 member"
+              : `${memberIds.length} members`
+      setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_MEMBER, value))
+    },
+    [],
+  )
+
+  const handleCommissionMemberIdsChange = useCallback(
+    (memberIds: string[]) => {
+      setSelectedCommissionMemberIds(memberIds)
+      syncMembersActiveFilter(memberIds, commissionMembers)
+    },
+    [commissionMembers, syncMembersActiveFilter],
+  )
+
   const commissionTeamGroupSections = useMemo(
     () => buildTeamGroupSectionsFromOrg(orgTeamGroups, commissionTeams),
     [orgTeamGroups, commissionTeams],
+  )
+
+  const commissionMemberGroupSections = useMemo((): MemberGroupSection[] => {
+    const sectionMap = new Map<string, MemberGroupSection>()
+    for (const member of commissionMembers) {
+      const existing = sectionMap.get(member.teamId)
+      if (existing) {
+        if (!existing.members.some((item) => item.userId === member.userId)) {
+          existing.members.push(member)
+        }
+      } else {
+        sectionMap.set(member.teamId, {
+          teamId: member.teamId,
+          teamLabel: member.teamLabel,
+          members: [member],
+        })
+      }
+    }
+    return selectedCommissionTeamIds
+      .map((teamId) => sectionMap.get(teamId))
+      .filter((section): section is MemberGroupSection => Boolean(section))
+      .map((section) => ({
+        ...section,
+        members: [...section.members].sort((a, b) => {
+          if (a.isTeamLead !== b.isTeamLead) return a.isTeamLead ? -1 : 1
+          return a.label.localeCompare(b.label)
+        }),
+      }))
+  }, [commissionMembers, selectedCommissionTeamIds])
+
+  const uniqueCommissionMemberCount = useMemo(
+    () => new Set(commissionMembers.map((member) => member.userId)).size,
+    [commissionMembers],
   )
 
   const handleCommissionTeamIdsChange = useCallback(
     (teamIds: string[]) => {
       setSelectedCommissionTeamIds(teamIds)
       syncTeamsActiveFilter(teamIds, commissionTeams)
+      if (teamIds.length === 0) {
+        pendingMemberRestoreRef.current = null
+      }
     },
     [commissionTeams, syncTeamsActiveFilter],
   )
@@ -903,6 +982,7 @@ export function CustomReportBuilderContent() {
   const [savingReport, setSavingReport] = useState(false)
   const loadedReportIdRef = useRef<string | null>(null)
   const prevCommissionTeamIdsRef = useRef<string[]>([])
+  const prevCommissionTeamIdsForMembersRef = useRef<string[]>([])
 
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
@@ -921,6 +1001,48 @@ export function CustomReportBuilderContent() {
     if (selectedCommissionTeamIds.length === 0 || teamScopeApps === null) return []
     return teamScopeApps
   }, [availableApps, canScopeManagedTeams, selectedCommissionTeamIds, teamScopeApps])
+
+  const byUserAppsEnabled =
+    canScopeManagedTeams &&
+    appSelectorViewMode === "by_user" &&
+    selectedCommissionMemberIds.length > 0
+
+  const {
+    groups: userAppGroups,
+    unionApps: userAppUnionApps,
+    loading: userAppsLoading,
+    error: userAppsError,
+  } = useCustomReportUserAppGroups(
+    selectedCommissionMemberIds,
+    commissionMembers,
+    appsForSelection,
+    byUserAppsEnabled,
+  )
+
+  const appsPoolForSelector = useMemo(() => {
+    if (byUserAppsEnabled && userAppUnionApps.length > 0) return userAppUnionApps
+    return appsForSelection
+  }, [byUserAppsEnabled, userAppUnionApps, appsForSelection])
+
+  const filteredFlatApps = useMemo(
+    () => appsForSelection.filter((app) => appMatchesSearchQuery(app, appListSearch)),
+    [appsForSelection, appListSearch],
+  )
+
+  const filteredUserAppGroups = useMemo(
+    () =>
+      userAppGroups
+        .map((group) => ({
+          ...group,
+          apps: group.apps.filter((app) => appMatchesSearchQuery(app, appListSearch)),
+        }))
+        .filter((group) => group.apps.length > 0),
+    [userAppGroups, appListSearch],
+  )
+
+  useEffect(() => {
+    if (!appPopoverOpen) setAppListSearch("")
+  }, [appPopoverOpen])
 
   useEffect(() => {
     reportsApi.getCatalog().then((c) => {
@@ -1013,7 +1135,15 @@ export function CustomReportBuilderContent() {
         setSelectedApps,
         setMetricFilters,
         setSelectedCommissionTeamIds,
-        setCommissionMember,
+        restoreCommissionMembersFromReport: (filters) => {
+          if (filters.commissionUsernames?.length) {
+            pendingMemberRestoreRef.current = {
+              emails: filters.commissionUsernames.filter(Boolean),
+            }
+          } else if (filters.commissionUser) {
+            pendingMemberRestoreRef.current = { userIds: [filters.commissionUser] }
+          }
+        },
         setSortColumn,
         setSortDirection,
         setDateFilterMode,
@@ -1083,7 +1213,7 @@ export function CustomReportBuilderContent() {
     if (!orgId) {
       setCommissionTeams([])
       setCommissionMembers([])
-      setCommissionMember("")
+      setSelectedCommissionMemberIds([])
       return
     }
 
@@ -1130,7 +1260,7 @@ export function CustomReportBuilderContent() {
         if (cancelled) return
         setCommissionTeams([])
         setCommissionMembers([])
-        setCommissionMember("")
+        setSelectedCommissionMemberIds([])
       }
     })()
 
@@ -1144,9 +1274,13 @@ export function CustomReportBuilderContent() {
     if (commissionTeams.length === 0) {
       setSelectedCommissionTeamIds([])
       setCommissionMembers([])
-      setCommissionMember("")
+      setSelectedCommissionMemberIds([])
       setTeamScopeApps(null)
-      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_TEAM))
+      setActiveFilters((prev) =>
+        prev.filter(
+          (filter) => filter.type !== FILTER_COMMISSION_TEAM && filter.type !== FILTER_COMMISSION_MEMBER,
+        ),
+      )
       return
     }
     setSelectedCommissionTeamIds((prev) => {
@@ -1165,21 +1299,29 @@ export function CustomReportBuilderContent() {
   }, [canScopeManagedTeams, teamsInitialized, commissionTeams, reportIdFromUrl, syncTeamsActiveFilter])
 
   useEffect(() => {
-    if (!canScopeManagedTeams || selectedCommissionTeamIds.length !== 1) {
+    if (!canScopeManagedTeams || selectedCommissionTeamIds.length === 0) {
       setCommissionMembers([])
-      setCommissionMember("")
+      setSelectedCommissionMemberIds([])
       setMemberOptionsLoading(false)
+      prevCommissionTeamIdsForMembersRef.current = []
+      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER))
       return
     }
 
-    const teamId = selectedCommissionTeamIds[0]
+    const prevTeamIds = [...prevCommissionTeamIdsForMembersRef.current]
+    const prevTeamKey = [...prevTeamIds].sort().join("|")
+    const nextTeamKey = [...selectedCommissionTeamIds].sort().join("|")
+    const teamsChanged = prevTeamKey !== nextTeamKey
+    prevCommissionTeamIdsForMembersRef.current = selectedCommissionTeamIds
+
     let cancelled = false
     setMemberOptionsLoading(true)
-    teamMembersApi
-      .filterTeamMembers({ teamId, page: 1, pageSize: 500 })
-      .then((response) => {
-        if (cancelled) return
-        const nextMembers = response.data.items
+
+    Promise.all(
+      selectedCommissionTeamIds.map(async (teamId) => {
+        const teamLabel = commissionTeams.find((team) => team.teamId === teamId)?.label ?? "Team"
+        const response = await teamMembersApi.filterTeamMembers({ teamId, page: 1, pageSize: 500 })
+        return response.data.items
           .map((member): CommissionMemberOption | null => {
             const email = member.email?.trim()
             if (!email) return null
@@ -1187,8 +1329,10 @@ export function CustomReportBuilderContent() {
             return {
               userId: member.id,
               email,
-              label: member.fullName ? `${member.fullName} (${email})` : email,
+              label: member.fullName?.trim() || email,
               isTeamLead: Boolean(teamMeta?.isTeamLead),
+              teamId,
+              teamLabel,
             }
           })
           .filter((member): member is CommissionMemberOption => Boolean(member))
@@ -1196,25 +1340,79 @@ export function CustomReportBuilderContent() {
             if (a.isTeamLead !== b.isTeamLead) return a.isTeamLead ? -1 : 1
             return a.label.localeCompare(b.label)
           })
-
+      }),
+    )
+      .then((memberGroups) => {
+        if (cancelled) return
+        const nextMembers = memberGroups.flat()
         setCommissionMembers(nextMembers)
-        if (nextMembers.length === 0) {
-          setCommissionMember("")
+
+        const allMemberIds = [...new Set(nextMembers.map((member) => member.userId))]
+        if (allMemberIds.length === 0) {
+          setSelectedCommissionMemberIds([])
           return
         }
 
-        if (nextMembers.some((member) => member.userId === commissionMember)) {
-          setCommissionMember(commissionMember)
+        const pending = pendingMemberRestoreRef.current
+        if (pending) {
+          pendingMemberRestoreRef.current = null
+          let restored: string[] = []
+          if (pending.emails?.length) {
+            const emailSet = new Set(pending.emails.map((email) => email.toLowerCase()))
+            restored = allMemberIds.filter((userId) => {
+              const member = nextMembers.find((item) => item.userId === userId)
+              return member && emailSet.has(member.email.toLowerCase())
+            })
+          } else if (pending.userIds?.length) {
+            restored = pending.userIds.filter((userId) => allMemberIds.includes(userId))
+          }
+          const teamLeadIds = collectTeamLeadMemberIds(nextMembers, selectedCommissionTeamIds)
+          const nextIds =
+            restored.length > 0
+              ? restored
+              : teamLeadIds.length > 0
+                ? teamLeadIds
+                : allMemberIds
+          setSelectedCommissionMemberIds(nextIds)
+          syncMembersActiveFilter(nextIds, nextMembers)
           return
         }
 
-        const defaultMember = nextMembers.find((member) => member.isTeamLead) ?? nextMembers[0]
-        setCommissionMember(defaultMember.userId)
+        if (teamsChanged) {
+          const addedTeamIds = selectedCommissionTeamIds.filter((teamId) => !prevTeamIds.includes(teamId))
+          setSelectedCommissionMemberIds((prev) => {
+            const pruned = prev.filter((userId) => allMemberIds.includes(userId))
+            let nextIds: string[]
+            if (prevTeamIds.length === 0) {
+              nextIds = collectTeamLeadMemberIds(nextMembers, selectedCommissionTeamIds)
+            } else if (addedTeamIds.length > 0) {
+              const newLeadIds = collectTeamLeadMemberIds(nextMembers, addedTeamIds)
+              nextIds = [...new Set([...pruned, ...newLeadIds])]
+            } else {
+              nextIds = pruned
+            }
+            syncMembersActiveFilter(nextIds, nextMembers)
+            return nextIds
+          })
+          return
+        }
+
+        setSelectedCommissionMemberIds((prev) => {
+          const pruned = prev.filter((userId) => allMemberIds.includes(userId))
+          if (pruned.length > 0) {
+            syncMembersActiveFilter(pruned, nextMembers)
+            return pruned
+          }
+          const teamLeadIds = collectTeamLeadMemberIds(nextMembers, selectedCommissionTeamIds)
+          const nextIds = teamLeadIds.length > 0 ? teamLeadIds : allMemberIds
+          syncMembersActiveFilter(nextIds, nextMembers)
+          return nextIds
+        })
       })
       .catch(() => {
         if (!cancelled) {
           setCommissionMembers([])
-          setCommissionMember("")
+          setSelectedCommissionMemberIds([])
         }
       })
       .finally(() => {
@@ -1224,7 +1422,7 @@ export function CustomReportBuilderContent() {
     return () => {
       cancelled = true
     }
-  }, [canScopeManagedTeams, selectedCommissionTeamIds, commissionMember])
+  }, [canScopeManagedTeams, selectedCommissionTeamIds, commissionTeams, syncMembersActiveFilter])
 
   useEffect(() => {
     if (!canScopeManagedTeams || selectedCommissionTeamIds.length === 0) {
@@ -1290,11 +1488,12 @@ export function CustomReportBuilderContent() {
   }, [selectedCommissionTeamIds, commissionTeams, syncTeamsActiveFilter])
 
   useEffect(() => {
-    if (!commissionMember) return
-    const label = commissionMembers.find((member) => member.userId === commissionMember)?.label
-    if (!label) return
-    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_MEMBER, label))
-  }, [commissionMember, commissionMembers])
+    if (selectedCommissionMemberIds.length === 0 || commissionMembers.length === 0) {
+      setActiveFilters((prev) => prev.filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER))
+      return
+    }
+    syncMembersActiveFilter(selectedCommissionMemberIds, commissionMembers)
+  }, [selectedCommissionMemberIds, commissionMembers, syncMembersActiveFilter])
 
   const currentReportQuery = useMemo<AppliedReportQueryState>(
     () => ({
@@ -1305,11 +1504,6 @@ export function CustomReportBuilderContent() {
       metrics: [...selectedMetrics],
       revenueSource: "All",
       metricFilters: [...metricFilters],
-      commissionTeamIds: canScopeManagedTeams
-        ? selectedCommissionTeamIds.length > 0
-          ? [...selectedCommissionTeamIds]
-          : null
-        : null,
     }),
     [
       startDate,
@@ -1318,8 +1512,6 @@ export function CustomReportBuilderContent() {
       selectedParameters,
       selectedMetrics,
       metricFilters,
-      canScopeManagedTeams,
-      selectedCommissionTeamIds,
     ],
   )
 
@@ -1335,7 +1527,6 @@ export function CustomReportBuilderContent() {
         metrics: state.metrics,
         revenueSource: state.revenueSource,
         metricFilters: state.metricFilters,
-        commissionTeamIds: state.commissionTeamIds ? [...state.commissionTeamIds].sort() : null,
       })
 
     return normalize(currentReportQuery) !== normalize(appliedReportQuery)
@@ -1369,8 +1560,6 @@ export function CustomReportBuilderContent() {
     metrics: appliedReportQuery?.metrics ?? [],
     revenueSource: appliedReportQuery?.revenueSource ?? "All",
     metricFilters: appliedReportQuery?.metricFilters ?? [],
-    commissionUsernames: null,
-    commissionTeamIds: appliedReportQuery?.commissionTeamIds ?? null,
     enabled: Boolean(appliedReportQuery) && (appliedReportQuery?.selectedAppIds.length ?? 0) > 0,
   })
 
@@ -1408,7 +1597,7 @@ export function CustomReportBuilderContent() {
     }
   }
 
-  const selectedAppLabels = appsForSelection
+  const selectedAppLabels = appsPoolForSelector
     .filter((a) => selectedApps.includes(a.appId))
     .map((a) => a.displayName || a.name)
 
@@ -1481,7 +1670,6 @@ export function CustomReportBuilderContent() {
       appIds: selectedApps,
       revenueSource: "All",
       metricFilters,
-      commissionUser: canScopeManagedTeams ? commissionMember || null : null,
       commissionTeamIds: canScopeManagedTeams
         ? selectedCommissionTeamIds.length > 0
           ? selectedCommissionTeamIds
@@ -1712,12 +1900,6 @@ export function CustomReportBuilderContent() {
     applySelectedMonth(new Date(yearPart, monthPart - 1, 1))
   }
 
-  const handleCommissionMemberChange = (value: string) => {
-    setCommissionMember(value)
-    const label = commissionMembers.find((member) => member.userId === value)?.label ?? value
-    setActiveFilters((prev) => upsertActiveFilter(prev, FILTER_COMMISSION_MEMBER, label))
-  }
-
   const addMetricFilter = () => {
     const value = Number(draftMetricFilterValue)
     if (!draftMetricFilterMetric || Number.isNaN(value)) return
@@ -1755,7 +1937,7 @@ export function CustomReportBuilderContent() {
   const toggleAppWithFilter = (appId: string) => {
     setSelectedApps((prev) => {
       const next = prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]
-      syncAppsActiveFilter(next, appsForSelection)
+      syncAppsActiveFilter(next, appsPoolForSelector)
       return next
     })
   }
@@ -1810,13 +1992,21 @@ export function CustomReportBuilderContent() {
           : selectedCommissionTeamIds.length === 1
             ? teamLabels[0] ?? "1 team"
             : `${selectedCommissionTeamIds.length} teams`
-    const memberLabel = commissionMembers.find((member) => member.userId === commissionMember)?.label
+    const memberFilterValue =
+      selectedCommissionMemberIds.length === 0
+        ? ""
+        : selectedCommissionMemberIds.length === uniqueCommissionMemberCount
+          ? "All members"
+          : selectedCommissionMemberIds.length === 1
+            ? commissionMembers.find((member) => member.userId === selectedCommissionMemberIds[0])?.label ??
+              "1 member"
+            : `${selectedCommissionMemberIds.length} members`
     const withTeamFilter = teamFilterValue
       ? upsertActiveFilter(nextFilters, FILTER_COMMISSION_TEAM, teamFilterValue)
       : nextFilters
     setActiveFilters(
-      memberLabel
-        ? upsertActiveFilter(withTeamFilter, FILTER_COMMISSION_MEMBER, memberLabel)
+      memberFilterValue
+        ? upsertActiveFilter(withTeamFilter, FILTER_COMMISSION_MEMBER, memberFilterValue)
         : withTeamFilter,
     )
   }
@@ -1836,6 +2026,22 @@ export function CustomReportBuilderContent() {
           ? "All teams"
           : `${selectedCommissionTeamLabels.length} teams`
 
+  const membersTriggerLabel =
+    selectedCommissionTeamIds.length === 0
+      ? "Select teams first"
+      : memberOptionsLoading
+        ? "Loading members..."
+        : uniqueCommissionMemberCount === 0
+          ? "No members found"
+          : selectedCommissionMemberIds.length === 0
+            ? "Select members"
+            : selectedCommissionMemberIds.length === 1
+              ? commissionMembers.find((member) => member.userId === selectedCommissionMemberIds[0])?.label ??
+                "1 member"
+              : selectedCommissionMemberIds.length === uniqueCommissionMemberCount
+                ? "All members"
+                : `${selectedCommissionMemberIds.length} members`
+
   const appsTriggerLabel =
     selectedAppLabels.length === 0
       ? appSelectorDisabled
@@ -1849,7 +2055,7 @@ export function CustomReportBuilderContent() {
             : "Select apps"
       : selectedAppLabels.length === 1
         ? selectedAppLabels[0]
-        : selectedAppLabels.length === appsForSelection.length
+        : selectedAppLabels.length === appsPoolForSelector.length
           ? "All apps"
           : `${selectedAppLabels.length} apps`
 
@@ -2306,135 +2512,198 @@ export function CustomReportBuilderContent() {
     </table>
   )
 
-  const renderAppSelectorList = () => (
-    <Command
-      className={cn(
-        isMobile
-          ? "flex h-full w-full max-w-full min-w-0 flex-col overflow-hidden rounded-none [&_[data-slot=command-input-wrapper]]:max-w-full [&_[data-slot=command-input-wrapper]]:min-w-0"
-          : undefined,
-      )}
-    >
-      <CommandInput
-        placeholder={isMobile ? "Search apps..." : "Search app name, App ID, or Store ID..."}
-        className={cn(isMobile && "min-w-0 shrink-0 truncate")}
-      />
-      <CommandList
+  const renderAppSelectorRow = (app: App, rowKey?: string) => {
+    const primaryLabel = app.displayName || app.name || app.appId
+    const storeId = app.appStoreId?.trim()
+    const secondaryLine =
+      storeId && storeId !== primaryLabel
+        ? storeId
+        : app.appId !== primaryLabel
+          ? app.appId
+          : null
+
+    return (
+      <CommandItem
+        key={rowKey ?? app.appId}
+        value={[
+          app.displayName || "",
+          app.name || "",
+          app.appId || "",
+          app.appStoreId || "",
+        ].join(" ")}
+        onSelect={() => toggleAppWithFilter(app.appId)}
         className={cn(
+          "cursor-pointer overflow-hidden",
           isMobile
-            ? "max-h-none min-h-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto"
-            : "max-h-[300px]",
+            ? "!grid w-full max-w-full min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-2 px-2 py-2"
+            : "min-w-0 w-full",
         )}
       >
-        <CommandEmpty>No apps found.</CommandEmpty>
-        <CommandGroup
+        <Checkbox checked={selectedApps.includes(app.appId)} className="shrink-0" />
+        <Avatar className="h-7 w-7 shrink-0 rounded-lg">
+          {app.iconUri?.trim() ? (
+            <AvatarImage src={app.iconUri.trim()} alt={primaryLabel} className="rounded-lg object-cover" />
+          ) : null}
+          <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-[10px]">
+            {primaryLabel.slice(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 max-w-full overflow-hidden">
+          <p className="truncate text-sm font-medium leading-tight" title={primaryLabel}>
+            {primaryLabel}
+          </p>
+          {isMobile ? (
+            secondaryLine ? (
+              <p className="truncate text-xs leading-tight text-slate-500" title={secondaryLine}>
+                {secondaryLine}
+              </p>
+            ) : null
+          ) : (
+            <>
+              <p className="truncate text-xs leading-tight text-slate-500" title={app.appId}>
+                {app.appId}
+              </p>
+              {storeId ? (
+                <p
+                  className="truncate font-mono text-[11px] leading-tight text-slate-400"
+                  title={storeId}
+                >
+                  {storeId}
+                </p>
+              ) : null}
+            </>
+          )}
+        </div>
+      </CommandItem>
+    )
+  }
+
+  const renderAppSelectorList = () => {
+    const isByUserView = canScopeManagedTeams && appSelectorViewMode === "by_user"
+    const listSearchActive = appListSearch.trim().length > 0
+
+    return (
+      <Command
+        shouldFilter={false}
+        className={cn(
+          isMobile
+            ? "flex h-full w-full max-w-full min-w-0 flex-col overflow-hidden rounded-none [&_[data-slot=command-input-wrapper]]:max-w-full [&_[data-slot=command-input-wrapper]]:min-w-0"
+            : undefined,
+        )}
+      >
+        {canScopeManagedTeams ? (
+          <div className="flex gap-1 border-b border-slate-100 bg-slate-50/80 px-2 py-1.5">
+            <button
+              type="button"
+              className={cn(
+                "flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
+                appSelectorViewMode === "flat"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900",
+              )}
+              onClick={() => setAppSelectorViewMode("flat")}
+            >
+              Flat
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
+                appSelectorViewMode === "by_user"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900",
+              )}
+              onClick={() => setAppSelectorViewMode("by_user")}
+            >
+              Group By User
+            </button>
+          </div>
+        ) : null}
+        <CommandInput
+          value={appListSearch}
+          onValueChange={setAppListSearch}
+          placeholder={isMobile ? "Search apps..." : "Search app name, App ID, or Store ID..."}
+          className={cn(isMobile && "min-w-0 shrink-0 truncate")}
+        />
+        <CommandList
           className={cn(
-            isMobile &&
-              "w-full max-w-full min-w-0 overflow-x-hidden p-0 [&_[cmdk-item]]:max-w-full [&_[cmdk-item]]:min-w-0",
+            isMobile
+              ? "max-h-none min-h-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto"
+              : "max-h-[300px]",
           )}
         >
-          <div className="flex gap-2 border-b border-slate-100 px-2 py-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => {
-                const ids = appsForSelection.map((a) => a.appId)
-                setSelectedApps(ids)
-                syncAppsActiveFilter(ids, appsForSelection)
-              }}
-            >
-              Select all
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => {
-                setSelectedApps([])
-                syncAppsActiveFilter([], appsForSelection)
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-          {selectedCommissionTeamIds.length > 0 &&
-          teamScopeApps !== null &&
-          appsForSelection.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-slate-500">
-              No apps linked to the selected teams.
-            </div>
-          ) : null}
-          {appsForSelection.map((app) => {
-            const primaryLabel = app.displayName || app.name || app.appId
-            const storeId = app.appStoreId?.trim()
-            const secondaryLine =
-              storeId && storeId !== primaryLabel
-                ? storeId
-                : app.appId !== primaryLabel
-                  ? app.appId
-                  : null
-
-            return (
-              <CommandItem
-                key={app.appId}
-                value={[
-                  app.displayName || "",
-                  app.name || "",
-                  app.appId || "",
-                  app.appStoreId || "",
-                ].join(" ")}
-                onSelect={() => toggleAppWithFilter(app.appId)}
-                className={cn(
-                  "cursor-pointer overflow-hidden",
-                  isMobile
-                    ? "!grid w-full max-w-full min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-2 px-2 py-2"
-                    : "min-w-0 w-full",
-                )}
+          <CommandGroup
+            className={cn(
+              isMobile &&
+                "w-full max-w-full min-w-0 overflow-x-hidden p-0 [&_[cmdk-item]]:max-w-full [&_[cmdk-item]]:min-w-0",
+            )}
+          >
+            <div className="flex gap-2 border-b border-slate-100 px-2 py-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  const ids = appsPoolForSelector.map((a) => a.appId)
+                  setSelectedApps(ids)
+                  syncAppsActiveFilter(ids, appsPoolForSelector)
+                }}
               >
-                <Checkbox checked={selectedApps.includes(app.appId)} className="shrink-0" />
-                <Avatar className="h-7 w-7 shrink-0 rounded-lg">
-                  <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-[10px]">
-                    {(app.displayName || app.name || app.appId).slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 max-w-full overflow-hidden">
-                  <p className="truncate text-sm font-medium leading-tight" title={primaryLabel}>
-                    {primaryLabel}
-                  </p>
-                  {isMobile ? (
-                    secondaryLine ? (
-                      <p
-                        className="truncate text-xs leading-tight text-slate-500"
-                        title={secondaryLine}
-                      >
-                        {secondaryLine}
-                      </p>
-                    ) : null
-                  ) : (
-                    <>
-                      <p className="truncate text-xs leading-tight text-slate-500" title={app.appId}>
-                        {app.appId}
-                      </p>
-                      {storeId ? (
-                        <p
-                          className="truncate font-mono text-[11px] leading-tight text-slate-400"
-                          title={storeId}
-                        >
-                          {storeId}
-                        </p>
-                      ) : null}
-                    </>
-                  )}
+                Select all
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setSelectedApps([])
+                  syncAppsActiveFilter([], appsPoolForSelector)
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+            {isByUserView ? (
+              selectedCommissionMemberIds.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-slate-500">Select team members first.</div>
+              ) : userAppsLoading ? (
+                <div className="px-3 py-4 text-sm text-slate-500">Loading apps by user…</div>
+              ) : userAppsError ? (
+                <div className="px-3 py-4 text-sm text-red-600">{userAppsError}</div>
+              ) : listSearchActive && filteredUserAppGroups.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-slate-500">No apps match your search.</div>
+              ) : userAppGroups.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-slate-500">
+                  No permitted apps for the selected members.
                 </div>
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  )
+              ) : (
+                filteredUserAppGroups.map((group) => (
+                  <div key={group.userId} className="pb-1">
+                    <div className="sticky top-0 z-[1] bg-white px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {group.userLabel}
+                    </div>
+                    {group.apps.map((app) => renderAppSelectorRow(app, `${group.userId}-${app.appId}`))}
+                  </div>
+                ))
+              )
+            ) : selectedCommissionTeamIds.length > 0 &&
+              teamScopeApps !== null &&
+              appsForSelection.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-slate-500">
+                No apps linked to the selected teams.
+              </div>
+            ) : listSearchActive && filteredFlatApps.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-slate-500">No apps match your search.</div>
+            ) : (
+              filteredFlatApps.map((app) => renderAppSelectorRow(app))
+            )}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    )
+  }
 
   const renderAppSelectorTrigger = (options?: { toggleOnClick?: boolean }) => (
     <Button
@@ -2648,33 +2917,21 @@ export function CustomReportBuilderContent() {
                       popoverModal={isMobile ? false : undefined}
                       popoverClassName={cn("w-[320px] p-0", isMobile && "z-[100]")}
                     />
-    
-                    <div className="hidden">
-                      <Select value={commissionMember} onValueChange={handleCommissionMemberChange}>
-                        <SelectTrigger
-                          className="w-64 h-10 bg-white"
-                          disabled={
-                            selectedCommissionTeamIds.length !== 1 ||
-                            commissionMembers.length === 0 ||
-                            memberOptionsLoading
-                          }
-                        >
-                          <SelectValue placeholder={memberOptionsLoading ? "Loading team members..." : "Select team member"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {commissionMembers.map((member) => (
-                            <SelectItem key={member.userId} value={member.userId}>
-                              {member.label}
-                            </SelectItem>
-                          ))}
-                          {!memberOptionsLoading && commissionMembers.length === 0 ? (
-                            <div className="px-2 py-2 text-sm text-slate-500">
-                              No team members found
-                            </div>
-                          ) : null}
-                        </SelectContent>
-                      </Select>
-                    </div>
+
+                    <GroupedMemberMultiSelect
+                      sections={commissionMemberGroupSections}
+                      selectedMemberIds={selectedCommissionMemberIds}
+                      onSelectedMemberIdsChange={handleCommissionMemberIdsChange}
+                      disabled={selectedCommissionTeamIds.length === 0}
+                      loading={memberOptionsLoading}
+                      triggerLabel={membersTriggerLabel}
+                      showUserIcon
+                      placeholder="Select members"
+                      emptyMembersMessage="No members in selected teams"
+                      triggerClassName="w-full max-w-none sm:min-w-[11rem] sm:max-w-[280px]"
+                      popoverModal={isMobile ? false : undefined}
+                      popoverClassName={cn("w-[320px] p-0", isMobile && "z-[100]")}
+                    />
                   </>
                 )}
     

@@ -13,9 +13,6 @@ export function useCustomReportQuery(options: {
   metrics: string[]
   revenueSource: string
   metricFilters?: CustomReportMetricFilter[]
-  commissionUsernames?: string[] | null
-  commissionTeamId?: string | null
-  commissionTeamIds?: string[] | null
   enabled?: boolean
 }) {
   const {
@@ -26,8 +23,6 @@ export function useCustomReportQuery(options: {
     metrics,
     revenueSource,
     metricFilters = [],
-    commissionTeamId = null,
-    commissionTeamIds = null,
     enabled = true,
   } = options
 
@@ -40,7 +35,6 @@ export function useCustomReportQuery(options: {
   const dimensionsKey = [...dimensions].sort().join(",")
   const metricsKey = [...metrics].sort().join(",")
   const metricFiltersKey = JSON.stringify(metricFilters)
-  const commissionTeamIdsKey = (commissionTeamIds ?? []).join(",")
 
   useEffect(() => {
     if (!enabled || dimensions.length === 0 || metrics.length === 0 || selectedAppIds.length === 0) {
@@ -64,10 +58,6 @@ export function useCustomReportQuery(options: {
           metrics: metricsKey ? metricsKey.split(",") : [],
           revenueSource,
           metricFilters,
-          commissionTeamId:
-            commissionTeamIds && commissionTeamIds.length > 0 ? null : commissionTeamId,
-          commissionTeamIds:
-            commissionTeamIds && commissionTeamIds.length > 0 ? commissionTeamIds : null,
         })
         if (reqId !== requestIdRef.current) return
         setData(result)
@@ -89,8 +79,6 @@ export function useCustomReportQuery(options: {
     dimensionsKey,
     metricsKey,
     metricFiltersKey,
-    commissionTeamId,
-    commissionTeamIdsKey,
     revenueSource,
   ])
 
