@@ -49,6 +49,7 @@ import {
   ChevronRight,
   Loader2,
   Pencil,
+  Copy,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -214,6 +215,22 @@ export function RequestListContent() {
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Request action failed."
       toast({ title: "Action failed", description: message, variant: "destructive" })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleDuplicate = async (request: MetaCampaignRequestListItemDto) => {
+    try {
+      setActionLoading(true)
+      const duplicated = await metaRequestsApi.duplicate(request.id)
+      invalidateCache(`meta-requests:list:${statusFilter}:${appFilter}:${accountFilter}`)
+      invalidateCache(`meta-request:${duplicated.id}`)
+      toast({ title: "Request duplicated", description: `${formatMetaRequestId(duplicated.id)} is ready to edit.` })
+      router.push(`/meta-ads/requests/${duplicated.id}/edit`)
+    } catch (apiError) {
+      const message = apiError instanceof Error ? apiError.message : "Unable to duplicate this request."
+      toast({ title: "Duplicate failed", description: message, variant: "destructive" })
     } finally {
       setActionLoading(false)
     }
@@ -402,6 +419,17 @@ export function RequestListContent() {
                             Edit Request
                           </DropdownMenuItem>
                         ) : null}
+                        {canCreate && request.status === "completed" ? (
+                          <DropdownMenuItem
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void handleDuplicate(request)
+                            }}
+                          >
+                            <Copy className="w-4 h-4 mr-2" />
+                            Duplicate
+                          </DropdownMenuItem>
+                        ) : null}
 
                         {request.status === "approved" && canExecute ? (
                           <DropdownMenuItem
@@ -463,4 +491,3 @@ export function RequestListContent() {
     </div>
   )
 }
-

@@ -162,6 +162,17 @@ function hasSelectedFlexibleAssetMedia(asset: RequestFormState["flexibleAssets"]
     : hasSelectedAssetMedia(asset.image, "image")
 }
 
+function getEditableCreativeTypePatch(originalType?: string | null): Partial<AdVariantFormState> {
+  const normalized = (originalType || "SINGLE_IMAGE").trim().toUpperCase()
+  if (normalized === "SINGLE_VIDEO") {
+    return { creativeType: "SINGLE_MEDIA", mediaType: "VIDEO" }
+  }
+  if (normalized === "SINGLE_IMAGE") {
+    return { creativeType: "SINGLE_MEDIA", mediaType: "IMAGE" }
+  }
+  return { creativeType: normalized as AdVariantFormState["creativeType"] }
+}
+
 function getExistingPostOptionLabel(post: MetaFacebookPostReferenceDto) {
   const primaryText = (post.message?.trim() || post.story?.trim() || post.id).replace(/\s+/g, " ")
   return primaryText.length > 72 ? `${primaryText.slice(0, 72)}...` : primaryText
@@ -216,6 +227,10 @@ function createEmptyAdVariantForSection(seq: number, form: Pick<RequestFormState
     playableLeadInVideo: createEmptyMediaSelection("meta_ref"),
     playableThumbnail: createEmptyMediaSelection("meta_ref"),
     existingPostId: "",
+    existingCreativeExternalId: "",
+    existingCreativeSourceMetaCreativeId: null,
+    existingCreativeName: "",
+    existingCreativeOriginalType: "",
     adName: "",
     trackingSpecs: "",
     advantageCreativeAllOptimizations: true,
@@ -1291,6 +1306,14 @@ export function CreativeSection({
     onChange({ flexibleAssets: nextAssets })
   }
 
+  const handleEditExistingCreative = () => {
+    onChange(getEditableCreativeTypePatch(form.existingCreativeOriginalType) as Partial<RequestFormState>)
+  }
+
+  const handleEditExistingVariantCreative = (variant: AdVariantFormState) => {
+    onUpdateAdditionalVariant?.(variant.sequenceNumber, getEditableCreativeTypePatch(variant.existingCreativeOriginalType))
+  }
+
   return (
     <>
     <Card className="border-slate-200">
@@ -1360,6 +1383,7 @@ export function CreativeSection({
                     <SelectItem value="CAROUSEL_IMAGE">Carousel</SelectItem>
                     <SelectItem value="FLEXIBLE">Flexible ad</SelectItem>
                     <SelectItem value="EXISTING_POST">Existing Post</SelectItem>
+                    <SelectItem value="EXISTING_CREATIVE" disabled>Reused Creative</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1516,7 +1540,7 @@ export function CreativeSection({
               </div>
             </div>
 
-            {form.creativeType !== "EXISTING_POST" && (
+            {form.creativeType !== "EXISTING_POST" && form.creativeType !== "EXISTING_CREATIVE" && (
               <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 p-4 space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2.5">
@@ -1739,8 +1763,36 @@ export function CreativeSection({
                 <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
                 <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible ad</TabsTrigger>
                 <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
+                <TabsTrigger value="EXISTING_CREATIVE" disabled className="text-xs px-3 data-[state=active]:bg-white"><Copy className="w-3.5 h-3.5 mr-1.5" />Reused</TabsTrigger>
                 <TabsTrigger value="PLAYABLE" className="text-xs px-3 data-[state=active]:bg-white"><Video className="w-3.5 h-3.5 mr-1.5" />Playable</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="EXISTING_CREATIVE" className="mt-4">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Reused creative</Badge>
+                        {form.existingCreativeOriginalType ? (
+                          <Badge variant="outline" className="font-mono text-[10px] text-slate-600">{form.existingCreativeOriginalType}</Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-sm font-semibold text-slate-900 truncate">
+                        {form.existingCreativeName || form.creativeName || "Existing Meta creative"}
+                      </p>
+                      <p className="font-mono text-xs text-slate-600 truncate">
+                        {form.existingCreativeExternalId || "No creative id"}
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={handleEditExistingCreative}>
+                      Edit creative
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    This draft will reuse the existing Meta creative when executed. Editing creative content switches this variant to create a new creative with the same prepared assets.
+                  </p>
+                </div>
+              </TabsContent>
 
               <TabsContent value="SINGLE_MEDIA" className="mt-4 space-y-4">
                 {hasMultipleSingleTexts && (
@@ -1865,6 +1917,49 @@ export function CreativeSection({
                       }
                     })(),
                     ...additionalVariants.map((variant) => {
+                      if (variant.creativeType === "EXISTING_CREATIVE") {
+                        const originalType = (variant.existingCreativeOriginalType || "SINGLE_IMAGE").trim().toUpperCase()
+                        const imgPreview = getSelectionPreviewSource(variant.singleImageImage)
+                        const thumbPreview = getSelectionPreviewSource(variant.singleVideoThumbnail)
+                        const videoPreview = getSelectionPreviewSource(variant.singleVideoVideo)
+                        const isVideo = originalType === "SINGLE_VIDEO"
+                        const previewUrl = isVideo ? (thumbPreview.url || videoPreview.url) : imgPreview.url
+                        const previewRequiresAuth = isVideo ? (thumbPreview.url ? thumbPreview.requiresAuth : videoPreview.requiresAuth) : imgPreview.requiresAuth
+                        return {
+                          key: `variant-${variant.sequenceNumber}`,
+                          sequenceNumber: variant.sequenceNumber,
+                          previewUrl,
+                          previewRequiresAuth,
+                          isComplete: !!variant.existingCreativeExternalId,
+                          editor: (
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Reused creative</Badge>
+                                    {variant.existingCreativeOriginalType ? (
+                                      <Badge variant="outline" className="font-mono text-[10px] text-slate-600">{variant.existingCreativeOriginalType}</Badge>
+                                    ) : null}
+                                  </div>
+                                  <p className="text-sm font-semibold text-slate-900 truncate">
+                                    {variant.existingCreativeName || variant.creativeName || "Existing Meta creative"}
+                                  </p>
+                                  <p className="font-mono text-xs text-slate-600 truncate">
+                                    {variant.existingCreativeExternalId || "No creative id"}
+                                  </p>
+                                </div>
+                                <Button type="button" variant="outline" size="sm" onClick={() => handleEditExistingVariantCreative(variant)}>
+                                  Edit creative
+                                </Button>
+                              </div>
+                              <p className="text-xs text-slate-600">
+                                This variation will reuse the existing Meta creative when executed. Editing creative content switches only this variation to create a new creative with the same prepared assets.
+                              </p>
+                            </div>
+                          ),
+                        }
+                      }
+
                       const imgPreview = getSelectionPreviewSource(variant.singleImageImage)
                       const thumbPreview = getSelectionPreviewSource(variant.singleVideoThumbnail)
                       const videoPreview = getSelectionPreviewSource(variant.singleVideoVideo)
@@ -2437,7 +2532,7 @@ export function CreativeSection({
                       alt="Creative preview"
                       className="w-full h-full object-cover rounded"
                     />
-                  ) : (form.creativeType === "SINGLE_VIDEO" || (form.creativeType === "SINGLE_MEDIA" && form.mediaType === "VIDEO")) ? <Video className="w-6 h-6 text-slate-300" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-slate-300" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
+                  ) : form.creativeType === "EXISTING_CREATIVE" ? <Copy className="w-6 h-6 text-slate-300" /> : (form.creativeType === "SINGLE_VIDEO" || (form.creativeType === "SINGLE_MEDIA" && form.mediaType === "VIDEO")) ? <Video className="w-6 h-6 text-slate-300" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-slate-300" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-semibold text-slate-900 leading-tight line-clamp-2">{getPreviewHeadline(form) || "Creative headline"}</p>
@@ -3783,6 +3878,13 @@ function getCreativeCompletion(form: RequestFormState) {
     ]
     return { complete: items.every((item) => item.ok), items }
   }
+  if (form.creativeType === "EXISTING_CREATIVE") {
+    const items = [
+      { label: "Creative name", ok: !!form.creativeName },
+      { label: "Existing creative ID", ok: !!form.existingCreativeExternalId },
+    ]
+    return { complete: items.every((item) => item.ok), items }
+  }
   if (form.creativeType === "EXISTING_POST") {
     const items = [
       { label: "Creative name", ok: !!form.creativeName },
@@ -3839,6 +3941,7 @@ function getPreviewImage(form: RequestFormState): { url: string; requiresAuth: b
     if (!firstAsset) return { url: "", requiresAuth: false }
     return firstAsset.assetType === "VIDEO" ? getSelectionPreviewSource(firstAsset.thumbnail) : getSelectionPreviewSource(firstAsset.image)
   }
+  if (form.creativeType === "EXISTING_CREATIVE") return { url: "", requiresAuth: false }
   if (form.creativeType === "PLAYABLE") return getSelectionPreviewSource(form.playableThumbnail)
   return getSelectionPreviewSource(form.singleImageImage)
 }
@@ -3848,6 +3951,7 @@ function getPreviewHeadline(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoHeadlines, form.singleVideoHeadline)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselCards[0]?.headline || ""
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexibleHeadlines)
+  if (form.creativeType === "EXISTING_CREATIVE") return form.existingCreativeName || form.existingCreativeExternalId || "Reused Meta creative"
   if (form.creativeType === "EXISTING_POST") return form.existingPostId ? `Existing Post ${form.existingPostId}` : "Existing post preview"
   if (form.creativeType === "PLAYABLE") return getFirstFilledVariation(form.playableHeadlines, form.playableHeadline)
   return getFirstFilledVariation(form.singleImageHeadlines, form.singleImageHeadline)
@@ -3858,6 +3962,7 @@ function getPreviewMessage(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return getFirstFilledVariation(form.singleVideoPrimaryTexts, form.singleVideoPrimaryText)
   if (form.creativeType === "CAROUSEL_IMAGE") return form.carouselPrimaryText || `${form.carouselCards.length} carousel cards`
   if (form.creativeType === "FLEXIBLE") return getFirstFilledVariation(form.flexiblePrimaryTexts) || `${form.flexibleAssets.length} flexible assets`
+  if (form.creativeType === "EXISTING_CREATIVE") return form.existingCreativeExternalId ? `Reuses creative ${form.existingCreativeExternalId}` : "Reuses an existing Meta creative."
   if (form.creativeType === "EXISTING_POST") return "Existing post preview will be resolved from Meta post at execution time."
   if (form.creativeType === "PLAYABLE") return getFirstFilledVariation(form.playablePrimaryTexts, form.playablePrimaryText)
   return getFirstFilledVariation(form.singleImagePrimaryTexts, form.singleImagePrimaryText)
@@ -3868,6 +3973,7 @@ function getPreviewCta(form: RequestFormState): string {
   if (form.creativeType === "SINGLE_VIDEO") return formatCta(form.singleVideoCallToAction)
   if (form.creativeType === "CAROUSEL_IMAGE") return formatCta(form.carouselCallToAction)
   if (form.creativeType === "FLEXIBLE") return formatCta(form.flexibleCallToAction)
+  if (form.creativeType === "EXISTING_CREATIVE") return "REUSE CREATIVE"
   if (form.creativeType === "EXISTING_POST") return "OPEN POST"
   if (form.creativeType === "PLAYABLE") return formatCta(form.playableCallToAction)
   return formatCta(form.singleImageCallToAction)

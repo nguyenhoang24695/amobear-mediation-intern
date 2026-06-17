@@ -4,6 +4,7 @@ import type {
   CreateMetaAppCustomEventDto,
   CreateMetaAppMappingRequestDto,
   CreateMetaCampaignRequestDto,
+  CreateMetaCampaignRequestTemplateDto,
   CreateMetaIntegrationRequestDto,
   ExecuteMetaCampaignRequestDto,
   MetaAdAccountDto,
@@ -28,6 +29,7 @@ import type {
   MetaCampaignStatusUpdateResultDto,
   MetaCampaignRequestDetailDto,
   MetaCampaignRequestListItemDto,
+  MetaCampaignRequestTemplateDto,
   MetaAssetPreparationResponseDto,
   MetaCampaignBreakdownPageDto,
   MetaInsightsDailyDto,
@@ -70,6 +72,7 @@ const AUTH_PREFIX = "/api/v1/meta-auth"
 const ACCOUNTS_PREFIX = "/api/v1/meta-accounts"
 const REFERENCE_PREFIX = "/api/v1/meta-reference"
 const REQUESTS_PREFIX = "/api/v1/meta-campaign-requests"
+const REQUEST_TEMPLATES_PREFIX = "/api/v1/meta-campaign-request-templates"
 const CAMPAIGNS_PREFIX = "/api/v1/meta-campaigns"
 const INSIGHTS_PREFIX = "/api/v1/meta-insights"
 
@@ -88,6 +91,10 @@ export const metaRequestsApi = {
 
   update: async (id: number, request: UpdateMetaCampaignRequestDto) => {
     return apiClient.put<MetaCampaignRequestDetailDto>(`${REQUESTS_PREFIX}/${id}`, request)
+  },
+
+  duplicate: async (id: number) => {
+    return apiClient.post<MetaCampaignRequestDetailDto>(`${REQUESTS_PREFIX}/${id}/duplicate`, {})
   },
 
   validate: async (id: number) => {
@@ -146,6 +153,18 @@ export const metaRequestsApi = {
 
   queueAssetPreparation: async (id: number) => {
     return apiClient.post<MetaAssetPreparationResponseDto>(`${REQUESTS_PREFIX}/${id}/asset-preparation/queue`, {})
+  },
+
+  listTemplates: async () => {
+    return apiClient.get<MetaCampaignRequestTemplateDto[]>(REQUEST_TEMPLATES_PREFIX)
+  },
+
+  createTemplate: async (request: CreateMetaCampaignRequestTemplateDto) => {
+    return apiClient.post<MetaCampaignRequestTemplateDto>(REQUEST_TEMPLATES_PREFIX, request)
+  },
+
+  deleteTemplate: async (id: number) => {
+    return apiClient.delete<void>(`${REQUEST_TEMPLATES_PREFIX}/${id}`)
   },
 
   retryAssetMetaUpload: async (assetId: number, metaAdAccountId: number, integrationId?: number | null) => {
