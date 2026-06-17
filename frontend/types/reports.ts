@@ -6,9 +6,6 @@ export interface CustomReportQueryRequest {
   metrics: string[]
   revenueSource: string
   metricFilters?: CustomReportMetricFilter[]
-  commissionUsernames?: string[] | null
-  commissionTeamId?: string | null
-  commissionTeamIds?: string[] | null
   sortBy?: string | null
   sortDir?: string
   iapRevenueModeDefault?: number | null
@@ -28,7 +25,6 @@ export interface CustomReportQueryMeta {
   dimensions: string[]
   metrics: string[]
   revenueSource: string
-  commissionUsernames?: string[] | null
   appIds: string[]
 }
 

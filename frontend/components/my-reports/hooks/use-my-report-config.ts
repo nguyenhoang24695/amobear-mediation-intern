@@ -204,8 +204,6 @@ export function buildMyReportQueryRequest(
     dimensions: config.dimensions,
     metrics: config.metrics,
     revenueSource: config.revenueSource,
-    commissionTeamIds:
-      config.selectedCommissionTeamIds.length > 0 ? config.selectedCommissionTeamIds : null,
     sortBy: config.sortBy,
     sortDir: config.sortDir,
     iapRevenueModeDefault: config.iapRevenueMode,

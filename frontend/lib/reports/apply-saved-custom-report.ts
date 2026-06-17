@@ -21,7 +21,7 @@ export interface ApplySavedCustomReportOptions {
   setSelectedApps: (ids: string[]) => void
   setMetricFilters: (filters: CustomReportSaved["filters"]["metricFilters"]) => void
   setSelectedCommissionTeamIds?: (ids: string[]) => void
-  setCommissionMember?: (value: string) => void
+  restoreCommissionMembersFromReport?: (filters: CustomReportSaved["filters"]) => void
   setSortColumn: (column: string) => void
   setSortDirection: (dir: "asc" | "desc") => void
   setDateFilterMode: (mode: DateFilterMode) => void
@@ -62,7 +62,7 @@ export function applySavedCustomReport(options: ApplySavedCustomReportOptions) {
     filters.commissionTeamIds?.filter(Boolean) ??
     (filters.commissionTeamId ? [filters.commissionTeamId] : [])
   options.setSelectedCommissionTeamIds?.(savedTeamIds)
-  options.setCommissionMember?.(filters.commissionUser ?? "")
+  options.restoreCommissionMembersFromReport?.(filters)
   options.setSortColumn(filters.sortBy ?? "date")
   options.setSortDirection(filters.sortDir === "asc" ? "asc" : "desc")
 
