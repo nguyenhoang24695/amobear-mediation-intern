@@ -3,6 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +34,7 @@ import { invalidateCache, useApi } from "@/hooks/use-api"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { metaIntegrationsApi, metaReferenceApi, metaRequestsApi } from "@/lib/api/meta-ads"
 import {
+  applyTemplateToForm,
   createEmptyCarouselCard,
   createEmptyFlexibleAsset,
   createEmptyMediaSelection,
@@ -25,6 +42,8 @@ import {
   formStateToCreateDto,
   formStateToUpdateDto,
   groupValidationErrors,
+  parseTemplateSettings,
+  pickTemplateableFields,
 } from "@/lib/meta-ads/mappers"
 import type {
   AdVariantFormState,
@@ -38,12 +57,13 @@ import type {
   GeoCountryGroupDto,
   MetaGeoRegionDto,
   MetaIntegrationDto,
+  MetaCampaignRequestTemplateDto,
   MetaRequestAssetSelectionState,
   MetaPerformanceGoalReferenceDto,
   MetaRequestFormState,
   MetaRequestStatus,
 } from "@/types/meta-ads"
-import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react"
+import { AlertTriangle, ChevronRight, Loader2, Save, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { getAllowedBillingEvents, getAllowedBidStrategies, getAllowedPerformanceGoalTypes, getAllowedPerformanceGoalsForBidStrategy, bidStrategyRequiresBidAmount, bidStrategyRequiresRoasGoal, resolveOptimizationGoal } from "./constants"
 import { AccountAppSection } from "./section-account-app"
@@ -499,6 +519,58 @@ function deriveTokenState(input: {
   }
 }
 
+function getTemplateSettings(template: MetaCampaignRequestTemplateDto | null | undefined): Partial<RequestFormState> {
+  if (!template) return {}
+  return template.settings ?? parseTemplateSettings(template.settingsJson)
+}
+
+function summarizeTemplateSettings(settings: Partial<RequestFormState>): string {
+  const pieces: string[] = []
+  if (settings.campaignObjective) pieces.push(settings.campaignObjective.replaceAll("_", " "))
+  if (settings.budgetStrategy) {
+    const budget = settings.budgetStrategy === "CBO"
+      ? settings.campaignDailyBudget || settings.campaignLifetimeBudget
+      : settings.adSetDailyBudget || settings.adSetLifetimeBudget
+    pieces.push(`${settings.budgetStrategy}${budget ? ` ${budget}` : ""}`)
+  }
+  if (settings.bidStrategy) pieces.push(settings.bidStrategy.replaceAll("_", " "))
+  if (settings.performanceGoalType) pieces.push(`Goal: ${settings.performanceGoalType.replaceAll("_", " ")}`)
+  if (settings.geoMode) {
+    const geoCount = settings.geoMode === "COUNTRY"
+      ? settings.countries?.length ?? 0
+      : settings.geoMode === "REGION"
+        ? settings.regionKeys?.length ?? 0
+        : settings.geoMode === "COUNTRY_GROUP"
+          ? settings.countryGroupIds?.length ?? 0
+          : settings.geoMode === "CITY"
+            ? settings.cityTargets?.length ?? 0
+            : 0
+    pieces.push(settings.geoMode === "GLOBAL" ? "Global" : `${settings.geoMode.replaceAll("_", " ")} ${geoCount || ""}`.trim())
+  }
+  if (settings.creativeType) pieces.push(`Creative: ${settings.creativeType.replaceAll("_", " ")}`)
+  return pieces.filter(Boolean).slice(0, 6).join(" · ") || "No summary available"
+}
+
+function templateBindingStillValid(settings: Partial<RequestFormState>, referenceData?: MetaCreateCampaignReferenceDto | null): boolean {
+  const integrationId = settings.executionIntegrationId ? Number(settings.executionIntegrationId) : null
+  const accountId = settings.adAccountId ? Number(settings.adAccountId) : null
+  const bindingId = settings.paidMediaAppBindingId ? Number(settings.paidMediaAppBindingId) : null
+
+  if (!integrationId && !accountId && !bindingId) return true
+  if (!referenceData) return false
+
+  if (integrationId && accountId) {
+    const account = referenceData.adAccounts.find((item) => item.id === accountId && item.isActive)
+    if (!account) return false
+    const hasAccess = (account.accessibleIntegrations ?? []).some((access) => access.integrationId === integrationId && access.canManage)
+    if (!hasAccess) return false
+  } else if (integrationId || accountId) {
+    return false
+  }
+
+  if (bindingId && !referenceData.appMappings.some((mapping) => mapping.id === bindingId && mapping.isActive)) return false
+  return true
+}
 interface Props {
   requestId?: number
 }
@@ -521,6 +593,12 @@ export function CreateRequestContent({ requestId }: Props) {
   const [submitOpen, setSubmitOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<GroupedValidationErrors>({})
+  const [lastValidationPassed, setLastValidationPassed] = useState(false)
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [loadedRequestId, setLoadedRequestId] = useState<number | null>(null)
   const [facebookPageSource, setFacebookPageSource] = useState<"promote_pages" | "access_token_all">("promote_pages")
@@ -554,6 +632,16 @@ export function CreateRequestContent({ requestId }: Props) {
     }
   )
 
+  const templateCacheKey = `meta-request-templates:list:${currentUser?.id ?? "anonymous"}`
+  const {
+    data: requestTemplates,
+    loading: templatesLoading,
+    error: templatesError,
+    refetch: refetchRequestTemplates,
+  } = useApi<MetaCampaignRequestTemplateDto[]>(
+    () => metaRequestsApi.listTemplates(),
+    { cacheKey: templateCacheKey }
+  )
   const { data: integrations } = useApi<MetaIntegrationDto[]>(
     () => metaIntegrationsApi.list(),
     {
@@ -723,6 +811,12 @@ export function CreateRequestContent({ requestId }: Props) {
   const hasExistingCreativeReuse = form.creativeType === "EXISTING_CREATIVE"
     || (form.additionalVariants ?? []).some((variant) => variant.creativeType === "EXISTING_CREATIVE")
 
+  const selectedTemplate = useMemo(
+    () => (requestTemplates ?? []).find((template) => template.id.toString() === selectedTemplateId) ?? null,
+    [requestTemplates, selectedTemplateId]
+  )
+  const selectedTemplateSettings = useMemo(() => getTemplateSettings(selectedTemplate), [selectedTemplate])
+  const selectedTemplateSummary = useMemo(() => summarizeTemplateSettings(selectedTemplateSettings), [selectedTemplateSettings])
   useEffect(() => {
     const skanEligible = form.campaignObjective.trim().toUpperCase() === "OUTCOME_APP_PROMOTION"
       && !!form.paidMediaAppBindingId
@@ -876,6 +970,7 @@ export function CreateRequestContent({ requestId }: Props) {
       return sanitizeRequestFormState(normalizedNext)
     })
 
+    setLastValidationPassed(false)
     setIsDirty(true)
   }
 
@@ -1119,6 +1214,7 @@ export function CreateRequestContent({ requestId }: Props) {
     setServerStatus(statusDetail.status)
     setIdempotencyKey(statusDetail.idempotencyKey || idempotencyKey)
     setValidationErrors(parseValidationErrorsJson(statusDetail.validationErrorsJson))
+    setLastValidationPassed(!statusDetail.validationErrorsJson)
     setIsDirty(false)
   }
 
@@ -1210,6 +1306,66 @@ export function CreateRequestContent({ requestId }: Props) {
     }
   }
 
+  const handleSaveTemplate = async () => {
+    const name = templateName.trim()
+    if (!name) {
+      toast({ title: "Template name is required", variant: "destructive" })
+      return
+    }
+
+    try {
+      setSavingTemplate(true)
+      const created = await metaRequestsApi.createTemplate({
+        name,
+        settingsJson: JSON.stringify(pickTemplateableFields(form)),
+      })
+      invalidateCache(templateCacheKey)
+      await refetchRequestTemplates(() => Promise.resolve([created, ...(requestTemplates ?? [])]))
+      setSelectedTemplateId(created.id.toString())
+      setTemplateName("")
+      setTemplateDialogOpen(false)
+      toast({ title: "Template saved", description: "Your current validated settings were saved." })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save template."
+      toast({ title: "Save template failed", description: message, variant: "destructive" })
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
+
+  const handleApplyTemplate = () => {
+    if (!selectedTemplate) return
+    const settings = getTemplateSettings(selectedTemplate)
+    const bindingStillValid = templateBindingStillValid(settings, referenceData)
+    const applied = applyTemplateToForm(form, settings, { bindingStillValid })
+    setForm(sanitizeRequestFormState(applied))
+    setLastValidationPassed(false)
+    setIsDirty(true)
+    toast({
+      title: "Template applied",
+      description: bindingStillValid
+        ? "Settings were applied. Please validate the request again."
+        : "Settings were applied, but old account/app binding was skipped. Please validate again.",
+    })
+  }
+
+  const handleDeleteTemplate = async () => {
+    if (!selectedTemplate) return
+    try {
+      setDeletingTemplateId(selectedTemplate.id)
+      await metaRequestsApi.deleteTemplate(selectedTemplate.id)
+      const remaining = (requestTemplates ?? []).filter((template) => template.id !== selectedTemplate.id)
+      invalidateCache(templateCacheKey)
+      await refetchRequestTemplates(() => Promise.resolve(remaining))
+      setSelectedTemplateId("")
+      toast({ title: "Template deleted" })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete template."
+      toast({ title: "Delete template failed", description: message, variant: "destructive" })
+    } finally {
+      setDeletingTemplateId(null)
+    }
+  }
   const handleValidate = async () => {
     try {
       setValidating(true)
@@ -1224,6 +1380,7 @@ export function CreateRequestContent({ requestId }: Props) {
       const groupedErrors = groupValidationErrors(result.errors)
       setValidationErrors(groupedErrors)
       invalidateCache(`meta-request:${currentDraftId}`)
+      setLastValidationPassed(result.isValid)
 
       if (result.isValid) {
         toast({ title: "Validation passed", description: "Request is ready to submit for approval." })
@@ -1231,6 +1388,7 @@ export function CreateRequestContent({ requestId }: Props) {
         toast({ title: "Validation failed", description: "Please fix the validation issues before submitting.", variant: "destructive" })
       }
     } catch (apiError) {
+      setLastValidationPassed(false)
       const message = apiError instanceof Error ? apiError.message : "Validation failed."
       toast({ title: "Validation failed", description: message, variant: "destructive" })
     } finally {
@@ -1312,6 +1470,16 @@ export function CreateRequestContent({ requestId }: Props) {
           <Button variant="outline" size="sm" onClick={() => void handleValidate()} disabled={validating || referenceLoading || editLoading}>
             {validating ? "Validating..." : "Validate"}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTemplateDialogOpen(true)}
+            disabled={!lastValidationPassed || saving || validating || referenceLoading || editLoading}
+            title={!lastValidationPassed ? "Validate successfully before saving a template" : "Save current settings as template"}
+          >
+            <Save className="w-3.5 h-3.5 mr-1.5" />
+            Save as Template
+          </Button>
           {showSubmitButton ? (
             <Button
               size="sm"
@@ -1342,6 +1510,54 @@ export function CreateRequestContent({ requestId }: Props) {
       </div>
       <div className="flex gap-5 items-start">
         <div className="flex-1 min-w-0 space-y-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Apply template</label>
+                  {templatesError ? <span className="text-xs text-red-600">{templatesError.message}</span> : null}
+                </div>
+                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId} disabled={templatesLoading || (requestTemplates ?? []).length === 0}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder={templatesLoading ? "Loading templates..." : (requestTemplates ?? []).length === 0 ? "No saved templates" : "Choose a template"} />
+                  </SelectTrigger>
+                  <SelectContent className="max-w-xl">
+                    {(requestTemplates ?? []).map((template) => {
+                      const settings = getTemplateSettings(template)
+                      return (
+                        <SelectItem key={template.id} value={template.id.toString()}>
+                          <span className="flex flex-col items-start gap-0.5 py-0.5">
+                            <span className="font-medium text-slate-900">{template.name}</span>
+                            <span className="max-w-[28rem] truncate text-xs text-slate-500">{summarizeTemplateSettings(settings)}</span>
+                          </span>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                {selectedTemplate ? (
+                  <p className="mt-2 text-xs text-slate-500">{selectedTemplateSummary}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-400">Only templates created by your user are listed here.</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleApplyTemplate} disabled={!selectedTemplate}>
+                  Apply
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => void handleDeleteTemplate()}
+                  disabled={!selectedTemplate || deletingTemplateId === selectedTemplate?.id}
+                  title="Delete selected template"
+                >
+                  {deletingTemplateId === selectedTemplate?.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
           <div id={requestSectionIds["account-app"]} className={getSectionWrapperClass("account-app", highlightedSection)}>
             <AccountAppSection
               form={form}
@@ -1442,6 +1658,33 @@ export function CreateRequestContent({ requestId }: Props) {
           />
         </div>
       </div>
+
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Request Settings Template</DialogTitle>
+            <DialogDescription>
+              Save the current validated settings, excluding media assets and campaign/ad names.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700" htmlFor="meta-request-template-name">Template name</label>
+            <Input
+              id="meta-request-template-name"
+              value={templateName}
+              onChange={(event) => setTemplateName(event.target.value)}
+              placeholder="e.g. US iOS VO installs"
+              maxLength={160}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)} disabled={savingTemplate}>Cancel</Button>
+            <Button onClick={() => void handleSaveTemplate()} disabled={savingTemplate || !templateName.trim()}>
+              {savingTemplate ? "Saving..." : "Save Template"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {showSubmitButton ? (
         <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
