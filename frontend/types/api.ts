@@ -56,7 +56,11 @@ export interface App {
 /** GET /api/Structure/apps/performance/hourly?appId=&startDate=&endDate= (or path …/by-appid/{appId}/…) — StarRocks gold hourly revenue + UA cost */
 export interface AppHourlyPerformanceBucketDto {
   bucketStart: string
+  /** Tổng applovin + admob + qonversion */
   revenue: number
+  revenueApplovin: number
+  revenueAdmob: number
+  revenueQonversion: number
   cost: number
 }
 

@@ -72,7 +72,10 @@ const bottomNavItems: BottomNavItem[] = [
     label: "Reports",
     href: "/nav/reports",
     isShow: () =>
-      hasScreenFunction("s-reports", "view") || hasScreenFunction("s-my-reports", "view"),
+      hasScreenFunction("s-reports", "view") ||
+      hasScreenFunction("s-overview-report", "view") ||
+      hasScreenFunction("s-waterfall-report", "view") ||
+      hasScreenFunction("s-my-reports", "view"),
     match: (pathname) =>
       pathname === "/nav/reports" || pathname.startsWith("/reports"),
   },

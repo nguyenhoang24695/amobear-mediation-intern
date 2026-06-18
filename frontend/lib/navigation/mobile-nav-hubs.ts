@@ -95,7 +95,7 @@ export const MOBILE_NAV_HUBS: Record<string, MobileNavHub> = {
         href: "/reports/overview",
         icon: BarChart3,
         description: "Profit overview by team and app",
-        isShow: () => hasScreenFunction("s-reports", "view"),
+        isShow: () => hasScreenFunction("s-overview-report", "view"),
       },
       {
         label: "Reports",
@@ -116,7 +116,7 @@ export const MOBILE_NAV_HUBS: Record<string, MobileNavHub> = {
         href: "/reports/waterfall",
         icon: BarChart3,
         description: "SoW and network performance by app",
-        isShow: () => hasScreenFunction("s-reports", "view"),
+        isShow: () => hasScreenFunction("s-waterfall-report", "view"),
       },
     ],
   },

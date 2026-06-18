@@ -9,7 +9,6 @@ import {
   getUserInitials,
   getUserDisplayName,
   getUserRoleDisplayName,
-  hasScreenFunction,
   type AuthUser,
 } from "@/lib/auth"
 import { logoutUser } from "@/lib/logout"
@@ -41,17 +40,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   ChevronDown,
   User,
-  Users,
-  UsersRound,
   Moon,
   Sun,
   Monitor,
-  Bell,
   HelpCircle,
-  Keyboard,
   LogOut,
   Loader2,
-  AlertTriangle,
 } from "lucide-react"
 
 export function UserDropdown() {
@@ -142,32 +136,6 @@ export function UserDropdown() {
               My Profile
             </Link>
           </DropdownMenuItem>
-          {hasScreenFunction("s-alerts", "setting-my-alerts") ? (
-            <DropdownMenuItem asChild>
-              <Link href="/alert-center?tab=my-alerts" className="flex items-center gap-2 cursor-pointer">
-                <AlertTriangle className="w-4 h-4" />
-                My Alerts
-              </Link>
-            </DropdownMenuItem>
-          ) : null}
-
-          <DropdownMenuSeparator />
-
-          {/* Organization Section */}
-          {user?.organization?.id && (
-            <DropdownMenuItem asChild>
-              <Link href="/my-organization" className="flex items-center gap-2 cursor-pointer">
-                <Users className="w-4 h-4" />
-                My Organization
-              </Link>
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem asChild>
-            <Link href="/teams" className="flex items-center gap-2 cursor-pointer">
-              <UsersRound className="w-4 h-4" />
-              Teams
-            </Link>
-          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
@@ -200,12 +168,6 @@ export function UserDropdown() {
               </DropdownMenuRadioGroup>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuItem asChild>
-            <Link href="/settings?tab=notifications" className="flex items-center gap-2 cursor-pointer">
-              <Bell className="w-4 h-4" />
-              Notifications
-            </Link>
-          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
@@ -216,10 +178,6 @@ export function UserDropdown() {
           >
             <HelpCircle className="w-4 h-4" />
             Help & Documentation
-          </DropdownMenuItem>
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <Keyboard className="w-4 h-4" />
-            Keyboard Shortcuts
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

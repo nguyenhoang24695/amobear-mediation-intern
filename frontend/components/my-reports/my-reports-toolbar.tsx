@@ -157,7 +157,7 @@ export function MyReportsToolbar({
   | "appliedConfig"
   | "orgId"
 >) {
-  const canViewOverviewReport = hasScreenFunction("s-reports", "view")
+  const canViewOverviewReport = hasScreenFunction("s-overview-report", "view")
   const canViewOrgDetails = hasScreenFunction("s-orgs", "view-details")
   const canViewProfitPlan = hasScreenFunction("s-orgs", "view-profit-plan")
 

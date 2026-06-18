@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Table,
@@ -63,8 +64,8 @@ import {
 import { useApi } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import { Pagination as DataPagination } from "@/components/shared/pagination"
-import { dashboardApi, structureApi } from "@/lib/api/services"
-import type { AppHourlyPerformanceResponseDto, RevenueOverview } from "@/types/api"
+import { structureApi } from "@/lib/api/services"
+import type { AppHourlyPerformanceResponseDto } from "@/types/api"
 
 /** yyyy-MM-dd theo lịch UTC từ bucket ISO (fallback khi parse lỗi). */
 function utcCalendarDateKeyFromBucketIso(iso: string): string {
@@ -176,7 +177,40 @@ const dailyVsHourlyDisplayEpsilonUsd = 0.02
 export interface HourlyBucket {
   bucketStart: string
   revenue: number
+  revenueApplovin: number
+  revenueAdmob: number
+  revenueQonversion: number
   cost: number
+}
+
+export type PerformanceBreakdownSourceKey = "applovin" | "admob" | "qonversion" | "xmp"
+
+const PERFORMANCE_BREAKDOWN_SOURCES: {
+  key: PerformanceBreakdownSourceKey
+  label: string
+  kind: "revenue" | "cost"
+}[] = [
+  { key: "applovin", label: "AppLovin", kind: "revenue" },
+  { key: "admob", label: "AdMob", kind: "revenue" },
+  { key: "qonversion", label: "Qonversion", kind: "revenue" },
+  { key: "xmp", label: "XMP", kind: "cost" },
+]
+
+const ALL_BREAKDOWN_SOURCES: PerformanceBreakdownSourceKey[] = ["applovin", "admob", "qonversion", "xmp"]
+
+function revenueFromHourlyBucket(
+  b: Pick<HourlyBucket, "revenueApplovin" | "revenueAdmob" | "revenueQonversion">,
+  selected: Set<PerformanceBreakdownSourceKey>,
+): number {
+  let sum = 0
+  if (selected.has("applovin")) sum += b.revenueApplovin
+  if (selected.has("admob")) sum += b.revenueAdmob
+  if (selected.has("qonversion")) sum += b.revenueQonversion
+  return sum
+}
+
+function costFromHourlyBucket(b: Pick<HourlyBucket, "cost">, selected: Set<PerformanceBreakdownSourceKey>): number {
+  return selected.has("xmp") ? b.cost : 0
 }
 
 interface DailyData {
@@ -299,6 +333,9 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
   const [metricVisualTypes, setMetricVisualTypes] =
     useState<Record<ChartSeriesKey, ChartBreakdownVisualType>>(DEFAULT_METRIC_VISUAL_TYPES)
   const [hiddenChartSeries, setHiddenChartSeries] = useState<Set<ChartSeriesKey>>(() => new Set())
+  const [selectedBreakdownSources, setSelectedBreakdownSources] = useState<Set<PerformanceBreakdownSourceKey>>(
+    () => new Set(ALL_BREAKDOWN_SOURCES),
+  )
   /** Offset (+7) hoặc UTC — gửi API; ngày trong range là lịch tại offset đó */
   const [queryTimeZoneId, setQueryTimeZoneId] = useState(() => {
     const fromAccount = performanceQueryTimeZoneIdFromPublisherOffsetHours(publisherTimezoneOffsetHours)
@@ -404,38 +441,23 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
     cacheKey,
   })
 
-  /** Cùng nguồn revenue ngày với widget Performance (Overview): gold.fact_daily_app_metrics qua dashboard API. */
-  const fetchDashboardDailyRevenue = useMemo(
-    () => () =>
-      dashboardApi.getRevenueOverviewForApp(appId, {
-        range: "custom",
-        startDate: apiRange.start,
-        endDate: apiRange.end,
-        metric: "revenue",
-      }),
-    [appId, apiRange.start, apiRange.end],
-  )
-
-  const dashboardRevCacheKey = `app_perf_dashboard_rev_${appId}_${apiRange.start}_${apiRange.end}`
-  const { data: dashboardRevenueOverview } = useApi<RevenueOverview>(fetchDashboardDailyRevenue, {
-    enabled: !!appId,
-    cacheKey: dashboardRevCacheKey,
-  })
-
-  const overviewRevenueByDate = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const pt of dashboardRevenueOverview?.data ?? []) {
-      const k = String(pt.date).split("T")[0]
-      if (k) m.set(k, Number(pt.value))
-    }
-    return m
-  }, [dashboardRevenueOverview])
+  const toggleBreakdownSource = useCallback((key: PerformanceBreakdownSourceKey) => {
+    setSelectedBreakdownSources((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
 
   const data: HourlyBucket[] = useMemo(() => {
     if (!perfResponse?.buckets?.length) return []
     return perfResponse.buckets.map((b) => ({
       bucketStart: b.bucketStart,
-      revenue: Number(b.revenue),
+      revenueApplovin: Number(b.revenueApplovin ?? 0),
+      revenueAdmob: Number(b.revenueAdmob ?? 0),
+      revenueQonversion: Number(b.revenueQonversion ?? 0),
+      revenue: Number(b.revenue ?? 0),
       cost: Number(b.cost),
     }))
   }, [perfResponse])
@@ -447,16 +469,20 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
       const dateKey = calendarDateKeyInTimeZone(bucket.bucketStart, queryTimeZoneId)
       if (!dateKey) continue
 
+      const bucketRevenue = revenueFromHourlyBucket(bucket, selectedBreakdownSources)
+      const bucketCost = costFromHourlyBucket(bucket, selectedBreakdownSources)
+
       if (!grouped[dateKey]) {
         grouped[dateKey] = { revenue: 0, cost: 0, hourly: [] }
       }
-      grouped[dateKey].revenue += bucket.revenue
-      grouped[dateKey].cost += bucket.cost
+      grouped[dateKey].revenue += bucketRevenue
+      grouped[dateKey].cost += bucketCost
       grouped[dateKey].hourly.push(bucket)
     }
 
     const alignMap = new Map((perfResponse?.dailyUaCostByDate ?? []).map((x) => [x.reportDate, x]))
-    const useGoldDailyUaCost = Boolean(perfResponse?.starRocksEnabled && alignMap.size > 0)
+    const useGoldDailyUaCost =
+      selectedBreakdownSources.has("xmp") && Boolean(perfResponse?.starRocksEnabled && alignMap.size > 0)
 
     const fromD = startOfDay(apiRange.from)
     const toD = startOfDay(apiRange.to)
@@ -470,13 +496,8 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
       const hasHourly = !!values && values.hourly.length > 0
       const align = alignMap.get(dateKey)
 
-      const overviewRevRaw = overviewRevenueByDate.get(dateKey)
-      const hasOverviewPoint = overviewRevenueByDate.has(dateKey)
       const revenueFromHourly = hasHourly ? Math.round(values!.revenue * 100) / 100 : null
-      const revenue =
-        hasOverviewPoint
-          ? Math.round(Number(overviewRevRaw) * 100) / 100
-          : revenueFromHourly
+      const revenue = revenueFromHourly
       const hourlyCostRollup = hasHourly ? Math.round(values!.cost * 100) / 100 : null
 
       let cost: number | null = null
@@ -490,13 +511,14 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         align != null &&
         (Math.abs(Number(align.goldHourlyUaCostSum)) > 1e-9 || Math.abs(Number(align.bronzeXmpReportCostSum)) > 1e-9)
       const hasData =
-        hasOverviewPoint ||
         hasHourly ||
-        hasGoldDailyOrHourly ||
+        (selectedBreakdownSources.has("xmp") && hasGoldDailyOrHourly) ||
         (revenue != null && Math.abs(revenue) > 1e-9)
 
       const sumHourlyCostRounded = hasHourly
-        ? Math.round(values!.hourly.reduce((s, h) => s + h.cost, 0) * 100) / 100
+        ? Math.round(
+            values!.hourly.reduce((s, h) => s + costFromHourlyBucket(h, selectedBreakdownSources), 0) * 100,
+          ) / 100
         : null
       const serverMismatch = align?.uaCostDailyVsHourlyMismatch === true
       const displayMismatch =
@@ -528,16 +550,6 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
             )
           : []
 
-      const sumHrRev = sortedHourly.reduce((s, h) => s + h.revenue, 0)
-      const scaleDayToOverview =
-        hasOverviewPoint && hasHourly && revenue != null
-          ? sumHrRev > 1e-9
-            ? revenue / sumHrRev
-            : sortedHourly.length > 0
-              ? revenue / sortedHourly.length
-              : null
-          : null
-
       return {
         date: dateKey,
         dateLabel: format(parseISO(dateKey), "MMM dd, yyyy"),
@@ -549,22 +561,19 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         hourlyData:
           hasHourly
             ? sortedHourly.map((h) => {
-                let hrRev = h.revenue
-                if (scaleDayToOverview != null) {
-                  hrRev = sumHrRev > 1e-9 ? h.revenue * scaleDayToOverview : scaleDayToOverview
-                }
-                const rRounded = Math.round(hrRev * 100) / 100
+                const rRounded = Math.round(revenueFromHourlyBucket(h, selectedBreakdownSources) * 100) / 100
+                const cRounded = Math.round(costFromHourlyBucket(h, selectedBreakdownSources) * 100) / 100
                 return {
                   hour: hourLabelInTimeZone(h.bucketStart, queryTimeZoneId),
                   revenue: rRounded,
-                  cost: h.cost,
-                  net: Math.round((rRounded - h.cost) * 100) / 100,
+                  cost: cRounded,
+                  net: Math.round((rRounded - cRounded) * 100) / 100,
                 }
               })
             : [],
       }
     })
-  }, [data, apiRange.from, apiRange.to, perfResponse, queryTimeZoneId, overviewRevenueByDate])
+  }, [data, apiRange.from, apiRange.to, perfResponse, queryTimeZoneId, selectedBreakdownSources])
 
   const filteredTableData = useMemo(() => {
     let filtered = [...dailyData]
@@ -953,8 +962,8 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold text-slate-900">Daily Breakdown</CardTitle>
           <CardDescription className="text-sm text-slate-500">
-            Revenue, UA cost và Net
-            {chartBreakdownByHour ? " theo giờ" : " theo ngày"} — tùy chỉnh Line/Bar từng metric ở sidebar
+            Revenue (AppLovin / AdMob / Qonversion), UA cost (XMP) và Net
+            {chartBreakdownByHour ? " theo giờ" : " theo ngày"} — lọc nguồn ở sidebar
             {canToggleBreakdownLegend ? (
               <>
                 {" · "}
@@ -1150,6 +1159,23 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                         </ToggleGroupItem>
                       </ToggleGroup>
                     </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-slate-100 pt-4 space-y-2.5">
+                  <p className="text-xs font-medium text-slate-700">Source filter</p>
+                  {PERFORMANCE_BREAKDOWN_SOURCES.map((source) => (
+                    <label
+                      key={source.key}
+                      className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selectedBreakdownSources.has(source.key)}
+                        onCheckedChange={() => toggleBreakdownSource(source.key)}
+                        aria-label={source.label}
+                      />
+                      <span>{source.label}</span>
+                    </label>
                   ))}
                 </div>
 
