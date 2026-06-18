@@ -574,6 +574,8 @@ export interface TeamMember {
   permissions?: Record<string, string>
   metaAdAccountIds?: number[] | null
   metaAdAccountCount?: number
+  tikTokAdAccountIds?: number[] | null
+  tikTokAdAccountCount?: number
 }
 
 export interface ActiveSession {

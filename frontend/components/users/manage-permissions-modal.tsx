@@ -64,6 +64,8 @@ export function ManagePermissionsModal({
   const [appPermissions, setAppPermissions] = useState<Record<string, AppPermissionLevel>>({})
   const [metaAdAccountIds, setMetaAdAccountIds] = useState<number[]>([])
   const [metaAdAccountSearch, setMetaAdAccountSearch] = useState("")
+  const [tikTokAdAccountIds, setTikTokAdAccountIds] = useState<number[]>([])
+  const [tikTokAdAccountSearch, setTikTokAdAccountSearch] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,6 +82,11 @@ export function ManagePermissionsModal({
   const { data: metaAdAccountOptionsResponse, loading: metaAdAccountOptionsLoading } = useApi(
     () => teamMembersApi.getMetaAdAccountPermissionOptions(),
     { enabled: open, cacheKey: "meta_ad_account_permission_options" }
+  )
+
+  const { data: tikTokAdAccountOptionsResponse, loading: tikTokAdAccountOptionsLoading } = useApi(
+    () => teamMembersApi.getTikTokAdAccountPermissionOptions(),
+    { enabled: open, cacheKey: "tiktok_ad_account_permission_options" }
   )
 
   const apps = useMemo(
@@ -100,6 +107,11 @@ export function ManagePermissionsModal({
   const metaAdAccountOptions = useMemo(
     () => metaAdAccountOptionsResponse?.data || [],
     [metaAdAccountOptionsResponse]
+  )
+
+  const tikTokAdAccountOptions = useMemo(
+    () => tikTokAdAccountOptionsResponse?.data || [],
+    [tikTokAdAccountOptionsResponse]
   )
 
   const admobAccountOptions = useMemo(() => {
@@ -153,11 +165,40 @@ export function ManagePermissionsModal({
     })
   }, [metaAdAccountOptions, metaAdAccountSearch, initiallyAssignedMetaAdAccountIdSet])
 
+  const selectedTikTokAdAccountIdSet = useMemo(() => new Set(tikTokAdAccountIds), [tikTokAdAccountIds])
+  const initiallyAssignedTikTokAdAccountIdSet = useMemo(
+    () => new Set(userProfile?.data?.tikTokAdAccountIds ?? []),
+    [userProfile?.data?.tikTokAdAccountIds]
+  )
+
+  const filteredTikTokAdAccounts = useMemo(() => {
+    const search = tikTokAdAccountSearch.trim().toLowerCase()
+    const filteredOptions = !search
+      ? tikTokAdAccountOptions
+      : tikTokAdAccountOptions.filter((option) => {
+          const haystack = [option.advertiserId, option.name, option.integrationName]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+          return haystack.includes(search)
+        })
+
+    return [...filteredOptions].sort((left, right) => {
+      const leftAssigned = initiallyAssignedTikTokAdAccountIdSet.has(left.id)
+      const rightAssigned = initiallyAssignedTikTokAdAccountIdSet.has(right.id)
+
+      if (leftAssigned === rightAssigned) return 0
+      return leftAssigned ? -1 : 1
+    })
+  }, [tikTokAdAccountOptions, tikTokAdAccountSearch, initiallyAssignedTikTokAdAccountIdSet])
+
   useEffect(() => {
     if (!open) {
       setAppPermissions({})
       setMetaAdAccountIds([])
       setMetaAdAccountSearch("")
+      setTikTokAdAccountIds([])
+      setTikTokAdAccountSearch("")
       setRole(initialRole)
       setGiveAllApps(false)
       setError(null)
@@ -186,6 +227,7 @@ export function ManagePermissionsModal({
     }
 
     setMetaAdAccountIds(userProfile?.data?.metaAdAccountIds ?? [])
+    setTikTokAdAccountIds(userProfile?.data?.tikTokAdAccountIds ?? [])
 
     if (userProfile?.data) {
       const teamRole = teamId
@@ -234,6 +276,12 @@ export function ManagePermissionsModal({
     )
   }
 
+  const toggleTikTokAdAccount = (accountId: number) => {
+    setTikTokAdAccountIds((prev) =>
+      prev.includes(accountId) ? prev.filter((value) => value !== accountId) : [...prev, accountId]
+    )
+  }
+
   const handleClose = () => {
     if (saving) return
     onOpenChange(false)
@@ -252,6 +300,7 @@ export function ManagePermissionsModal({
             ? undefined
             : Object.entries(appPermissions).map(([AppId, Level]) => ({ AppId, Level })),
         metaAdAccountIds: metaAdAccountIds.length > 0 ? metaAdAccountIds : undefined,
+        tikTokAdAccountIds: tikTokAdAccountIds.length > 0 ? tikTokAdAccountIds : undefined,
       }
       const resp = await teamMembersApi.managePermissions(userId, body)
       if (!resp.success) {
@@ -294,7 +343,7 @@ export function ManagePermissionsModal({
         <DialogHeader>
           <DialogTitle>Manage Permissions</DialogTitle>
           <DialogDescription>
-            Update role, app permissions, and Meta ad account visibility for <span className="font-semibold text-slate-900">{userName}</span> in this team.
+            Update role, app permissions, and Meta / TikTok ad account visibility for <span className="font-semibold text-slate-900">{userName}</span> in this team.
           </DialogDescription>
         </DialogHeader>
 
@@ -316,6 +365,9 @@ export function ManagePermissionsModal({
               </TabsTrigger>
               <TabsTrigger value="meta" className="px-4 data-[state=active]:bg-white">
                 Meta Permission
+              </TabsTrigger>
+              <TabsTrigger value="tiktok" className="px-4 data-[state=active]:bg-white">
+                TikTok Permission
               </TabsTrigger>
             </TabsList>
 
@@ -468,6 +520,63 @@ export function ManagePermissionsModal({
                               <div className="mt-1 text-xs text-slate-500">
                                 {option.integrationName || `Integration #${option.metaIntegrationId}`}
                                 {!option.isActive ? "Disabled" : ""}
+                              </div>
+                            </div>
+                          </label>
+                        )
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="tiktok" className="mt-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wide">TikTok Ad Account Access</Label>
+                  <p className="mt-1 text-sm text-slate-600">Users only see assigned TikTok ad accounts across TikTok Ads screens.</p>
+                </div>
+                <div className="text-sm font-medium text-slate-700">{tikTokAdAccountIds.length} assigned</div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 p-3">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={tikTokAdAccountSearch}
+                      onChange={(event) => setTikTokAdAccountSearch(event.target.value)}
+                      placeholder="Search TikTok advertiser ID, name, or integration"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+
+                <ScrollArea className="h-64">
+                  <div className="space-y-2 p-3">
+                    {tikTokAdAccountOptionsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading TikTok ad accounts...
+                      </div>
+                    ) : filteredTikTokAdAccounts.length === 0 ? (
+                      <p className="text-sm text-slate-500">No TikTok ad accounts available</p>
+                    ) : (
+                      filteredTikTokAdAccounts.map((option) => {
+                        const checked = selectedTikTokAdAccountIdSet.has(option.id)
+                        return (
+                          <label
+                            key={option.id}
+                            className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:bg-slate-50"
+                          >
+                            <Checkbox checked={checked} onCheckedChange={() => toggleTikTokAdAccount(option.id)} className="mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-mono text-sm text-blue-700">{option.advertiserId}</div>
+                              <div className="mt-1 text-sm font-medium text-slate-900">{option.name}</div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                {option.integrationName || `Integration #${option.tiktokIntegrationId}`}
+                                {!option.isActive ? " · Disabled" : ""}
                               </div>
                             </div>
                           </label>
