@@ -333,7 +333,7 @@ export function SourceDetailsTab({
         <p className="text-sm text-slate-500">No tables configured for this source.</p>
       )}
 
-      <BackfillDialog open={dialogOpen} onOpenChange={setDialogOpen} action={selectedAction} onSuccess={() => void load()} />
+      <BackfillDialog open={dialogOpen} onOpenChange={setDialogOpen} sourceKey={sourceKey} action={selectedAction} onSuccess={() => void load()} />
     </div>
   )
 }

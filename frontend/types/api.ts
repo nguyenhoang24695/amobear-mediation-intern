@@ -803,6 +803,57 @@ export interface SourceDetailsDto {
   summary?: SourceDetailsSummaryDto | null
 }
 
+/** Data Sources → Runs tab (persistent backfill with per-day checkpoint) */
+export interface DataSourceBackfillRunProgressDto {
+  paramKeys?: { start?: string | null; end?: string | null; single?: string | null } | null
+  rangeStart?: string | null
+  rangeEnd?: string | null
+  totalDays: number
+  completedDates: string[]
+  currentDate?: string | null
+  failedDate?: string | null
+}
+
+export interface DataSourceBackfillRunStartedDto {
+  runId: string
+  eventsUrl: string
+  status: string
+  progress?: DataSourceBackfillRunProgressDto | null
+}
+
+export interface DataSourceBackfillRunListItemDto {
+  id: string
+  sourceKey: string
+  label: string
+  endpoint: string
+  status: string
+  progress?: DataSourceBackfillRunProgressDto | null
+  errorMessage?: string | null
+  startedAt?: string | null
+  completedAt?: string | null
+  createdAt: string
+}
+
+export interface DataSourceBackfillRunDetailDto extends DataSourceBackfillRunListItemDto {
+  queryParams: Record<string, string>
+  lastHeartbeatAt?: string | null
+  eventsUrl: string
+}
+
+export interface PagedDataSourceBackfillRunsDto {
+  items: DataSourceBackfillRunListItemDto[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
+export interface StartDataSourceBackfillRunRequest {
+  sourceKey: string
+  label: string
+  endpoint: string
+  queryParams: Record<string, string>
+}
+
 // Waterfall Recommendation Types
 export interface WaterfallRecommendationConfigDto {
   id: number
