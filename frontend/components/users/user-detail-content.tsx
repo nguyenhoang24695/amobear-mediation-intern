@@ -189,6 +189,10 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
     () => teamMembersApi.getMetaAdAccountPermissionOptions(),
     { enabled: canView, cacheKey: 'meta_ad_account_permission_options' }
   )
+  const { data: tikTokAdAccountOptionsResponse, loading: tikTokAdAccountOptionsLoading } = useApi(
+    () => teamMembersApi.getTikTokAdAccountPermissionOptions(),
+    { enabled: canView, cacheKey: 'tiktok_ad_account_permission_options' }
+  )
 
   const user = userResponse?.data
   const userRoleKeys = useMemo(
@@ -196,6 +200,7 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
     [user?.role, user?.roles],
   )
   const metaAdAccountOptions = metaAdAccountOptionsResponse?.data || []
+  const tikTokAdAccountOptions = tikTokAdAccountOptionsResponse?.data || []
   const allApps = appsResponse?.apps
   const userStatus = user?.status || "inactive"
   const statusMeta = userStatusConfig[userStatus] || userStatusConfig.inactive
@@ -215,6 +220,22 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
       }
     })
   }, [metaAdAccountOptions, user?.metaAdAccountIds])
+  const tikTokPermissionsList = useMemo(() => {
+    const selectedTikTokAdAccountIds = user?.tikTokAdAccountIds || []
+    const optionMap = new Map(tikTokAdAccountOptions.map((option) => [option.id, option]))
+
+    return selectedTikTokAdAccountIds.map((id) => {
+      const matchedOption = optionMap.get(id)
+      return {
+        id,
+        advertiserId: matchedOption?.advertiserId || String(id),
+        name: matchedOption?.name || "Unknown TikTok ad account",
+        integrationName: matchedOption?.integrationName || null,
+        tiktokIntegrationId: matchedOption?.tiktokIntegrationId || null,
+        isActive: matchedOption?.isActive ?? true,
+      }
+    })
+  }, [tikTokAdAccountOptions, user?.tikTokAdAccountIds])
   const canManageTargetUser = !!user && canEdit && (isSuperAdmin || !isPrivilegedRole(user.role, user.roles))
   const canResetTargetPassword = !!user && canResetPassword && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role, user.roles))
   const canToggleTargetStatus = !!user && canEnableDisable && currentUser?.id !== user.id && (isSuperAdmin || !isPrivilegedRole(user.role, user.roles))
@@ -654,6 +675,9 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
               <TabsTrigger value="meta" className="px-4 data-[state=active]:bg-white">
                 Meta Permission
               </TabsTrigger>
+              <TabsTrigger value="tiktok" className="px-4 data-[state=active]:bg-white">
+                TikTok Permission
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="direct" className="space-y-6">
@@ -793,6 +817,76 @@ export function UserDetailContent({ userId, backHref = "/team-members" }: UserDe
                             <TableCell>
                               <div className="text-sm text-slate-600">
                                 {perm.integrationName || (perm.metaIntegrationId ? `Integration #${perm.metaIntegrationId}` : "-")}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  perm.isActive
+                                    ? "border-green-200 bg-green-50 text-green-700"
+                                    : "border-slate-200 bg-slate-50 text-slate-600"
+                                )}
+                              >
+                                {perm.isActive ? "Active" : "Disabled"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="tiktok" className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold">TikTok Permission</CardTitle>
+                    <Badge variant="secondary" className="text-xs">
+                      {tikTokPermissionsList.length}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="min-w-[280px]">TikTok Ad Account</TableHead>
+                        <TableHead>Integration</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tikTokAdAccountOptionsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="py-6 text-center text-slate-500">
+                            <div className="inline-flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading TikTok permissions...
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : tikTokPermissionsList.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="py-6 text-center text-slate-500">
+                            No TikTok permissions granted
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        tikTokPermissionsList.map((perm) => (
+                          <TableRow key={perm.id}>
+                            <TableCell>
+                              <div>
+                                <div className="font-mono text-sm text-blue-700">{perm.advertiserId}</div>
+                                <div className="mt-1 text-sm font-medium text-slate-900">{perm.name}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm text-slate-600">
+                                {perm.integrationName || (perm.tiktokIntegrationId ? `Integration #${perm.tiktokIntegrationId}` : "-")}
                               </div>
                             </TableCell>
                             <TableCell>

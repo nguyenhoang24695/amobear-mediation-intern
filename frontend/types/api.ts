@@ -56,7 +56,11 @@ export interface App {
 /** GET /api/Structure/apps/performance/hourly?appId=&startDate=&endDate= (or path …/by-appid/{appId}/…) — StarRocks gold hourly revenue + UA cost */
 export interface AppHourlyPerformanceBucketDto {
   bucketStart: string
+  /** Tổng applovin + admob + qonversion */
   revenue: number
+  revenueApplovin: number
+  revenueAdmob: number
+  revenueQonversion: number
   cost: number
 }
 
@@ -574,6 +578,8 @@ export interface TeamMember {
   permissions?: Record<string, string>
   metaAdAccountIds?: number[] | null
   metaAdAccountCount?: number
+  tikTokAdAccountIds?: number[] | null
+  tikTokAdAccountCount?: number
 }
 
 export interface ActiveSession {
@@ -928,6 +934,34 @@ export interface WaterfallBulkPolicyPreviewResponseDto {
   ruleGroupId?: number | null
   totalCount: number
   targets: WaterfallBulkPolicyTargetDto[]
+}
+
+export interface WaterfallActivePolicyItemDto {
+  mediationGroupId: string
+  mediationGroupName: string
+  appId: string
+  appName: string
+  appIconUri?: string | null
+  effectiveRuleGroupName?: string | null
+  applyMode: string
+  intervalDays: number
+  dueAt?: string | null
+  isDue: boolean
+  lastObservedApplyAt?: string | null
+  lastApplySource?: string | null
+  lastEvaluatedAt?: string | null
+  lastAlertResultId?: number | null
+  platform?: string | null
+  adFormat?: string | null
+  state?: string | null
+}
+
+export interface WaterfallActivePolicyListResponseDto {
+  totalCount: number
+  autoCount: number
+  semiAutoCount: number
+  dueNowCount: number
+  items: WaterfallActivePolicyItemDto[]
 }
 
 export interface BulkUpdateWaterfallApplyPoliciesRequestDto {
@@ -1404,7 +1438,6 @@ export interface PermittedAppListItem {
   iconUri?: string | null
   platform?: string | null
 }
-
 
 
 

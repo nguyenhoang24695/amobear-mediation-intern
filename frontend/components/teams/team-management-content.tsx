@@ -6,23 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Search, Plus, Users, Loader2, FolderOpen, MoreHorizontal, ExternalLink, SquarePen, Trash2 } from "lucide-react"
+import { Search, Loader2, FolderOpen, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { userApi, type UserTeamWithMembers } from "@/lib/api/services"
 
@@ -48,18 +32,12 @@ export function TeamManagementContent() {
   const [teams, setTeams] = useState<UserTeamWithMembers[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [editingTeam, setEditingTeam] = useState<UserTeamWithMembers | null>(null)
-  const [teamName, setTeamName] = useState("")
-  const [teamDescription, setTeamDescription] = useState("")
 
-  // Fetch teams details from API (chỉ lấy các team mà user hiện tại đang nằm trong đó)
   const fetchTeams = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Gọi API mới: /api/v1/user/teams
       const data = await userApi.getMyTeams()
       setTeams(data)
     } catch (err) {
@@ -74,37 +52,11 @@ export function TeamManagementContent() {
     fetchTeams()
   }, [fetchTeams])
 
-  // Client-side search filter
   const filteredTeams = teams.filter((team) => {
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return team.name.toLowerCase().includes(query) || team.description?.toLowerCase().includes(query)
   })
-
-  // Handle Edit Team
-  const handleEditTeam = (team: UserTeamWithMembers) => {
-    setEditingTeam(team)
-    setTeamName(team.name)
-    setTeamDescription(team.description || "")
-    setCreateModalOpen(true)
-  }
-
-  // Handle Close Modal
-  const handleCloseModal = () => {
-    setCreateModalOpen(false)
-    setEditingTeam(null)
-    setTeamName("")
-    setTeamDescription("")
-  }
-
-  // Handle Create/Update Team
-  const handleSaveTeam = async () => {
-    // TODO: Implement API call to create/update team
-    console.log("Save team:", { editingTeam, teamName, teamDescription })
-    handleCloseModal()
-    // Refresh teams list after save
-    await fetchTeams()
-  }
 
   return (
     <div className="space-y-6">
@@ -116,11 +68,11 @@ export function TeamManagementContent() {
             {teams.length} teams
           </Badge>
         </div>
-        <p className="text-sm text-slate-500 mt-1">Organize your team members into groups</p>
+        <p className="text-sm text-slate-500 mt-1">View teams you belong to</p>
       </div>
 
-      {/* Action Bar */}
-      <div className="flex justify-between">
+      {/* Search */}
+      <div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -130,18 +82,6 @@ export function TeamManagementContent() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => {
-            setEditingTeam(null)
-            setTeamName("")
-            setTeamDescription("")
-            setCreateModalOpen(true)
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Team
-        </Button>
       </div>
 
       {/* Loading State */}
@@ -180,29 +120,9 @@ export function TeamManagementContent() {
             {filteredTeams.map((team) => (
               <Card key={team.id} className="border-slate-200 hover:border-slate-300 transition-colors">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-slate-900">{team.name}</h3>
-                      <p className="text-sm text-slate-500">{team.memberCount} members</p>
-                    </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditTeam(team)}>
-                            <SquarePen className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600 focus:text-red-600">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{team.name}</h3>
+                    <p className="text-sm text-slate-500">{team.memberCount} members</p>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -245,49 +165,6 @@ export function TeamManagementContent() {
           </div>
         )
       )}
-
-      {/* Create/Edit Team Modal */}
-      <Dialog open={createModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingTeam ? "Edit Team" : "Create New Team"}</DialogTitle>
-            <DialogDescription>
-              {editingTeam
-                ? "Update team information and manage permissions"
-                : "Create a new team to organize users and manage permissions"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="team-name">Team Name</Label>
-              <Input
-                id="team-name"
-                placeholder="e.g., Mobile Team"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="team-description">Description (Optional)</Label>
-              <Textarea
-                id="team-description"
-                placeholder="Describe the team's purpose..."
-                rows={3}
-                value={teamDescription}
-                onChange={(e) => setTeamDescription(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseModal}>
-              Cancel
-            </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveTeam}>
-              {editingTeam ? "Save Changes" : "Create Team"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

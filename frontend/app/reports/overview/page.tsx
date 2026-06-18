@@ -7,7 +7,7 @@ import { OverviewReportContent } from "@/components/reports/overview-report-cont
 export default function OverviewReportPage() {
   return (
     <DashboardLayout>
-      <ScreenFunctionGuard screenKey="s-reports" functionKey="view">
+      <ScreenFunctionGuard screenKey="s-overview-report" functionKey="view">
         <Suspense
           fallback={
             <div className="flex items-center justify-center py-20">

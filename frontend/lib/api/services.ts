@@ -30,6 +30,7 @@ import type {
     CreateUpdateRuleGroupDto,
     AppRuleGroupMappingDto,
     WaterfallFilterOptionDto,
+    WaterfallActivePolicyListResponseDto,
     AlertRule,
     AlertCenterListItem,
     AlertCenterTimelineItem,
@@ -111,6 +112,8 @@ export interface AuthResponse {
             permissions?: Record<string, string>
             metaAdAccountIds?: number[] | null
             metaAdAccountCount?: number
+            tikTokAdAccountIds?: number[] | null
+            tikTokAdAccountCount?: number
         }
     }
     error?: {
@@ -169,6 +172,8 @@ export interface CurrentUser {
     permissions?: Record<string, string>
     metaAdAccountIds?: number[] | null
     metaAdAccountCount?: number
+    tikTokAdAccountIds?: number[] | null
+    tikTokAdAccountCount?: number
     rolePermissions?: Record<string, string[]>
 }
 
@@ -845,6 +850,16 @@ export const waterfallManagementApi = {
         return apiClient.get<WaterfallBulkPolicyPreviewResponseDto>('/api/WaterfallManagement/bulk-policy-targets', params as Record<string, string | number | undefined>)
     },
 
+    getActivePolicies: async (params: {
+        appId?: string
+        applyMode?: string
+        search?: string
+        page?: number
+        pageSize?: number
+    }): Promise<WaterfallActivePolicyListResponseDto> => {
+        return apiClient.get<WaterfallActivePolicyListResponseDto>('/api/WaterfallManagement/active-policies', params as Record<string, string | number | undefined>)
+    },
+
     bulkUpdatePolicies: async (
         body: BulkUpdateWaterfallApplyPoliciesRequestDto
     ): Promise<BulkUpdateWaterfallApplyPoliciesResponseDto> => {
@@ -969,6 +984,15 @@ export interface MetaAdAccountPermissionOption {
     integrationName?: string | null
     isActive: boolean
 }
+
+export interface TikTokAdAccountPermissionOption {
+    id: number
+    advertiserId: string
+    name: string
+    tiktokIntegrationId: number
+    integrationName?: string | null
+    isActive: boolean
+}
 export const teamMembersApi = {
     filterTeamMembers: async (request: TeamMemberFilterRequest): Promise<{ success: boolean; data: PagedTeamMembersResponse }> => {
         return apiClient.post('/api/v1/team-members/filter', request)
@@ -1008,6 +1032,10 @@ export const teamMembersApi = {
         return apiClient.get('/api/v1/team-members/permission-options/meta-ad-accounts')
     },
 
+    getTikTokAdAccountPermissionOptions: async (): Promise<{ success: boolean; data: TikTokAdAccountPermissionOption[] }> => {
+        return apiClient.get('/api/v1/team-members/permission-options/tiktok-ad-accounts')
+    },
+
     inviteUser: async (request: InviteUserRequest): Promise<{ success: boolean; data?: { invitationId: string; email: string; expiresAt: string; message: string } }> => {
         return apiClient.post('/api/v1/team-members/invite-user', request)
     },
@@ -1033,7 +1061,7 @@ export const teamMembersApi = {
     // Update team role + app permissions for a user in a team
     managePermissions: async (
         userId: string,
-        body: { teamId: string; role: string; appPermissions?: Array<{ AppId: string; Level: string }>; metaAdAccountIds?: number[] }
+        body: { teamId: string; role: string; appPermissions?: Array<{ AppId: string; Level: string }>; metaAdAccountIds?: number[]; tikTokAdAccountIds?: number[] }
     ): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post(`/api/v1/team-members/manage-permissions/${userId}`, body)
     },
@@ -2972,6 +3000,5 @@ export const reportsApi = {
         return apiClient.put('/api/v1/reports/overview-filter', filter)
     },
 }
-
 
 
