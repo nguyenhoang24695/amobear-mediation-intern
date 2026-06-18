@@ -1,7 +1,7 @@
 "use client"
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Download, Loader2, Settings, Target, Upload } from "lucide-react"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react"
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Download, Loader2, RefreshCw, Settings, Target, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -60,6 +60,7 @@ import {
 } from "@/lib/metrics/profit-metric-styles"
 import { useToast } from "@/hooks/use-toast"
 import { useApi } from "@/hooks/use-api"
+import { useResizableWidth } from "@/hooks/use-resizable-width"
 import { authApi, organizationsApi, structureApi, type OrgTeam, type OrgTeamGroup, type TeamMonthlyProfitPlan } from "@/lib/api/services"
 import { getCurrentUser } from "@/lib/auth"
 import { buildTeamGroupSectionsFromOrg } from "@/lib/organizations/team-group"
@@ -221,11 +222,40 @@ function mapFilterTeamsToOrgTeams(filterTeams: CommissionTeamOption[]): OrgTeam[
   }))
 }
 
-const APP_COLUMN_CLASS =
-  "sticky left-0 z-10 min-w-[148px] max-w-[148px] border-r bg-white px-2 py-1.5 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]"
+const APP_COLUMN_STORAGE_KEY = "revenue-plan-app-column-width-v1"
+const APP_COLUMN_DEFAULT_WIDTH = 148
+const APP_COLUMN_MIN_WIDTH = 96
+const APP_COLUMN_MAX_WIDTH = 420
 
-const APP_HEADER_CLASS =
-  "sticky left-0 top-0 z-30 min-w-[148px] max-w-[148px] border-r border-slate-200 bg-slate-50/95 px-2 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
+const APP_COLUMN_BASE_CLASS =
+  "sticky left-0 z-10 border-r-2 border-slate-300 bg-white px-2 py-1.5 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]"
+
+const APP_HEADER_BASE_CLASS =
+  "sticky left-0 top-0 z-30 border-r-2 border-slate-300 bg-slate-50/95 px-2 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
+
+function AppColumnResizeHandle({ onMouseDown }: { onMouseDown: (event: MouseEvent) => void }) {
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize App column"
+      title="Drag to resize column"
+      className="group/handle absolute -right-1.5 top-0 bottom-0 z-40 flex w-4 cursor-col-resize touch-none items-center justify-center"
+      onMouseDown={onMouseDown}
+    >
+      <div className="absolute inset-y-2 right-1/2 w-0.5 translate-x-1/2 rounded-full bg-slate-300 transition-colors group-hover/handle:bg-blue-500 group-active/handle:w-1 group-active/handle:bg-blue-600" />
+      <div
+        className={cn(
+          "relative flex h-7 w-4 items-center justify-center rounded border-2 border-slate-300 bg-white text-slate-500 shadow-sm",
+          "transition-colors group-hover/handle:border-blue-400 group-hover/handle:text-blue-600",
+          "group-active/handle:border-blue-500 group-active/handle:bg-blue-50",
+        )}
+      >
+        <ArrowLeftRight className="h-3 w-3 shrink-0" aria-hidden />
+      </div>
+    </div>
+  )
+}
 
 const METRIC_HEADER_CLASS =
   "sticky top-[72px] z-20 border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600"
@@ -451,7 +481,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [loadingFilterTeams, setLoadingFilterTeams] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [plans, setPlans] = useState<TeamMonthlyProfitPlan[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [appliedMonthRange, setAppliedMonthRange] = useState<MonthRange | null>(null)
+  const [appliedTeamIds, setAppliedTeamIds] = useState<string[] | null>(null)
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSizeOption, setPageSizeOption] = useState<PageSizeOption>(100)
@@ -467,6 +499,26 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
   const [columnSidebarOpen, setColumnSidebarOpen] = useState(false)
   const [columnVisibility, setColumnVisibility] = useState<RevenuePlanColumnVisibility>(() =>
     createDefaultColumnVisibility(),
+  )
+
+  const {
+    width: appColumnWidth,
+    isResizing: isAppColumnResizing,
+    startResizing: startAppColumnResize,
+  } = useResizableWidth({
+    defaultWidth: APP_COLUMN_DEFAULT_WIDTH,
+    minWidth: APP_COLUMN_MIN_WIDTH,
+    maxWidth: APP_COLUMN_MAX_WIDTH,
+    storageKey: APP_COLUMN_STORAGE_KEY,
+  })
+
+  const appColumnStyle = useMemo(
+    () => ({
+      width: appColumnWidth,
+      minWidth: appColumnWidth,
+      maxWidth: appColumnWidth,
+    }),
+    [appColumnWidth],
   )
 
   const visibleColumnCount = useMemo(
@@ -570,28 +622,40 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     setTeamsFilterInitialized(true)
   }, [canScopeManagedTeams, teamsFilterInitialized, filterTeams, selectedTeamIds.length])
 
-  const loadData = useCallback(async () => {
+  const handleLoadData = useCallback(async () => {
+    const teamIds = effectiveTeamIds
     setLoading(true)
     try {
-      const planList = await fetchOrganizationProfitPlans(
-        orgId,
-        startMonth,
-        endMonth,
-        effectiveTeamIds,
-      )
+      const planList = await fetchOrganizationProfitPlans(orgId, startMonth, endMonth, teamIds)
       setPlans(planList)
+      setAppliedMonthRange({ startMonth, endMonth })
+      setAppliedTeamIds(teamIds)
       setCurrentPage(1)
     } catch (err) {
       console.error("Failed to load organization profit plans:", err)
       setPlans([])
+      toast({
+        title: "Failed to load data",
+        description: err instanceof Error ? err.message : "Could not load revenue plans.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
-  }, [orgId, startMonth, endMonth, effectiveTeamIds])
+  }, [orgId, startMonth, endMonth, effectiveTeamIds, toast])
 
-  useEffect(() => {
-    void loadData()
-  }, [loadData])
+  const hasLoadedData = appliedMonthRange != null
+
+  const hasPendingLoad = useMemo(() => {
+    if (!hasLoadedData || !appliedMonthRange) return true
+    const pendingTeamKey = [...effectiveTeamIds].sort().join("|")
+    const appliedTeamKey = [...(appliedTeamIds ?? [])].sort().join("|")
+    return (
+      startMonth !== appliedMonthRange.startMonth
+      || endMonth !== appliedMonthRange.endMonth
+      || pendingTeamKey !== appliedTeamKey
+    )
+  }, [hasLoadedData, appliedMonthRange, appliedTeamIds, startMonth, endMonth, effectiveTeamIds])
 
   const filteredPlans = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -604,10 +668,10 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
     )
   }, [plans, searchQuery])
 
-  const monthKeys = useMemo(
-    () => enumerateMonthKeys(startMonth, endMonth),
-    [startMonth, endMonth],
-  )
+  const monthKeys = useMemo(() => {
+    const range = appliedMonthRange ?? monthRange
+    return enumerateMonthKeys(range.startMonth, range.endMonth)
+  }, [appliedMonthRange, monthRange])
 
   const appRows = useMemo(() => {
     const map = new Map<string, AppPlanRow>()
@@ -753,7 +817,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
       })
       setImportPreviewOpen(false)
       resetImportState()
-      await loadData()
+      await handleLoadData()
     } catch (err) {
       console.error("Failed to import profit plans:", err)
       toast({
@@ -992,10 +1056,33 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                 <TooltipTrigger asChild>
                   <Button
                     type="button"
+                    variant={hasPendingLoad ? "default" : "outline"}
+                    className={cn(!hasPendingLoad && "bg-white")}
+                    onClick={() => void handleLoadData()}
+                    disabled={loading || loadingFilterTeams}
+                  >
+                    {loading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Load Data
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {hasPendingLoad
+                    ? "Apply the selected month range and teams, then load the table."
+                    : "Reload the table with the current filters."}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
                     variant="outline"
                     className="bg-white"
                     onClick={() => void handleExportData()}
-                    disabled={loading || exportingData || appRows.length === 0 || exportTeamSelectionBlocked}
+                    disabled={loading || exportingData || !hasLoadedData || appRows.length === 0 || exportTeamSelectionBlocked}
                   >
                     {exportingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                     Export data
@@ -1056,19 +1143,44 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-10 text-sm text-slate-500">
+          {!hasLoadedData && !loading ? (
+            <div className="rounded-lg border border-slate-200">
+              <div className="flex min-h-[min(50vh,400px)] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+                <p className="max-w-md text-sm text-slate-500">
+                  Chọn khoảng tháng{canScopeManagedTeams ? ", team" : ""} và bấm{" "}
+                  <span className="font-medium text-slate-700">Load Data</span> để tải bảng revenue plan.
+                </p>
+                <Button type="button" onClick={() => void handleLoadData()} disabled={loadingFilterTeams}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Load Data
+                </Button>
+              </div>
+            </div>
+          ) : loading ? (
+            <div className="flex min-h-[min(50vh,400px)] items-center justify-center py-10 text-sm text-slate-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Loading revenue plans...
             </div>
           ) : (
             <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <div className="max-h-[min(70vh,720px)] overflow-auto">
+              <div
+                className={cn(
+                  "max-h-[min(70vh,720px)] overflow-auto",
+                  isAppColumnResizing && "select-none",
+                )}
+              >
                 <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
                     <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
-                      <TableHead rowSpan={3} className={APP_HEADER_CLASS}>
-                        App
+                      <TableHead
+                        rowSpan={3}
+                        className={cn(APP_HEADER_BASE_CLASS, isAppColumnResizing && "select-none")}
+                        style={appColumnStyle}
+                      >
+                        <div className="relative pr-1">
+                          App
+                          <AppColumnResizeHandle onMouseDown={startAppColumnResize} />
+                        </div>
                       </TableHead>
                       {monthKeys.map((month) => (
                         <TableHead
@@ -1180,7 +1292,12 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       <>
                         <TableRow className="bg-slate-100/80 hover:bg-slate-100/80">
                           <TableCell
-                            className={cn(APP_COLUMN_CLASS, "bg-slate-100 font-bold text-slate-900")}
+                            className={cn(
+                              APP_COLUMN_BASE_CLASS,
+                              "bg-slate-100 font-bold text-slate-900",
+                              isAppColumnResizing && "select-none",
+                            )}
+                            style={appColumnStyle}
                           >
                             Total
                           </TableCell>
@@ -1206,7 +1323,10 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
                           return (
                         <TableRow key={row.appStoreId} className="hover:bg-slate-50/60">
-                          <TableCell className={APP_COLUMN_CLASS}>
+                          <TableCell
+                            className={cn(APP_COLUMN_BASE_CLASS, isAppColumnResizing && "select-none")}
+                            style={appColumnStyle}
+                          >
                             <RevenuePlanAppCell
                               appLabel={row.appLabel}
                               appStoreId={row.appStoreId}
