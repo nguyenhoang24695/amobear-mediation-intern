@@ -74,6 +74,9 @@ const STABLE_SCOPE_HINT = [...REQUIRED_SCOPES, ...RECOMMENDED_SCOPES].join(", ")
 const emptyForm: CreateMetaIntegrationRequestDto = {
   displayName: "",
   authMode: "system_user_token",
+  metaAppId: "",
+  oauthConfigId: "",
+  appSecret: "",
   accessToken: "",
   tokenType: "Bearer",
   tokenExpiresAt: "",
@@ -310,6 +313,9 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     setForm({
       displayName: integration.displayName,
       authMode: integration.authMode,
+      metaAppId: integration.metaAppId ?? "",
+      oauthConfigId: integration.oauthConfigId ?? "",
+      appSecret: "",
       accessToken: "",
       tokenType: integration.tokenType ?? "Bearer",
       tokenExpiresAt: integration.tokenExpiresAt ? integration.tokenExpiresAt.slice(0, 16) : "",
@@ -407,6 +413,9 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
       let saved: MetaIntegrationDto
       const requestPayload = {
         ...form,
+        metaAppId: form.metaAppId || null,
+        oauthConfigId: form.oauthConfigId || null,
+        appSecret: form.appSecret || null,
         accessToken: form.accessToken || null,
         tokenType: form.tokenType || null,
         tokenExpiresAt: form.tokenExpiresAt ? new Date(form.tokenExpiresAt).toISOString() : null,
@@ -765,6 +774,34 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                     USER_TOKEN should only be used for development or testing. It is not recommended for production request execution.
                   </div>
                 ) : null}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Meta App ID</Label>
+                    <Input
+                      className="h-9 text-sm font-mono"
+                      value={form.metaAppId ?? ""}
+                      onChange={(event) => updateConnectionForm({ metaAppId: event.target.value })}
+                      placeholder="966021639087771"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Business Login Config ID</Label>
+                    <Input
+                      className="h-9 text-sm font-mono"
+                      value={form.oauthConfigId ?? ""}
+                      onChange={(event) => updateConnectionForm({ oauthConfigId: event.target.value })}
+                      placeholder="1370633118256507"
+                    />
+                    <p className="text-[11px] text-slate-500">For Facebook Login for Business, OAuth uses config_id instead of scope when this is set.</p>
+                  </div>
+                </div>
+                <MaskedInput
+                  label="Meta App Secret"
+                  value={form.appSecret ?? ""}
+                  onChange={(value) => updateConnectionForm({ appSecret: value })}
+                  placeholder="Leave blank to keep current value"
+                  hint={editTarget?.appSecretHint ?? null}
+                />
               </div>
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 space-y-4 h-fit">

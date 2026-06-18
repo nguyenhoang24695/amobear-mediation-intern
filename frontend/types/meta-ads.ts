@@ -23,6 +23,7 @@ export interface MetaIntegrationDto {
   businesses?: MetaBusinessReferenceDto[]
   businessCount?: number
   metaAppId?: string | null
+  oauthConfigId?: string | null
   hasAppSecret: boolean
   appSecretHint?: string | null
   hasAccessToken: boolean
@@ -51,6 +52,7 @@ export interface CreateMetaIntegrationRequestDto {
   metaBusinessId?: string | null
   metaBusinessName?: string | null
   metaAppId?: string | null
+  oauthConfigId?: string | null
   appSecret?: string | null
   accessToken?: string | null
   tokenType?: string | null
@@ -66,6 +68,7 @@ export interface UpdateMetaIntegrationRequestDto {
   metaBusinessId?: string | null
   metaBusinessName?: string | null
   metaAppId?: string | null
+  oauthConfigId?: string | null
   appSecret?: string | null
   accessToken?: string | null
   tokenType?: string | null
@@ -118,6 +121,7 @@ export interface MetaIntegrationTestRequestDto {
   metaBusinessId?: string | null
   metaBusinessName?: string | null
   metaAppId?: string | null
+  oauthConfigId?: string | null
   appSecret?: string | null
   accessToken?: string | null
   tokenType?: string | null
