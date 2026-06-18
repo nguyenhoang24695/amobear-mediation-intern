@@ -46,6 +46,10 @@ import type {
     DataSourcesOverviewDto,
     DataSourcesTimelineDto,
     SourceDetailsDto,
+    DataSourceBackfillRunStartedDto,
+    PagedDataSourceBackfillRunsDto,
+    DataSourceBackfillRunDetailDto,
+    StartDataSourceBackfillRunRequest,
     AppDailyInsight,
     AppHourlyPerformanceResponseDto,
     AppGrowthTodayResponseDto,
@@ -2210,6 +2214,28 @@ export const dataSourcesApi = {
             layer,
             days,
         } as Record<string, string | number | undefined>)
+    },
+    startBackfillRun: async (
+        body: StartDataSourceBackfillRunRequest
+    ): Promise<DataSourceBackfillRunStartedDto> => {
+        return apiClient.post<DataSourceBackfillRunStartedDto>('/api/v1/data-sources/backfill-runs', body)
+    },
+    listBackfillRuns: async (params?: {
+        sourceKey?: string
+        status?: string
+        page?: number
+        pageSize?: number
+    }): Promise<PagedDataSourceBackfillRunsDto> => {
+        return apiClient.get<PagedDataSourceBackfillRunsDto>('/api/v1/data-sources/backfill-runs', params as Record<string, string | number | undefined>)
+    },
+    getBackfillRun: async (id: string): Promise<DataSourceBackfillRunDetailDto> => {
+        return apiClient.get<DataSourceBackfillRunDetailDto>(`/api/v1/data-sources/backfill-runs/${id}`)
+    },
+    resumeBackfillRun: async (id: string): Promise<DataSourceBackfillRunStartedDto> => {
+        return apiClient.post<DataSourceBackfillRunStartedDto>(`/api/v1/data-sources/backfill-runs/${id}/resume`, {})
+    },
+    openBackfillRunLogStream: (eventsUrl: string, signal?: AbortSignal): Promise<Response> => {
+        return apiClient.streamGet(eventsUrl, signal)
     },
 }
 
