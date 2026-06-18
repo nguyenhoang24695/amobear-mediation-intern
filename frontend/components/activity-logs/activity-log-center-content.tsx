@@ -3,19 +3,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { format, formatDistanceToNow } from "date-fns"
-import { Activity, Eye, RefreshCw, Search, ShieldCheck } from "lucide-react"
+import { Activity, Check, ChevronsUpDown, Eye, RefreshCw, Search, ShieldCheck } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   activityLogsApi,
   type ActivityLogDetail,
+  type ActivityLogDomainOption,
+  type ActivityLogEventTypeOption,
   type ActivityLogListItem,
   type PagedResult,
 } from "@/lib/api/services"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -26,10 +37,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Pagination } from "@/components/shared/pagination"
+import { cn } from "@/lib/utils"
 import { ActivityLogDetailDialog } from "./activity-log-detail-dialog"
 
-const DOMAIN_OPTIONS = [
-  { value: "all", label: "All Domains" },
+const ALL_DOMAIN_OPTION = { value: "all", label: "All Domains" }
+
+// Fallback khi endpoint /filter-options chưa trả về (lỗi mạng / đang load).
+// Nguồn chuẩn là backend ActivityLogEventCatalog — danh sách này chỉ để UI không trống.
+const FALLBACK_DOMAIN_OPTIONS = [
+  ALL_DOMAIN_OPTION,
   { value: "waterfall", label: "Waterfall" },
   { value: "job", label: "Jobs" },
   { value: "app", label: "App" },
@@ -62,7 +78,7 @@ const JOB_NAME_OPTIONS = [
   { value: "dashboard-cache-job", label: "Dashboard Cache" },
 ]
 
-const EVENT_TYPE_OPTIONS = [
+const FALLBACK_EVENT_TYPE_OPTIONS = [
   { value: "waterfall.apply.succeeded", label: "Waterfall Apply Succeeded", domain: "waterfall" },
   { value: "waterfall.apply.failed", label: "Waterfall Apply Failed", domain: "waterfall" },
   { value: "waterfall.sync.succeeded", label: "Waterfall Sync Succeeded", domain: "waterfall" },
@@ -213,6 +229,76 @@ function ActivityLogsTableSkeleton() {
   )
 }
 
+interface EventTypeFilterComboboxProps {
+  options: { value: string; label: string }[]
+  value: string
+  onChange: (next: string) => void
+}
+
+function EventTypeFilterCombobox({ options, value, onChange }: EventTypeFilterComboboxProps) {
+  const [open, setOpen] = useState(false)
+
+  const selectedLabel =
+    value === "all" ? "All Event Types" : options.find((option) => option.value === value)?.label ?? "All Event Types"
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          className="h-10 w-full justify-between bg-white px-3 text-left font-normal"
+        >
+          <span className="min-w-0 flex-1 truncate text-left">{selectedLabel}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] min-w-[min(100vw-2rem,320px)] p-0"
+        align="start"
+      >
+        <Command>
+          <CommandInput placeholder="Search event type..." />
+          <CommandList>
+            <CommandEmpty>No event type found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="__all__ All Event Types"
+                onSelect={() => {
+                  onChange("all")
+                  setOpen(false)
+                }}
+              >
+                <Check className={cn("mr-2 h-4 w-4 shrink-0", value === "all" ? "opacity-100" : "opacity-0")} />
+                <span className="text-slate-700">All Event Types</span>
+              </CommandItem>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  // Cho cmdk search được cả label lẫn raw event type (vd "policy", "waterfall.policy.updated").
+                  value={`${option.label} ${option.value}`}
+                  onSelect={() => {
+                    onChange(option.value)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")}
+                  />
+                  <span className="truncate">{option.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function ActivityLogCenterContent() {
   return <ActivityLogCenterBody />
 }
@@ -226,6 +312,7 @@ function ActivityLogCenterBody() {
     domain: searchParams.get("domain") ?? "all",
     eventType: searchParams.get("eventType") ?? "all",
     status: searchParams.get("status") ?? "all",
+    actor: searchParams.get("actor") ?? "",
     targetType: searchParams.get("targetType") ?? "all",
     targetId: searchParams.get("targetId") ?? "",
     jobName: searchParams.get("jobName") ?? "all",
@@ -241,6 +328,7 @@ function ActivityLogCenterBody() {
   const [domainFilter, setDomainFilter] = useState(filtersFromUrl.domain)
   const [eventTypeFilter, setEventTypeFilter] = useState(filtersFromUrl.eventType)
   const [statusFilter, setStatusFilter] = useState(filtersFromUrl.status)
+  const [actorFilter, setActorFilter] = useState(filtersFromUrl.actor)
   const [targetTypeFilter, setTargetTypeFilter] = useState(filtersFromUrl.targetType)
   const [targetIdFilter, setTargetIdFilter] = useState(filtersFromUrl.targetId)
   const [jobNameFilter, setJobNameFilter] = useState(filtersFromUrl.jobName)
@@ -254,6 +342,7 @@ function ActivityLogCenterBody() {
 
   const [debouncedTextFilters, setDebouncedTextFilters] = useState({
     q: filtersFromUrl.q,
+    actor: filtersFromUrl.actor,
     appId: filtersFromUrl.appId,
     mediationGroupId: filtersFromUrl.mediationGroupId,
     targetId: filtersFromUrl.targetId,
@@ -269,6 +358,11 @@ function ActivityLogCenterBody() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Catalog filter lấy động từ backend (ActivityLogEventCatalog); fallback tĩnh nếu fetch lỗi.
+  const [domainOptions, setDomainOptions] = useState<ActivityLogDomainOption[]>(FALLBACK_DOMAIN_OPTIONS)
+  const [eventTypeOptions, setEventTypeOptions] =
+    useState<ActivityLogEventTypeOption[]>(FALLBACK_EVENT_TYPE_OPTIONS)
+
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedPreview, setSelectedPreview] = useState<ActivityLogListItem | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<ActivityLogDetail | null>(null)
@@ -279,6 +373,7 @@ function ActivityLogCenterBody() {
     const timer = setTimeout(() => {
       setDebouncedTextFilters({
         q: searchQuery.trim(),
+        actor: actorFilter.trim(),
         appId: appIdFilter.trim(),
         mediationGroupId: mediationGroupIdFilter.trim(),
         targetId: targetIdFilter.trim(),
@@ -286,13 +381,36 @@ function ActivityLogCenterBody() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [searchQuery, appIdFilter, mediationGroupIdFilter, targetIdFilter])
+  }, [searchQuery, actorFilter, appIdFilter, mediationGroupIdFilter, targetIdFilter])
+
+  useEffect(() => {
+    let cancelled = false
+    activityLogsApi
+      .getFilterOptions()
+      .then((options) => {
+        if (cancelled) return
+        if (options.domains?.length) {
+          setDomainOptions([ALL_DOMAIN_OPTION, ...options.domains])
+        }
+        if (options.eventTypes?.length) {
+          setEventTypeOptions(options.eventTypes)
+        }
+      })
+      .catch((err) => {
+        // Giữ fallback tĩnh nếu lỗi — không chặn UI.
+        console.error("Failed to load activity log filter options:", err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     setSearchQuery(filtersFromUrl.q)
     setDomainFilter(filtersFromUrl.domain)
     setEventTypeFilter(filtersFromUrl.eventType)
     setStatusFilter(filtersFromUrl.status)
+    setActorFilter(filtersFromUrl.actor)
     setTargetTypeFilter(filtersFromUrl.targetType)
     setTargetIdFilter(filtersFromUrl.targetId)
     setJobNameFilter(filtersFromUrl.jobName)
@@ -304,6 +422,7 @@ function ActivityLogCenterBody() {
     setPageSize(filtersFromUrl.pageSize)
     setDebouncedTextFilters({
       q: filtersFromUrl.q,
+      actor: filtersFromUrl.actor,
       appId: filtersFromUrl.appId,
       mediationGroupId: filtersFromUrl.mediationGroupId,
       targetId: filtersFromUrl.targetId,
@@ -312,9 +431,9 @@ function ActivityLogCenterBody() {
   }, [filtersFromUrl])
 
   const filteredEventTypes = useMemo(() => {
-    if (domainFilter === "all") return EVENT_TYPE_OPTIONS
-    return EVENT_TYPE_OPTIONS.filter((option) => option.domain === domainFilter)
-  }, [domainFilter])
+    if (domainFilter === "all") return eventTypeOptions
+    return eventTypeOptions.filter((option) => option.domain === domainFilter)
+  }, [domainFilter, eventTypeOptions])
 
   useEffect(() => {
     if (eventTypeFilter !== "all" && !filteredEventTypes.some((option) => option.value === eventTypeFilter)) {
@@ -329,6 +448,7 @@ function ActivityLogCenterBody() {
 
       const response = await activityLogsApi.list({
         q: debouncedTextFilters.q || undefined,
+        actor: debouncedTextFilters.actor || undefined,
         domain: domainFilter !== "all" ? domainFilter : undefined,
         eventType: eventTypeFilter !== "all" ? eventTypeFilter : undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
@@ -397,6 +517,7 @@ function ActivityLogCenterBody() {
     setDomainFilter("all")
     setEventTypeFilter("all")
     setStatusFilter("all")
+    setActorFilter("")
     setTargetTypeFilter("all")
     setTargetIdFilter("")
     setJobNameFilter("all")
@@ -413,6 +534,7 @@ function ActivityLogCenterBody() {
       domainFilter !== "all" ||
       eventTypeFilter !== "all" ||
       statusFilter !== "all" ||
+      actorFilter ||
       targetTypeFilter !== "all" ||
       targetIdFilter ||
       jobNameFilter !== "all" ||
@@ -544,7 +666,7 @@ function ActivityLogCenterBody() {
                 <SelectValue placeholder="Domain" />
               </SelectTrigger>
               <SelectContent>
-                {DOMAIN_OPTIONS.map((option) => (
+                {domainOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -552,25 +674,14 @@ function ActivityLogCenterBody() {
               </SelectContent>
             </Select>
 
-            <Select
+            <EventTypeFilterCombobox
+              options={filteredEventTypes}
               value={eventTypeFilter}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setEventTypeFilter(value)
                 setCurrentPage(1)
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Event Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Event Types</SelectItem>
-                {filteredEventTypes.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
 
             <Select
               value={statusFilter}
@@ -592,7 +703,16 @@ function ActivityLogCenterBody() {
             </Select>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8">
+            <Input
+              placeholder="Actor name"
+              value={actorFilter}
+              onChange={(event) => {
+                setActorFilter(event.target.value)
+                setCurrentPage(1)
+              }}
+            />
+
             <Select
               value={targetTypeFilter}
               onValueChange={(value) => {

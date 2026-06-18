@@ -247,6 +247,22 @@ export interface ActivityLogDetail extends ActivityLogListItem {
     refs: ActivityLogRef[]
 }
 
+export interface ActivityLogDomainOption {
+    value: string
+    label: string
+}
+
+export interface ActivityLogEventTypeOption {
+    value: string
+    label: string
+    domain: string
+}
+
+export interface ActivityLogFilterOptions {
+    domains: ActivityLogDomainOption[]
+    eventTypes: ActivityLogEventTypeOption[]
+}
+
 export interface ActivityLogQueryParams {
     from?: string
     to?: string
@@ -2222,6 +2238,10 @@ export const activityLogsApi = {
 
     getById: async (id: number): Promise<ActivityLogDetail> => {
         return apiClient.get<ActivityLogDetail>(`/api/v1/activity-logs/${id}`)
+    },
+
+    getFilterOptions: async (): Promise<ActivityLogFilterOptions> => {
+        return apiClient.get<ActivityLogFilterOptions>('/api/v1/activity-logs/filter-options')
     },
 }
 
