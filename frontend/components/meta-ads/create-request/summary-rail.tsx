@@ -41,6 +41,7 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
   const creativeStatus = getCreativeStatus(form)
   const geoStatus = getGeoStatus(form)
   const geoSummary = getGeoSummary(form)
+  const adTransparencySummary = getAdTransparencySummary(form)
 
   return (
     <div className="space-y-3">
@@ -118,6 +119,9 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
           <div className="pt-2 border-t border-slate-200">
             <p className="font-semibold text-slate-900 mb-1">Ad Set</p>
             <SummaryLine label="Geo" value={geoSummary} />
+            {adTransparencySummary.length > 0 ? (
+              adTransparencySummary.map((item) => <SummaryLine key={item.label} label={item.label} value={item.value} />)
+            ) : null}
             <SummaryLine label="Age" value={`${form.ageMin}-${form.ageMax}`} />
             <SummaryLine label="Performance Goal" value={getPerformanceGoalSummary(form)} />
             <SummaryLine label="Bid Strategy" value={form.bidStrategy || "-"} />
@@ -154,6 +158,39 @@ export function RequestSummaryRail({ form, serverStatus, validationErrors, token
       ) : null}
     </div>
   )
+}
+
+function getAdTransparencySummary(form: RequestFormState): Array<{ label: string; value: string }> {
+  const ri = form.regionalRegulationIdentities
+  const otherBeneficiary = ri?.universalBeneficiary ?? ri?.australiaFinservBeneficiary ?? ri?.indiaFinservBeneficiary
+  const otherPayer = ri?.universalPayer ?? ri?.australiaFinservPayer ?? ri?.indiaFinservPayer
+  const items = ri ? [
+    { code: "Singapore", beneficiary: ri.singaporeUniversalBeneficiary, payer: ri.singaporeUniversalPayer },
+    { code: "Taiwan", beneficiary: ri.taiwanUniversalBeneficiary, payer: ri.taiwanUniversalPayer },
+    { code: "Other", beneficiary: otherBeneficiary, payer: otherPayer },
+  ] : []
+
+  const rows = items
+    .filter((item) => item.beneficiary?.trim())
+    .map((item) => {
+      const beneficiary = item.beneficiary!.trim()
+      const payer = item.payer?.trim()
+      return {
+        label: `Advertiser ${item.code}`,
+        value: payer && payer !== beneficiary ? `${beneficiary} / payer ${payer}` : beneficiary,
+      }
+    })
+
+  if (form.dsaBeneficiary?.trim()) {
+    const beneficiary = form.dsaBeneficiary.trim()
+    const payer = form.dsaPayor?.trim()
+    rows.push({
+      label: "Advertiser EU",
+      value: payer && payer !== beneficiary ? `${beneficiary} / payer ${payer}` : beneficiary,
+    })
+  }
+
+  return rows
 }
 
 function getGeoStatus(form: RequestFormState): CheckState {

@@ -332,6 +332,37 @@ function getRequestPerformanceGoalSummary(detail: MetaCampaignRequestDetailDto):
   }
   return "Maximize number of app installs"
 }
+
+function getAdTransparencyRows(detail: MetaCampaignRequestDetailDto): Array<{ label: string; value: string }> {
+  const ri = detail.payload.adSet.regionalRegulationIdentities
+  const otherBeneficiary = ri?.universalBeneficiary ?? ri?.australiaFinservBeneficiary ?? ri?.indiaFinservBeneficiary
+  const otherPayer = ri?.universalPayer ?? ri?.australiaFinservPayer ?? ri?.indiaFinservPayer
+  const rows = (ri ? [
+    { code: "Singapore", beneficiary: ri.singaporeUniversalBeneficiary, payer: ri.singaporeUniversalPayer },
+    { code: "Taiwan", beneficiary: ri.taiwanUniversalBeneficiary, payer: ri.taiwanUniversalPayer },
+    { code: "Other", beneficiary: otherBeneficiary, payer: otherPayer },
+  ] : [])
+    .filter((item) => item.beneficiary?.trim())
+    .map((item) => {
+      const beneficiary = item.beneficiary!.trim()
+      const payer = item.payer?.trim()
+      return {
+        label: `Advertiser ${item.code}`,
+        value: payer && payer !== beneficiary ? `${beneficiary} / payer ${payer}` : beneficiary,
+      }
+    })
+
+  if (detail.payload.adSet.dsaBeneficiary?.trim()) {
+    const beneficiary = detail.payload.adSet.dsaBeneficiary.trim()
+    const payer = detail.payload.adSet.dsaPayor?.trim()
+    rows.push({
+      label: "Advertiser EU",
+      value: payer && payer !== beneficiary ? `${beneficiary} / payer ${payer}` : beneficiary,
+    })
+  }
+
+  return rows
+}
 function getCreativeSummaryHeadline(creative: MetaCreativeDraftDto): string {
   switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
@@ -1160,6 +1191,9 @@ export function RequestDetailContent({ requestId }: Props) {
                 {detail.payload.adSet.customStoreListingId && (
                   <DetailRow label="Custom Store Listing" value={detail.payload.adSet.customStoreListingId} mono />
                 )}
+                {getAdTransparencyRows(detail).map((row) => (
+                  <DetailRow key={row.label} label={row.label} value={row.value} mono />
+                ))}
                 <DetailRow label="Creative Type" value={creativeType.replaceAll("_", " ")} mono />
                 <DetailRow label="Creative Name" value={creativeCommon.name || "-"} />
                 <DetailRow label="Facebook Page ID" value={creativeCommon.pageId || "-"} mono />
