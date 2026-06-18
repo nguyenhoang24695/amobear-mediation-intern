@@ -14,6 +14,7 @@ import { SyncJobsTimeline } from "./sync-jobs-timeline"
 import { DataQualityMonitor } from "./data-quality-monitor"
 import { ArchitectureDiagram } from "./architecture-diagram"
 import { SourceDetailsTab } from "./source-details-tab"
+import { DataSourceRunsTab } from "./data-source-runs-tab"
 
 const SCREEN_DATA_SOURCES = "s-data-sources"
 
@@ -110,6 +111,7 @@ export function DataSourcesContent() {
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="runs">Runs</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-6 mt-0">
           {overview && <SourcesOverviewGrid sources={overview.sources} />}
@@ -149,6 +151,9 @@ export function DataSourcesContent() {
         </TabsContent>
         <TabsContent value="details" className="mt-0">
           <SourceDetailsTab sources={overview?.sources ?? []} enabled={mainTab === "details" && Boolean(overview)} />
+        </TabsContent>
+        <TabsContent value="runs" className="mt-0">
+          <DataSourceRunsTab sources={overview?.sources ?? []} enabled={mainTab === "runs" && Boolean(overview)} />
         </TabsContent>
       </Tabs>
     </div>
