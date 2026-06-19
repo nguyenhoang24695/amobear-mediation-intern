@@ -250,6 +250,7 @@ function createDefaultFormState(): RequestFormState {
     campaignLifetimeBudget: "",
     adSetName: "",
     regionalRegulationIdentities: null,
+    includesFinancialProducts: false,
     dsaBeneficiary: "Amobear",
     dsaPayor: "",
     geoMode: "GLOBAL",

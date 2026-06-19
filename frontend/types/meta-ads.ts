@@ -796,6 +796,7 @@ export interface MetaAdSetDraftDto {
   deferredDeepLinkUrl?: string | null
   customStoreListingId?: string | null
   regionalRegulationIdentities?: MetaRegionalRegulationIdentitiesDto | null
+  includesFinancialProducts?: boolean
   dsaBeneficiary?: string | null
   dsaPayor?: string | null
 }
@@ -1487,6 +1488,7 @@ export interface MetaRequestFormState {
   deferredDeepLinkUrl?: string | null
   customStoreListingId?: string | null
   regionalRegulationIdentities?: MetaRegionalRegulationIdentitiesDto | null
+  includesFinancialProducts: boolean
   dsaBeneficiary?: string | null
   dsaPayor?: string | null
   // Additional ad variants (variant 2, 3, ...). Variant 1 is represented by the flat creative/ad fields above.

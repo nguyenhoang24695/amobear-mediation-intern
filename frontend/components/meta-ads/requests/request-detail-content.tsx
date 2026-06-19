@@ -352,6 +352,10 @@ function getAdTransparencyRows(detail: MetaCampaignRequestDetailDto): Array<{ la
       }
     })
 
+  if (detail.payload.adSet.includesFinancialProducts) {
+    rows.unshift({ label: "Financial services", value: "Yes (FINSERV)" })
+  }
+
   if (detail.payload.adSet.dsaBeneficiary?.trim()) {
     const beneficiary = detail.payload.adSet.dsaBeneficiary.trim()
     const payer = detail.payload.adSet.dsaPayor?.trim()

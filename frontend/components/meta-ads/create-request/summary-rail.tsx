@@ -181,6 +181,10 @@ function getAdTransparencySummary(form: RequestFormState): Array<{ label: string
       }
     })
 
+  if (form.includesFinancialProducts) {
+    rows.unshift({ label: "Financial services", value: "Yes (FINSERV)" })
+  }
+
   if (form.dsaBeneficiary?.trim()) {
     const beneficiary = form.dsaBeneficiary.trim()
     const payer = form.dsaPayor?.trim()
