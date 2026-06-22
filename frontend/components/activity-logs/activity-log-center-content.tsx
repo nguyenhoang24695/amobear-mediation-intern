@@ -212,6 +212,24 @@ function parsePositiveInt(value?: string | null, fallback = 1) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
+type ActivityLogTextFilters = {
+  q: string
+  actor: string
+  appId: string
+  mediationGroupId: string
+  targetId: string
+}
+
+function sameTextFilters(a: ActivityLogTextFilters, b: ActivityLogTextFilters) {
+  return (
+    a.q === b.q &&
+    a.actor === b.actor &&
+    a.appId === b.appId &&
+    a.mediationGroupId === b.mediationGroupId &&
+    a.targetId === b.targetId
+  )
+}
+
 function ActivityLogsTableSkeleton() {
   return (
     <div className="space-y-3 p-6">
@@ -340,7 +358,7 @@ function ActivityLogCenterBody() {
   const [pageSize, setPageSize] = useState(filtersFromUrl.pageSize)
   const [filtersReady, setFiltersReady] = useState(false)
 
-  const [debouncedTextFilters, setDebouncedTextFilters] = useState({
+  const [debouncedTextFilters, setDebouncedTextFilters] = useState<ActivityLogTextFilters>({
     q: filtersFromUrl.q,
     actor: filtersFromUrl.actor,
     appId: filtersFromUrl.appId,
@@ -371,13 +389,14 @@ function ActivityLogCenterBody() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedTextFilters({
+      const next = {
         q: searchQuery.trim(),
         actor: actorFilter.trim(),
         appId: appIdFilter.trim(),
         mediationGroupId: mediationGroupIdFilter.trim(),
         targetId: targetIdFilter.trim(),
-      })
+      }
+      setDebouncedTextFilters((prev) => (sameTextFilters(prev, next) ? prev : next))
     }, 300)
 
     return () => clearTimeout(timer)
@@ -420,13 +439,16 @@ function ActivityLogCenterBody() {
     setToDate(filtersFromUrl.toDate)
     setCurrentPage(filtersFromUrl.page)
     setPageSize(filtersFromUrl.pageSize)
-    setDebouncedTextFilters({
+    const nextDebouncedTextFilters = {
       q: filtersFromUrl.q,
       actor: filtersFromUrl.actor,
       appId: filtersFromUrl.appId,
       mediationGroupId: filtersFromUrl.mediationGroupId,
       targetId: filtersFromUrl.targetId,
-    })
+    }
+    setDebouncedTextFilters((prev) =>
+      sameTextFilters(prev, nextDebouncedTextFilters) ? prev : nextDebouncedTextFilters,
+    )
     setFiltersReady(true)
   }, [filtersFromUrl])
 
