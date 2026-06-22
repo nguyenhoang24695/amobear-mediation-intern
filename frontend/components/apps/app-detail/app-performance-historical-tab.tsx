@@ -697,12 +697,22 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         totalCost: null as number | null,
         net: null as number | null,
         margin: null as number | null,
+        iaaRevenue: null as number | null,
+        iapRevenue: null as number | null,
         buckets: 0,
         daysWithData: 0,
       }
     }
     const totalRevenue = dailyData.reduce((s, d) => s + (d.revenue ?? 0), 0)
     const totalCost = dailyData.reduce((s, d) => s + (d.cost ?? 0), 0)
+    const iaaRevenue = data.reduce((s, bucket) => {
+      const applovin = selectedBreakdownSources.has("applovin") ? bucket.revenueApplovin : 0
+      const admob = selectedBreakdownSources.has("admob") ? bucket.revenueAdmob : 0
+      return s + applovin + admob
+    }, 0)
+    const iapRevenue = selectedBreakdownSources.has("qonversion")
+      ? data.reduce((s, bucket) => s + bucket.revenueQonversion, 0)
+      : 0
     const net = totalRevenue - totalCost
     const margin = totalRevenue > 0 ? (net / totalRevenue) * 100 : 0
     const daysWithData = dailyData.filter((d) => d.hasData).length
@@ -712,10 +722,12 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
       totalCost: Math.round(totalCost * 100) / 100,
       net: Math.round(net * 100) / 100,
       margin: Math.round(margin * 10) / 10,
+      iaaRevenue: Math.round(iaaRevenue * 100) / 100,
+      iapRevenue: Math.round(iapRevenue * 100) / 100,
       buckets,
       daysWithData,
     }
-  }, [data, dailyData])
+  }, [data, dailyData, selectedBreakdownSources])
 
   const handlePresetChange = (value: PresetKey) => {
     setPreset(value)
@@ -867,11 +879,21 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         <Card className="border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
                 <p className="text-xl font-semibold text-slate-900">{fmtUsd(summary.totalRevenue)}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">IAA Revenue</p>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-700">{fmtUsd(summary.iaaRevenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">IAP Revenue</p>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-700">{fmtUsd(summary.iapRevenue)}</p>
+                  </div>
+                </div>
               </div>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
+              <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
                 <DollarSign className="w-4 h-4" />
               </div>
             </div>
