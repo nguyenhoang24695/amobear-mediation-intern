@@ -8,6 +8,7 @@ import { HelpMarkdown } from "@/components/help/help-markdown"
 const TITLES: Record<HelpDocSlug, string> = {
   "slack-user": "Slack cho User — Help",
   "alert-rules": "Alert Rule — Help",
+  "google-play-rtdn": "Google Play RTDN — Help",
 }
 
 export function generateStaticParams() {

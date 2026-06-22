@@ -1,11 +1,12 @@
 /** Slug URL → file trong `content/help/` (chỉ các file được phép đọc). */
-export const HELP_DOC_SLUGS = ["slack-user", "alert-rules"] as const
+export const HELP_DOC_SLUGS = ["slack-user", "alert-rules", "google-play-rtdn"] as const
 export type HelpDocSlug = (typeof HELP_DOC_SLUGS)[number]
 
 export const HELP_DOC_FILES = {
   overview: "overview.md",
   "slack-user": "slack-user-configuration.md",
   "alert-rules": "alert-rule-configuration.md",
+  "google-play-rtdn": "google-play-rtdn-configuration.md",
 } as const
 
 export type HelpNavItem = {
@@ -19,6 +20,15 @@ export const HELP_ALERT_CENTER_CHILDREN: HelpNavItem[] = [
   { slug: "", title: "Tổng quan", description: "Mục lục và đường dẫn nhanh" },
   { slug: "slack-user", title: "Slack cho User", description: "Webhook trên Profile" },
   { slug: "alert-rules", title: "Alert Rule", description: "Tạo rule và kênh thông báo" },
+]
+
+/** Các trang Help đứng ngang cấp nhóm "Alert Center". */
+export const HELP_TOP_LEVEL_ITEMS: HelpNavItem[] = [
+  {
+    slug: "google-play-rtdn",
+    title: "Google Play RTDN",
+    description: "Pub/Sub và Play Console",
+  },
 ]
 
 const ALLOWED_FILES = new Set<string>(Object.values(HELP_DOC_FILES))
@@ -36,5 +46,6 @@ export function helpFileNameForSlug(slug: string | undefined): string {
   if (!slug) return HELP_DOC_FILES.overview
   if (slug === "slack-user") return HELP_DOC_FILES["slack-user"]
   if (slug === "alert-rules") return HELP_DOC_FILES["alert-rules"]
+  if (slug === "google-play-rtdn") return HELP_DOC_FILES["google-play-rtdn"]
   throw new Error("Unknown help slug")
 }
