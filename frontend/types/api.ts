@@ -652,6 +652,43 @@ export interface JobScheduleUpdateRequest {
   manualRunJson?: string | null
 }
 
+export interface JobRunLogLineDto {
+  id: number
+  lineNo: number
+  loggedAt: string
+  message: string
+}
+
+export interface JobRunListItemDto {
+  id: string
+  jobId: string
+  displayName?: string | null
+  triggerSource: string
+  status: string
+  hangfireJobId?: string | null
+  actorUserId?: string | null
+  startedAt: string
+  completedAt?: string | null
+  lastHeartbeatAt: string
+  durationMs?: number | null
+  errorMessage?: string | null
+}
+
+export interface JobRunDetailDto extends JobRunListItemDto {
+  jobTypeName?: string | null
+  jobMethodName?: string | null
+  queryParamsJson?: string | null
+  logs: JobRunLogLineDto[]
+}
+
+export interface PagedJobRunsDto {
+  items: JobRunListItemDto[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 // Data Sources (Nexus observability)
 export interface DataDomainJobDto {
   jobId: string

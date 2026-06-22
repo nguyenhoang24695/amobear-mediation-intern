@@ -21,6 +21,8 @@ import type {
     PagedTeamMembersResponse,
     HangfireJobSchedule,
     JobScheduleUpdateRequest,
+    JobRunDetailDto,
+    PagedJobRunsDto,
     WaterfallRecommendationConfigDto,
     UpsertWaterfallRecommendationConfigDto,
     ReplaceWaterfallConfigAppsDto,
@@ -2254,6 +2256,22 @@ export const jobSchedulesApi = {
     // Reload schedules from database to Hangfire
     reload: async (): Promise<{ success: boolean; message?: string }> => {
         return apiClient.post<{ success: boolean; message?: string }>('/api/v1/job-schedules/reload', {})
+    },
+
+    listRuns: async (
+        jobId: string,
+        params?: { status?: string; page?: number; pageSize?: number }
+    ): Promise<PagedJobRunsDto> => {
+        return apiClient.get<PagedJobRunsDto>(
+            `/api/v1/job-schedules/${encodeURIComponent(jobId)}/runs`,
+            params as Record<string, string | number | undefined>
+        )
+    },
+
+    getRun: async (jobId: string, runId: string): Promise<JobRunDetailDto> => {
+        return apiClient.get<JobRunDetailDto>(
+            `/api/v1/job-schedules/${encodeURIComponent(jobId)}/runs/${encodeURIComponent(runId)}`
+        )
     },
 }
 
