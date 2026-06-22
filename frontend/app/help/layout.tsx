@@ -5,7 +5,7 @@ import { HelpDocsShell } from "@/components/help/help-docs-shell"
 
 export const metadata: Metadata = {
   title: "Help & Docs — Nexus",
-  description: "Hướng dẫn Alert Center, Slack user và cấu hình alert rule",
+  description: "Hướng dẫn Alert Center, webhook tích hợp và tài liệu vận hành Nexus",
 }
 
 export default function HelpLayout({ children }: { children: ReactNode }) {

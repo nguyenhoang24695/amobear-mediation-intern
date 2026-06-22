@@ -13,12 +13,12 @@ import {
   Lock,
   Loader2,
   MessageSquare,
+  RadioTower,
   Upload,
-  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Logo } from "@/components/shared/logo"
-import { HELP_ALERT_CENTER_CHILDREN, type HelpDocSlug } from "@/lib/help-docs"
+import { HELP_ALERT_CENTER_CHILDREN, HELP_TOP_LEVEL_ITEMS, type HelpDocSlug } from "@/lib/help-docs"
 import { helpDocumentsApi } from "@/lib/api/services"
 import type { HelpDocumentListItem } from "@/types/api"
 import { HelpDocUploadModal } from "@/components/help/help-doc-upload-modal"
@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast"
 const slugIcon = (slug: "" | HelpDocSlug) => {
   if (slug === "") return BookOpen
   if (slug === "slack-user") return MessageSquare
+  if (slug === "google-play-rtdn") return RadioTower
   return ListChecks
 }
 
@@ -202,6 +203,38 @@ export function HelpDocsSidebar() {
                 })}
               </div>
             )}
+          </div>
+
+          <div className="pt-2 mt-2 border-t border-slate-200 space-y-1">
+            {HELP_TOP_LEVEL_ITEMS.map((item) => {
+              const href = item.slug ? `/help/${item.slug}` : "/help"
+              const isActive =
+                item.slug === ""
+                  ? pathname === "/help"
+                  : pathname === `/help/${item.slug}` || pathname.startsWith(`/help/${item.slug}/`)
+              const Icon = slugIcon(item.slug)
+
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-start gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                    isActive ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  )}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span className="flex-1 text-left leading-snug">
+                    <span className="block">{item.title}</span>
+                    {item.description && (
+                      <span className="block text-[11px] font-normal text-slate-500 mt-0.5">
+                        {item.description}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
 
           <div className="pt-2 mt-2 border-t border-slate-200">
