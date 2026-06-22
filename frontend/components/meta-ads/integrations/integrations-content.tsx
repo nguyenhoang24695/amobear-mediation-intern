@@ -29,6 +29,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { invalidateCache, invalidateCachePrefix, useApi } from "@/hooks/use-api"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
@@ -58,6 +61,8 @@ import {
   ShieldAlert,
   ShieldX,
   Building2,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react"
 
 const SCREEN_META_ACCOUNTS = "s-meta-accounts"
@@ -70,6 +75,29 @@ const AUTH_MODE_OPTIONS = [
 const REQUIRED_SCOPES = ["ads_management", "ads_read"] as const
 const RECOMMENDED_SCOPES = ["pages_show_list", "pages_read_engagement"] as const
 const STABLE_SCOPE_HINT = [...REQUIRED_SCOPES, ...RECOMMENDED_SCOPES].join(", ")
+// Default scopes pre-selected for a new USER_TOKEN OAuth integration.
+const OAUTH_REQUEST_SCOPES = [
+  "pages_show_list",
+  "ads_management",
+  "ads_read",
+  "business_management",
+  "pages_read_engagement",
+  "pages_manage_ads",
+  "public_profile",
+] as const
+
+// Full catalog of scopes the user can pick from the multi-select.
+const AVAILABLE_OAUTH_SCOPES = [
+  "catalog_management",
+  "threads_business_basic",
+  "pages_show_list",
+  "ads_management",
+  "ads_read",
+  "business_management",
+  "pages_read_engagement",
+  "pages_manage_ads",
+  "public_profile",
+] as const
 
 const emptyForm: CreateMetaIntegrationRequestDto = {
   displayName: "",
@@ -250,6 +278,7 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
   const [oauthLoadingId, setOauthLoadingId] = useState<number | null>(null)
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [scopePickerOpen, setScopePickerOpen] = useState(false)
   const oauthNoticeRef = useRef<string | null>(null)
 
   const isOwnedByCurrentUser = useCallback(
@@ -347,6 +376,14 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
     setForm((current) => ({ ...current, ...patch }))
     setTestResult(null)
     setConnectionStateDirty(true)
+  }
+
+  const toggleOAuthScope = (scope: string) => {
+    const current = form.scopes ?? []
+    const next = current.includes(scope)
+      ? current.filter((value) => value !== scope)
+      : [...current, scope]
+    updateConnectionForm({ scopes: next })
   }
 
   const validateForm = () => {
@@ -752,7 +789,16 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-700">Auth Mode</Label>
-                  <Select value={form.authMode} onValueChange={(value) => updateConnectionForm({ authMode: value })}>
+                  <Select
+                    value={form.authMode}
+                    onValueChange={(value) =>
+                      updateConnectionForm(
+                        value === "oauth_user"
+                          ? { authMode: value, scopes: [...OAUTH_REQUEST_SCOPES] }
+                          : { authMode: value },
+                      )
+                    }
+                  >
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -774,34 +820,38 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                     USER_TOKEN should only be used for development or testing. It is not recommended for production request execution.
                   </div>
                 ) : null}
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Meta App ID</Label>
-                    <Input
-                      className="h-9 text-sm font-mono"
-                      value={form.metaAppId ?? ""}
-                      onChange={(event) => updateConnectionForm({ metaAppId: event.target.value })}
-                      placeholder="966021639087771"
+                {form.authMode !== "oauth_user" && (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-slate-700">Meta App ID</Label>
+                        <Input
+                          className="h-9 text-sm font-mono"
+                          value={form.metaAppId ?? ""}
+                          onChange={(event) => updateConnectionForm({ metaAppId: event.target.value })}
+                          placeholder="966021639087771"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-slate-700">Business Login Config ID</Label>
+                        <Input
+                          className="h-9 text-sm font-mono"
+                          value={form.oauthConfigId ?? ""}
+                          onChange={(event) => updateConnectionForm({ oauthConfigId: event.target.value })}
+                          placeholder="1370633118256507"
+                        />
+                        <p className="text-[11px] text-slate-500">For Facebook Login for Business, OAuth uses config_id instead of scope when this is set.</p>
+                      </div>
+                    </div>
+                    <MaskedInput
+                      label="Meta App Secret"
+                      value={form.appSecret ?? ""}
+                      onChange={(value) => updateConnectionForm({ appSecret: value })}
+                      placeholder="Leave blank to keep current value"
+                      hint={editTarget?.appSecretHint ?? null}
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Business Login Config ID</Label>
-                    <Input
-                      className="h-9 text-sm font-mono"
-                      value={form.oauthConfigId ?? ""}
-                      onChange={(event) => updateConnectionForm({ oauthConfigId: event.target.value })}
-                      placeholder="1370633118256507"
-                    />
-                    <p className="text-[11px] text-slate-500">For Facebook Login for Business, OAuth uses config_id instead of scope when this is set.</p>
-                  </div>
-                </div>
-                <MaskedInput
-                  label="Meta App Secret"
-                  value={form.appSecret ?? ""}
-                  onChange={(value) => updateConnectionForm({ appSecret: value })}
-                  placeholder="Leave blank to keep current value"
-                  hint={editTarget?.appSecretHint ?? null}
-                />
+                  </>
+                )}
               </div>
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 space-y-4 h-fit">
@@ -813,6 +863,69 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
                       : "Meta Marketing API does not use a standard refresh token flow like Google OAuth."}
                   </p>
                 </div>
+
+                {form.authMode === "oauth_user" && (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-blue-600" />
+                      <p className="text-xs font-semibold text-blue-900">App permissions requested via OAuth</p>
+                    </div>
+                    <p className="text-[11px] text-blue-700">
+                      Connecting will open Facebook Login and request the selected permissions:
+                    </p>
+                    <Popover open={scopePickerOpen} onOpenChange={setScopePickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={scopePickerOpen}
+                          className="h-9 w-full justify-between bg-white text-xs font-normal"
+                        >
+                          <span className="truncate text-slate-600">
+                            {(form.scopes?.length ?? 0) > 0
+                              ? `${form.scopes!.length} permission${form.scopes!.length === 1 ? "" : "s"} selected`
+                              : "Select permissions"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandList>
+                            <CommandGroup>
+                              {AVAILABLE_OAUTH_SCOPES.map((scope) => {
+                                const isSelected = (form.scopes ?? []).includes(scope)
+                                return (
+                                  <CommandItem
+                                    key={scope}
+                                    value={scope}
+                                    onSelect={() => toggleOAuthScope(scope)}
+                                    className="font-mono text-xs"
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                                    <span>{scope}</span>
+                                  </CommandItem>
+                                )
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {(form.scopes?.length ?? 0) > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(form.scopes ?? []).map((scope) => (
+                          <Badge key={scope} variant="secondary" className="font-mono text-[10px]">
+                            {scope}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-amber-700">No permission selected.</p>
+                    )}
+                  </div>
+                )}
 
                 {form.authMode === "oauth_user" && (
                   <div className="space-y-2">
