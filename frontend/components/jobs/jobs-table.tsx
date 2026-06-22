@@ -40,6 +40,7 @@ import {
   Search,
   Loader2,
   Settings2,
+  History,
 } from "lucide-react"
 import { Pagination } from "@/components/shared/pagination"
 import type { Job } from "./job-management-content"
@@ -54,6 +55,7 @@ interface JobsTableProps {
   onManualRunSettings?: (job: Job) => void
   onToggle: (jobId: string) => void
   onViewDetails: (job: Job) => void
+  onViewHistory: (job: Job) => void
   onClearFilters: () => void
   hasFilters: boolean
   canEdit?: boolean
@@ -74,6 +76,7 @@ export function JobsTable({
   onManualRunSettings,
   onToggle,
   onViewDetails,
+  onViewHistory,
   onClearFilters,
   hasFilters,
   canEdit = true,
@@ -496,6 +499,10 @@ export function JobsTable({
                           <DropdownMenuItem onClick={() => onViewDetails(job)}>
                             <Info className="w-4 h-4 mr-2" />
                             View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onViewHistory(job)}>
+                            <History className="w-4 h-4 mr-2" />
+                            View History
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -68,6 +68,7 @@ export function JobManagementContent() {
   const canReload = hasScreenFunction(SCREEN_JOBS, FN_RELOAD)
 
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -375,6 +376,7 @@ export function JobManagementContent() {
           onManualRunSettings={canEdit ? (job) => setManualRunSettingsJob(job) : undefined}
           onToggle={handleToggleJob}
           onViewDetails={(job) => setDetailsJob(job)}
+          onViewHistory={(job) => router.push(`/jobs/${encodeURIComponent(job.jobId)}/history`)}
           onClearFilters={() => {
             setSearchQuery("")
             setStatusFilter("all")
