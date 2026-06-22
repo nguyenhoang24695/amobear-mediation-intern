@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -34,11 +35,13 @@ import { structureApi, waterfallManagementApi, waterfallRecommendationSettingsAp
 import { cn } from "@/lib/utils"
 import type {
   App,
+  WaterfallActivePolicyItemDto,
+  WaterfallActivePolicyListResponseDto,
   WaterfallBulkPolicyPreviewResponseDto,
   WaterfallBulkPolicyTargetDto,
   WaterfallFilterOptionDto,
 } from "@/types/api"
-import { Layers, ListChecks, Loader2, RefreshCw, Smartphone } from "lucide-react"
+import { CalendarClock, ExternalLink, Layers, ListChecks, Loader2, RefreshCw, Search, Smartphone } from "lucide-react"
 
 const SCREEN_WATERFALL_APPLY = "s-waterfall-apply"
 const FN_VIEW = "view"
@@ -143,9 +146,419 @@ function filterLocalOptions(options: WaterfallFilterOptionDto[], search: string)
   })
 }
 
+function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
+  const { toast } = useToast()
+  const [selectedAppId, setSelectedAppId] = useState<string | undefined>()
+  const [applyMode, setApplyMode] = useState<string>("all")
+  const [search, setSearch] = useState("")
+  const [dueOnly, setDueOnly] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [data, setData] = useState<WaterfallActivePolicyListResponseDto | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [pendingModeChange, setPendingModeChange] = useState<{ item: WaterfallActivePolicyItemDto; applyMode: ApplyMode } | null>(null)
+
+  const { data: appsResponse, loading: appsLoading } = useApi(
+    () => structureApi.getApps(),
+    { enabled: true, cacheKey: "waterfall_apply_active_apps" },
+  )
+
+  const apps = useMemo(() => {
+    return [...(appsResponse?.apps ?? [])].sort((left, right) =>
+      getAppLabel(left).localeCompare(getAppLabel(right), undefined, { sensitivity: "base" }),
+    )
+  }, [appsResponse])
+  const appOptions = useMemo(() => buildAppOptions(apps), [apps])
+
+  const loadActivePolicies = async () => {
+    setLoading(true)
+    try {
+      const response = await waterfallManagementApi.getActivePolicies({
+        appId: selectedAppId,
+        applyMode: applyMode === "all" ? undefined : applyMode,
+        search: search.trim() || undefined,
+        page,
+        pageSize,
+      })
+      setData(response)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load active automation."
+      toast({
+        title: "Load failed",
+        description: message,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadActivePolicies()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAppId, applyMode, search, page, pageSize])
+
+  const totalCount = data?.totalCount ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const displayedItems = useMemo(() => {
+    const items = data?.items ?? []
+    return dueOnly ? items.filter((item) => item.isDue) : items
+  }, [data, dueOnly])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
+
+  const handleConfirmModeChange = async () => {
+    if (!pendingModeChange) return
+
+    setUpdating(true)
+    try {
+      await waterfallManagementApi.updatePolicy(pendingModeChange.item.mediationGroupId, {
+        applyMode: pendingModeChange.applyMode,
+        intervalDays: pendingModeChange.applyMode === "manual" ? null : pendingModeChange.item.intervalDays,
+      })
+      toast({
+        title: "Mode updated",
+        description: `${pendingModeChange.item.mediationGroupName} was changed to ${getApplyModeLabel(pendingModeChange.applyMode)}.`,
+      })
+      setPendingModeChange(null)
+      await loadActivePolicies()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update apply mode."
+      toast({
+        title: "Update failed",
+        description: message,
+        variant: "destructive",
+      })
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleFilterChange = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setPage(1)
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="gap-3 border-b">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-xl">Active automation</CardTitle>
+              <CardDescription>
+                Mediation groups currently running in Auto or Semi auto, including groups that are not due yet.
+              </CardDescription>
+            </div>
+            <Button variant="outline" onClick={() => void loadActivePolicies()} disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5 pt-6">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_minmax(220px,0.75fr)_160px]">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">App</label>
+              <WaterfallFilterCombobox
+                value={selectedAppId}
+                placeholder="All apps"
+                searchPlaceholder="Search app"
+                emptyMessage="No app found"
+                allLabel="All apps"
+                cacheKeyBase="waterfall_apply_active_app_filter"
+                scopeKey={`apps_${appOptions.length}`}
+                loadOptions={async (keyword) => filterLocalOptions(appOptions, keyword)}
+                onSelect={(option) => {
+                  setSelectedAppId(option?.value)
+                  setPage(1)
+                }}
+                disabled={appsLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Mode</label>
+              <Select value={applyMode} onValueChange={handleFilterChange(setApplyMode)}>
+                <SelectTrigger className="h-10 bg-white">
+                  <SelectValue placeholder="All automation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All automation</SelectItem>
+                  <SelectItem value="auto">Auto</SelectItem>
+                  <SelectItem value="semi_auto">Semi auto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Search</label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value)
+                    setPage(1)
+                  }}
+                  placeholder="App name, App Id, Mediation groups"
+                  className="h-10 bg-white pl-9"
+                />
+              </div>
+            </div>
+            <label className="flex items-end gap-2 pb-2 text-sm text-slate-700">
+              <Checkbox checked={dueOnly} onCheckedChange={(checked) => setDueOnly(checked === true)} />
+              Due only
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <SummaryCard label="Auto" value={data?.autoCount ?? 0} mode="auto" />
+            <SummaryCard label="Semi auto" value={data?.semiAutoCount ?? 0} mode="semi_auto" />
+            <Card className="gap-3 py-5">
+              <CardContent className="flex items-center justify-between px-5">
+                <div>
+                  <p className="text-sm text-slate-500">Due now</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">{data?.dueNowCount ?? 0}</p>
+                </div>
+                <CalendarClock className="h-5 w-5 text-slate-400" />
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="gap-3 border-b">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-lg">Active automation list</CardTitle>
+            <CardDescription>{totalCount} mediation groups are running in Auto or Semi auto.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0 pt-0">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 px-6 py-14 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading active automation...
+            </div>
+          ) : displayedItems.length === 0 ? (
+            <div className="px-6 py-14 text-center text-sm text-slate-500">
+              No mediation groups match the current filters.
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">App</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Mediation group</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Mode</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Interval</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Next due GMT+7</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Last observed apply</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Apply source</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Platform / format</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {displayedItems.map((item) => (
+                      <ActivePolicyRow
+                        key={item.mediationGroupId}
+                        item={item}
+                        canManage={canManage}
+                        onModeChange={(nextMode) => {
+                          if (item.applyMode !== nextMode) {
+                            setPendingModeChange({ item, applyMode: nextMode })
+                          }
+                        }}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalCount}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(value) => {
+                  setPageSize(value)
+                  setPage(1)
+                }}
+                itemName="mediation groups"
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={pendingModeChange != null} onOpenChange={(open) => !open && setPendingModeChange(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm apply mode change</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingModeChange
+                ? `Change ${pendingModeChange.item.mediationGroupName} to ${getApplyModeLabel(pendingModeChange.applyMode)}. This only updates the policy and does not apply waterfall changes directly.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={updating}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleConfirmModeChange()
+              }}
+            >
+              {updating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
+function SummaryCard({ label, value, mode }: { label: string; value: number; mode: ApplyMode }) {
+  return (
+    <Card className="gap-3 py-5">
+      <CardContent className="flex items-center justify-between px-5">
+        <div>
+          <p className="text-sm text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>
+        </div>
+        <Badge variant="outline" className={cn("capitalize", getApplyModeBadgeClass(mode))}>
+          {getApplyModeLabel(mode)}
+        </Badge>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActivePolicyRow({
+  item,
+  canManage,
+  onModeChange,
+}: {
+  item: WaterfallActivePolicyItemDto
+  canManage: boolean
+  onModeChange: (applyMode: ApplyMode) => void
+}) {
+  return (
+    <tr className="align-top hover:bg-slate-50/60">
+      <td className="px-4 py-4">
+        <div className="flex items-start gap-3">
+          {item.appIconUri ? (
+            <img src={item.appIconUri} alt="" className="h-9 w-9 rounded-md border border-slate-200 object-cover" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+              <Smartphone className="h-4 w-4" />
+            </div>
+          )}
+          <div className="space-y-1">
+            <div className="font-medium text-slate-900">{item.appName}</div>
+            <div className="text-xs text-slate-500">{item.appId}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="space-y-1">
+          <div className="font-medium text-slate-900">{item.mediationGroupName}</div>
+          <div className="text-xs text-slate-500">{item.mediationGroupId}</div>
+          <div className="text-xs text-slate-500">State: {item.state || "-"}</div>
+          <div className="text-xs text-slate-500">Rule group: {item.effectiveRuleGroupName || "-"}</div>
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <Badge variant="outline" className={getApplyModeBadgeClass(item.applyMode)}>
+          {getApplyModeLabel(item.applyMode)}
+        </Badge>
+      </td>
+      <td className="px-4 py-4 text-sm text-slate-700">{formatIntervalLabel(item.intervalDays)}</td>
+      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(item.dueAt)}</td>
+      <td className="px-4 py-4">
+        <Badge variant="outline" className={item.isDue ? "border-rose-200 bg-rose-50 text-rose-700" : "border-slate-200 bg-slate-50 text-slate-700"}>
+          {item.isDue ? "Due now" : "On schedule"}
+        </Badge>
+      </td>
+      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(item.lastObservedApplyAt)}</td>
+      <td className="px-4 py-4 text-sm text-slate-700">{item.lastApplySource || "-"}</td>
+      <td className="px-4 py-4 text-sm text-slate-700">
+        <div>{item.platform || "-"}</div>
+        <div className="text-xs text-slate-500">{item.adFormat || "-"}</div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex min-w-48 flex-col gap-2">
+          <Select
+            value={item.applyMode}
+            onValueChange={(value) => onModeChange(value as ApplyMode)}
+            disabled={!canManage}
+          >
+            <SelectTrigger className="h-9 bg-white">
+              <SelectValue placeholder="Change mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {APPLY_MODE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/mediation/${encodeURIComponent(item.mediationGroupId)}?tab=waterfall-optimization`}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open mediation
+            </a>
+          </Button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 export function WaterfallApplyContent() {
   const canView = hasScreenFunction(SCREEN_WATERFALL_APPLY, FN_VIEW)
   const canManage = hasScreenFunction(SCREEN_WATERFALL_APPLY, FN_MANAGE)
+
+  if (!canView) {
+    return <NoPermissionView />
+  }
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-slate-900">Waterfall Automation</h1>
+        <p className="text-sm text-slate-500">
+          Monitor active automation or configure apply mode in bulk.
+        </p>
+      </div>
+      <Tabs defaultValue="active" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="active">Active automation</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk configure</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active" className="space-y-4">
+          <ActiveAutomationTab canManage={canManage} />
+        </TabsContent>
+        <TabsContent value="bulk" className="space-y-4">
+          <BulkConfigureTab canManage={canManage} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function BulkConfigureTab({ canManage }: { canManage: boolean }) {
   const { toast } = useToast()
 
   const [filterType, setFilterType] = useState<FilterType>("app")
@@ -163,11 +576,11 @@ export function WaterfallApplyContent() {
 
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
-    { enabled: canView, cacheKey: "waterfall_apply_apps" },
+    { enabled: true, cacheKey: "waterfall_apply_apps" },
   )
   const { data: ruleGroupsResponse, loading: ruleGroupsLoading } = useApi(
     () => waterfallRecommendationSettingsApi.getAllRuleGroups(),
-    { enabled: canView, cacheKey: "waterfall_apply_rule_groups" },
+    { enabled: true, cacheKey: "waterfall_apply_rule_groups" },
   )
 
   const apps = useMemo(() => {
@@ -233,10 +646,6 @@ export function WaterfallApplyContent() {
     const matchedRuleGroup = ruleGroups.find((group) => group.id === previewData.ruleGroupId)
     return matchedRuleGroup?.name ?? (previewData.ruleGroupId != null ? `Rule Group #${previewData.ruleGroupId}` : "-")
   }, [apps, previewData, ruleGroups])
-
-  if (!canView) {
-    return <NoPermissionView />
-  }
 
   const resetPreview = () => {
     setPreviewData(null)
@@ -418,7 +827,7 @@ export function WaterfallApplyContent() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader className="gap-3 border-b">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">

@@ -12,6 +12,7 @@ import type {
   MetaCreativeMediaSourceDto,
   MetaRequestAssetSelectionState,
   MetaRequestFormState,
+  MetaRegionalRegulationIdentitiesDto,
   UpdateMetaCampaignRequestDto,
   MetaDegreesOfFreedomSpecDto,
 } from "@/types/meta-ads"
@@ -117,6 +118,29 @@ function parseOptionalDate(value: string): string | null {
   return date.toISOString()
 }
 
+function trimOrNull(value?: string | null): string | null {
+  const normalized = value?.trim()
+  return normalized ? normalized : null
+}
+
+function normalizeRegionalRegulationIdentities(value?: MetaRegionalRegulationIdentitiesDto | null): MetaRegionalRegulationIdentitiesDto | null {
+  if (!value) return null
+  const normalized: MetaRegionalRegulationIdentitiesDto = {
+    singaporeUniversalBeneficiary: trimOrNull(value.singaporeUniversalBeneficiary),
+    singaporeUniversalPayer: trimOrNull(value.singaporeUniversalPayer),
+    taiwanUniversalBeneficiary: trimOrNull(value.taiwanUniversalBeneficiary),
+    taiwanUniversalPayer: trimOrNull(value.taiwanUniversalPayer),
+    taiwanFinservBeneficiary: trimOrNull(value.taiwanFinservBeneficiary),
+    taiwanFinservPayer: trimOrNull(value.taiwanFinservPayer),
+    australiaFinservBeneficiary: trimOrNull(value.australiaFinservBeneficiary),
+    australiaFinservPayer: trimOrNull(value.australiaFinservPayer),
+    indiaFinservBeneficiary: trimOrNull(value.indiaFinservBeneficiary),
+    indiaFinservPayer: trimOrNull(value.indiaFinservPayer),
+    universalBeneficiary: trimOrNull(value.universalBeneficiary),
+    universalPayer: trimOrNull(value.universalPayer),
+  }
+  return Object.values(normalized).some(Boolean) ? normalized : null
+}
 
 function inferGeoModeFromDraft(adSet: CreateMetaCampaignRequestDto["adSet"]): MetaRequestFormState["geoMode"] {
   const normalized = (adSet.geoMode ?? "").trim().toUpperCase()
@@ -733,6 +757,10 @@ export function formStateToCreateDto(form: MetaRequestFormState, idempotencyKey?
       publisherPlatforms: form.placementMode === "MANUAL" ? form.publisherPlatforms : [],
       facebookPositions: form.placementMode === "MANUAL" ? form.facebookPositions : [],
       instagramPositions: form.placementMode === "MANUAL" ? form.instagramPositions : [],
+      regionalRegulationIdentities: normalizeRegionalRegulationIdentities(form.regionalRegulationIdentities),
+      includesFinancialProducts: form.includesFinancialProducts ?? false,
+      dsaBeneficiary: trimOrNull(form.dsaBeneficiary),
+      dsaPayor: trimOrNull(form.dsaPayor),
     },
     adVariants,
   }
@@ -916,6 +944,10 @@ export function detailDtoToFormState(detail: MetaCampaignRequestDetailDto): Meta
     campaignDailyBudget: payload.campaign.dailyBudget?.toString() ?? "",
     campaignLifetimeBudget: payload.campaign.lifetimeBudget?.toString() ?? "",
     adSetName: payload.adSet.name ?? "",
+    regionalRegulationIdentities: normalizeRegionalRegulationIdentities(payload.adSet.regionalRegulationIdentities),
+    includesFinancialProducts: payload.adSet.includesFinancialProducts ?? false,
+    dsaBeneficiary: payload.adSet.dsaBeneficiary ?? "",
+    dsaPayor: payload.adSet.dsaPayor ?? "",
     geoMode,
     countries: payload.adSet.countries ?? [],
     excludedCountries: payload.adSet.excludedCountries ?? [],
@@ -970,7 +1002,7 @@ const META_REQUEST_TEMPLATE_FIELDS = [
   "objective", "budgetStrategy", "buyingType", "campaignObjective", "specialAdCategories",
   "bidStrategy", "isAdSetBudgetSharingEnabled", "isSkadnetworkAttribution", "campaignDailyBudget", "campaignLifetimeBudget",
   "geoMode", "countries", "excludedCountries", "regionKeys", "countryGroupIds", "cityTargets", "localeKeys",
-  "ageMin", "ageMax", "gender", "userOs", "placementMode", "publisherPlatforms", "facebookPositions", "instagramPositions", "advantageAudience",
+  "ageMin", "ageMax", "gender", "userOs", "placementMode", "publisherPlatforms", "facebookPositions", "instagramPositions", "advantageAudience", "regionalRegulationIdentities", "dsaBeneficiary", "dsaPayor",
   "adSetDailyBudget", "adSetLifetimeBudget", "billingEvent", "optimizationGoal", "performanceGoalType", "performanceGoalEventName", "performanceGoalValueType", "bidAmount", "roasAverageFloor",
   "creativeType", "singleImagePrimaryText", "singleImagePrimaryTexts", "singleImageHeadline", "singleImageHeadlines", "singleImageDescription", "singleImageCallToAction", "singleImageLinkUrl",
   "singleVideoPrimaryText", "singleVideoPrimaryTexts", "singleVideoHeadline", "singleVideoHeadlines", "singleVideoDescription", "singleVideoCallToAction", "singleVideoLinkUrl",

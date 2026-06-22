@@ -249,6 +249,10 @@ function createDefaultFormState(): RequestFormState {
     campaignDailyBudget: "20",
     campaignLifetimeBudget: "",
     adSetName: "",
+    regionalRegulationIdentities: null,
+    includesFinancialProducts: false,
+    dsaBeneficiary: "Amobear",
+    dsaPayor: "",
     geoMode: "GLOBAL",
     countries: [],
     excludedCountries: [],
@@ -1597,6 +1601,7 @@ export function CreateRequestContent({ requestId }: Props) {
               countryGroupsMessage={geoCountryGroupsError?.message ?? null}
               onCountryGroupsChanged={() => void refetchGeoCountryGroups()}
               metaAdAccountId={form.adAccountId ? Number(form.adAccountId) : null}
+              executionIntegrationId={form.executionIntegrationId ? Number(form.executionIntegrationId) : null}
               appPlatform={selectedAppPlatform}
             />
           </div>

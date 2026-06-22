@@ -44,6 +44,7 @@ import type {
   MetaFacebookPageProfileDto,
   MetaFacebookPostReferencePageDto,
   MetaFacebookPostReferenceQueryDto,
+  MetaRegulationIdentityDto,
   MetaGeoCityReferenceDto,
   GeoCountryGroupDto,
   MetaGeoRegionDto,
@@ -242,6 +243,10 @@ export const metaReferenceApi = {
 
   getAdAccountFacebookPages: async (adAccountId: number, source: "promote_pages" | "access_token_all" = "promote_pages", integrationId?: number | null) => {
     return apiClient.get<MetaFacebookPageReferenceDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/facebook-pages`, { source, ...(integrationId ? { integrationId } : {}) })
+  },
+
+  getRegulationIdentities: async (adAccountId: number, integrationId?: number | null) => {
+    return apiClient.get<MetaRegulationIdentityDto[]>(`${REFERENCE_PREFIX}/ad-accounts/${adAccountId}/regulation-identities`, integrationId ? { integrationId } : undefined)
   },
 
   getFacebookPageProfileId: async (adAccountId: number, pageId: string) => {

@@ -23,6 +23,7 @@ export interface MetaIntegrationDto {
   businesses?: MetaBusinessReferenceDto[]
   businessCount?: number
   metaAppId?: string | null
+  oauthConfigId?: string | null
   hasAppSecret: boolean
   appSecretHint?: string | null
   hasAccessToken: boolean
@@ -51,6 +52,7 @@ export interface CreateMetaIntegrationRequestDto {
   metaBusinessId?: string | null
   metaBusinessName?: string | null
   metaAppId?: string | null
+  oauthConfigId?: string | null
   appSecret?: string | null
   accessToken?: string | null
   tokenType?: string | null
@@ -66,6 +68,7 @@ export interface UpdateMetaIntegrationRequestDto {
   metaBusinessId?: string | null
   metaBusinessName?: string | null
   metaAppId?: string | null
+  oauthConfigId?: string | null
   appSecret?: string | null
   accessToken?: string | null
   tokenType?: string | null
@@ -118,6 +121,7 @@ export interface MetaIntegrationTestRequestDto {
   metaBusinessId?: string | null
   metaBusinessName?: string | null
   metaAppId?: string | null
+  oauthConfigId?: string | null
   appSecret?: string | null
   accessToken?: string | null
   tokenType?: string | null
@@ -791,6 +795,25 @@ export interface MetaAdSetDraftDto {
   instagramPositions: string[]
   deferredDeepLinkUrl?: string | null
   customStoreListingId?: string | null
+  regionalRegulationIdentities?: MetaRegionalRegulationIdentitiesDto | null
+  includesFinancialProducts?: boolean
+  dsaBeneficiary?: string | null
+  dsaPayor?: string | null
+}
+
+export interface MetaRegionalRegulationIdentitiesDto {
+  singaporeUniversalBeneficiary?: string | null
+  singaporeUniversalPayer?: string | null
+  taiwanUniversalBeneficiary?: string | null
+  taiwanUniversalPayer?: string | null
+  taiwanFinservBeneficiary?: string | null
+  taiwanFinservPayer?: string | null
+  australiaFinservBeneficiary?: string | null
+  australiaFinservPayer?: string | null
+  indiaFinservBeneficiary?: string | null
+  indiaFinservPayer?: string | null
+  universalBeneficiary?: string | null
+  universalPayer?: string | null
 }
 
 export interface MetaCreativeMediaSourceDto {
@@ -1168,6 +1191,14 @@ export interface MetaFacebookPageReferenceDto {
   accessibleViaIntegrations?: MetaFacebookPageAccessibleIntegrationDto[] | null
 }
 
+export interface MetaRegulationIdentityDto {
+  id: string
+  name: string
+  type?: string | null
+  verificationStatus?: string | null
+  eligibleCategories: string[]
+}
+
 export interface MetaFacebookPageProfileDto {
   pageId: string
   profileId: string | null
@@ -1456,6 +1487,10 @@ export interface MetaRequestFormState {
   advantageCreativeInlineComment: boolean
   deferredDeepLinkUrl?: string | null
   customStoreListingId?: string | null
+  regionalRegulationIdentities?: MetaRegionalRegulationIdentitiesDto | null
+  includesFinancialProducts: boolean
+  dsaBeneficiary?: string | null
+  dsaPayor?: string | null
   // Additional ad variants (variant 2, 3, ...). Variant 1 is represented by the flat creative/ad fields above.
   additionalVariants: AdVariantFormState[]
 }

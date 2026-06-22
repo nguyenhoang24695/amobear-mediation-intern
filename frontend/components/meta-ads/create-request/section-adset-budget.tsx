@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { metaReferenceApi } from "@/lib/api/meta-ads"
@@ -22,14 +21,10 @@ import { AlertTriangle, CalendarClock, Info, Loader2, Plus } from "lucide-react"
 import type { RequestFormState } from "./create-request-content"
 import type { MetaAdSetDraftValidationDto, MetaPerformanceGoalOptionDto, MetaPerformanceGoalReferenceDto, MetaPerformanceGoalTypeOptionDto } from "@/types/meta-ads"
 import {
-  BILLING_EVENT_OPTIONS,
   bidStrategyRequiresBidAmount,
   bidStrategyRequiresRoasGoal,
-  getAllowedBillingEvents,
-  getBillingEventDisabledReason,
   getAllowedPerformanceGoalTypes,
   getPerformanceGoalDisabledReasonForBidStrategy,
-  isBillingEventCompatible,
   isBidAmountAllowed,
   isPerformanceGoalCompatibleWithBidStrategy,
   resolveOptimizationGoal,
@@ -209,11 +204,8 @@ export function AdSetBudgetSection({
   const isABO = form.budgetStrategy === "ABO"
   const allowedPerformanceGoals = getAllowedPerformanceGoalTypes(form.campaignObjective)
   const selectedGoalType = form.performanceGoalType || "APP_INSTALLS"
-  const resolvedOptimizationGoal = resolveOptimizationGoal(selectedGoalType)
   const bidAmountRequired = bidStrategyRequiresBidAmount(form.bidStrategy)
   const bidAmountAllowed = isBidAmountAllowed(form.bidStrategy)
-  const allowedBillingEvents = getAllowedBillingEvents(resolvedOptimizationGoal)
-  const isBillingCompatible = isBillingEventCompatible(resolvedOptimizationGoal, form.billingEvent)
   const normalizedPlatform = (appPlatform ?? "").trim().toUpperCase()
   const platformNote = normalizedPlatform === "ANDROID"
     ? "Android mobile targeting will be applied automatically from the selected app mapping."
@@ -350,36 +342,7 @@ export function AdSetBudgetSection({
             <p className="text-[11px] text-slate-400">{`Enter budget and bid amounts in normal ${currency} units. Nexus converts them to Meta minor units during execution.`}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-start">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Billing Event</Label>
-              <Select value={form.billingEvent} onValueChange={(value) => onChange({ billingEvent: value })}>
-                <SelectTrigger className={`h-9 text-sm ${!isBillingCompatible ? "border-amber-400 ring-1 ring-amber-300" : ""}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BILLING_EVENT_OPTIONS.map((eventValue) => {
-                    const reason = getBillingEventDisabledReason(resolvedOptimizationGoal, eventValue)
-                    const disabled = !!reason
-                    return (
-                      <SelectItem key={eventValue} value={eventValue} disabled={disabled}>
-                        <div className="py-0.5">
-                          <div className={`font-mono text-xs ${disabled ? "text-slate-400 line-through" : ""}`}>{eventValue}</div>
-                          {reason ? <div className="text-[10px] text-slate-400 leading-relaxed">{reason}</div> : null}
-                        </div>
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-              <p className={`text-[11px] flex items-start gap-1 ${isBillingCompatible ? "text-slate-400" : "text-amber-700"}`}>
-                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                {isBillingCompatible
-                  ? `Allowed billing events for ${resolvedOptimizationGoal}: ${allowedBillingEvents.join(", ")}`
-                  : `Current billing event is incompatible with ${resolvedOptimizationGoal}. Use ${allowedBillingEvents.join(" or ")} instead.`}
-              </p>
-            </div>
-
+          <div className="space-y-4 items-start">
             <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-slate-700">Performance Goal</Label>
@@ -520,7 +483,7 @@ export function AdSetBudgetSection({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-slate-700">Bid Amount {bidAmountRequired ? <span className="text-red-500">*</span> : <span className="text-slate-400 font-normal">(optional)</span>}</Label>
               <div className="relative w-48">
@@ -549,20 +512,6 @@ export function AdSetBudgetSection({
                   Bid Amount is disabled because the selected bid strategy should run without a cap. This prevents Meta from treating the ad set as cost cap.
                 </p>
               )}
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                <div>
-                  <Label className="text-xs font-medium text-slate-700">Advantage Audience</Label>
-                  <p className="text-[11px] text-slate-500 mt-1">Meta now requires this flag to be sent explicitly for this ad set flow.</p>
-                </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                  <span>{form.advantageAudience ? "Enabled" : "Disabled"}</span>
-                  <Switch checked={form.advantageAudience} onCheckedChange={(checked) => onChange({ advantageAudience: checked })} />
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-400">Set this to Enabled only when you want Meta to expand audience targeting. Disabled keeps audience control tighter.</p>
             </div>
           </div>
 
