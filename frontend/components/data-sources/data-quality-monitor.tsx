@@ -125,9 +125,9 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg font-semibold">Data Quality Monitor</CardTitle>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-36 h-8 text-sm">
+              <SelectTrigger className="h-8 w-full text-sm sm:w-36">
                 <SelectValue placeholder="Source" />
               </SelectTrigger>
               <SelectContent>
@@ -140,7 +140,7 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36 h-8 text-sm">
+              <SelectTrigger className="h-8 w-full text-sm sm:w-36">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>

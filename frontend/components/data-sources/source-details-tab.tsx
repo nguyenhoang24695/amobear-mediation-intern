@@ -62,14 +62,14 @@ function TableHealthCard({
     <Card className={cn("border", cardTone(table))}>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-[10px] font-mono uppercase">
                 {layerLabel}
               </Badge>
-              <CardTitle className="text-base font-semibold text-slate-900 font-mono">{table.displayName ?? table.groupKey}</CardTitle>
+              <CardTitle className="break-all text-base font-semibold text-slate-900 font-mono">{table.displayName ?? table.groupKey}</CardTitle>
             </div>
-            <p className="text-xs text-slate-500 mt-1">{table.groupKey}</p>
+            <p className="mt-1 break-all text-xs text-slate-500">{table.groupKey}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {table.median != null && (
@@ -104,7 +104,7 @@ function TableHealthCard({
         {table.suggestedActions.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {table.suggestedActions.map((a, i) => (
-              <Button key={`${a.endpoint}-${i}`} size="sm" variant="secondary" className="text-xs h-8" onClick={() => onRunAction(a)}>
+              <Button key={`${a.endpoint}-${i}`} size="sm" variant="secondary" className="h-auto min-h-8 whitespace-normal text-xs" onClick={() => onRunAction(a)}>
                 {a.label}
               </Button>
             ))}
@@ -121,7 +121,7 @@ function TableHealthCard({
             <CollapsibleContent className="px-2 pb-3 space-y-3">
               {table.firebasePerApp!.map((child) => (
                 <div key={child.groupKey} className="rounded-md border border-slate-100 bg-slate-50/80 p-2 space-y-2">
-                  <p className="text-xs font-mono text-slate-800">{child.displayName ?? child.groupKey}</p>
+                  <p className="break-all text-xs font-mono text-slate-800">{child.displayName ?? child.groupKey}</p>
                   <div className="flex flex-wrap gap-1">
                     {child.daily.map((d) => (
                       <div
@@ -139,7 +139,7 @@ function TableHealthCard({
                   {child.suggestedActions.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {child.suggestedActions.map((a, j) => (
-                        <Button key={`${child.groupKey}-${a.endpoint}-${j}`} size="sm" variant="outline" className="text-[10px] h-7" onClick={() => onRunAction(a)}>
+                        <Button key={`${child.groupKey}-${a.endpoint}-${j}`} size="sm" variant="outline" className="h-auto min-h-7 whitespace-normal text-[10px]" onClick={() => onRunAction(a)}>
                           {a.label}
                         </Button>
                       ))}
@@ -233,9 +233,9 @@ export function SourceDetailsTab({
             (non-zero).
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
           <Select value={sourceKey} onValueChange={setSourceKey}>
-            <SelectTrigger className="w-[200px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[200px]">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
@@ -247,7 +247,7 @@ export function SourceDetailsTab({
             </SelectContent>
           </Select>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-            <SelectTrigger className="w-[100px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[100px]">
               <SelectValue placeholder="Days" />
             </SelectTrigger>
             <SelectContent>
@@ -258,7 +258,7 @@ export function SourceDetailsTab({
               ))}
             </SelectContent>
           </Select>
-          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => void load()} disabled={loading}>
+          <Button type="button" variant="outline" size="sm" className="h-9 w-full sm:w-auto" onClick={() => void load()} disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             <span className="ml-1.5">Refresh</span>
           </Button>

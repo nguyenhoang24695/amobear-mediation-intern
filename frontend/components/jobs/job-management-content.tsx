@@ -227,8 +227,8 @@ export function JobManagementContent() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2 bg-transparent" asChild>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Button variant="outline" className="w-full gap-2 bg-transparent sm:w-auto" asChild>
             <Link href={buildActivityLogsHref({ domain: "job" })}>
               <Activity className="w-4 h-4" />
               View Activity
@@ -237,14 +237,14 @@ export function JobManagementContent() {
           {canReload && (
             <Button
               variant="outline"
-              className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 sm:w-auto"
               onClick={() => setReloadOpen(true)}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Reload Schedules
             </Button>
           )}
-          <Button variant="ghost" className="text-slate-600" onClick={handleRefresh}>
+          <Button variant="ghost" className="w-full text-slate-600 sm:w-auto" onClick={handleRefresh}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>

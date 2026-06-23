@@ -147,17 +147,17 @@ export function NotificationPopup() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[380px] p-0 shadow-lg" sideOffset={8}>
+      <PopoverContent align="end" className="w-[calc(100vw-1rem)] max-w-[380px] p-0 shadow-lg" sideOffset={8}>
         <div className="border-b border-slate-200">
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex flex-col gap-1 px-3 py-3 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:px-4">
             <h3 className="font-semibold text-slate-900">Notifications</h3>
-            <span className="text-sm text-slate-500">
+            <span className="text-xs text-slate-500 min-[360px]:text-right min-[360px]:text-sm">
             {totalOpenCount > 0 || insightNotes.length > 0
               ? `${headerUnseen} new · alerts + insights`
               : "No notifications"}
             </span>
           </div>
-          <div className="flex gap-2 px-4 pb-3">
+          <div className="flex gap-2 px-3 pb-3 min-[360px]:px-4">
             <button
               type="button"
               onClick={() => setListFilter("all")}
@@ -212,7 +212,7 @@ export function NotificationPopup() {
                         }
                       }}
                       className={cn(
-                        "flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors",
+                        "flex items-start gap-3 px-3 py-3 hover:bg-slate-50 transition-colors min-[360px]:px-4",
                         !note.read && "bg-indigo-50/50",
                       )}
                     >
@@ -220,7 +220,7 @@ export function NotificationPopup() {
                         <Sparkles className="w-4 h-4 text-indigo-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900">{note.title}</p>
+                        <p className="text-sm font-medium text-slate-900 line-clamp-2">{note.title}</p>
                         {note.body ? (
                           <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{note.body}</p>
                         ) : null}
@@ -242,7 +242,7 @@ export function NotificationPopup() {
                     href={href}
                     onClick={() => void markAlertsViewed([alert.id])}
                     className={cn(
-                      "flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors",
+                      "flex items-start gap-3 px-3 py-3 hover:bg-slate-50 transition-colors min-[360px]:px-4",
                       isUnread && "bg-slate-50/80"
                     )}
                   >
@@ -270,7 +270,7 @@ export function NotificationPopup() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{formatAlertCardTitle(alert)}</p>
+                      <p className="text-sm font-medium text-slate-900 line-clamp-2">{formatAlertCardTitle(alert)}</p>
                       <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{alert.message}</p>
                       <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(alert.triggeredAt)}</p>
                     </div>
@@ -292,7 +292,7 @@ export function NotificationPopup() {
             </div>
           </div>
         ) : listFilter === "unread" && (alerts.length > 0 || insightNotes.length > 0) ? (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="flex flex-col items-center justify-center px-3 py-12 min-[360px]:px-4">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
               <Bell className="w-6 h-6 text-slate-400" />
             </div>
@@ -300,7 +300,7 @@ export function NotificationPopup() {
             <p className="text-xs text-slate-500 mt-1 text-center">Switch to All to see read insights and alerts.</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center px-3 py-12 min-[360px]:px-4">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
               <BellOff className="w-6 h-6 text-slate-400" />
             </div>
@@ -313,7 +313,7 @@ export function NotificationPopup() {
           <Link
             href="/alert-center"
             onClick={markAllAlertsViewed}
-            className="flex items-center justify-center gap-1 py-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
+            className="flex items-center justify-center gap-1 px-3 py-3 text-center text-sm text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
           >
             View All Notifications
             <ArrowRight className="w-4 h-4" />

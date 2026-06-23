@@ -276,10 +276,10 @@ export function AppsPageContent() {
       </div>
 
       {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         {/* Left: Search & Filters */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="relative w-full sm:w-80">
+        <div className="flex min-w-0 flex-col xl:flex-row xl:items-center gap-3">
+          <div className="relative w-full xl:w-80 xl:shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Search by name, app ID, or store ID..."
@@ -289,9 +289,9 @@ export function AppsPageContent() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap xl:w-auto xl:flex-nowrap">
             <Select value={platform} onValueChange={(v) => handleFilterChange("Platform", v)}>
-              <SelectTrigger className="w-36 h-10 bg-white">
+              <SelectTrigger className="h-10 w-full bg-white lg:w-36">
                 <SelectValue placeholder="Platform" />
               </SelectTrigger>
               <SelectContent>
@@ -304,7 +304,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={status} onValueChange={(v) => handleFilterChange("Status", v)}>
-              <SelectTrigger className="w-32 h-10 bg-white">
+              <SelectTrigger className="h-10 w-full bg-white lg:w-32">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -317,7 +317,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={type} onValueChange={(v) => handleFilterChange("Type", v)}>
-              <SelectTrigger className="w-32 h-10 bg-white">
+              <SelectTrigger className="h-10 w-full bg-white lg:w-32">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -330,7 +330,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={network} onValueChange={(v) => handleFilterChange("Network", v)}>
-              <SelectTrigger className="w-36 h-10 bg-white">
+              <SelectTrigger className="h-10 w-full bg-white lg:w-36">
                 <SelectValue placeholder="Network" />
               </SelectTrigger>
               <SelectContent>
@@ -343,7 +343,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={admobAccount} onValueChange={(v) => handleFilterChange("AdMob Account", v)}>
-              <SelectTrigger className="w-44 h-10 bg-white min-w-[11rem]">
+              <SelectTrigger className="h-10 w-full bg-white lg:w-44">
                 <SelectValue placeholder="AdMob Account" />
               </SelectTrigger>
               <SelectContent>
@@ -357,7 +357,7 @@ export function AppsPageContent() {
             
 
             <Select value={wfFilter} onValueChange={(v) => handleFilterChange("% WF", v)}>
-              <SelectTrigger className="w-32 h-10 bg-white">
+              <SelectTrigger className="h-10 w-full bg-white lg:w-32">
                 <SelectValue placeholder="% WF" />
               </SelectTrigger>
               <SelectContent>

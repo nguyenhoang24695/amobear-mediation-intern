@@ -385,16 +385,19 @@ export function WaterfallConfigsPanel({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {canManageConfigs && (
-            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setCreateConfigOpen(true)}>
+            <Button
+              className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+              onClick={() => setCreateConfigOpen(true)}
+            >
               <Settings className="mr-2 h-4 w-4" />
               Create Config
             </Button>
           )}
           <Button
             variant="ghost"
-            className="text-slate-600"
+            className="w-full text-slate-600 sm:w-auto"
             onClick={() => {
               refetchConfigs()
               toast({ title: "Refreshed", description: "Configs refreshed" })
@@ -404,7 +407,7 @@ export function WaterfallConfigsPanel({
             <RefreshCw className={`mr-2 h-4 w-4 ${configsLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="bg-transparent" disabled>
+          <Button variant="outline" className="w-full bg-transparent sm:w-auto" disabled>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>

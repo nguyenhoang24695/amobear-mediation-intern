@@ -578,8 +578,8 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           {!embedded ? (
             <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
               <span>Meta Ads</span>
@@ -588,24 +588,30 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
             </nav>
           ) : null}
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
+            <div className="shrink-0 rounded-lg bg-blue-50 p-2">
               <Link2 className="w-5 h-5 text-blue-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl font-bold text-slate-900">Meta Integrations</h1>
               <p className="text-sm text-slate-500">Manage Meta Marketing API credentials and business account connections</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {canUseDefaultIntegration ? (
-            <Button variant="outline" size="sm" onClick={() => defaultIntegration && void redirectToOAuth(defaultIntegration)} disabled={!defaultIntegration || !canOpenDefaultDevOAuth || oauthLoadingId !== null}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => defaultIntegration && void redirectToOAuth(defaultIntegration)}
+              disabled={!defaultIntegration || !canOpenDefaultDevOAuth || oauthLoadingId !== null}
+            >
               {oauthLoadingId !== null ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ExternalLink className="w-4 h-4 mr-2" />}
               Open Dev OAuth
             </Button>
           ) : null}
           {canCreate ? (
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
+            <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" size="sm" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
               Create Integration
             </Button>
@@ -1024,16 +1030,16 @@ export function IntegrationsContent({ embedded = false }: IntegrationsContentPro
               </div>
             </div>
           </div>
-          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <Button variant="ghost" className="w-full text-slate-600 sm:w-auto" onClick={() => setDrawerOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => void handleTestConnection()} disabled={submitting || testingConnection}>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleTestConnection()} disabled={submitting || testingConnection}>
                 {testingConnection ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
                 Test Connection
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
+              <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
                 {submitting
                   ? "Saving..."
                   : form.authMode === "oauth_user"

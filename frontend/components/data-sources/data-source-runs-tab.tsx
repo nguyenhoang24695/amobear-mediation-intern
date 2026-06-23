@@ -146,9 +146,9 @@ export function DataSourceRunsTab({
             Tiến trình lưu trong DB (checkpoint theo ngày). Có thể xem log hoặc resume khi failed/interrupted.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
           <Select value={sourceFilter || "__all__"} onValueChange={(v) => setSourceFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="w-[180px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[180px]">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
@@ -161,7 +161,7 @@ export function DataSourceRunsTab({
             </SelectContent>
           </Select>
           <Select value={statusFilter || "__all__"} onValueChange={(v) => setStatusFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="w-[140px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -173,7 +173,7 @@ export function DataSourceRunsTab({
               ))}
             </SelectContent>
           </Select>
-          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => void load()} disabled={loading}>
+          <Button type="button" variant="outline" size="sm" className="h-9 w-full sm:w-auto" onClick={() => void load()} disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             <span className="ml-1.5">Refresh</span>
           </Button>
@@ -273,12 +273,12 @@ export function DataSourceRunsTab({
       </Card>
 
       <Dialog open={logRun != null} onOpenChange={(o) => !o && closeLogs()}>
-        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col">
+        <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-xl flex-col">
           <DialogHeader>
             <DialogTitle>Run log</DialogTitle>
             <DialogDescription>{logRun?.label}</DialogDescription>
           </DialogHeader>
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <Checkbox id="runs-autoscroll" checked={autoScroll} onCheckedChange={(v) => setAutoScroll(v === true)} />
               <Label htmlFor="runs-autoscroll" className="text-xs font-normal cursor-pointer">
@@ -299,7 +299,7 @@ export function DataSourceRunsTab({
             className="w-full min-h-[200px] rounded-md border border-slate-200 bg-slate-950 px-2 py-1.5 text-xs font-mono text-slate-100 leading-relaxed overflow-y-auto"
           />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeLogs}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeLogs}>
               Close
             </Button>
           </DialogFooter>
