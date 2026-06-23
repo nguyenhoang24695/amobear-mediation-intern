@@ -1,0 +1,515 @@
+{
+	"info": {
+		"_postman_id": "f9a0b1c2-af-nexus-2026-v2",
+		"name": "Amobear Nexus — AppsFlyer APIs v2",
+		"description": "Postman collection v2 cho AppsFlyer API integration vào Amobear Nexus.\n\nDoc reference: 128 — AppsFlyer Integration\n\n## Key Update v2\n- Folder 00: App List API — lấy danh sách tất cả apps\n- Folder 07: Master API ALL APPS — `app_id=all` cho Nexus pipeline\n  - 4 request tách theo KPI type (LTV, Retention, Activity, Cohort)\n  - Không mix KPI types trong cùng 1 call\n\n## Authentication\n- Pull API: `api_token` in query param\n- Master API / Cohort API / App List: `Authorization: Bearer {token}`\n\n## Rate Limits\n- Pull API: 10 calls/min per app\n- Master API: 40 calls/min\n- Cohort API: 5 calls/min\n\n## ⚠️ Master API `app_id=all` notes:\n- Lấy ALL apps trong 1 call — không cần loop per-app\n- currency=preferred chỉ work nếu tất cả apps cùng currency\n- Nếu apps khác currency → dùng USD (default)\n- Tách 4 calls: LTV, Retention, Activity, Cohort (không mix được)\n- Date range max 90 ngày\n- Data freshness: T+1 đến T+2",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://hq1.appsflyer.com",
+			"type": "string"
+		},
+		{
+			"key": "api_token",
+			"value": "YOUR_API_V2_TOKEN_HERE",
+			"type": "string",
+			"description": "AppsFlyer API V2 Token — Dashboard → your email → API Tokens"
+		},
+		{
+			"key": "app_id",
+			"value": "com.amobear.puzzlegame",
+			"type": "string",
+			"description": "Single app: Android=com.package / iOS=idXXX. Or use 'all' for Master API"
+		},
+		{
+			"key": "from_date",
+			"value": "2026-04-01",
+			"type": "string"
+		},
+		{
+			"key": "to_date",
+			"value": "2026-04-07",
+			"type": "string"
+		},
+		{
+			"key": "nexus_webhook_local",
+			"value": "http://localhost:5000/api/webhooks/appsflyer",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "00 — App List API",
+			"description": "Lấy danh sách tất cả apps trong AppsFlyer account.\nDùng để build mapping table cho Nexus.\n\nAuth: Bearer token in header.",
+			"item": [
+				{
+					"name": "0.1 List All Apps",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"},
+							{"key": "Accept", "value": "application/json", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/mng/apps?limit=1000&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "mng", "apps"],
+							"query": [
+								{"key": "limit", "value": "1000"},
+								{"key": "offset", "value": "0"}
+							]
+						},
+						"description": "Lấy danh sách apps. Max 1000 per page, paginate via offset.\n\nResponse fields per app: id (app_id), name, platform, currency, time_zone.\n\n**Nexus use:** Daily sync → config.appsflyer_app_mapping table.\nCheck total_items in meta → if > 1000, paginate."
+					}
+				},
+				{
+					"name": "0.2 List Apps (Page 2)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"},
+							{"key": "Accept", "value": "application/json", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/mng/apps?limit=1000&offset=1000",
+							"host": ["{{base_url}}"],
+							"path": ["api", "mng", "apps"],
+							"query": [
+								{"key": "limit", "value": "1000"},
+								{"key": "offset", "value": "1000"}
+							]
+						},
+						"description": "Page 2 nếu có > 1000 apps."
+					}
+				}
+			]
+		},
+		{
+			"name": "07 — Master API: ALL APPS (Nexus Pipeline)",
+			"description": "🔥 CORE REQUESTS cho Nexus daily pipeline.\n\n`app_id=all` → 1 call lấy TẤT CẢ apps.\nTách 4 requests vì LTV, Retention, Activity, Cohort KPIs KHÔNG MIX được.\n\n⚠️ Rate limit: 40 calls/min.\n⚠️ Date range max 90 ngày.\n⚠️ currency=preferred chỉ work nếu tất cả apps cùng currency → nếu không, bỏ param (default USD).",
+			"item": [
+				{
+					"name": "7.1 ALL APPS — LTV KPIs (install-day revenue, cost, ROI)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid,geo,c,af_adset,af_ad&kpis=installs,cost,revenue,roi,arpu_ltv,average_ecpi,clicks,impressions,ctr,conversion_rate,sessions,loyal_users,loyal_users_rate,total_revenue,total_cost&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid,geo,c,af_adset,af_ad"},
+								{"key": "kpis", "value": "installs,cost,revenue,roi,arpu_ltv,average_ecpi,clicks,impressions,ctr,conversion_rate,sessions,loyal_users,loyal_users_rate,total_revenue,total_cost"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "🔥 PRIMARY Nexus sync call — ALL apps, ALL LTV KPIs.\n\nGroupings: app_id × date × media_source × geo × campaign × adset × ad.\nĐây là fullest granularity cho UA performance.\n\n**KPIs included:**\n- installs, clicks, impressions, ctr, conversion_rate\n- cost, average_ecpi (CPI)\n- revenue, total_revenue, arpu_ltv, roi\n- sessions, loyal_users, loyal_users_rate\n- total_cost\n\n**Nexus Gold mapping:**\n- installs → app_ua_daily.installs\n- cost → app_ua_daily.cost_usd\n- average_ecpi → app_ua_daily.cpi_usd\n- revenue → app_ua_daily.revenue_usd\n- roi → app_ua_daily.roas\n\n⚠️ Nếu response quá lớn: bỏ af_ad (giảm granularity), hoặc split date range."
+					}
+				},
+				{
+					"name": "7.2 ALL APPS — LTV KPIs (lightweight — cho daily sync)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid,geo&kpis=installs,cost,revenue,roi,average_ecpi,sessions,loyal_users_rate&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid,geo"},
+								{"key": "kpis", "value": "installs,cost,revenue,roi,average_ecpi,sessions,loyal_users_rate"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Lightweight version cho daily recurring sync.\nBớt groupings (no adset/ad) → response nhỏ hơn, nhanh hơn.\n\nDùng cho Hangfire daily job — app_id × date × media_source × geo."
+					}
+				},
+				{
+					"name": "7.3 ALL APPS — Retention KPIs (D1, D3, D7, D14, D30)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid,geo&kpis=installs,retention_day_1,retention_day_3,retention_day_7,retention_day_14,retention_day_30&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid,geo"},
+								{"key": "kpis", "value": "installs,retention_day_1,retention_day_3,retention_day_7,retention_day_14,retention_day_30"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "⚠️ SEPARATE CALL — Retention KPIs không mix với LTV KPIs.\n\nD1/D3/D7/D14/D30 retention by app × date × media_source × geo.\nRetention = % users still active on day N.\n\n**Nexus Gold mapping:**\n- retention_day_1 → app_ua_daily.d1_retention\n- retention_day_7 → app_ua_daily.d7_retention\n\n⚠️ retention_day_7 data cho ngày X chỉ available X+7 ngày sau.\nNên sync T-7 to T-1 cho retention data."
+					}
+				},
+				{
+					"name": "7.4 ALL APPS — Activity KPIs (DAU, MAU, sessions, revenue, uninstalls)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid&kpis=activity_average_dau,activity_average_mau,activity_average_dau_mau_rate,activity_sessions,activity_revenue,activity_arpu,activity_uninstalls&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid"},
+								{"key": "kpis", "value": "activity_average_dau,activity_average_mau,activity_average_dau_mau_rate,activity_sessions,activity_revenue,activity_arpu,activity_uninstalls"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "⚠️ SEPARATE CALL — Activity KPIs không mix với LTV.\n\nActivity = event-day based (not install-day).\n`date` grouping REQUIRED cho activity KPIs.\n\nDAU, MAU, sessions, revenue, ARPU, uninstalls by app × date × media_source.\n\n**Nexus use:** Cross-validate DAU with Firebase/AppMetrica."
+					}
+				},
+				{
+					"name": "7.5 ALL APPS — Cohort Revenue (D7, D14, D30, D60, D90)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid,geo&kpis=installs,cost,cohort_day_7_total_revenue_per_user,cohort_day_14_total_revenue_per_user,cohort_day_30_total_revenue_per_user,cohort_day_60_total_revenue_per_user,cohort_day_90_total_revenue_per_user&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid,geo"},
+								{"key": "kpis", "value": "installs,cost,cohort_day_7_total_revenue_per_user,cohort_day_14_total_revenue_per_user,cohort_day_30_total_revenue_per_user,cohort_day_60_total_revenue_per_user,cohort_day_90_total_revenue_per_user"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Cohort revenue per user at D7/D14/D30/D60/D90.\n\n**Nexus Gold mapping:**\n- cohort_day_7_total_revenue_per_user → app_ua_daily.ltv_d7_usd\n- cohort_day_30_total_revenue_per_user → app_ua_daily.ltv_d30_usd\n\n⚠️ cohort_day_0 NOT supported in Master API.\n⚠️ D90 data only available for installs ≥ 90 days ago."
+					}
+				},
+				{
+					"name": "7.6 ALL APPS — Cohort ROAS + Sessions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid&kpis=installs,cost,cohort_day_7_roas,cohort_day_30_roas,cohort_day_7_sessions,cohort_day_30_sessions&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid"},
+								{"key": "kpis", "value": "installs,cost,cohort_day_7_roas,cohort_day_30_roas,cohort_day_7_sessions,cohort_day_30_sessions"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Cohort ROAS and session counts at D7/D30.\n\nROAS = Return On Ad Spend = cumulative revenue / cost at day N.\n\n**Nexus use:** Weekly sync — LTV payback analysis."
+					}
+				},
+				{
+					"name": "7.7 ALL APPS — Protect360 Fraud KPIs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid&kpis=installs,blocked_installs,blocked_installs_rate,detection_installs,detection_installs_rate&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid"},
+								{"key": "kpis", "value": "installs,blocked_installs,blocked_installs_rate,detection_installs,detection_installs_rate"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Fraud detection metrics per app × date × media_source.\n\nblocked_installs: Real-time blocked.\ndetection_installs: Post-attribution fraud detected.\n\n**Nexus use:** Weekly sync — fraud monitoring dashboard."
+					}
+				},
+				{
+					"name": "7.8 ALL APPS — Custom Event KPIs (af_purchase)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid,geo&kpis=installs,af_purchase_unique_users,af_purchase_event_counter,af_purchase_sales_in_usd&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid,geo"},
+								{"key": "kpis", "value": "installs,af_purchase_unique_users,af_purchase_event_counter,af_purchase_sales_in_usd"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "In-app purchase event metrics.\n\n⚠️ Event names are CASE-SENSITIVE — phải khớp chính xác với event name gửi qua SDK.\n\nCommon events: af_purchase, af_subscribe, af_complete_registration, af_tutorial_completion, af_level_achieved, af_ad_view.\n\nĐổi 'af_purchase' thành event name khác nếu cần.\n\n**Nexus use:** IAP attribution by media source — cross-validate with Qonversion."
+					}
+				},
+				{
+					"name": "7.9 ALL APPS — Calculated KPI (Custom ROAS D7, Payback Period)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid&kpis=installs,cost,revenue&calculated_kpi_roas_d7=(cohort_day_7_total_revenue_per_user-average_ecpi)/average_ecpi&calculated_kpi_ltv_cac_ratio=cohort_day_30_total_revenue_per_user/average_ecpi&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid"},
+								{"key": "kpis", "value": "installs,cost,revenue"},
+								{"key": "calculated_kpi_roas_d7", "value": "(cohort_day_7_total_revenue_per_user-average_ecpi)/average_ecpi"},
+								{"key": "calculated_kpi_ltv_cac_ratio", "value": "cohort_day_30_total_revenue_per_user/average_ecpi"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Custom calculated KPIs:\n- roas_d7: (D7 revenue per user - CPI) / CPI\n- ltv_cac_ratio: D30 LTV / CPI\n\nKey names MUST start with 'calculated_kpi_'.\nOperators: + - * / (encode + as %2B if needed).\n\n**Nexus use:** Automated ROAS analysis per channel."
+					}
+				},
+				{
+					"name": "7.10 ALL APPS — JSON format (for programmatic parsing)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/all?from={{from_date}}&to={{to_date}}&groupings=app_id,date,pid,geo&kpis=installs,cost,revenue,roi,average_ecpi&format=json",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "all"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "app_id,date,pid,geo"},
+								{"key": "kpis", "value": "installs,cost,revenue,roi,average_ecpi"},
+								{"key": "format", "value": "json"}
+							]
+						},
+						"description": "Same as 7.2 but JSON format — easier for .NET parsing.\n\n⚠️ JSON responses can be MUCH larger than CSV for same data."
+					}
+				}
+			]
+		},
+		{
+			"name": "07b — Master API: SINGLE APP (ad-hoc)",
+			"description": "Per-app requests cho deep-dive hoặc debug. Dùng `app_id` variable.",
+			"item": [
+				{
+					"name": "7b.1 Single App — Full LTV KPIs (campaign level)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,pid,c,af_adset,af_ad,geo&kpis=installs,cost,revenue,roi,arpu_ltv,average_ecpi,clicks,impressions,ctr,conversion_rate,sessions,loyal_users,loyal_users_rate&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,pid,c,af_adset,af_ad,geo"},
+								{"key": "kpis", "value": "installs,cost,revenue,roi,arpu_ltv,average_ecpi,clicks,impressions,ctr,conversion_rate,sessions,loyal_users,loyal_users_rate"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Deep-dive single app. Full campaign hierarchy: date × media_source × campaign × adset × ad × geo.\n\nDùng khi cần analyze specific app performance chi tiết."
+					}
+				},
+				{
+					"name": "7b.2 Single App — Retention + Cohort Combined",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,pid&kpis=installs,retention_day_1,retention_day_7,retention_day_30,cohort_day_7_total_revenue_per_user,cohort_day_30_total_revenue_per_user&format=csv&currency=preferred&timezone=preferred",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,pid"},
+								{"key": "kpis", "value": "installs,retention_day_1,retention_day_7,retention_day_30,cohort_day_7_total_revenue_per_user,cohort_day_30_total_revenue_per_user"},
+								{"key": "format", "value": "csv"},
+								{"key": "currency", "value": "preferred"},
+								{"key": "timezone", "value": "preferred"}
+							]
+						},
+						"description": "Single app: Retention + Cohort có thể mix (cả hai là install-day based).\n\ncurrency=preferred + timezone=preferred OK cho single app.\n\nDùng cho ad-hoc analysis cụ thể 1 app."
+					}
+				},
+				{
+					"name": "7b.3 Single App — Filters (specific media source + geo)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,c,af_adset&kpis=installs,cost,revenue,roi&filters=pid==facebook;geo==US,GB,DE&format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,c,af_adset"},
+								{"key": "kpis", "value": "installs,cost,revenue,roi"},
+								{"key": "filters", "value": "pid==facebook;geo==US,GB,DE"},
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Filtered query: Facebook only, US+GB+DE only.\n\nFilter syntax: field==value (single) or field==val1,val2 (multiple).\nMultiple filters: semicolon separated.\n\nDùng cho deep-dive specific channel + geo."
+					}
+				}
+			]
+		},
+		{
+			"name": "08 — Master Freshness API",
+			"description": "Check khi nào data được update lần cuối. Dùng trước khi sync để biết data đã sẵn sàng chưa.",
+			"item": [
+				{
+					"name": "8.1 Get Last Update Time",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/master-agg-data/v4/app/{{app_id}}/last-update",
+							"host": ["{{base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}", "last-update"]
+						},
+						"description": "Returns timestamp of last data update for this app.\n\n**Nexus use:** Check before sync — if last_update < previous sync time → skip (no new data)."
+					}
+				}
+			]
+		},
+		{
+			"name": "01-06 — Pull API (giữ nguyên từ v1)",
+			"description": "Pull API Raw Data requests — giữ nguyên từ collection v1.\nXem collection v1 cho full details.\n\nSummary:\n01: Raw Non-organic (installs, events, uninstalls)\n02: Raw Organic\n03: Retargeting\n04: Ad Revenue\n05: Protect360\n06: Aggregate Performance",
+			"item": [
+				{
+					"name": "Xem collection v1 cho Pull API requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/raw-data/export/app/{{app_id}}/installs_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "installs_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Reference: Non-organic installs raw data.\nFull Pull API requests available in collection v1."
+					}
+				}
+			]
+		},
+		{
+			"name": "09 — Cohort API (POST)",
+			"description": "Cohort API cho chi tiết hơn Master API cohort KPIs.\nPOST with JSON body. Auth via header.\n\n⚠️ Rate limit: 5 calls/min.\n⚠️ Chỉ 1 KPI per call (tất cả functions trả về).",
+			"item": [
+				{
+					"name": "9.1 Revenue Cohort ALL APPS (D0-D30)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"},
+							{"key": "Content-Type", "value": "application/json", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cohort_type\": \"user_acquisition\",\n  \"min_cohort_size\": 1,\n  \"preferred_timezone\": false,\n  \"from\": \"{{from_date}}\",\n  \"to\": \"{{to_date}}\",\n  \"granularity\": \"day\",\n  \"groupings\": [\"af_app_id\", \"date\", \"pid\", \"geo\"],\n  \"filters\": {\n    \"period\": [0, 1, 3, 7, 14, 30],\n    \"partial_data\": \"excluded\"\n  },\n  \"kpis\": [\"revenue\"],\n  \"aggregation_type\": \"cumulative\",\n  \"per_user\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cohorts/v1/data/app/all?format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cohorts", "v1", "data", "app", "all"],
+							"query": [
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Cohort API: Revenue per user cumulative at D0/D1/D3/D7/D14/D30.\nGrouped by app × date × media_source × geo.\n\nper_user=true → revenue per user (for LTV).\nper_user=false → total revenue (for absolute numbers).\n\nNexus use: Weekly LTV pipeline — more granular than Master API cohort KPIs."
+					}
+				},
+				{
+					"name": "9.2 Retention Cohort ALL APPS (sessions on-day)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"},
+							{"key": "Content-Type", "value": "application/json", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cohort_type\": \"user_acquisition\",\n  \"min_cohort_size\": 10,\n  \"preferred_timezone\": false,\n  \"from\": \"{{from_date}}\",\n  \"to\": \"{{to_date}}\",\n  \"granularity\": \"day\",\n  \"groupings\": [\"af_app_id\", \"date\", \"pid\"],\n  \"filters\": {\n    \"period\": [1, 3, 7, 14, 30],\n    \"partial_data\": \"excluded\"\n  },\n  \"kpis\": [\"sessions\"],\n  \"aggregation_type\": \"on_day\",\n  \"per_user\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cohorts/v1/data/app/all?format=csv",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cohorts", "v1", "data", "app", "all"],
+							"query": [
+								{"key": "format", "value": "csv"}
+							]
+						},
+						"description": "Retention: sessions on specific days (not cumulative).\nRetention D7 = unique_users(D7) / conversions.\n\naggregation_type=on_day → only count events ON that day.\nmin_cohort_size=10 → exclude tiny cohorts."
+					}
+				}
+			]
+		},
+		{
+			"name": "10 — Push API Simulation",
+			"description": "Mock Push API payloads — giữ nguyên từ v1.",
+			"item": [
+				{
+					"name": "10.1 Simulate: Install Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer YOUR_PUSH_API_AUTH_TOKEN", "type": "text"},
+							{"key": "Content-Type", "value": "application/json", "type": "text"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"app_id\": \"com.amobear.puzzlegame\",\n  \"event_type\": \"install\",\n  \"event_time\": \"2026-04-07 12:30:00.000\",\n  \"event_name\": \"install\",\n  \"appsflyer_id\": \"1712534400000-1234567890\",\n  \"media_source\": \"facebook\",\n  \"campaign\": \"Puzzle_UA_US_Apr2026\",\n  \"campaign_id\": \"23850001234\",\n  \"adset\": \"Lookalike_1pct\",\n  \"ad\": \"Video_30s_v2\",\n  \"country_code\": \"US\",\n  \"platform\": \"android\",\n  \"is_retargeting\": false\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}",
+							"host": ["{{nexus_webhook_local}}"]
+						},
+						"description": "Mock install push event for testing Nexus webhook receiver."
+					}
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,1089 @@
+{
+  "summary": [
+    {
+      "category": "productivity",
+      "apps": 126,
+      "ios": 9,
+      "android": 117,
+      "revenue_today": 169383.86,
+      "impressions_today": 43392010,
+      "avg_ecpm": 7.764,
+      "rev_share_pct": 46.16
+    },
+    {
+      "category": "creative_utility",
+      "apps": 49,
+      "ios": 7,
+      "android": 42,
+      "revenue_today": 59058.64,
+      "impressions_today": 13500667,
+      "avg_ecpm": 4.818,
+      "rev_share_pct": 16.1
+    },
+    {
+      "category": "midcore_game",
+      "apps": 19,
+      "ios": 4,
+      "android": 15,
+      "revenue_today": 34434.7,
+      "impressions_today": 35402002,
+      "avg_ecpm": 1.82,
+      "rev_share_pct": 9.38
+    },
+    {
+      "category": "subscription_content",
+      "apps": 37,
+      "ios": 6,
+      "android": 31,
+      "revenue_today": 27376.67,
+      "impressions_today": 3627169,
+      "avg_ecpm": 8.673,
+      "rev_share_pct": 7.46
+    },
+    {
+      "category": "casual_game",
+      "apps": 31,
+      "ios": 8,
+      "android": 23,
+      "revenue_today": 16692.26,
+      "impressions_today": 6055291,
+      "avg_ecpm": 4.934,
+      "rev_share_pct": 4.55
+    },
+    {
+      "category": "ai_utility",
+      "apps": 28,
+      "ios": 4,
+      "android": 24,
+      "revenue_today": 11503.28,
+      "impressions_today": 3190387,
+      "avg_ecpm": 8.033,
+      "rev_share_pct": 3.14
+    },
+    {
+      "category": "hyper_casual",
+      "apps": 9,
+      "ios": 1,
+      "android": 8,
+      "revenue_today": 11421.25,
+      "impressions_today": 2337183,
+      "avg_ecpm": 3.616,
+      "rev_share_pct": 3.11
+    },
+    {
+      "category": "music_audio",
+      "apps": 15,
+      "ios": 2,
+      "android": 13,
+      "revenue_today": 11121.69,
+      "impressions_today": 3488544,
+      "avg_ecpm": 4.533,
+      "rev_share_pct": 3.03
+    },
+    {
+      "category": "entertainment",
+      "apps": 23,
+      "ios": 2,
+      "android": 21,
+      "revenue_today": 8109.97,
+      "impressions_today": 2412521,
+      "avg_ecpm": 3.603,
+      "rev_share_pct": 2.21
+    },
+    {
+      "category": "simulation",
+      "apps": 6,
+      "ios": 1,
+      "android": 5,
+      "revenue_today": 6177.69,
+      "impressions_today": 3228823,
+      "avg_ecpm": 2.614,
+      "rev_share_pct": 1.68
+    },
+    {
+      "category": "ai_chat",
+      "apps": 10,
+      "ios": 1,
+      "android": 9,
+      "revenue_today": 4503.52,
+      "impressions_today": 1280778,
+      "avg_ecpm": 6.989,
+      "rev_share_pct": 1.23
+    },
+    {
+      "category": "other",
+      "apps": 93,
+      "ios": 19,
+      "android": 74,
+      "revenue_today": 4336.4,
+      "impressions_today": 732561,
+      "avg_ecpm": 5.192,
+      "rev_share_pct": 1.18
+    },
+    {
+      "category": "personalization",
+      "apps": 18,
+      "ios": 0,
+      "android": 18,
+      "revenue_today": 2807.53,
+      "impressions_today": 957530,
+      "avg_ecpm": 2.469,
+      "rev_share_pct": 0.77
+    }
+  ],
+  "totals": {
+    "apps": 464,
+    "ios": 64,
+    "android": 400,
+    "revenue_today": 366927.46,
+    "impressions_today": 119605466,
+    "head_count_rev_ge_100": 152,
+    "tail_count_rev_lt_1": 156,
+    "pareto_p80_n": 43
+  },
+  "top_apps": [
+    {
+      "name": "Video Player: Stream, Save MP4",
+      "store_id": "com.videosaver.downloadvideo.mp4.app",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 31051.52,
+      "impressions": 3565342,
+      "ecpm": 8.71,
+      "fill_rate": 94.27,
+      "rev_change_pct": -24.25
+    },
+    {
+      "name": "Face changer: Future self",
+      "store_id": "com.facechanger.agingapp.futureself",
+      "platform": "ANDROID",
+      "category": "creative_utility",
+      "revenue": 22721.17,
+      "impressions": 3761757,
+      "ecpm": 6.04,
+      "fill_rate": 55.75,
+      "rev_change_pct": -8.47
+    },
+    {
+      "name": "Email - Fastest Mail for Gmail & more email",
+      "store_id": "com.fastsigninemail.securemail.bestemail",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 18813.22,
+      "impressions": 2890130,
+      "ecpm": 6.51,
+      "fill_rate": 73.77,
+      "rev_change_pct": -4.34
+    },
+    {
+      "name": "Private Browser: Safe & Secure",
+      "store_id": "com.pivatebrowser.proxybrowser.pro",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 16042.58,
+      "impressions": 2616287,
+      "ecpm": 6.13,
+      "fill_rate": 93.91,
+      "rev_change_pct": 4.01
+    },
+    {
+      "name": "Mobile Phone Speaker Cleaner",
+      "store_id": "com.speakercleaner.waterremover.removedust.pro",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 13907.21,
+      "impressions": 6298023,
+      "ecpm": 2.21,
+      "fill_rate": 88.65,
+      "rev_change_pct": -21.76
+    },
+    {
+      "name": "456 Run Challenge: Clash 3D",
+      "store_id": "com.run.squid.challenges.survival.clash",
+      "platform": "ANDROID",
+      "category": "midcore_game",
+      "revenue": 13857.08,
+      "impressions": 17365932,
+      "ecpm": 0.8,
+      "fill_rate": 9.67,
+      "rev_change_pct": -37.34
+    },
+    {
+      "name": "Live World Map: Satellite View",
+      "store_id": "com.earthmap.livesatellite.worldmap.view",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 11326.27,
+      "impressions": 731506,
+      "ecpm": 15.48,
+      "fill_rate": 94.26,
+      "rev_change_pct": 60.26
+    },
+    {
+      "name": "Photo Recovery",
+      "store_id": "com.app.recoverfiles.photo.video",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 11137.83,
+      "impressions": 9526778,
+      "ecpm": 1.17,
+      "fill_rate": 67.04,
+      "rev_change_pct": -20.06
+    },
+    {
+      "name": "Background & Object Remover",
+      "store_id": "com.backgroundremover.editbackground.removeobject",
+      "platform": "ANDROID",
+      "category": "creative_utility",
+      "revenue": 8674.67,
+      "impressions": 2371923,
+      "ecpm": 3.66,
+      "fill_rate": 88.83,
+      "rev_change_pct": -38.33
+    },
+    {
+      "name": "The weather timeline & weather - graphs & radar",
+      "store_id": "com.weather.weatherforecast.weathertimeline",
+      "platform": "ANDROID",
+      "category": "subscription_content",
+      "revenue": 8188.63,
+      "impressions": 347952,
+      "ecpm": 23.53,
+      "fill_rate": 80.88,
+      "rev_change_pct": 21.42
+    },
+    {
+      "name": "456 Run Challenge: Clash 3D",
+      "store_id": "com.run.squid.challenges.survival.clash",
+      "platform": "ANDROID",
+      "category": "midcore_game",
+      "revenue": 7679.22,
+      "impressions": 6928781,
+      "ecpm": 1.11,
+      "fill_rate": 0,
+      "rev_change_pct": -4.1
+    },
+    {
+      "name": "AR Tracer: Trace Drawing",
+      "store_id": "6504559449",
+      "platform": "IOS",
+      "category": "creative_utility",
+      "revenue": 7271.24,
+      "impressions": 2382756,
+      "ecpm": 3.05,
+      "fill_rate": 75.33,
+      "rev_change_pct": -22.29
+    },
+    {
+      "name": "PDF Viewer & Document Scanner",
+      "store_id": "com.pdfviewer.imagetopdf.ocrscanner.app",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 6994.89,
+      "impressions": 862570,
+      "ecpm": 8.11,
+      "fill_rate": 78.14,
+      "rev_change_pct": -18.5
+    },
+    {
+      "name": "Holy Quran - Deeper journey",
+      "store_id": "com.quran.deeperquran.aiquran",
+      "platform": "ANDROID",
+      "category": "subscription_content",
+      "revenue": 6961.99,
+      "impressions": 1883142,
+      "ecpm": 3.7,
+      "fill_rate": 61.94,
+      "rev_change_pct": -5.8
+    },
+    {
+      "name": "WiFinder: Wifi Location Map",
+      "store_id": "com.wifimap.freewifi.wifipassword",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 6005.73,
+      "impressions": 1453821,
+      "ecpm": 4.13,
+      "fill_rate": 76.9,
+      "rev_change_pct": -6.22
+    },
+    {
+      "name": "AI Search: Smart Web Browser",
+      "store_id": "com.aisearch.smart.web.browser.private",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 5590.76,
+      "impressions": 411946,
+      "ecpm": 13.57,
+      "fill_rate": 94.06,
+      "rev_change_pct": 115.31
+    },
+    {
+      "name": "Web Browser Powered By AI",
+      "store_id": "com.webbrowser.internetbrowser.ai",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 5579.36,
+      "impressions": 696398,
+      "ecpm": 8.01,
+      "fill_rate": 94.56,
+      "rev_change_pct": 1783.16
+    },
+    {
+      "name": "Photo Enhancer: Object Remover",
+      "store_id": "com.retouchphoto.objectremover.enhanceimage.ai",
+      "platform": "ANDROID",
+      "category": "creative_utility",
+      "revenue": 5438.43,
+      "impressions": 963498,
+      "ecpm": 5.64,
+      "fill_rate": 91.22,
+      "rev_change_pct": 5.15
+    },
+    {
+      "name": "Compass360: Smart Compass tool",
+      "store_id": "com.smart.compass.qibla.forecast.direction",
+      "platform": "ANDROID",
+      "category": "subscription_content",
+      "revenue": 5206.02,
+      "impressions": 253046,
+      "ecpm": 20.57,
+      "fill_rate": 93.05,
+      "rev_change_pct": 10.67
+    },
+    {
+      "name": "AI Remove: Background Eraser",
+      "store_id": "remove.backgroundchanger.photoeditor",
+      "platform": "ANDROID",
+      "category": "creative_utility",
+      "revenue": 5099.71,
+      "impressions": 874210,
+      "ecpm": 5.83,
+      "fill_rate": 83.2,
+      "rev_change_pct": 52.13
+    },
+    {
+      "name": "Avn Email Online - Mailbox Client",
+      "store_id": "com.emailonline.officemail.amoemail",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 4785.1,
+      "impressions": 1013747,
+      "ecpm": 4.72,
+      "fill_rate": 85.69,
+      "rev_change_pct": -23.83
+    },
+    {
+      "name": "Email - Fast and Smart Mail",
+      "store_id": "com.fastsigninemail.securemail.bestemail",
+      "platform": "ANDROID",
+      "category": "productivity",
+      "revenue": 4613.58,
+      "impressions": 579018,
+      "ecpm": 7.97,
+      "fill_rate": 63.87,
+      "rev_change_pct": -41.85
+    },
+    {
+      "name": "Fun Clicker",
+      "store_id": "6758614770",
+      "platform": "IOS",
+      "category": "hyper_casual",
+      "revenue": 4341.99,
+      "impressions": 345483,
+      "ecpm": 12.57,
+      "fill_rate": 6.74,
+      "rev_change_pct": 1.69
+    },
+    {
+      "name": "All Music Player & Equalizer",
+      "store_id": "com.mp3player.musicequalizer.app",
+      "platform": "ANDROID",
+      "category": "music_audio",
+      "revenue": 4339.92,
+      "impressions": 521676,
+      "ecpm": 8.32,
+      "fill_rate": 89.07,
+      "rev_change_pct": -61.54
+    },
+    {
+      "name": "Supermarket Tycoon 3D",
+      "store_id": "6739697316",
+      "platform": "IOS",
+      "category": "simulation",
+      "revenue": 4177.42,
+      "impressions": 2160176,
+      "ecpm": 1.93,
+      "fill_rate": 1.95,
+      "rev_change_pct": -17.25
+    },
+    {
+      "name": "Fun Clicker",
+      "store_id": "com.fun.funclicker.spoopy",
+      "platform": "ANDROID",
+      "category": "hyper_casual",
+      "revenue": 4134.8,
+      "impressions": 749994,
+      "ecpm": 5.51,
+      "fill_rate": 5.37,
+      "rev_change_pct": -21.27
+    },
+    {
+      "name": "Fishing Mega Battle",
+      "store_id": "com.fishing.megabattle",
+      "platform": "ANDROID",
+      "category": "midcore_game",
+      "revenue": 3957.59,
+      "impressions": 4368366,
+      "ecpm": 0.91,
+      "fill_rate": 5.2,
+      "rev_change_pct": -8.83
+    },
+    {
+      "name": "Wool Arrow: Escape Puzzle",
+      "store_id": "com.amb.knit.flow.yarn.relax",
+      "platform": "ANDROID",
+      "category": "casual_game",
+      "revenue": 3772.13,
+      "impressions": 198362,
+      "ecpm": 19.02,
+      "fill_rate": 12.28,
+      "rev_change_pct": 13.38
+    },
+    {
+      "name": "Music Downloader: Stream, Save",
+      "store_id": "com.musicdownloader.trendingmusic.app",
+      "platform": "ANDROID",
+      "category": "music_audio",
+      "revenue": 3601.75,
+      "impressions": 336873,
+      "ecpm": 10.69,
+      "fill_rate": 91.95,
+      "rev_change_pct": -7.55
+    },
+    {
+      "name": "Weather Radar Map Live & Real-time weather maps",
+      "store_id": "com.weatherradar.liveradar.weathermap",
+      "platform": "ANDROID",
+      "category": "subscription_content",
+      "revenue": 3425.71,
+      "impressions": 517348,
+      "ecpm": 6.62,
+      "fill_rate": 91.71,
+      "rev_change_pct": -8.81
+    }
+  ],
+  "per_category_top5": {
+    "ai_chat": [
+      {
+        "name": "Lovia: AI Character Chat",
+        "store_id": "com.chatbotai.virtualcharacter.app",
+        "platform": "ANDROID",
+        "revenue": 2398.73,
+        "impressions": 718966,
+        "ecpm": 3.34,
+        "fill_rate": 85.58
+      },
+      {
+        "name": "Lumia: AI Girl RP Chat",
+        "store_id": "com.aichat.aigirlfriend.roleplay",
+        "platform": "ANDROID",
+        "revenue": 1034.19,
+        "impressions": 364900,
+        "ecpm": 2.83,
+        "fill_rate": 76.28
+      },
+      {
+        "name": "DearMuse: AI Character & Story",
+        "store_id": "com.rpstory.virtualgirl.app",
+        "platform": "ANDROID",
+        "revenue": 540.19,
+        "impressions": 165819,
+        "ecpm": 3.26,
+        "fill_rate": 81.73
+      },
+      {
+        "name": "Chatbot AI: AI Smart Assistant",
+        "store_id": "com.aichat.ask.chatbot.app",
+        "platform": "ANDROID",
+        "revenue": 439.42,
+        "impressions": 19033,
+        "ecpm": 23.09,
+        "fill_rate": 46.94
+      },
+      {
+        "name": "Amo AI: Smart AI Chatbot",
+        "store_id": "com.myai.aichat.chatbot",
+        "platform": "ANDROID",
+        "revenue": 47.69,
+        "impressions": 7144,
+        "ecpm": 6.68,
+        "fill_rate": 56.71
+      }
+    ],
+    "ai_utility": [
+      {
+        "name": "AI Photo Lab: Enhance & Erase",
+        "store_id": "com.aiphoto.editor.enhance.objectremover",
+        "platform": "ANDROID",
+        "revenue": 2721.2,
+        "impressions": 1069139,
+        "ecpm": 2.55,
+        "fill_rate": 92.49
+      },
+      {
+        "name": "Face Swap - AI Photo Editor",
+        "store_id": "com.faceswap.facechanger.aiheadshot",
+        "platform": "ANDROID",
+        "revenue": 2373.91,
+        "impressions": 1083266,
+        "ecpm": 2.19,
+        "fill_rate": 51.33
+      },
+      {
+        "name": "Leafly: Plant Identifier, Care",
+        "store_id": "com.plantidentifier.plantapp.ai",
+        "platform": "ANDROID",
+        "revenue": 2356.78,
+        "impressions": 115561,
+        "ecpm": 20.39,
+        "fill_rate": 79.57
+      },
+      {
+        "name": "PlantCheck: Plant Identifier",
+        "store_id": "6749175319",
+        "platform": "IOS",
+        "revenue": 886.79,
+        "impressions": 19205,
+        "ecpm": 46.17,
+        "fill_rate": 87.25
+      },
+      {
+        "name": "Genius Art: Image AI Generator",
+        "store_id": "com.aiart.artgenerator.photoeditor.aiimage",
+        "platform": "ANDROID",
+        "revenue": 744.26,
+        "impressions": 202646,
+        "ecpm": 3.67,
+        "fill_rate": 71.68
+      }
+    ],
+    "hyper_casual": [
+      {
+        "name": "Fun Clicker",
+        "store_id": "6758614770",
+        "platform": "IOS",
+        "revenue": 4341.99,
+        "impressions": 345483,
+        "ecpm": 12.57,
+        "fill_rate": 6.74
+      },
+      {
+        "name": "Fun Clicker",
+        "store_id": "com.fun.funclicker.spoopy",
+        "platform": "ANDROID",
+        "revenue": 4134.8,
+        "impressions": 749994,
+        "ecpm": 5.51,
+        "fill_rate": 5.37
+      },
+      {
+        "name": "Block Master: Craft Adventure",
+        "store_id": "com.obby.run.parkour.escape.jump.act",
+        "platform": "ANDROID",
+        "revenue": 1678.39,
+        "impressions": 812721,
+        "ecpm": 2.07,
+        "fill_rate": 5.16
+      },
+      {
+        "name": "Craft Blox: Obby Parkour Games",
+        "store_id": "com.obby.run.parkour.escape.jump.act",
+        "platform": "ANDROID",
+        "revenue": 973.14,
+        "impressions": 300901,
+        "ecpm": 3.23,
+        "fill_rate": 0
+      },
+      {
+        "name": "Fun Clicker 2",
+        "store_id": "com.amb.funclicker.shape",
+        "platform": "ANDROID",
+        "revenue": 160.51,
+        "impressions": 39693,
+        "ecpm": 4.04,
+        "fill_rate": 3.17
+      }
+    ],
+    "midcore_game": [
+      {
+        "name": "456 Run Challenge: Clash 3D",
+        "store_id": "com.run.squid.challenges.survival.clash",
+        "platform": "ANDROID",
+        "revenue": 13857.08,
+        "impressions": 17365932,
+        "ecpm": 0.8,
+        "fill_rate": 9.67
+      },
+      {
+        "name": "456 Run Challenge: Clash 3D",
+        "store_id": "com.run.squid.challenges.survival.clash",
+        "platform": "ANDROID",
+        "revenue": 7679.22,
+        "impressions": 6928781,
+        "ecpm": 1.11,
+        "fill_rate": 0
+      },
+      {
+        "name": "Fishing Mega Battle",
+        "store_id": "com.fishing.megabattle",
+        "platform": "ANDROID",
+        "revenue": 3957.59,
+        "impressions": 4368366,
+        "ecpm": 0.91,
+        "fill_rate": 5.2
+      },
+      {
+        "name": "Bag War: Merge Battle",
+        "store_id": "com.amb.bagwar.mergebattle",
+        "platform": "ANDROID",
+        "revenue": 2293.29,
+        "impressions": 434012,
+        "ecpm": 5.28,
+        "fill_rate": 1.87
+      },
+      {
+        "name": "Monster Evolution Run & Battle",
+        "store_id": "com.stick.monster.pocket.run",
+        "platform": "ANDROID",
+        "revenue": 1684.89,
+        "impressions": 1382389,
+        "ecpm": 1.22,
+        "fill_rate": 2.55
+      }
+    ],
+    "casual_game": [
+      {
+        "name": "Wool Arrow: Escape Puzzle",
+        "store_id": "com.amb.knit.flow.yarn.relax",
+        "platform": "ANDROID",
+        "revenue": 3772.13,
+        "impressions": 198362,
+        "ecpm": 19.02,
+        "fill_rate": 12.28
+      },
+      {
+        "name": "Left or Right: Dress up Show",
+        "store_id": "com.amb.fashion.fit.leftright",
+        "platform": "ANDROID",
+        "revenue": 3381.1,
+        "impressions": 2353421,
+        "ecpm": 1.44,
+        "fill_rate": 7.4
+      },
+      {
+        "name": "Noisy Zoo: Make Silly Sounds",
+        "store_id": "com.hub2.thenoisezoo",
+        "platform": "ANDROID",
+        "revenue": 3112.35,
+        "impressions": 1365578,
+        "ecpm": 2.28,
+        "fill_rate": 2.66
+      },
+      {
+        "name": "Noisy Zoo: Make Silly Sounds",
+        "store_id": "6761046027",
+        "platform": "IOS",
+        "revenue": 1031.16,
+        "impressions": 243981,
+        "ecpm": 4.23,
+        "fill_rate": 3.22
+      },
+      {
+        "name": "Left or Right: Dress up Show",
+        "store_id": "com.amb.fashion.fit.leftright",
+        "platform": "ANDROID",
+        "revenue": 921.56,
+        "impressions": 806377,
+        "ecpm": 1.14,
+        "fill_rate": 71.46
+      }
+    ],
+    "simulation": [
+      {
+        "name": "Supermarket Tycoon 3D",
+        "store_id": "6739697316",
+        "platform": "IOS",
+        "revenue": 4177.42,
+        "impressions": 2160176,
+        "ecpm": 1.93,
+        "fill_rate": 1.95
+      },
+      {
+        "name": "Supermarket Tycoon 3D",
+        "store_id": "com.supermarket.manager.simulator.game",
+        "platform": "ANDROID",
+        "revenue": 1907.62,
+        "impressions": 1034314,
+        "ecpm": 1.84,
+        "fill_rate": 2.23
+      },
+      {
+        "name": "Blocky Supermarket Simulator",
+        "store_id": "com.market.management.simulator.game",
+        "platform": "ANDROID",
+        "revenue": 91.24,
+        "impressions": 33712,
+        "ecpm": 2.71,
+        "fill_rate": 32.29
+      },
+      {
+        "name": "Motor Race: Real Simulator",
+        "store_id": "com.moto.rider.gp.traffic.racing",
+        "platform": "ANDROID",
+        "revenue": 0.88,
+        "impressions": 182,
+        "ecpm": 4.83,
+        "fill_rate": 14.98
+      },
+      {
+        "name": "Motor Race: Real Simulator",
+        "store_id": "com.moto.rider.gp.traffic.racing",
+        "platform": "ANDROID",
+        "revenue": 0.27,
+        "impressions": 73,
+        "ecpm": 3.66,
+        "fill_rate": 0
+      }
+    ],
+    "creative_utility": [
+      {
+        "name": "Face changer: Future self",
+        "store_id": "com.facechanger.agingapp.futureself",
+        "platform": "ANDROID",
+        "revenue": 22721.17,
+        "impressions": 3761757,
+        "ecpm": 6.04,
+        "fill_rate": 55.75
+      },
+      {
+        "name": "Background & Object Remover",
+        "store_id": "com.backgroundremover.editbackground.removeobject",
+        "platform": "ANDROID",
+        "revenue": 8674.67,
+        "impressions": 2371923,
+        "ecpm": 3.66,
+        "fill_rate": 88.83
+      },
+      {
+        "name": "AR Tracer: Trace Drawing",
+        "store_id": "6504559449",
+        "platform": "IOS",
+        "revenue": 7271.24,
+        "impressions": 2382756,
+        "ecpm": 3.05,
+        "fill_rate": 75.33
+      },
+      {
+        "name": "Photo Enhancer: Object Remover",
+        "store_id": "com.retouchphoto.objectremover.enhanceimage.ai",
+        "platform": "ANDROID",
+        "revenue": 5438.43,
+        "impressions": 963498,
+        "ecpm": 5.64,
+        "fill_rate": 91.22
+      },
+      {
+        "name": "AI Remove: Background Eraser",
+        "store_id": "remove.backgroundchanger.photoeditor",
+        "platform": "ANDROID",
+        "revenue": 5099.71,
+        "impressions": 874210,
+        "ecpm": 5.83,
+        "fill_rate": 83.2
+      }
+    ],
+    "entertainment": [
+      {
+        "name": "ShortTales: Short Movie, Drama",
+        "store_id": "com.shortmovie.reels.drama.hot",
+        "platform": "ANDROID",
+        "revenue": 2649.83,
+        "impressions": 489628,
+        "ecpm": 5.41,
+        "fill_rate": 76.79
+      },
+      {
+        "name": "Story Saver: Download Video",
+        "store_id": "com.storysaver.savereels.downloadvideo.hd",
+        "platform": "ANDROID",
+        "revenue": 1254.38,
+        "impressions": 256551,
+        "ecpm": 4.89,
+        "fill_rate": 87.58
+      },
+      {
+        "name": "Prank Sound: Funny Airhorn App",
+        "store_id": "com.pranksound.airhorn.funnysound.app",
+        "platform": "ANDROID",
+        "revenue": 1136.82,
+        "impressions": 830861,
+        "ecpm": 1.37,
+        "fill_rate": 85.12
+      },
+      {
+        "name": "Prank Video Call: Idol Version",
+        "store_id": "com.prankcall.videoprank.idolversion.app",
+        "platform": "ANDROID",
+        "revenue": 1016.14,
+        "impressions": 247192,
+        "ecpm": 4.11,
+        "fill_rate": 93.48
+      },
+      {
+        "name": "Retro GBA Emulator: 90s Game",
+        "store_id": "com.gameemulator.gameconsole.retro",
+        "platform": "ANDROID",
+        "revenue": 977.18,
+        "impressions": 225646,
+        "ecpm": 4.33,
+        "fill_rate": 85.51
+      }
+    ],
+    "subscription_content": [
+      {
+        "name": "The weather timeline & weather - graphs & radar",
+        "store_id": "com.weather.weatherforecast.weathertimeline",
+        "platform": "ANDROID",
+        "revenue": 8188.63,
+        "impressions": 347952,
+        "ecpm": 23.53,
+        "fill_rate": 80.88
+      },
+      {
+        "name": "Holy Quran - Deeper journey",
+        "store_id": "com.quran.deeperquran.aiquran",
+        "platform": "ANDROID",
+        "revenue": 6961.99,
+        "impressions": 1883142,
+        "ecpm": 3.7,
+        "fill_rate": 61.94
+      },
+      {
+        "name": "Compass360: Smart Compass tool",
+        "store_id": "com.smart.compass.qibla.forecast.direction",
+        "platform": "ANDROID",
+        "revenue": 5206.02,
+        "impressions": 253046,
+        "ecpm": 20.57,
+        "fill_rate": 93.05
+      },
+      {
+        "name": "Weather Radar Map Live & Real-time weather maps",
+        "store_id": "com.weatherradar.liveradar.weathermap",
+        "platform": "ANDROID",
+        "revenue": 3425.71,
+        "impressions": 517348,
+        "ecpm": 6.62,
+        "fill_rate": 91.71
+      },
+      {
+        "name": "AMO Translator - AI Translate",
+        "store_id": "com.amo.translator.ai.translate",
+        "platform": "ANDROID",
+        "revenue": 1184.98,
+        "impressions": 218691,
+        "ecpm": 5.42,
+        "fill_rate": 69.34
+      }
+    ],
+    "productivity": [
+      {
+        "name": "Video Player: Stream, Save MP4",
+        "store_id": "com.videosaver.downloadvideo.mp4.app",
+        "platform": "ANDROID",
+        "revenue": 31051.52,
+        "impressions": 3565342,
+        "ecpm": 8.71,
+        "fill_rate": 94.27
+      },
+      {
+        "name": "Email - Fastest Mail for Gmail & more email",
+        "store_id": "com.fastsigninemail.securemail.bestemail",
+        "platform": "ANDROID",
+        "revenue": 18813.22,
+        "impressions": 2890130,
+        "ecpm": 6.51,
+        "fill_rate": 73.77
+      },
+      {
+        "name": "Private Browser: Safe & Secure",
+        "store_id": "com.pivatebrowser.proxybrowser.pro",
+        "platform": "ANDROID",
+        "revenue": 16042.58,
+        "impressions": 2616287,
+        "ecpm": 6.13,
+        "fill_rate": 93.91
+      },
+      {
+        "name": "Mobile Phone Speaker Cleaner",
+        "store_id": "com.speakercleaner.waterremover.removedust.pro",
+        "platform": "ANDROID",
+        "revenue": 13907.21,
+        "impressions": 6298023,
+        "ecpm": 2.21,
+        "fill_rate": 88.65
+      },
+      {
+        "name": "Live World Map: Satellite View",
+        "store_id": "com.earthmap.livesatellite.worldmap.view",
+        "platform": "ANDROID",
+        "revenue": 11326.27,
+        "impressions": 731506,
+        "ecpm": 15.48,
+        "fill_rate": 94.26
+      }
+    ],
+    "music_audio": [
+      {
+        "name": "All Music Player & Equalizer",
+        "store_id": "com.mp3player.musicequalizer.app",
+        "platform": "ANDROID",
+        "revenue": 4339.92,
+        "impressions": 521676,
+        "ecpm": 8.32,
+        "fill_rate": 89.07
+      },
+      {
+        "name": "Music Downloader: Stream, Save",
+        "store_id": "com.musicdownloader.trendingmusic.app",
+        "platform": "ANDROID",
+        "revenue": 3601.75,
+        "impressions": 336873,
+        "ecpm": 10.69,
+        "fill_rate": 91.95
+      },
+      {
+        "name": "Piano Keyboard: Learn Piano",
+        "store_id": "com.pianokeyboard.learnpiano.virtualpiano.easypiano.app",
+        "platform": "ANDROID",
+        "revenue": 2356.89,
+        "impressions": 2197805,
+        "ecpm": 1.07,
+        "fill_rate": 60.43
+      },
+      {
+        "name": "DJ Music Mixer: Make Beat",
+        "store_id": "com.djmusicmixer.beatmaker.remix",
+        "platform": "ANDROID",
+        "revenue": 329.44,
+        "impressions": 215103,
+        "ecpm": 1.53,
+        "fill_rate": 62.79
+      },
+      {
+        "name": "Music Player: Audio Insight",
+        "store_id": "com.offlinemusic.musicplayer.app",
+        "platform": "ANDROID",
+        "revenue": 145.64,
+        "impressions": 55371,
+        "ecpm": 2.63,
+        "fill_rate": 79.74
+      }
+    ],
+    "personalization": [
+      {
+        "name": "Zipper Wallpaper: Zip Lock",
+        "store_id": "com.zipperwallpaper.ziplock",
+        "platform": "ANDROID",
+        "revenue": 1498.14,
+        "impressions": 316330,
+        "ecpm": 4.74,
+        "fill_rate": 81.42
+      },
+      {
+        "name": "3D Battery Charging Animation",
+        "store_id": "com.battery3d.charging.animationeffect.chargingscreen",
+        "platform": "ANDROID",
+        "revenue": 545.79,
+        "impressions": 371368,
+        "ecpm": 1.47,
+        "fill_rate": 84.31
+      },
+      {
+        "name": "Cool & Fancy Keyboard Themes",
+        "store_id": "com.fancykeyboard.changekeyboard.pro",
+        "platform": "ANDROID",
+        "revenue": 395.1,
+        "impressions": 167176,
+        "ecpm": 2.36,
+        "fill_rate": 92.37
+      },
+      {
+        "name": "Lively Lock Screen Wallpapers",
+        "store_id": "com.lively.lockscreen.videotolive.wallpapers",
+        "platform": "ANDROID",
+        "revenue": 353.59,
+        "impressions": 95855,
+        "ecpm": 3.69,
+        "fill_rate": 87.42
+      },
+      {
+        "name": "Theme: 4K Icon Pack & Widgets",
+        "store_id": "com.theme.iconpack.phonewidgets.wallpaper",
+        "platform": "ANDROID",
+        "revenue": 8.13,
+        "impressions": 3525,
+        "ecpm": 2.31,
+        "fill_rate": 53.71
+      }
+    ],
+    "other": [
+      {
+        "name": "HomeMagic: AI Interior Design",
+        "store_id": "com.homedecor.aidesign.interior.avn",
+        "platform": "ANDROID",
+        "revenue": 1740.06,
+        "impressions": 118205,
+        "ecpm": 14.72,
+        "fill_rate": 77.63
+      },
+      {
+        "name": "Fuzzy's Ice Cream: Scream Game",
+        "store_id": "com.amb.popys.icecream.scream",
+        "platform": "ANDROID",
+        "revenue": 736.37,
+        "impressions": 258001,
+        "ecpm": 2.85,
+        "fill_rate": 40.13
+      },
+      {
+        "name": "FacePlus: AI Face Editor",
+        "store_id": "com.faceplus.faceeditor.naturalbeauty",
+        "platform": "ANDROID",
+        "revenue": 702.12,
+        "impressions": 23341,
+        "ecpm": 30.08,
+        "fill_rate": 68.37
+      },
+      {
+        "name": "Monster Pocket: Run & Building",
+        "store_id": "1670523517",
+        "platform": "IOS",
+        "revenue": 183.17,
+        "impressions": 58593,
+        "ecpm": 3.13,
+        "fill_rate": 22.39
+      },
+      {
+        "name": "Face Editor: AI Makeup Look",
+        "store_id": "com.faceeditor.aimakeup.app",
+        "platform": "ANDROID",
+        "revenue": 167.45,
+        "impressions": 14638,
+        "ecpm": 11.44,
+        "fill_rate": 82.89
+      }
+    ]
+  }
+}

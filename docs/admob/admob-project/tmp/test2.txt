@@ -1,0 +1,8 @@
+# list_metrics = ["METRIC_UNSPECIFIED", "AD_REQUESTS", "CLICKS", "ESTIMATED_EARNINGS", 
+#                 "IMPRESSIONS", "IMPRESSION_CTR", "IMPRESSION_RPM", "MATCHED_REQUESTS", 
+#                 "MATCH_RATE", "SHOW_RATE", "OBSERVED_ECPM"]     # 11 metrics
+
+# list_dimensions = ["DIMENSION_UNSPECIFIED", "DATE", "MONTH", "WEEK", "AD_SOURCE",
+#                    "AD_SOURCE_INSTANCE", "AD_UNIT", "APP", "MEDIATION_GROUP",
+#                    "AD_TYPE", "COUNTRY", "FORMAT", "PLATFORM", "MOBILE_OS_VERSION",
+#                    "GMA_SDK_VERSION", "APP_VERSION_NAME"]       # 16 dimensions

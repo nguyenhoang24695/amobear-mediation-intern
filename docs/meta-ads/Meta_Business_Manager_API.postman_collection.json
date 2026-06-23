@@ -1,0 +1,1080 @@
+{
+  "info": {
+    "name": "Meta Business Manager API — Full Reference",
+    "_postman_id": "meta-bm-api-2026-v2",
+    "description": "Comprehensive Postman collection for managing Meta Business Manager via Graph API v25.0.\n\nSetup:\n1. Set {{access_token}} = your System User Token\n2. Set {{bm_id}} = your Business Manager ID\n3. Authorization uses Bearer token via header (NOT query params)\n\nAll endpoints tested against Graph API v25.0.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://graph.facebook.com/v25.0",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "YOUR_SYSTEM_USER_TOKEN",
+      "type": "string",
+      "description": "System User Token (non-expiring). Generate in BM Settings > System Users."
+    },
+    {
+      "key": "bm_id",
+      "value": "YOUR_BUSINESS_MANAGER_ID",
+      "type": "string"
+    },
+    {
+      "key": "ad_account_id",
+      "value": "act_YOUR_AD_ACCOUNT_ID",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "BUSINESS_SCOPED_USER_ID",
+      "type": "string"
+    },
+    {
+      "key": "page_id",
+      "value": "YOUR_PAGE_ID",
+      "type": "string"
+    },
+    {
+      "key": "system_user_id",
+      "value": "SYSTEM_USER_ID",
+      "type": "string"
+    },
+    {
+      "key": "asset_group_id",
+      "value": "ASSET_GROUP_ID",
+      "type": "string"
+    },
+    {
+      "key": "child_bm_id",
+      "value": "CHILD_BM_ID",
+      "type": "string"
+    },
+    {
+      "key": "ig_account_id",
+      "value": "INSTAGRAM_ACCOUNT_ID",
+      "type": "string"
+    },
+    {
+      "key": "extended_credit_id",
+      "value": "EXTENDED_CREDIT_ID",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Business Manager — CRUD",
+      "description": "Create, Read, Update Business Manager",
+      "item": [
+        {
+          "name": "Get BM Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}?fields=id,name,primary_page,verification_status,created_time,created_by,updated_time,two_factor_type,vertical,vertical_id,timezone_id,profile_picture_uri,link",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}"],
+              "query": [
+                { "key": "fields", "value": "id,name,primary_page,verification_status,created_time,created_by,updated_time,two_factor_type,vertical,vertical_id,timezone_id,profile_picture_uri,link" }
+              ]
+            },
+            "description": "Đọc thông tin chi tiết của Business Manager."
+          }
+        },
+        {
+          "name": "List My BMs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me/businesses",
+              "host": ["{{base_url}}"],
+              "path": ["me", "businesses"]
+            },
+            "description": "Liệt kê tất cả BMs mà user/system user có quyền access."
+          }
+        },
+        {
+          "name": "Create New BM",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Amobear BM", "description": "Tên BM (required)" },
+                { "key": "vertical", "value": "GAMING", "description": "Ngành nghề (required)" },
+                { "key": "primary_page", "value": "{{page_id}}", "description": "Page ID đại diện BM" },
+                { "key": "timezone_id", "value": "175", "description": "Vietnam timezone" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/me/businesses",
+              "host": ["{{base_url}}"],
+              "path": ["me", "businesses"]
+            },
+            "description": "Tạo BM mới. Cần business_management permission. Dev mode: max 2 child BMs."
+          }
+        },
+        {
+          "name": "Update BM",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Amobear Updated", "description": "Tên BM mới" },
+                { "key": "vertical", "value": "GAMING" },
+                { "key": "two_factor_type", "value": "admin_required", "description": "none | admin_required | all_required" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}"]
+            },
+            "description": "Cập nhật thông tin BM."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Business Users — People Management",
+      "description": "Manage business users (người thật) trong BM",
+      "item": [
+        {
+          "name": "List All Business Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/business_users?fields=id,name,email,role,first_name,last_name,title&summary=total_count",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "business_users"],
+              "query": [
+                { "key": "fields", "value": "id,name,email,role,first_name,last_name,title" },
+                { "key": "summary", "value": "total_count" }
+              ]
+            },
+            "description": "Liệt kê users trong BM. Cần Advanced Access."
+          }
+        },
+        {
+          "name": "Invite User (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "email", "value": "admin@amobear.com", "description": "Email (required)" },
+                { "key": "role", "value": "ADMIN" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/business_users",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "business_users"]
+            },
+            "description": "Invite user ADMIN. Rate limited — error 17 = đợi 24h."
+          }
+        },
+        {
+          "name": "Invite User (EMPLOYEE)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "email", "value": "employee@amobear.com" },
+                { "key": "role", "value": "EMPLOYEE" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/business_users",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "business_users"]
+            }
+          }
+        },
+        {
+          "name": "List Pending Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/pending_users?fields=id,email,role,status",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "pending_users"],
+              "query": [
+                { "key": "fields", "value": "id,email,role,status" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "role", "value": "ADMIN", "description": "ADMIN | EMPLOYEE" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Remove User from BM",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{user_id}}"]
+            },
+            "description": "Không xóa được admin cuối cùng (error 3914)."
+          }
+        },
+        {
+          "name": "Cancel Pending Invite",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{user_id}}"]
+            },
+            "description": "Dùng pending_user_id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. System Users",
+      "description": "Manage system users (server/bot accounts)",
+      "item": [
+        {
+          "name": "List System Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/system_users?fields=id,name,role&summary=total_count",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "system_users"],
+              "query": [
+                { "key": "fields", "value": "id,name,role" },
+                { "key": "summary", "value": "total_count" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create System User (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Nexus Automation Bot", "description": "Required" },
+                { "key": "role", "value": "ADMIN", "description": "ADMIN | EMPLOYEE" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/system_users",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "system_users"]
+            },
+            "description": "App phải được BM claim trước (error 104001)."
+          }
+        },
+        {
+          "name": "Create System User (EMPLOYEE)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Nexus Read-Only Bot" },
+                { "key": "role", "value": "EMPLOYEE" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/system_users",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "system_users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Ad Account Management",
+      "description": "Claim, create, list, assign users to ad accounts",
+      "item": [
+        {
+          "name": "List Owned Ad Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_ad_accounts?fields=id,account_id,name,account_status,currency,timezone_id,amount_spent,balance,business,permitted_tasks,access_type&limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_ad_accounts"],
+              "query": [
+                { "key": "fields", "value": "id,account_id,name,account_status,currency,timezone_id,amount_spent,balance,business,permitted_tasks,access_type" },
+                { "key": "limit", "value": "100" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Pending Ad Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/pending_owned_ad_accounts",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "pending_owned_ad_accounts"]
+            }
+          }
+        },
+        {
+          "name": "⚠️ Claim Existing Ad Account (IRREVERSIBLE)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "adaccount_id", "value": "act_123456789", "description": "Format: act_XXXXXXXXX" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_ad_accounts",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_ad_accounts"]
+            },
+            "description": "⚠️ IRREVERSIBLE: OWNER status không thể undo. Test sandbox trước!"
+          }
+        },
+        {
+          "name": "Create New Ad Account (Limit 5)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Amobear - WeatherApp US" },
+                { "key": "currency", "value": "USD" },
+                { "key": "timezone_id", "value": "1" },
+                { "key": "end_advertiser", "value": "{{bm_id}}", "description": "Business ID, NONE, or UNFOUND" },
+                { "key": "media_agency", "value": "NONE" },
+                { "key": "partner", "value": "NONE" },
+                { "key": "invoice", "value": "false", "description": "true = attach to credit line" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/adaccount",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "adaccount"]
+            },
+            "description": "Max 5 ad accounts via API."
+          }
+        },
+        {
+          "name": "Assign User to Ad Account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "user", "value": "{{user_id}}" },
+                { "key": "tasks", "value": "[\"MANAGE\",\"ADVERTISE\",\"ANALYZE\"]", "description": "JSON array" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{ad_account_id}}/assigned_users",
+              "host": ["{{base_url}}"],
+              "path": ["{{ad_account_id}}", "assigned_users"]
+            },
+            "description": "Also used to change existing permissions (overwrite)."
+          }
+        },
+        {
+          "name": "List Assigned Users on Ad Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{ad_account_id}}/assigned_users?fields=id,name,email,tasks",
+              "host": ["{{base_url}}"],
+              "path": ["{{ad_account_id}}", "assigned_users"],
+              "query": [
+                { "key": "fields", "value": "id,name,email,tasks" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List User's Assigned Ad Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{user_id}}/assigned_ad_accounts?fields=id,name,account_status",
+              "host": ["{{base_url}}"],
+              "path": ["{{user_id}}", "assigned_ad_accounts"],
+              "query": [
+                { "key": "fields", "value": "id,name,account_status" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove User from Ad Account",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "user", "value": "{{user_id}}" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{ad_account_id}}/assigned_users",
+              "host": ["{{base_url}}"],
+              "path": ["{{ad_account_id}}", "assigned_users"]
+            }
+          }
+        },
+        {
+          "name": "Remove Ad Account from BM",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "adaccount_id", "value": "{{ad_account_id}}" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/ad_accounts",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "ad_accounts"]
+            },
+            "description": "⚠️ Only works for AGENCY access or PENDING status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Page Management",
+      "item": [
+        {
+          "name": "List Owned Pages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_pages?fields=id,name,category,fan_count",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_pages"],
+              "query": [{ "key": "fields", "value": "id,name,category,fan_count" }]
+            }
+          }
+        },
+        {
+          "name": "List Client Pages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/client_pages?fields=id,name,category",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "client_pages"],
+              "query": [{ "key": "fields", "value": "id,name,category" }]
+            }
+          }
+        },
+        {
+          "name": "List Pending Owned Pages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/pending_owned_pages",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "pending_owned_pages"]
+            }
+          }
+        },
+        {
+          "name": "Remove Page from BM",
+          "request": {
+            "method": "DELETE",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "page_id", "value": "{{page_id}}" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/pages",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "pages"]
+            },
+            "description": "Error 42001 nếu linked với IG business."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Instagram Management",
+      "item": [
+        {
+          "name": "List All IG Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/instagram_accounts?fields=id,username",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "instagram_accounts"],
+              "query": [{ "key": "fields", "value": "id,username" }]
+            }
+          }
+        },
+        {
+          "name": "List Owned IG Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_instagram_accounts?fields=id,username",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_instagram_accounts"],
+              "query": [{ "key": "fields", "value": "id,username" }]
+            }
+          }
+        },
+        {
+          "name": "List IG Business Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/instagram_business_accounts?fields=id,username",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "instagram_business_accounts"],
+              "query": [{ "key": "fields", "value": "id,username" }]
+            }
+          }
+        },
+        {
+          "name": "List Client IG Assets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/client_instagram_assets",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "client_instagram_assets"]
+            }
+          }
+        },
+        {
+          "name": "Remove IG Account from BM",
+          "request": {
+            "method": "DELETE",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "instagram_account", "value": "{{ig_account_id}}" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/instagram_accounts",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "instagram_accounts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Pixels & Catalogs",
+      "item": [
+        {
+          "name": "List All Pixels",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/adspixels?fields=id,name,owner_business",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "adspixels"],
+              "query": [{ "key": "fields", "value": "id,name,owner_business" }]
+            }
+          }
+        },
+        {
+          "name": "List Owned Pixels",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_pixels?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_pixels"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Owned Product Catalogs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_product_catalogs?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_product_catalogs"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Client Product Catalogs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/client_product_catalogs?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "client_product_catalogs"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Agency & Client Relationships",
+      "item": [
+        {
+          "name": "List Agencies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/agencies?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "agencies"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Clients",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/clients?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "clients"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "Remove Agency",
+          "request": {
+            "method": "DELETE",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "business", "value": "AGENCY_BM_ID" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/agencies",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "agencies"]
+            }
+          }
+        },
+        {
+          "name": "Remove Client",
+          "request": {
+            "method": "DELETE",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "business", "value": "CLIENT_BM_ID" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/clients",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "clients"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Business Asset Groups",
+      "item": [
+        {
+          "name": "List Asset Groups",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/business_asset_groups?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "business_asset_groups"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Pages in Asset Group",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{asset_group_id}}/contained_pages",
+              "host": ["{{base_url}}"],
+              "path": ["{{asset_group_id}}", "contained_pages"]
+            }
+          }
+        },
+        {
+          "name": "List Ad Accounts in Asset Group",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{asset_group_id}}/contained_adaccounts",
+              "host": ["{{base_url}}"],
+              "path": ["{{asset_group_id}}", "contained_adaccounts"]
+            }
+          }
+        },
+        {
+          "name": "Add Page to Asset Group",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "asset_id", "value": "{{page_id}}" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{asset_group_id}}/contained_pages",
+              "host": ["{{base_url}}"],
+              "path": ["{{asset_group_id}}", "contained_pages"]
+            }
+          }
+        },
+        {
+          "name": "Add Ad Account to Asset Group",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "asset_id", "value": "{{ad_account_id}}" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{asset_group_id}}/contained_adaccounts",
+              "host": ["{{base_url}}"],
+              "path": ["{{asset_group_id}}", "contained_adaccounts"]
+            }
+          }
+        },
+        {
+          "name": "Remove Page from Asset Group",
+          "request": {
+            "method": "DELETE",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "asset_id", "value": "{{page_id}}" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{asset_group_id}}/contained_pages",
+              "host": ["{{base_url}}"],
+              "path": ["{{asset_group_id}}", "contained_pages"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. 2-Tier BM (Parent-Child)",
+      "item": [
+        {
+          "name": "Create Child BM",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Amobear Child - Game Division", "description": "Required" },
+                { "key": "shared_page_id", "value": "{{page_id}}", "description": "Required - primary page" },
+                { "key": "page_permitted_tasks", "value": "[\"MANAGE\",\"CREATE_CONTENT\",\"MODERATE\",\"ADVERTISE\",\"ANALYZE\"]" },
+                { "key": "timezone_id", "value": "175" },
+                { "key": "child_business_external_id", "value": "amobear_game_001", "description": "Optional external ID" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_businesses",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_businesses"]
+            }
+          }
+        },
+        {
+          "name": "List Child BMs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_businesses?fields=id,name,child_business_external_id",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_businesses"],
+              "query": [{ "key": "fields", "value": "id,name,child_business_external_id" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Child BM",
+          "request": {
+            "method": "DELETE",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "client_id", "value": "{{child_bm_id}}" }]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_businesses",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_businesses"]
+            }
+          }
+        },
+        {
+          "name": "Manage Client Business (Aggregator)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Client Corp" },
+                { "key": "existing_client_business_id", "value": "", "description": "Optional" },
+                { "key": "timezone_id", "value": "175" },
+                { "key": "vertical", "value": "GAMING" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/managed_businesses",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "managed_businesses"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Finance & Invoicing",
+      "description": "Credit lines, invoices, campaign billing breakdown",
+      "item": [
+        {
+          "name": "Get Extended Credits (Full Fields)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/extendedcredits?fields=id,legal_entity_name,allocated_amount,balance,credit_available,max_balance,online_max_balance,owner_business_name,credit_type,is_automated_experience,liable_biz_name,send_bill_to_biz_name,partition_from,is_access_revoked",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "extendedcredits"],
+              "query": [
+                { "key": "fields", "value": "id,legal_entity_name,allocated_amount,balance,credit_available,max_balance,online_max_balance,owner_business_name,credit_type,is_automated_experience,liable_biz_name,send_bill_to_biz_name,partition_from,is_access_revoked" }
+              ]
+            },
+            "description": "Lấy tất cả credit lines với đầy đủ fields: balance, available, max, allocation, etc."
+          }
+        },
+        {
+          "name": "Get Extended Credit Detail (by ID)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{extended_credit_id}}?fields=id,legal_entity_name,allocated_amount,balance,credit_available,max_balance,online_max_balance,owner_business,owner_business_name,credit_type,is_automated_experience,liable_biz_name,send_bill_to_biz_name,receiving_credit_allocation_config",
+              "host": ["{{base_url}}"],
+              "path": ["{{extended_credit_id}}"],
+              "query": [
+                { "key": "fields", "value": "id,legal_entity_name,allocated_amount,balance,credit_available,max_balance,online_max_balance,owner_business,owner_business_name,credit_type,is_automated_experience,liable_biz_name,send_bill_to_biz_name,receiving_credit_allocation_config" }
+              ]
+            },
+            "description": "Chi tiết 1 credit line cụ thể. Dùng extended_credit_id từ kết quả endpoint trên."
+          }
+        },
+        {
+          "name": "Get Invoice Groups in Credit Line",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{extended_credit_id}}/extended_credit_invoice_groups",
+              "host": ["{{base_url}}"],
+              "path": ["{{extended_credit_id}}", "extended_credit_invoice_groups"]
+            },
+            "description": "Ad accounts trong cùng invoice group sẽ tạo 1 consolidated invoice."
+          }
+        },
+        {
+          "name": "Get Credit Allocation Configs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{extended_credit_id}}/owning_credit_allocation_configs",
+              "host": ["{{base_url}}"],
+              "path": ["{{extended_credit_id}}", "owning_credit_allocation_configs"]
+            },
+            "description": "Xem credit phân bổ cho child BMs (Tier 2)."
+          }
+        },
+        {
+          "name": "Get Invoices (Date Range)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/business_invoices?start_date=2026-01-01&end_date=2026-04-01&fields=id,billed_amount_details,billing_period,invoice_id,payment_term,type,payment_status,due_date,invoice_date,amount_due,download_uri",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "business_invoices"],
+              "query": [
+                { "key": "start_date", "value": "2026-01-01" },
+                { "key": "end_date", "value": "2026-04-01" },
+                { "key": "fields", "value": "id,billed_amount_details,billing_period,invoice_id,payment_term,type,payment_status,due_date,invoice_date,amount_due,download_uri" }
+              ]
+            },
+            "description": "Cần finance role. download_uri = link PDF invoice."
+          }
+        },
+        {
+          "name": "Get Invoices with Campaign Breakdown",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/business_invoices?start_date=2026-01-01&end_date=2026-04-01&fields=billed_amount_details,billing_period,entity,id,invoice_id,payment_term,type,campaigns",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "business_invoices"],
+              "query": [
+                { "key": "start_date", "value": "2026-01-01" },
+                { "key": "end_date", "value": "2026-04-01" },
+                { "key": "fields", "value": "billed_amount_details,billing_period,entity,id,invoice_id,payment_term,type,campaigns" }
+              ]
+            },
+            "description": "Drill down tới campaign level: campaign_id, campaign_name, billed_amount."
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. WhatsApp Business Accounts",
+      "item": [
+        {
+          "name": "List Owned WA Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_whatsapp_business_accounts?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_whatsapp_business_accounts"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Client WA Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/client_whatsapp_business_accounts?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "client_whatsapp_business_accounts"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Miscellaneous Edges",
+      "item": [
+        {
+          "name": "List Owned Apps",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/owned_apps?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "owned_apps"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Client Apps",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/client_apps?fields=id,name",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "client_apps"],
+              "query": [{ "key": "fields", "value": "id,name" }]
+            }
+          }
+        },
+        {
+          "name": "List Event Source Groups",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/event_source_groups",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "event_source_groups"]
+            }
+          }
+        },
+        {
+          "name": "List Ad Studies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/ad_studies",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "ad_studies"]
+            }
+          }
+        },
+        {
+          "name": "List OpenBridge Configurations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{bm_id}}/openbridge_configurations",
+              "host": ["{{base_url}}"],
+              "path": ["{{bm_id}}", "openbridge_configurations"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

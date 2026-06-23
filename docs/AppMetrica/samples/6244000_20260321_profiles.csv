@@ -1,0 +1,359 @@
+profile_id,appmetrica_gender,appmetrica_birth_date,appmetrica_notifications_enabled,appmetrica_name,appmetrica_crashes,appmetrica_errors,appmetrica_first_session_date,appmetrica_last_start_date,appmetrica_sessions,appmetrica_sdk_version,appmetrica_device_id,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,app_package_name,app_version_name
+,,,false,,0,0,2026-02-10,2026-03-21,44,7012000,5115556849263050181,,KR,Samsung,Galaxy S20 Ultra 5G,1,dad32107-a6f7-4fb8-8791-3b46235ad009,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-01-26,2026-03-21,455,7012000,6680232358467358596,,KZ,Redmi,Redmi 12,1,242292a8-7d67-4989-b486-e4aac46fa0a6,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,1951298954975975172,,KR,Samsung,Galaxy S26 Ultra,1,9b849bd5-a86c-4fcc-b527-de8d68a7115a,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,2012214919645711787,,RS,Samsung,Galaxy A14,1,f547d92f-8546-4746-bb11-274fca309347,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,16,7012000,7850861937536141501,,RU,Realme,realme narzo 50i Prime,1,dd893a14-f734-4a0d-86c1-e746a4118e3d,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,137,2026-02-21,2026-03-21,177,5012001,16549093055574216544,Astana,KZ,Apple,iPhone 15 Pro Max,1,,602734CC-BBE7-42A3-BAE5-B26B5A47870D,B9F09F0D-9FCA-4667-9A1F-E18881E46227,ios,18.0.1,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-23,2026-03-21,144,7012000,6263335285289359954,,DZ,Samsung,Galaxy A05,1,56f771b2-727f-43ca-86c6-fedd84e70101,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-01-26,2026-03-21,783,7012000,4114309863149399306,,NO,Samsung,Galaxy Tab S10 FE,2,137f1f82-b9e7-4ac7-a0fb-15122ca5971a,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,11795759603551052771,,PL,Deutsche Telekom,T Phone 2,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,18220272336798669985,,US,Samsung,Galaxy A15,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-24,2026-03-21,17,5012001,3487801464409244169,Apodaca,MX,Apple,"iPad Pro (9.7"")",2,,,0A7067CA-76E9-4327-846F-7C05965CF00A,ios,16.7.12,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-11,2026-03-21,12,7012000,7072824800810705232,,JP,Google,Pixel 6a,1,e2e34838-f8fc-46b9-b62f-41a97ae01bcf,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-22,2026-03-21,29,7012000,9086496889472960478,,TW,Samsung,Galaxy A55 5G,1,113b24ea-c059-48e5-af6f-e5a07b4d18b1,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,9,2026-03-01,2026-03-21,298,7012000,7297779161037476107,,EG,Honor,HONOR X6a,1,71a04a50-9fb4-48d9-9ccb-f28afce18be2,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-28,2026-03-21,97,7012000,16948154403146983516,,UZ,Itel,itel A50,1,bd583e35-1681-4647-957b-36329b5cfc88,,,android,14,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,4,2026-03-03,2026-03-20,87,7012000,18117782617839018275,,CZ,Samsung,Galaxy A13,1,e37a3dd7-dd96-4479-b3ae-64c03e1b4d01,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-21,2026-03-21,7,7012000,5850095349313238253,,RU,Xiaomi,Mi 10T Pro,1,,,,android,12,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,3,2026-02-15,2026-03-20,109,7012000,7723861833806840662,,ID,Oppo,A18,1,0811a529-0a66-4409-874b-0214114124e2,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-18,2026-03-20,19,7012000,748594240342356890,,AR,Samsung,Galaxy A04e,1,c61a010d-d7db-4f23-b970-1ec460768ea3,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,9098988537076317888,,BB,Samsung,Galaxy A35 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-24,2026-03-21,83,7012000,16122217430879683970,,EG,Realme,realme C21,1,636b1f88-0001-4891-a2d1-826b26903f1e,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,121,7012000,18052422134860695994,,AT,Samsung,Galaxy Tab A9+,2,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,8,2026-01-28,2026-03-21,410,7012000,779932456462675639,,CZ,Redmi,Redmi 14C,1,246be8ab-25b1-42fe-8c35-19f82362fb5e,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-23,2026-03-20,160,7012000,6671099838766048808,,IT,Honor,HONOR 200,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-24,2026-03-20,131,7012000,11409393320404337403,,US,Samsung,Galaxy A16 5G,1,ff04b467-9afe-4f69-a7c3-02c5f2066ec3,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,14569212177741165096,,JP,Sony,Xperia 1 VI,1,8acd1fb1-6db2-4e29-af0a-7e97a8e8fb5a,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,3335568607416070175,,AU,Samsung,Galaxy S25 FE,1,a7b860e2-f5d3-4590-aa19-a40e2a1e1f13,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-10,2026-03-21,44,7012000,18374625591391274494,,MN,Samsung,Galaxy A13,1,7605955a-2774-41d6-bfc6-dad2d33acd5c,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-01-25,2026-03-21,32,7012000,11958380428335371457,,TW,Samsung,Galaxy A32 5G,1,c30c8883-5608-45fb-ae4c-313d6532cf50,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,18375596821816867613,,SE,Samsung,Galaxy S25,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,10520715620592130933,,RU,Blackview,Tab 60,2,3969f38b-ca67-4637-8058-5b2b2b11101c,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,18243111694034101375,,RU,Samsung,Galaxy M21,1,e92355f2-cd42-4235-8dab-fe45a313c9d4,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-14,2026-03-21,18,7012000,3716565968170002579,,JP,Samsung,Galaxy A25 5G,1,8657feca-2684-4027-9dc6-f630d35c071e,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,2,7012000,4998889924358735331,,RU,Realme,RMX3834,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,4,7012000,9167085086760726494,,SK,Samsung,Galaxy A32 5G,1,d5f2d768-bcca-406b-bd83-d861ea12b427,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,17244183294486894308,,KR,Samsung,Galaxy Tab S6 Lite,2,b5cd402a-a01d-4ad0-9fba-18a1a78c25b3,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,2,7012000,8140751259977847100,,VE,Tecno,TECNO POVA 4,1,659d9f98-b9ea-44a5-a8ab-4d7fb82f43e3,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,10,7012000,2009740471791361952,,IN,Realme,RMX3998,1,42ce2bff-98ae-432f-bea9-b7d6ab7ea35e,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,34,7012000,3609208427579216045,,AR,Motorola,moto g200 5G,1,c9331b64-bc8e-414b-bb0b-4d8d9ae29f86,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-01,2026-03-21,44,7012000,9015301325673674926,,DE,Samsung,Galaxy A50,1,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-02-25,2026-03-20,416,7012000,10028792627945208653,,DE,Samsung,Galaxy A16 5G,1,003876fb-4f0c-4dda-924c-6545f4043492,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,5,7012000,16831221181115414990,,BG,Samsung,Galaxy A33 5G,1,cec8b8d0-3aa7-45de-ba98-5c88b4407c43,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-01,2026-03-21,15,7012000,18333237823145590487,,IN,Samsung,Galaxy F13,1,2ff05fee-fea1-43a9-a6b7-241d24fae6e4,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-17,2026-03-21,16,7012000,5838972328010125208,,AL,Samsung,Galaxy A06,1,2d32489b-f3b1-4f4c-af98-e8417ed3a8ba,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,7,7012000,6938297401413147493,,US,onn.,Tablet Gen 4,2,59c882cf-520c-465a-b837-1290f95a9a0d,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-16,2026-03-21,28,7012000,17487404321148274113,,PR,OnePlus,OnePlus Nord N20 5G,1,9e30ea4f-f42a-4d5f-939e-4fca72d0f04c,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-20,2026-03-21,53,7012000,18312617537529204968,,AR,Motorola,moto g85 5G,1,c28e30fd-7807-4732-9c40-64c57e5ddab6,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-11,2026-03-21,54,7012000,3952501375055936256,,RU,Redmi,Redmi Note 12,1,511ab84c-e8af-4b3d-8fba-d02c3af8d7d5,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,11,7012000,15643167160035274142,,MX,Motorola,moto g14,1,2503a88f-dcd3-42f3-8d97-7c7ab9d28a11,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-01-28,2026-03-21,49,7012000,17448783221201850875,,NL,Samsung,Galaxy A41,1,481d6c68-4633-431e-92c0-0015f5169808,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-01,2026-03-21,127,7012000,18048384120996778060,,IT,Samsung,Galaxy A33 5G,1,e0e8a5b2-e6f9-432a-b261-a3bb4e34971c,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-20,3,7012000,5838066287062272875,,IT,Samsung,Galaxy A35 5G,1,77556fbd-857a-4556-8f8f-695d57c8871c,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,5,7012000,16940526160192866325,,SG,Samsung,Galaxy Tab A7 Lite,2,57863cd8-414a-4f6c-b802-dab9fff80b5d,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-20,8,7012000,3829178252425348514,,PT,Teclast,P30T_ROW,2,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,3,2026-03-09,2026-03-21,41,7012000,12611476266205786219,,MX,Redmi,Redmi 9,1,,,,android,11,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-10,2026-03-21,12,7012000,12076092046678555512,,SK,Doogee,Fire 6 Power,1,,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,6,7012000,15477477321681435931,,CH,Samsung,Galaxy A36 5G,1,256b6d7f-c96a-4564-b95d-d3e17184ffb4,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,14101230244240448287,,BO,Honor,HONOR X8a,1,22e20247-30a1-43f5-ada9-c4c4cfab8038,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-05,2026-03-20,39,7012000,16498799533360656173,,VE,Redmi,Redmi 9A,1,24526feb-1277-4caa-8d08-e105cdd12d22,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-17,2026-03-21,16,7012000,1193765804584339227,,ZA,Samsung,Galaxy A04e,1,82b3e0d6-11d4-4df7-9ba0-18b71160ce0d,,,android,14,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-30,2026-03-21,4,7012000,5382024311568130953,,KR,Samsung,Galaxy Wide8,1,bd0dde89-7bde-46ef-9520-0c41c4066611,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,27,7012000,16012303701761463790,,US,TCL,TCL K32 5G,1,fe36913c-9ece-4856-be5b-0445ee2c9bfd,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,1,0,2026-02-11,2026-03-21,142,7012000,10140828723133532238,,GB,Samsung,Galaxy A55 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-24,2026-03-21,15,7012000,18395547407403262740,,MX,Motorola,moto e20,2,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,53,7012000,7837704970248838153,,CZ,Redmi,Redmi Note 10 Pro,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-12,2026-03-21,38,5012001,14368364618902170510,,US,Apple,iPad 11th Gen (WiFi),2,,,B181AE6C-AC6F-4394-942C-904D84946081,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-12,2026-03-21,101,7012000,13661333324136878314,,IN,Redmi,Redmi 13C 5G,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-10,2026-03-20,20,7012000,1650768684895553773,,CO,Samsung,Galaxy A56 5G,1,6d8f086e-3fef-4394-8b26-5c33eaac4522,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-19,2026-03-21,21,7012000,2112244298243626968,,ID,Vivo,Y18,1,f3396b04-996b-4859-accf-f12f48d8d8b1,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-11,2026-03-21,12,7012000,12206582836579721216,,DZ,Redmi,Redmi A3,1,66576a58-b829-4db1-93de-4b2d9939266b,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-17,2026-03-20,64,7012000,17640365601823286122,,US,Lenovo,Lenovo Tab M11,2,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-28,2026-03-21,136,7012000,8711028923866180182,,TR,Samsung,Galaxy A21s,1,c6d731f3-e65a-4bf6-acf4-91889e580ad0,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-02,2026-03-21,40,7012000,16237240773176922618,,KZ,Samsung,Galaxy S20 Ultra 5G,1,dc3439ca-8a65-4846-8590-d3fe82c24a5c,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-20,6,7012000,773455128400874988,,US,Samsung,Galaxy A14 5G,1,11eca2df-bc38-4d33-b84f-4f38e39abd37,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-02-07,2026-03-21,205,7012000,11581508053853577725,,HU,Samsung,Galaxy A36 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,14019881525411137191,,FR,Samsung,Galaxy S25 FE,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-06,2026-03-20,62,7012000,16812341217801320260,,ES,Redmi,Redmi Note 12S,1,a18af177-a808-41f4-a252-2433680c12fc,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-08,2026-03-21,285,7012000,2235161078683320640,,JP,Samsung,Galaxy A23 5G,1,d26eeafc-c70d-4778-8b11-8e5d184b6152,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-06,2026-03-20,66,7012000,13381343040642499916,,NZ,Oppo,A78,1,6827eeca-ac31-4e64-bc32-28410121991b,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,6,7012000,12053753678746744136,,US,Samsung,Galaxy S26 Ultra,1,6772434d-6ea5-4a82-b638-b1897a972632,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-15,2026-03-21,53,7012000,4870176091735552601,,MK,Samsung,Galaxy A13,1,ff1fc4ac-5e99-4b2e-bd6e-299cfda7ef87,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-09,2026-03-21,60,7012000,13734355397702243233,,CH,Samsung,Galaxy Tab S3,2,,,,android,9,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,3,5012001,4707320283680865894,Linz,AT,Apple,iPhone 14 Pro,1,,,C990673B-2CA4-4C7A-9E78-6482C8C5DBAB,ios,18.3.2,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-05,2026-03-20,22,7012000,15577127163146432285,,HU,Samsung,Galaxy Z Flip5,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,10955324450691530611,,NZ,Samsung,Galaxy A16 5G,1,3247478e-c07b-4592-b2e8-d6fa38e1ff3a,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,6,7012000,12728978290586136406,,HU,Honor,HONOR X6a,1,,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-28,2026-03-20,76,7012000,16893927919293015218,,NO,Samsung,Galaxy A34 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-15,2026-03-21,29,7012000,14394842123676498170,,ZA,Samsung,Galaxy A25 5G,1,05dffb12-fe1d-49ae-b397-c6abb0d67445,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-21,2026-03-21,6,7012000,1404947545690937541,,RU,Xiaomi,Xiaomi 12 Pro,1,9bd71540-b9e9-4423-af77-e58c3b43dd25,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-07,2026-03-21,10,7012000,7855915011072755656,,CN,Redmi,Redmi Pad Pro,2,82e860bc-53c7-44fc-aef5-a75447dca3b0,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,6397905779836042586,,HU,Xiaomi,Redmi Note 8,1,30884741-1a76-4c17-97a9-b4add49bf1d0,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-25,2026-03-21,44,7012000,5240079445602622955,,RU,Redmi,REDMI Note 15,1,1b1f00ed-5d2a-44cc-b461-68047db35abb,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-09,2026-03-21,22,7012000,1266480584119977063,,VN,Realme,RMX3939,1,43fff332-e6e2-4a78-ae66-a6980b7eb9c0,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,9701672757835441428,,IN,Vivo,vivo Y29 5G,1,801fc7ca-ab92-4570-9902-282b7ce95743,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,4091940765787990507,,US,Samsung,Galaxy A50s,1,3f9869e3-ed60-4fcf-8070-7382c7c92b49,,,android,9,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-17,2026-03-21,43,7012000,5885161474894007449,,NZ,Samsung,Galaxy A24,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-28,2026-03-20,32,7012000,10004533461488466530,,EG,Redmi,Redmi 12C,1,b83778a5-1962-4c8f-913c-9b884dd042f3,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,260179419482615245,,JP,Sharp,AQUOS zero5G basic DX,1,e6a62726-a7a9-41c1-8db4-e749497a7e31,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,30,7012000,4366134167867593122,,CA,Samsung,Galaxy Tab S10 FE,2,e4974fad-8851-4406-b828-daaa15a54a4a,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,8908282341548607549,,GB,Samsung,Galaxy A15,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,38,7012000,1950903458297290633,,DE,Samsung,Galaxy A25 5G,1,80b56622-55e7-408b-8f98-4076c5a17fa8,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-02-28,2026-03-21,73,7012000,10601043159480818551,,EG,Realme,realme 12 Pro+ 5G,1,38cc154c-48ee-4b66-8ba4-09b386ecf9fe,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-09,2026-03-21,17,7012000,13453983582171659541,,IQ,Realme,realme 10,1,309be736-50a4-43e1-9ce5-b975a00790c2,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-09,2026-03-21,138,7012000,5269268668049239879,,IN,Vivo,V29,1,159120ba-6d58-4a11-9dff-71085df8d5d0,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,18,7012000,11727370645921052526,,UZ,Redmi,Redmi 14C,1,745dd158-ab6b-4fd0-badb-3a13053a93b5,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,15443032356367645642,,SE,Samsung,Galaxy A70,1,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,13,7012000,16749764475728828212,,KR,Samsung,Galaxy S24,1,8b5d2d7d-d87a-41a5-b9d4-c3f4a73c4ea1,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-25,2026-03-20,141,7012000,3705660817109841235,,PT,Samsung,Galaxy A33 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,32,7012000,5377359756813331181,,MX,Samsung,Galaxy A13,1,cc847c59-b446-432f-9c83-7610d2eed768,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,3,7012000,1043290543088655366,,IN,Oppo,CPH2527,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-16,2026-03-21,10,7012000,1139274530315859543,,ES,Samsung,Galaxy S20 FE 5G,1,682b13f2-7591-4601-a45e-682af723d07e,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-18,2026-03-21,6,7012000,14787544633195721801,,IN,Vivo,V2033,1,2ad7d123-d648-45ee-b77d-456e46499ffb,,,android,11,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-18,2026-03-20,6,7012000,17843827677354039972,,CA,Samsung,Galaxy A16 5G,1,97839c50-91cd-44c9-9348-f471d4eaa84e,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-22,2026-03-20,9,7012000,810409529823183869,,US,Samsung,Galaxy Tab A11+,2,7f8d1c54-4169-4801-85aa-090963d8ac67,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,1,2026-03-12,2026-03-21,80,7012000,4345404741529255160,,VN,Samsung,Galaxy A06,1,08efa81c-9f9d-4b98-8451-9b27199dbcff,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-01-27,2026-03-21,53,7012000,6134255727323850844,,KZ,Samsung,Galaxy A35 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-17,2026-03-21,29,7012000,11111255368641063838,,KH,Infinix,Infinix SMART 10,1,6d66060e-315d-430c-9d3c-21e982f9810e,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,5,7012000,14743668200315196512,,TH,Samsung,Galaxy A05s,1,af4dd6e4-4611-4b15-bf1b-a0bd393a5f46,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,16432367370166200753,,BE,Redmi,Redmi Note 13 Pro+ 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,4,2026-03-01,2026-03-21,171,7012000,1768755587333515793,,MG,Infinix,Infinix SMART 7 HD,1,c1e94661-bc32-40f9-af3f-3b92d7c01f29,,,android,12,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,4,7012000,4755919509713862332,,IN,Redmi,Redmi Note 10 5G,1,d6678e59-b468-4ea7-88a0-5a8cdf743302,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-29,2026-03-20,141,7012000,6785190707599958868,,IQ,Infinix,Infinix NOTE 40 Pro,1,0e13bc94-5f22-4dd7-9a95-42ec3ef2e529,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-20,13,7012000,11420758107189619582,,DE,Samsung,Galaxy S23,1,708ac423-27d4-4794-9ed9-9f8699cc41ea,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,11660502381301725207,,TW,Samsung,"Galaxy Tab A (8.0"", 2019)",2,60562b7d-ca87-43fb-86b5-b93e8c6729fc,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,12,7012000,1646281993396434371,,CO,Samsung,Galaxy Note20,1,b60f6417-3559-4f27-bbfd-7403cbb972f4,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-17,2026-03-21,37,7012000,2169398778815300415,,RO,Samsung,Galaxy S20+ 5G,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-10,2026-03-21,23,7012000,3381244806310123329,,US,Samsung,Galaxy A16 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,6961985118502025067,,DE,Lenovo,Lenovo Tab M9,2,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,8,7012000,4379748953804650137,,IT,Samsung,Galaxy A34 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,167,7012000,10805654266788681454,,ES,Motorola,moto g34 5G,1,91b4d6b9-1358-4f9a-8bb8-fb7aff846592,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,3,7012000,17306292464163996604,,JP,Kyocera,BASIO4,1,e9d42dff-f0c6-456c-bc8b-06973e1ab0d2,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-14,2026-03-21,8,7012000,5000999633830419572,,AR,Samsung,Galaxy A14,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-15,2026-03-20,72,7012000,7967154263320030946,,MA,Samsung,Galaxy A05,1,b6c6be25-90eb-4ebf-bbdd-8810fde0f36a,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,170,7012000,5604107396776894369,,RU,Xiaomi,POCO M5s,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-14,2026-03-21,28,7012000,12847487504583586368,,KR,Samsung,Galaxy S23,1,68473b75-e954-44bc-b309-6ad7c93aa0d4,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-27,2026-03-21,192,7012000,13731457641212275619,,IN,Samsung,Galaxy A06 5G,1,7986c3e9-6b63-41a1-aa63-587e0335b3b6,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-06,2026-03-21,32,7012000,106436061017802888,,JP,Sony,Xperia Ace III,1,0e074b2d-a3e2-4ad2-8303-e61f5adc9958,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-07,2026-03-21,5,7012000,12590728311003335786,,IN,Samsung,Galaxy A54 5G,1,c56c19d4-ca02-4ed5-a1e8-583e887a74c2,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-25,2026-03-21,66,7012000,3307595477476644186,,SG,Oppo,Reno8 T 5G,1,27ed2324-9212-4440-b9d2-0cae46ba0758,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,6,2026-02-01,2026-03-21,116,7012000,5348633980301282253,,DE,Itel,itel P55+,1,,,,android,13,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-21,2026-03-21,8,7012000,17475311284289104791,,AU,Zte,Optus X Tap 3,1,f0348b52-9d88-4e66-99d6-0180abf2bd18,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-02-23,2026-03-21,131,7012000,10992813169549800629,,JP,Oppo,CPH2309,1,4ebb3ef2-1042-40db-ba48-fd66767708f0,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-10,2026-03-21,24,7012000,14610571684814687685,,SK,Redmi,Redmi Pad SE 8.7,2,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-12,2026-03-21,37,7012000,16993087407510997194,,GB,Tecno,SPARK Go 2024,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-30,2026-03-21,58,7012000,4548620329249413347,,DE,Samsung,Galaxy A14 5G,1,1abbbb9a-4fe5-4d8c-8d8c-f1921c63fcf5,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,2,7012000,3202376790371527442,,SE,Samsung,Galaxy Tab A9+,2,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,12042920983059483542,,US,Samsung,Galaxy A15 5G,1,86d03d76-1932-4915-bbd7-9ab4a784d6e6,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,4827710521867907645,,RO,Samsung,Galaxy A34 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,4,7012000,16553461566060428184,,RS,Honor,HONOR X6,1,eb7730e2-1c28-4191-b834-896f6c385ea9,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,1233871694218376814,,DE,Samsung,Galaxy A16,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,6,7012000,2960308912198687727,,SN,Oppo,A3 Pro 5G/A3 5G/A80 5G,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-25,2026-03-20,81,7012000,4453348974699852301,,IT,Oppo,Reno10 5G,1,f5661630-be23-4e58-83be-af17073e52d3,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-03,2026-03-21,57,7012000,16930120857883968206,,RU,Realme,realme 5,1,7ca8c9c9-8587-41ea-bf43-ff119f77af2e,,,android,9,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-05,2026-03-21,32,7012000,8849023414503214813,,US,Motorola,moto g - 2025,1,0b2d18fd-4b4f-4b2d-b36c-cf5aa190eb60,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,17,2026-02-13,2026-03-21,85,5012001,11194995658734754348,Bern,CH,Apple,iPhone 14,1,,,2C64D5EC-D338-4127-872A-2FF486E4FB24,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-27,2026-03-20,66,7012000,5688376722110040372,,CO,Tecno,TECNO SPARK 10C,1,90a8f3c1-b372-49a1-a5cb-0fea37b53f98,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-25,2026-03-21,53,7012000,11874253059106367966,,PT,Redmi,Redmi Pad SE 8.7,2,0e4d937c-cd6a-40b3-849c-590c6e35ddde,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,5,7012000,14713079831188529348,,TW,Samsung,Galaxy A56 5G,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,1395043402672477478,,JO,Infinix,Infinix NOTE 40 Pro,1,046ea8a4-9878-40e3-9606-4ba41b79d431,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-03-21,2026-03-21,5,7012000,4850718245504405581,,US,PCB-T106,S10,2,dbed3dde-e7ea-40fc-8ea0-a7820fe1dffd,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,12259619812372318805,,RU,Oppo,A3x,1,0601ae14-5ded-4acc-8ffc-166517f7ac71,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-28,2026-03-21,400,7012000,15523986832886741042,,EG,Redmi,REDMI 15C,1,0c6fb5ea-c8fa-4657-8c0a-1e91474330cd,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,12431799263847406670,,DE,Samsung,Galaxy Tab A,2,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,14003637271498553232,,US,Blu,M10L Pro,1,b6135c08-522a-449b-9158-5973c9fafcc1,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,3475996148836504744,,US,Samsung,Galaxy A15 5G,1,b7c115fd-8792-4b01-bb2c-598f1d108bc7,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,4,7012000,5739006211263093182,,DZ,Realme,realme C21-Y,1,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-18,2026-03-21,27,7012000,9170676044159842334,,VN,Redmi,REDMI Note 15 5G,1,b7f854f3-58c2-40a5-b019-4bbc9e8c82ea,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-18,2026-03-21,9,7012000,12137183528928263382,,TW,Samsung,Galaxy A54 5G,1,aae1131c-6ca3-4346-b13f-4bb2183fba7c,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-20,2026-03-21,14,7012000,11376258691007640546,,HN,Oppo,A38,1,c00a2b39-125d-4fc0-bc38-330c24538aca,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-01-30,2026-03-21,138,7012000,6115990490673822048,,DE,Redmi,Redmi Note 13 5G,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-02,2026-03-21,270,7012000,10112131853019208587,,JP,OyeFit,T10_EEA,2,7d2ec707-f3c6-49f2-8bfb-dfc361ed4994,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-11,2026-03-21,210,7012000,610379771700994102,,CL,Redmi,Redmi Note 14 5G,1,b2a6c2f4-52df-41d9-ab8f-81f76a6ffa38,,,android,14,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-18,2026-03-21,6,7012000,15788460818310952567,,KR,Samsung,Galaxy A17,1,c4e0b8c4-b611-4ef3-9926-9fae542179b5,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,7,7012000,15975901427292352550,,MX,Redmi,Redmi 14C,1,c46023d7-06eb-4d87-991b-2001b2ceccd6,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,2402624673321537742,,KZ,Samsung,Galaxy A15,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-13,2026-03-21,10,7012000,4800931545880373582,,TW,Samsung,Galaxy A7 (2018),1,2a2376c3-cd65-4cd9-93d8-c372ae782d0c,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,7274851898365613177,,GB,Samsung,Galaxy S21 5G,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-07,2026-03-21,108,7012000,9623966654147597540,,LU,Nokia,Nokia X20,1,,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-25,2026-03-20,139,7012000,16556817384147436138,,ES,Zte,ZTE Blade A75 5G,1,0c71dbdf-eadf-4884-87f5-7fab5610a619,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,1753786200308876677,,GE,POCO,POCO F6,1,a3524d85-fd8b-4abd-a9ef-fdeeadfef4d7,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-06,2026-03-21,99,7012000,18099476390316611774,,KZ,Samsung,Galaxy A35 5G,1,4077ef60-b004-468e-931d-572118bfb91e,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-20,7,7012000,6915634098929624881,,SA,Samsung,Galaxy A26 5G,1,33fe1d73-fc85-4a4c-b5ae-e83be3126288,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-23,2026-03-21,35,7012000,5128003559111698245,,RU,Huawei,HONOR 10i,1,06ca7989-fb69-4822-a522-5d3da6e48654,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,7573759159141465992,,IN,Vivo,vivo 1906,1,5e31c8c0-ec9a-48b5-84e4-2679c3902d17,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,12939675678609085749,,IN,Samsung,Galaxy F16 5G,1,975652de-7afa-48b7-b21b-0af8f54e28de,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-20,8,7012000,16367608551622897410,,EG,Realme,realme C21-Y,1,aad79c18-3a68-437b-a99e-277f6ada4a36,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-22,2026-03-21,136,7012000,11098151999768198230,,CO,Oppo,Reno14 F 5G,1,3fc694ab-fbec-432b-a3fc-44f8a9a99ed6,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-31,2026-03-20,19,7012000,15596486586780150094,,ME,Tesla,Explr 9,1,3addd3f4-c6f0-43ef-b906-e73479e93d9a,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,2,7012000,4802783107297661881,,RU,Realme,realme C31,1,,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,8078252016623682053,,SK,Huawei,HONOR 20,1,,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-28,2026-03-21,39,7012000,17052760277296742095,,NL,Realme,realme GT Neo 2,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,2301427122495663147,,AR,Samsung,Galaxy A24,1,c950ccc3-0b24-4c28-bad0-acccb0406b8f,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,4,7012000,13121282244679160745,,ZA,Samsung,Galaxy A30s,1,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-18,2026-03-21,6,7012000,7399617353725241798,,MN,Samsung,Galaxy A53 5G,1,a28fe37a-c13e-4fb0-83e7-c65db9db86b0,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,1493825402666505571,,AR,Motorola,moto e22,1,f5d386f5-ca4e-46a4-a3ae-00b19f010de7,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-13,2026-03-21,23,7012000,15360051688425400319,,PH,Redmi,Redmi Note 14,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-15,2026-03-21,11,7012000,16739245931956753331,,VN,Oppo,Reno13 F 5G,1,503f7d62-d758-4473-a856-5d4631b74922,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-19,2026-03-21,9,7012000,11923393384179317791,,KG,Samsung,Galaxy Note10+,1,1d95b980-38f0-41a4-8af9-99f4108641d2,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-06,2026-03-21,48,7012000,7142408600927030225,,RU,Lenovo,Lenovo Tab M10 FHD Plus,1,,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,3,2026-02-24,2026-03-21,379,7012000,15353335007668641678,,VE,Redmi,Redmi 9C,1,,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,17670249430075457864,,DE,Samsung,Galaxy Tab A9+,2,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,7,7012000,17944238939113124005,,UZ,Samsung,Galaxy A06,1,4ec57a21-2774-435f-9750-1722b608d0e8,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-01,2026-03-20,27,7012000,3789876422115556050,,IT,Oppo,A74,1,,,,android,13,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-18,2026-03-21,10,7012000,6718651750203773829,,US,Samsung,Galaxy A16 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-14,2026-03-21,82,7012000,8023801589595518900,,MX,Samsung,Galaxy Tab A7 Lite,2,c1f27807-c4b3-40b5-8ece-fc41c59db51a,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-02-25,2026-03-20,231,7012000,8242364546225244860,,AM,Honor,HONOR X7d,1,4fa34bc4-b397-436f-b0db-20c7c3d0e922,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-02-17,2026-03-21,1078,7012000,11920769528887606535,,MX,Samsung,Galaxy A23,1,0fa1339c-47d6-49c6-870f-dbe0d3c81805,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-05,2026-03-21,204,7012000,14324702523059382204,,IN,Motorola,moto g64 5G,1,fdb24db3-7b73-47e5-bbd1-1f055ec299d1,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,519561638554492167,,FR,Redmi,REDMI Note 15 Pro 5G,1,df0139c9-59b0-46af-8d24-cc66250610c6,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,4,7012000,1183201898232827689,,TR,Samsung,Galaxy A15,1,30fdff61-6bdf-473b-815c-e013adfa2d92,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-13,2026-03-21,55,7012000,5431638799694358459,,AT,Samsung,Galaxy S24,1,42c72e57-b5b8-4153-ba79-68ad0bb21e15,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,5,7012000,10348775491165298464,,TW,Samsung,Galaxy Tab A9+,2,dde2441a-89e9-4a73-ab68-8d02f0b74e1c,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-08,2026-03-21,29,7012000,12777468432862545463,,SN,ANSD,RGPH-5,2,495defa5-c3d5-4274-8091-8735159adf80,,,android,12,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,15521406902346686974,,TR,Xiaomi,220333QAG,1,8562a48d-5c0d-41b9-9dbf-9f5aaa961027,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-02,2026-03-21,41,7012000,13462011995121702877,,CZ,mPTech,myPhone N23 lite,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-18,2026-03-21,10,7012000,10036035573161626828,,TW,Samsung,Galaxy Tab S9 FE+,2,5f3b1f17-7663-4afa-a6d8-745786e64ae0,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-31,2026-03-21,47,7012000,10449230401514020402,,SG,Vivo,V50,1,0b78e169-3029-4f80-be7e-a7be805ce533,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-11,2026-03-21,98,7012000,11558488286352505018,,DZ,POCO,POCO M3,1,94f2d27f-7d28-41b2-a757-2733a7bb3a7f,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,6,7012000,7545730195979481729,,DE,Redmi,Redmi Note 11 Pro 5G,1,eb0ae5a6-c230-4b46-8eb6-68d2e3a22e88,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-17,2026-03-21,30,7012000,8114559924699421109,,KR,Samsung,Galaxy Note9,1,1eb62c69-e768-4d1b-b920-461847af49b7,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,1555511833229581366,,KZ,Oppo,OPPO Reno8 T,1,d19ad76f-4d5d-4cf4-8db7-0ff14d13aa7c,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,6,7012000,5238130624992420669,,PH,Redmi,Redmi A2+,1,862644c5-7a1b-454d-9a77-0af7830f1dc7,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-25,2026-03-20,34,7012000,10533858644933886142,,ES,Aiwa,TAB-1100,2,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-20,2,7012000,6300621612038165338,,FR,Redmi,Redmi Note 8 Pro,1,,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,12557762081019633467,,NL,Samsung,Galaxy S24+,1,,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,14109612381513420653,,RU,Redmi,Redmi 12,1,1a89ef32-7b70-4ec1-92b0-632cb4984650,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-28,2026-03-21,39,7012000,14806449108333528544,,ES,Samsung,Galaxy A14 5G,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,121460573034722117,,VE,Infinix,HOT 11 2022,1,e66582f3-cfa1-4b6a-84f7-e16821639183,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,7,7012000,4117094219602385630,,RO,Samsung,Galaxy S24 Ultra,1,8b2ec218-55ac-48de-b258-c760dab03b31,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-11,2026-03-21,64,7012000,9646325252269784917,,CO,Samsung,Galaxy A30,1,53bcc66b-59e5-4206-97d6-b1a4a7896a63,,,android,11,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,5,7012000,11373071656381635069,,ZA,Samsung,Galaxy A13,1,0fc5bca7-b45d-4e36-bee5-a414803886bc,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,1,21,2026-01-24,2026-03-21,83,5012001,2422528240470820219,Nijmegen,NL,Apple,iPhone 17,1,,,53E8D0DB-3443-4E09-94E0-865DF238370D,ios,26.2.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,2,2026-02-23,2026-03-21,11,5012001,10974190115916084894,Vientiane,LA,Apple,iPhone 13 Pro,1,,D8A536D7-0477-4DB2-B5A8-6BEF712F0E77,699CFB3D-CA53-4008-AD45-E6D8864718F7,ios,26.2.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-16,2026-03-21,7,7012000,13720756210345141740,,FR,Samsung,Galaxy A13 5G,1,c9e5163e-a3fb-40c7-891e-953d0d119830,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,8,7012000,320338989371038152,,CO,Vivo,vivo V50 Lite,1,1ff42b76-a97b-41d4-a684-4298d92bf755,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,22,7012000,13874283880559345271,,KR,Samsung,Galaxy Note20 5G,1,0e0e7910-8776-401f-914a-021de7948e6f,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,6,7012000,7837564158170635655,,EC,Tecno,TECNO,1,1bd271b6-d370-4385-835e-b871d7683385,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,1,0,2026-03-19,2026-03-21,13,7012000,16260606563227595531,,JP,Redmi,Redmi Note 9T,1,9609cb71-5be1-4d2a-ab41-1aabbada5beb,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-01-27,2026-03-21,114,7012000,3224531810015146835,,SA,Huawei,HUAWEI P smart Pro,1,,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,5470159527393780228,,VE,Tecno,TECNO SPARK 10C,1,ca99f9b3-1e35-4a4e-a4d3-119c7a1dae33,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,15589515217062420912,,US,Hot Pepper,Datil,1,bd459b1f-8dcb-4339-830d-b1df3d4b76bc,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,46,7012000,2716498820443370327,,VN,Samsung,Galaxy A53 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,384,7012000,10831369030513684614,,RU,TECNO MOBILE LIMITED,TECNO KG5n,1,a7b42098-c8ea-4bd6-995f-0a8676cdae85,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-29,2026-03-21,10,7012000,130841416498619831,,ZA,Samsung,Galaxy A31,1,00ff552e-d2ba-44f2-9abc-f1ab3a27151f,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,8,7012000,8094518893833342378,,IN,Oppo,A59 5G,1,f4e17c5e-f09c-4f83-a4a1-cdf1bc8c3ed5,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,10597898656267549039,,PR,Samsung,Galaxy A36 5G,1,6e7e387e-b49f-4781-b34c-8a98597693ca,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-23,2026-03-21,24,7012000,17802551819794690436,,IN,Redmi,Redmi A5,1,455c0b91-8263-439a-9df0-5bd2f3106fa6,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-21,2026-03-21,49,7012000,2310309545250013337,,CO,Samsung,Galaxy A52s 5G,1,87cb97ec-90b3-46dc-8a0b-47d8f884254b,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-20,5,7012000,2177102126375836136,,EG,Samsung,Galaxy A16,1,,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-19,2026-03-21,4,7012000,9377377655220450982,,IT,Redmi,Redmi Note 13 5G,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-28,2026-03-20,15,7012000,14774762527487211085,,RU,POCO,POCO C65,1,fcc0918e-64b1-46e9-af01-0c691078c0d0,,,android,13,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-31,2026-03-20,90,7012000,17598300715376377025,,ES,Xiaomi,Xiaomi 15T,1,7fce904a-c24b-48fb-b6f5-2cbcd0811408,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-07,2026-03-21,23,7012000,3550400516313159527,,ID,Redmi,Redmi Note 10S,1,bfc258f6-dc8c-41a8-bcab-81f89bdf4a35,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,4,7012000,4005288585328018414,,IN,POCO,POCO C61,1,a5fd62ec-5c94-439a-afb4-6743da17d23f,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-28,2026-03-20,58,7012000,10871238464002858586,,ES,Samsung,Galaxy A20e,1,fb4ddbb7-3ae3-4944-a0c5-88ad2b57e89e,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-22,2026-03-21,150,7012000,16262751612415898574,,RU,OnePlus,OnePlus Nord CE4 Lite 5G,1,209a8164-38ff-4772-a4ee-f406e0ebfe62,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,83,7012000,3331622929846081250,,IT,Honor,HONOR X5 Plus,1,8829a0e1-175f-413a-a781-1737bd27c79d,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,4090026990363588853,,GB,Oppo,CPH2145,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,13730385187926048845,,AU,Lenovo,Lenovo Tab M9,2,27819a17-4bfb-4d60-bf1b-3489b3302e40,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-01-23,2026-03-21,277,7012000,1179086282389189614,,IN,Realme,RMX3998,1,8e988a6d-6b53-4901-bcf0-f125160fadbd,,,android,14,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-05,2026-03-21,62,7012000,2265881173038702802,,IN,Samsung,Galaxy A25 5G,1,5d3ae5ae-2c0e-4191-8ecf-e1b6f74085c2,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,7117906577564169852,,KR,Samsung,Galaxy A16,1,206a0031-d651-4802-92ea-ee30b3e91bdb,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-18,2026-03-20,99,7012000,1421605707784815565,,GB,Samsung,Galaxy Tab A8,2,fac115fe-5340-4bfa-a34c-9030c3653746,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-17,2026-03-21,109,7012000,17162487551991387028,,DE,Samsung,Galaxy Tab A9+,2,,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-28,2026-03-20,1152,7012000,2588962806468349438,,SI,Samsung,Galaxy Tab A9,1,ecb79800-e0d8-4ccf-92aa-f0df7db5f175,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,5890140730866877937,,VN,Oppo,Reno8 T 5G,1,a93148ee-eb67-4e0d-b3b3-89f08afa15f0,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,119,2026-01-22,2026-03-20,677,5012001,13981613714729251106,Cairo,EG,Apple,iPhone 11,1,,,4C6A0ED5-72D3-47B8-9AA6-5444EB42A651,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-23,2026-03-21,5,7012000,14295137104242344673,,TH,Samsung,Galaxy S23 FE,1,80f65275-df72-4f76-a003-de31f887bc4d,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-28,2026-03-21,301,7012000,7657282400529863682,,PS,Redmi,Redmi Note 14 Pro,1,0db938a8-68c4-462c-900a-926e5176ba2e,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,26,7012000,9132180101462644524,,US,Samsung,Galaxy A16 5G,1,98771fb7-9620-4bf7-b194-c691b6ae28a6,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,7,7012000,9677548591936720850,,GR,POCO,POCO C65,1,07f18b28-e0d2-42e0-8037-3514ed453ff8,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-21,2026-03-20,67,7012000,7537567229795744789,,CD,Tecno,TECNO CAMON 30S,1,d1cffaa8-126c-46e8-a19b-f90d0b59da7f,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,13,2026-02-14,2026-03-21,52,5012001,8661934004760528333,Petershagen,DE,Apple,iPhone 16,1,,,5432974E-F604-48F6-93BC-D217C1A6933B,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,12054173457102395502,,RU,Tecno,TECNO SPARK 10C,1,b3bffd98-87eb-4ed9-b1a0-f4d817a7b2da,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,14,7012000,16134240238853105960,,ID,Redmi,Redmi 13,1,3a361bc7-5f3a-4d2b-aae4-a74d24f00ede,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-10,2026-03-20,34,7012000,4281575201532999469,,AE,Samsung,Galaxy A07,1,3fb285e7-ba60-44c4-a549-b8d1492f7fcc,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,8248159888257583469,,KR,Samsung,Galaxy S23+,1,1361a091-538a-46f2-b786-46ef0e8e4a58,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-02,2026-03-21,64,7012000,2882432705543234315,,IN,Oppo,A6x 5G,1,9a99bcb8-ae23-43f9-a2ce-6c4f2af4ea77,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-03,2026-03-21,124,7012000,14985672267533110426,,PE,Honor,HONOR X7,1,a60a4c87-9b0d-4054-a0b2-c2ad389dcba5,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-31,2026-03-20,65,7012000,5585048781211835687,,SE,Samsung,Galaxy A17 5G,1,d3de7218-d6f3-447a-bc11-586fb694af2d,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-30,2026-03-20,177,7012000,9792512638461189390,,CZ,Lenovo,Lenovo Tab M10 HD (2nd Gen),2,b7caea46-d4b0-40bc-a97f-dea585d8eea5,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-11,2026-03-20,55,7012000,14994274902512435349,,AR,Samsung,Galaxy Tab A7 Lite,2,5f8025e9-d316-41c3-83b6-ab306d3f1f30,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,8,7012000,408026414868307755,,MY,Redmi,Redmi Note 11 Pro 5G,1,52a2815b-842c-4569-b01d-eb0a907542f8,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,2,7012000,11995715336622450455,,RU,Huawei,HONOR 20S,1,30e61390-f860-4b23-9462-5bc52ea56d40,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-01-30,2026-03-21,478,7012000,13395665113109326766,,TR,Infinix,Infinix ZERO 30,1,0ee65e08-c130-4143-b31c-69bb4f1d95cc,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,8,7012000,5120923413129735545,,TR,mipo,mipo_M59,1,eb6adfa3-aa26-4218-9c07-0e639ed19124,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,11,7012000,5371635741174550656,,IN,OnePlus,OnePlus 13,1,ee295eec-6f3c-47f2-be5c-deb49c77b67a,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,6246616786109401673,,RU,Huawei,M3,1,ff33aa11-1828-4679-bfb6-590f3b2fd193,,,android,7.0,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-01,2026-03-21,154,7012000,15165649284340646506,,CL,Motorola,moto g(30),1,,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,10,7012000,9715762626508159319,,IN,Vivo,Y19 5G,1,e2e71466-6fe4-44b3-812e-aaf2d0eb65ee,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,5,7012000,12524093550988889614,,IN,Redmi,Redmi 13C 5G,1,e2f44c5e-e0e1-488e-b57c-f1128627358f,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,5,7012000,697684495722854415,,RU,Samsung,Galaxy A02s,1,4c99e2a2-15ce-41ba-906a-f2c74113d324,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-06,2026-03-21,7,7012000,18407197614763117708,,RU,Realme,realme 10,1,81a7209f-6c3b-491d-a529-605f77b5977a,,,android,14,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-21,2026-03-21,5,7012000,17641229007624409552,,JP,Google,Pixel 6a,1,ad5dd89f-0459-40f2-b750-0bd59c105b95,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,6,7012000,17588388762993661468,,MY,Honor,HONOR X7c,1,b4b32c4c-d04c-470f-9dc3-27dc0f8b6955,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-21,2026-03-21,44,7012000,3802262006462442296,,BG,Samsung,Galaxy A32,1,6a5d9d3e-65e7-4b2c-8824-9290dae4d7e8,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-29,2026-03-21,102,7012000,16992294529283702360,,US,Samsung,Galaxy S24 FE,1,44dfa05f-532c-432b-a719-d2a2f26a63a0,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-16,2026-03-20,267,7012000,6065460969341610526,,US,Hot Pepper,HPPH88C,1,ecef028d-5dbe-4239-bf14-a2c02b973400,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,5,2026-03-17,2026-03-21,18,7012000,9340284256423246426,,PH,Tecno,SPARK Go 2024,1,52af33a1-9cd0-4bcb-b7dc-632649aa5e20,,,android,13,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-08,2026-03-21,17,7012000,10533236601364758107,,JP,Sharp,AQUOS wish3,1,5f02aebd-6c42-43fc-8665-f4cce466a14f,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,4,7012000,14905636157010235520,,,Samsung,Galaxy A15,1,58f4bebc-5059-4fc6-b8af-7b34b67c7c33,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-07,2026-03-21,148,7012000,13052614007541263687,,IT,Samsung,Galaxy A15 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,4,7012000,2583644768352071436,,RU,Infinix,HOT,1,f60d7793-28e3-4d6d-9b0a-c7f3d90e0c75,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,2,2026-01-29,2026-03-21,150,7012000,8481861360933402420,,CA,Samsung,Galaxy A16 5G,1,a29a646b-cd60-42f5-ba93-8667365c213e,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,13684625180013607293,,,POCO,POCO F3,1,,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,16361518330836675464,,GB,Samsung,"Galaxy Tab A (2018, 10.5)",2,,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-02,2026-03-21,25,7012000,5502348568930108328,,GR,Oppo,A60,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-20,2,7012000,1925914430067330429,,CO,Redmi,Redmi Note 11,1,0bba86bd-cfbc-457d-af51-28e216aad909,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,5946215816599227146,,CA,Samsung,Galaxy S23 FE,1,b3b97767-2ee1-41ad-a5ee-56f5191b9f9c,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-24,2026-03-21,48,7012000,10523973071252859124,,US,Samsung,Galaxy A14 5G,1,60d5aa50-c4fd-434b-bff1-3256a39a78f1,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-11,2026-03-20,10,7012000,939637650344395160,,TH,Oppo,Pad SE,2,e43dca41-e9fe-41a2-9800-7e40ae673a88,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,32,2026-01-23,2026-03-20,179,5012001,5170190492734927780,Sabadell,ES,Apple,iPad Air 11-inch 7th Gen (WiFi),2,,75426427-CDA0-4338-B3EE-BC509ACD927A,C8C1FAA8-8857-46ED-9CB9-88DBCDAAF2A5,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-28,2026-03-20,52,7012000,10569242458835139741,,VE,Tecno,TECNO SPARK 10C,1,e20f3a24-c3e2-4036-8855-e162e2672257,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-11,2026-03-21,28,7012000,16024264887273398234,,JP,Oppo,A3 Pro 5G/A3 5G/A80 5G,1,e1e25a9f-c7d8-49d4-b46a-2d8a2c6e84c2,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,6,7012000,15889224257015644151,,IN,Samsung,Galaxy M53 5G,1,b309ec6f-aaea-4ac4-b97f-610b2a22b7bb,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-08,2026-03-20,35,7012000,16105551280284667782,,MQ,Samsung,Galaxy A15,1,7dbfdd54-a864-4e59-bd8c-330a33ee7d55,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,1,63,2026-02-14,2026-03-21,117,5012001,12553581090979663693,Samut Prakan,TH,Apple,iPhone 12 Pro Max,1,,A43B5C6A-6424-4DFB-B425-510BEE8B1368,9CC9D5AD-E819-4EA0-8E65-80F6F926AB93,ios,26.2.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-03,2026-03-20,49,7012000,841497708404837446,,CL,Samsung,Galaxy A21s,1,,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-15,2026-03-21,85,7012000,4304983385377256585,,ES,Oppo,F25 Pro 5G,1,e74cc80f-9b7d-4898-907b-863431ca6f77,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,178,2026-01-22,2026-03-21,426,5012001,10145501956537388260,,CL,Apple,iPhone 11,1,,,A9C0AB7B-7EEA-4B1B-A30A-0719DCB7113C,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,4,7012000,12379691086481026635,,UZ,Xiaomi,Redmi Note 8,1,4df38eaf-e82d-408d-b118-cbf831c0e749,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-27,2026-03-21,67,7012000,1433694511917781872,,RO,Lenovo,Lenovo Idea Tab Pro,2,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-18,2026-03-21,58,7012000,5550305368871829627,,JP,Samsung,Galaxy S25,1,dfbcbdad-91bd-494a-9373-9c2623ac52e5,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,10,7012000,16641649774850149228,,US,Samsung,Galaxy Tab S5e,2,51cb9251-f6f1-4c9f-b080-083d3c40adfa,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-25,2026-03-21,71,7012000,4793492243128948374,,JP,Samsung,Galaxy A55 5G,1,e2d3a43a-0760-4507-b01f-f3a12b113979,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,17,7012000,11166353188678141218,,IN,Xiaomi,23076RN4BI,1,d9bf80e1-9e30-41e2-8f07-10855e05719b,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,3,2026-01-30,2026-03-20,105,7012000,16778980522459198914,,ES,Samsung,Galaxy A17 5G,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-07,2026-03-21,120,7012000,18282199410226888944,,IN,Vivo,V2054,1,3534c6df-c6df-4692-b9bb-685a173ff221,,,android,11,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,7,7012000,550213877961454110,,IT,Motorola,moto g05,1,2ec32297-4410-4f22-ae08-1e241472cec9,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-26,2026-03-21,151,7012000,4385770864914346021,,KZ,Samsung,Galaxy A03,1,f6edb583-b46a-40a4-8b92-f2b7023b4c3a,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-19,2026-03-21,19,7012000,7825862820554312569,,TR,Redmi,Redmi 13C,1,8b1c5795-4dc0-4677-95fe-49e273a2af3a,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-29,2026-03-21,289,7012000,15147992552988554560,,CA,Samsung,Galaxy Z Fold5,1,,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-15,2026-03-21,29,7012000,18286791371688587949,,CL,Samsung,Galaxy A21s,1,9929bfcd-0874-4a77-9ebc-f21d9d4ab3f8,,,android,11,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-24,2026-03-20,10,7012000,14870917998417933160,,RS,Redmi,Redmi 13C,1,e99370e4-43ed-40d6-a902-729e6e73cd60,,,android,13,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,21,2026-01-26,2026-03-21,192,7012000,5623993517984334990,,JP,IRIS_OHYAMA,TE10D1M64,2,edd1939d-ca9f-423a-a16a-8ef29d3b50d1,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,8,2026-02-23,2026-03-20,257,7012000,12299443393994103673,,VN,Oppo,A78,1,,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-21,5,7012000,2186449572040510846,,BA,Samsung,Galaxy A53 5G,1,76ccc8d4-4a93-438e-a6b7-91b6e4d77d3a,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-12,2026-03-21,16,7012000,518013403011538066,,CO,Redmi,Redmi 15,1,255b05fa-0469-434d-8064-23aa39e12ee5,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-13,2026-03-21,20,7012000,16397951071459243382,,RU,Samsung,Galaxy A56 5G,1,7bbd79d7-a1fd-483f-bbcc-cc639183938d,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-02,2026-03-21,18,7012000,18114255810634236590,,,POCO,POCO C65,1,a4409705-ff93-488d-b809-769c1e0aa120,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,3463625495193980372,,RS,Honor,HONOR Magic7 Lite,1,6cd3e230-96c2-4ba4-96f7-f6c4c3ea62ac,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-06,2026-03-20,35,7012000,373097984875646317,,PH,Infinix,Infinix SMART 10,1,33cbe787-d9e8-48c6-a2fe-369f5c198d11,,,android,15,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-03-20,2026-03-20,1,7012000,9596282830251951907,,JP,Zte,A403ZT,1,761aa576-e420-45fd-b129-914e92aeb50a,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,3,2026-02-27,2026-03-20,117,7012000,14879487508282940843,,AO,Vivo,V27,1,311c6db2-0a8a-424c-848e-05177f6dec63,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-05,2026-03-21,20,7012000,4837760143550016654,,US,Samsung,Galaxy S23 Ultra,1,8d683ad7-e290-4d59-89f0-1177ec15aab5,,,android,16,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-15,2026-03-21,9,5012001,12320821491083250581,Riyadh,SA,Apple,iPhone 16e,1,,,F0533965-5395-41DB-ADA9-54E60A70C2F2,ios,26.2.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-02-23,2026-03-21,5,7012000,4226398449623798147,,FR,Honor,HONOR 90 Lite,1,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-21,2026-03-21,1,7012000,14778775128274669603,,UZ,Redmi,Redmi Note 12 Pro,1,db06bfbd-24c2-48bd-9896-bc01dddc210d,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-24,2026-03-21,84,7012000,15633502183365144980,,US,TCL,T-Mobile REVVL TAB 2,1,18c1e375-053f-4358-83c9-7d4e199c185c,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-01-29,2026-03-20,58,7012000,16472151029560728860,,CA,Samsung,Galaxy Tab A8,2,85923b90-adf7-49d1-8a2c-bc7b9b9f0cb3,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-02-06,2026-03-21,814,7012000,3137242815478388744,,SK,Huawei,HONOR 20,1,46466411-7a57-46f6-b4b2-ea5fd2042c16,,,android,10,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-03-20,2026-03-21,3,7012000,11134862794050013855,,IL,Samsung,Galaxy S24 Ultra,1,262f4953-e063-4d09-b9d7-4f8668924bf7,,,android,14,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-05,2026-03-21,1281,7012000,6433674384798057906,,HU,Samsung,Galaxy Z Flip4,1,131c4c8a-6f1a-410a-9aa1-8a5bd40b1981,,,android,16,com.amb.busaway.colorsort,1.0.1
+,,,false,,1,2,2026-02-13,2026-03-21,72,5012001,7189841011846632212,Sydney,AU,Apple,iPhone 15 Plus,1,,,EA7684AD-E339-441E-BC84-CD37049868E9,ios,26.3.1,com.amb.busaway.colorsort,1.0.0
+,,,false,,0,0,2026-01-26,2026-03-20,13,7012000,9038723615681565694,,FR,Redmi,Redmi Pad SE,2,,,,android,15,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,1,2026-03-15,2026-03-21,59,7012000,12533163734095249281,,CA,Samsung,Galaxy S10,1,c8022567-cfea-43f1-be2f-af3415a85bba,,,android,12,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-14,2026-03-21,76,7012000,9237515782129062946,,VE,Tecno,TECNO SPARK 20C,1,d1e8109c-9cd0-4d3b-bb6e-4805bcb88576,,,android,13,com.amb.busaway.colorsort,1.0.1
+,,,false,,0,0,2026-02-26,2026-03-21,3,7012000,17621351800814394023,,SG,Redmi,Redmi A3,1,bc2b22f8-682a-4d05-9392-3f61b64b3f3f,,,android,16,com.amb.busaway.colorsort,1.0.1

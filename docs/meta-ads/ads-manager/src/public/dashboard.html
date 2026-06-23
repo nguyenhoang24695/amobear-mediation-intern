@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Ads Manager Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #1877f2;
+        }
+        .sidebar .nav-link {
+            color: white;
+            padding: 15px 20px;
+            border-radius: 0;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .sidebar .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .metric-card h3 {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .metric-card p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+        }
+        .btn-facebook {
+            background-color: #1877f2;
+            border-color: #1877f2;
+            color: white;
+        }
+        .btn-facebook:hover {
+            background-color: #166fe5;
+            border-color: #166fe5;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-4">
+                    <h4 class="text-white"><i class="fab fa-facebook"></i> Ads Manager</h4>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#dashboard" data-section="dashboard">
+                        <i class="fas fa-chart-dashboard"></i> Dashboard
+                    </a>
+                    <a class="nav-link" href="#campaigns" data-section="campaigns">
+                        <i class="fas fa-bullhorn"></i> Campaigns
+                    </a>
+                    <a class="nav-link" href="#adsets" data-section="adsets">
+                        <i class="fas fa-layer-group"></i> Ad Sets
+                    </a>
+                    <a class="nav-link" href="#ads" data-section="ads">
+                        <i class="fas fa-ad"></i> Ads
+                    </a>
+                    <a class="nav-link" href="#audiences" data-section="audiences">
+                        <i class="fas fa-users"></i> Audiences
+                    </a>
+                    <a class="nav-link" href="#insights" data-section="insights">
+                        <i class="fas fa-chart-line"></i> Insights
+                    </a>
+                    <a class="nav-link" href="#automation" data-section="automation">
+                        <i class="fas fa-robot"></i> Automation
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 id="page-title">Dashboard</h1>
+                    <div>
+                        <select id="account-selector" class="form-select d-inline-block w-auto me-2">
+                            <option value="">Select Ad Account</option>
+                        </select>
+                        <button class="btn btn-facebook" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="content-section">
+                    <!-- Metrics Cards -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h3 id="total-spend">$0</h3>
+                                <p>Total Spend (30 days)</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h3 id="total-impressions">0</h3>
+                                <p>Total Impressions</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h3 id="total-clicks">0</h3>
+                                <p>Total Clicks</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h3 id="avg-ctr">0%</h3>
+                                <p>Average CTR</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="chart-container">
+                                <h5>Performance Trends (Last 30 days)</h5>
+                                <canvas id="trendsChart" height="100"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="chart-container">
+                                <h5>Campaign Objectives</h5>
+                                <canvas id="objectivesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Campaigns Table -->
+                    <div class="table-container">
+                        <h5>Top Performing Campaigns</h5>
+                        <table class="table table-striped" id="top-campaigns-table">
+                            <thead>
+                                <tr>
+                                    <th>Campaign Name</th>
+                                    <th>Status</th>
+                                    <th>Objective</th>
+                                    <th>Spend</th>
+                                    <th>Impressions</th>
+                                    <th>Clicks</th>
+                                    <th>CTR</th>
+                                    <th>CPC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Campaigns Section -->
+                <div id="campaigns-section" class="content-section" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Campaigns</h5>
+                        <button class="btn btn-facebook" onclick="showCreateCampaignModal()">
+                            <i class="fas fa-plus"></i> Create Campaign
+                        </button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="table table-striped" id="campaigns-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Objective</th>
+                                    <th>Budget</th>
+                                    <th>Spend</th>
+                                    <th>Results</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Ad Sets Section -->
+                <div id="adsets-section" class="content-section" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Ad Sets</h5>
+                        <button class="btn btn-facebook" onclick="showCreateAdSetModal()">
+                            <i class="fas fa-plus"></i> Create Ad Set
+                        </button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="table table-striped" id="adsets-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Campaign</th>
+                                    <th>Status</th>
+                                    <th>Budget</th>
+                                    <th>Optimization Goal</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Other sections can be added here -->
+                <div id="insights-section" class="content-section" style="display: none;">
+                    <h5>Insights & Reports</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6>Custom Date Range Analysis</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Date Range:</label>
+                                    <div class="row">
+                                        <div class="col">
+                                            <input type="date" class="form-control" id="date-start">
+                                        </div>
+                                        <div class="col">
+                                            <input type="date" class="form-control" id="date-end">
+                                        </div>
+                                        <div class="col-auto">
+                                            <button class="btn btn-facebook" onclick="generateCustomReport()">
+                                                Generate Report
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <canvas id="customChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6>Export Options</h6>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary" onclick="exportReport('csv')">
+                                        <i class="fas fa-file-csv"></i> Export to CSV
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="exportReport('excel')">
+                                        <i class="fas fa-file-excel"></i> Export to Excel
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="exportReport('pdf')">
+                                        <i class="fas fa-file-pdf"></i> Export to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals will go here -->
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let selectedAccount = '';
+        let accessToken = '';
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavigation();
+            loadAccounts();
+            
+            // Set default dates
+            document.getElementById('date-start').value = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+            document.getElementById('date-end').value = new Date().toISOString().split('T')[0];
+        });
+        
+        // Navigation
+        function initializeNavigation() {
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links
+                    document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Hide all sections
+                    document.querySelectorAll('.content-section').forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    // Show selected section
+                    const sectionName = this.dataset.section;
+                    document.getElementById(sectionName + '-section').style.display = 'block';
+                    document.getElementById('page-title').textContent = this.textContent.trim();
+                    
+                    // Load section data
+                    loadSectionData(sectionName);
+                });
+            });
+        }
+        
+        function loadSectionData(section) {
+            if (!selectedAccount) return;
+            
+            switch(section) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'campaigns':
+                    loadCampaigns();
+                    break;
+                case 'adsets':
+                    loadAdSets();
+                    break;
+                case 'insights':
+                    loadInsights();
+                    break;
+            }
+        }
+        
+        // Account management
+        function loadAccounts() {
+            // This would typically load from your API
+            // For demo, we'll add a sample account
+            const selector = document.getElementById('account-selector');
+            selector.innerHTML = '<option value="">Select Ad Account</option>';
+            
+            // Add sample account (replace with actual API call)
+            const option = document.createElement('option');
+            option.value = 'act_123456789';
+            option.textContent = 'Demo Ad Account (act_123456789)';
+            selector.appendChild(option);
+            
+            selector.addEventListener('change', function() {
+                selectedAccount = this.value;
+                if (selectedAccount) {
+                    loadDashboardData();
+                }
+            });
+        }
+        
+        // Dashboard functions
+        function loadDashboardData() {
+            if (!selectedAccount) return;
+            
+            // Load metrics (replace with actual API calls)
+            loadMetrics();
+            loadTrendsChart();
+            loadObjectivesChart();
+            loadTopCampaigns();
+        }
+        
+        function loadMetrics() {
+            // Demo data - replace with actual API calls
+            document.getElementById('total-spend').textContent = '$12,456';
+            document.getElementById('total-impressions').textContent = '2.3M';
+            document.getElementById('total-clicks').textContent = '45.2K';
+            document.getElementById('avg-ctr').textContent = '1.97%';
+        }
+        
+        function loadTrendsChart() {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: generateDateLabels(30),
+                    datasets: [{
+                        label: 'Spend ($)',
+                        data: generateRandomData(30, 200, 800),
+                        borderColor: '#1877f2',
+                        backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Clicks',
+                        data: generateRandomData(30, 50, 200),
+                        borderColor: '#42b883',
+                        backgroundColor: 'rgba(66, 184, 131, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+        
+        function loadObjectivesChart() {
+            const ctx = document.getElementById('objectivesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Traffic', 'Conversions', 'Engagement', 'App Installs'],
+                    datasets: [{
+                        data: [35, 25, 20, 20],
+                        backgroundColor: ['#1877f2', '#42b883', '#e74c3c', '#f39c12']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+        
+        function loadTopCampaigns() {
+            const tbody = document.querySelector('#top-campaigns-table tbody');
+            tbody.innerHTML = '';
+            
+            // Demo data - replace with actual API call
+            const campaigns = [
+                { name: 'Summer Sale Campaign', status: 'ACTIVE', objective: 'CONVERSIONS', spend: 1250.50, impressions: 125000, clicks: 2500, ctr: 2.0, cpc: 0.50 },
+                { name: 'Brand Awareness Q3', status: 'ACTIVE', objective: 'REACH', spend: 890.25, impressions: 98000, clicks: 1800, ctr: 1.8, cpc: 0.49 },
+                { name: 'Product Launch', status: 'PAUSED', objective: 'TRAFFIC', spend: 675.80, impressions: 67000, clicks: 1340, ctr: 2.0, cpc: 0.50 }
+            ];
+            
+            campaigns.forEach(campaign => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${campaign.name}</td>
+                    <td><span class="badge status-badge bg-${campaign.status === 'ACTIVE' ? 'success' : 'warning'}">${campaign.status}</span></td>
+                    <td>${campaign.objective}</td>
+                    <td>$${campaign.spend.toFixed(2)}</td>
+                    <td>${campaign.impressions.toLocaleString()}</td>
+                    <td>${campaign.clicks.toLocaleString()}</td>
+                    <td>${campaign.ctr}%</td>
+                    <td>$${campaign.cpc.toFixed(2)}</td>
+                `;
+            });
+        }
+        
+        function loadCampaigns() {
+            // Implementation for campaigns table
+            console.log('Loading campaigns for account:', selectedAccount);
+        }
+        
+        function loadAdSets() {
+            // Implementation for ad sets table
+            console.log('Loading ad sets for account:', selectedAccount);
+        }
+        
+        function loadInsights() {
+            // Implementation for insights
+            console.log('Loading insights for account:', selectedAccount);
+        }
+        
+        // Utility functions
+        function generateDateLabels(days) {
+            const labels = [];
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString());
+            }
+            return labels;
+        }
+        
+        function generateRandomData(length, min, max) {
+            return Array.from({length}, () => Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+        
+        function refreshData() {
+            if (selectedAccount) {
+                loadDashboardData();
+            }
+        }
+        
+        function showCreateCampaignModal() {
+            alert('Create Campaign modal would open here');
+        }
+        
+        function showCreateAdSetModal() {
+            alert('Create Ad Set modal would open here');
+        }
+        
+        function generateCustomReport() {
+            const startDate = document.getElementById('date-start').value;
+            const endDate = document.getElementById('date-end').value;
+            
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            console.log('Generating report from', startDate, 'to', endDate);
+            // Implementation for custom report generation
+        }
+        
+        function exportReport(format) {
+            console.log('Exporting report in', format, 'format');
+            // Implementation for report export
+        }
+    </script>
+</body>
+</html>

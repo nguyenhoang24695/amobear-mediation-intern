@@ -1,0 +1,43 @@
+{
+  "info": {
+    "name": "AppsFlyer + Nexus (doc 128)",
+    "description": "Jobs-test API (Development / JobsTest:AllowRun) và mẫu gọi AppsFlyer (Bearer / Pull). Không lưu secret trong collection — dùng biến collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "afPullToken", "value": "" },
+    { "key": "afBearerToken", "value": "" },
+    { "key": "afAppId", "value": "idYOUR_APP_OR_bundle" },
+    { "key": "afBaseHost", "value": "https://hq1.appsflyer.com" },
+    { "key": "webhookBearer", "value": "" }
+  ],
+  "item": [
+    { "name": "JobsTest AF installs sync", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-installs-sync?startDate=2026-04-01&endDate=2026-04-01" } },
+    { "name": "JobsTest AF events sync", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-events-sync?startDate=2026-04-01&endDate=2026-04-01" } },
+    { "name": "JobsTest AF aggregate sync", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-aggregate-sync?startDate=2026-04-01&endDate=2026-04-01" } },
+    { "name": "JobsTest AF extended ad revenue", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-extended-ad-revenue" } },
+    { "name": "JobsTest AF extended Protect360", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-extended-protect360" } },
+    { "name": "JobsTest AF extended SKAN", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-extended-skan" } },
+    { "name": "JobsTest AF Master API", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-master-sync" } },
+    { "name": "JobsTest AF Cohort API", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-cohort-sync" } },
+    { "name": "JobsTest AF UA transform (gold)", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-ua-transform?startDate=2026-04-01&endDate=2026-04-07" } },
+    { "name": "JobsTest Adjust sync", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/adjust-sync?startDate=2026-04-01&endDate=2026-04-07" } },
+    { "name": "JobsTest Silver/Gold transform", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/silver-gold-transform" } },
+    { "name": "AF Pull installs_report v5", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/installs_report/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull in_app_events_report v5", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/in_app_events_report/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull agg partners_by_date v5", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/agg-data/export/app/{{afAppId}}/partners_by_date_report/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull ad_revenue_raw v5", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/ad_revenue_raw/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull detection v5", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/detection/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull skad_inapps v1", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/skad_inapps_report/v1?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Master POST (Bearer)", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{afBearerToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"app_ids\": [\"{{afAppId}}\"],\n  \"from\": \"2026-04-01\",\n  \"to\": \"2026-04-07\"\n}" }, "url": "{{afBaseHost}}/api/master-reports/v1" } },
+    { "name": "AF Cohort POST (Bearer)", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{afBearerToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"cohort_type\": \"user_acquisition\",\n  \"min_cohort_size\": 1,\n  \"from\": \"2026-04-01\",\n  \"to\": \"2026-04-07\",\n  \"aggregation_type\": \"cumulative\",\n  \"preferred_currency\": \"USD\",\n  \"filters\": { \"app_id\": [\"{{afAppId}}\"] },\n  \"cohort_period\": { \"type\": \"daily\", \"value\": 30 }\n}" }, "url": "{{afBaseHost}}/api/cohorts/v1/report" } },
+    { "name": "Nexus Webhook Push sample", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{webhookBearer}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"app_id\": \"{{afAppId}}\",\n  \"event_type\": \"in-app-event\",\n  \"event_name\": \"af_purchase\"\n}" }, "url": "{{baseUrl}}/api/webhooks/appsflyer" } },
+    { "name": "JobsTest AF installs T-1 default", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-installs-sync" } },
+    { "name": "JobsTest AF events T-1 default", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/jobs-test/appsflyer-events-sync" } },
+    { "name": "AF Pull organic installs (info)", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/organic_installs_report/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull uninstalls (info)", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/uninstalls_report/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "AF Pull reinstalls (info)", "request": { "method": "GET", "header": [], "url": "{{afBaseHost}}/api/raw-data/export/app/{{afAppId}}/reinstalls/v5?api_token={{afPullToken}}&from=2026-04-01&to=2026-04-07" } },
+    { "name": "Duplicate Master POST alt path", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{afBearerToken}}" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{afBaseHost}}/api/master-reports/v1" } }
+  ]
+}

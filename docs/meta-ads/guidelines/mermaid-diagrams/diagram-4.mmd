@@ -1,0 +1,32 @@
+flowchart LR
+    subgraph Schedule["📅 Hangfire Scheduler"]
+        S1[Hourly<br>Active metrics]
+        S2[Daily 2AM<br>Full insights T-1]
+        S3[Real-time<br>Webhook events]
+    end
+
+    subgraph Fetch["📥 Data Fetch"]
+        W[Meta Worker]
+    end
+
+    subgraph Store["🗄️ Data Lake"]
+        MINIO[MinIO<br>raw JSON]
+        BRONZE[StarRocks Bronze]
+        SILVER[StarRocks Silver]
+        GOLD[StarRocks Gold<br>fact_campaign_roi]
+    end
+
+    subgraph Consume["📊 Consumption"]
+        DASH[Grafana Dashboard]
+        UI2[Admin Portal]
+        RULE[Optimizer Engine]
+    end
+
+    S1 --> W
+    S2 --> W
+    S3 --> W
+    W -->|GET /insights| MINIO
+    MINIO --> BRONZE --> SILVER --> GOLD
+    GOLD --> DASH
+    SILVER --> UI2
+    GOLD --> RULE

@@ -1,0 +1,12 @@
+# Mẫu curl (Windows cmd escaping ^) — KHÔNG dán cookie thật vào repo.
+# Lấy Cookie + project + account từ DevTools sau khi đăng nhập dash.qonversion.io.
+# Cập nhật cookie vào Nexus: PUT /api/v1/admin/qonversion/accounts/{id}/dashboard-cookie (xem QonversionAdminController).
+
+curl "https://dash.qonversion.io/api/v1/exports?project=YOUR_PROJECT_KEY&account=YOUR_ACCOUNT_UID" ^
+  -H "accept: */*" ^
+  -H "content-type: application/json" ^
+  -H "origin: https://dash.qonversion.io" ^
+  -H "referer: https://dash.qonversion.io/reports/raw-data/generate?project=YOUR_PROJECT_KEY&account=YOUR_ACCOUNT_UID" ^
+  -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" ^
+  -b "<PASTE_FULL_COOKIE_HEADER_VALUE_HERE>" ^
+  --data-raw "{\"from_timestamp\":1776038400,\"to_timestamp\":1776729599,\"platform\":\"iOS\",\"date_limiter_type\":\"happened_at\"}"

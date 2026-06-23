@@ -1,0 +1,966 @@
+{
+    "data": [
+      {
+        "type": "analyticsReports",
+        "id": "r16-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Flashlight Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r16-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r16-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r16-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r124-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "ARKit World Tracking",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r124-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r124-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r124-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r125-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "ARKit World Tracking Image Detection",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r125-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r125-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r125-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r168-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Photogrammetry ObjectCaptureSession API Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r168-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r168-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r168-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r169-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "PhotogrammetrySession API Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r169-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r169-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r169-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r22-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Haptics Engine Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r22-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r22-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r22-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r23-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "ShazamKit Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r23-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r23-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r23-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r74-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Added to Focus",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r74-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r74-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r74-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r33-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Streaming Playback Performance",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r33-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r33-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r33-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r34-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Streaming Downloads Performance",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r34-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r34-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r34-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r111-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Audio Input Muting",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r111-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r111-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r111-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r37-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "AirPlay Performance",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r37-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r37-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r37-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r112-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "RoomPlan Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r112-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r112-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r112-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r113-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Audio Input Route and Duration and Call Mode",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r113-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r113-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r113-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r114-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Disk Space Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r114-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r114-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r114-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r115-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Location Sessions",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r115-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r115-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r115-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r116-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "CarPlay Navigation",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r116-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r116-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r116-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r117-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Video PiP Duration",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r117-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r117-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r117-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r119-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "HTTP Live Streaming Playback Errors",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r119-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r119-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r119-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r120-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "HTTP Live Streaming Playback Count",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r120-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r120-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r120-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r122-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Bluetooth LE Scans",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r122-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r122-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r122-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r123-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Bluetooth LE Advertising",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r123-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r123-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r123-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r170-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "AccessorySetupKit Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r170-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r170-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r170-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r0-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Clip Usage Standard",
+          "category": "APP_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r0-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r0-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r0-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r1-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Clip Usage Detailed",
+          "category": "APP_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r1-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r1-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r1-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r2-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Crashes",
+          "category": "APP_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r2-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r2-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r2-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r129-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Custom Language Model Builds Failed",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r129-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r129-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r129-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r130-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Custom Language Model Builds Started",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r130-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r130-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r130-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r131-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Customized Transcription Requests",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r131-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r131-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r131-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r132-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "DockKit App Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r132-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r132-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r132-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r133-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Live Activity Use",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r133-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r133-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r133-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r134-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Multiple Game Controllers Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r134-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r134-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r134-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r135-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Photos Picker",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r135-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r135-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r135-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r136-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Shared With You Content Engagement",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r136-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r136-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r136-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r137-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Spotlight Query Performance",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r137-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r137-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r137-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r174-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "iBeacon Add Region Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r174-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r174-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r174-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r175-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "iBeacon Stop Monitoring for Region Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r175-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r175-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r175-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r140-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "VisionKit Live Text Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r140-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r140-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r140-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r141-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Wi-Fi Known Network Modifications",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r141-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r141-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r141-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r171-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "AccessorySetupKit Accessory Picker Sessions",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r171-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r171-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r171-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r172-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Bluetooth LE Session Duration",
+          "category": "PERFORMANCE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r172-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r172-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r172-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r176-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "iBeacon Ranging Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r176-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r176-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r176-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r177-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Browser Choice Screen Selection",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r177-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r177-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r177-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r179-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Store Web Preview Engagement Standard",
+          "category": "APP_STORE_ENGAGEMENT"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r179-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r179-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r179-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r180-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App Store Web Preview Engagement Detailed",
+          "category": "APP_STORE_ENGAGEMENT"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r180-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r180-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r180-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r194-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Platform App Installs",
+          "category": "APP_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r194-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r194-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r194-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r239-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Video Streaming Duration",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r239-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r239-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r239-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r238-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "App HangTracer Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r238-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r238-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r238-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r237-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "Nearby Interaction Sessions",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r237-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r237-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r237-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      },
+      {
+        "type": "analyticsReports",
+        "id": "r236-04d3edb1-69d9-47a6-b51f-ebe11135076b",
+        "attributes": {
+          "name": "ProRes Video Usage",
+          "category": "FRAMEWORK_USAGE"
+        },
+        "relationships": {
+          "instances": {
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r236-04d3edb1-69d9-47a6-b51f-ebe11135076b/relationships/instances",
+              "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r236-04d3edb1-69d9-47a6-b51f-ebe11135076b/instances"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r236-04d3edb1-69d9-47a6-b51f-ebe11135076b"
+        }
+      }
+    ],
+    "links": {
+      "self": "https://api.appstoreconnect.apple.com/v1/analyticsReportRequests/04d3edb1-69d9-47a6-b51f-ebe11135076b/reports?cursor=Mg&limit=50",
+      "first": "https://api.appstoreconnect.apple.com/v1/analyticsReportRequests/04d3edb1-69d9-47a6-b51f-ebe11135076b/reports?limit=50",
+      "next": "https://api.appstoreconnect.apple.com/v1/analyticsReportRequests/04d3edb1-69d9-47a6-b51f-ebe11135076b/reports?cursor=ZA&limit=50"
+    },
+    "meta": {
+      "paging": {
+        "total": 147,
+        "nextCursor": "ZA",
+        "limit": 50
+      }
+    }
+  }

@@ -1,0 +1,15 @@
+# ============ ENVIRONMENT ============
+.env
+# ============ IDE & EDITORS ============
+# PhpStorm / IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+storage
+vendor

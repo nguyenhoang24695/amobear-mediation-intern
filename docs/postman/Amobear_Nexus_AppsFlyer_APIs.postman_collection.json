@@ -1,0 +1,767 @@
+{
+	"info": {
+		"_postman_id": "f9a0b1c2-af-nexus-2026-collection",
+		"name": "Amobear Nexus — AppsFlyer APIs",
+		"description": "Postman collection cho AppsFlyer API integration vào Amobear Nexus.\n\nDoc reference: 128 — AppsFlyer Integration\n\n## Setup\n1. Dashboard → Integration → API Access → Copy API V2 Token\n2. Set biến `api_token` trong Environment\n3. Set `app_id` = bundle ID (Android) hoặc idXXX (iOS)\n\n## Authentication\n- Pull API: Token trong query param `api_token`\n- Master API & Cohort API: `Authorization: Bearer {token}`\n\n## Rate Limits\n- Pull API: 10 calls/min per app\n- Master API: 40 calls/min\n- Cohort API: 5 calls/min\n\n## Date Format: YYYY-MM-DD\n## Response: CSV (Pull API) or JSON (Master/Cohort API)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "pull_base_url",
+			"value": "https://hq1.appsflyer.com",
+			"type": "string"
+		},
+		{
+			"key": "master_base_url",
+			"value": "https://hq1.appsflyer.com",
+			"type": "string"
+		},
+		{
+			"key": "cohort_base_url",
+			"value": "https://hq1.appsflyer.com",
+			"type": "string"
+		},
+		{
+			"key": "api_token",
+			"value": "YOUR_API_V2_TOKEN_HERE",
+			"type": "string",
+			"description": "AppsFlyer API V2 Token — Dashboard → Integration → API Access"
+		},
+		{
+			"key": "app_id",
+			"value": "com.amobear.puzzlegame",
+			"type": "string",
+			"description": "Android: com.package.name — iOS: id1234567890"
+		},
+		{
+			"key": "from_date",
+			"value": "2026-04-01",
+			"type": "string"
+		},
+		{
+			"key": "to_date",
+			"value": "2026-04-07",
+			"type": "string"
+		},
+		{
+			"key": "nexus_webhook_local",
+			"value": "http://localhost:5000/api/webhooks/appsflyer",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "01 — Pull API: Raw Data (Non-organic)",
+			"description": "Raw install-level data with attribution. CSV response.\n\nBase URL: https://hq1.appsflyer.com/api/raw-data/export/app/\n\n⚠️ Max 90 days range. Max 1M rows per request.",
+			"item": [
+				{
+					"name": "1.1 Non-organic Installs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/installs_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}&currency=preferred",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "installs_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "currency", "value": "preferred"}
+							]
+						},
+						"description": "Paid/attributed installs. Each row = 1 install event.\n\nKey fields: media_source, campaign, campaign_id, adset, ad, country_code, install_time, appsflyer_id.\n\n**Nexus use:** Primary source for UA attribution data → bronze.appsflyer_installs_raw"
+					}
+				},
+				{
+					"name": "1.2 Non-organic Installs (with additional fields)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/installs_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}&additional_fields=device_download_time,deeplink_url,oaid,install_app_store,match_type,contributor1_media_source,contributor1_campaign,keyword_id,store_reinstall,impressions,custom_data&currency=preferred",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "installs_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "additional_fields", "value": "device_download_time,deeplink_url,oaid,install_app_store,match_type,contributor1_media_source,contributor1_campaign,keyword_id,store_reinstall,impressions,custom_data"},
+								{"key": "currency", "value": "preferred"}
+							]
+						},
+						"description": "Installs with additional fields. Note: additional_fields are NOT included by default.\n\nUseful extras: match_type (fingerprint/id_matching), contributor fields (multi-touch), deeplink_url."
+					}
+				},
+				{
+					"name": "1.3 Non-organic In-app Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/in_app_events_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}&currency=preferred",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "in_app_events_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "currency", "value": "preferred"}
+							]
+						},
+						"description": "In-app events (purchases, level_complete, etc.) with attribution.\n\nKey fields: event_name, event_value (JSON), event_revenue, event_revenue_usd, media_source.\n\n**Nexus use:** Track post-install user value by media source."
+					}
+				},
+				{
+					"name": "1.4 In-app Events (filtered by event name)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/in_app_events_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}&event_name=af_purchase,af_subscribe&currency=preferred",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "in_app_events_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "event_name", "value": "af_purchase,af_subscribe"},
+								{"key": "currency", "value": "preferred"}
+							]
+						},
+						"description": "Filter by specific events. Comma-separated event names.\n\nCommon events: af_purchase, af_subscribe, af_level_achieved, af_tutorial_completion, af_ad_view."
+					}
+				},
+				{
+					"name": "1.5 Uninstalls",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/uninstall_events_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "uninstall_events_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Uninstall events with attribution. Identify which campaigns drive high uninstall rates.\n\n**Nexus use:** Churn analysis by media source."
+					}
+				},
+				{
+					"name": "1.6 Reinstalls",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/reinstalls/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "reinstalls", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Reinstall events."
+					}
+				}
+			]
+		},
+		{
+			"name": "02 — Pull API: Raw Data (Organic)",
+			"description": "Organic (non-attributed) data. Requires separate API permission.",
+			"item": [
+				{
+					"name": "2.1 Organic Installs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/organic_installs_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "organic_installs_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Organic installs — no media_source attribution.\n\n**Nexus use:** Organic vs paid ratio, ASO impact analysis."
+					}
+				},
+				{
+					"name": "2.2 Organic In-app Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/organic_in_app_events_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "organic_in_app_events_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "In-app events from organic users."
+					}
+				},
+				{
+					"name": "2.3 Organic Uninstalls",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/organic_uninstall_events_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "organic_uninstall_events_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Organic uninstalls."
+					}
+				}
+			]
+		},
+		{
+			"name": "03 — Pull API: Retargeting",
+			"description": "Re-engagement and re-attribution data for retargeting campaigns.",
+			"item": [
+				{
+					"name": "3.1 Retargeting Conversions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/installs_retarget/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "installs_retarget", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Re-engagements & re-attributions from retargeting campaigns.\n\nKey field: retargeting_conversion_type (re-engagement or re-attribution)"
+					}
+				},
+				{
+					"name": "3.2 Retargeting In-app Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/in_app_events_retarget/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "in_app_events_retarget", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "In-app events attributed to retargeting campaigns."
+					}
+				}
+			]
+		},
+		{
+			"name": "04 — Pull API: Ad Revenue",
+			"description": "Ad monetization revenue attributed to install source.\n\n⚠️ Ad revenue can update with up to 3-day lag.",
+			"item": [
+				{
+					"name": "4.1 Attributed Ad Revenue",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/ad_revenue_raw/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "ad_revenue_raw", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Ad revenue (from AdMob, AppLovin, etc.) attributed back to install source.\n\nThis tells you: 'Users from Facebook campaign X generated $Y in ad revenue.'\n\n⚠️ Use for attribution analysis ONLY. Do NOT add to total IAA revenue (use direct AdMob/AppLovin API for that)."
+					}
+				},
+				{
+					"name": "4.2 Organic Ad Revenue",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/ad_revenue_organic_raw/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "ad_revenue_organic_raw", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Ad revenue from organic users."
+					}
+				},
+				{
+					"name": "4.3 Retargeting Ad Revenue",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/ad_revenue_raw_retarget/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "ad_revenue_raw_retarget", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Ad revenue from retargeting-attributed users."
+					}
+				}
+			]
+		},
+		{
+			"name": "05 — Pull API: Protect360 (Fraud)",
+			"description": "Fraud detection data from AppsFlyer Protect360.",
+			"item": [
+				{
+					"name": "5.1 Blocked Installs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/blocked_installs_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "blocked_installs_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Installs blocked in real-time by Protect360.\n\nKey fields: blocked_reason, blocked_reason_value, blocked_sub_reason.\n\n**Nexus use:** Fraud monitoring dashboard, block fraudulent media sources."
+					}
+				},
+				{
+					"name": "5.2 Post-Attribution Fraud Installs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/detection/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "detection", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Installs detected as fraud AFTER attribution (post-attribution).\n\nThese were initially counted as legitimate but later flagged."
+					}
+				},
+				{
+					"name": "5.3 Blocked In-app Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/raw-data/export/app/{{app_id}}/blocked_in_app_events_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "raw-data", "export", "app", "{{app_id}}", "blocked_in_app_events_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "In-app events blocked by Protect360."
+					}
+				}
+			]
+		},
+		{
+			"name": "06 — Pull API: Aggregate Performance",
+			"description": "Aggregated reports with cost data. LTV-based aggregation (by install date).\n\nBase URL: https://hq1.appsflyer.com/api/agg-data/export/app/",
+			"item": [
+				{
+					"name": "6.1 Partners Report (by media source)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/agg-data/export/app/{{app_id}}/partners_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}&category=standard",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "agg-data", "export", "app", "{{app_id}}", "partners_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "category", "value": "standard"}
+							]
+						},
+						"description": "Aggregated performance by media source. INCLUDES COST DATA.\n\ncategory options:\n- standard: all partners except Facebook\n- facebook: Facebook-specific grouping (by campaign + adgroup)\n\nKey fields: media_source, installs, cost, impressions, clicks, revenue, roi, average_ecpi.\n\n**Nexus use:** Primary source for CPI/ROAS calculation → gold.app_ua_daily"
+					}
+				},
+				{
+					"name": "6.2 Partners Report (Facebook only)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/agg-data/export/app/{{app_id}}/partners_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}&category=facebook&media_source=facebook",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "agg-data", "export", "app", "{{app_id}}", "partners_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "category", "value": "facebook"},
+								{"key": "media_source", "value": "facebook"}
+							]
+						},
+						"description": "Facebook-specific report with campaign + adgroup breakdown."
+					}
+				},
+				{
+					"name": "6.3 Geo Report (by country)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/agg-data/export/app/{{app_id}}/geo_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "agg-data", "export", "app", "{{app_id}}", "geo_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Aggregated performance by country. Same metrics as partners report.\n\n**Nexus use:** Geo-level CPI analysis for budget allocation."
+					}
+				},
+				{
+					"name": "6.4 Daily Partners Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/agg-data/export/app/{{app_id}}/partners_by_date_report/v5?api_token={{api_token}}&from={{from_date}}&to={{to_date}}",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "agg-data", "export", "app", "{{app_id}}", "partners_by_date_report", "v5"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"}
+							]
+						},
+						"description": "Daily breakdown by partner. Date × media_source granularity.\n\n**Nexus use:** Daily trend analysis for UA spend optimization."
+					}
+				}
+			]
+		},
+		{
+			"name": "07 — Master API",
+			"description": "Custom KPI selection with flexible groupings. Premium feature.\n\n⚠️ Auth: Authorization header (not query param).",
+			"item": [
+				{
+					"name": "7.1 Master API — Basic KPIs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{master_base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,media_source,geo&kpis=installs,cost,revenue,roi,average_ecpi&format=csv&currency=preferred",
+							"host": ["{{master_base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,media_source,geo"},
+								{"key": "kpis", "value": "installs,cost,revenue,roi,average_ecpi"},
+								{"key": "format", "value": "csv"},
+								{"key": "currency", "value": "preferred"}
+							]
+						},
+						"description": "Master API with basic UA KPIs. Grouped by date × media_source × geo.\n\nAvailable groupings: date, app_id, media_source, campaign, adset, ad, geo, channel, keywords, site_id, af_ad_type.\n\n**Nexus use:** Primary daily UA performance sync."
+					}
+				},
+				{
+					"name": "7.2 Master API — Retention KPIs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{master_base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,media_source&kpis=installs,retention_day_1,retention_day_3,retention_day_7,retention_day_14,retention_day_30,loyal_users_rate&format=json",
+							"host": ["{{master_base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,media_source"},
+								{"key": "kpis", "value": "installs,retention_day_1,retention_day_3,retention_day_7,retention_day_14,retention_day_30,loyal_users_rate"},
+								{"key": "format", "value": "json"}
+							]
+						},
+						"description": "Retention metrics by media source. D1, D3, D7, D14, D30.\n\n**Nexus use:** Track quality of users from each UA channel."
+					}
+				},
+				{
+					"name": "7.3 Master API — Cohort Revenue KPIs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{master_base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,media_source&kpis=installs,cost,cohort_day_7_total_revenue_per_user,cohort_day_30_total_revenue_per_user,arpu_ltv&format=json",
+							"host": ["{{master_base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,media_source"},
+								{"key": "kpis", "value": "installs,cost,cohort_day_7_total_revenue_per_user,cohort_day_30_total_revenue_per_user,arpu_ltv"},
+								{"key": "format", "value": "json"}
+							]
+						},
+						"description": "Cohort revenue KPIs. D7 and D30 revenue per user.\n\n**Nexus use:** LTV estimation for Gold layer."
+					}
+				},
+				{
+					"name": "7.4 Master API — Calculated KPI (Custom ROAS D7)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{master_base_url}}/api/master-agg-data/v4/app/{{app_id}}?from={{from_date}}&to={{to_date}}&groupings=date,media_source&kpis=installs,cost,revenue&calculated_kpi_roas_d7=(cohort_day_7_total_revenue_per_user-average_ecpi)/average_ecpi&calculated_kpi_payback_period=cost/revenue&format=json",
+							"host": ["{{master_base_url}}"],
+							"path": ["api", "master-agg-data", "v4", "app", "{{app_id}}"],
+							"query": [
+								{"key": "from", "value": "{{from_date}}"},
+								{"key": "to", "value": "{{to_date}}"},
+								{"key": "groupings", "value": "date,media_source"},
+								{"key": "kpis", "value": "installs,cost,revenue"},
+								{"key": "calculated_kpi_roas_d7", "value": "(cohort_day_7_total_revenue_per_user-average_ecpi)/average_ecpi"},
+								{"key": "calculated_kpi_payback_period", "value": "cost/revenue"},
+								{"key": "format", "value": "json"}
+							]
+						},
+						"description": "Custom calculated KPIs. ROAS D7 and payback period.\n\nKey names must start with 'calculated_kpi_'.\nOperators: + - * / (encode + as %2B in URL)."
+					}
+				}
+			]
+		},
+		{
+			"name": "08 — Cohort API",
+			"description": "Cohort analysis — revenue, retention by install cohort.\n\nPOST with JSON body. Auth via header.\n\n⚠️ Rate limit: 5 calls/min.",
+			"item": [
+				{
+					"name": "8.1 Revenue Cohort (Cumulative D0-D30)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cohort_type\": \"user_acquisition\",\n  \"min_cohort_size\": 1,\n  \"preferred_timezone\": \"UTC\",\n  \"from\": \"{{from_date}}\",\n  \"to\": \"{{to_date}}\",\n  \"granularity\": \"day\",\n  \"groupings\": [\"date\", \"media_source\"],\n  \"filters\": {\n    \"period\": [0, 1, 3, 7, 14, 30],\n    \"partial_data\": \"excluded\"\n  },\n  \"kpis\": [\"revenue\"],\n  \"aggregation_type\": \"cumulative\"\n}"
+						},
+						"url": {
+							"raw": "{{cohort_base_url}}/api/cohorts/v1/data/app/{{app_id}}",
+							"host": ["{{cohort_base_url}}"],
+							"path": ["api", "cohorts", "v1", "data", "app", "{{app_id}}"]
+						},
+						"description": "Cumulative revenue by install cohort. Periods: D0, D1, D3, D7, D14, D30.\n\nResponse shows revenue_sum and revenue_count per period per media_source.\n\n**Nexus use:** LTV D7/D30 calculation for Gold layer."
+					}
+				},
+				{
+					"name": "8.2 Retention Cohort (D1, D3, D7)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cohort_type\": \"user_acquisition\",\n  \"min_cohort_size\": 10,\n  \"preferred_timezone\": \"UTC\",\n  \"from\": \"{{from_date}}\",\n  \"to\": \"{{to_date}}\",\n  \"granularity\": \"day\",\n  \"groupings\": [\"date\", \"media_source\", \"geo\"],\n  \"filters\": {\n    \"period\": [1, 3, 7],\n    \"partial_data\": \"excluded\"\n  },\n  \"kpis\": [\"sessions\", \"unique_users\"],\n  \"aggregation_type\": \"on_day\"\n}"
+						},
+						"url": {
+							"raw": "{{cohort_base_url}}/api/cohorts/v1/data/app/{{app_id}}",
+							"host": ["{{cohort_base_url}}"],
+							"path": ["api", "cohorts", "v1", "data", "app", "{{app_id}}"]
+						},
+						"description": "Retention cohort: sessions & unique_users on specific days.\n\naggregation_type: 'on_day' (not cumulative) for retention calculation.\n\nRetention D1 = unique_users_day_1 / conversions.\n\n**Nexus use:** D1/D3/D7 retention by media_source × geo."
+					}
+				},
+				{
+					"name": "8.3 Custom Event Cohort (af_purchase)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{api_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cohort_type\": \"user_acquisition\",\n  \"min_cohort_size\": 1,\n  \"preferred_timezone\": \"UTC\",\n  \"from\": \"{{from_date}}\",\n  \"to\": \"{{to_date}}\",\n  \"granularity\": \"day\",\n  \"groupings\": [\"date\", \"media_source\"],\n  \"filters\": {\n    \"period\": [0, 1, 3, 7, 14, 30],\n    \"partial_data\": \"excluded\",\n    \"events\": [{\"name\": \"af_purchase\"}]\n  },\n  \"kpis\": [\"event_counter\", \"unique_users\", \"revenue\"],\n  \"aggregation_type\": \"cumulative\"\n}"
+						},
+						"url": {
+							"raw": "{{cohort_base_url}}/api/cohorts/v1/data/app/{{app_id}}",
+							"host": ["{{cohort_base_url}}"],
+							"path": ["api", "cohorts", "v1", "data", "app", "{{app_id}}"]
+						},
+						"description": "Cohort analysis filtered to specific event (af_purchase).\n\nShows: how many users from each cohort made purchases within D0-D30.\n\n**Nexus use:** Purchase conversion rate by install cohort × media source."
+					}
+				}
+			]
+		},
+		{
+			"name": "09 — SKAN Reports",
+			"description": "iOS SKAdNetwork aggregate performance data.",
+			"item": [
+				{
+					"name": "9.1 SKAN Aggregate Performance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pull_base_url}}/api/skadnetworks/v3/data/app/{{app_id}}?api_token={{api_token}}&start_date={{from_date}}&end_date={{to_date}}&date_type=install&groupings=media_source,campaign&kpis=installs,cost,revenue",
+							"host": ["{{pull_base_url}}"],
+							"path": ["api", "skadnetworks", "v3", "data", "app", "{{app_id}}"],
+							"query": [
+								{"key": "api_token", "value": "{{api_token}}"},
+								{"key": "start_date", "value": "{{from_date}}"},
+								{"key": "end_date", "value": "{{to_date}}"},
+								{"key": "date_type", "value": "install"},
+								{"key": "groupings", "value": "media_source,campaign"},
+								{"key": "kpis", "value": "installs,cost,revenue"}
+							]
+						},
+						"description": "SKAN postback data aggregated. Privacy-compliant iOS attribution.\n\ndate_type: 'install' (by install date) or 'arrival' (by postback arrival).\n\n**Nexus use:** iOS UA performance in post-ATT world."
+					}
+				}
+			]
+		},
+		{
+			"name": "10 — Push API Simulation",
+			"description": "Mock Push API payloads to test Nexus webhook receiver.\n\n⚡ Send to local endpoint to validate processing.",
+			"item": [
+				{
+					"name": "10.1 Simulate: Install Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer YOUR_PUSH_API_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"app_id\": \"com.amobear.puzzlegame\",\n  \"event_type\": \"install\",\n  \"event_time\": \"2026-04-07 12:30:00.000\",\n  \"event_name\": \"install\",\n  \"appsflyer_id\": \"1712534400000-1234567890\",\n  \"customer_user_id\": \"amobear_user_001\",\n  \"media_source\": \"facebook\",\n  \"campaign\": \"Puzzle_UA_US_Apr2026\",\n  \"campaign_id\": \"23850001234\",\n  \"adset\": \"Lookalike_1pct\",\n  \"adset_id\": \"23850005678\",\n  \"ad\": \"Video_30s_v2\",\n  \"ad_id\": \"23850009012\",\n  \"country_code\": \"US\",\n  \"city\": \"San Francisco\",\n  \"platform\": \"android\",\n  \"device_type\": \"Pixel 8\",\n  \"os_version\": \"14.0\",\n  \"app_version\": \"3.2.1\",\n  \"attributed_touch_type\": \"click\",\n  \"attributed_touch_time\": \"2026-04-07 12:15:00.000\",\n  \"install_time\": \"2026-04-07 12:30:00.000\",\n  \"advertising_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"is_retargeting\": false\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}",
+							"host": ["{{nexus_webhook_local}}"]
+						},
+						"description": "Simulate install push event. Nexus should:\n1. Return 200 OK\n2. Save to MinIO\n3. Insert to bronze.appsflyer_installs_raw with source_channel='push_api'"
+					}
+				},
+				{
+					"name": "10.2 Simulate: In-app Purchase Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer YOUR_PUSH_API_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"app_id\": \"com.amobear.puzzlegame\",\n  \"event_type\": \"in-app-event\",\n  \"event_time\": \"2026-04-07 14:00:00.000\",\n  \"event_name\": \"af_purchase\",\n  \"event_value\": \"{\\\"af_revenue\\\": 4.99, \\\"af_currency\\\": \\\"USD\\\", \\\"af_content_id\\\": \\\"coins_500\\\", \\\"af_content_type\\\": \\\"consumable\\\"}\",\n  \"event_revenue\": \"4.99\",\n  \"event_revenue_currency\": \"USD\",\n  \"event_revenue_usd\": \"4.99\",\n  \"appsflyer_id\": \"1712534400000-1234567890\",\n  \"customer_user_id\": \"amobear_user_001\",\n  \"media_source\": \"facebook\",\n  \"campaign\": \"Puzzle_UA_US_Apr2026\",\n  \"campaign_id\": \"23850001234\",\n  \"country_code\": \"US\",\n  \"platform\": \"android\",\n  \"install_time\": \"2026-04-07 12:30:00.000\",\n  \"is_retargeting\": false\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}",
+							"host": ["{{nexus_webhook_local}}"]
+						},
+						"description": "Simulate in-app purchase event. Has revenue data.\n\n⚠️ event_value is JSON string — parse for revenue details.\n\nNexus should: Insert to bronze.appsflyer_events_raw. Revenue for attribution analysis ONLY (not total revenue)."
+					}
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,751 @@
+{
+	"info": {
+		"_postman_id": "appmetrica-amobear-2026",
+		"name": "AppMetrica → Amobear StarRocks Integration",
+		"description": "Complete AppMetrica API collection for Amobear Mediation Pro platform.\n\n## Authentication\nSet `oauth_token` in collection variables with your Yandex OAuth token.\nGet token: https://oauth.yandex.ru/authorize?response_type=token&client_id=<app_id>\n\n## Flow\n1. Management API → List apps, get app_id\n2. Reporting API → Aggregated stats (DAU, sessions, revenue)\n3. Logs API → Raw event-level data (async: request → poll → download)\n4. Data Stream API → Continuous export\n\n## StarRocks Target Tables\n- bronze.appmetrica_stats (from Reporting API)\n- bronze.appmetrica_events (from Logs API events)\n- bronze.appmetrica_sessions (from Logs API sessions)\n- bronze.appmetrica_crashes (from Logs API crashes)\n- bronze.appmetrica_ad_revenue (from Logs API ad_revenue)\n- bronze.appmetrica_revenue (from Logs API revenue/IAP)\n- bronze.appmetrica_installations (from Logs API installations)\n- bronze.appmetrica_profiles (from Logs API profiles)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://api.appmetrica.yandex.com",
+			"type": "string"
+		},
+		{
+			"key": "oauth_token",
+			"value": "YOUR_OAUTH_TOKEN_HERE",
+			"type": "string",
+			"description": "Yandex OAuth token with appmetrica:read + appmetrica:write scopes"
+		},
+		{
+			"key": "app_id",
+			"value": "YOUR_APP_ID",
+			"type": "string",
+			"description": "AppMetrica application ID (numeric)"
+		},
+		{
+			"key": "date_from",
+			"value": "2026-03-15",
+			"type": "string"
+		},
+		{
+			"key": "date_to",
+			"value": "2026-03-16",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "key",
+				"value": "Authorization",
+				"type": "string"
+			},
+			{
+				"key": "value",
+				"value": "OAuth {{oauth_token}}",
+				"type": "string"
+			},
+			{
+				"key": "in",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "0. Health & Setup",
+			"description": "Verify connectivity and check Logs API availability before running data exports.",
+			"item": [
+				{
+					"name": "Check Logs API Availability",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/availability?application_id={{app_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "availability"],
+							"query": [
+								{
+									"key": "application_id",
+									"value": "{{app_id}}"
+								}
+							]
+						},
+						"description": "Check if Logs API is available. If disabled, use skip_unavailable_shards=true in requests.\n\nResponse: {\"logs_api_availability_status\": \"enabled\" | \"disabled\"}"
+					}
+				}
+			]
+		},
+		{
+			"name": "1. Management API — App Discovery",
+			"description": "Get list of all apps and their IDs. Run this first to populate app_id variable.\n\n→ StarRocks: Used to build dim_apps mapping in PostgreSQL.",
+			"item": [
+				{
+					"name": "List All Applications",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.applications && jsonData.applications.length > 0) {",
+									"    console.log('Found ' + jsonData.applications.length + ' apps');",
+									"    // Auto-set first app_id if not configured",
+									"    if (pm.collectionVariables.get('app_id') === 'YOUR_APP_ID') {",
+									"        pm.collectionVariables.set('app_id', jsonData.applications[0].id.toString());",
+									"        console.log('Auto-set app_id to: ' + jsonData.applications[0].id);",
+									"    }",
+									"}",
+									"pm.test('Applications returned', function() {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(jsonData.applications).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/management/v1/applications",
+							"host": ["{{base_url}}"],
+							"path": ["management", "v1", "applications"]
+						},
+						"description": "Returns all AppMetrica applications for your account.\nUse the `id` field as app_id in all subsequent requests."
+					}
+				},
+				{
+					"name": "Get Single Application Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/management/v1/application/{{app_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["management", "v1", "application", "{{app_id}}"]
+						},
+						"description": "Get detailed info for a specific app: name, package, platform, timezone, etc."
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Reporting API — Aggregated Stats",
+			"description": "Pre-aggregated metrics. Fast response, good for daily KPI sync.\n\n→ StarRocks Target: bronze.appmetrica_stats\n→ Sync Schedule: Daily T-1 at 03:00 AM",
+			"item": [
+				{
+					"name": "Daily Users & Sessions (by Country + OS)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+									"var jsonData = pm.response.json();",
+									"pm.test('Has data rows', function() {",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"    console.log('Total rows: ' + jsonData.total_rows);",
+									"    console.log('Sampled: ' + jsonData.sampled);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data?id={{app_id}}&metrics=ym:ge:users,ym:ge:sessions,ym:ge:totalEvents&dimensions=ym:ge:date,ym:ge:operatingSystemInfo,ym:ge:regionCountry&date1={{date_from}}&date2={{date_to}}&limit=10000&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ge:users,ym:ge:sessions,ym:ge:totalEvents" },
+								{ "key": "dimensions", "value": "ym:ge:date,ym:ge:operatingSystemInfo,ym:ge:regionCountry" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "limit", "value": "10000" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "ym:ge: users, sessions, totalEvents. ym:s / ym:u extra metrics need ym:s:* / ym:u:* dimensions in appsettings (not ym:ge:date — 4011).\n\nMaps to: bronze.appmetrica_stats"
+					}
+				},
+				{
+					"name": "Daily Users & Sessions by Time (Chart)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data/bytime?id={{app_id}}&metrics=ym:ge:users,ym:ge:sessions&group=day&date1={{date_from}}&date2={{date_to}}&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data", "bytime"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ge:users,ym:ge:sessions" },
+								{ "key": "group", "value": "day" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "Time-series data for trending. Returns arrays per metric per time bucket.\nUse for daily trend charts in dashboard."
+					}
+				},
+				{
+					"name": "Device Stats (Manufacturer + Model)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data?id={{app_id}}&metrics=ym:ge:users,ym:ge:sessions&dimensions=ym:ge:mobileDeviceBranding,ym:ge:mobileDeviceModel&date1={{date_from}}&date2={{date_to}}&limit=100&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ge:users,ym:ge:sessions" },
+								{ "key": "dimensions", "value": "ym:ge:mobileDeviceBranding,ym:ge:mobileDeviceModel" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "limit", "value": "100" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "Device breakdown for product/QA team. Top 100 device models by user count."
+					}
+				},
+				{
+					"name": "App Version Distribution",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data?id={{app_id}}&metrics=ym:ge:users,ym:ge:sessions,ym:ge:crashes&dimensions=ym:ge:appVersion,ym:ge:operatingSystemInfo&date1={{date_from}}&date2={{date_to}}&limit=500&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ge:users,ym:ge:sessions,ym:ge:crashes" },
+								{ "key": "dimensions", "value": "ym:ge:appVersion,ym:ge:operatingSystemInfo" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "limit", "value": "500" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "Version adoption + crash correlation.\nCritical for monitoring rollouts and deciding force-update thresholds."
+					}
+				},
+				{
+					"name": "Event Counts by Name (Top Events)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data?id={{app_id}}&metrics=ym:ce:users,ym:ce:devices,ym:ce:eventCounter&dimensions=ym:ce:eventLabel&date1={{date_from}}&date2={{date_to}}&limit=200&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ce:users,ym:ce:devices,ym:ce:eventCounter" },
+								{ "key": "dimensions", "value": "ym:ce:eventLabel" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "limit", "value": "200" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "Top 200 events by count. Use ce: prefix for client events.\nUseful for event taxonomy and engagement analysis."
+					}
+				},
+				{
+					"name": "Crash Stats by OS + Version",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data?id={{app_id}}&metrics=ym:ge:crashes,ym:ge:users&dimensions=ym:ge:date,ym:ge:operatingSystemInfo,ym:ge:appVersion&date1={{date_from}}&date2={{date_to}}&limit=500&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ge:crashes,ym:ge:users" },
+								{ "key": "dimensions", "value": "ym:ge:date,ym:ge:operatingSystemInfo,ym:ge:appVersion" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "limit", "value": "500" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "Crash-free rate calculation: (users - users_with_crashes) / users.\nGroup by OS + version to identify problematic builds."
+					}
+				},
+				{
+					"name": "Reporting API — CSV Format",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stat/v1/data.csv?id={{app_id}}&metrics=ym:ge:users,ym:ge:sessions&dimensions=ym:ge:date,ym:ge:regionCountry&date1={{date_from}}&date2={{date_to}}&limit=10000&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["stat", "v1", "data.csv"],
+							"query": [
+								{ "key": "id", "value": "{{app_id}}" },
+								{ "key": "metrics", "value": "ym:ge:users,ym:ge:sessions" },
+								{ "key": "dimensions", "value": "ym:ge:date,ym:ge:regionCountry" },
+								{ "key": "date1", "value": "{{date_from}}" },
+								{ "key": "date2", "value": "{{date_to}}" },
+								{ "key": "limit", "value": "10000" },
+								{ "key": "lang", "value": "en" }
+							]
+						},
+						"description": "Same query in CSV format. Append .csv to the endpoint.\nUseful for direct ingestion pipelines."
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Logs API — Raw Event Data (Async)",
+			"description": "Non-aggregated, row-level data. ASYNC flow:\n1. POST/GET request → 202 Accepted (queued)\n2. Same request again → 200 OK (file ready to download)\n3. Download the file (JSON or CSV)\n\nIMPORTANT: Logs API has quotas. Max 3 concurrent requests.\n\n→ StarRocks Target: bronze.appmetrica_events, _sessions, _crashes, _ad_revenue, _revenue, _installations, _profiles",
+			"item": [
+				{
+					"name": "Events Export (JSON)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 202) {",
+									"    console.log('⏳ Request queued. Wait and retry same request for download.');",
+									"    pm.test('Queued (202)', function() { pm.response.to.have.status(202); });",
+									"} else if (pm.response.code === 200) {",
+									"    console.log('✅ Data ready for download!');",
+									"    pm.test('Data ready (200)', function() { pm.response.to.have.status(200); });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip", "description": "Get compressed response" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=event_datetime,event_json,event_name,event_receive_datetime,event_receive_timestamp,event_timestamp,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default", "description": "default=device time, receive=server time" },
+								{ "key": "fields", "value": "event_datetime,event_json,event_name,event_receive_datetime,event_receive_timestamp,event_timestamp,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id" }
+							]
+						},
+						"description": "Raw event-level export. First call returns 202 (queued), subsequent identical calls return 200 when ready.\n\n→ bronze.appmetrica_events\n\nKey fields:\n- event_name: Event identifier\n- event_json: Event params as JSON\n- appmetrica_device_id: Unique device ID\n- profile_id: User profile for cross-device"
+					}
+				},
+				{
+					"name": "Session Starts Export (JSON)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 202) { console.log('⏳ Queued'); }",
+									"else if (pm.response.code === 200) { console.log('✅ Ready'); }"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/sessions_starts.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=session_id,session_start_datetime,session_start_receive_datetime,session_start_receive_timestamp,session_start_timestamp,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "sessions_starts.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "session_id,session_start_datetime,session_start_receive_datetime,session_start_receive_timestamp,session_start_timestamp,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id" }
+							]
+						},
+						"description": "Session start events for DAU/session analysis.\n\n→ bronze.appmetrica_sessions"
+					}
+				},
+				{
+					"name": "Installations Export (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/installations.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=application_id,installation_id,attributed_touch_type,click_datetime,click_url_parameters,profile_id,publisher_id,publisher_name,tracker_name,tracking_id,install_datetime,install_receive_datetime,install_timestamp,is_reattribution,is_reinstallation,match_type,appmetrica_device_id,city,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,app_package_name,app_version_name",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "installations.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "application_id,installation_id,attributed_touch_type,click_datetime,click_url_parameters,profile_id,publisher_id,publisher_name,tracker_name,tracking_id,install_datetime,install_receive_datetime,install_timestamp,is_reattribution,is_reinstallation,match_type,appmetrica_device_id,city,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,app_package_name,app_version_name" }
+							]
+						},
+						"description": "Install attribution data. Includes tracker, publisher, match_type for UA analysis.\n\n→ bronze.appmetrica_installations\n\nKey: Cross-reference with XMP/Meta cost data via tracker_name and publisher_name."
+					}
+				},
+				{
+					"name": "Ad Revenue Export (JSON) ⭐",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 202) { console.log('⏳ Queued - retry in 30-60s'); }",
+									"else if (pm.response.code === 200) { console.log('✅ Ad Revenue data ready!'); }"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/ad_revenue_events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=ad_revenue_datetime,ad_revenue_timestamp,ad_revenue_receive_datetime,ad_revenue_receive_timestamp,ad_revenue,ad_revenue_currency,ad_revenue_type,ad_revenue_data_source,ad_revenue_network,ad_revenue_placement_id,ad_revenue_placement_name,ad_revenue_unit_id,ad_revenue_unit_name,ad_revenue_precision,ad_revenue_payload,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "ad_revenue_events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "ad_revenue_datetime,ad_revenue_timestamp,ad_revenue_receive_datetime,ad_revenue_receive_timestamp,ad_revenue,ad_revenue_currency,ad_revenue_type,ad_revenue_data_source,ad_revenue_network,ad_revenue_placement_id,ad_revenue_placement_name,ad_revenue_unit_id,ad_revenue_unit_name,ad_revenue_precision,ad_revenue_payload,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name" }
+							]
+						},
+						"description": "⚠️ CRITICAL: Ad Revenue from AppMetrica SDK autocollection.\n\nThis is impression-level ad revenue data collected by the AppMetrica SDK.\n\nIMPORTANT for Mediation Pro:\n- ad_revenue_network = mediation network name\n- ad_revenue_type = banner|interstitial|rewarded|native|mrec\n- ad_revenue_data_source = autocollected|manual\n- Use for CROSS-VALIDATION with AdMob/AppLovin direct APIs\n- DO NOT double-count with direct network revenue\n\n→ bronze.appmetrica_ad_revenue"
+					}
+				},
+				{
+					"name": "Revenue / IAP Export (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/revenue_events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=revenue_quantity,revenue_price,revenue_currency,revenue_product_id,revenue_order_id,revenue_order_id_source,is_revenue_verified,is_revenue_autocollected,revenue_inapp_type,revenue_event_type,event_datetime,event_name,event_receive_datetime,event_receive_timestamp,event_timestamp,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,google_aid,ios_ifa,ios_ifv,os_version,profile_id,app_build_number,app_package_name,app_version_name",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "revenue_events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "revenue_quantity,revenue_price,revenue_currency,revenue_product_id,revenue_order_id,revenue_order_id_source,is_revenue_verified,is_revenue_autocollected,revenue_inapp_type,revenue_event_type,event_datetime,event_name,event_receive_datetime,event_receive_timestamp,event_timestamp,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,google_aid,ios_ifa,ios_ifv,os_version,profile_id,app_build_number,app_package_name,app_version_name" }
+							]
+						},
+						"description": "In-App Purchase (IAP) revenue events.\n\nKey fields:\n- revenue_event_type: subscription_started, subscription_renewed, one_time_purchase, refund, etc.\n- is_revenue_verified: true = validated with store\n- is_revenue_autocollected: true = SDK auto-tracking\n\n→ bronze.appmetrica_revenue\n\nUse for IAP performance dashboard (gold.fact_iap_performance)."
+					}
+				},
+				{
+					"name": "Crashes Export (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/crashes.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=crash,crash_datetime,crash_group_id,crash_id,crash_name,crash_receive_datetime,crash_receive_timestamp,crash_timestamp,appmetrica_device_id,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,os_name,os_version,profile_id,app_package_name,app_version_name,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "crashes.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "crash,crash_datetime,crash_group_id,crash_id,crash_name,crash_receive_datetime,crash_receive_timestamp,crash_timestamp,appmetrica_device_id,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,os_name,os_version,profile_id,app_package_name,app_version_name,application_id" }
+							]
+						},
+						"description": "Crash stack traces with device context.\n\n→ bronze.appmetrica_crashes\n\nGroup by crash_group_id for dedup.\nJoin with app_version for crash-free rate per build."
+					}
+				},
+				{
+					"name": "Profiles Export (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/profiles_v2.json?application_id={{app_id}}&fields=profile_id,appmetrica_gender,appmetrica_birth_date,appmetrica_notifications_enabled,appmetrica_name,appmetrica_crashes,appmetrica_errors,appmetrica_first_session_date,appmetrica_last_start_date,appmetrica_sessions,appmetrica_sdk_version,appmetrica_device_id,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,app_package_name,app_version_name",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "profiles_v2.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "fields", "value": "profile_id,appmetrica_gender,appmetrica_birth_date,appmetrica_notifications_enabled,appmetrica_name,appmetrica_crashes,appmetrica_errors,appmetrica_first_session_date,appmetrica_last_start_date,appmetrica_sessions,appmetrica_sdk_version,appmetrica_device_id,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,app_package_name,app_version_name" }
+							]
+						},
+						"description": "User profile snapshots. No date_since/date_until — returns current state.\n\n→ bronze.appmetrica_profiles\n\nUseful for:\n- User segmentation\n- Lifetime session count\n- Push notification opt-in rate\n- First session date for cohort analysis"
+					}
+				},
+				{
+					"name": "Clicks/Impressions Export (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/clicks.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=application_id,click_datetime,click_id,click_ipv6,click_timestamp,click_url_parameters,click_user_agent,publisher_id,publisher_name,tracker_name,tracking_id,touch_type,is_bot,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "clicks.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "application_id,click_datetime,click_id,click_ipv6,click_timestamp,click_url_parameters,click_user_agent,publisher_id,publisher_name,tracker_name,tracking_id,touch_type,is_bot,city,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version" }
+							]
+						},
+						"description": "Tracking click/impression data for attribution analysis.\nFilter is_bot to remove non-human traffic.\n\nUseful for UA team: click → install funnel analysis."
+					}
+				},
+				{
+					"name": "Postbacks Export (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/postbacks.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=application_id,attributed_touch_type,publisher_id,publisher_name,tracker_name,tracking_id,install_datetime,install_timestamp,match_type,appmetrica_device_id,country_iso_code,device_model,device_type,google_aid,ios_ifa,os_name,os_version,app_package_name,app_version_name,conversion_datetime,conversion_timestamp,event_name,attempt_datetime,cost_model (postback_type),notifying_status,response_code",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "postbacks.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "application_id,attributed_touch_type,publisher_id,publisher_name,tracker_name,tracking_id,install_datetime,install_timestamp,match_type,appmetrica_device_id,country_iso_code,device_model,device_type,google_aid,ios_ifa,os_name,os_version,app_package_name,app_version_name,conversion_datetime,conversion_timestamp,event_name,attempt_datetime,cost_model (postback_type),notifying_status,response_code" }
+							]
+						},
+						"description": "Postback delivery logs. Verify attribution partner integration.\n\nKey: notifying_status = sent|failed, response_code for debugging."
+					}
+				},
+				{
+					"name": "Force Regenerate (Cache-Control)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" },
+							{ "key": "Cache-Control", "value": "no-cache", "description": "Force new file generation" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=event_datetime,event_name,event_json,appmetrica_device_id,profile_id,os_name,country_iso_code,app_version_name,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "event_datetime,event_name,event_json,appmetrica_device_id,profile_id,os_name,country_iso_code,app_version_name,application_id" }
+							]
+						},
+						"description": "Use Cache-Control: no-cache to force regenerate a Logs API export.\nUse Cache-Control: max-age=N to use cached file if generated within N seconds."
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Logs API — CSV Format (Production)",
+			"description": "CSV format is recommended for production pipelines.\nSmaller payload, faster parsing in .NET, direct StarRocks Stream Load compatible.",
+			"item": [
+				{
+					"name": "Events Export (CSV) — Production",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/events.csv?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=event_datetime,event_json,event_name,event_receive_datetime,event_receive_timestamp,event_timestamp,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "events.csv"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "event_datetime,event_json,event_name,event_receive_datetime,event_receive_timestamp,event_timestamp,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id" }
+							]
+						},
+						"description": "Production-grade CSV export.\n\nRecommended for .NET pipeline:\n1. Save gzipped CSV to MinIO raw/appmetrica/logs/events/\n2. Parse CSV with CsvHelper\n3. Batch INSERT into bronze.appmetrica_events via MySqlConnector"
+					}
+				},
+				{
+					"name": "Ad Revenue Export (CSV) — Production",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/ad_revenue_events.csv?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=ad_revenue_datetime,ad_revenue_timestamp,ad_revenue_receive_datetime,ad_revenue_receive_timestamp,ad_revenue,ad_revenue_currency,ad_revenue_type,ad_revenue_data_source,ad_revenue_network,ad_revenue_placement_id,ad_revenue_placement_name,ad_revenue_unit_id,ad_revenue_unit_name,ad_revenue_precision,ad_revenue_payload,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,os_version,profile_id,app_build_number,app_package_name,app_version_name",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "ad_revenue_events.csv"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "ad_revenue_datetime,ad_revenue_timestamp,ad_revenue_receive_datetime,ad_revenue_receive_timestamp,ad_revenue,ad_revenue_currency,ad_revenue_type,ad_revenue_data_source,ad_revenue_network,ad_revenue_placement_id,ad_revenue_placement_name,ad_revenue_unit_id,ad_revenue_unit_name,ad_revenue_precision,ad_revenue_payload,session_id,installation_id,appmetrica_device_id,city,connection_type,country_iso_code,device_manufacturer,device_model,device_type,google_aid,ios_ifa,os_version,profile_id,app_build_number,app_package_name,app_version_name" }
+							]
+						},
+						"description": "Ad Revenue CSV for production pipeline.\nHighest priority for Mediation Pro ad revenue cross-validation."
+					}
+				},
+				{
+					"name": "Sessions CSV — Production",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/sessions_starts.csv?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=session_id,session_start_datetime,session_start_receive_datetime,session_start_receive_timestamp,session_start_timestamp,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "sessions_starts.csv"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "session_id,session_start_datetime,session_start_receive_datetime,session_start_receive_timestamp,session_start_timestamp,appmetrica_device_id,city,connection_type,country_iso_code,device_locale,device_manufacturer,device_model,device_type,google_aid,ios_ifa,ios_ifv,os_name,os_version,profile_id,app_build_number,app_package_name,app_version_name,application_id" }
+							]
+						},
+						"description": "Session starts CSV for production."
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Logs API — With Filters",
+			"description": "Examples of filtered Logs API requests. Use for targeted exports.",
+			"item": [
+				{
+					"name": "Events — Filter by OS (Android only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&use_utf8_bom=true&fields=event_datetime,event_name,event_json,appmetrica_device_id,os_name,country_iso_code,app_version_name,application_id&filters=os_name=='android'",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "use_utf8_bom", "value": "true" },
+								{ "key": "fields", "value": "event_datetime,event_name,event_json,appmetrica_device_id,os_name,country_iso_code,app_version_name,application_id" },
+								{ "key": "filters", "value": "os_name=='android'" }
+							]
+						},
+						"description": "Filter example: Android-only events.\nSyntax: field_name=='value' or field_name!='value'"
+					}
+				},
+				{
+					"name": "Events — Filter by Event Name",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=event_datetime,event_name,event_json,appmetrica_device_id,profile_id,country_iso_code,app_version_name,application_id&filters=event_name=='level_complete'",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "event_datetime,event_name,event_json,appmetrica_device_id,profile_id,country_iso_code,app_version_name,application_id" },
+								{ "key": "filters", "value": "event_name=='level_complete'" }
+							]
+						},
+						"description": "Export only specific events. Change 'level_complete' to your event name.\nUseful for game level analytics pipeline."
+					}
+				},
+				{
+					"name": "Ad Revenue — Filter by Network",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/ad_revenue_events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&fields=ad_revenue_datetime,ad_revenue,ad_revenue_currency,ad_revenue_type,ad_revenue_network,ad_revenue_unit_id,ad_revenue_unit_name,ad_revenue_precision,appmetrica_device_id,country_iso_code,app_version_name&filters=ad_revenue_network=='admob'",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "ad_revenue_events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "fields", "value": "ad_revenue_datetime,ad_revenue,ad_revenue_currency,ad_revenue_type,ad_revenue_network,ad_revenue_unit_id,ad_revenue_unit_name,ad_revenue_precision,appmetrica_device_id,country_iso_code,app_version_name" },
+								{ "key": "filters", "value": "ad_revenue_network=='admob'" }
+							]
+						},
+						"description": "Filter ad revenue by specific network.\nUseful for cross-validating AdMob direct API data vs AppMetrica SDK reported data."
+					}
+				},
+				{
+					"name": "Events — Skip Unavailable Shards",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept-Encoding", "value": "gzip" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/v1/export/events.json?application_id={{app_id}}&date_since={{date_from}}&date_until={{date_to}}&date_dimension=default&skip_unavailable_shards=true&fields=event_datetime,event_name,appmetrica_device_id,application_id",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "v1", "export", "events.json"],
+							"query": [
+								{ "key": "application_id", "value": "{{app_id}}" },
+								{ "key": "date_since", "value": "{{date_from}}" },
+								{ "key": "date_until", "value": "{{date_to}}" },
+								{ "key": "date_dimension", "value": "default" },
+								{ "key": "skip_unavailable_shards", "value": "true" },
+								{ "key": "fields", "value": "event_datetime,event_name,appmetrica_device_id,application_id" }
+							]
+						},
+						"description": "Use when Logs API availability check returns 'disabled'.\nData loss < 1%. Better than failing the entire sync job."
+					}
+				}
+			]
+		}
+	]
+}

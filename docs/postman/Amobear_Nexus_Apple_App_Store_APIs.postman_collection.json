@@ -1,0 +1,821 @@
+{
+	"info": {
+		"_postman_id": "e5f6g7h8-apple-nexus-2026-collection",
+		"name": "Amobear Nexus — Apple App Store APIs",
+		"description": "Postman collection cho Apple App Store integration vào Amobear Nexus.\n\nDoc reference: 127 — Apple App Store Direct Integration\n\n## 4 API Groups\n1. **App Store Connect API** — Analytics Reports, Sales, Finance (dùng ASC keys)\n2. **App Store Server API** — Transaction verification, Subscription status (dùng IAP keys)\n\n## Setup\n1. Generate JWT trước khi gọi API (xem Pre-request Script trong folder)\n2. Set Environment variables:\n   - `asc_key_id`, `asc_issuer_id` — App Store Connect credentials\n   - `iap_key_id`, `iap_issuer_id` — In-App Purchase credentials\n   - `jwt_asc`, `jwt_iap` — Generated JWT tokens\n   - `app_apple_id` — Numeric App Store ID\n   - `bundle_id` — App bundle identifier\n   - `vendor_number` — From App Store Connect\n\n## ⚠️ JWT Generation\nApple requires ES256 signed JWT. Postman không native support ES256.\n**Options:**\n- Dùng Pre-request Script với jsrsasign library\n- Generate JWT ngoài (script/tool) rồi paste vào `jwt_asc`/`jwt_iap`\n- Dùng .NET tool hoặc jwt.io với private key\n\nJWT max lifetime: 20 phút — refresh trước khi expired.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "asc_base_url",
+			"value": "https://api.appstoreconnect.apple.com",
+			"type": "string"
+		},
+		{
+			"key": "server_api_base_url",
+			"value": "https://api.storekit.itunes.apple.com",
+			"type": "string"
+		},
+		{
+			"key": "asc_key_id",
+			"value": "YOUR_ASC_KEY_ID",
+			"type": "string",
+			"description": "App Store Connect API Key ID"
+		},
+		{
+			"key": "asc_issuer_id",
+			"value": "YOUR_ASC_ISSUER_ID",
+			"type": "string",
+			"description": "App Store Connect Issuer ID"
+		},
+		{
+			"key": "iap_key_id",
+			"value": "YOUR_IAP_KEY_ID",
+			"type": "string",
+			"description": "In-App Purchase Key ID"
+		},
+		{
+			"key": "iap_issuer_id",
+			"value": "YOUR_IAP_ISSUER_ID",
+			"type": "string",
+			"description": "In-App Purchase Issuer ID"
+		},
+		{
+			"key": "jwt_asc",
+			"value": "PASTE_YOUR_ASC_JWT_HERE",
+			"type": "string",
+			"description": "Generated JWT for App Store Connect API (max 20 min lifetime)"
+		},
+		{
+			"key": "jwt_iap",
+			"value": "PASTE_YOUR_IAP_JWT_HERE",
+			"type": "string",
+			"description": "Generated JWT for App Store Server API (max 20 min lifetime)"
+		},
+		{
+			"key": "app_apple_id",
+			"value": "1234567890",
+			"type": "string",
+			"description": "Numeric Apple App ID from App Store Connect"
+		},
+		{
+			"key": "bundle_id",
+			"value": "com.amobear.puzzlegame",
+			"type": "string",
+			"description": "App bundle identifier"
+		},
+		{
+			"key": "vendor_number",
+			"value": "YOUR_VENDOR_NUMBER",
+			"type": "string",
+			"description": "Vendor number from App Store Connect → Payments and Financial Reports"
+		},
+		{
+			"key": "original_transaction_id",
+			"value": "2000000123456000",
+			"type": "string",
+			"description": "Sample original transaction ID for Server API queries"
+		},
+		{
+			"key": "transaction_id",
+			"value": "2000000123456789",
+			"type": "string",
+			"description": "Sample transaction ID"
+		},
+		{
+			"key": "report_request_id",
+			"value": "",
+			"type": "string",
+			"description": "Analytics Report Request ID — set after creating ONGOING request"
+		}
+	],
+	"item": [
+		{
+			"name": "00 — JWT Helper",
+			"description": "JWT generation helper scripts.\n\n⚠️ Apple requires ES256 signed JWT. Vì Postman pre-request script có hạn chế với ES256, khuyến nghị generate JWT bên ngoài rồi paste vào variable.\n\nDùng 1 trong các cách sau:\n1. jwt.io — paste private key, set header/payload\n2. .NET script: `System.IdentityModel.Tokens.Jwt`\n3. Python: `PyJWT` with `cryptography`\n4. Node.js: `jsonwebtoken`",
+			"item": [
+				{
+					"name": "0.1 JWT Payload Reference — App Store Connect",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://jwt.io",
+							"protocol": "https",
+							"host": ["jwt", "io"]
+						},
+						"description": "## JWT cho App Store Connect API\n\n**Header:**\n```json\n{\n  \"alg\": \"ES256\",\n  \"kid\": \"{{asc_key_id}}\",\n  \"typ\": \"JWT\"\n}\n```\n\n**Payload:**\n```json\n{\n  \"iss\": \"{{asc_issuer_id}}\",\n  \"iat\": <current_unix_timestamp>,\n  \"exp\": <current + 900>,\n  \"aud\": \"appstoreconnect-v1\"\n}\n```\n\n**Sign with:** App Store Connect Private Key (.p8 file)\n\nPaste result vào variable `jwt_asc`"
+					}
+				},
+				{
+					"name": "0.2 JWT Payload Reference — App Store Server API",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://jwt.io",
+							"protocol": "https",
+							"host": ["jwt", "io"]
+						},
+						"description": "## JWT cho App Store Server API\n\n**Header:**\n```json\n{\n  \"alg\": \"ES256\",\n  \"kid\": \"{{iap_key_id}}\",\n  \"typ\": \"JWT\"\n}\n```\n\n**Payload:**\n```json\n{\n  \"iss\": \"{{iap_issuer_id}}\",\n  \"iat\": <current_unix_timestamp>,\n  \"exp\": <current + 900>,\n  \"aud\": \"appstoreconnect-v1\",\n  \"bid\": \"{{bundle_id}}\"\n}\n```\n\n**Sign with:** In-App Purchase Private Key (.p8 file)\n\n⚠️ Lưu ý field `bid` (bundle ID) — chỉ có ở Server API JWT.\n\nPaste result vào variable `jwt_iap`"
+					}
+				}
+			]
+		},
+		{
+			"name": "01 — App Store Connect: Apps",
+			"description": "List và lookup apps trong App Store Connect account.",
+			"item": [
+				{
+					"name": "1.1 List All Apps",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/apps?fields[apps]=name,bundleId,sku&sort=bundleId&limit=50",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "apps"],
+							"query": [
+								{"key": "fields[apps]", "value": "name,bundleId,sku"},
+								{"key": "sort", "value": "bundleId"},
+								{"key": "limit", "value": "50"}
+							]
+						},
+						"description": "Lấy danh sách tất cả apps. Response chứa app `id` (= Apple ID), `bundleId`, `name`.\n\n**Nexus use:** Build mapping table apple_id ↔ bundle_id.\nPaginate qua `links.next` cho >50 apps."
+					}
+				},
+				{
+					"name": "1.2 Get Specific App",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/apps/{{app_apple_id}}?fields[apps]=name,bundleId,sku,primaryLocale",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "apps", "{{app_apple_id}}"],
+							"query": [
+								{"key": "fields[apps]", "value": "name,bundleId,sku,primaryLocale"}
+							]
+						},
+						"description": "Lấy thông tin chi tiết 1 app bằng Apple ID."
+					}
+				}
+			]
+		},
+		{
+			"name": "02 — Analytics Reports",
+			"description": "App Store Analytics Reports API — store funnel, downloads, revenue attribution.\n\n⚠️ Data completeness: T-2 (2 ngày sau mới complete).\n\nWorkflow:\n1. Create ONGOING report request (one-time setup)\n2. List reports by category\n3. Get report instances (by date)\n4. Download report data (CSV/TSV)",
+			"item": [
+				{
+					"name": "2.1 Create ONGOING Report Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"type\": \"analyticsReportRequests\",\n    \"attributes\": {\n      \"accessType\": \"ONGOING\"\n    },\n    \"relationships\": {\n      \"app\": {\n        \"data\": {\n          \"type\": \"apps\",\n          \"id\": \"{{app_apple_id}}\"\n        }\n      }\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{asc_base_url}}/v1/analyticsReportRequests",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "analyticsReportRequests"]
+						},
+						"description": "🔧 ONE-TIME SETUP — Tạo ONGOING report request cho app.\nApple sẽ tự generate reports daily/weekly/monthly sau 24-48h.\n\n⚠️ Cần Admin role JWT.\n\nSave response `id` → variable `report_request_id`."
+					}
+				},
+				{
+					"name": "2.2 Create ONE_TIME_SNAPSHOT (Historical Backfill)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"type\": \"analyticsReportRequests\",\n    \"attributes\": {\n      \"accessType\": \"ONE_TIME_SNAPSHOT\"\n    },\n    \"relationships\": {\n      \"app\": {\n        \"data\": {\n          \"type\": \"apps\",\n          \"id\": \"{{app_apple_id}}\"\n        }\n      }\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{asc_base_url}}/v1/analyticsReportRequests",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "analyticsReportRequests"]
+						},
+						"description": "Historical backfill — lấy toàn bộ data có sẵn.\nDùng 1 lần khi onboard app mới vào Nexus."
+					}
+				},
+				{
+					"name": "2.3 List Report Requests for App",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/apps/{{app_apple_id}}/analyticsReportRequests?filter[accessType]=ONGOING&fields[analyticsReportRequests]=accessType,stoppedDueToInactivity&include=reports",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "apps", "{{app_apple_id}}", "analyticsReportRequests"],
+							"query": [
+								{"key": "filter[accessType]", "value": "ONGOING"},
+								{"key": "fields[analyticsReportRequests]", "value": "accessType,stoppedDueToInactivity"},
+								{"key": "include", "value": "reports"}
+							]
+						},
+						"description": "Xem status của report requests cho app. Check `stoppedDueToInactivity`."
+					}
+				},
+				{
+					"name": "2.4 List Reports by Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/analyticsReportRequests/{{report_request_id}}/reports?filter[category]=APP_STORE_ENGAGEMENT",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "analyticsReportRequests", "{{report_request_id}}", "reports"],
+							"query": [
+								{"key": "filter[category]", "value": "APP_STORE_ENGAGEMENT"}
+							]
+						},
+						"description": "List available reports cho 1 report request, filtered by category.\n\nCategories:\n- APP_STORE_ENGAGEMENT (impressions, views)\n- APP_STORE_COMMERCE (revenue, purchases)\n- APP_USAGE (active devices, sessions)\n- FRAMEWORK_USAGE\n- PERFORMANCE"
+					}
+				},
+				{
+					"name": "2.5 Get Report Instances (by date)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/analyticsReports/:report_id/instances?filter[granularity]=DAILY&limit=7",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "analyticsReports", ":report_id", "instances"],
+							"variable": [
+								{"key": "report_id", "value": "REPORT_ID_FROM_2.4", "description": "Report ID from previous response"}
+							],
+							"query": [
+								{"key": "filter[granularity]", "value": "DAILY"},
+								{"key": "limit", "value": "7"}
+							]
+						},
+						"description": "Lấy report instances (mỗi instance = 1 date/period).\n\nGranularity: DAILY, WEEKLY, MONTHLY.\n\nResponse chứa download URL cho mỗi instance."
+					}
+				},
+				{
+					"name": "2.6 Download Report Instance (CSV)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/a]gzip",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/analyticsReportInstances/:instance_id/segments",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "analyticsReportInstances", ":instance_id", "segments"],
+							"variable": [
+								{"key": "instance_id", "value": "INSTANCE_ID_FROM_2.5", "description": "Report instance ID"}
+							]
+						},
+						"description": "Download actual report data. Response is gzipped CSV/TSV.\n\n**Nexus pipeline:** Download → decompress → parse → MinIO backup → StarRocks insert."
+					}
+				}
+			]
+		},
+		{
+			"name": "03 — Sales Reports",
+			"description": "Daily/Weekly/Monthly sales reports. T-1 estimates.\n\nResponse: Gzipped TSV.",
+			"item": [
+				{
+					"name": "3.1 Daily Sales Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/a]gzip",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/salesReports?filter[reportType]=SALES&filter[reportSubType]=SUMMARY&filter[frequency]=DAILY&filter[reportDate]=2026-04-06&filter[vendorNumber]={{vendor_number}}",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "salesReports"],
+							"query": [
+								{"key": "filter[reportType]", "value": "SALES"},
+								{"key": "filter[reportSubType]", "value": "SUMMARY"},
+								{"key": "filter[frequency]", "value": "DAILY"},
+								{"key": "filter[reportDate]", "value": "2026-04-06"},
+								{"key": "filter[vendorNumber]", "value": "{{vendor_number}}"}
+							]
+						},
+						"description": "Daily sales summary. Response: Gzipped TSV.\n\nFields include: Provider, Provider Country, SKU, Developer, Title, Version, Product Type Identifier, Units, Developer Proceeds, Begin Date, End Date, Customer Currency, Country Code, Currency of Proceeds, Apple Identifier, etc.\n\n**Nexus use:** Primary daily reconciliation source vs Qonversion data.\n\n⚠️ reportDate format: YYYY-MM-DD. Data available T-1."
+					}
+				},
+				{
+					"name": "3.2 Weekly Sales Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/salesReports?filter[reportType]=SALES&filter[reportSubType]=SUMMARY&filter[frequency]=WEEKLY&filter[reportDate]=2026-04-05&filter[vendorNumber]={{vendor_number}}",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "salesReports"],
+							"query": [
+								{"key": "filter[reportType]", "value": "SALES"},
+								{"key": "filter[reportSubType]", "value": "SUMMARY"},
+								{"key": "filter[frequency]", "value": "WEEKLY"},
+								{"key": "filter[reportDate]", "value": "2026-04-05"},
+								{"key": "filter[vendorNumber]", "value": "{{vendor_number}}"}
+							]
+						},
+						"description": "Weekly sales summary. reportDate = Sunday of the week."
+					}
+				},
+				{
+					"name": "3.3 Subscription Events Report",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/salesReports?filter[reportType]=SUBSCRIPTION_EVENT&filter[reportSubType]=SUMMARY&filter[frequency]=DAILY&filter[reportDate]=2026-04-06&filter[vendorNumber]={{vendor_number}}",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "salesReports"],
+							"query": [
+								{"key": "filter[reportType]", "value": "SUBSCRIPTION_EVENT"},
+								{"key": "filter[reportSubType]", "value": "SUMMARY"},
+								{"key": "filter[frequency]", "value": "DAILY"},
+								{"key": "filter[reportDate]", "value": "2026-04-06"},
+								{"key": "filter[vendorNumber]", "value": "{{vendor_number}}"}
+							]
+						},
+						"description": "Subscription lifecycle events report. Includes trials, conversions, renewals, cancellations.\n\n**Nexus use:** Cross-validate Qonversion subscription event counts."
+					}
+				},
+				{
+					"name": "3.4 Subscriber Report",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/salesReports?filter[reportType]=SUBSCRIBER&filter[reportSubType]=DETAILED&filter[frequency]=DAILY&filter[reportDate]=2026-04-06&filter[vendorNumber]={{vendor_number}}",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "salesReports"],
+							"query": [
+								{"key": "filter[reportType]", "value": "SUBSCRIBER"},
+								{"key": "filter[reportSubType]", "value": "DETAILED"},
+								{"key": "filter[frequency]", "value": "DAILY"},
+								{"key": "filter[reportDate]", "value": "2026-04-06"},
+								{"key": "filter[vendorNumber]", "value": "{{vendor_number}}"}
+							]
+						},
+						"description": "Detailed subscriber data — active subscriptions, states, retention."
+					}
+				}
+			]
+		},
+		{
+			"name": "04 — Finance Reports",
+			"description": "Monthly financial reports — official accounting figures.\n\n⚠️ Apple fiscal calendar ≠ Gregorian calendar. Report settlement periods may not align with calendar months.",
+			"item": [
+				{
+					"name": "4.1 Finance Detail Report",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/financeReports?filter[reportType]=FINANCE_DETAIL&filter[reportDate]=2026-03&filter[regionCode]=ZZ&filter[vendorNumber]={{vendor_number}}",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "financeReports"],
+							"query": [
+								{"key": "filter[reportType]", "value": "FINANCE_DETAIL"},
+								{"key": "filter[reportDate]", "value": "2026-03"},
+								{"key": "filter[regionCode]", "value": "ZZ"},
+								{"key": "filter[vendorNumber]", "value": "{{vendor_number}}"}
+							]
+						},
+						"description": "Monthly finance report — official proceeds after Apple commission, tax, withholdings.\n\n`regionCode=ZZ` = all regions.\nOther codes: US, EU, JP, etc.\n\n**Nexus use:** Monthly revenue reconciliation — source of truth for accounting."
+					}
+				},
+				{
+					"name": "4.2 Finance Report — US Region",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/financeReports?filter[reportType]=FINANCE_DETAIL&filter[reportDate]=2026-03&filter[regionCode]=US&filter[vendorNumber]={{vendor_number}}",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "financeReports"],
+							"query": [
+								{"key": "filter[reportType]", "value": "FINANCE_DETAIL"},
+								{"key": "filter[reportDate]", "value": "2026-03"},
+								{"key": "filter[regionCode]", "value": "US"},
+								{"key": "filter[vendorNumber]", "value": "{{vendor_number}}"}
+							]
+						},
+						"description": "Finance report filtered by US region."
+					}
+				}
+			]
+		},
+		{
+			"name": "05 — App Store Server API: Transactions",
+			"description": "Transaction verification & history.\n\n⚠️ Dùng IAP JWT (khác với ASC JWT).\nBase URL: https://api.storekit.itunes.apple.com",
+			"item": [
+				{
+					"name": "5.1 Get Transaction Info",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/transactions/{{transaction_id}}",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "transactions", "{{transaction_id}}"]
+						},
+						"description": "Verify specific transaction. Response: JWS signed transaction info.\n\nDecode JWS payload để get: productId, purchaseDate, expiresDate, price, currency, storefront, transactionReason.\n\n**Nexus use:** On-demand verification khi anomaly detected."
+					}
+				},
+				{
+					"name": "5.2 Get Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/history/{{original_transaction_id}}?sort=DESCENDING&limit=20",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "history", "{{original_transaction_id}}"],
+							"query": [
+								{"key": "sort", "value": "DESCENDING"},
+								{"key": "limit", "value": "20"}
+							]
+						},
+						"description": "Full purchase history for user (by original transaction ID).\n\nPaginate via `revision` token from response.\n\n**Nexus use:** User purchase audit, support tool."
+					}
+				},
+				{
+					"name": "5.3 Get Transaction History (with filters)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/history/{{original_transaction_id}}?sort=DESCENDING&limit=20&productType=AUTO_RENEWABLE&startDate=1704067200000&endDate=1735689600000",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "history", "{{original_transaction_id}}"],
+							"query": [
+								{"key": "sort", "value": "DESCENDING"},
+								{"key": "limit", "value": "20"},
+								{"key": "productType", "value": "AUTO_RENEWABLE"},
+								{"key": "startDate", "value": "1704067200000"},
+								{"key": "endDate", "value": "1735689600000"}
+							]
+						},
+						"description": "Filtered transaction history.\n\nproductType: AUTO_RENEWABLE, NON_RENEWABLE, CONSUMABLE, NON_CONSUMABLE\nstartDate/endDate: milliseconds since epoch"
+					}
+				}
+			]
+		},
+		{
+			"name": "06 — App Store Server API: Subscriptions",
+			"description": "Subscription status queries — dùng IAP JWT.",
+			"item": [
+				{
+					"name": "6.1 Get All Subscription Statuses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/subscriptions/{{original_transaction_id}}",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "subscriptions", "{{original_transaction_id}}"]
+						},
+						"description": "Lấy status của tất cả auto-renewable subscriptions cho user.\n\nResponse chứa:\n- signedTransactionInfo (JWS)\n- signedRenewalInfo (JWS) — auto_renew_status, expiration_intent, grace_period_expires_date\n\n**Nexus use:** Daily reconciliation — cross-validate Qonversion subscription status."
+					}
+				}
+			]
+		},
+		{
+			"name": "07 — App Store Server API: Refunds",
+			"description": "Refund lookup & consumption reporting.",
+			"item": [
+				{
+					"name": "7.1 Get Refund History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v2/refund/lookup/{{original_transaction_id}}",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v2", "refund", "lookup", "{{original_transaction_id}}"]
+						},
+						"description": "Lấy refund history cho user.\n\n**Nexus use:** Verify refund events từ Qonversion, fraud detection."
+					}
+				},
+				{
+					"name": "7.2 Look Up Order ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/lookup/:order_id",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "lookup", ":order_id"],
+							"variable": [
+								{"key": "order_id", "value": "MX1234567890", "description": "Order ID from user's purchase email"}
+							]
+						},
+						"description": "Lookup transaction by Apple Order ID (from user's purchase confirmation email).\n\n**Nexus use:** Customer support — user provides order ID."
+					}
+				}
+			]
+		},
+		{
+			"name": "08 — Server Notifications V2",
+			"description": "Testing & recovery for Apple S2S Notifications.\n\n⚠️ Hiện tại S2S URL đang trỏ về Qonversion. Các request dưới đây dùng để test và recover notifications.",
+			"item": [
+				{
+					"name": "8.1 Request Test Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/notifications/test",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "notifications", "test"]
+						},
+						"description": "Gửi test notification tới configured S2S URL.\n\n**Nexus use:** Verify Apple → Qonversion → Nexus pipeline is working.\n\nResponse chứa `testNotificationToken` — dùng ở 8.2 để check delivery status."
+					}
+				},
+				{
+					"name": "8.2 Check Test Notification Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/notifications/test/:test_notification_token",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "notifications", "test", ":test_notification_token"],
+							"variable": [
+								{"key": "test_notification_token", "value": "TOKEN_FROM_8.1"}
+							]
+						},
+						"description": "Check delivery status of test notification.\n\nResponse: `sendAttempts` array với timestamp và result per attempt."
+					}
+				},
+				{
+					"name": "8.3 Get Notification History",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"startDate\": 1712534400000,\n  \"endDate\": 1712620800000,\n  \"notificationType\": \"DID_RENEW\"\n}"
+						},
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/notifications/history",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "notifications", "history"]
+						},
+						"description": "Recover missed notifications by date range.\n\nOptional filters: notificationType, notificationSubtype\n\nnotificationType values:\n- SUBSCRIBED\n- DID_RENEW\n- DID_CHANGE_RENEWAL_STATUS\n- DID_FAIL_TO_RENEW\n- EXPIRED\n- REFUND\n- GRACE_PERIOD_EXPIRED\n- OFFER_REDEEMED\n- CONSUMPTION_REQUEST\n\n**Nexus use:** Recover missed events khi Qonversion webhook gap detected."
+					}
+				},
+				{
+					"name": "8.4 Get Notification History (All types, paginated)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"startDate\": 1712534400000,\n  \"endDate\": 1712620800000\n}"
+						},
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/notifications/history?paginationToken=NEXT_TOKEN_HERE",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "notifications", "history"],
+							"query": [
+								{"key": "paginationToken", "value": "NEXT_TOKEN_HERE", "disabled": true}
+							]
+						},
+						"description": "All notification types for date range. Use paginationToken from previous response for next page.\n\nstartDate/endDate: milliseconds since epoch."
+					}
+				}
+			]
+		},
+		{
+			"name": "09 — App Store Server API: Subscription Extend",
+			"description": "Extend subscription renewal date — dùng cho customer support / appeasement.",
+			"item": [
+				{
+					"name": "9.1 Extend Subscription Renewal Date",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_iap}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"extendByDays\": 7,\n  \"extendReasonCode\": 0,\n  \"requestIdentifier\": \"nexus-extend-{{$timestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{server_api_base_url}}/inApps/v1/subscriptions/extend/{{original_transaction_id}}",
+							"host": ["{{server_api_base_url}}"],
+							"path": ["inApps", "v1", "subscriptions", "extend", "{{original_transaction_id}}"]
+						},
+						"description": "Extend subscription by N days. Max 2 extends per year per subscription.\n\nextendReasonCode:\n- 0: Undeclared\n- 1: Customer satisfaction\n- 2: Other\n- 3: Service issue\n\n**Nexus use:** Admin tool — extend subscription cho support cases."
+					}
+				}
+			]
+		},
+		{
+			"name": "10 — Performance Metrics (Future)",
+			"description": "App performance data — crash rate, launch time, battery usage.\nPhase 3 trong doc 127 roadmap.",
+			"item": [
+				{
+					"name": "10.1 Get Power & Performance Metrics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_asc}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{asc_base_url}}/v1/apps/{{app_apple_id}}/perfPowerMetrics",
+							"host": ["{{asc_base_url}}"],
+							"path": ["v1", "apps", "{{app_apple_id}}", "perfPowerMetrics"]
+						},
+						"description": "App performance metrics — launch time, hang rate, disk writes, memory, battery.\n\n**Nexus use:** Future — feed into App Health Score performance dimension."
+					}
+				}
+			]
+		}
+	]
+}

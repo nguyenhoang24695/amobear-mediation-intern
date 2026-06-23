@@ -1,0 +1,5 @@
+pyspark==3.5.5
+python-dotenv
+google-cloud-storage
+google-cloud-bigquery
+mysql-connector-python

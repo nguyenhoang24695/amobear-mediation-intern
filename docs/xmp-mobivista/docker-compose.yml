@@ -1,0 +1,17 @@
+services:
+  # XMP Platform - Python application với cron jobs
+  xmp-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xmp-platform
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    env_file:
+      - .env
+    environment:
+      # System
+      - TZ=Asia/Ho_Chi_Minh
+    restart: unless-stopped
+    network_mode: host  # Để kết nối tới StarRocks external

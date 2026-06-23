@@ -1,0 +1,116 @@
+{
+    "apps": [
+        {
+            "id": "dnf7td2ry3uo",
+            "name": "3D Battery Charging Animation",
+            "short_name": "",
+            "section": "",
+            "formatting": null,
+            "description": "",
+            "increase_is_negative": false,
+            "default_store_app_id": "com.battery3d.charging.animationeffect.chargingscreen",
+            "currency": {
+                "name": "United States Dollar",
+                "code": "USD"
+            },
+            "platforms": {
+                "android": {
+                    "store_type": "google_play",
+                    "store_id": "com.battery3d.charging.animationeffect.chargingscreen",
+                    "bundle_id": "com.battery3d.charging.animationeffect.chargingscreen",
+                    "configured": true,
+                    "platform": "android",
+                    "app_state": "unknown"
+                },
+                "web": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "web",
+                    "app_state": "unknown"
+                },
+                "windows": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "windows",
+                    "app_state": "unknown"
+                },
+                "ios": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "ios",
+                    "app_state": "unknown"
+                },
+                "windows-phone": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "windows-phone",
+                    "app_state": "unknown"
+                }
+            }
+        },
+        {
+            "id": "lv7bdbq7064g",
+            "name": "3D Earth Map: Live World View",
+            "short_name": "",
+            "section": "",
+            "formatting": null,
+            "description": "",
+            "increase_is_negative": false,
+            "default_store_app_id": "com.liveearthmap.satelliteview.worldmap",
+            "currency": {
+                "name": "United States Dollar",
+                "code": "USD"
+            },
+            "platforms": {
+                "android": {
+                    "store_type": "google_play",
+                    "store_id": "com.liveearthmap.satelliteview.worldmap",
+                    "bundle_id": "com.liveearthmap.satelliteview.worldmap",
+                    "configured": true,
+                    "platform": "android",
+                    "app_state": "unknown"
+                },
+                "web": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "web",
+                    "app_state": "unknown"
+                },
+                "windows": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "windows",
+                    "app_state": "unknown"
+                },
+                "ios": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "ios",
+                    "app_state": "unknown"
+                },
+                "windows-phone": {
+                    "store_type": null,
+                    "store_id": null,
+                    "bundle_id": null,
+                    "configured": false,
+                    "platform": "windows-phone",
+                    "app_state": "unknown"
+                }
+            }
+        }
+    ]
+}

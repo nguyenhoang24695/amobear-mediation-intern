@@ -1,0 +1,38 @@
+flowchart LR
+    subgraph PARTNER["🏢 Partner Side (Meta BM Owner)"]
+        BM[Business Manager]
+        AD[Ad Accounts]
+        BILL[Billing & Credit Line]
+        SU[System User Token]
+    end
+
+    subgraph AMOBEAR["⚙️ Amobear Nexus Platform"]
+        VAULT[Token Vault<br>AES-256 Encrypted]
+        API[Meta API Client]
+        RBAC[Role-Based Access<br>Internal to Amobear]
+        UI[Admin Portal]
+        DW[(Data Warehouse<br>Insights)]
+    end
+
+    subgraph UA["👥 UA Marketing Team"]
+        UM1[Marketer A]
+        UM2[Marketer B]
+        UM3[Marketer C]
+    end
+
+    BM --> AD
+    BM --> BILL
+    BM -.-> SU
+    SU -->|Issued to Amobear| VAULT
+    VAULT --> API
+    API <-->|Graph API v25.0| BM
+    API --> DW
+    DW --> UI
+    UI --> RBAC
+    RBAC --> UM1
+    RBAC --> UM2
+    RBAC --> UM3
+
+    style BILL fill:#ffcccc
+    style SU fill:#90EE90
+    style VAULT fill:#FFE4B5

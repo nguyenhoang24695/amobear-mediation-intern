@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo:*)",
+      "Bash(ssh:*)",
+      "Bash(chmod:*)",
+      "Bash(cygpath:*)",
+      "Bash(ssh-keyscan:*)",
+      "Bash(powershell -Command \"[Environment]::SetEnvironmentVariable\\(''HOME'', ''C:\\\\Users\\\\hiepnt'', ''User''\\)\")"
+    ]
+  }
+}

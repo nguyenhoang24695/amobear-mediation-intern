@@ -1,0 +1,52 @@
+{
+    "name": "facebook-ads-manager/dashboard",
+    "description": "Complete Facebook Ads Management Platform",
+    "version": "1.0.0",
+    "type": "project",
+    "keywords": ["facebook", "ads", "marketing", "api", "dashboard", "php"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Facebook Ads Manager Team",
+            "email": "dev@example.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "phpstan/phpstan": "^1.0",
+        "squizlabs/php_codesniffer": "^3.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "FacebookAds\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "FacebookAds\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "phpstan": "phpstan analyse src --level=5",
+        "cs-fix": "phpcbf --standard=PSR12 src",
+        "cs-check": "phpcs --standard=PSR12 src",
+        "install-db": "mysql -u root -p facebook_ads_manager < database/schema.sql",
+        "sync-insights": "php src/jobs/sync_insights.php",
+        "run-automation": "php src/jobs/run_automation.php",
+        "sync-historical": "php src/jobs/sync_insights.php historical 30"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

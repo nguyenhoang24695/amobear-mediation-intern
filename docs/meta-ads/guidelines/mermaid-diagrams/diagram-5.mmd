@@ -1,0 +1,12 @@
+flowchart TB
+    START[Daily 8AM Check] --> EVAL{Evaluate rules}
+    EVAL -->|CPI > 1.5x target, 3 days| A1[Pause Ad Set]
+    EVAL -->|ROAS < 0.5, 7 days| A2[Reduce budget 30%]
+    EVAL -->|ROAS > 2.0, 7 days| A3[Increase budget 20%]
+    EVAL -->|CTR < 0.5%| A4[Flag creative refresh]
+    EVAL -->|Frequency > 5| A5[Expand audience]
+
+    A1 & A2 & A3 & A4 & A5 --> LOG[Write audit log]
+    LOG --> NOTIFY[Notify UA Marketer via Slack]
+
+    Note1[Every change is logged:<br>who/when/what/why] -.-> LOG

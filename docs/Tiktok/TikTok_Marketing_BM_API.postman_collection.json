@@ -1,0 +1,1481 @@
+{
+	"info": {
+		"_postman_id": "a8f3c2e1-4b5d-4f6a-9c8e-1234567890ab",
+		"name": "TikTok Marketing & BM API - Amobear Nexus",
+		"description": "Complete Postman collection for TikTok Marketing API v1.3 and Business Center API integration.\n\n**Reference:** Doc 130 - TikTok Marketing & BM API Integration\n\n**Usage:**\n1. Set collection variables: `app_id`, `app_secret`, `access_token`, `advertiser_id`, `bc_id`\n2. Run Auth → Exchange Access Token first (one-time) to populate `access_token`\n3. All other endpoints use `{{access_token}}` in header `Access-Token` (NOT Bearer)\n\n**Important notes:**\n- Header name is `Access-Token`, NOT `Authorization: Bearer`\n- Access token does NOT expire but can be revoked by advertiser\n- Max 30 days per /report/integrated/get request; use async /report/task/ for longer ranges\n- Rate limit: Standard 10 QPS, Advanced 20 QPS per app (sliding 1-minute window)\n\n**Prepared by CTO Advisory for Amobear**",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://business-api.tiktok.com/open_api/v1.3",
+			"type": "string",
+			"description": "TikTok Marketing API production base URL. Use https://sandbox-ads.tiktok.com/open_api/v1.3 for sandbox."
+		},
+		{
+			"key": "app_id",
+			"value": "YOUR_TIKTOK_APP_ID",
+			"type": "string",
+			"description": "TikTok Developer App ID"
+		},
+		{
+			"key": "app_secret",
+			"value": "YOUR_TIKTOK_APP_SECRET",
+			"type": "string",
+			"description": "TikTok Developer App Secret (keep secure)"
+		},
+		{
+			"key": "auth_code",
+			"value": "",
+			"type": "string",
+			"description": "Temporary auth code from OAuth redirect callback. Valid for ~60 seconds."
+		},
+		{
+			"key": "access_token",
+			"value": "YOUR_ACCESS_TOKEN",
+			"type": "string",
+			"description": "Long-lived access token (populated after OAuth exchange)"
+		},
+		{
+			"key": "advertiser_id",
+			"value": "YOUR_ADVERTISER_ID",
+			"type": "string",
+			"description": "Numeric TikTok advertiser_id (find in TikTok Ads Manager URL as aadv parameter)"
+		},
+		{
+			"key": "bc_id",
+			"value": "YOUR_BC_ID",
+			"type": "string",
+			"description": "Business Center ID"
+		},
+		{
+			"key": "campaign_id",
+			"value": "",
+			"type": "string",
+			"description": "Sample campaign_id for filtering adgroup/ad queries"
+		},
+		{
+			"key": "adgroup_id",
+			"value": "",
+			"type": "string",
+			"description": "Sample adgroup_id"
+		},
+		{
+			"key": "start_date",
+			"value": "2026-04-13",
+			"type": "string",
+			"description": "YYYY-MM-DD format, typically T-7"
+		},
+		{
+			"key": "end_date",
+			"value": "2026-04-19",
+			"type": "string",
+			"description": "YYYY-MM-DD format, typically T-1"
+		},
+		{
+			"key": "task_id",
+			"value": "",
+			"type": "string",
+			"description": "Async report task_id (populated after /report/task/create/)"
+		}
+	],
+	"item": [
+		{
+			"name": "01 - Auth",
+			"description": "OAuth 2.0 flow. Unlike Meta (System User token), TikTok uses standard auth_code → access_token exchange. Token does not auto-expire but can be revoked by advertiser.",
+			"item": [
+				{
+					"name": "A0 - Authorization URL (manual browser step)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://business-api.tiktok.com/portal/auth?app_id={{app_id}}&state=nexus_oauth&redirect_uri=https://your-nexus.amobear.com/api/admin/tiktok/oauth/callback",
+							"protocol": "https",
+							"host": [
+								"business-api",
+								"tiktok",
+								"com"
+							],
+							"path": [
+								"portal",
+								"auth"
+							],
+							"query": [
+								{
+									"key": "app_id",
+									"value": "{{app_id}}"
+								},
+								{
+									"key": "state",
+									"value": "nexus_oauth",
+									"description": "Random string to prevent CSRF. Validate in callback."
+								},
+								{
+									"key": "redirect_uri",
+									"value": "https://your-nexus.amobear.com/api/admin/tiktok/oauth/callback",
+									"description": "Must match whitelisted URL in TikTok app config"
+								}
+							]
+						},
+						"description": "**This is NOT an API call** — it's the URL the user opens in browser to grant permission.\n\nAfter user logs in + grants permission, TikTok redirects to your `redirect_uri` with `?auth_code=XXX&state=nexus_oauth`. Capture `auth_code` and set it as collection variable `auth_code`, then run A1 below.\n\n`auth_code` is valid for ~60 seconds — exchange immediately."
+					},
+					"response": []
+				},
+				{
+					"name": "A1 - Exchange Access Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+									"",
+									"const json = pm.response.json();",
+									"if (json.code === 0 && json.data && json.data.access_token) {",
+									"    pm.collectionVariables.set('access_token', json.data.access_token);",
+									"    console.log('✓ access_token saved to collection variable');",
+									"    console.log('advertiser_ids:', json.data.advertiser_ids);",
+									"    if (json.data.advertiser_ids && json.data.advertiser_ids.length > 0) {",
+									"        pm.collectionVariables.set('advertiser_id', json.data.advertiser_ids[0]);",
+									"        console.log('✓ First advertiser_id saved:', json.data.advertiser_ids[0]);",
+									"    }",
+									"} else {",
+									"    console.error('✗ Exchange failed:', json.message, 'code:', json.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"app_id\": \"{{app_id}}\",\n    \"secret\": \"{{app_secret}}\",\n    \"auth_code\": \"{{auth_code}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/oauth2/access_token/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"oauth2",
+								"access_token",
+								""
+							]
+						},
+						"description": "Exchange the short-lived `auth_code` (from redirect callback) for a long-lived `access_token`.\n\n**Response example:**\n```json\n{\n  \"message\": \"OK\",\n  \"code\": 0,\n  \"data\": {\n    \"access_token\": \"xxxx\",\n    \"scope\": [3, 4, 7, 19],\n    \"advertiser_ids\": [\"1234567890\", \"0987654321\"]\n  }\n}\n```\n\n**Test script automatically:** saves `access_token` and first `advertiser_id` to collection variables.\n\n**Error codes:**\n- `40105` — auth_code expired or invalid\n- `40001` — app_id/secret mismatch"
+					},
+					"response": []
+				},
+				{
+					"name": "A2 - Get Advertisers for Token",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/oauth2/advertiser/get/?app_id={{app_id}}&secret={{app_secret}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"oauth2",
+								"advertiser",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "app_id",
+									"value": "{{app_id}}"
+								},
+								{
+									"key": "secret",
+									"value": "{{app_secret}}"
+								}
+							]
+						},
+						"description": "List advertisers accessible by this token. Use to discover all advertiser accounts without relying on BC.\n\n**Response:** `data.list[]` with `advertiser_id` + `advertiser_name`."
+					},
+					"response": []
+				},
+				{
+					"name": "A3 - Revoke Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"app_id\": \"{{app_id}}\",\n    \"secret\": \"{{app_secret}}\",\n    \"access_token\": \"{{access_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/oauth2/revoke_token/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"oauth2",
+								"revoke_token",
+								""
+							]
+						},
+						"description": "⚠️ DESTRUCTIVE — Revokes the access token. Use only when decommissioning or explicit reset.\n\nAfter revoke, the advertiser must re-authorize via Authorization URL (A0) again."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 - Structure (R1-R4)",
+			"description": "Sync account/campaign/adgroup/ad structure. Daily sync at 00:40-00:55 UTC+7 per Nexus schedule.",
+			"item": [
+				{
+					"name": "R1 - Advertiser Info",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/advertiser/info/?advertiser_ids=[\"{{advertiser_id}}\"]",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"advertiser",
+								"info",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_ids",
+									"value": "[\"{{advertiser_id}}\"]",
+									"description": "JSON-encoded array, max 100 IDs per call"
+								}
+							]
+						},
+						"description": "Get advertiser metadata: name, currency, timezone, status, balance.\n\n**Nexus mapping:** `bronze.tiktok_advertisers`\n\n**Used by:** TikTokStructureSyncJob + TikTokTokenValidationJob (to detect revoked tokens).\n\n**Response fields:**\n- advertiser_id, name, currency, timezone\n- status (STATUS_ENABLE / STATUS_DISABLE)\n- balance, role, display_timezone\n- license_no, company, address"
+					},
+					"response": []
+				},
+				{
+					"name": "R2 - Campaign Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/campaign/get/?advertiser_id={{advertiser_id}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"campaign",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000",
+									"description": "Max 1000 per page"
+								},
+								{
+									"key": "fields",
+									"value": "[\"campaign_id\",\"campaign_name\",\"objective_type\",\"app_promotion_type\",\"operation_status\",\"secondary_status\",\"budget\",\"budget_mode\",\"create_time\",\"modify_time\"]",
+									"description": "Whitelist fields to return",
+									"disabled": true
+								},
+								{
+									"key": "filtering",
+									"value": "{\"operation_status\":\"ENABLE\"}",
+									"description": "Optional: filter by status",
+									"disabled": true
+								}
+							]
+						},
+						"description": "List campaigns for advertiser. Paginate by `page` (1-indexed).\n\n**Nexus mapping:** `bronze.tiktok_campaigns`\n\n**Key fields to watch:**\n- `objective_type` — Must be `APP_PROMOTION` for app campaigns (legacy `APP_INSTALL` deprecated)\n- `app_promotion_type` — `APP_INSTALL` / `APP_RETARGETING`\n- `operation_status` vs `secondary_status` — both need to be ENABLE for the campaign to serve\n\n**Pagination loop:**\n```\nwhile page <= data.page_info.total_page: fetch, append, page++\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "R3 - AdGroup Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/adgroup/get/?advertiser_id={{advertiser_id}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adgroup",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								},
+								{
+									"key": "filtering",
+									"value": "{\"campaign_ids\":[\"{{campaign_id}}\"]}",
+									"description": "Optional: filter by campaign_ids",
+									"disabled": true
+								}
+							]
+						},
+						"description": "List ad groups. Contains targeting (age, gender, location, interests), placement, bid.\n\n**Nexus mapping:** `bronze.tiktok_adgroups`\n\n**Key fields:**\n- placement_type, placements[]\n- location_ids, age_groups, gender, languages\n- bid_price, bid_type, optimization_goal\n- pacing (PACING_MODE_SMOOTH / PACING_MODE_FAST)\n- budget, budget_mode, schedule_type\n- app_id (iOS store_id or Android package_name) — **critical for app mapping**"
+					},
+					"response": []
+				},
+				{
+					"name": "R4 - Ad Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ad/get/?advertiser_id={{advertiser_id}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ad",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								},
+								{
+									"key": "filtering",
+									"value": "{\"adgroup_ids\":[\"{{adgroup_id}}\"]}",
+									"description": "Optional: filter by adgroup_ids",
+									"disabled": true
+								}
+							]
+						},
+						"description": "List ads (creatives). Each ad = video/image + CTA + tracking URL.\n\n**Nexus mapping:** `bronze.tiktok_ads`\n\n**Key fields:**\n- ad_id, ad_name, ad_format (SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL, SPARK_ADS)\n- video_id, image_ids[]\n- call_to_action, ad_text, display_name\n- landing_page_url, tracking_url\n- click_tracking_url, impression_tracking_url\n- identity_id, identity_type"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 - Reporting (R5, R7)",
+			"description": "Performance reports. Single endpoint /report/integrated/get with different data_level + dimensions + metrics combinations. This is the MOST IMPORTANT endpoint for Nexus.",
+			"item": [
+				{
+					"name": "R5a - Report BASIC Campaign-level (Daily)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/integrated/get/?advertiser_id={{advertiser_id}}&report_type=BASIC&data_level=AUCTION_CAMPAIGN&dimensions=[\"campaign_id\",\"stat_time_day\"]&metrics=[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cost_per_conversion\",\"cpm\",\"cpc\",\"ctr\",\"real_time_app_install\",\"real_time_app_install_cost\"]&start_date={{start_date}}&end_date={{end_date}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"integrated",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "report_type",
+									"value": "BASIC",
+									"description": "BASIC | AUDIENCE | PLAYABLE_MATERIAL | CATALOG | BC"
+								},
+								{
+									"key": "data_level",
+									"value": "AUCTION_CAMPAIGN",
+									"description": "AUCTION_ADVERTISER | AUCTION_CAMPAIGN | AUCTION_ADGROUP | AUCTION_AD"
+								},
+								{
+									"key": "dimensions",
+									"value": "[\"campaign_id\",\"stat_time_day\"]",
+									"description": "Must include a time dimension. Add \"country_code\" for geo breakdown."
+								},
+								{
+									"key": "metrics",
+									"value": "[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cost_per_conversion\",\"cpm\",\"cpc\",\"ctr\",\"real_time_app_install\",\"real_time_app_install_cost\"]",
+									"description": "Max 20 metrics per request"
+								},
+								{
+									"key": "start_date",
+									"value": "{{start_date}}"
+								},
+								{
+									"key": "end_date",
+									"value": "{{end_date}}",
+									"description": "Max 30 days range. For longer, use async R7."
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								},
+								{
+									"key": "query_lifetime",
+									"value": "false",
+									"disabled": true
+								}
+							]
+						},
+						"description": "**⭐ Main endpoint for Nexus TikTokReportSyncDailyJob**\n\nCampaign-level daily performance. Maps to `bronze.tiktok_report` with `data_level='AUCTION_CAMPAIGN'`.\n\n**Anti-double-counting reminder:**\n- `spend` → SOLE SOURCE for TikTok cost, insert into `gold.fact_campaign_roi`\n- `real_time_app_install` → CROSS-VALIDATION ONLY, NEVER insert to Gold as `installs` (MMP is authoritative)\n\n**Response structure:**\n```json\n{\n  \"data\": {\n    \"list\": [\n      {\n        \"dimensions\": {\"campaign_id\": \"...\", \"stat_time_day\": \"2026-04-18\"},\n        \"metrics\": {\"spend\": \"1234.56\", \"impressions\": \"100000\", ...}\n      }\n    ],\n    \"page_info\": {\"page\": 1, \"page_size\": 1000, \"total_number\": N, \"total_page\": X}\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "R5b - Report BASIC AdGroup-level",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/integrated/get/?advertiser_id={{advertiser_id}}&report_type=BASIC&data_level=AUCTION_ADGROUP&dimensions=[\"adgroup_id\",\"stat_time_day\"]&metrics=[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cost_per_conversion\",\"cpm\",\"cpc\",\"ctr\"]&start_date={{start_date}}&end_date={{end_date}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"integrated",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "report_type",
+									"value": "BASIC"
+								},
+								{
+									"key": "data_level",
+									"value": "AUCTION_ADGROUP"
+								},
+								{
+									"key": "dimensions",
+									"value": "[\"adgroup_id\",\"stat_time_day\"]"
+								},
+								{
+									"key": "metrics",
+									"value": "[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cost_per_conversion\",\"cpm\",\"cpc\",\"ctr\"]"
+								},
+								{
+									"key": "start_date",
+									"value": "{{start_date}}"
+								},
+								{
+									"key": "end_date",
+									"value": "{{end_date}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								}
+							]
+						},
+						"description": "AdGroup-level daily performance. **Phase 2 scope** for Nexus — more granular optimization signal.\n\nNote: Volume scales ~5-10x vs Campaign-level."
+					},
+					"response": []
+				},
+				{
+					"name": "R5c - Report BASIC Ad-level",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/integrated/get/?advertiser_id={{advertiser_id}}&report_type=BASIC&data_level=AUCTION_AD&dimensions=[\"ad_id\",\"stat_time_day\"]&metrics=[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cost_per_conversion\",\"cpm\",\"cpc\",\"ctr\",\"video_play_actions\",\"video_watched_2s\",\"video_watched_6s\"]&start_date={{start_date}}&end_date={{end_date}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"integrated",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "report_type",
+									"value": "BASIC"
+								},
+								{
+									"key": "data_level",
+									"value": "AUCTION_AD"
+								},
+								{
+									"key": "dimensions",
+									"value": "[\"ad_id\",\"stat_time_day\"]"
+								},
+								{
+									"key": "metrics",
+									"value": "[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cost_per_conversion\",\"cpm\",\"cpc\",\"ctr\",\"video_play_actions\",\"video_watched_2s\",\"video_watched_6s\"]"
+								},
+								{
+									"key": "start_date",
+									"value": "{{start_date}}"
+								},
+								{
+									"key": "end_date",
+									"value": "{{end_date}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								}
+							]
+						},
+						"description": "Ad-level performance with video engagement metrics. **Phase 2 scope** — per-creative CPI, video completion rate.\n\n**Video metrics available:**\n- video_play_actions (plays)\n- video_watched_2s, video_watched_6s (retention)\n- video_views_p25, p50, p75, p100 (completion quartiles)\n- average_video_play, average_video_play_per_user"
+					},
+					"response": []
+				},
+				{
+					"name": "R5d - Report Country Breakdown",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/integrated/get/?advertiser_id={{advertiser_id}}&report_type=BASIC&data_level=AUCTION_CAMPAIGN&dimensions=[\"campaign_id\",\"stat_time_day\",\"country_code\"]&metrics=[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cpm\",\"ctr\"]&start_date={{start_date}}&end_date={{end_date}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"integrated",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "report_type",
+									"value": "BASIC"
+								},
+								{
+									"key": "data_level",
+									"value": "AUCTION_CAMPAIGN"
+								},
+								{
+									"key": "dimensions",
+									"value": "[\"campaign_id\",\"stat_time_day\",\"country_code\"]"
+								},
+								{
+									"key": "metrics",
+									"value": "[\"spend\",\"impressions\",\"clicks\",\"conversion\",\"cpm\",\"ctr\"]"
+								},
+								{
+									"key": "start_date",
+									"value": "{{start_date}}"
+								},
+								{
+									"key": "end_date",
+									"value": "{{end_date}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								}
+							]
+						},
+						"description": "Campaign performance with country breakdown. Each row = (campaign, date, country) combination.\n\n**Use cases:**\n- Geo heatmap on UA Dashboard\n- Per-country ROAS analysis\n- Detect geo-mix changes that affect CPI\n\n**Row count multiplier:** if campaign runs in 50 countries → 50x rows vs R5a."
+					},
+					"response": []
+				},
+				{
+					"name": "R5e - Report AUDIENCE (demographics)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/integrated/get/?advertiser_id={{advertiser_id}}&report_type=AUDIENCE&data_level=AUCTION_CAMPAIGN&dimensions=[\"campaign_id\",\"stat_time_day\",\"age\",\"gender\"]&metrics=[\"spend\",\"impressions\",\"clicks\",\"conversion\"]&start_date={{start_date}}&end_date={{end_date}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"integrated",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "report_type",
+									"value": "AUDIENCE",
+									"description": "Demographics breakdown"
+								},
+								{
+									"key": "data_level",
+									"value": "AUCTION_CAMPAIGN"
+								},
+								{
+									"key": "dimensions",
+									"value": "[\"campaign_id\",\"stat_time_day\",\"age\",\"gender\"]"
+								},
+								{
+									"key": "metrics",
+									"value": "[\"spend\",\"impressions\",\"clicks\",\"conversion\"]"
+								},
+								{
+									"key": "start_date",
+									"value": "{{start_date}}"
+								},
+								{
+									"key": "end_date",
+									"value": "{{end_date}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								}
+							]
+						},
+						"description": "Demographic breakdown. Phase 2+ for Nexus.\n\n**Available dimensions for AUDIENCE:** age, gender, country_code, platform, interest_category_name."
+					},
+					"response": []
+				},
+				{
+					"name": "R7a - Async Report Task Create",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const json = pm.response.json();",
+									"if (json.code === 0 && json.data && json.data.task_id) {",
+									"    pm.collectionVariables.set('task_id', json.data.task_id);",
+									"    console.log('✓ task_id saved:', json.data.task_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"advertiser_id\": \"{{advertiser_id}}\",\n    \"report_type\": \"BASIC\",\n    \"data_level\": \"AUCTION_CAMPAIGN\",\n    \"dimensions\": [\"campaign_id\", \"stat_time_day\"],\n    \"metrics\": [\"spend\", \"impressions\", \"clicks\", \"conversion\"],\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-03-31\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/report/task/create/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"task",
+								"create",
+								""
+							]
+						},
+						"description": "Create async report task for date ranges > 30 days or result > 20,000 rows.\n\n**Use case:** Historical backfill when first integrating an advertiser.\n\n**Workflow:**\n1. POST /report/task/create/ → get task_id\n2. Poll GET /report/task/check/ every 30s (max 30 min)\n3. When status=SUCCESS → GET /report/task/get/ (paginated)\n\n**Test script** saves `task_id` to collection variable for next steps."
+					},
+					"response": []
+				},
+				{
+					"name": "R7b - Async Report Task Check",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/task/check/?advertiser_id={{advertiser_id}}&task_id={{task_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"task",
+								"check",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "task_id",
+									"value": "{{task_id}}"
+								}
+							]
+						},
+						"description": "Check status of async report task.\n\n**Status values:**\n- `QUEUING` — waiting to run\n- `PROCESSING` — running\n- `SUCCESS` — done, ready to fetch via R7c\n- `FAILED` — error, check `error_message`\n- `CANCELED` — user canceled\n\nPoll every 30s until SUCCESS or FAILED. Max timeout 30 min."
+					},
+					"response": []
+				},
+				{
+					"name": "R7c - Async Report Task Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/report/task/get/?advertiser_id={{advertiser_id}}&task_id={{task_id}}&page=1&page_size=1000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"task",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "task_id",
+									"value": "{{task_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "1000"
+								}
+							]
+						},
+						"description": "Fetch results of completed async task. Paginated — iterate `page` until `page > total_page`."
+					},
+					"response": []
+				},
+				{
+					"name": "R7d - Async Report Task Cancel",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"advertiser_id\": \"{{advertiser_id}}\",\n    \"task_id\": \"{{task_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/report/task/cancel/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"task",
+								"cancel",
+								""
+							]
+						},
+						"description": "Cancel a running async task. Use when task stuck or no longer needed."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04 - Business Center (R8-R13)",
+			"description": "BC API — equivalent of Meta Business Manager. Provides org-level visibility: advertisers, assets, transactions, balances.",
+			"item": [
+				{
+					"name": "R8 - BC Get (list Business Centers)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const json = pm.response.json();",
+									"if (json.code === 0 && json.data && json.data.list && json.data.list.length > 0) {",
+									"    const firstBc = json.data.list[0];",
+									"    if (firstBc.bc_info && firstBc.bc_info.bc_id) {",
+									"        pm.collectionVariables.set('bc_id', firstBc.bc_info.bc_id);",
+									"        console.log('✓ First bc_id saved:', firstBc.bc_info.bc_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bc/get/?page=1&page_size=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"bc",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "List all Business Centers accessible by this token.\n\n**Nexus mapping:** `tiktok_business_centers` (PostgreSQL)\n\n**Response:**\n```json\n{\n  \"data\": {\n    \"list\": [{\n      \"bc_info\": {\n        \"bc_id\": \"1234567890\",\n        \"name\": \"Amobear BC\",\n        \"company\": \"Amobear Ltd\",\n        \"status\": \"ACTIVE\"\n      }\n    }]\n  }\n}\n```\n\n**Test script** saves first `bc_id` to collection variable."
+					},
+					"response": []
+				},
+				{
+					"name": "R9 - BC Advertiser Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bc/advertiser/get/?bc_id={{bc_id}}&page=1&page_size=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"bc",
+								"advertiser",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "bc_id",
+									"value": "{{bc_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "List advertisers within a BC. Use to discover all advertiser_ids before calling Marketing API per advertiser.\n\n**Nexus mapping:** `tiktok_advertisers`"
+					},
+					"response": []
+				},
+				{
+					"name": "R10 - BC Transaction Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bc/transaction/get/?bc_id={{bc_id}}&start_date={{start_date}}&end_date={{end_date}}&page=1&page_size=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"bc",
+								"transaction",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "bc_id",
+									"value": "{{bc_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "{{start_date}}"
+								},
+								{
+									"key": "end_date",
+									"value": "{{end_date}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								},
+								{
+									"key": "transaction_type",
+									"value": "SPEND",
+									"description": "SPEND | RECHARGE | REFUND | TRANSFER_IN | TRANSFER_OUT",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Transaction records for BC: recharges, spends, refunds. Used for **finance reconciliation**.\n\n**Nexus mapping:** `bronze.tiktok_bc_transactions`\n\n**Use case:** Compare `SUM(spend from R5)` vs `SUM(SPEND transactions from R10)` — must match within tolerance, otherwise flag finance discrepancy."
+					},
+					"response": []
+				},
+				{
+					"name": "R11 - BC Advertiser Balance Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bc/advertiser/balance/get/?bc_id={{bc_id}}&advertiser_ids=[\"{{advertiser_id}}\"]&page=1&page_size=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"bc",
+								"advertiser",
+								"balance",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "bc_id",
+									"value": "{{bc_id}}"
+								},
+								{
+									"key": "advertiser_ids",
+									"value": "[\"{{advertiser_id}}\"]",
+									"description": "Max 100 per call"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Get advertiser balance (prepaid credit).\n\n**Nexus mapping:** refresh every 4h, alert when `balance < threshold`.\n\n**Response fields:**\n- balance, grant_balance (gifted credit)\n- cash_balance, frozen_balance\n- currency"
+					},
+					"response": []
+				},
+				{
+					"name": "R12 - BC Asset Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bc/asset/get/?bc_id={{bc_id}}&asset_type=ADVERTISER&page=1&page_size=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"bc",
+								"asset",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "bc_id",
+									"value": "{{bc_id}}"
+								},
+								{
+									"key": "asset_type",
+									"value": "ADVERTISER",
+									"description": "ADVERTISER | PIXEL | CATALOG | APP | BUSINESS_ENTITY"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "List assets in BC by type. Nice-to-have for Nexus Phase 2 (audit which pixels/apps are registered)."
+					},
+					"response": []
+				},
+				{
+					"name": "R13 - BC Member Get",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bc/member/get/?bc_id={{bc_id}}&page=1&page_size=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"bc",
+								"member",
+								"get",
+								""
+							],
+							"query": [
+								{
+									"key": "bc_id",
+									"value": "{{bc_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "⚠️ **PII-sensitive.** List BC members (users, emails, roles).\n\n**Nexus policy:** Do NOT sync in Phase 1. Only use ad-hoc for audit purposes. If synced, store in PostgreSQL encrypted, never in StarRocks."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 - Tool & Utility",
+			"description": "Helper endpoints — metadata lookups, region/language lists, etc.",
+			"item": [
+				{
+					"name": "T1 - Tool Region",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/tool/region/?advertiser_id={{advertiser_id}}&placements=[\"PLACEMENT_TIKTOK\"]",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tool",
+								"region",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								},
+								{
+									"key": "placements",
+									"value": "[\"PLACEMENT_TIKTOK\"]"
+								}
+							]
+						},
+						"description": "List of supported targeting regions (countries, states). Populate `dim_country` mapping."
+					},
+					"response": []
+				},
+				{
+					"name": "T2 - Tool Language",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/tool/language/?advertiser_id={{advertiser_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tool",
+								"language",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								}
+							]
+						},
+						"description": "List of supported targeting languages."
+					},
+					"response": []
+				},
+				{
+					"name": "T3 - App Info",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/app/list/?advertiser_id={{advertiser_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"app",
+								"list",
+								""
+							],
+							"query": [
+								{
+									"key": "advertiser_id",
+									"value": "{{advertiser_id}}"
+								}
+							]
+						},
+						"description": "List apps registered with this advertiser. **CRITICAL for Nexus** — resolves `app_id` → store identifiers (package_name for Android, iOS store ID).\n\nThis is the primary data source for `silver.dim_tiktok_campaign_app` resolution."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "06 - Write APIs (Phase 3 - FUTURE)",
+			"description": "⚠️ **PHASE 3 — NOT IN CURRENT SCOPE.** These endpoints require additional scope approval and risk review. Included as reference for future roadmap.",
+			"item": [
+				{
+					"name": "W1 - Campaign Create (DRAFT)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"advertiser_id\": \"{{advertiser_id}}\",\n    \"campaign_name\": \"Nexus-Auto-APP-PROMO-{{$timestamp}}\",\n    \"objective_type\": \"APP_PROMOTION\",\n    \"app_promotion_type\": \"APP_INSTALL\",\n    \"budget_mode\": \"BUDGET_MODE_TOTAL\",\n    \"budget\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/campaign/create/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"campaign",
+								"create",
+								""
+							]
+						},
+						"description": "⚠️ **Phase 3 only.** Create campaign. Requires write scope + allowlist.\n\n**Objective type must be:** `APP_PROMOTION` (legacy `APP_INSTALL` deprecated Jan 2024)."
+					},
+					"response": []
+				},
+				{
+					"name": "W2 - Campaign Update (DRAFT)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"advertiser_id\": \"{{advertiser_id}}\",\n    \"campaign_id\": \"{{campaign_id}}\",\n    \"budget\": 200.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/campaign/update/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"campaign",
+								"update",
+								""
+							]
+						},
+						"description": "⚠️ **Phase 3 only.** Update campaign budget/name."
+					},
+					"response": []
+				},
+				{
+					"name": "W3 - Campaign Status Update (DRAFT)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Access-Token",
+								"value": "{{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"advertiser_id\": \"{{advertiser_id}}\",\n    \"campaign_ids\": [\"{{campaign_id}}\"],\n    \"operation_status\": \"DISABLE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/campaign/status/update/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"campaign",
+								"status",
+								"update",
+								""
+							]
+						},
+						"description": "⚠️ **Phase 3 only — HIGH RISK.** Pause/enable campaign. Equivalent of AdMob's PATCH MG state change. Needs:\n- User approval UI\n- Audit log (WHO, WHEN, WHY)\n- Rollback capability\n- Alert on every execution"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "key",
+				"value": "Access-Token",
+				"type": "string"
+			},
+			{
+				"key": "value",
+				"value": "{{access_token}}",
+				"type": "string"
+			},
+			{
+				"key": "in",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Collection-level pre-request: ensure base variables are set",
+					"const requiredVars = ['base_url', 'app_id'];",
+					"const missing = requiredVars.filter(v => !pm.collectionVariables.get(v) || pm.collectionVariables.get(v).startsWith('YOUR_'));",
+					"if (missing.length > 0) {",
+					"    console.warn('⚠️ Missing or placeholder variables:', missing.join(', '));",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Collection-level test: check TikTok API response code",
+					"if (pm.response && pm.response.code === 200) {",
+					"    try {",
+					"        const json = pm.response.json();",
+					"        if (json.code && json.code !== 0) {",
+					"            console.error(`✗ TikTok API error code=${json.code}: ${json.message}`);",
+					"            if (json.code === 40100) {",
+					"                console.error('→ Access token invalid or revoked. Re-run Auth A1.');",
+					"            } else if (json.code === 40001) {",
+					"                console.error('→ Parameter error. Check field names/values.');",
+					"            } else if (json.code === 50002) {",
+					"                console.error('→ Rate limit exceeded. Back off and retry.');",
+					"            }",
+					"        }",
+					"    } catch (e) {",
+					"        // Not JSON, skip",
+					"    }",
+					"}"
+				]
+			}
+		}
+	]
+}

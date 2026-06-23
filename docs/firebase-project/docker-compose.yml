@@ -1,0 +1,13 @@
+services:
+  starrocks-scheduler:
+    build: .
+    container_name: starrocks_scheduler
+    restart: always
+    volumes:
+      # Mount code and keys to allow updates without rebuilding
+      - ./code:/app/code
+      - ./z_api_key:/app/z_api_key
+      # Mount logs to host
+      - ./logs:/var/log
+    environment:
+      - TZ=Asia/Ho_Chi_Minh

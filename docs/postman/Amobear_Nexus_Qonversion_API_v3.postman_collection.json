@@ -1,0 +1,602 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-qonv-nexus-2026-collection",
+		"name": "Amobear Nexus — Qonversion API v3",
+		"description": "Postman collection cho Qonversion API integration vào Amobear Nexus.\n\nDoc reference: 126 — Qonversion Integration\n\n## Setup\n1. Vào Qonversion Dashboard → Project Settings → Copy Project Key, Secret Key\n2. Set biến `project_key` và `secret_key` trong Environment\n3. Set `base_url` = https://api.qonversion.io/v3\n4. Thay `user_id` bằng Qonversion User ID thực\n\n## Authentication\n- Standard endpoints: `Authorization: Bearer {{project_key}}`\n- Grant/Revoke entitlements: `Authorization: Bearer {{secret_key}}`\n\n## Webhook Testing\n- Folder 'Webhook Simulation' chứa mock payload để test Nexus webhook receiver",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://api.qonversion.io/v3",
+			"type": "string"
+		},
+		{
+			"key": "project_key",
+			"value": "YOUR_PROJECT_KEY_HERE",
+			"type": "string",
+			"description": "Qonversion Project Key — from Dashboard → Project Settings"
+		},
+		{
+			"key": "secret_key",
+			"value": "sk_YOUR_SECRET_KEY_HERE",
+			"type": "string",
+			"description": "Qonversion Secret Key (sk_ prefix) — for grant/revoke entitlements only"
+		},
+		{
+			"key": "user_id",
+			"value": "QON_sample_user_id",
+			"type": "string",
+			"description": "Qonversion internal user ID"
+		},
+		{
+			"key": "identity_id",
+			"value": "amobear_custom_user_123",
+			"type": "string",
+			"description": "Custom identity ID (Amobear user ID)"
+		},
+		{
+			"key": "nexus_webhook_url",
+			"value": "https://nexus.amobear.com/api/webhooks/qonversion",
+			"type": "string",
+			"description": "Nexus webhook endpoint for testing"
+		},
+		{
+			"key": "nexus_webhook_local",
+			"value": "http://localhost:5000/api/webhooks/qonversion",
+			"type": "string",
+			"description": "Local dev webhook endpoint"
+		}
+	],
+	"item": [
+		{
+			"name": "01 — Users",
+			"description": "Quản lý Qonversion users. Mỗi app install tạo 1 Qonversion user.",
+			"item": [
+				{
+					"name": "1.1 Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{user_id}}\",\n  \"environment\": \"production\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						},
+						"description": "Tạo user mới trong Qonversion. Thường SDK tự tạo, dùng API cho server-side flows.\n\n**Nexus use:** Verify user exists trước khi query entitlements."
+					}
+				},
+				{
+					"name": "1.2 Retrieve User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "Lấy thông tin user. Response bao gồm platform, environment, created_at.\n\n**Nexus use:** User lookup khi AI Insight cần subscription context."
+					}
+				}
+			]
+		},
+		{
+			"name": "02 — User Properties",
+			"description": "User-level attributes cho segmentation và analytics.",
+			"item": [
+				{
+					"name": "2.1 Get User Properties",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/properties",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "properties"]
+						},
+						"description": "Lấy custom user properties (country, app version, IDFA, etc.).\n\n**Nexus use:** Enrich user data cho segmentation."
+					}
+				},
+				{
+					"name": "2.2 Set User Properties",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"properties\": [\n    {\n      \"key\": \"_amobear_app_group\",\n      \"value\": \"puzzle_games\"\n    },\n    {\n      \"key\": \"_amobear_cohort\",\n      \"value\": \"2026-Q1\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/properties",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "properties"]
+						},
+						"description": "Set custom properties cho user. Dùng prefix `_amobear_` cho Nexus-specific properties."
+					}
+				}
+			]
+		},
+		{
+			"name": "03 — Identity",
+			"description": "Cross-platform user identity management. Map Qonversion user_id ↔ Amobear custom_user_id.",
+			"item": [
+				{
+					"name": "3.1 Create Identity",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/identities/{{identity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["identities", "{{identity_id}}"]
+						},
+						"description": "Link Amobear custom user ID với Qonversion user. Cho phép cross-device access.\n\n**Nexus use:** Map Qonversion events tới Amobear internal user IDs."
+					}
+				},
+				{
+					"name": "3.2 Retrieve Identity",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/identities/{{identity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["identities", "{{identity_id}}"]
+						},
+						"description": "Lookup Qonversion user_id từ Amobear identity_id."
+					}
+				}
+			]
+		},
+		{
+			"name": "04 — Entitlements",
+			"description": "Quản lý premium access. GET dùng Project Key, POST/DELETE dùng Secret Key.",
+			"item": [
+				{
+					"name": "4.1 Get User Entitlements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/entitlements",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "entitlements"]
+						},
+						"description": "Lấy tất cả entitlements (active + expired) của user.\n\nResponse bao gồm: active status, expires timestamp, product_id, subscription renew_state.\n\n**Nexus use:** Cross-validate subscription status, AI Insight context."
+					}
+				},
+				{
+					"name": "4.2 Grant Entitlement (Secret Key)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"premium\",\n  \"expires\": 1735689600\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/entitlements",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "entitlements"]
+						},
+						"description": "⚠️ Dùng SECRET KEY — Grant premium access cho user.\n\n`expires`: Unix timestamp khi entitlement hết hạn.\n\n**Nexus use:** Admin tool — grant manual entitlements cho support cases."
+					}
+				},
+				{
+					"name": "4.3 Revoke Entitlement (Secret Key)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/entitlements/premium",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "entitlements", "premium"]
+						},
+						"description": "⚠️ Dùng SECRET KEY — Revoke specific entitlement.\n\n**Nexus use:** Admin tool — revoke access khi phát hiện fraud."
+					}
+				}
+			]
+		},
+		{
+			"name": "05 — Products",
+			"description": "Quản lý IAP products đã cấu hình trong Qonversion dashboard.",
+			"item": [
+				{
+					"name": "5.1 List All Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/products",
+							"host": ["{{base_url}}"],
+							"path": ["products"]
+						},
+						"description": "Lấy danh sách tất cả products đã cấu hình trong Qonversion.\n\n**Nexus use:** Daily sync product catalog → StarRocks metadata table."
+					}
+				}
+			]
+		},
+		{
+			"name": "06 — Purchases",
+			"description": "Record purchases (chủ yếu cho Stripe web purchases). App purchases tự tracked qua SDK.",
+			"item": [
+				{
+					"name": "6.1 Record Stripe Purchase",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{project_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currency\": \"USD\",\n  \"price\": \"9.99\",\n  \"stripe_store_data\": {\n    \"subscription_id\": \"sub_XXXXXX\",\n    \"product_id\": \"prod_YYYYYY\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/purchases",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "purchases"]
+						},
+						"description": "Record web/Stripe purchase. Không cần cho mobile IAP (SDK handles).\n\n**Nexus use:** Reference only — nếu Amobear có web subscription flow."
+					}
+				}
+			]
+		},
+		{
+			"name": "07 — Webhook Simulation",
+			"description": "Mock webhook payloads để test Nexus webhook receiver endpoint.\n\n⚡ Gửi tới Nexus local/staging endpoint để validate processing pipeline.",
+			"item": [
+				{
+					"name": "7.1 Simulate: trial_started",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"trial_started\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1712534400,\n  \"created_at\": 1712534400,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": null,\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000001\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1712534400,\n  \"expiration_date\": 1713139200,\n  \"subscription_period\": \"P1W\",\n  \"offer_type\": \"free_trial\",\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "Simulate trial_started event. No revenue. Nexus should:\n1. Return 200 OK immediately\n2. Save to MinIO\n3. Insert into bronze.qonversion_events_raw\n4. NOT trigger revenue alert"
+					}
+				},
+				{
+					"name": "7.2 Simulate: trial_converted",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"trial_converted\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1713139200,\n  \"created_at\": 1713139200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 8.49,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000002\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1713139200,\n  \"expiration_date\": 1715731200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "Simulate trial → paid conversion. HAS revenue (proceeds $8.49).\nNexus should: Insert with revenue, count towards iap_revenue_usd in Gold."
+					}
+				},
+				{
+					"name": "7.3 Simulate: subscription_renewed",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"subscription_renewed\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1715731200,\n  \"created_at\": 1715731200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 8.49,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000003\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1715731200,\n  \"expiration_date\": 1718323200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "Simulate renewal. Same revenue as conversion. Nexus should add to daily revenue."
+					}
+				},
+				{
+					"name": "7.4 Simulate: subscription_canceled",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"subscription_canceled\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1716508800,\n  \"created_at\": 1716508800,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": null,\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000004\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1715731200,\n  \"expiration_date\": 1718323200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "Simulate cancel. No revenue — user still has access until expiration_date.\nNexus should: Record event, count towards subscriptions_canceled in Gold."
+					}
+				},
+				{
+					"name": "7.5 Simulate: subscription_refunded",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"subscription_refunded\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1716595200,\n  \"created_at\": 1716595200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": -8.49,\n    \"value_usd\": -9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000005\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1715731200,\n  \"expiration_date\": 1718323200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "⚠️ REFUND — NEGATIVE revenue. Nexus should:\n1. Record with revenue_sign = -1\n2. Subtract from daily iap_revenue\n3. Count towards iap_refunds_usd\n4. TRIGGER refund alert"
+					}
+				},
+				{
+					"name": "7.6 Simulate: subscription_billing_issue",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"subscription_billing_issue\",\n  \"user_id\": \"QON_test_user_002\",\n  \"custom_user_id\": \"amobear_user_67890\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"ABCD1234-5678-9012-EFGH-IJKLMNOP3456\",\n  \"time\": 1716681600,\n  \"created_at\": 1716681600,\n  \"product_id\": \"com.amobear.wordgame.premium.yearly\",\n  \"currency\": \"VND\",\n  \"country\": \"VN\",\n  \"platform\": \"Android\",\n  \"environment\": \"production\",\n  \"revenue\": null,\n  \"price\": {\n    \"value\": 249000,\n    \"value_usd\": 9.99,\n    \"currency\": \"VND\"\n  },\n  \"transaction_id\": \"GPA.3333-4444-5555-66666\",\n  \"original_transaction_id\": \"GPA.3333-4444-5555-00000\",\n  \"purchase_date\": 1684972800,\n  \"expiration_date\": 1716595200,\n  \"subscription_period\": \"P1Y\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.wordgame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "Billing issue — payment failed. No revenue. Signal for churn prediction.\nNote: VND currency, Android platform — test multi-currency handling."
+					}
+				},
+				{
+					"name": "7.7 Simulate: non_renewing_purchase (One-time IAP)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"non_renewing_purchase\",\n  \"user_id\": \"QON_test_user_003\",\n  \"custom_user_id\": \"amobear_user_99999\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"\",\n  \"time\": 1716768000,\n  \"created_at\": 1716768000,\n  \"product_id\": \"com.amobear.puzzlegame.coins.500\",\n  \"currency\": \"USD\",\n  \"country\": \"JP\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 0.85,\n    \"value_usd\": 0.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 0.99,\n    \"value_usd\": 0.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000200000001\",\n  \"original_transaction_id\": \"2000000200000001\",\n  \"purchase_date\": 1716768000,\n  \"expiration_date\": null,\n  \"subscription_period\": null,\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "One-time consumable IAP (coins). No expiration. Revenue counts towards IAP total.\nTest: no subscription_period, no expiration_date."
+					}
+				},
+				{
+					"name": "7.8 Simulate: DUPLICATE event (test dedup)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization-Token",
+								"value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"trial_converted\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1713139200,\n  \"created_at\": 1713139200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 8.49,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000002\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1713139200,\n  \"expiration_date\": 1715731200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}/",
+							"host": ["{{nexus_webhook_local}}"],
+							"path": [""]
+						},
+						"description": "⚠️ DUPLICATE of 7.2 (same transaction_id + event_name).\nNexus should: Return 200 OK but flag is_duplicate=true, NOT double-count revenue."
+					}
+				}
+			]
+		},
+		{
+			"name": "08 — Webhook Report Receiver",
+			"description": "Test Nexus endpoint nhận scheduled raw data report links từ Qonversion.",
+			"item": [
+				{
+					"name": "8.1 Simulate: Scheduled Report Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"report_uid\": \"4AJ-qk3\",\n  \"report_name\": \"Daily Nexus Reconciliation\",\n  \"project_key\": \"{{project_key}}\",\n  \"platform\": \"iOS\",\n  \"delete_at\": 1716854400,\n  \"link\": \"https://api.qonversion.io/reports/download/SAMPLE_LINK_TOKEN\",\n  \"send_at\": 21600,\n  \"period\": 86400,\n  \"environment\": 1\n}"
+						},
+						"url": {
+							"raw": "{{nexus_webhook_local}}-reports",
+							"host": ["{{nexus_webhook_local}}-reports"],
+							"path": [""]
+						},
+						"description": "Simulate Qonversion sending scheduled report download link.\nNexus should: Download CSV from link → Parse → Reconcile with webhook data."
+					}
+				}
+			]
+		}
+	]
+}

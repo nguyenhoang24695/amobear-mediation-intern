@@ -1,0 +1,1310 @@
+{
+  "info": {
+    "_postman_id": "mediation-pro-admob-api",
+    "name": "Mediation Pro - AdMob API Collection",
+    "description": "Complete AdMob API collection for Mediation optimization platform.\n\n## Setup Instructions\n\n### 1. Create Google Cloud Project\n1. Go to https://console.cloud.google.com\n2. Create new project or select existing\n3. Enable \"AdMob API\" in API Library\n\n### 2. Create OAuth 2.0 Credentials\n1. Go to APIs & Services > Credentials\n2. Create OAuth 2.0 Client ID (Web application)\n3. Add Postman callback URL: https://oauth.pstmn.io/v1/callback\n4. Copy Client ID and Client Secret\n\n### 3. Configure Postman Variables\nSet these in Collection Variables:\n- `client_id`: Your OAuth Client ID\n- `client_secret`: Your OAuth Client Secret\n- `publisher_id`: Your AdMob Publisher ID (e.g., pub-1234567890123456)\n\n### 4. Get Access Token\n1. Go to Authorization tab\n2. Click \"Get New Access Token\"\n3. Complete Google sign-in\n4. Use the token for all requests\n\n## API Documentation\n- AdMob API: https://developers.google.com/admob/api/v1/getting-started\n- Write API (Alpha): Requires allowlist - contact Google rep",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      {
+        "key": "grant_type",
+        "value": "authorization_code",
+        "type": "string"
+      },
+      {
+        "key": "tokenName",
+        "value": "AdMob Access Token",
+        "type": "string"
+      },
+      {
+        "key": "challengeAlgorithm",
+        "value": "S256",
+        "type": "string"
+      },
+      {
+        "key": "accessTokenUrl",
+        "value": "https://oauth2.googleapis.com/token",
+        "type": "string"
+      },
+      {
+        "key": "authUrl",
+        "value": "https://accounts.google.com/o/oauth2/v2/auth",
+        "type": "string"
+      },
+      {
+        "key": "redirect_uri",
+        "value": "https://oauth.pstmn.io/v1/callback",
+        "type": "string"
+      },
+      {
+        "key": "scope",
+        "value": "https://www.googleapis.com/auth/admob.readonly https://www.googleapis.com/auth/admob.report",
+        "type": "string"
+      },
+      {
+        "key": "clientSecret",
+        "value": "{{client_secret}}",
+        "type": "string"
+      },
+      {
+        "key": "clientId",
+        "value": "{{client_id}}",
+        "type": "string"
+      },
+      {
+        "key": "useBrowser",
+        "value": true,
+        "type": "boolean"
+      },
+      {
+        "key": "client_authentication",
+        "value": "body",
+        "type": "string"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://admob.googleapis.com/v1",
+      "type": "string"
+    },
+    {
+      "key": "base_url_alpha",
+      "value": "https://admob.googleapis.com/v1alpha",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+      "type": "string"
+    },
+    {
+      "key": "client_secret",
+      "value": "YOUR_OAUTH_CLIENT_SECRET",
+      "type": "string"
+    },
+    {
+      "key": "publisher_id",
+      "value": "pub-1234567890123456",
+      "type": "string"
+    },
+    {
+      "key": "account_name",
+      "value": "accounts/pub-1234567890123456",
+      "type": "string"
+    },
+    {
+      "key": "app_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ad_unit_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mediation_group_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "description": "OAuth 2.0 authentication flows for Google APIs",
+      "item": [
+        {
+          "name": "Get Access Token (Manual)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "code",
+                  "value": "{{auth_code}}",
+                  "description": "Authorization code from OAuth flow",
+                  "type": "text"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code",
+                  "type": "text"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "https://oauth.pstmn.io/v1/callback",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://oauth2.googleapis.com/token",
+              "protocol": "https",
+              "host": ["oauth2", "googleapis", "com"],
+              "path": ["token"]
+            },
+            "description": "Exchange authorization code for access token. Use this if you need to manually handle the OAuth flow."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://oauth2.googleapis.com/token",
+              "protocol": "https",
+              "host": ["oauth2", "googleapis", "com"],
+              "path": ["token"]
+            },
+            "description": "Refresh an expired access token using the refresh token."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Token Info",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://oauth2.googleapis.com/tokeninfo?access_token={{access_token}}",
+              "protocol": "https",
+              "host": ["oauth2", "googleapis", "com"],
+              "path": ["tokeninfo"],
+              "query": [
+                {
+                  "key": "access_token",
+                  "value": "{{access_token}}"
+                }
+              ]
+            },
+            "description": "Verify the access token and check its scopes and expiration."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Account & Apps",
+      "description": "APIs to list publisher accounts and apps",
+      "item": [
+        {
+          "name": "List Publisher Accounts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "if (jsonData.account && jsonData.account.length > 0) {",
+                  "    var account = jsonData.account[0];",
+                  "    pm.collectionVariables.set('account_name', account.name);",
+                  "    pm.collectionVariables.set('publisher_id', account.publisherId);",
+                  "    console.log('Account set:', account.name);",
+                  "}",
+                  "",
+                  "pm.test('Accounts retrieved successfully', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(jsonData.account).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/accounts",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["accounts"]
+            },
+            "description": "List all AdMob publisher accounts associated with the authenticated user.\n\n**Response includes:**\n- Account name (resource identifier)\n- Publisher ID\n- Reporting timezone\n- Currency code"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url_alpha}}/accounts"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"account\": [\n    {\n      \"name\": \"accounts/pub-1234567890123456\",\n      \"publisherId\": \"pub-1234567890123456\",\n      \"reportingTimeZone\": \"Asia/Ho_Chi_Minh\",\n      \"currencyCode\": \"USD\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Apps",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "if (jsonData.apps && jsonData.apps.length > 0) {",
+                  "    var app = jsonData.apps[0];",
+                  "    pm.collectionVariables.set('app_id', app.appId);",
+                  "    console.log('First app set:', app.appId);",
+                  "}",
+                  "",
+                  "pm.test('Apps retrieved successfully', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/apps?pageSize=100",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "apps"],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "List all apps in the AdMob account.\n\n**Response includes:**\n- App ID (ca-app-pub-xxx~xxx)\n- Platform (ANDROID/IOS)\n- App store info (name, store ID)\n- Manual app info if not linked"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/apps"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"apps\": [\n    {\n      \"name\": \"accounts/pub-1234567890123456/apps/1234567890\",\n      \"appId\": \"ca-app-pub-1234567890123456~1234567890\",\n      \"platform\": \"ANDROID\",\n      \"manualAppInfo\": {\n        \"displayName\": \"Weather App\"\n      },\n      \"linkedAppInfo\": {\n        \"appStoreId\": \"com.example.weather\",\n        \"displayName\": \"Weather Pro\"\n      },\n      \"appApprovalState\": \"ACTION_REQUIRED\"\n    }\n  ],\n  \"nextPageToken\": \"\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Ad Units",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "if (jsonData.adUnits && jsonData.adUnits.length > 0) {",
+                  "    var adUnit = jsonData.adUnits[0];",
+                  "    pm.collectionVariables.set('ad_unit_id', adUnit.adUnitId);",
+                  "    console.log('First ad unit set:', adUnit.adUnitId);",
+                  "}",
+                  "",
+                  "pm.test('Ad Units retrieved successfully', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adUnits?pageSize=1000",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adUnits"],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "List all ad units in the account.\n\n**Response includes:**\n- Ad Unit ID\n- Ad Unit Name\n- App ID\n- Ad Format (BANNER, INTERSTITIAL, REWARDED, etc.)"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/adUnits"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"adUnits\": [\n    {\n      \"name\": \"accounts/pub-xxx/adUnits/1234567890\",\n      \"adUnitId\": \"ca-app-pub-xxx/1234567890\",\n      \"appId\": \"ca-app-pub-xxx~9876543210\",\n      \"displayName\": \"Rewarded_MainScreen\",\n      \"adFormat\": \"REWARDED\",\n      \"adTypes\": [\"VIDEO\"]\n    }\n  ],\n  \"nextPageToken\": \"\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Ad Sources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adSources",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adSources"]
+            },
+            "description": "List all available ad sources (networks) for mediation.\n\n**Response includes:**\n- Ad Source ID (network identifier)\n- Title (display name)\n- Whether it supports bidding\n\n**Common Ad Source IDs:**\n- AdMob Network: 5450213213286189855\n- Pangle: 1022305674882866\n- Meta: 1215381445328257\n- Unity: 3579388761970597674\n- AppLovin: 8298043612981979098"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/adSources"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"adSources\": [\n    {\n      \"adSourceId\": \"5450213213286189855\",\n      \"title\": \"AdMob Network\"\n    },\n    {\n      \"adSourceId\": \"1022305674882866\",\n      \"title\": \"Pangle\"\n    },\n    {\n      \"adSourceId\": \"1022305674882867\",\n      \"title\": \"Pangle (bidding)\"\n    },\n    {\n      \"adSourceId\": \"1215381445328257\",\n      \"title\": \"Meta Audience Network\"\n    },\n    {\n      \"adSourceId\": \"3579388761970597674\",\n      \"title\": \"Unity Ads\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Adapters for Ad Source",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adSources/5450213213286189855/adapters",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adSources", "5450213213286189855", "adapters"]
+            },
+            "description": "List adapters for a specific ad source.\n\nUsed when creating ad unit mappings to get the correct adapter configuration.\n\n**Path parameter:**\n- adSourceId: The ad source/network ID (e.g., 5450213213286189855 for AdMob Network)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Mediation Groups",
+      "description": "APIs to manage mediation groups and their configurations",
+      "item": [
+        {
+          "name": "List All Mediation Groups",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "if (jsonData.mediationGroups && jsonData.mediationGroups.length > 0) {",
+                  "    var mg = jsonData.mediationGroups[0];",
+                  "    pm.collectionVariables.set('mediation_group_id', mg.mediationGroupId);",
+                  "    console.log('First mediation group set:', mg.mediationGroupId);",
+                  "}",
+                  "",
+                  "pm.test('Mediation Groups retrieved', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups?pageSize=100",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups"],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "List all mediation groups in the account.\n\n**Response includes:**\n- Mediation Group ID\n- Display Name\n- Targeting (platform, format, ad units, regions)\n- State (ENABLED/DISABLED)\n- A/B Experiment State\n- All mediation lines (bidding + waterfall)"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"mediationGroups\": [\n    {\n      \"name\": \"accounts/pub-xxx/mediationGroups/1234567890\",\n      \"mediationGroupId\": \"1234567890\",\n      \"displayName\": \"Rewarded - US\",\n      \"targeting\": {\n        \"platform\": \"ANDROID\",\n        \"format\": \"REWARDED\",\n        \"adUnitIds\": [\"ca-app-pub-xxx/111\", \"ca-app-pub-xxx/222\"],\n        \"targetedRegionCodes\": [\"US\"]\n      },\n      \"state\": \"ENABLED\",\n      \"mediationAbExperimentState\": \"NOT_RUNNING\",\n      \"mediationGroupLines\": {\n        \"0\": {\n          \"id\": \"0\",\n          \"displayName\": \"Pangle (bidding)\",\n          \"adSourceId\": \"1022305674882867\",\n          \"cpmMode\": \"LIVE\",\n          \"state\": \"ENABLED\",\n          \"adUnitMappings\": {}\n        },\n        \"1\": {\n          \"id\": \"1\",\n          \"displayName\": \"AdMob $25\",\n          \"adSourceId\": \"5450213213286189855\",\n          \"cpmMode\": \"MANUAL\",\n          \"cpmMicros\": \"25000000\",\n          \"state\": \"ENABLED\",\n          \"adUnitMappings\": {\n            \"ca-app-pub-xxx/111\": \"accounts/pub-xxx/adUnits/111/adUnitMappings/abc123\"\n          }\n        }\n      }\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Mediation Groups by App",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups?filter=CONTAINS_ANY(APP_IDS,{{app_id}})",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "CONTAINS_ANY(APP_IDS,{{app_id}})"
+                }
+              ]
+            },
+            "description": "Filter mediation groups by app ID.\n\n**Filter syntax:**\n- CONTAINS_ANY(APP_IDS, app_id1, app_id2, ...)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Mediation Group",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups/{{mediation_group_id}}",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups", "{{mediation_group_id}}"]
+            },
+            "description": "Get details of a specific mediation group including all waterfall and bidding lines."
+          },
+          "response": []
+        },
+        {
+          "name": "List Ad Unit Mappings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adUnits/{{ad_unit_id}}/adUnitMappings",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adUnits", "{{ad_unit_id}}", "adUnitMappings"]
+            },
+            "description": "List all ad unit mappings for a specific ad unit.\n\nUsed to get the mapping between primary ad units and network-specific ad units."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Waterfall Management (Write API)",
+      "description": "APIs to create and update waterfall configurations. **Requires AdMob Write API access (allowlist).**",
+      "item": [
+        {
+          "name": "List AdMob Network Waterfall Ad Units",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adMobNetworkWaterfallAdUnits?pageSize=100",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adMobNetworkWaterfallAdUnits"],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                },
+                {
+                  "key": "pageToken",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all AdMob Network waterfall ad units for the account.\n\n**Response:** adMobNetworkWaterfallAdUnits array with name, admobNetworkWaterfallAdUnitId, displayName, appId, format, adTypes, cpmFloorSettings.globalFloorMicros.\n\nPagination: use pageToken if nextPageToken is returned."
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/adMobNetworkWaterfallAdUnits?pageSize=100"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"adMobNetworkWaterfallAdUnits\": [\n    {\n      \"name\": \"accounts/pub-xxx/adMobNetworkWaterfallAdUnits/111222333\",\n      \"admobNetworkWaterfallAdUnitId\": \"111222333\",\n      \"displayName\": \"AdMob $25\",\n      \"appId\": \"ca-app-pub-xxx~123\",\n      \"format\": \"REWARDED\",\n      \"adTypes\": [\"VIDEO\"],\n      \"cpmFloorSettings\": {\n        \"globalFloorMicros\": \"25000000\"\n      }\n    }\n  ],\n  \"nextPageToken\": \"\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create AdMob Waterfall Ad Units",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requests\": [\n    {\n      \"adMobNetworkWaterfallAdUnit\": {\n        \"appId\": \"{{app_id}}\",\n        \"displayName\": \"AdMob $25\",\n        \"format\": \"REWARDED\",\n        \"adTypes\": [\"VIDEO\"],\n        \"cpmFloorSettings\": {\n          \"globalFloorMicros\": \"25000000\"\n        }\n      }\n    },\n    {\n      \"adMobNetworkWaterfallAdUnit\": {\n        \"appId\": \"{{app_id}}\",\n        \"displayName\": \"AdMob $20\",\n        \"format\": \"REWARDED\",\n        \"adTypes\": [\"VIDEO\"],\n        \"cpmFloorSettings\": {\n          \"globalFloorMicros\": \"20000000\"\n        }\n      }\n    },\n    {\n      \"adMobNetworkWaterfallAdUnit\": {\n        \"appId\": \"{{app_id}}\",\n        \"displayName\": \"AdMob $15\",\n        \"format\": \"REWARDED\",\n        \"adTypes\": [\"VIDEO\"],\n        \"cpmFloorSettings\": {\n          \"globalFloorMicros\": \"15000000\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adMobNetworkWaterfallAdUnits:batchCreate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adMobNetworkWaterfallAdUnits:batchCreate"]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nCreate multiple AdMob Network waterfall ad units in a single batch.\n\n**Request body:**\n- appId: The app to create units for\n- displayName: Display name for the waterfall line\n- format: BANNER, INTERSTITIAL, REWARDED, REWARDED_INTERSTITIAL, APP_OPEN_AD\n- adTypes: [\"VIDEO\"], [\"RICH_MEDIA\"], or [\"VIDEO\", \"RICH_MEDIA\"]\n- globalFloorMicros: eCPM in micros (multiply dollars by 1,000,000)\n\n**Example:**\n- $25.00 = 25000000 micros\n- $10.50 = 10500000 micros"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/adMobNetworkWaterfallAdUnits:batchCreate"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"adMobNetworkWaterfallAdUnits\": [\n    {\n      \"name\": \"accounts/pub-xxx/adMobNetworkWaterfallAdUnits/111222333\",\n      \"admobNetworkWaterfallAdUnitId\": \"111222333\",\n      \"displayName\": \"AdMob $25\",\n      \"appId\": \"ca-app-pub-xxx~123\",\n      \"format\": \"REWARDED\",\n      \"adTypes\": [\"VIDEO\"],\n      \"cpmFloorSettings\": {\n        \"globalFloorMicros\": \"25000000\"\n      }\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update AdMob Waterfall Ad Units",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requests\": [\n    {\n      \"adMobNetworkWaterfallAdUnit\": {\n        \"name\": \"{{account_name}}/adMobNetworkWaterfallAdUnits/111222333\",\n        \"displayName\": \"AdMob $28\",\n        \"cpmFloorSettings\": {\n          \"globalFloorMicros\": \"28000000\"\n        }\n      }\n    }\n  ],\n  \"updateMask\": \"displayName,cpmFloorSettings\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adMobNetworkWaterfallAdUnits:batchUpdate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adMobNetworkWaterfallAdUnits:batchUpdate"]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nUpdate existing AdMob Network waterfall ad units (change floor prices).\n\n**Request body:**\n- name: Full resource name of the waterfall ad unit\n- displayName: New display name\n- globalFloorMicros: New eCPM floor in micros\n- updateMask: Fields to update (comma-separated)"
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Create Ad Unit Mappings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requests\": [\n    {\n      \"adUnitMapping\": {\n        \"adUnitId\": \"ca-app-pub-xxx/123456789\",\n        \"adapterId\": \"1234567890\",\n        \"adUnitConfigurations\": {\n          \"admob_network_waterfall_ad_unit_id\": \"111222333\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adUnitMappings:batchCreate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adUnitMappings:batchCreate"]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nCreate mappings between primary ad units and network-specific ad units.\n\nThis links the waterfall ad unit you created to your actual ad unit in the mediation group."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch Mediation Group (Update Lines)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mediationGroupLines\": {\n    \"-1\": {\n      \"displayName\": \"AdMob $25\",\n      \"adSourceId\": \"5450213213286189855\",\n      \"cpmMode\": \"MANUAL\",\n      \"cpmMicros\": \"25000000\",\n      \"state\": \"ENABLED\",\n      \"adUnitMappings\": {\n        \"ca-app-pub-xxx/123\": \"accounts/pub-xxx/adUnits/123/adUnitMappings/mapping123\"\n      }\n    },\n    \"-2\": {\n      \"displayName\": \"AdMob $20\",\n      \"adSourceId\": \"5450213213286189855\",\n      \"cpmMode\": \"MANUAL\",\n      \"cpmMicros\": \"20000000\",\n      \"state\": \"ENABLED\",\n      \"adUnitMappings\": {\n        \"ca-app-pub-xxx/123\": \"accounts/pub-xxx/adUnits/123/adUnitMappings/mapping456\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups/{{mediation_group_id}}?updateMask=mediationGroupLines[\"-1\"],mediationGroupLines[\"-2\"]",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups", "{{mediation_group_id}}"],
+              "query": [
+                {
+                  "key": "updateMask",
+                  "value": "mediationGroupLines[\"-1\"],mediationGroupLines[\"-2\"]"
+                }
+              ]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nUpdate a mediation group to add, modify, or remove waterfall lines.\n\n**Key concepts:**\n- New lines use negative IDs: \"-1\", \"-2\", etc.\n- Existing lines use their actual ID: \"123\", \"456\"\n- To remove a line: set state to \"REMOVED\"\n- To disable: set state to \"DISABLED\"\n\n**updateMask syntax:**\n- Add new: mediationGroupLines[\"-1\"]\n- Update existing: mediationGroupLines[\"123\"].cpmMicros\n- Remove: mediationGroupLines[\"123\"].state"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Waterfall Line",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mediationGroupLines\": {\n    \"LINE_ID_TO_REMOVE\": {\n      \"state\": \"REMOVED\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups/{{mediation_group_id}}?updateMask=mediationGroupLines[\"LINE_ID_TO_REMOVE\"].state",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups", "{{mediation_group_id}}"],
+              "query": [
+                {
+                  "key": "updateMask",
+                  "value": "mediationGroupLines[\"LINE_ID_TO_REMOVE\"].state"
+                }
+              ]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nRemove a waterfall line from a mediation group by setting its state to REMOVED.\n\nReplace LINE_ID_TO_REMOVE with the actual line ID (e.g., \"123\")."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. A/B Testing",
+      "description": "APIs to manage mediation A/B experiments",
+      "item": [
+        {
+          "name": "List A/B Experiments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/adMobAbExperiments",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "adMobAbExperiments"]
+            },
+            "description": "List all A/B experiments in the account."
+          },
+          "response": []
+        },
+        {
+          "name": "Create A/B Experiment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Test Higher Floors\",\n  \"treatmentTrafficPercentage\": \"20\",\n  \"treatmentMediationLines\": [\n    {\n      \"mediationGroupLine\": {\n        \"displayName\": \"AdMob $30\",\n        \"adSourceId\": \"5450213213286189855\",\n        \"cpmMode\": \"MANUAL\",\n        \"cpmMicros\": \"30000000\",\n        \"state\": \"ENABLED\",\n        \"adUnitMappings\": {\n          \"ca-app-pub-xxx/123\": \"accounts/pub-xxx/adUnits/123/adUnitMappings/mapping789\"\n        }\n      }\n    },\n    {\n      \"mediationGroupLine\": {\n        \"displayName\": \"AdMob $22\",\n        \"adSourceId\": \"5450213213286189855\",\n        \"cpmMode\": \"MANUAL\",\n        \"cpmMicros\": \"22000000\",\n        \"state\": \"ENABLED\",\n        \"adUnitMappings\": {\n          \"ca-app-pub-xxx/123\": \"accounts/pub-xxx/adUnits/123/adUnitMappings/mapping101\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups/{{mediation_group_id}}/mediationAbExperiments",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups", "{{mediation_group_id}}", "mediationAbExperiments"]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nCreate a new A/B experiment for a mediation group.\n\n**Request body:**\n- displayName: Name of the experiment\n- treatmentTrafficPercentage: % of traffic to send to treatment (10-90)\n- treatmentMediationLines: The waterfall configuration for the treatment variant"
+          },
+          "response": []
+        },
+        {
+          "name": "Stop A/B Experiment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variantChoice\": \"VARIANT_A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationGroups/{{mediation_group_id}}/mediationAbExperiments:stop",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationGroups", "{{mediation_group_id}}", "mediationAbExperiments:stop"]
+            },
+            "description": "**⚠️ Requires Write API Access**\n\nStop a running A/B experiment and choose which variant to keep.\n\n**variantChoice options:**\n- VARIANT_A: Keep the control (original) configuration\n- VARIANT_B: Keep the treatment (experiment) configuration"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Reporting & Analytics",
+      "description": "APIs to generate mediation reports for analytics",
+      "item": [
+        {
+          "name": "Generate Mediation Report - Basic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportSpec\": {\n    \"dateRange\": {\n      \"startDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 1\n      },\n      \"endDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 28\n      }\n    },\n    \"dimensions\": [\n      \"DATE\",\n      \"APP\",\n      \"AD_UNIT\"\n    ],\n    \"metrics\": [\n      \"ESTIMATED_EARNINGS\",\n      \"IMPRESSIONS\",\n      \"MATCHED_REQUESTS\",\n      \"MATCH_RATE\",\n      \"OBSERVED_ECPM\"\n    ],\n    \"localizationSettings\": {\n      \"currencyCode\": \"USD\",\n      \"languageCode\": \"en-US\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationReport:generate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationReport:generate"]
+            },
+            "description": "Generate a basic mediation report grouped by date, app, and ad unit.\n\n**Available Dimensions:**\n- DATE, MONTH, WEEK\n- APP, AD_UNIT, AD_SOURCE, AD_SOURCE_INSTANCE\n- COUNTRY, FORMAT, PLATFORM\n- MEDIATION_GROUP\n\n**Available Metrics:**\n- ESTIMATED_EARNINGS\n- IMPRESSIONS, CLICKS, IMPRESSION_CTR\n- MATCHED_REQUESTS, MATCH_RATE\n- OBSERVED_ECPM"
+          },
+          "response": [
+            {
+              "name": "Example Response",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{base_url_alpha}}/{{account_name}}/mediationReport:generate"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "[\n  {\n    \"header\": {\n      \"dateRange\": {\n        \"startDate\": {\"year\": 2024, \"month\": 12, \"day\": 1},\n        \"endDate\": {\"year\": 2024, \"month\": 12, \"day\": 28}\n      },\n      \"localizationSettings\": {\n        \"currencyCode\": \"USD\",\n        \"languageCode\": \"en-US\"\n      }\n    }\n  },\n  {\n    \"row\": {\n      \"dimensionValues\": {\n        \"DATE\": {\"value\": \"20241215\"},\n        \"APP\": {\"value\": \"ca-app-pub-xxx~123\", \"displayLabel\": \"Weather App\"},\n        \"AD_UNIT\": {\"value\": \"ca-app-pub-xxx/456\", \"displayLabel\": \"Rewarded_Main\"}\n      },\n      \"metricValues\": {\n        \"ESTIMATED_EARNINGS\": {\"microsValue\": \"1234567890\"},\n        \"IMPRESSIONS\": {\"integerValue\": \"50000\"},\n        \"MATCHED_REQUESTS\": {\"integerValue\": \"62000\"},\n        \"MATCH_RATE\": {\"doubleValue\": 0.78},\n        \"OBSERVED_ECPM\": {\"microsValue\": \"18500000\"}\n      }\n    }\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Generate Mediation Report - By Network",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportSpec\": {\n    \"dateRange\": {\n      \"startDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 1\n      },\n      \"endDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 28\n      }\n    },\n    \"dimensions\": [\n      \"DATE\",\n      \"AD_SOURCE\",\n      \"AD_SOURCE_INSTANCE\"\n    ],\n    \"metrics\": [\n      \"ESTIMATED_EARNINGS\",\n      \"IMPRESSIONS\",\n      \"MATCHED_REQUESTS\",\n      \"MATCH_RATE\",\n      \"OBSERVED_ECPM\"\n    ],\n    \"localizationSettings\": {\n      \"currencyCode\": \"USD\",\n      \"languageCode\": \"en-US\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationReport:generate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationReport:generate"]
+            },
+            "description": "Generate report grouped by ad source (network) and ad source instance (waterfall line).\n\nUseful for analyzing which networks are performing best."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Mediation Report - By Country",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportSpec\": {\n    \"dateRange\": {\n      \"startDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 1\n      },\n      \"endDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 28\n      }\n    },\n    \"dimensions\": [\n      \"COUNTRY\",\n      \"FORMAT\",\n      \"PLATFORM\"\n    ],\n    \"metrics\": [\n      \"ESTIMATED_EARNINGS\",\n      \"IMPRESSIONS\",\n      \"OBSERVED_ECPM\"\n    ],\n    \"sortConditions\": [\n      {\n        \"metric\": \"ESTIMATED_EARNINGS\",\n        \"order\": \"DESCENDING\"\n      }\n    ],\n    \"localizationSettings\": {\n      \"currencyCode\": \"USD\",\n      \"languageCode\": \"en-US\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationReport:generate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationReport:generate"]
+            },
+            "description": "Generate report grouped by country, format, and platform.\n\nUseful for analyzing geographic performance differences."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Mediation Report - By Mediation Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportSpec\": {\n    \"dateRange\": {\n      \"startDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 1\n      },\n      \"endDate\": {\n        \"year\": 2024,\n        \"month\": 12,\n        \"day\": 28\n      }\n    },\n    \"dimensions\": [\n      \"MEDIATION_GROUP\",\n      \"AD_SOURCE_INSTANCE\"\n    ],\n    \"metrics\": [\n      \"ESTIMATED_EARNINGS\",\n      \"IMPRESSIONS\",\n      \"MATCHED_REQUESTS\",\n      \"MATCH_RATE\",\n      \"OBSERVED_ECPM\"\n    ],\n    \"dimensionFilters\": [\n      {\n        \"dimension\": \"MEDIATION_GROUP\",\n        \"matchesAny\": {\n          \"values\": [\"ca-app-pub-{{publisher_id}}:mg:{{mediation_group_id}}\"]\n        }\n      }\n    ],\n    \"localizationSettings\": {\n      \"currencyCode\": \"USD\",\n      \"languageCode\": \"en-US\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationReport:generate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationReport:generate"]
+            },
+            "description": "Generate report for a specific mediation group with breakdown by ad source instance (waterfall line).\n\nUseful for analyzing waterfall performance and calculating Share of Wallet (SoW)."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Mediation Report - Last 7 Days Summary",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Calculate dates",
+                  "var today = new Date();",
+                  "var sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);",
+                  "",
+                  "pm.variables.set('end_year', today.getFullYear());",
+                  "pm.variables.set('end_month', today.getMonth() + 1);",
+                  "pm.variables.set('end_day', today.getDate());",
+                  "",
+                  "pm.variables.set('start_year', sevenDaysAgo.getFullYear());",
+                  "pm.variables.set('start_month', sevenDaysAgo.getMonth() + 1);",
+                  "pm.variables.set('start_day', sevenDaysAgo.getDate());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportSpec\": {\n    \"dateRange\": {\n      \"startDate\": {\n        \"year\": {{start_year}},\n        \"month\": {{start_month}},\n        \"day\": {{start_day}}\n      },\n      \"endDate\": {\n        \"year\": {{end_year}},\n        \"month\": {{end_month}},\n        \"day\": {{end_day}}\n      }\n    },\n    \"dimensions\": [],\n    \"metrics\": [\n      \"ESTIMATED_EARNINGS\",\n      \"IMPRESSIONS\",\n      \"MATCHED_REQUESTS\",\n      \"MATCH_RATE\",\n      \"OBSERVED_ECPM\",\n      \"CLICKS\",\n      \"IMPRESSION_CTR\"\n    ],\n    \"localizationSettings\": {\n      \"currencyCode\": \"USD\",\n      \"languageCode\": \"en-US\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url_alpha}}/{{account_name}}/mediationReport:generate",
+              "host": ["{{base_url_alpha}}"],
+              "path": ["{{account_name}}", "mediationReport:generate"]
+            },
+            "description": "Generate a summary report for the last 7 days with no dimension breakdown (account totals only).\n\nUseful for dashboard KPI cards."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Network Configuration",
+      "description": "Example API structures for third-party network integrations (not part of AdMob API)",
+      "item": [
+        {
+          "name": "[Reference] Pangle - Get App List",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{pangle_api_key}}",
+                "description": "Pangle API Key"
+              }
+            ],
+            "url": {
+              "raw": "https://api.pangleglobal.com/open_api/v1/applications",
+              "protocol": "https",
+              "host": ["api", "pangleglobal", "com"],
+              "path": ["open_api", "v1", "applications"]
+            },
+            "description": "**Reference only - requires Pangle API access**\n\nList applications in your Pangle account to get App IDs for ad unit creation."
+          },
+          "response": []
+        },
+        {
+          "name": "[Reference] Pangle - Create Placement",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{pangle_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app_id\": \"{{pangle_app_id}}\",\n  \"name\": \"Rewarded_$25\",\n  \"ad_type\": \"rewarded_video\",\n  \"price_type\": \"custom\",\n  \"custom_price\": 25.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://api.pangleglobal.com/open_api/v1/placements",
+              "protocol": "https",
+              "host": ["api", "pangleglobal", "com"],
+              "path": ["open_api", "v1", "placements"]
+            },
+            "description": "**Reference only - requires Pangle API access**\n\nCreate a new placement (ad unit) in Pangle with specified floor price."
+          },
+          "response": []
+        },
+        {
+          "name": "[Reference] InMobi - Get Placements",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{inmobi_token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://api.inmobi.com/v3/placements?appId={{inmobi_app_id}}",
+              "protocol": "https",
+              "host": ["api", "inmobi", "com"],
+              "path": ["v3", "placements"],
+              "query": [
+                {
+                  "key": "appId",
+                  "value": "{{inmobi_app_id}}"
+                }
+              ]
+            },
+            "description": "**Reference only - requires InMobi API access**\n\nList placements for an InMobi application."
+          },
+          "response": []
+        },
+        {
+          "name": "[Reference] Mintegral - Get Units",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Token {{mintegral_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "https://api.mintegral.com/v1/units?app_id={{mintegral_app_id}}",
+              "protocol": "https",
+              "host": ["api", "mintegral", "com"],
+              "path": ["v1", "units"],
+              "query": [
+                {
+                  "key": "app_id",
+                  "value": "{{mintegral_app_id}}"
+                }
+              ]
+            },
+            "description": "**Reference only - requires Mintegral API access**\n\nList ad units for a Mintegral application."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Utility & Helpers",
+      "description": "Helper requests for common operations",
+      "item": [
+        {
+          "name": "Calculate eCPM from Micros",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set these values",
+                  "var micros = 25000000; // Example: $25.00",
+                  "",
+                  "var dollars = micros / 1000000;",
+                  "console.log('eCPM in dollars: $' + dollars.toFixed(2));",
+                  "",
+                  "pm.variables.set('ecpm_dollars', dollars.toFixed(2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://httpbin.org/get?info=This_is_a_utility_request",
+              "protocol": "https",
+              "host": ["httpbin", "org"],
+              "path": ["get"],
+              "query": [
+                {
+                  "key": "info",
+                  "value": "This_is_a_utility_request"
+                }
+              ]
+            },
+            "description": "Utility request to convert eCPM from micros to dollars.\n\nEdit the Pre-request Script to convert values.\n\n**Conversion:**\n- Micros to Dollars: micros / 1,000,000\n- Dollars to Micros: dollars * 1,000,000\n\n**Examples:**\n- $25.00 = 25,000,000 micros\n- $10.50 = 10,500,000 micros\n- $0.50 = 500,000 micros"
+          },
+          "response": []
+        },
+        {
+          "name": "Convert Dollars to Micros",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set the dollar amount you want to convert",
+                  "var dollars = 25.00;",
+                  "",
+                  "var micros = Math.round(dollars * 1000000);",
+                  "console.log('eCPM in micros: ' + micros);",
+                  "",
+                  "pm.variables.set('ecpm_micros', micros.toString());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://httpbin.org/get?info=Convert_dollars_to_micros",
+              "protocol": "https",
+              "host": ["httpbin", "org"],
+              "path": ["get"],
+              "query": [
+                {
+                  "key": "info",
+                  "value": "Convert_dollars_to_micros"
+                }
+              ]
+            },
+            "description": "Utility request to convert eCPM from dollars to micros.\n\nEdit the dollar amount in the Pre-request Script."
+          },
+          "response": []
+        },
+        {
+          "name": "Full Workflow - Get MG Details with Performance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This is a documentation-only request",
+                  "console.log('=== FULL WORKFLOW TO GET MG DETAILS ===');",
+                  "console.log('');",
+                  "console.log('Step 1: List Publisher Accounts');",
+                  "console.log('   -> GET /v1alpha/accounts');",
+                  "console.log('   -> Get account_name');",
+                  "console.log('');",
+                  "console.log('Step 2: List Mediation Groups');",
+                  "console.log('   -> GET /v1alpha/{account}/mediationGroups');",
+                  "console.log('   -> Get mediation_group_id, targeting, lines');",
+                  "console.log('');",
+                  "console.log('Step 3: Get Performance Data');",
+                  "console.log('   -> POST /v1alpha/{account}/mediationReport:generate');",
+                  "console.log('   -> Filter by MEDIATION_GROUP');",
+                  "console.log('   -> Group by AD_SOURCE_INSTANCE for SoW calculation');",
+                  "console.log('');",
+                  "console.log('Step 4: Calculate Recommendations');",
+                  "console.log('   -> For each line, calculate SoW = line_revenue / total_revenue');",
+                  "console.log('   -> Apply optimization rules based on SoW and match_rate');",
+                  "console.log('');",
+                  "console.log('Step 5: Apply Changes');",
+                  "console.log('   -> Create/Update waterfall ad units');",
+                  "console.log('   -> Create ad unit mappings');",
+                  "console.log('   -> Patch mediation group');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://httpbin.org/get?workflow=documentation",
+              "protocol": "https",
+              "host": ["httpbin", "org"],
+              "path": ["get"],
+              "query": [
+                {
+                  "key": "workflow",
+                  "value": "documentation"
+                }
+              ]
+            },
+            "description": "This is a documentation request that outlines the full workflow for getting mediation group details with performance data.\n\nRun this request and check the Console for the workflow steps."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

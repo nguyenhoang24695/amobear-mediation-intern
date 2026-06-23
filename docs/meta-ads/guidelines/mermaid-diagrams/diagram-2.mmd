@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant P as Partner
+    participant A as Amobear Ops
+    participant V as Token Vault
+    participant API as Meta Graph API
+
+    P->>P: Create System User + Generate Token
+    P->>A: Send token securely
+    A->>V: Store encrypted (AES-256)
+    A->>API: GET /{bm_id} (test connectivity)
+    API-->>A: BM metadata OK
+    A->>A: Sync ad accounts, pages, pixels
+    A->>P: Confirm onboarding complete

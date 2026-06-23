@@ -1,0 +1,145 @@
+services:
+  # StarRocks Frontend (FE) - Query processing và metadata management
+  starrocks-fe:
+    image: starrocks/fe-ubuntu:3.1-latest
+    hostname: starrocks-fe
+    container_name: starrocks-fe
+    user: root
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo 'sys_log_level = INFO' >> /opt/starrocks/fe/conf/fe.conf
+        /opt/starrocks/fe/bin/start_fe.sh
+    ports:
+      - "8030:8030"     # Web UI
+      - "9020:9020"     # RPC port
+      - "9030:9030"     # MySQL protocol port
+    volumes:
+      - starrocks-fe-data:/opt/starrocks/fe/meta
+    environment:
+      - JAVA_OPTS=-Xmx4g
+      - TZ=Asia/Ho_Chi_Minh
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f StarRocksFE || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - starrocks-network
+    restart: unless-stopped
+
+  # StarRocks Backend (BE) - Data storage và processing
+  starrocks-be:
+    image: starrocks/be-ubuntu:3.1-latest
+    hostname: starrocks-be
+    container_name: starrocks-be
+    user: root
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo 'sys_log_level = INFO' >> /opt/starrocks/be/conf/be.conf
+        /opt/starrocks/be/bin/start_be.sh
+    depends_on:
+      starrocks-fe:
+        condition: service_healthy
+    ports:
+      - "8040:8040"     # Web UI
+      - "9060:9060"     # RPC port
+      - "8060:8060"     # Heartbeat port
+    volumes:
+      - starrocks-be-data:/opt/starrocks/be/storage
+    environment:
+      - JAVA_OPTS=-Xmx8g
+      - TZ=Asia/Ho_Chi_Minh
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f starrocks_be || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - starrocks-network
+    restart: unless-stopped
+
+  # Service khởi tạo - Thêm BE node vào FE cluster
+  starrocks-init:
+    image: mysql:8.0
+    depends_on:
+      starrocks-be:
+        condition: service_healthy
+    command: >
+      bash -c "
+        echo 'Chờ StarRocks khởi động hoàn toàn...' &&
+        sleep 20 &&
+        echo 'Thiết lập password cho root user...' &&
+        mysql -h starrocks-fe -P 9030 -u root -e \"SET PASSWORD FOR 'root'@'%' = PASSWORD('${MKT_PASSWD_DB}');\" 2>&1 | grep -v 'ERROR 1396' || true &&
+        echo 'Kiểm tra và thêm Backend node vào cluster...' &&
+        mysql -h starrocks-fe -P 9030 -u root -p'${MKT_PASSWD_DB}' -e \"ALTER SYSTEM ADD BACKEND 'starrocks-be:9050';\" 2>&1 | grep -v 'Backend already exists' || true &&
+        echo '✓ Backend node đã sẵn sàng' &&
+        echo 'Danh sách Backend nodes:' &&
+        mysql -h starrocks-fe -P 9030 -u root -p'${MKT_PASSWD_DB}' -e \"SHOW BACKENDS\\G\" | grep -E '(BackendId|IP|Alive|TabletNum)'
+      "
+    environment:
+      - MKT_PASSWD_DB=${MKT_PASSWD_DB}
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - starrocks-network
+
+  # AdMob Platform - Python application với cron jobs
+  admob-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: admob-platform
+    depends_on:
+      starrocks-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./logs:/app/logs
+      - ./z_key:/app/z_key:ro
+    environment:
+      # StarRocks Configuration
+      - STARROCKS_FE_HOST=${STARROCKS_FE_HOST}
+      - STARROCKS_FE_PORT=${STARROCKS_FE_PORT}
+      - STARROCKS_BE_HOST=${STARROCKS_BE_HOST}
+      - STARROCKS_BE_PORT=${STARROCKS_BE_PORT}
+      # Database StarRocks AdMob+XMP (mkt_server) info
+      - MKT_HOST_DB=${MKT_HOST_DB}
+      - MKT_USER_DB=${MKT_USER_DB}
+      - MKT_PASSWD_DB=${MKT_PASSWD_DB}
+      - MKT_PORT_DB=${MKT_PORT_DB}
+      - MKT_JDBC_PORT=${MKT_JDBC_PORT}
+      - MKT_HTTP_PORT=${MKT_HTTP_PORT}
+      - MKT_FIREBASE_DB=${MKT_FIREBASE_DB}
+      - ADMOB_DB=${ADMOB_DB}
+      - XMP_DB=${XMP_DB}
+      # List token, publisher_id trong AdMob
+      - ADMOB_LIST_TOKENS=${ADMOB_LIST_TOKENS}
+      - ADMOB_DICT_PUBLISHER_ID=${ADMOB_DICT_PUBLISHER_ID}
+      # CLIENT_ID, CLIENT_SECRET trong XMP
+      - XMP_CLIENT_ID=${XMP_CLIENT_ID}
+      - XMP_CLIENT_SECRET=${XMP_CLIENT_SECRET}
+      # List CLDR country code by continent
+      - LIST_AFRICA_CODES=${LIST_AFRICA_CODES}
+      - LIST_AMERICAS_CODES=${LIST_AMERICAS_CODES}
+      - LIST_ASIA_CODES=${LIST_ASIA_CODES}
+      - LIST_EUROPE_CODES=${LIST_EUROPE_CODES}
+      - LIST_OCEANIA_CODES=${LIST_OCEANIA_CODES}
+      # System
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - starrocks-network
+    restart: unless-stopped
+
+volumes:
+  starrocks-fe-data:
+    driver: local
+  starrocks-be-data:
+    driver: local
+
+networks:
+  starrocks-network:
+    driver: bridge

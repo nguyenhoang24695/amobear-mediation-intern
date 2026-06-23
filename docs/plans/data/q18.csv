@@ -1,0 +1,16 @@
+"country","retention_day","total_d0","active_users","retention_rate"
+Japan,0,23454,23448,100.0
+Japan,1,22881,2223,9.7
+Japan,3,21382,626,2.9
+Japan,7,18564,284,1.5
+Japan,14,13775,125,0.9
+United Kingdom,0,21148,21144,100.0
+United Kingdom,1,20194,3452,17.1
+United Kingdom,3,17743,930,5.2
+United Kingdom,7,14761,405,2.7
+United Kingdom,14,9979,204,2.0
+United States,0,78221,78194,100.0
+United States,1,76014,9671,12.7
+United States,3,71487,2887,4.0
+United States,7,62154,1269,2.0
+United States,14,46934,566,1.2

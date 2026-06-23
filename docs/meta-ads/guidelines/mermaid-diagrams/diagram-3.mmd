@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant UM as UA Marketer<br>(Amobear)
+    participant UI as Amobear Admin Portal
+    participant APP as Campaign Service
+    participant META as Meta API<br>(Partner's BM)
+
+    UM->>UI: Log in with Amobear SSO
+    UI->>UI: Check RBAC: which BMs is this user allowed to manage?
+    UI-->>UM: Show only authorized BMs
+    UM->>UI: Pick BM → "Create Campaign"
+    UM->>UI: Fill in form (objective, budget, targeting, creative)
+    UI->>APP: Submit request
+    APP->>APP: Validate + queue for approval
+    APP->>META: POST /campaigns (status: PAUSED)
+    META-->>APP: Campaign ID
+    APP->>META: POST /adsets, /adcreatives, /ads
+    META-->>APP: IDs
+    APP-->>UM: Campaign created (PAUSED, pending approval)
+
+    Note over UM,META: UA Marketer does NOT log into Business Suite<br>Has NO partner Facebook credentials

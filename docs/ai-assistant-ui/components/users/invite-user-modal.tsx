@@ -1,0 +1,527 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { X, Loader2, CheckCircle2, ChevronDown, Check, ChevronsUpDown, AlertCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface InviteUserModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+const teams = [
+  { value: "mobile", label: "Mobile Team" },
+  { value: "analytics", label: "Analytics Team" },
+  { value: "product", label: "Product Team" },
+  { value: "marketing", label: "Marketing Team" },
+]
+
+const apps = [
+  { id: "1", name: "Weather Plus Pro", icon: "🌤️" },
+  { id: "2", name: "Game Master", icon: "🎮" },
+  { id: "3", name: "Photo Editor Pro", icon: "📷" },
+  { id: "4", name: "Fitness Tracker", icon: "💪" },
+  { id: "5", name: "Music Player", icon: "🎵" },
+]
+
+type ModalState = "form" | "loading" | "success" | "partial-error"
+
+export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
+  const [state, setState] = useState<ModalState>("form")
+  const [emailInput, setEmailInput] = useState("")
+  const [emails, setEmails] = useState<string[]>([])
+  const [role, setRole] = useState("viewer")
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([])
+  const [teamsOpen, setTeamsOpen] = useState(false)
+  const [giveAllApps, setGiveAllApps] = useState(false)
+  const [selectedApps, setSelectedApps] = useState<{ id: string; permission: string }[]>([])
+  const [appsOpen, setAppsOpen] = useState(false)
+  const [message, setMessage] = useState("")
+  const [showPreview, setShowPreview] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault()
+      addEmail()
+    }
+  }
+
+  const addEmail = () => {
+    const email = emailInput.trim().replace(",", "")
+    if (!email) return
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address")
+      return
+    }
+
+    if (emails.includes(email)) {
+      setEmailError("This email has already been added")
+      return
+    }
+
+    // Check if already a member
+    if (email === "existing@company.com") {
+      setEmailError(`${email} is already a member of this organization`)
+      return
+    }
+
+    setEmails([...emails, email])
+    setEmailInput("")
+    setEmailError(null)
+  }
+
+  const removeEmail = (email: string) => {
+    setEmails(emails.filter((e) => e !== email))
+  }
+
+  const toggleTeam = (team: string) => {
+    setSelectedTeams((prev) => (prev.includes(team) ? prev.filter((t) => t !== team) : [...prev, team]))
+  }
+
+  const toggleApp = (appId: string) => {
+    setSelectedApps((prev) => {
+      const exists = prev.find((a) => a.id === appId)
+      if (exists) {
+        return prev.filter((a) => a.id !== appId)
+      }
+      return [...prev, { id: appId, permission: "view" }]
+    })
+  }
+
+  const updateAppPermission = (appId: string, permission: string) => {
+    setSelectedApps((prev) => prev.map((a) => (a.id === appId ? { ...a, permission } : a)))
+  }
+
+  const removeApp = (appId: string) => {
+    setSelectedApps((prev) => prev.filter((a) => a.id !== appId))
+  }
+
+  const handleSubmit = async () => {
+    if (emails.length === 0) return
+
+    setState("loading")
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setState("success")
+  }
+
+  const handleInviteMore = () => {
+    setState("form")
+    setEmails([])
+    setEmailInput("")
+    setRole("viewer")
+    setSelectedTeams([])
+    setGiveAllApps(false)
+    setSelectedApps([])
+    setMessage("")
+  }
+
+  const handleClose = () => {
+    onOpenChange(false)
+    setTimeout(() => {
+      setState("form")
+      setEmails([])
+      setEmailInput("")
+      setRole("viewer")
+      setSelectedTeams([])
+      setGiveAllApps(false)
+      setSelectedApps([])
+      setMessage("")
+      setEmailError(null)
+    }, 200)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {state === "form" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Invite Team Member</DialogTitle>
+              <DialogDescription>Send an invitation to join your organization</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* Email Addresses */}
+              <div className="space-y-2">
+                <Label>Email addresses</Label>
+                <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-10 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                  {emails.map((email) => (
+                    <Badge key={email} variant="secondary" className="gap-1">
+                      {email}
+                      <button onClick={() => removeEmail(email)} className="ml-1 hover:text-red-500">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <Input
+                    type="email"
+                    placeholder={emails.length === 0 ? "Enter email addresses..." : ""}
+                    className="flex-1 border-0 shadow-none focus-visible:ring-0 min-w-32 h-6 p-0"
+                    value={emailInput}
+                    onChange={(e) => {
+                      setEmailInput(e.target.value)
+                      setEmailError(null)
+                    }}
+                    onKeyDown={handleEmailKeyDown}
+                    onBlur={addEmail}
+                  />
+                </div>
+                {emailError ? (
+                  <p className="text-xs text-red-500">{emailError}</p>
+                ) : (
+                  <p className="text-xs text-slate-500">Press Enter or comma to add multiple emails</p>
+                )}
+              </div>
+
+              {/* Role Selection */}
+              <div className="space-y-3">
+                <Label>Role</Label>
+                <RadioGroup value={role} onValueChange={setRole} className="space-y-3">
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <RadioGroupItem value="admin" id="admin" className="mt-0.5" />
+                    <div>
+                      <Label htmlFor="admin" className="font-medium cursor-pointer">
+                        Admin
+                      </Label>
+                      <p className="text-xs text-slate-500">Full access to all features including user management</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <RadioGroupItem value="editor" id="editor" className="mt-0.5" />
+                    <div>
+                      <Label htmlFor="editor" className="font-medium cursor-pointer">
+                        Editor
+                      </Label>
+                      <p className="text-xs text-slate-500">Can view and edit apps, mediation groups, and reports</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <RadioGroupItem value="viewer" id="viewer" className="mt-0.5" />
+                    <div>
+                      <Label htmlFor="viewer" className="font-medium cursor-pointer">
+                        Viewer
+                      </Label>
+                      <p className="text-xs text-slate-500">Read-only access to assigned apps and reports</p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Team Assignment */}
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-slate-500 text-xs uppercase tracking-wide">Team Assignment (Optional)</Label>
+                <div className="space-y-2">
+                  <Label>Add to teams</Label>
+                  <Popover open={teamsOpen} onOpenChange={setTeamsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={teamsOpen}
+                        className="w-full justify-between font-normal bg-transparent"
+                      >
+                        {selectedTeams.length > 0 ? `${selectedTeams.length} team(s) selected` : "Select teams..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search teams..." />
+                        <CommandList>
+                          <CommandEmpty>No team found.</CommandEmpty>
+                          <CommandGroup>
+                            {teams.map((team) => (
+                              <CommandItem key={team.value} onSelect={() => toggleTeam(team.value)}>
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedTeams.includes(team.value) ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                {team.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {selectedTeams.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTeams.map((teamId) => {
+                        const team = teams.find((t) => t.value === teamId)
+                        return (
+                          <Badge key={teamId} variant="secondary" className="gap-1">
+                            {team?.label}
+                            <button onClick={() => toggleTeam(teamId)} className="ml-1 hover:text-red-500">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* App Permissions */}
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-slate-500 text-xs uppercase tracking-wide">App Permissions (Optional)</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Grant access to specific apps</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="all-apps"
+                        checked={giveAllApps}
+                        onChange={(e) => setGiveAllApps(e.target.checked)}
+                        className="rounded border-slate-300"
+                      />
+                      <label htmlFor="all-apps" className="text-sm text-slate-600 cursor-pointer">
+                        Give access to all apps
+                      </label>
+                    </div>
+                  </div>
+
+                  {!giveAllApps && (
+                    <>
+                      <Popover open={appsOpen} onOpenChange={setAppsOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between font-normal bg-transparent"
+                          >
+                            Select apps...
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search apps..." />
+                            <CommandList>
+                              <CommandEmpty>No app found.</CommandEmpty>
+                              <CommandGroup>
+                                {apps.map((app) => (
+                                  <CommandItem key={app.id} onSelect={() => toggleApp(app.id)}>
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedApps.find((a) => a.id === app.id) ? "opacity-100" : "opacity-0",
+                                      )}
+                                    />
+                                    <span className="mr-2">{app.icon}</span>
+                                    {app.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+
+                      {/* Selected Apps List */}
+                      {selectedApps.length > 0 && (
+                        <div className="space-y-2">
+                          {selectedApps.map((selected) => {
+                            const app = apps.find((a) => a.id === selected.id)
+                            return (
+                              <div
+                                key={selected.id}
+                                className="flex items-center justify-between p-2 bg-slate-50 rounded-md"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span>{app?.icon}</span>
+                                  <span className="text-sm">{app?.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Select
+                                    value={selected.permission}
+                                    onValueChange={(v) => updateAppPermission(selected.id, v)}
+                                  >
+                                    <SelectTrigger className="w-24 h-8">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="view">View</SelectItem>
+                                      <SelectItem value="edit">Edit</SelectItem>
+                                      <SelectItem value="manage">Manage</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => removeApp(selected.id)}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Personal Message */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Personal message (Optional)</Label>
+                <Textarea
+                  placeholder="Add a personal note to the invitation email..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                />
+                <p className="text-xs text-slate-500 text-right">{message.length}/500</p>
+              </div>
+
+              {/* Preview */}
+              <Collapsible open={showPreview} onOpenChange={setShowPreview}>
+                <CollapsibleTrigger className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                  <ChevronDown className={cn("w-4 h-4 transition-transform", showPreview && "rotate-180")} />
+                  Preview invitation email
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  <div className="p-4 bg-slate-50 rounded-lg border text-sm space-y-3">
+                    <p className="font-medium">Subject: You've been invited to join Amobear Inc on Mediation Pro</p>
+                    <div className="border-t pt-3 space-y-2 text-slate-600">
+                      <p>Hi there,</p>
+                      <p>
+                        John Doe has invited you to join Amobear Inc on Mediation Pro as a{" "}
+                        <strong className="text-slate-900 capitalize">{role}</strong>.
+                      </p>
+                      {message && <div className="bg-white p-3 rounded border italic">"{message}"</div>}
+                      <p>Click the button below to accept your invitation and create your account.</p>
+                      <div className="py-2">
+                        <Button size="sm" className="bg-blue-600">
+                          Accept Invitation
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-400">This invitation will expire in 7 days.</p>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <p className="text-xs text-slate-500 flex-1">Invitations expire in 7 days</p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={emails.length === 0}>
+                  Send Invitation
+                </Button>
+              </div>
+            </DialogFooter>
+          </>
+        )}
+
+        {state === "loading" && (
+          <div className="py-12 flex flex-col items-center justify-center">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+            <p className="text-lg font-medium text-slate-900">Sending invitations...</p>
+            <p className="text-sm text-slate-500">Please wait</p>
+          </div>
+        )}
+
+        {state === "success" && (
+          <>
+            <div className="py-8 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">Invitations sent!</h2>
+              <p className="text-sm text-slate-500 mb-4">
+                We've sent invitations to {emails.length} email address{emails.length > 1 ? "es" : ""}.
+              </p>
+              <div className="space-y-2 w-full max-w-sm">
+                {emails.map((email) => (
+                  <div
+                    key={email}
+                    className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    {email}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleInviteMore}>
+                Invite More
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+                Done
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {state === "partial-error" && (
+          <>
+            <div className="py-8 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">Partial success</h2>
+              <p className="text-sm text-slate-500 mb-4">2 of 3 invitations sent. 1 failed:</p>
+              <div className="space-y-2 w-full max-w-sm">
+                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  john@example.com
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-md px-3 py-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  sarah@example.com
+                </div>
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">
+                  <X className="w-4 h-4 text-red-500" />
+                  existing@company.com - Already a member
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleInviteMore}>
+                Invite More
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+                Done
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -1,0 +1,294 @@
+{
+  "template": {
+    "name": "AI Utility App Insight",
+    "category": "AI App",
+    "description": "Tạo báo cáo App Insight hàng ngày cho ứng dụng Utility (creative tools, AR, photo/video editors, productivity). Bao gồm Health Scoring 8 chiều, phân tích doanh thu IAA+IAP, engagement, retention, product metrics đặc thù, geo deep dive, UA economics, và action plan có tracking T+1.",
+    "default_template": false,
+    "provider_priority": "default",
+    "max_apps_per_batch": 50,
+    "parallel_degree": 10
+  },
+
+  "global_ai_instructions": "[SYSTEM PROMPT — Layer 1: Global Instructions]\n\nBạn là AI App Health Analyst cho Amobear Nexus. Mỗi ngày bạn nhận:\n1. Snapshot dữ liệu ngày T của 1 app\n2. Actions từ báo cáo ngày T-1 (nếu có)\n\nNhiệm vụ: Tạo báo cáo Markdown theo ĐÚNG template format. Report này sẽ được:\n- Hiển thị trên Nexus UI (có radar chart renderer)\n- Export PDF gửi BOD\n- Dùng làm input cho báo cáo T+1 (action tracking)\n\n═══ HEALTH SCORING ═══\n- 8 dimensions, mỗi dimension 0-100.\n- Composite = weighted average CHỈ trên dimensions CÓ DATA. N/A → loại khỏi tính toán, set radar = 0.\n- Tier: S(90+), A(80-89), B(65-79), C(50-64), D(30-49), F(<30).\n- So sánh score hôm nay vs hôm qua → ghi trend ↑/↓/→ và delta.\n\n═══ T+1 ACTION TRACKING ═══\n- Nếu nhận được previous_actions: review từng action, classify ✅/🔄/❌ dựa trên data hôm nay.\n- ✅ Resolved: metric đã cải thiện qua ngưỡng cảnh báo.\n- 🔄 Ongoing: chưa cải thiện, ghi carried_days.\n- ❌ Worsened: metric xấu hơn → escalate urgency.\n- Nếu carried_days ≥ 3 → đề xuất escalate lên cấp trên.\n\n═══ FORMAT SỐ LIỆU ═══\n- Revenue: $#,###.## | eCPM: $#.## | Tỷ lệ: #.#% | Số lượng: #,### hoặc #.#K\n- Trend: +#.#% hoặc −#.#% (có dấu) | N/A khi không có dữ liệu — KHÔNG bịa số\n\n═══ QUY TẮC DOANH THU ═══\n- Tổng doanh thu = IAA (AdMob/mediation từ gold.fact) + IAP (purchases/subscriptions từ Firebase)\n- LUÔN tách rõ IAA vs IAP | ARPDAU = Tổng DT / DAU | ROI = Tổng DT / Tổng UA cost\n\n═══ QUY TẮC JOIN ═══\n- gold/admob/mediation → JOIN silver.dim_app_identifiers (admob_app_id)\n- bronze.fb_* → tên bảng chứa app key, KHÔNG có cột app_id\n- bronze.xmp → CONCAT('id', app_store_id) cho iOS\n- LUÔN filter event_date cho partition pruning\n\n═══ NGÔN NGỮ ═══\n- Tiếng Việt, chuyên nghiệp. Gắn thẻ team: [BOD], [UA], [Mediation], [Product], [Dev], [DA]\n- Chỉ trích số có trong snapshot — KHÔNG bịa",
+
+  "sections": [
+    {
+      "title": "📊 Executive Summary",
+      "section_key": "executive_summary",
+      "enabled": true,
+      "sort_order": 1,
+      "metrics": [
+        "health_score", "health_tier", "composite_8d",
+        "total_revenue", "iaa_revenue", "iap_revenue",
+        "revenue_trend_7d", "impressions", "ecpm", "fill_rate",
+        "dimension_revenue", "dimension_growth", "dimension_engagement",
+        "dimension_product", "dimension_ad_infra", "dimension_unit_econ",
+        "dimension_portfolio", "dimension_velocity"
+      ],
+      "comparisons": {
+        "day_over_day": true,
+        "vs_7d_avg": true,
+        "vs_14d_avg": true,
+        "vs_30d_avg": false
+      },
+      "audience": ["BOD / Leadership"],
+      "ai_instructions": "Khung doc 121 §3, §7.1 — Health Intelligence: mở bằng H2, health score 0-100 và tier (S/A/B/C/D/F). 8 dimension radar hoặc bảng |Dimension|Score|Trend|Status|. 2-4 câu narrative: dimension mạnh/yếu nhất, rủi ro chính, tín hiệu chéo.\n\nDIMENSION WEIGHTS (Utility App): Revenue 20%, Growth 10%, Engagement 20%, Product 20%, Ad Infra 15%, Unit Econ 10%, Portfolio 5%.\n\nSCORING: Base=50. Revenue: +15 if rev_vs_7d >+15%, -15 if <-15%. Growth: +20 if ROI>1.5, -25 if <0.5. Engagement: +15 if D1>35%, -15 if <25%. Product: +15 if drawing_rate>45%, -15 if <30%. Ad Infra: +10 if fill>90%, -15 if SoW>70%. Unit Econ: +15 if ARPDAU trend>+10%, -20 if ROI<0.5. Portfolio: +10 if geo diversified.",
+      "anomaly_thresholds": {
+        "health_score_drop": {"warning": -5, "critical": -10},
+        "dimension_critical": {"threshold": 30}
+      }
+    },
+    {
+      "title": "💰 Revenue & Monetization (+ Ad Infrastructure)",
+      "section_key": "revenue_monetization",
+      "enabled": true,
+      "sort_order": 2,
+      "metrics": [
+        "total_revenue", "iaa_revenue", "iap_revenue", "ecpm", "fill_rate",
+        "impressions", "total_ad_requests", "total_matched_requests", "arpdau",
+        "ad_source_name", "ad_source_revenue", "ad_source_sow",
+        "ad_unit_name", "ad_unit_revenue", "ad_unit_ecpm",
+        "ad_format", "ad_format_impressions"
+      ],
+      "comparisons": {
+        "day_over_day": true,
+        "vs_7d_avg": true,
+        "vs_14d_avg": true,
+        "vs_30d_avg": false
+      },
+      "audience": ["BOD / Leadership", "Mediation"],
+      "ai_instructions": "3.1 Xu hướng DT tổng (IAA+IAP): bảng 15d + stacked bar chart. ARPDAU = Tổng DT/DAU. 3.2 SoW theo nguồn (pie + bảng, chỉ IAA). 3.3 Ad Unit (bảng format/rev/eCPM). 3.4 Ad Format Breakdown (pie impressions từ Q11b). 3.5 Fill Rate & Infra Health.\n\nQUY TẮC: LUÔN tách IAA vs IAP. Q1=IAA only, Q9=IAP only. SoW chỉ trên IAA. Ghi chú khi DoD bị ảnh hưởng bởi IAP spike.",
+      "anomaly_thresholds": {
+        "revenue_drop_7d": {"warning": -15, "critical": -25, "unit": "%"},
+        "fill_rate": {"warning_below": 85, "critical_below": 80, "unit": "%"},
+        "ecpm_drop_7d": {"warning": -10, "critical": -20, "unit": "%"},
+        "sow_concentration": {"warning": 60, "critical": 70, "unit": "%"}
+      }
+    },
+    {
+      "title": "👥 Engagement & Retention",
+      "section_key": "engagement_retention",
+      "enabled": true,
+      "sort_order": 3,
+      "metrics": [
+        "dau", "new_users", "dav", "sessions", "sessions_per_user",
+        "ad_penetration", "avg_engagement_min", "paying_users",
+        "d1_retention", "d3_retention", "d7_retention", "d14_retention", "d30_retention"
+      ],
+      "comparisons": {
+        "day_over_day": true,
+        "vs_7d_avg": true,
+        "vs_14d_avg": true,
+        "vs_30d_avg": false
+      },
+      "audience": ["BOD / Leadership", "Product"],
+      "ai_instructions": "5.1 DAU trend (bar DAU + line New Users 15d). 5.2 Retention cohort bảng + curve. Tách Mar vs Apr cohorts nếu đủ data.\n\nSIGNALS: S3=D1↓+NewUsers↑→[UA]. S4=D7↓+D1 OK→[Product]. Sessions/user<1.5→warning. NewUsers>40%DAU→UA dependency.\n\nDAU = session_start OR user_engagement. DAV = ad_impression*. Retention clamp ≤100%.",
+      "anomaly_thresholds": {
+        "dau_drop_7d": {"warning": -10, "critical": -20, "unit": "%"},
+        "d1_retention": {"warning_below": 25, "critical_below": 20, "unit": "%"},
+        "d7_retention": {"warning_below": 12, "critical_below": 10, "unit": "%"},
+        "sessions_per_user": {"warning_below": 1.5, "unit": "x"}
+      }
+    },
+    {
+      "title": "🎮 Product & Content Health",
+      "section_key": "product_content",
+      "enabled": true,
+      "sort_order": 4,
+      "metrics": [
+        "drawing_rate", "d0_activation", "onboard_complete_rate", "onboard_drop_step",
+        "drawing_users", "drawing_completions", "trial_starts", "sub_upgrades",
+        "trial_to_sub", "trial_cancels", "refunds", "iap_shows", "iap_clicks",
+        "iap_purchases", "iap_revenue_daily", "share_users",
+        "geo_drawing_rate", "geo_d0_activation", "geo_onboard_complete",
+        "geo_d1_retention", "geo_d7_retention"
+      ],
+      "comparisons": {
+        "day_over_day": true,
+        "vs_7d_avg": true,
+        "vs_14d_avg": true,
+        "vs_30d_avg": false
+      },
+      "audience": ["BOD / Leadership", "Product"],
+      "ai_instructions": "6.1 Product KPIs (bảng T/7d/target). 6.2 Drawing Rate + D0 Activation chart 15d. 6.3 Onboarding funnel (flowchart 8 bước, highlight drop). 6.4 Subscription funnel (trials bar + IAP rev line). 6.5 GEO DEEP DIVE — top 3 countries: bảng so sánh, onboarding per country (Q17), retention per country (Q18), D0 activation per country (Q19). Cross-insights BẮT BUỘC + actions per country.\n\nKPI #1 = drawing_rate. SIGNAL 5=DR↓+DAU OK→[Product]. SIGNAL 6=D0↓+Onboard OK→missing CTA. SIGNAL 7=Trial↑+Conversion↓→paywall.\n\nJP-specific: check end_onboard_jp path, ~93% JP users bypass personalization.",
+      "anomaly_thresholds": {
+        "drawing_rate": {"warning_below": 35, "critical_below": 30, "unit": "%"},
+        "d0_activation": {"warning_below": 25, "critical_below": 20, "unit": "%"},
+        "onboard_complete": {"warning_below": 60, "critical_below": 50, "unit": "%"},
+        "trial_to_sub": {"warning_below": 10, "critical_below": 5, "unit": "%"}
+      }
+    },
+    {
+      "title": "📈 Growth & Acquisition",
+      "section_key": "growth_acquisition",
+      "enabled": true,
+      "sort_order": 5,
+      "metrics": [
+        "ua_cost", "ua_cost_by_channel", "roi",
+        "organic_installs", "organic_pct", "installs_by_network"
+      ],
+      "comparisons": {
+        "day_over_day": true,
+        "vs_7d_avg": true,
+        "vs_14d_avg": false,
+        "vs_30d_avg": false
+      },
+      "audience": ["BOD / Leadership", "UA"],
+      "ai_instructions": "7.1 UA cost by channel (pie + bảng). 7.2 ROI = Tổng DT (IAA+IAP) / Tổng UA. 7.3 Organic vs Paid: dùng snapshot.attribution.appsFlyerOrganicSplit khi hasAppsFlyerAttributionSlice (Master gold/aggregate hoặc Pull raw); nếu không có slice thì Firebase af_status. 7.4 Installs & chi phí theo network: appsFlyerInstallsByMediaSourceTop (cùng điều kiện).\n\nS3 recap. ROI<0.5 + NewUsers↑ = đốt tiền. Organic cao + paid ROI thấp → giảm paid, tối ưu organic.\n\nUA cost từ Q13 XMP. iOS: store_package_id = CONCAT('id', app_store_id).",
+      "anomaly_thresholds": {
+        "roi": {"warning_below": 1.0, "critical_below": 0.5, "unit": "x"},
+        "ua_cost_spike": {"warning": 30, "critical": 50, "unit": "%"}
+      }
+    },
+    {
+      "title": "⚠️ Anomalies & Alerts",
+      "section_key": "anomalies_alerts",
+      "enabled": true,
+      "sort_order": 6,
+      "metrics": [],
+      "comparisons": {
+        "day_over_day": true,
+        "vs_7d_avg": true,
+        "vs_14d_avg": true,
+        "vs_30d_avg": false
+      },
+      "audience": ["BOD / Leadership"],
+      "ai_instructions": "Auto-detect từ 10 CROSS-REFERENCE SIGNALS:\nS1: Rev↑+Fill↓=fragile. S2: Rev↑+DAU↓=intensity. S3: D1↓+NewUsers↑=UA quality. S4: D7↓+D1 OK=core loop. S5: DR↓+DAU OK=KPI#1. S6: D0↓+Onboard OK=missing CTA. S7: Trial↑+Conv↓=paywall. S8: Country A>>B=localization. S9: Gold empty+Bronze has=pipeline. S10: Q1 rev có nhưng DAU NULL=lag.\n\nFormat: 🔴 Nghiêm trọng → 🟡 Cảnh báo → ✅ Tích cực. Bảng: #|Tín hiệu|Chi tiết|Source.",
+      "anomaly_thresholds": {
+        "cross_signals": [
+          {"id": "S1", "conditions": ["revenue_dod>0", "fill_rate_dod<0"], "severity": "warning"},
+          {"id": "S2", "conditions": ["revenue_dod>0", "dau_dod<0"], "severity": "warning"},
+          {"id": "S3", "conditions": ["d1_trend<0", "new_users_trend>0"], "severity": "critical"},
+          {"id": "S5", "conditions": ["drawing_rate_dod<-3", "dau_dod>=-5"], "severity": "critical"},
+          {"id": "S7", "conditions": ["trial_starts_trend>0", "trial_to_sub<5"], "severity": "critical"},
+          {"id": "S10", "conditions": ["q1_dau==null", "q5_dau>0"], "severity": "info"}
+        ]
+      }
+    },
+    {
+      "title": "✅ Recommendations & Action Plan",
+      "section_key": "action_plan",
+      "enabled": true,
+      "sort_order": 7,
+      "metrics": [],
+      "comparisons": {},
+      "audience": ["BOD / Leadership", "UA", "Product", "Mediation"],
+      "ai_instructions": "T+1 review nếu có previous_actions (✅/🔄/❌). New actions: 🔴P0 (2-4 tuần này), 🟡P1 (3-5 sprint này), 🟢P2 (3-5 sprint sau). Tổng ≤12. Carried forward nếu carried_days≥3→escalate.\n\nMỗi action: Hành động cụ thể | Owner [tag] | Tín hiệu | Tác động. Không action chung chung.",
+      "anomaly_thresholds": {}
+    }
+  ],
+
+  "knowledge_base": [
+    {
+      "title": "[KB-1] Thresholds & Benchmarks — Utility App (Creative)",
+      "category": "Rules",
+      "content": "REVENUE: >+15% vs 7d→Positive | <-15%→Warning | <-25%→Critical\nFILL RATE: >90%→Excellent | 85-90%→Good | 80-85%→Warning | <80%→Critical\neCPM: >+10% vs 7d→Positive | <-10%→Warning | <-20%→Critical\nAD CONCENTRATION: Top1 >70%→Critical | >60%→Warning | <40%→Healthy\nRETENTION: D1 >35%→Excellent | 30-35%→Good | <25%→Warning | <20%→Critical. D7 >15%→Good | <10%→Warning\nDRAWING RATE (KPI#1): >45%→Excellent | 40-45%→Good | 30-35%→Warning | <30%→Critical\nD0 ACTIVATION: >30%→Excellent | 25-30%→Good | <20%→Warning\nONBOARDING: >75%→Excellent | 70-75%→Good | <60%→Warning | <50%→Critical\nROI: >1.5→Positive | 1.0-1.5→OK | 0.5-1.0→Warning | <0.5→Critical\nTRIAL→SUB: >20%→Excellent | 15-20%→Good | <10%→Warning\nSESSIONS/USER: >2.5→Positive | 1.5-2.5→Good | <1.5→Warning\nAD PENETRATION: >80%→Positive | 60-80%→OK | <60%→Tip",
+      "tags": ["benchmarks", "thresholds", "utility", "creative"],
+      "focus_areas": ["revenue", "retention", "product", "ad_perf"],
+      "priority": 10
+    },
+    {
+      "title": "[KB-2] Cross-Reference Rules — Signal Detection",
+      "category": "Rules",
+      "content": "S1: Rev↑+Fill↓→fragile growth→[Mediation]\nS2: Rev↑+DAU↓→ads intensity→[Product]\nS3: D1↓+NewUsers↑→UA quality→[UA]\nS4: D7↓+D1 OK→core loop→[Product]\nS5: DR↓+DAU OK→KPI#1 alert→[Product]\nS6: D0↓+Onboard OK→missing CTA→[Product]\nS7: Trial↑+Conv↓→paywall→[Product]\nS8: Country A DR>>B→localization→[Product]\nS9: Gold empty+Bronze has→pipeline→[DA][Dev]\nS10: Q1 rev+DAU NULL→lag→use Bronze",
+      "tags": ["signals", "cross-reference", "anomaly"],
+      "focus_areas": ["all"],
+      "priority": 10
+    },
+    {
+      "title": "[115] Bronze Firebase fb_* (no app_id column)",
+      "category": "Schema",
+      "content": "`bronze.fb_*` = raw events, one physical table per Firebase app (suffix = sanitized app key). NO `app_id` column — do NOT write `WHERE app_id`. Scope by table name. Always filter `event_date` (partition). Columns: event_date, event_timestamp, user_pseudo_id, install_date, retention_day, event_name, app_version, device_json, geo_json, traffic_source_json, event_params_json, user_properties_json, raw_event_json. JSON: use get_json_string(col, '$.path'). event_params format: object map key→{string_value, int_value, float_value, double_value}.",
+      "tags": ["firebase", "bronze", "115", "sql"],
+      "focus_areas": ["iaa", "iap", "retention"],
+      "priority": 10
+    },
+    {
+      "title": "[115] Gold Layer — fact + daily_overview schema",
+      "category": "Schema",
+      "content": "gold.fact_daily_app_metrics: app_id=admob_app_id, `date` (backtick), total_revenue/estimated_revenue, ecpm, fill_rate, impressions, total_ad_requests, total_matched_requests, ua_cost, roi, dau, dav, arpdau (MAY BE NULL). gold.daily_overview: app_id=admob_app_id, event_date, dau, new_users, dav, sessions, avg_sessions, avg_dur_min, ad_penetration. Lag ~1d until Firebase job 04:00 UTC. CRITICAL: use `total_matched_requests` NOT `matched_requests`.",
+      "tags": ["gold", "schema", "fact", "daily_overview"],
+      "focus_areas": ["revenue", "engagement"],
+      "priority": 10
+    },
+    {
+      "title": "[115] JOIN Rules — dim_app_identifiers mapping",
+      "category": "Rules",
+      "content": "silver.dim_app_identifiers: firebase_id↔admob_app_id↔package_name↔app_store_id↔adjust_id. Gold/AdMob/Mediation: JOIN dim ON dim.admob_app_id=table.app_id WHERE dim.firebase_id='{key}'. XMP iOS: JOIN dim ON x.store_package_id=CONCAT('id',d.app_store_id). bronze.fb_*: NO JOIN (table name has key). AppsFlyer: WHERE af.app_id=dim.package_name OR CONCAT('id',dim.app_store_id). Do NOT use silver.dim_apps_summary (deprecated).",
+      "tags": ["join", "dim", "115", "sql"],
+      "focus_areas": ["all"],
+      "priority": 10
+    },
+    {
+      "title": "Utility App Event Catalog — Drawing/Creative",
+      "category": "Schema",
+      "content": "CORE: session_start, user_engagement, first_open, screen_view. DRAWING starts: draw_with_lesson, draw_with_template, content_draw, lessons_drawing, lessons_free_start_drawing, lessons_Pro_start_drawing. COMPLETIONS: draw_finish_with_lesson, draw_finish_with_template, content_done. ONBOARDING (8 steps): first_open→language_choose→intro_next_click→intro_category_choose→intro_user_level_choose→intro_user_age_choose→intro_iap→end_onboard_global/end_onboard_iaa/end_onboard_jp. IAP: iap_show→iap_click→iap_open_view→iap_open_pay→iap_purchase. SUB: trial_started, subscription_upgraded, trial_canceled, refund. AD: ad_impression_custom (main for AR Tracer), ad_clicked. Format: get_json_string(event_params_json,'$.ad_format').",
+      "tags": ["events", "utility", "creative", "drawing"],
+      "focus_areas": ["product", "retention", "iap"],
+      "priority": 8
+    },
+    {
+      "title": "[115] Forbidden identifiers & SQL pitfalls",
+      "category": "Rules",
+      "content": "FORBIDDEN: silver.dim_apps_summary, `matched_requests` (use total_matched_requests), WHERE app_id on bronze.fb_*, SELECT * on bronze, query without event_date, GROUP BY alias (StarRocks), ad_impression1-4 for AR Tracer. ALWAYS: filter event_date, use get_json_string(), CAST JSON values, COALESCE for division, batch INSERT by date.",
+      "tags": ["starrocks", "115", "sql", "pitfalls"],
+      "focus_areas": ["all"],
+      "priority": 10
+    }
+  ],
+
+  "metrics": [
+    {"metric_key": "total_revenue", "display_name": "Tổng doanh thu", "domain": "Revenue", "unit": "USD", "formula": "iaa_revenue + iap_revenue", "formula_sql": "Q1.estimated_revenue + Q9.iap_revenue_usd", "description": "Tổng doanh thu IAA (AdMob) + IAP (purchases/subscriptions)", "source_table": "gold.fact + bronze.fb_*", "default_priority": 1, "thresholds": {}, "tags": ["revenue", "p0"]},
+    {"metric_key": "iaa_revenue", "display_name": "Doanh thu IAA", "domain": "Revenue", "unit": "USD", "formula": "estimated_revenue", "formula_sql": "SUM(estimated_revenue)", "description": "Doanh thu quảng cáo từ AdMob/mediation", "source_table": "gold.fact_daily_app_metrics", "default_priority": 1, "thresholds": {}, "tags": ["revenue", "iaa"]},
+    {"metric_key": "iap_revenue", "display_name": "Doanh thu IAP", "domain": "Revenue", "unit": "USD", "formula": "SUM iap_revenue_usd", "formula_sql": "SUM(CASE WHEN event_name IN ('iap_purchase','in_app_purchase') THEN CAST(get_json_string(raw_event_json,'$.event_value_in_usd') AS DOUBLE) ELSE 0 END)", "description": "Doanh thu mua hàng/subscription từ Firebase", "source_table": "bronze.fb_*", "default_priority": 1, "thresholds": {}, "tags": ["revenue", "iap"]},
+    {"metric_key": "ecpm", "display_name": "eCPM", "domain": "Revenue", "unit": "USD", "formula": "revenue / impressions × 1000", "formula_sql": "ecpm (pre-calculated)", "description": "Effective cost per mille từ gold.fact", "source_table": "gold.fact_daily_app_metrics", "default_priority": 2, "thresholds": {"warning": "<-10% vs 7d", "critical": "<-20% vs 7d"}, "tags": ["revenue", "ad_perf"]},
+    {"metric_key": "fill_rate", "display_name": "Fill Rate", "domain": "Ad Perf", "unit": "%", "formula": "total_matched_requests / total_ad_requests × 100", "formula_sql": "fill_rate (pre-calculated) or total_matched_requests/total_ad_requests", "description": "Tỷ lệ lấp đầy quảng cáo", "source_table": "gold.fact_daily_app_metrics", "default_priority": 2, "thresholds": {"healthy": ">90", "warning": "80-85", "critical": "<80"}, "tags": ["ad_perf"]},
+    {"metric_key": "arpdau", "display_name": "ARPDAU", "domain": "Revenue", "unit": "USD", "formula": "total_revenue / dau", "formula_sql": "(Q1.estimated_revenue + Q9.iap_revenue_usd) / Q5.dau", "description": "Average revenue per daily active user (IAA+IAP)", "source_table": "Derived", "default_priority": 2, "thresholds": {}, "tags": ["revenue", "unit_econ"]},
+    {"metric_key": "dau", "display_name": "DAU", "domain": "Engagement", "unit": "count", "formula": "unique users session_start OR user_engagement", "formula_sql": "COUNT(DISTINCT CASE WHEN event_name IN ('session_start','user_engagement') THEN user_pseudo_id END)", "description": "Daily Active Users", "source_table": "bronze.fb_* or gold.daily_overview", "default_priority": 1, "thresholds": {}, "tags": ["engagement", "p0"]},
+    {"metric_key": "new_users", "display_name": "New Users", "domain": "Growth", "unit": "count", "formula": "unique users first_open", "formula_sql": "COUNT(DISTINCT CASE WHEN event_name='first_open' THEN user_pseudo_id END)", "description": "User mới (first_open)", "source_table": "bronze.fb_*", "default_priority": 2, "thresholds": {}, "tags": ["growth"]},
+    {"metric_key": "dav", "display_name": "DAV", "domain": "Engagement", "unit": "count", "formula": "unique users ad_impression*", "formula_sql": "COUNT(DISTINCT CASE WHEN event_name LIKE 'ad_impression%' THEN user_pseudo_id END)", "description": "Daily Ad Viewers", "source_table": "bronze.fb_*", "default_priority": 2, "thresholds": {}, "tags": ["engagement", "ad_perf"]},
+    {"metric_key": "sessions_per_user", "display_name": "Sessions/User", "domain": "Engagement", "unit": "ratio", "formula": "sessions / dau", "formula_sql": "Derived", "description": "Số sessions trung bình mỗi user", "source_table": "Derived", "default_priority": 3, "thresholds": {"healthy": ">2.5", "warning": "<1.5"}, "tags": ["engagement"]},
+    {"metric_key": "ad_penetration", "display_name": "Ad Penetration", "domain": "Engagement", "unit": "%", "formula": "dav / dau × 100", "formula_sql": "Derived", "description": "% DAU xem quảng cáo", "source_table": "Derived", "default_priority": 3, "thresholds": {"healthy": ">80", "warning": "<60"}, "tags": ["engagement", "ad_perf"]},
+    {"metric_key": "d1_retention", "display_name": "D1 Retention", "domain": "Retention", "unit": "%", "formula": "D1 active / D0 installs × 100", "formula_sql": "Q6 cohort query", "description": "Tỷ lệ giữ chân ngày 1", "source_table": "bronze.fb_*", "default_priority": 1, "thresholds": {"healthy": ">35", "warning": "<25", "critical": "<20"}, "tags": ["retention", "p0"]},
+    {"metric_key": "d7_retention", "display_name": "D7 Retention", "domain": "Retention", "unit": "%", "formula": "D7 active / D0 × 100", "formula_sql": "Q6 cohort query", "description": "Tỷ lệ giữ chân ngày 7", "source_table": "bronze.fb_*", "default_priority": 1, "thresholds": {"healthy": ">15", "warning": "<12", "critical": "<10"}, "tags": ["retention", "p0"]},
+    {"metric_key": "drawing_rate", "display_name": "Drawing Rate", "domain": "Product", "unit": "%", "formula": "drawing_users / dau × 100", "formula_sql": "Q7.drawing_users / Q5.dau × 100", "description": "KPI #1: % DAU có vẽ", "source_table": "Derived", "default_priority": 1, "thresholds": {"healthy": ">45", "warning": "30-35", "critical": "<30"}, "tags": ["product", "kpi1", "p0"]},
+    {"metric_key": "d0_activation", "display_name": "D0 Activation", "domain": "Product", "unit": "%", "formula": "d0_drawers / installs × 100", "formula_sql": "Q10 query", "description": "% user mới vẽ ngay ngày cài", "source_table": "bronze.fb_*", "default_priority": 1, "thresholds": {"healthy": ">30", "warning": "<25", "critical": "<20"}, "tags": ["product", "p0"]},
+    {"metric_key": "onboard_complete_rate", "display_name": "Onboard Complete", "domain": "Product", "unit": "%", "formula": "step8_complete / step1_install × 100", "formula_sql": "Q8 query", "description": "Tỷ lệ hoàn thành onboarding", "source_table": "bronze.fb_*", "default_priority": 2, "thresholds": {"healthy": ">75", "warning": "<60", "critical": "<50"}, "tags": ["product", "onboarding"]},
+    {"metric_key": "trial_to_sub", "display_name": "Trial→Sub", "domain": "Product", "unit": "%", "formula": "sub_upgrades / trial_starts × 100", "formula_sql": "Q9 derived", "description": "Tỷ lệ chuyển đổi trial sang subscription", "source_table": "bronze.fb_*", "default_priority": 2, "thresholds": {"healthy": ">20", "warning": "<10", "critical": "<5"}, "tags": ["product", "iap", "subscription"]},
+    {"metric_key": "ua_cost", "display_name": "UA Cost", "domain": "Growth", "unit": "USD", "formula": "SUM cost by channel", "formula_sql": "SUM(x.cost) FROM bronze.xmp_report", "description": "Tổng chi phí thu hút user", "source_table": "bronze.xmp_report", "default_priority": 2, "thresholds": {}, "tags": ["growth", "ua"]},
+    {"metric_key": "roi", "display_name": "ROI", "domain": "Growth", "unit": "ratio", "formula": "total_revenue / ua_cost", "formula_sql": "Derived", "description": "Return on Investment (doanh thu / chi UA)", "source_table": "Derived", "default_priority": 1, "thresholds": {"healthy": ">1.5", "warning": "0.5-1.0", "critical": "<0.5"}, "tags": ["growth", "unit_econ", "p0"]},
+    {"metric_key": "health_score", "display_name": "Health Score", "domain": "Health", "unit": "score", "formula": "weighted avg 7 dimensions", "formula_sql": "Pre-calculated by scoring logic", "description": "Điểm sức khỏe tổng hợp 0-100", "source_table": "Derived", "default_priority": 1, "thresholds": {"S": ">90", "A": "80-89", "B": "65-79", "C": "50-64", "D": "30-49", "F": "<30"}, "tags": ["health", "p0"]}
+  ],
+
+  "app_context_templates": [
+    {"key": "query_identifiers", "label": "Query context — app identifiers for MCP", "description": "firebase_id, bundle_id, platform, app_store_id, admob_app_id, adjust_id, bronze_table"},
+    {"key": "monetization", "label": "Monetization — hybrid IAA+IAP", "description": "Revenue mix, ad formats, IAP model, ad events, AdMob sources"},
+    {"key": "game_progression", "label": "Game progression & level design", "description": "Core loop, level structure, difficulty curve (cho game apps)"},
+    {"key": "user_flow", "label": "User flow — onboarding", "description": "Onboarding steps, funnel events, variant paths (JP, etc.)"},
+    {"key": "geo_strategy", "label": "Geo-specific strategy", "description": "Top markets, per-country behavior, localization needs"},
+    {"key": "ad_infra", "label": "Ad infrastructure & mediation", "description": "Primary ad events, format params, fill rate notes, SoW analysis"},
+    {"key": "growth_ua", "label": "Growth & UA snapshot", "description": "UA channels, attribution setup (AF/Adjust), organic vs paid"},
+    {"key": "liveops", "label": "LiveOps / A-B tests", "description": "Active experiments, feature flags, seasonal events"},
+    {"key": "unit_econ", "label": "Unit economics & LTV context", "description": "ARPDAU, CPI, LTV estimates, payback period"}
+  ],
+
+  "app_context_example_ar_tracer": {
+    "appSummary": "AR Tracer: Trace Drawing — ứng dụng vẽ tranh qua camera AR trên iOS. Thể loại Creative Utility. Monetization hybrid IAA (60%) + IAP/Subscription (40%). Thị trường chính: US, UK, JP. Giai đoạn growth (UA scaling).",
+    "contexts": {
+      "query_identifiers": {
+        "firebase_id": "ar_tracer_trace_drawing_ios",
+        "bundle_id": "com.avntech.ar-drawing",
+        "platform": "iOS",
+        "app_store_id": "6504559449",
+        "xmp_store_package_id": "id6504559449",
+        "adjust_id": null,
+        "bronze_table": "bronze.fb_ar_tracer_trace_drawing_ios"
+      },
+      "monetization": "Revenue mix ~60% IAA, ~40% IAP. IAA: 5 formats — interstitial dominates (55.7%), rewarded highest eCPM ($24.60). Ad event: ad_impression_custom (NOT ad_impression1-4). Format param: get_json_string(event_params_json,'$.ad_format'). IAP: Subscription trial→paid. Trial→Sub critically low (0.2%).",
+      "user_flow": "Core Loop: Install→Onboard(8 steps)→Browse→AR Drawing→Complete→Share→Return. Onboarding: first_open→language_choose*→intro_next_click→category→level→age→iap→end_onboard_global/iaa/jp. IMPORTANT: Japan has SEPARATE path (end_onboard_jp) bypassing personalization (~93% JP users).",
+      "geo_strategy": "US: largest, D0 activation 70.6% but D1 only 12.7%. UK: best quality (D1 17.1%, DR 63.0%). JP: lowest retention (D1 9.7%), bypass personalization. UK under-invested in UA.",
+      "ad_infra": "Primary: ad_impression_custom. Formats: banner 58.1%, native 16.5%, interstitial 13.0%, app_open 10.7%, rewarded 1.7%. Fill 89.5%. SoW: Waterfall 39% (healthy). Opportunity: increase rewarded.",
+      "unit_econ": "ARPDAU $0.071. ROI 0.168x (deeply negative). Daily loss ~$8.5K. Organic 38K installs (free). D7 LTV est ~$0.50 vs CPI ~$3-4. Need 6-8x retention improvement to break even on paid."
+    }
+  }
+}

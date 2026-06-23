@@ -1,0 +1,8 @@
+python-dotenv
+google-auth-oauthlib
+google-auth
+requests
+sqlalchemy
+pymysql
+pymongo
+pandas

@@ -1,0 +1,886 @@
+{
+  "info": {
+    "_postman_id": "meta-marketing-api-mediation-pro",
+    "name": "Meta Marketing API - Mediation Pro Platform",
+    "description": "Complete Postman collection for Meta Marketing API integration.\n\n## Setup Instructions\n\n1. Create environment with variables:\n   - base_url: https://graph.facebook.com/v24.0\n   - access_token: Your long-lived access token\n   - app_id, app_secret, ad_account_id, page_id\n\n2. Import this collection and select environment\n\n## API Version: v24.0 (Released Oct 8, 2025)\n## Updated: Feb 2026\n\n## Important v24.0 Changes:\n- Legacy ASC/AAC APIs deprecated\n- Use OUTCOME_APP_PROMOTION for app installs\n- lookalike_spec mandatory from Jan 6, 2026\n- 5% budget can go to excluded placements",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+  },
+  "item": [
+    {
+      "name": "01. Authentication",
+      "item": [
+        {
+          "name": "Exchange Token (Short to Long)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/oauth/access_token?grant_type=fb_exchange_token&client_id={{app_id}}&client_secret={{app_secret}}&fb_exchange_token={{short_lived_token}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "oauth", "access_token"],
+              "query": [
+                {"key": "grant_type", "value": "fb_exchange_token"},
+                {"key": "client_id", "value": "{{app_id}}"},
+                {"key": "client_secret", "value": "{{app_secret}}"},
+                {"key": "fb_exchange_token", "value": "{{short_lived_token}}"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Debug Token",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/debug_token?input_token={{access_token}}&access_token={{app_id}}|{{app_secret}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "debug_token"],
+              "query": [
+                {"key": "input_token", "value": "{{access_token}}"},
+                {"key": "access_token", "value": "{{app_id}}|{{app_secret}}"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/me?fields=id,name,email",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "me"],
+              "query": [{"key": "fields", "value": "id,name,email"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Ad Accounts",
+      "item": [
+        {
+          "name": "List Ad Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name,amount_spent,business&limit=100",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "me", "adaccounts"],
+              "query": [
+                {"key": "fields", "value": "id,name,account_status,currency,timezone_name,amount_spent,business"},
+                {"key": "limit", "value": "100"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ad Account Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}?fields=id,name,account_status,currency,timezone_name,spend_cap,business,disable_reason",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}"],
+              "query": [{"key": "fields", "value": "id,name,account_status,currency,timezone_name,spend_cap,business,disable_reason"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Campaigns",
+      "item": [
+        {
+          "name": "List All Campaigns",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/campaigns?fields=id,name,objective,status,daily_budget,lifetime_budget,bid_strategy,effective_status,special_ad_categories,created_time&limit=100",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "campaigns"],
+              "query": [
+                {"key": "fields", "value": "id,name,objective,status,daily_budget,lifetime_budget,bid_strategy,effective_status,special_ad_categories,created_time"},
+                {"key": "limit", "value": "100"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Active Campaigns",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/campaigns?fields=id,name,objective,status,daily_budget&filtering=[{\"field\":\"effective_status\",\"operator\":\"IN\",\"value\":[\"ACTIVE\"]}]",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "campaigns"],
+              "query": [
+                {"key": "fields", "value": "id,name,objective,status,daily_budget"},
+                {"key": "filtering", "value": "[{\"field\":\"effective_status\",\"operator\":\"IN\",\"value\":[\"ACTIVE\"]}]"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}?fields=id,name,objective,status,daily_budget,lifetime_budget,bid_strategy,adsets{id,name,status}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}"],
+              "query": [{"key": "fields", "value": "id,name,objective,status,daily_budget,lifetime_budget,bid_strategy,adsets{id,name,status}"}]
+            }
+          }
+        },
+        {
+          "name": "Create Campaign - App Promotion",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"App Install - Weather App - VN - Feb 2025\",\n  \"objective\": \"OUTCOME_APP_PROMOTION\",\n  \"status\": \"PAUSED\",\n  \"special_ad_categories\": [],\n  \"buying_type\": \"AUCTION\",\n  \"bid_strategy\": \"LOWEST_COST_WITHOUT_CAP\"\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/campaigns",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Create Campaign - With Budget",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weather App - VN Android - Feb 2025\",\n  \"objective\": \"OUTCOME_APP_PROMOTION\",\n  \"status\": \"PAUSED\",\n  \"special_ad_categories\": [],\n  \"buying_type\": \"AUCTION\",\n  \"bid_strategy\": \"LOWEST_COST_WITHOUT_CAP\",\n  \"daily_budget\": 5000000\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/campaigns",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Update Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Campaign Name\",\n  \"status\": \"PAUSED\",\n  \"daily_budget\": 7500000\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Pause Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"status\": \"PAUSED\"}"},
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Activate Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"status\": \"ACTIVE\"}"},
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Ad Sets",
+      "item": [
+        {
+          "name": "List Ad Sets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adsets?fields=id,name,campaign_id,status,daily_budget,optimization_goal,billing_event,targeting,start_time,end_time&limit=100",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adsets"],
+              "query": [
+                {"key": "fields", "value": "id,name,campaign_id,status,daily_budget,optimization_goal,billing_event,targeting,start_time,end_time"},
+                {"key": "limit", "value": "100"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Ad Sets by Campaign",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}/adsets?fields=id,name,status,daily_budget,targeting,optimization_goal",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}", "adsets"],
+              "query": [{"key": "fields", "value": "id,name,status,daily_budget,targeting,optimization_goal"}]
+            }
+          }
+        },
+        {
+          "name": "Get Ad Set",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{adset_id}}?fields=id,name,campaign_id,status,daily_budget,optimization_goal,billing_event,targeting,promoted_object,ads{id,name,status}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{adset_id}}"],
+              "query": [{"key": "fields", "value": "id,name,campaign_id,status,daily_budget,optimization_goal,billing_event,targeting,promoted_object,ads{id,name,status}"}]
+            }
+          }
+        },
+        {
+          "name": "Create Ad Set - VN Android",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VN - Android - 18-45 - Gaming Interest\",\n  \"campaign_id\": \"{{campaign_id}}\",\n  \"status\": \"PAUSED\",\n  \"daily_budget\": 2000000,\n  \"billing_event\": \"IMPRESSIONS\",\n  \"optimization_goal\": \"APP_INSTALLS\",\n  \"bid_amount\": 5000,\n  \"targeting\": {\n    \"geo_locations\": {\"countries\": [\"VN\"]},\n    \"age_min\": 18,\n    \"age_max\": 45,\n    \"genders\": [0],\n    \"device_platforms\": [\"mobile\"],\n    \"user_os\": [\"Android\"],\n    \"publisher_platforms\": [\"facebook\", \"instagram\", \"audience_network\"],\n    \"facebook_positions\": [\"feed\", \"stories\", \"reels\"],\n    \"instagram_positions\": [\"stream\", \"story\", \"reels\"]\n  },\n  \"promoted_object\": {\n    \"application_id\": \"{{facebook_app_id}}\",\n    \"object_store_url\": \"https://play.google.com/store/apps/details?id=com.example.app\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adsets",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adsets"]
+            }
+          }
+        },
+        {
+          "name": "Create Ad Set - With Interest",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VN - Android - Gaming Interest - 25-40\",\n  \"campaign_id\": \"{{campaign_id}}\",\n  \"status\": \"PAUSED\",\n  \"daily_budget\": 3000000,\n  \"billing_event\": \"IMPRESSIONS\",\n  \"optimization_goal\": \"APP_INSTALLS\",\n  \"targeting\": {\n    \"geo_locations\": {\"countries\": [\"VN\"], \"location_types\": [\"home\", \"recent\"]},\n    \"age_min\": 25,\n    \"age_max\": 40,\n    \"device_platforms\": [\"mobile\"],\n    \"user_os\": [\"Android\"],\n    \"publisher_platforms\": [\"facebook\", \"instagram\"],\n    \"flexible_spec\": [\n      {\n        \"interests\": [\n          {\"id\": \"6003139266461\", \"name\": \"Mobile games\"},\n          {\"id\": \"6003107902433\", \"name\": \"Games\"}\n        ]\n      }\n    ]\n  },\n  \"promoted_object\": {\n    \"application_id\": \"{{facebook_app_id}}\",\n    \"object_store_url\": \"https://play.google.com/store/apps/details?id=com.example.app\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adsets",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adsets"]
+            }
+          }
+        },
+        {
+          "name": "Update Ad Set Budget",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"daily_budget\": 4000000}"},
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{adset_id}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{adset_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Pause Ad Set",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"status\": \"PAUSED\"}"},
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{adset_id}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{adset_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Ad Creatives",
+      "item": [
+        {
+          "name": "List Ad Creatives",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adcreatives?fields=id,name,title,body,object_story_spec,thumbnail_url&limit=50",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adcreatives"],
+              "query": [
+                {"key": "fields", "value": "id,name,title,body,object_story_spec,thumbnail_url"},
+                {"key": "limit", "value": "50"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"bytes\": \"{{base64_image_data}}\"}"},
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adimages",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adimages"]
+            }
+          }
+        },
+        {
+          "name": "List Images",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adimages?fields=hash,name,url,created_time,width,height&limit=50",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adimages"],
+              "query": [
+                {"key": "fields", "value": "hash,name,url,created_time,width,height"},
+                {"key": "limit", "value": "50"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Creative - Image",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Creative - Weather App - Image v1\",\n  \"object_story_spec\": {\n    \"page_id\": \"{{page_id}}\",\n    \"link_data\": {\n      \"image_hash\": \"{{image_hash}}\",\n      \"link\": \"https://play.google.com/store/apps/details?id=com.example.weatherapp\",\n      \"message\": \"Download Weather App - Accurate forecasts!\",\n      \"name\": \"Weather App\",\n      \"description\": \"Get accurate weather forecasts\",\n      \"call_to_action\": {\n        \"type\": \"INSTALL_MOBILE_APP\",\n        \"value\": {\"link\": \"https://play.google.com/store/apps/details?id=com.example.weatherapp\"}\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adcreatives",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adcreatives"]
+            }
+          }
+        },
+        {
+          "name": "Create Creative - Video",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Creative - Weather App - Video 15s\",\n  \"object_story_spec\": {\n    \"page_id\": \"{{page_id}}\",\n    \"video_data\": {\n      \"video_id\": \"{{video_id}}\",\n      \"title\": \"Download Weather App\",\n      \"message\": \"Accurate weather forecasts - Download now!\",\n      \"image_url\": \"{{thumbnail_url}}\",\n      \"call_to_action\": {\n        \"type\": \"INSTALL_MOBILE_APP\",\n        \"value\": {\"link\": \"https://play.google.com/store/apps/details?id=com.example.weatherapp\"}\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/adcreatives",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "adcreatives"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Ads",
+      "item": [
+        {
+          "name": "List Ads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/ads?fields=id,name,adset_id,creative{id,name,thumbnail_url},status,effective_status&limit=100",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "ads"],
+              "query": [
+                {"key": "fields", "value": "id,name,adset_id,creative{id,name,thumbnail_url},status,effective_status"},
+                {"key": "limit", "value": "100"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Ads by Ad Set",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{adset_id}}/ads?fields=id,name,status,creative{id,name},effective_status",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{adset_id}}", "ads"],
+              "query": [{"key": "fields", "value": "id,name,status,creative{id,name},effective_status"}]
+            }
+          }
+        },
+        {
+          "name": "Create Ad",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ad - Creative A - VN Android\",\n  \"adset_id\": \"{{adset_id}}\",\n  \"creative\": {\"creative_id\": \"{{creative_id}}\"},\n  \"status\": \"PAUSED\",\n  \"tracking_specs\": [\n    {\n      \"action.type\": [\"mobile_app_install\"],\n      \"application\": [\"{{facebook_app_id}}\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/ads",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "ads"]
+            }
+          }
+        },
+        {
+          "name": "Get Ad",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_id}}?fields=id,name,adset_id,creative{id,name,object_story_spec},status,effective_status",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_id}}"],
+              "query": [{"key": "fields", "value": "id,name,adset_id,creative{id,name,object_story_spec},status,effective_status"}]
+            }
+          }
+        },
+        {
+          "name": "Update Ad Status",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"status\": \"ACTIVE\"}"},
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_id}}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Insights",
+      "item": [
+        {
+          "name": "Account Insights - Last 7d",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/insights?fields=impressions,reach,clicks,spend,cpc,cpm,ctr,frequency,actions,cost_per_action_type&date_preset=last_7d",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "impressions,reach,clicks,spend,cpc,cpm,ctr,frequency,actions,cost_per_action_type"},
+                {"key": "date_preset", "value": "last_7d"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Campaign Insights - Date Range",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}/insights?fields=campaign_id,campaign_name,impressions,reach,clicks,spend,cpc,cpm,ctr,actions,cost_per_action_type&time_range={\"since\":\"2025-01-01\",\"until\":\"2025-01-31\"}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "campaign_id,campaign_name,impressions,reach,clicks,spend,cpc,cpm,ctr,actions,cost_per_action_type"},
+                {"key": "time_range", "value": "{\"since\":\"2025-01-01\",\"until\":\"2025-01-31\"}"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ad Set Insights - App Install",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{adset_id}}/insights?fields=adset_id,adset_name,impressions,clicks,spend,actions,cost_per_action_type,mobile_app_install,cost_per_mobile_app_install&date_preset=last_30d",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{adset_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "adset_id,adset_name,impressions,clicks,spend,actions,cost_per_action_type,mobile_app_install,cost_per_mobile_app_install"},
+                {"key": "date_preset", "value": "last_30d"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ad Insights - All Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_id}}/insights?fields=ad_id,ad_name,impressions,reach,clicks,spend,cpc,cpm,ctr,frequency,actions,action_values,cost_per_action_type&date_preset=last_28d",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "ad_id,ad_name,impressions,reach,clicks,spend,cpc,cpm,ctr,frequency,actions,action_values,cost_per_action_type"},
+                {"key": "date_preset", "value": "last_28d"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Insights - Age/Gender Breakdown",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/insights?fields=impressions,reach,clicks,spend,actions&date_preset=last_30d&breakdowns=age,gender&level=account",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "impressions,reach,clicks,spend,actions"},
+                {"key": "date_preset", "value": "last_30d"},
+                {"key": "breakdowns", "value": "age,gender"},
+                {"key": "level", "value": "account"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Insights - Country Breakdown",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/insights?fields=impressions,clicks,spend,actions,cost_per_action_type&date_preset=last_30d&breakdowns=country&level=campaign",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "impressions,clicks,spend,actions,cost_per_action_type"},
+                {"key": "date_preset", "value": "last_30d"},
+                {"key": "breakdowns", "value": "country"},
+                {"key": "level", "value": "campaign"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Insights - Platform Breakdown",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}/insights?fields=impressions,clicks,spend,actions&date_preset=last_7d&breakdowns=publisher_platform,platform_position",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "impressions,clicks,spend,actions"},
+                {"key": "date_preset", "value": "last_7d"},
+                {"key": "breakdowns", "value": "publisher_platform,platform_position"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Daily Time Series",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}/insights?fields=campaign_id,date_start,date_stop,impressions,spend,clicks,actions&date_preset=last_30d&time_increment=1",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "campaign_id,date_start,date_stop,impressions,spend,clicks,actions"},
+                {"key": "date_preset", "value": "last_30d"},
+                {"key": "time_increment", "value": "1"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Insights - Attribution Windows",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{campaign_id}}/insights?fields=campaign_id,impressions,spend,actions,cost_per_action_type&date_preset=last_28d&action_attribution_windows=[\"1d_click\",\"7d_click\",\"1d_view\"]",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{campaign_id}}", "insights"],
+              "query": [
+                {"key": "fields", "value": "campaign_id,impressions,spend,actions,cost_per_action_type"},
+                {"key": "date_preset", "value": "last_28d"},
+                {"key": "action_attribution_windows", "value": "[\"1d_click\",\"7d_click\",\"1d_view\"]"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Async Reports",
+      "item": [
+        {
+          "name": "Create Async Report",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level\": \"ad\",\n  \"date_preset\": \"last_90d\",\n  \"fields\": [\"ad_id\", \"ad_name\", \"adset_id\", \"campaign_id\", \"impressions\", \"clicks\", \"spend\", \"actions\", \"cost_per_action_type\"],\n  \"breakdowns\": [\"age\", \"gender\"]\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/insights",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "insights"]
+            }
+          }
+        },
+        {
+          "name": "Check Report Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{report_run_id}}?fields=async_status,async_percent_completion",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{report_run_id}}"],
+              "query": [{"key": "fields", "value": "async_status,async_percent_completion"}]
+            }
+          }
+        },
+        {
+          "name": "Get Report Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{report_run_id}}/insights?limit=500",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{report_run_id}}", "insights"],
+              "query": [{"key": "limit", "value": "500"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Audiences",
+      "item": [
+        {
+          "name": "List Custom Audiences",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/customaudiences?fields=id,name,subtype,approximate_count,delivery_status&limit=50",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "customaudiences"],
+              "query": [
+                {"key": "fields", "value": "id,name,subtype,approximate_count,delivery_status"},
+                {"key": "limit", "value": "50"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Lookalike Audience",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lookalike - High Value - VN 1%\",\n  \"subtype\": \"LOOKALIKE\",\n  \"origin_audience_id\": \"{{source_audience_id}}\",\n  \"lookalike_spec\": {\n    \"type\": \"similarity\",\n    \"country\": \"VN\",\n    \"ratio\": 0.01\n  }\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/customaudiences",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "customaudiences"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Targeting Search",
+      "item": [
+        {
+          "name": "Search Interests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/search?type=adinterest&q=gaming&limit=25",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "search"],
+              "query": [
+                {"key": "type", "value": "adinterest"},
+                {"key": "q", "value": "gaming"},
+                {"key": "limit", "value": "25"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Behaviors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/search?type=adbehavior&q=purchase&limit=25",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "search"],
+              "query": [
+                {"key": "type", "value": "adbehavior"},
+                {"key": "q", "value": "purchase"},
+                {"key": "limit", "value": "25"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Locations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/search?type=adgeolocation&q=vietnam&location_types=[\"country\",\"city\"]&limit=25",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "search"],
+              "query": [
+                {"key": "type", "value": "adgeolocation"},
+                {"key": "q", "value": "vietnam"},
+                {"key": "location_types", "value": "[\"country\",\"city\"]"},
+                {"key": "limit", "value": "25"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Reach Estimate",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/reachestimate?targeting_spec={\"geo_locations\":{\"countries\":[\"VN\"]},\"age_min\":18,\"age_max\":45,\"device_platforms\":[\"mobile\"],\"user_os\":[\"Android\"]}",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "reachestimate"],
+              "query": [{"key": "targeting_spec", "value": "{\"geo_locations\":{\"countries\":[\"VN\"]},\"age_min\":18,\"age_max\":45,\"device_platforms\":[\"mobile\"],\"user_os\":[\"Android\"]}"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Batch Requests",
+      "item": [
+        {
+          "name": "Batch - Get Multiple Campaigns",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batch\": [\n    {\"method\": \"GET\", \"relative_url\": \"{{campaign_id_1}}?fields=id,name,status\"},\n    {\"method\": \"GET\", \"relative_url\": \"{{campaign_id_2}}?fields=id,name,status\"}\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", ""]
+            }
+          }
+        },
+        {
+          "name": "Batch - Get Insights Multiple",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batch\": [\n    {\"method\": \"GET\", \"relative_url\": \"{{campaign_id_1}}/insights?fields=impressions,spend&date_preset=last_7d\"},\n    {\"method\": \"GET\", \"relative_url\": \"{{campaign_id_2}}/insights?fields=impressions,spend&date_preset=last_7d\"}\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Videos",
+      "item": [
+        {
+          "name": "List Videos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{ad_account_id}}/advideos?fields=id,title,length,created_time,thumbnails,permalink_url&limit=50",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{ad_account_id}}", "advideos"],
+              "query": [
+                {"key": "fields", "value": "id,title,length,created_time,thumbnails,permalink_url"},
+                {"key": "limit", "value": "50"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Video Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://graph.facebook.com/v24.0/{{video_id}}?fields=id,title,description,length,status,thumbnails",
+              "protocol": "https",
+              "host": ["graph", "facebook", "com"],
+              "path": ["v24.0", "{{video_id}}"],
+              "query": [{"key": "fields", "value": "id,title,description,length,status,thumbnails"}]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

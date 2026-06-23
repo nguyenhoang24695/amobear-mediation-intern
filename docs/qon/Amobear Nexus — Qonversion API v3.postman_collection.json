@@ -1,0 +1,1262 @@
+{
+  "info": {
+    "_postman_id": "11aeea27-614e-456c-ab1b-6d783c9ab0b8",
+    "name": "Amobear Nexus — Qonversion API v3",
+    "description": "Postman collection cho Qonversion API integration vào Amobear Nexus.\n\nDoc reference: 126 — Qonversion Integration\n\n## Setup\n1. Vào Qonversion Dashboard → Project Settings → Copy Project Key, Secret Key\n2. Set biến `project_key` và `secret_key` trong Environment\n3. Set `base_url` = https://api.qonversion.io/v3\n4. Thay `user_id` bằng Qonversion User ID thực\n\n## Authentication\n- Standard endpoints: `Authorization: Bearer {{project_key}}`\n- Grant/Revoke entitlements: `Authorization: Bearer {{secret_key}}`\n\n## Webhook Testing\n- Folder 'Webhook Simulation' chứa mock payload để test Nexus webhook receiver",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "5690765",
+    "_collection_link": "https://go.postman.co/collection/5690765-11aeea27-614e-456c-ab1b-6d783c9ab0b8?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01 — Users",
+      "item": [
+        {
+          "name": "1.1 Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{user_id}}\",\n  \"environment\": \"production\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Tạo user mới trong Qonversion. Thường SDK tự tạo, dùng API cho server-side flows.\n\n**Nexus use:** Verify user exists trước khi query entitlements."
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Retrieve User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Lấy thông tin user. Response bao gồm platform, environment, created_at.\n\n**Nexus use:** User lookup khi AI Insight cần subscription context."
+          },
+          "response": []
+        }
+      ],
+      "description": "Quản lý Qonversion users. Mỗi app install tạo 1 Qonversion user."
+    },
+    {
+      "name": "02 — User Properties",
+      "item": [
+        {
+          "name": "2.1 Get User Properties",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/properties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "properties"
+              ]
+            },
+            "description": "Lấy custom user properties (country, app version, IDFA, etc.).\n\n**Nexus use:** Enrich user data cho segmentation."
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Set User Properties",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": [\n    {\n      \"key\": \"_amobear_app_group\",\n      \"value\": \"puzzle_games\"\n    },\n    {\n      \"key\": \"_amobear_cohort\",\n      \"value\": \"2026-Q1\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/properties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "properties"
+              ]
+            },
+            "description": "Set custom properties cho user. Dùng prefix `_amobear_` cho Nexus-specific properties."
+          },
+          "response": []
+        }
+      ],
+      "description": "User-level attributes cho segmentation và analytics."
+    },
+    {
+      "name": "03 — Identity",
+      "item": [
+        {
+          "name": "3.1 Create Identity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/identities/{{identity_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "identities",
+                "{{identity_id}}"
+              ]
+            },
+            "description": "Link Amobear custom user ID với Qonversion user. Cho phép cross-device access.\n\n**Nexus use:** Map Qonversion events tới Amobear internal user IDs."
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Retrieve Identity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/identities/{{identity_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "identities",
+                "{{identity_id}}"
+              ]
+            },
+            "description": "Lookup Qonversion user_id từ Amobear identity_id."
+          },
+          "response": []
+        }
+      ],
+      "description": "Cross-platform user identity management. Map Qonversion user_id ↔ Amobear custom_user_id."
+    },
+    {
+      "name": "04 — Entitlements",
+      "item": [
+        {
+          "name": "4.1 Get User Entitlements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/entitlements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "entitlements"
+              ]
+            },
+            "description": "Lấy tất cả entitlements (active + expired) của user.\n\nResponse bao gồm: active status, expires timestamp, product_id, subscription renew_state.\n\n**Nexus use:** Cross-validate subscription status, AI Insight context."
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Grant Entitlement (Secret Key)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{secret_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"premium\",\n  \"expires\": 1735689600\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/entitlements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "entitlements"
+              ]
+            },
+            "description": "⚠️ Dùng SECRET KEY — Grant premium access cho user.\n\n`expires`: Unix timestamp khi entitlement hết hạn.\n\n**Nexus use:** Admin tool — grant manual entitlements cho support cases."
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Revoke Entitlement (Secret Key)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{secret_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/entitlements/premium",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "entitlements",
+                "premium"
+              ]
+            },
+            "description": "⚠️ Dùng SECRET KEY — Revoke specific entitlement.\n\n**Nexus use:** Admin tool — revoke access khi phát hiện fraud."
+          },
+          "response": []
+        }
+      ],
+      "description": "Quản lý premium access. GET dùng Project Key, POST/DELETE dùng Secret Key."
+    },
+    {
+      "name": "05 — Products",
+      "item": [
+        {
+          "name": "5.1 List All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Lấy danh sách tất cả products đã cấu hình trong Qonversion.\n\n**Nexus use:** Daily sync product catalog → StarRocks metadata table."
+          },
+          "response": []
+        }
+      ],
+      "description": "Quản lý IAP products đã cấu hình trong Qonversion dashboard."
+    },
+    {
+      "name": "06 — Purchases",
+      "item": [
+        {
+          "name": "6.1 Record Stripe Purchase",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{project_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\",\n  \"price\": \"9.99\",\n  \"stripe_store_data\": {\n    \"subscription_id\": \"sub_XXXXXX\",\n    \"product_id\": \"prod_YYYYYY\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/purchases",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "purchases"
+              ]
+            },
+            "description": "Record web/Stripe purchase. Không cần cho mobile IAP (SDK handles).\n\n**Nexus use:** Reference only — nếu Amobear có web subscription flow."
+          },
+          "response": []
+        }
+      ],
+      "description": "Record purchases (chủ yếu cho Stripe web purchases). App purchases tự tracked qua SDK."
+    },
+    {
+      "name": "07 — Webhook Simulation",
+      "item": [
+        {
+          "name": "7.1 Simulate: trial_started",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"trial_started\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1712534400,\n  \"created_at\": 1712534400,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": null,\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000001\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1712534400,\n  \"expiration_date\": 1713139200,\n  \"subscription_period\": \"P1W\",\n  \"offer_type\": \"free_trial\",\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Simulate trial_started event. No revenue. Nexus should:\n1. Return 200 OK immediately\n2. Save to MinIO\n3. Insert into bronze.qonversion_events_raw\n4. NOT trigger revenue alert"
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 Simulate: trial_converted",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"trial_converted\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1713139200,\n  \"created_at\": 1713139200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 8.49,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000002\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1713139200,\n  \"expiration_date\": 1715731200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Simulate trial → paid conversion. HAS revenue (proceeds $8.49).\nNexus should: Insert with revenue, count towards iap_revenue_usd in Gold."
+          },
+          "response": []
+        },
+        {
+          "name": "7.3 Simulate: subscription_renewed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"subscription_renewed\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1715731200,\n  \"created_at\": 1715731200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 8.49,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000003\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1715731200,\n  \"expiration_date\": 1718323200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Simulate renewal. Same revenue as conversion. Nexus should add to daily revenue."
+          },
+          "response": []
+        },
+        {
+          "name": "7.4 Simulate: subscription_canceled",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"subscription_canceled\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1716508800,\n  \"created_at\": 1716508800,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": null,\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000004\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1715731200,\n  \"expiration_date\": 1718323200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Simulate cancel. No revenue — user still has access until expiration_date.\nNexus should: Record event, count towards subscriptions_canceled in Gold."
+          },
+          "response": []
+        },
+        {
+          "name": "7.5 Simulate: subscription_refunded",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"subscription_refunded\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1716595200,\n  \"created_at\": 1716595200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": -8.49,\n    \"value_usd\": -9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000005\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1715731200,\n  \"expiration_date\": 1718323200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "⚠️ REFUND — NEGATIVE revenue. Nexus should:\n1. Record with revenue_sign = -1\n2. Subtract from daily iap_revenue\n3. Count towards iap_refunds_usd\n4. TRIGGER refund alert"
+          },
+          "response": []
+        },
+        {
+          "name": "7.6 Simulate: subscription_billing_issue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"subscription_billing_issue\",\n  \"user_id\": \"QON_test_user_002\",\n  \"custom_user_id\": \"amobear_user_67890\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"ABCD1234-5678-9012-EFGH-IJKLMNOP3456\",\n  \"time\": 1716681600,\n  \"created_at\": 1716681600,\n  \"product_id\": \"com.amobear.wordgame.premium.yearly\",\n  \"currency\": \"VND\",\n  \"country\": \"VN\",\n  \"platform\": \"Android\",\n  \"environment\": \"production\",\n  \"revenue\": null,\n  \"price\": {\n    \"value\": 249000,\n    \"value_usd\": 9.99,\n    \"currency\": \"VND\"\n  },\n  \"transaction_id\": \"GPA.3333-4444-5555-66666\",\n  \"original_transaction_id\": \"GPA.3333-4444-5555-00000\",\n  \"purchase_date\": 1684972800,\n  \"expiration_date\": 1716595200,\n  \"subscription_period\": \"P1Y\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.wordgame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Billing issue — payment failed. No revenue. Signal for churn prediction.\nNote: VND currency, Android platform — test multi-currency handling."
+          },
+          "response": []
+        },
+        {
+          "name": "7.7 Simulate: non_renewing_purchase (One-time IAP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"non_renewing_purchase\",\n  \"user_id\": \"QON_test_user_003\",\n  \"custom_user_id\": \"amobear_user_99999\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"\",\n  \"time\": 1716768000,\n  \"created_at\": 1716768000,\n  \"product_id\": \"com.amobear.puzzlegame.coins.500\",\n  \"currency\": \"USD\",\n  \"country\": \"JP\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 0.85,\n    \"value_usd\": 0.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 0.99,\n    \"value_usd\": 0.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000200000001\",\n  \"original_transaction_id\": \"2000000200000001\",\n  \"purchase_date\": 1716768000,\n  \"expiration_date\": null,\n  \"subscription_period\": null,\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "One-time consumable IAP (coins). No expiration. Revenue counts towards IAP total.\nTest: no subscription_period, no expiration_date."
+          },
+          "response": []
+        },
+        {
+          "name": "7.8 Simulate: DUPLICATE event (test dedup)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization-Token",
+                "value": "Basic YOUR_WEBHOOK_AUTH_TOKEN",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_name\": \"trial_converted\",\n  \"user_id\": \"QON_test_user_001\",\n  \"custom_user_id\": \"amobear_user_12345\",\n  \"identity_id\": \"\",\n  \"advertiser_id\": \"9FD1767D-8B48-45BD-A2F4-1C08B08E56F2\",\n  \"time\": 1713139200,\n  \"created_at\": 1713139200,\n  \"product_id\": \"com.amobear.puzzlegame.premium.monthly\",\n  \"currency\": \"USD\",\n  \"country\": \"US\",\n  \"platform\": \"iOS\",\n  \"environment\": \"production\",\n  \"revenue\": {\n    \"value\": 8.49,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\",\n    \"is_proceed\": 1,\n    \"proceeds_rate\": 85\n  },\n  \"price\": {\n    \"value\": 9.99,\n    \"value_usd\": 9.99,\n    \"currency\": \"USD\"\n  },\n  \"transaction_id\": \"2000000100000002\",\n  \"original_transaction_id\": \"2000000100000001\",\n  \"purchase_date\": 1713139200,\n  \"expiration_date\": 1715731200,\n  \"subscription_period\": \"P1M\",\n  \"offer_type\": null,\n  \"is_family_shared\": false,\n  \"app_id\": \"com.amobear.puzzlegame\"\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}/",
+              "host": [
+                "{{nexus_webhook_local}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "⚠️ DUPLICATE of 7.2 (same transaction_id + event_name).\nNexus should: Return 200 OK but flag is_duplicate=true, NOT double-count revenue."
+          },
+          "response": []
+        }
+      ],
+      "description": "Mock webhook payloads để test Nexus webhook receiver endpoint.\n\n⚡ Gửi tới Nexus local/staging endpoint để validate processing pipeline."
+    },
+    {
+      "name": "08 — Webhook Report Receiver",
+      "item": [
+        {
+          "name": "8.1 Simulate: Scheduled Report Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_uid\": \"4AJ-qk3\",\n  \"report_name\": \"Daily Nexus Reconciliation\",\n  \"project_key\": \"{{project_key}}\",\n  \"platform\": \"iOS\",\n  \"delete_at\": 1716854400,\n  \"link\": \"https://api.qonversion.io/reports/download/SAMPLE_LINK_TOKEN\",\n  \"send_at\": 21600,\n  \"period\": 86400,\n  \"environment\": 1\n}"
+            },
+            "url": {
+              "raw": "{{nexus_webhook_local}}-reports/",
+              "host": [
+                "{{nexus_webhook_local}}-reports"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Simulate Qonversion sending scheduled report download link.\nNexus should: Download CSV from link → Parse → Reconcile with webhook data."
+          },
+          "response": []
+        }
+      ],
+      "description": "Test Nexus endpoint nhận scheduled raw data report links từ Qonversion."
+    },
+    {
+      "name": "09 - Web Crawler",
+      "item": [
+        {
+          "name": "01. Call Export data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "*/*"
+              },
+              {
+                "key": "accept-language",
+                "value": "en-US,en;q=0.9,vi;q=0.8"
+              },
+              {
+                "key": "baggage",
+                "value": "sentry-environment=production,sentry-release=dash-app%403.136.0,sentry-public_key=5656bbcf10b34921ad19f0b8bbec6509,sentry-trace_id=97d3eaf872254616bcc591d179cc4b95,sentry-org_id=613478,sentry-sampled=true,sentry-sample_rand=0.7884604405942917,sentry-sample_rate=1"
+              },
+              {
+                "key": "content-type",
+                "value": "application/json"
+              },
+              {
+                "key": "origin",
+                "value": "https://dash.qonversion.io"
+              },
+              {
+                "key": "priority",
+                "value": "u=1, i"
+              },
+              {
+                "key": "referer",
+                "value": "https://dash.qonversion.io/reports/raw-data/generate?project=BXjpXO_z&account=3pCprDme"
+              },
+              {
+                "key": "sec-ch-ua",
+                "value": "\"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\""
+              },
+              {
+                "key": "sec-ch-ua-mobile",
+                "value": "?0"
+              },
+              {
+                "key": "sec-ch-ua-platform",
+                "value": "\"Windows\""
+              },
+              {
+                "key": "sec-fetch-dest",
+                "value": "empty"
+              },
+              {
+                "key": "sec-fetch-mode",
+                "value": "cors"
+              },
+              {
+                "key": "sec-fetch-site",
+                "value": "same-origin"
+              },
+              {
+                "key": "sentry-trace",
+                "value": "97d3eaf872254616bcc591d179cc4b95-ab3e73cc8455006f-1"
+              },
+              {
+                "key": "user-agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+              },
+              {
+                "key": "Cookie",
+                "value": "_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; darkMode=false; _fbp=fb.1.1775643079632.7011111738306406; __stripe_mid=8d85c12e-c13e-41ca-931b-3c20ef3c533a70c387; NPS_3ab4cf9e_last_seen=1775643153393; _twpid=tw.1775643153822.69134437958090331; _ym_uid=1775643154107556263; _ym_d=1775643154; AMP_MKTG_213dedb7fb=JTdCJTdE; _gid=GA1.2.860279115.1776657305; amplitude_identify=eyJxb252ZXJzaW9uX3VzZXJfdWlkIjoiTUZ0X00ybmgiLCJxb252ZXJzaW9uX3VzZXJfY3JlYXRlZF9hdCI6IjIwMjYtMDQtMDhUMDM6Mjk6MzErMDA6MDAiLCJxb252ZXJzaW9uX3VzZXJfcm9sZSI6Im1hbmFnZXIiLCJhY2NvdW50X25hbWUiOiJBbW9iZWFyIFN0dWRpbyIsImFjY291bnRfdWlkIjoiM3BDcHJEbWUiLCJhY2NvdW50X2NyZWF0ZWRfYXQiOiIyMDIzLTExLTE3VDA2OjQwOjIyKzAwOjAwIiwiYWNjb3VudF9wbGFuX2tleSI6ImJ1c2luZXNzMjAyMiIsImFjY291bnRfcGxhbl9pZCI6NjksImFjY291bnRfbWVtYmVyc19jb3VudCI6NTgsImFjY291bnRfcHJvamVjdHNfY291bnQiOjMwMSwiYWNjb3VudF9wcm9qZWN0c19hcHBzdG9yZV9jb3VudCI6NDYsImFjY291bnRfcHJvamVjdHNfZ3BsYXlfY291bnQiOjIyNSwiYWNjb3VudF9wcm9qZWN0c19zdHJpcGVfY291bnQiOjIsImFjY291bnRfcHJvamVjdHNfYXNhX2NvdW50IjowLCJhY2NvdW50X2hhc19wYXltZW50X21ldGhvZCI6dHJ1ZSwiYWNjb3VudF9oYXNfcHJvZF9kYXRhIjp0cnVlLCJhY2NvdW50X2hhc19zYW5kYm94X2RhdGEiOnRydWUsImludGVncmF0aW9uc19jb3VudCI6MjY5LCJpbnRlZ3JhdGlvbnNfYWN0aXZlX2NvdW50IjoyMzAsImFjY291bnRfcHJvamVjdHNfZW50aXRsZW1lbnRzX2NvdW50IjoyNjUsInByb2plY3RzX2J5X2ludGVncmF0aW9uc19jb3VudCI6eyJhZGp1c3QiOjU1LCJhbWF6b25fczMiOjUsImFwcG1ldHJpY2EiOjMsImFwcHNmbHllciI6NDcsImZhY2Vib29rIjoyOSwiZmlyZWJhc2UiOjY3LCJnb29nbGVfY2xvdWRfc3RvcmFnZSI6MSwic2xhY2siOjIsIndlYmhvb2tzIjoxMX0sImFjY291bnRfbXRyX3ByZXZpb3VzX21vbnRoIjp7Im10ciI6Njg5MTU3LjQ5OTk5OTk4LCJtdHJfc3RyaXBlIjowfX0=; intercom_settings=eyJ1c2VyX2lkIjoiTUZ0X00ybmgiLCJuYW1lIjoiQW5oIFF1YW5nIiwiZW1haWwiOiJxdWFuZ25ndXllbkBhbW9iZWFyLnZuIiwiY3JlYXRlZF9hdCI6MTc3NTYxODk3MSwicm9sZSI6Im1hbmFnZXIiLCJjb21wYW55Ijp7ImNvbXBhbnlfaWQiOjI4NTQ0LCJjcmVhdGVkX2F0IjoxNzAwMjAzMjIyLCJuYW1lIjoiQW1vYmVhciBTdHVkaW8iLCJwbGFuIjo2OSwicGxhbl9uYW1lIjoiQ3VzdG9tIGZvciBBbW9iZWFyIiwicGxhbl9rZXkiOiJidXNpbmVzczIwMjIiLCJCaWxsaW5nIjoidHJ1ZSIsInN0cmlwZV9jdXN0b21lcl9pZCI6ImN1c19QODNXdDNOMkFBd1Q5RiIsImlzX3RyaWFsIjoiZmFsc2UiLCJ0b3RhbF9zcGVuZCI6NTYzOTh9fQ==; _csrf-board=d3a3f2ee3f7728cc2b5462a4f063641f0d74e238c7c9c4b10426cc3fc0b69b22a%3A2%3A%7Bi%3A0%3Bs%3A11%3A%22_csrf-board%22%3Bi%3A1%3Bs%3A32%3A%22Odk2t0mH4ZdbVMFp9jGqD0zfr_uJ2RD6%22%3B%7D; project_MFt_M2nh=3af4468e93f0c13d38b0bdf63158180e4c8826e69adbbf277838a6b54d6f8508a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22project_MFt_M2nh%22%3Bi%3A1%3Bs%3A8%3A%22BXjpXO_z%22%3B%7D; platform_key=13d7455d1c8cb080b57267621195561039d4405fc098c6d0c2d47213cbe2fb8da%3A2%3A%7Bi%3A0%3Bs%3A12%3A%22platform_key%22%3Bi%3A1%3Bs%3A3%3A%22iOS%22%3B%7D; qonversion-board=mqfve289mi1cmt5h6v4abnf6of; _clck=1dgsx6y%5E2%5Eg5d%5E0%5E2289; __stripe_sid=07fd93e5-bab0-4e8e-aeda-b90e47ab9ab8cfca71; NPS_3ab4cf9e_throttle=1776700570463; session-gXifcNy1GoCifrbAVi4wcFcuQ6gwwX6w=%7B%22gleapId%22%3A%22344c8007-7a2d-458a-922f-9499dc1e3805%22%2C%22gleapHash%22%3A%221e7e67650cf1ffd296a955850127fb290b3d8f52fdcad39925acd6248066f333%22%2C%22name%22%3A%22Anh%20Quang%22%2C%22email%22%3A%22quangnguyen%40amobear.vn%22%2C%22userId%22%3A%22MFt_M2nh%22%2C%22value%22%3A56398%2C%22companyName%22%3A%22Amobear%20Studio%22%2C%22deviceType%22%3A%22desktop%22%2C%22platform%22%3A%22web%22%2C%22plan%22%3A%22Custom%20for%20Amobear%22%2C%22lang%22%3A%22en-us%22%2C%22customData%22%3A%7B%22billing%22%3A%22true%22%2C%22companyCreatedAt%22%3A%222023-11-17T06%3A40%3A22.000Z%22%2C%22companyUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Faccount%2Fview%3Fid%3D28544%22%2C%22isTrial%22%3A%22false%22%2C%22plan_id%22%3A69%2C%22plan_key%22%3A%22business2022%22%2C%22role%22%3A%22manager%22%2C%22stripeCustomerId%22%3A%22cus_P83Wt3N2AAwT9F%22%2C%22userUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Fuser%2Fview%3Fid%3DMFt_M2nh%22%7D%2C%22id%22%3A%2269d5cba4f6b0237e1bf4aef2%22%7D; _ym_isad=2; _ga=GA1.2.2049717739.1775643079; frill-sdk={%22data%22:{%22sessionCount%22:8%2C%22identifiedAt%22:%222026-04-08T10:11:19.813Z%22%2C%22lastIdentifiedAt%22:%222026-04-20T03:57:27.141Z%22}}; AMP_213dedb7fb=JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjI5Y2I1ZmVhYy1lZDY3LTQ5NTAtOTc3NC1hMjRlOTJmNDY4NWQlMjIlMkMlMjJ1c2VySWQlMjIlM0ElMjJNRnRfTTJuaCUyMiUyQyUyMnNlc3Npb25JZCUyMiUzQTE3NzY2NTczMDUzNDklMkMlMjJvcHRPdXQlMjIlM0FmYWxzZSUyQyUyMmxhc3RFdmVudFRpbWUlMjIlM0ExNzc2NjU4NzgwMDU5JTJDJTIybGFzdEV2ZW50SWQlMjIlM0ExNDMlMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlN0Q=; _clsk=1fb5h3w%5E1776658780671%5E32%5E1%5Ef.clarity.ms%2Fcollect; _ga_F64G0BDZ9S=GS2.1.s1776657304$o6$g1$t1776658781$j51$l0$h0"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"from_timestamp\":1776038400,\"to_timestamp\":1776729599,\"platform\":\"iOS\",\"date_limiter_type\":\"happened_at\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://dash.qonversion.io/api/v1/exports?project=BXjpXO_z&account=3pCprDme",
+              "protocol": "https",
+              "host": [
+                "dash",
+                "qonversion",
+                "io"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "exports"
+              ],
+              "query": [
+                {
+                  "key": "project",
+                  "value": "BXjpXO_z"
+                },
+                {
+                  "key": "account",
+                  "value": "3pCprDme"
+                }
+              ]
+            },
+            "description": "Generated from cURL: curl 'https://dash.qonversion.io/api/v1/exports?project=BXjpXO_z&account=3pCprDme' \\\r\n  -H 'accept: */*' \\\r\n  -H 'accept-language: en-US,en;q=0.9,vi;q=0.8' \\\r\n  -H 'baggage: sentry-environment=production,sentry-release=dash-app%403.136.0,sentry-public_key=5656bbcf10b34921ad19f0b8bbec6509,sentry-trace_id=97d3eaf872254616bcc591d179cc4b95,sentry-org_id=613478,sentry-sampled=true,sentry-sample_rand=0.7884604405942917,sentry-sample_rate=1' \\\r\n  -H 'content-type: application/json' \\\r\n  -b '_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; darkMode=false; _fbp=fb.1.1775643079632.7011111738306406; __stripe_mid=8d85c12e-c13e-41ca-931b-3c20ef3c533a70c387; NPS_3ab4cf9e_last_seen=1775643153393; _twpid=tw.1775643153822.69134437958090331; _ym_uid=1775643154107556263; _ym_d=1775643154; AMP_MKTG_213dedb7fb=JTdCJTdE; _gid=GA1.2.860279115.1776657305; amplitude_identify=eyJxb252ZXJzaW9uX3VzZXJfdWlkIjoiTUZ0X00ybmgiLCJxb252ZXJzaW9uX3VzZXJfY3JlYXRlZF9hdCI6IjIwMjYtMDQtMDhUMDM6Mjk6MzErMDA6MDAiLCJxb252ZXJzaW9uX3VzZXJfcm9sZSI6Im1hbmFnZXIiLCJhY2NvdW50X25hbWUiOiJBbW9iZWFyIFN0dWRpbyIsImFjY291bnRfdWlkIjoiM3BDcHJEbWUiLCJhY2NvdW50X2NyZWF0ZWRfYXQiOiIyMDIzLTExLTE3VDA2OjQwOjIyKzAwOjAwIiwiYWNjb3VudF9wbGFuX2tleSI6ImJ1c2luZXNzMjAyMiIsImFjY291bnRfcGxhbl9pZCI6NjksImFjY291bnRfbWVtYmVyc19jb3VudCI6NTgsImFjY291bnRfcHJvamVjdHNfY291bnQiOjMwMSwiYWNjb3VudF9wcm9qZWN0c19hcHBzdG9yZV9jb3VudCI6NDYsImFjY291bnRfcHJvamVjdHNfZ3BsYXlfY291bnQiOjIyNSwiYWNjb3VudF9wcm9qZWN0c19zdHJpcGVfY291bnQiOjIsImFjY291bnRfcHJvamVjdHNfYXNhX2NvdW50IjowLCJhY2NvdW50X2hhc19wYXltZW50X21ldGhvZCI6dHJ1ZSwiYWNjb3VudF9oYXNfcHJvZF9kYXRhIjp0cnVlLCJhY2NvdW50X2hhc19zYW5kYm94X2RhdGEiOnRydWUsImludGVncmF0aW9uc19jb3VudCI6MjY5LCJpbnRlZ3JhdGlvbnNfYWN0aXZlX2NvdW50IjoyMzAsImFjY291bnRfcHJvamVjdHNfZW50aXRsZW1lbnRzX2NvdW50IjoyNjUsInByb2plY3RzX2J5X2ludGVncmF0aW9uc19jb3VudCI6eyJhZGp1c3QiOjU1LCJhbWF6b25fczMiOjUsImFwcG1ldHJpY2EiOjMsImFwcHNmbHllciI6NDcsImZhY2Vib29rIjoyOSwiZmlyZWJhc2UiOjY3LCJnb29nbGVfY2xvdWRfc3RvcmFnZSI6MSwic2xhY2siOjIsIndlYmhvb2tzIjoxMX0sImFjY291bnRfbXRyX3ByZXZpb3VzX21vbnRoIjp7Im10ciI6Njg5MTU3LjQ5OTk5OTk4LCJtdHJfc3RyaXBlIjowfX0=; intercom_settings=eyJ1c2VyX2lkIjoiTUZ0X00ybmgiLCJuYW1lIjoiQW5oIFF1YW5nIiwiZW1haWwiOiJxdWFuZ25ndXllbkBhbW9iZWFyLnZuIiwiY3JlYXRlZF9hdCI6MTc3NTYxODk3MSwicm9sZSI6Im1hbmFnZXIiLCJjb21wYW55Ijp7ImNvbXBhbnlfaWQiOjI4NTQ0LCJjcmVhdGVkX2F0IjoxNzAwMjAzMjIyLCJuYW1lIjoiQW1vYmVhciBTdHVkaW8iLCJwbGFuIjo2OSwicGxhbl9uYW1lIjoiQ3VzdG9tIGZvciBBbW9iZWFyIiwicGxhbl9rZXkiOiJidXNpbmVzczIwMjIiLCJCaWxsaW5nIjoidHJ1ZSIsInN0cmlwZV9jdXN0b21lcl9pZCI6ImN1c19QODNXdDNOMkFBd1Q5RiIsImlzX3RyaWFsIjoiZmFsc2UiLCJ0b3RhbF9zcGVuZCI6NTYzOTh9fQ==; _csrf-board=d3a3f2ee3f7728cc2b5462a4f063641f0d74e238c7c9c4b10426cc3fc0b69b22a%3A2%3A%7Bi%3A0%3Bs%3A11%3A%22_csrf-board%22%3Bi%3A1%3Bs%3A32%3A%22Odk2t0mH4ZdbVMFp9jGqD0zfr_uJ2RD6%22%3B%7D; project_MFt_M2nh=3af4468e93f0c13d38b0bdf63158180e4c8826e69adbbf277838a6b54d6f8508a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22project_MFt_M2nh%22%3Bi%3A1%3Bs%3A8%3A%22BXjpXO_z%22%3B%7D; platform_key=13d7455d1c8cb080b57267621195561039d4405fc098c6d0c2d47213cbe2fb8da%3A2%3A%7Bi%3A0%3Bs%3A12%3A%22platform_key%22%3Bi%3A1%3Bs%3A3%3A%22iOS%22%3B%7D; qonversion-board=mqfve289mi1cmt5h6v4abnf6of; _clck=1dgsx6y%5E2%5Eg5d%5E0%5E2289; __stripe_sid=07fd93e5-bab0-4e8e-aeda-b90e47ab9ab8cfca71; NPS_3ab4cf9e_throttle=1776700570463; session-gXifcNy1GoCifrbAVi4wcFcuQ6gwwX6w=%7B%22gleapId%22%3A%22344c8007-7a2d-458a-922f-9499dc1e3805%22%2C%22gleapHash%22%3A%221e7e67650cf1ffd296a955850127fb290b3d8f52fdcad39925acd6248066f333%22%2C%22name%22%3A%22Anh%20Quang%22%2C%22email%22%3A%22quangnguyen%40amobear.vn%22%2C%22userId%22%3A%22MFt_M2nh%22%2C%22value%22%3A56398%2C%22companyName%22%3A%22Amobear%20Studio%22%2C%22deviceType%22%3A%22desktop%22%2C%22platform%22%3A%22web%22%2C%22plan%22%3A%22Custom%20for%20Amobear%22%2C%22lang%22%3A%22en-us%22%2C%22customData%22%3A%7B%22billing%22%3A%22true%22%2C%22companyCreatedAt%22%3A%222023-11-17T06%3A40%3A22.000Z%22%2C%22companyUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Faccount%2Fview%3Fid%3D28544%22%2C%22isTrial%22%3A%22false%22%2C%22plan_id%22%3A69%2C%22plan_key%22%3A%22business2022%22%2C%22role%22%3A%22manager%22%2C%22stripeCustomerId%22%3A%22cus_P83Wt3N2AAwT9F%22%2C%22userUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Fuser%2Fview%3Fid%3DMFt_M2nh%22%7D%2C%22id%22%3A%2269d5cba4f6b0237e1bf4aef2%22%7D; _ym_isad=2; _ga=GA1.2.2049717739.1775643079; frill-sdk={%22data%22:{%22sessionCount%22:8%2C%22identifiedAt%22:%222026-04-08T10:11:19.813Z%22%2C%22lastIdentifiedAt%22:%222026-04-20T03:57:27.141Z%22}}; AMP_213dedb7fb=JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjI5Y2I1ZmVhYy1lZDY3LTQ5NTAtOTc3NC1hMjRlOTJmNDY4NWQlMjIlMkMlMjJ1c2VySWQlMjIlM0ElMjJNRnRfTTJuaCUyMiUyQyUyMnNlc3Npb25JZCUyMiUzQTE3NzY2NTczMDUzNDklMkMlMjJvcHRPdXQlMjIlM0FmYWxzZSUyQyUyMmxhc3RFdmVudFRpbWUlMjIlM0ExNzc2NjU4NzgwMDU5JTJDJTIybGFzdEV2ZW50SWQlMjIlM0ExNDMlMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlN0Q=; _clsk=1fb5h3w%5E1776658780671%5E32%5E1%5Ef.clarity.ms%2Fcollect; _ga_F64G0BDZ9S=GS2.1.s1776657304$o6$g1$t1776658781$j51$l0$h0' \\\r\n  -H 'origin: https://dash.qonversion.io' \\\r\n  -H 'priority: u=1, i' \\\r\n  -H 'referer: https://dash.qonversion.io/reports/raw-data/generate?project=BXjpXO_z&account=3pCprDme' \\\r\n  -H 'sec-ch-ua: \"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"' \\\r\n  -H 'sec-ch-ua-mobile: ?0' \\\r\n  -H 'sec-ch-ua-platform: \"Windows\"' \\\r\n  -H 'sec-fetch-dest: empty' \\\r\n  -H 'sec-fetch-mode: cors' \\\r\n  -H 'sec-fetch-site: same-origin' \\\r\n  -H 'sentry-trace: 97d3eaf872254616bcc591d179cc4b95-ab3e73cc8455006f-1' \\\r\n  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' \\\r\n  --data-raw '{\"from_timestamp\":1776038400,\"to_timestamp\":1776729599,\"platform\":\"iOS\",\"date_limiter_type\":\"happened_at\"}'"
+          },
+          "response": [
+            {
+              "name": "01. Call Export data",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "accept",
+                    "value": "*/*"
+                  },
+                  {
+                    "key": "accept-language",
+                    "value": "en-US,en;q=0.9,vi;q=0.8"
+                  },
+                  {
+                    "key": "baggage",
+                    "value": "sentry-environment=production,sentry-release=dash-app%403.136.0,sentry-public_key=5656bbcf10b34921ad19f0b8bbec6509,sentry-trace_id=97d3eaf872254616bcc591d179cc4b95,sentry-org_id=613478,sentry-sampled=true,sentry-sample_rand=0.7884604405942917,sentry-sample_rate=1"
+                  },
+                  {
+                    "key": "content-type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "origin",
+                    "value": "https://dash.qonversion.io"
+                  },
+                  {
+                    "key": "priority",
+                    "value": "u=1, i"
+                  },
+                  {
+                    "key": "referer",
+                    "value": "https://dash.qonversion.io/reports/raw-data/generate?project=BXjpXO_z&account=3pCprDme"
+                  },
+                  {
+                    "key": "sec-ch-ua",
+                    "value": "\"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\""
+                  },
+                  {
+                    "key": "sec-ch-ua-mobile",
+                    "value": "?0"
+                  },
+                  {
+                    "key": "sec-ch-ua-platform",
+                    "value": "\"Windows\""
+                  },
+                  {
+                    "key": "sec-fetch-dest",
+                    "value": "empty"
+                  },
+                  {
+                    "key": "sec-fetch-mode",
+                    "value": "cors"
+                  },
+                  {
+                    "key": "sec-fetch-site",
+                    "value": "same-origin"
+                  },
+                  {
+                    "key": "sentry-trace",
+                    "value": "97d3eaf872254616bcc591d179cc4b95-ab3e73cc8455006f-1"
+                  },
+                  {
+                    "key": "user-agent",
+                    "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; darkMode=false; _fbp=fb.1.1775643079632.7011111738306406; __stripe_mid=8d85c12e-c13e-41ca-931b-3c20ef3c533a70c387; NPS_3ab4cf9e_last_seen=1775643153393; _twpid=tw.1775643153822.69134437958090331; _ym_uid=1775643154107556263; _ym_d=1775643154; AMP_MKTG_213dedb7fb=JTdCJTdE; _gid=GA1.2.860279115.1776657305; amplitude_identify=eyJxb252ZXJzaW9uX3VzZXJfdWlkIjoiTUZ0X00ybmgiLCJxb252ZXJzaW9uX3VzZXJfY3JlYXRlZF9hdCI6IjIwMjYtMDQtMDhUMDM6Mjk6MzErMDA6MDAiLCJxb252ZXJzaW9uX3VzZXJfcm9sZSI6Im1hbmFnZXIiLCJhY2NvdW50X25hbWUiOiJBbW9iZWFyIFN0dWRpbyIsImFjY291bnRfdWlkIjoiM3BDcHJEbWUiLCJhY2NvdW50X2NyZWF0ZWRfYXQiOiIyMDIzLTExLTE3VDA2OjQwOjIyKzAwOjAwIiwiYWNjb3VudF9wbGFuX2tleSI6ImJ1c2luZXNzMjAyMiIsImFjY291bnRfcGxhbl9pZCI6NjksImFjY291bnRfbWVtYmVyc19jb3VudCI6NTgsImFjY291bnRfcHJvamVjdHNfY291bnQiOjMwMSwiYWNjb3VudF9wcm9qZWN0c19hcHBzdG9yZV9jb3VudCI6NDYsImFjY291bnRfcHJvamVjdHNfZ3BsYXlfY291bnQiOjIyNSwiYWNjb3VudF9wcm9qZWN0c19zdHJpcGVfY291bnQiOjIsImFjY291bnRfcHJvamVjdHNfYXNhX2NvdW50IjowLCJhY2NvdW50X2hhc19wYXltZW50X21ldGhvZCI6dHJ1ZSwiYWNjb3VudF9oYXNfcHJvZF9kYXRhIjp0cnVlLCJhY2NvdW50X2hhc19zYW5kYm94X2RhdGEiOnRydWUsImludGVncmF0aW9uc19jb3VudCI6MjY5LCJpbnRlZ3JhdGlvbnNfYWN0aXZlX2NvdW50IjoyMzAsImFjY291bnRfcHJvamVjdHNfZW50aXRsZW1lbnRzX2NvdW50IjoyNjUsInByb2plY3RzX2J5X2ludGVncmF0aW9uc19jb3VudCI6eyJhZGp1c3QiOjU1LCJhbWF6b25fczMiOjUsImFwcG1ldHJpY2EiOjMsImFwcHNmbHllciI6NDcsImZhY2Vib29rIjoyOSwiZmlyZWJhc2UiOjY3LCJnb29nbGVfY2xvdWRfc3RvcmFnZSI6MSwic2xhY2siOjIsIndlYmhvb2tzIjoxMX0sImFjY291bnRfbXRyX3ByZXZpb3VzX21vbnRoIjp7Im10ciI6Njg5MTU3LjQ5OTk5OTk4LCJtdHJfc3RyaXBlIjowfX0=; intercom_settings=eyJ1c2VyX2lkIjoiTUZ0X00ybmgiLCJuYW1lIjoiQW5oIFF1YW5nIiwiZW1haWwiOiJxdWFuZ25ndXllbkBhbW9iZWFyLnZuIiwiY3JlYXRlZF9hdCI6MTc3NTYxODk3MSwicm9sZSI6Im1hbmFnZXIiLCJjb21wYW55Ijp7ImNvbXBhbnlfaWQiOjI4NTQ0LCJjcmVhdGVkX2F0IjoxNzAwMjAzMjIyLCJuYW1lIjoiQW1vYmVhciBTdHVkaW8iLCJwbGFuIjo2OSwicGxhbl9uYW1lIjoiQ3VzdG9tIGZvciBBbW9iZWFyIiwicGxhbl9rZXkiOiJidXNpbmVzczIwMjIiLCJCaWxsaW5nIjoidHJ1ZSIsInN0cmlwZV9jdXN0b21lcl9pZCI6ImN1c19QODNXdDNOMkFBd1Q5RiIsImlzX3RyaWFsIjoiZmFsc2UiLCJ0b3RhbF9zcGVuZCI6NTYzOTh9fQ==; _csrf-board=d3a3f2ee3f7728cc2b5462a4f063641f0d74e238c7c9c4b10426cc3fc0b69b22a%3A2%3A%7Bi%3A0%3Bs%3A11%3A%22_csrf-board%22%3Bi%3A1%3Bs%3A32%3A%22Odk2t0mH4ZdbVMFp9jGqD0zfr_uJ2RD6%22%3B%7D; project_MFt_M2nh=3af4468e93f0c13d38b0bdf63158180e4c8826e69adbbf277838a6b54d6f8508a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22project_MFt_M2nh%22%3Bi%3A1%3Bs%3A8%3A%22BXjpXO_z%22%3B%7D; platform_key=13d7455d1c8cb080b57267621195561039d4405fc098c6d0c2d47213cbe2fb8da%3A2%3A%7Bi%3A0%3Bs%3A12%3A%22platform_key%22%3Bi%3A1%3Bs%3A3%3A%22iOS%22%3B%7D; qonversion-board=mqfve289mi1cmt5h6v4abnf6of; _clck=1dgsx6y%5E2%5Eg5d%5E0%5E2289; __stripe_sid=07fd93e5-bab0-4e8e-aeda-b90e47ab9ab8cfca71; NPS_3ab4cf9e_throttle=1776700570463; session-gXifcNy1GoCifrbAVi4wcFcuQ6gwwX6w=%7B%22gleapId%22%3A%22344c8007-7a2d-458a-922f-9499dc1e3805%22%2C%22gleapHash%22%3A%221e7e67650cf1ffd296a955850127fb290b3d8f52fdcad39925acd6248066f333%22%2C%22name%22%3A%22Anh%20Quang%22%2C%22email%22%3A%22quangnguyen%40amobear.vn%22%2C%22userId%22%3A%22MFt_M2nh%22%2C%22value%22%3A56398%2C%22companyName%22%3A%22Amobear%20Studio%22%2C%22deviceType%22%3A%22desktop%22%2C%22platform%22%3A%22web%22%2C%22plan%22%3A%22Custom%20for%20Amobear%22%2C%22lang%22%3A%22en-us%22%2C%22customData%22%3A%7B%22billing%22%3A%22true%22%2C%22companyCreatedAt%22%3A%222023-11-17T06%3A40%3A22.000Z%22%2C%22companyUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Faccount%2Fview%3Fid%3D28544%22%2C%22isTrial%22%3A%22false%22%2C%22plan_id%22%3A69%2C%22plan_key%22%3A%22business2022%22%2C%22role%22%3A%22manager%22%2C%22stripeCustomerId%22%3A%22cus_P83Wt3N2AAwT9F%22%2C%22userUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Fuser%2Fview%3Fid%3DMFt_M2nh%22%7D%2C%22id%22%3A%2269d5cba4f6b0237e1bf4aef2%22%7D; _ym_isad=2; _ga=GA1.2.2049717739.1775643079; frill-sdk={%22data%22:{%22sessionCount%22:8%2C%22identifiedAt%22:%222026-04-08T10:11:19.813Z%22%2C%22lastIdentifiedAt%22:%222026-04-20T03:57:27.141Z%22}}; AMP_213dedb7fb=JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjI5Y2I1ZmVhYy1lZDY3LTQ5NTAtOTc3NC1hMjRlOTJmNDY4NWQlMjIlMkMlMjJ1c2VySWQlMjIlM0ElMjJNRnRfTTJuaCUyMiUyQyUyMnNlc3Npb25JZCUyMiUzQTE3NzY2NTczMDUzNDklMkMlMjJvcHRPdXQlMjIlM0FmYWxzZSUyQyUyMmxhc3RFdmVudFRpbWUlMjIlM0ExNzc2NjU4NzgwMDU5JTJDJTIybGFzdEV2ZW50SWQlMjIlM0ExNDMlMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlN0Q=; _clsk=1fb5h3w%5E1776658780671%5E32%5E1%5Ef.clarity.ms%2Fcollect; _ga_F64G0BDZ9S=GS2.1.s1776657304$o6$g1$t1776658781$j51$l0$h0"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"from_timestamp\":1776038400,\"to_timestamp\":1776729599,\"platform\":\"iOS\",\"date_limiter_type\":\"happened_at\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://dash.qonversion.io/api/v1/exports?project=BXjpXO_z&account=3pCprDme",
+                  "protocol": "https",
+                  "host": [
+                    "dash",
+                    "qonversion",
+                    "io"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "exports"
+                  ],
+                  "query": [
+                    {
+                      "key": "project",
+                      "value": "BXjpXO_z"
+                    },
+                    {
+                      "key": "account",
+                      "value": "3pCprDme"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": ":status",
+                  "value": 200
+                },
+                {
+                  "key": "date",
+                  "value": "Mon, 20 Apr 2026 04:27:27 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json; charset=UTF-8"
+                },
+                {
+                  "key": "x-powered-by",
+                  "value": "PHP/7.3.22"
+                },
+                {
+                  "key": "expires",
+                  "value": "Thu, 19 Nov 1981 08:52:00 GMT"
+                },
+                {
+                  "key": "cache-control",
+                  "value": "no-store, no-cache, must-revalidate"
+                },
+                {
+                  "key": "pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "set-cookie",
+                  "value": "_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; expires=Wed, 20-May-2026 04:27:27 GMT; Max-Age=2592000; path=/; HttpOnly; SameSite=Lax"
+                },
+                {
+                  "key": "strict-transport-security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "access-control-allow-headers",
+                  "value": "*"
+                },
+                {
+                  "key": "cf-cache-status",
+                  "value": "DYNAMIC"
+                },
+                {
+                  "key": "content-encoding",
+                  "value": "br"
+                },
+                {
+                  "key": "server",
+                  "value": "cloudflare"
+                },
+                {
+                  "key": "cf-ray",
+                  "value": "9ef165855b0b9cac-HKG"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"uuid\": \"ghTqVleuhN866LckvEOvn3_foifu35GX\",\n        \"status\": 0,\n        \"type\": \"events\",\n        \"from_timestamp\": 1776038400,\n        \"to_timestamp\": 1776729599,\n        \"platform\": \"iOS\",\n        \"date_limiter_type\": \"happened_at\",\n        \"created_at\": 1776659247\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "02. Get Export status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "*/*"
+              },
+              {
+                "key": "accept-language",
+                "value": "en-US,en;q=0.9,vi;q=0.8"
+              },
+              {
+                "key": "baggage",
+                "value": "sentry-environment=production,sentry-release=dash-app%403.136.0,sentry-public_key=5656bbcf10b34921ad19f0b8bbec6509,sentry-trace_id=97d3eaf872254616bcc591d179cc4b95,sentry-org_id=613478,sentry-sampled=true,sentry-sample_rand=0.7884604405942917,sentry-sample_rate=1"
+              },
+              {
+                "key": "priority",
+                "value": "u=1, i"
+              },
+              {
+                "key": "referer",
+                "value": "https://dash.qonversion.io/reports/raw-data/export/3S9bb0RGpYJf8KDbJ6Ac0zblQRbwkaBe?account=3pCprDme"
+              },
+              {
+                "key": "sec-ch-ua",
+                "value": "\"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\""
+              },
+              {
+                "key": "sec-ch-ua-mobile",
+                "value": "?0"
+              },
+              {
+                "key": "sec-ch-ua-platform",
+                "value": "\"Windows\""
+              },
+              {
+                "key": "sec-fetch-dest",
+                "value": "empty"
+              },
+              {
+                "key": "sec-fetch-mode",
+                "value": "cors"
+              },
+              {
+                "key": "sec-fetch-site",
+                "value": "same-origin"
+              },
+              {
+                "key": "sentry-trace",
+                "value": "97d3eaf872254616bcc591d179cc4b95-becb709a785104bc-1"
+              },
+              {
+                "key": "user-agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+              },
+              {
+                "key": "Cookie",
+                "value": "_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; darkMode=false; _fbp=fb.1.1775643079632.7011111738306406; __stripe_mid=8d85c12e-c13e-41ca-931b-3c20ef3c533a70c387; NPS_3ab4cf9e_last_seen=1775643153393; _twpid=tw.1775643153822.69134437958090331; _ym_uid=1775643154107556263; _ym_d=1775643154; AMP_MKTG_213dedb7fb=JTdCJTdE; _gid=GA1.2.860279115.1776657305; amplitude_identify=eyJxb252ZXJzaW9uX3VzZXJfdWlkIjoiTUZ0X00ybmgiLCJxb252ZXJzaW9uX3VzZXJfY3JlYXRlZF9hdCI6IjIwMjYtMDQtMDhUMDM6Mjk6MzErMDA6MDAiLCJxb252ZXJzaW9uX3VzZXJfcm9sZSI6Im1hbmFnZXIiLCJhY2NvdW50X25hbWUiOiJBbW9iZWFyIFN0dWRpbyIsImFjY291bnRfdWlkIjoiM3BDcHJEbWUiLCJhY2NvdW50X2NyZWF0ZWRfYXQiOiIyMDIzLTExLTE3VDA2OjQwOjIyKzAwOjAwIiwiYWNjb3VudF9wbGFuX2tleSI6ImJ1c2luZXNzMjAyMiIsImFjY291bnRfcGxhbl9pZCI6NjksImFjY291bnRfbWVtYmVyc19jb3VudCI6NTgsImFjY291bnRfcHJvamVjdHNfY291bnQiOjMwMSwiYWNjb3VudF9wcm9qZWN0c19hcHBzdG9yZV9jb3VudCI6NDYsImFjY291bnRfcHJvamVjdHNfZ3BsYXlfY291bnQiOjIyNSwiYWNjb3VudF9wcm9qZWN0c19zdHJpcGVfY291bnQiOjIsImFjY291bnRfcHJvamVjdHNfYXNhX2NvdW50IjowLCJhY2NvdW50X2hhc19wYXltZW50X21ldGhvZCI6dHJ1ZSwiYWNjb3VudF9oYXNfcHJvZF9kYXRhIjp0cnVlLCJhY2NvdW50X2hhc19zYW5kYm94X2RhdGEiOnRydWUsImludGVncmF0aW9uc19jb3VudCI6MjY5LCJpbnRlZ3JhdGlvbnNfYWN0aXZlX2NvdW50IjoyMzAsImFjY291bnRfcHJvamVjdHNfZW50aXRsZW1lbnRzX2NvdW50IjoyNjUsInByb2plY3RzX2J5X2ludGVncmF0aW9uc19jb3VudCI6eyJhZGp1c3QiOjU1LCJhbWF6b25fczMiOjUsImFwcG1ldHJpY2EiOjMsImFwcHNmbHllciI6NDcsImZhY2Vib29rIjoyOSwiZmlyZWJhc2UiOjY3LCJnb29nbGVfY2xvdWRfc3RvcmFnZSI6MSwic2xhY2siOjIsIndlYmhvb2tzIjoxMX0sImFjY291bnRfbXRyX3ByZXZpb3VzX21vbnRoIjp7Im10ciI6Njg5MTU3LjQ5OTk5OTk4LCJtdHJfc3RyaXBlIjowfX0=; intercom_settings=eyJ1c2VyX2lkIjoiTUZ0X00ybmgiLCJuYW1lIjoiQW5oIFF1YW5nIiwiZW1haWwiOiJxdWFuZ25ndXllbkBhbW9iZWFyLnZuIiwiY3JlYXRlZF9hdCI6MTc3NTYxODk3MSwicm9sZSI6Im1hbmFnZXIiLCJjb21wYW55Ijp7ImNvbXBhbnlfaWQiOjI4NTQ0LCJjcmVhdGVkX2F0IjoxNzAwMjAzMjIyLCJuYW1lIjoiQW1vYmVhciBTdHVkaW8iLCJwbGFuIjo2OSwicGxhbl9uYW1lIjoiQ3VzdG9tIGZvciBBbW9iZWFyIiwicGxhbl9rZXkiOiJidXNpbmVzczIwMjIiLCJCaWxsaW5nIjoidHJ1ZSIsInN0cmlwZV9jdXN0b21lcl9pZCI6ImN1c19QODNXdDNOMkFBd1Q5RiIsImlzX3RyaWFsIjoiZmFsc2UiLCJ0b3RhbF9zcGVuZCI6NTYzOTh9fQ==; _csrf-board=d3a3f2ee3f7728cc2b5462a4f063641f0d74e238c7c9c4b10426cc3fc0b69b22a%3A2%3A%7Bi%3A0%3Bs%3A11%3A%22_csrf-board%22%3Bi%3A1%3Bs%3A32%3A%22Odk2t0mH4ZdbVMFp9jGqD0zfr_uJ2RD6%22%3B%7D; project_MFt_M2nh=3af4468e93f0c13d38b0bdf63158180e4c8826e69adbbf277838a6b54d6f8508a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22project_MFt_M2nh%22%3Bi%3A1%3Bs%3A8%3A%22BXjpXO_z%22%3B%7D; platform_key=13d7455d1c8cb080b57267621195561039d4405fc098c6d0c2d47213cbe2fb8da%3A2%3A%7Bi%3A0%3Bs%3A12%3A%22platform_key%22%3Bi%3A1%3Bs%3A3%3A%22iOS%22%3B%7D; qonversion-board=mqfve289mi1cmt5h6v4abnf6of; _clck=1dgsx6y%5E2%5Eg5d%5E0%5E2289; __stripe_sid=07fd93e5-bab0-4e8e-aeda-b90e47ab9ab8cfca71; NPS_3ab4cf9e_throttle=1776700570463; session-gXifcNy1GoCifrbAVi4wcFcuQ6gwwX6w=%7B%22gleapId%22%3A%22344c8007-7a2d-458a-922f-9499dc1e3805%22%2C%22gleapHash%22%3A%221e7e67650cf1ffd296a955850127fb290b3d8f52fdcad39925acd6248066f333%22%2C%22name%22%3A%22Anh%20Quang%22%2C%22email%22%3A%22quangnguyen%40amobear.vn%22%2C%22userId%22%3A%22MFt_M2nh%22%2C%22value%22%3A56398%2C%22companyName%22%3A%22Amobear%20Studio%22%2C%22deviceType%22%3A%22desktop%22%2C%22platform%22%3A%22web%22%2C%22plan%22%3A%22Custom%20for%20Amobear%22%2C%22lang%22%3A%22en-us%22%2C%22customData%22%3A%7B%22billing%22%3A%22true%22%2C%22companyCreatedAt%22%3A%222023-11-17T06%3A40%3A22.000Z%22%2C%22companyUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Faccount%2Fview%3Fid%3D28544%22%2C%22isTrial%22%3A%22false%22%2C%22plan_id%22%3A69%2C%22plan_key%22%3A%22business2022%22%2C%22role%22%3A%22manager%22%2C%22stripeCustomerId%22%3A%22cus_P83Wt3N2AAwT9F%22%2C%22userUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Fuser%2Fview%3Fid%3DMFt_M2nh%22%7D%2C%22id%22%3A%2269d5cba4f6b0237e1bf4aef2%22%7D; _ym_isad=2; _ga=GA1.2.2049717739.1775643079; frill-sdk={%22data%22:{%22sessionCount%22:8%2C%22identifiedAt%22:%222026-04-08T10:11:19.813Z%22%2C%22lastIdentifiedAt%22:%222026-04-20T03:57:27.141Z%22}}; AMP_213dedb7fb=JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjI5Y2I1ZmVhYy1lZDY3LTQ5NTAtOTc3NC1hMjRlOTJmNDY4NWQlMjIlMkMlMjJ1c2VySWQlMjIlM0ElMjJNRnRfTTJuaCUyMiUyQyUyMnNlc3Npb25JZCUyMiUzQTE3NzY2NTczMDUzNDklMkMlMjJvcHRPdXQlMjIlM0FmYWxzZSUyQyUyMmxhc3RFdmVudFRpbWUlMjIlM0ExNzc2NjU4ODAxMzk2JTJDJTIybGFzdEV2ZW50SWQlMjIlM0ExNDUlMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlN0Q=; _clsk=1fb5h3w%5E1776658801974%5E33%5E1%5Ef.clarity.ms%2Fcollect; _ga_F64G0BDZ9S=GS2.1.s1776657304$o6$g1$t1776658802$j30$l0$h0"
+              }
+            ],
+            "url": {
+              "raw": "https://dash.qonversion.io/api/v1/exports/ghTqVleuhN866LckvEOvn3_foifu35GX?project=BXjpXO_z&account=3pCprDme",
+              "protocol": "https",
+              "host": [
+                "dash",
+                "qonversion",
+                "io"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "exports",
+                "ghTqVleuhN866LckvEOvn3_foifu35GX"
+              ],
+              "query": [
+                {
+                  "key": "project",
+                  "value": "BXjpXO_z"
+                },
+                {
+                  "key": "account",
+                  "value": "3pCprDme"
+                }
+              ]
+            },
+            "description": "Generated from cURL: curl 'https://dash.qonversion.io/api/v1/exports/3S9bb0RGpYJf8KDbJ6Ac0zblQRbwkaBe?project=BXjpXO_z&account=3pCprDme' \\\r\n  -H 'accept: */*' \\\r\n  -H 'accept-language: en-US,en;q=0.9,vi;q=0.8' \\\r\n  -H 'baggage: sentry-environment=production,sentry-release=dash-app%403.136.0,sentry-public_key=5656bbcf10b34921ad19f0b8bbec6509,sentry-trace_id=97d3eaf872254616bcc591d179cc4b95,sentry-org_id=613478,sentry-sampled=true,sentry-sample_rand=0.7884604405942917,sentry-sample_rate=1' \\\r\n  -b '_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; darkMode=false; _fbp=fb.1.1775643079632.7011111738306406; __stripe_mid=8d85c12e-c13e-41ca-931b-3c20ef3c533a70c387; NPS_3ab4cf9e_last_seen=1775643153393; _twpid=tw.1775643153822.69134437958090331; _ym_uid=1775643154107556263; _ym_d=1775643154; AMP_MKTG_213dedb7fb=JTdCJTdE; _gid=GA1.2.860279115.1776657305; amplitude_identify=eyJxb252ZXJzaW9uX3VzZXJfdWlkIjoiTUZ0X00ybmgiLCJxb252ZXJzaW9uX3VzZXJfY3JlYXRlZF9hdCI6IjIwMjYtMDQtMDhUMDM6Mjk6MzErMDA6MDAiLCJxb252ZXJzaW9uX3VzZXJfcm9sZSI6Im1hbmFnZXIiLCJhY2NvdW50X25hbWUiOiJBbW9iZWFyIFN0dWRpbyIsImFjY291bnRfdWlkIjoiM3BDcHJEbWUiLCJhY2NvdW50X2NyZWF0ZWRfYXQiOiIyMDIzLTExLTE3VDA2OjQwOjIyKzAwOjAwIiwiYWNjb3VudF9wbGFuX2tleSI6ImJ1c2luZXNzMjAyMiIsImFjY291bnRfcGxhbl9pZCI6NjksImFjY291bnRfbWVtYmVyc19jb3VudCI6NTgsImFjY291bnRfcHJvamVjdHNfY291bnQiOjMwMSwiYWNjb3VudF9wcm9qZWN0c19hcHBzdG9yZV9jb3VudCI6NDYsImFjY291bnRfcHJvamVjdHNfZ3BsYXlfY291bnQiOjIyNSwiYWNjb3VudF9wcm9qZWN0c19zdHJpcGVfY291bnQiOjIsImFjY291bnRfcHJvamVjdHNfYXNhX2NvdW50IjowLCJhY2NvdW50X2hhc19wYXltZW50X21ldGhvZCI6dHJ1ZSwiYWNjb3VudF9oYXNfcHJvZF9kYXRhIjp0cnVlLCJhY2NvdW50X2hhc19zYW5kYm94X2RhdGEiOnRydWUsImludGVncmF0aW9uc19jb3VudCI6MjY5LCJpbnRlZ3JhdGlvbnNfYWN0aXZlX2NvdW50IjoyMzAsImFjY291bnRfcHJvamVjdHNfZW50aXRsZW1lbnRzX2NvdW50IjoyNjUsInByb2plY3RzX2J5X2ludGVncmF0aW9uc19jb3VudCI6eyJhZGp1c3QiOjU1LCJhbWF6b25fczMiOjUsImFwcG1ldHJpY2EiOjMsImFwcHNmbHllciI6NDcsImZhY2Vib29rIjoyOSwiZmlyZWJhc2UiOjY3LCJnb29nbGVfY2xvdWRfc3RvcmFnZSI6MSwic2xhY2siOjIsIndlYmhvb2tzIjoxMX0sImFjY291bnRfbXRyX3ByZXZpb3VzX21vbnRoIjp7Im10ciI6Njg5MTU3LjQ5OTk5OTk4LCJtdHJfc3RyaXBlIjowfX0=; intercom_settings=eyJ1c2VyX2lkIjoiTUZ0X00ybmgiLCJuYW1lIjoiQW5oIFF1YW5nIiwiZW1haWwiOiJxdWFuZ25ndXllbkBhbW9iZWFyLnZuIiwiY3JlYXRlZF9hdCI6MTc3NTYxODk3MSwicm9sZSI6Im1hbmFnZXIiLCJjb21wYW55Ijp7ImNvbXBhbnlfaWQiOjI4NTQ0LCJjcmVhdGVkX2F0IjoxNzAwMjAzMjIyLCJuYW1lIjoiQW1vYmVhciBTdHVkaW8iLCJwbGFuIjo2OSwicGxhbl9uYW1lIjoiQ3VzdG9tIGZvciBBbW9iZWFyIiwicGxhbl9rZXkiOiJidXNpbmVzczIwMjIiLCJCaWxsaW5nIjoidHJ1ZSIsInN0cmlwZV9jdXN0b21lcl9pZCI6ImN1c19QODNXdDNOMkFBd1Q5RiIsImlzX3RyaWFsIjoiZmFsc2UiLCJ0b3RhbF9zcGVuZCI6NTYzOTh9fQ==; _csrf-board=d3a3f2ee3f7728cc2b5462a4f063641f0d74e238c7c9c4b10426cc3fc0b69b22a%3A2%3A%7Bi%3A0%3Bs%3A11%3A%22_csrf-board%22%3Bi%3A1%3Bs%3A32%3A%22Odk2t0mH4ZdbVMFp9jGqD0zfr_uJ2RD6%22%3B%7D; project_MFt_M2nh=3af4468e93f0c13d38b0bdf63158180e4c8826e69adbbf277838a6b54d6f8508a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22project_MFt_M2nh%22%3Bi%3A1%3Bs%3A8%3A%22BXjpXO_z%22%3B%7D; platform_key=13d7455d1c8cb080b57267621195561039d4405fc098c6d0c2d47213cbe2fb8da%3A2%3A%7Bi%3A0%3Bs%3A12%3A%22platform_key%22%3Bi%3A1%3Bs%3A3%3A%22iOS%22%3B%7D; qonversion-board=mqfve289mi1cmt5h6v4abnf6of; _clck=1dgsx6y%5E2%5Eg5d%5E0%5E2289; __stripe_sid=07fd93e5-bab0-4e8e-aeda-b90e47ab9ab8cfca71; NPS_3ab4cf9e_throttle=1776700570463; session-gXifcNy1GoCifrbAVi4wcFcuQ6gwwX6w=%7B%22gleapId%22%3A%22344c8007-7a2d-458a-922f-9499dc1e3805%22%2C%22gleapHash%22%3A%221e7e67650cf1ffd296a955850127fb290b3d8f52fdcad39925acd6248066f333%22%2C%22name%22%3A%22Anh%20Quang%22%2C%22email%22%3A%22quangnguyen%40amobear.vn%22%2C%22userId%22%3A%22MFt_M2nh%22%2C%22value%22%3A56398%2C%22companyName%22%3A%22Amobear%20Studio%22%2C%22deviceType%22%3A%22desktop%22%2C%22platform%22%3A%22web%22%2C%22plan%22%3A%22Custom%20for%20Amobear%22%2C%22lang%22%3A%22en-us%22%2C%22customData%22%3A%7B%22billing%22%3A%22true%22%2C%22companyCreatedAt%22%3A%222023-11-17T06%3A40%3A22.000Z%22%2C%22companyUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Faccount%2Fview%3Fid%3D28544%22%2C%22isTrial%22%3A%22false%22%2C%22plan_id%22%3A69%2C%22plan_key%22%3A%22business2022%22%2C%22role%22%3A%22manager%22%2C%22stripeCustomerId%22%3A%22cus_P83Wt3N2AAwT9F%22%2C%22userUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Fuser%2Fview%3Fid%3DMFt_M2nh%22%7D%2C%22id%22%3A%2269d5cba4f6b0237e1bf4aef2%22%7D; _ym_isad=2; _ga=GA1.2.2049717739.1775643079; frill-sdk={%22data%22:{%22sessionCount%22:8%2C%22identifiedAt%22:%222026-04-08T10:11:19.813Z%22%2C%22lastIdentifiedAt%22:%222026-04-20T03:57:27.141Z%22}}; AMP_213dedb7fb=JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjI5Y2I1ZmVhYy1lZDY3LTQ5NTAtOTc3NC1hMjRlOTJmNDY4NWQlMjIlMkMlMjJ1c2VySWQlMjIlM0ElMjJNRnRfTTJuaCUyMiUyQyUyMnNlc3Npb25JZCUyMiUzQTE3NzY2NTczMDUzNDklMkMlMjJvcHRPdXQlMjIlM0FmYWxzZSUyQyUyMmxhc3RFdmVudFRpbWUlMjIlM0ExNzc2NjU4ODAxMzk2JTJDJTIybGFzdEV2ZW50SWQlMjIlM0ExNDUlMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlN0Q=; _clsk=1fb5h3w%5E1776658801974%5E33%5E1%5Ef.clarity.ms%2Fcollect; _ga_F64G0BDZ9S=GS2.1.s1776657304$o6$g1$t1776658802$j30$l0$h0' \\\r\n  -H 'priority: u=1, i' \\\r\n  -H 'referer: https://dash.qonversion.io/reports/raw-data/export/3S9bb0RGpYJf8KDbJ6Ac0zblQRbwkaBe?account=3pCprDme' \\\r\n  -H 'sec-ch-ua: \"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"' \\\r\n  -H 'sec-ch-ua-mobile: ?0' \\\r\n  -H 'sec-ch-ua-platform: \"Windows\"' \\\r\n  -H 'sec-fetch-dest: empty' \\\r\n  -H 'sec-fetch-mode: cors' \\\r\n  -H 'sec-fetch-site: same-origin' \\\r\n  -H 'sentry-trace: 97d3eaf872254616bcc591d179cc4b95-becb709a785104bc-1' \\\r\n  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36'"
+          },
+          "response": [
+            {
+              "name": "02. Get Export status",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "accept",
+                    "value": "*/*"
+                  },
+                  {
+                    "key": "accept-language",
+                    "value": "en-US,en;q=0.9,vi;q=0.8"
+                  },
+                  {
+                    "key": "baggage",
+                    "value": "sentry-environment=production,sentry-release=dash-app%403.136.0,sentry-public_key=5656bbcf10b34921ad19f0b8bbec6509,sentry-trace_id=97d3eaf872254616bcc591d179cc4b95,sentry-org_id=613478,sentry-sampled=true,sentry-sample_rand=0.7884604405942917,sentry-sample_rate=1"
+                  },
+                  {
+                    "key": "priority",
+                    "value": "u=1, i"
+                  },
+                  {
+                    "key": "referer",
+                    "value": "https://dash.qonversion.io/reports/raw-data/export/3S9bb0RGpYJf8KDbJ6Ac0zblQRbwkaBe?account=3pCprDme"
+                  },
+                  {
+                    "key": "sec-ch-ua",
+                    "value": "\"Google Chrome\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\""
+                  },
+                  {
+                    "key": "sec-ch-ua-mobile",
+                    "value": "?0"
+                  },
+                  {
+                    "key": "sec-ch-ua-platform",
+                    "value": "\"Windows\""
+                  },
+                  {
+                    "key": "sec-fetch-dest",
+                    "value": "empty"
+                  },
+                  {
+                    "key": "sec-fetch-mode",
+                    "value": "cors"
+                  },
+                  {
+                    "key": "sec-fetch-site",
+                    "value": "same-origin"
+                  },
+                  {
+                    "key": "sentry-trace",
+                    "value": "97d3eaf872254616bcc591d179cc4b95-becb709a785104bc-1"
+                  },
+                  {
+                    "key": "user-agent",
+                    "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; darkMode=false; _fbp=fb.1.1775643079632.7011111738306406; __stripe_mid=8d85c12e-c13e-41ca-931b-3c20ef3c533a70c387; NPS_3ab4cf9e_last_seen=1775643153393; _twpid=tw.1775643153822.69134437958090331; _ym_uid=1775643154107556263; _ym_d=1775643154; AMP_MKTG_213dedb7fb=JTdCJTdE; _gid=GA1.2.860279115.1776657305; amplitude_identify=eyJxb252ZXJzaW9uX3VzZXJfdWlkIjoiTUZ0X00ybmgiLCJxb252ZXJzaW9uX3VzZXJfY3JlYXRlZF9hdCI6IjIwMjYtMDQtMDhUMDM6Mjk6MzErMDA6MDAiLCJxb252ZXJzaW9uX3VzZXJfcm9sZSI6Im1hbmFnZXIiLCJhY2NvdW50X25hbWUiOiJBbW9iZWFyIFN0dWRpbyIsImFjY291bnRfdWlkIjoiM3BDcHJEbWUiLCJhY2NvdW50X2NyZWF0ZWRfYXQiOiIyMDIzLTExLTE3VDA2OjQwOjIyKzAwOjAwIiwiYWNjb3VudF9wbGFuX2tleSI6ImJ1c2luZXNzMjAyMiIsImFjY291bnRfcGxhbl9pZCI6NjksImFjY291bnRfbWVtYmVyc19jb3VudCI6NTgsImFjY291bnRfcHJvamVjdHNfY291bnQiOjMwMSwiYWNjb3VudF9wcm9qZWN0c19hcHBzdG9yZV9jb3VudCI6NDYsImFjY291bnRfcHJvamVjdHNfZ3BsYXlfY291bnQiOjIyNSwiYWNjb3VudF9wcm9qZWN0c19zdHJpcGVfY291bnQiOjIsImFjY291bnRfcHJvamVjdHNfYXNhX2NvdW50IjowLCJhY2NvdW50X2hhc19wYXltZW50X21ldGhvZCI6dHJ1ZSwiYWNjb3VudF9oYXNfcHJvZF9kYXRhIjp0cnVlLCJhY2NvdW50X2hhc19zYW5kYm94X2RhdGEiOnRydWUsImludGVncmF0aW9uc19jb3VudCI6MjY5LCJpbnRlZ3JhdGlvbnNfYWN0aXZlX2NvdW50IjoyMzAsImFjY291bnRfcHJvamVjdHNfZW50aXRsZW1lbnRzX2NvdW50IjoyNjUsInByb2plY3RzX2J5X2ludGVncmF0aW9uc19jb3VudCI6eyJhZGp1c3QiOjU1LCJhbWF6b25fczMiOjUsImFwcG1ldHJpY2EiOjMsImFwcHNmbHllciI6NDcsImZhY2Vib29rIjoyOSwiZmlyZWJhc2UiOjY3LCJnb29nbGVfY2xvdWRfc3RvcmFnZSI6MSwic2xhY2siOjIsIndlYmhvb2tzIjoxMX0sImFjY291bnRfbXRyX3ByZXZpb3VzX21vbnRoIjp7Im10ciI6Njg5MTU3LjQ5OTk5OTk4LCJtdHJfc3RyaXBlIjowfX0=; intercom_settings=eyJ1c2VyX2lkIjoiTUZ0X00ybmgiLCJuYW1lIjoiQW5oIFF1YW5nIiwiZW1haWwiOiJxdWFuZ25ndXllbkBhbW9iZWFyLnZuIiwiY3JlYXRlZF9hdCI6MTc3NTYxODk3MSwicm9sZSI6Im1hbmFnZXIiLCJjb21wYW55Ijp7ImNvbXBhbnlfaWQiOjI4NTQ0LCJjcmVhdGVkX2F0IjoxNzAwMjAzMjIyLCJuYW1lIjoiQW1vYmVhciBTdHVkaW8iLCJwbGFuIjo2OSwicGxhbl9uYW1lIjoiQ3VzdG9tIGZvciBBbW9iZWFyIiwicGxhbl9rZXkiOiJidXNpbmVzczIwMjIiLCJCaWxsaW5nIjoidHJ1ZSIsInN0cmlwZV9jdXN0b21lcl9pZCI6ImN1c19QODNXdDNOMkFBd1Q5RiIsImlzX3RyaWFsIjoiZmFsc2UiLCJ0b3RhbF9zcGVuZCI6NTYzOTh9fQ==; _csrf-board=d3a3f2ee3f7728cc2b5462a4f063641f0d74e238c7c9c4b10426cc3fc0b69b22a%3A2%3A%7Bi%3A0%3Bs%3A11%3A%22_csrf-board%22%3Bi%3A1%3Bs%3A32%3A%22Odk2t0mH4ZdbVMFp9jGqD0zfr_uJ2RD6%22%3B%7D; project_MFt_M2nh=3af4468e93f0c13d38b0bdf63158180e4c8826e69adbbf277838a6b54d6f8508a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22project_MFt_M2nh%22%3Bi%3A1%3Bs%3A8%3A%22BXjpXO_z%22%3B%7D; platform_key=13d7455d1c8cb080b57267621195561039d4405fc098c6d0c2d47213cbe2fb8da%3A2%3A%7Bi%3A0%3Bs%3A12%3A%22platform_key%22%3Bi%3A1%3Bs%3A3%3A%22iOS%22%3B%7D; qonversion-board=mqfve289mi1cmt5h6v4abnf6of; _clck=1dgsx6y%5E2%5Eg5d%5E0%5E2289; __stripe_sid=07fd93e5-bab0-4e8e-aeda-b90e47ab9ab8cfca71; NPS_3ab4cf9e_throttle=1776700570463; session-gXifcNy1GoCifrbAVi4wcFcuQ6gwwX6w=%7B%22gleapId%22%3A%22344c8007-7a2d-458a-922f-9499dc1e3805%22%2C%22gleapHash%22%3A%221e7e67650cf1ffd296a955850127fb290b3d8f52fdcad39925acd6248066f333%22%2C%22name%22%3A%22Anh%20Quang%22%2C%22email%22%3A%22quangnguyen%40amobear.vn%22%2C%22userId%22%3A%22MFt_M2nh%22%2C%22value%22%3A56398%2C%22companyName%22%3A%22Amobear%20Studio%22%2C%22deviceType%22%3A%22desktop%22%2C%22platform%22%3A%22web%22%2C%22plan%22%3A%22Custom%20for%20Amobear%22%2C%22lang%22%3A%22en-us%22%2C%22customData%22%3A%7B%22billing%22%3A%22true%22%2C%22companyCreatedAt%22%3A%222023-11-17T06%3A40%3A22.000Z%22%2C%22companyUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Faccount%2Fview%3Fid%3D28544%22%2C%22isTrial%22%3A%22false%22%2C%22plan_id%22%3A69%2C%22plan_key%22%3A%22business2022%22%2C%22role%22%3A%22manager%22%2C%22stripeCustomerId%22%3A%22cus_P83Wt3N2AAwT9F%22%2C%22userUrl%22%3A%22https%3A%2F%2Fteam.qonversion.io%2Fuser%2Fview%3Fid%3DMFt_M2nh%22%7D%2C%22id%22%3A%2269d5cba4f6b0237e1bf4aef2%22%7D; _ym_isad=2; _ga=GA1.2.2049717739.1775643079; frill-sdk={%22data%22:{%22sessionCount%22:8%2C%22identifiedAt%22:%222026-04-08T10:11:19.813Z%22%2C%22lastIdentifiedAt%22:%222026-04-20T03:57:27.141Z%22}}; AMP_213dedb7fb=JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjI5Y2I1ZmVhYy1lZDY3LTQ5NTAtOTc3NC1hMjRlOTJmNDY4NWQlMjIlMkMlMjJ1c2VySWQlMjIlM0ElMjJNRnRfTTJuaCUyMiUyQyUyMnNlc3Npb25JZCUyMiUzQTE3NzY2NTczMDUzNDklMkMlMjJvcHRPdXQlMjIlM0FmYWxzZSUyQyUyMmxhc3RFdmVudFRpbWUlMjIlM0ExNzc2NjU4ODAxMzk2JTJDJTIybGFzdEV2ZW50SWQlMjIlM0ExNDUlMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlN0Q=; _clsk=1fb5h3w%5E1776658801974%5E33%5E1%5Ef.clarity.ms%2Fcollect; _ga_F64G0BDZ9S=GS2.1.s1776657304$o6$g1$t1776658802$j30$l0$h0"
+                  }
+                ],
+                "url": {
+                  "raw": "https://dash.qonversion.io/api/v1/exports/ghTqVleuhN866LckvEOvn3_foifu35GX?project=BXjpXO_z&account=3pCprDme",
+                  "protocol": "https",
+                  "host": [
+                    "dash",
+                    "qonversion",
+                    "io"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "exports",
+                    "ghTqVleuhN866LckvEOvn3_foifu35GX"
+                  ],
+                  "query": [
+                    {
+                      "key": "project",
+                      "value": "BXjpXO_z"
+                    },
+                    {
+                      "key": "account",
+                      "value": "3pCprDme"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": ":status",
+                  "value": 200
+                },
+                {
+                  "key": "date",
+                  "value": "Mon, 20 Apr 2026 04:29:15 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json; charset=UTF-8"
+                },
+                {
+                  "key": "x-powered-by",
+                  "value": "PHP/7.3.22"
+                },
+                {
+                  "key": "expires",
+                  "value": "Thu, 19 Nov 1981 08:52:00 GMT"
+                },
+                {
+                  "key": "cache-control",
+                  "value": "no-store, no-cache, must-revalidate"
+                },
+                {
+                  "key": "pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "set-cookie",
+                  "value": "_identity-board=82cbe6b6889ca6f45390b3bf7c5187709cef4737a14d42b9923b78d57f59022ca%3A2%3A%7Bi%3A0%3Bs%3A15%3A%22_identity-board%22%3Bi%3A1%3Bs%3A50%3A%22%5B43373%2C%22obboB9EPNw31Dn9cG2fw4BPEHg5zk2NK%22%2C2592000%5D%22%3B%7D; expires=Wed, 20-May-2026 04:29:15 GMT; Max-Age=2592000; path=/; HttpOnly; SameSite=Lax"
+                },
+                {
+                  "key": "strict-transport-security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "access-control-allow-headers",
+                  "value": "*"
+                },
+                {
+                  "key": "cf-cache-status",
+                  "value": "DYNAMIC"
+                },
+                {
+                  "key": "content-encoding",
+                  "value": "br"
+                },
+                {
+                  "key": "server",
+                  "value": "cloudflare"
+                },
+                {
+                  "key": "cf-ray",
+                  "value": "9ef168298f4c84a0-HKG"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"uuid\": \"ghTqVleuhN866LckvEOvn3_foifu35GX\",\n        \"status\": 3,\n        \"status_name\": \"Done\",\n        \"from_timestamp\": 1776038400,\n        \"to_timestamp\": 1776729599,\n        \"platform\": \"iOS\",\n        \"date_limiter_type\": \"happened_at\",\n        \"created_at\": 1776659247,\n        \"delete_at\": 1777264054,\n        \"is_expired\": false,\n        \"file_url\": \"https://cloud.qonversion.io/report/ghTqVleuhN866LckvEOvn3_foifu35GX\",\n        \"file_name\": \"q-export-20260420042727-jl994Dj7R4F7Eu.csv\",\n        \"file_size\": \"1.86 MB\"\n    }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.qonversion.io/v3"
+    },
+    {
+      "key": "project_key",
+      "value": "YOUR_PROJECT_KEY_HERE",
+      "description": "Qonversion Project Key — from Dashboard → Project Settings"
+    },
+    {
+      "key": "secret_key",
+      "value": "sk_YOUR_SECRET_KEY_HERE",
+      "description": "Qonversion Secret Key (sk_ prefix) — for grant/revoke entitlements only"
+    },
+    {
+      "key": "user_id",
+      "value": "QON_sample_user_id",
+      "description": "Qonversion internal user ID"
+    },
+    {
+      "key": "identity_id",
+      "value": "amobear_custom_user_123",
+      "description": "Custom identity ID (Amobear user ID)"
+    },
+    {
+      "key": "nexus_webhook_url",
+      "value": "https://nexus.amobear.com/api/webhooks/qonversion",
+      "description": "Nexus webhook endpoint for testing"
+    },
+    {
+      "key": "nexus_webhook_local",
+      "value": "http://localhost:5000/api/webhooks/qonversion",
+      "description": "Local dev webhook endpoint"
+    }
+  ]
+}

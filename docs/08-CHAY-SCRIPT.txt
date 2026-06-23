@@ -1,0 +1,70 @@
+═══════════════════════════════════════════════════════════════
+  HƯỚNG DẪN CHẠY QUICK-START.PS1 TRÊN WINDOWS
+═══════════════════════════════════════════════════════════════
+
+CÁCH 1: CHẠY TRONG POWERSHELL (KHUYẾN NGHỊ)
+─────────────────────────────────────────────
+
+1. Mở PowerShell:
+   - Nhấn Windows + X → Chọn "Windows PowerShell"
+   - Hoặc tìm "PowerShell" trong Start Menu
+
+2. Di chuyển đến thư mục project:
+   cd D:\Git\Amobear.Mediation.Tools
+
+3. Chạy script:
+   .\quick-start.ps1
+
+─────────────────────────────────────────────
+
+CÁCH 2: CHẠY NHANH VỚI BYPASS (NẾU GẶP LỖI EXECUTION POLICY)
+─────────────────────────────────────────────
+
+Mở PowerShell và chạy:
+   powershell -ExecutionPolicy Bypass -File D:\Git\Amobear.Mediation.Tools\quick-start.ps1
+
+─────────────────────────────────────────────
+
+CÁCH 3: CHẠY TỪ COMMAND PROMPT (CMD)
+─────────────────────────────────────────────
+
+Mở CMD và chạy:
+   cd D:\Git\Amobear.Mediation.Tools
+   powershell -ExecutionPolicy Bypass -File quick-start.ps1
+
+─────────────────────────────────────────────
+
+CÁCH 4: CLICK CHUỘT PHẢI (ĐƠN GIẢN NHẤT)
+─────────────────────────────────────────────
+
+1. Mở File Explorer
+2. Điều hướng đến: D:\Git\Amobear.Mediation.Tools
+3. Click chuột phải vào file "quick-start.ps1"
+4. Chọn "Run with PowerShell"
+
+─────────────────────────────────────────────
+
+NẾU GẶP LỖI "EXECUTION POLICY"
+─────────────────────────────────────────────
+
+Chạy PowerShell với quyền Administrator và gõ:
+
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+Sau đó chạy lại script:
+   .\quick-start.ps1
+
+─────────────────────────────────────────────
+
+KIỂM TRA TRƯỚC KHI CHẠY
+─────────────────────────────────────────────
+
+Đảm bảo đã cài đặt:
+   ✓ Docker Desktop (đang chạy)
+   ✓ .NET 8 SDK
+
+Kiểm tra:
+   docker --version
+   dotnet --version
+
+═══════════════════════════════════════════════════════════════

@@ -1,0 +1,736 @@
+{
+  "info": {
+    "_postman_id": "applovin-max-v2-mediation-pro",
+    "name": "AppLovin MAX API Collection v2 - Mediation Pro",
+    "description": "Complete collection for AppLovin MAX APIs based on official documentation (support.axon.ai).\n\n## Quick Start\n1. Import this collection\n2. Import the environment file\n3. Set your Report Key in environment\n4. Run Health Checks first\n\n## APIs Included\n- Revenue Reporting API\n- Cohort API\n- User-Level Ad Revenue API\n- Ad Unit Management API\n\n## Official Docs\nhttps://support.axon.ai/en/max/reporting-apis/",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Health Checks",
+      "item": [
+        {
+          "name": "Verify Report API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has code 200', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.code).to.eql(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Report API Key is VALID');",
+                  "} else {",
+                  "    console.log('❌ Report API Key verification FAILED');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "Minimal request to verify Report API key validity"
+          }
+        },
+        {
+          "name": "Verify Management API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Management API Key is VALID');",
+                  "} else if (pm.response.code === 401) {",
+                  "    console.log('❌ Management API Key is INVALID');",
+                  "} else {",
+                  "    console.log('⚠️ Unexpected response: ' + pm.response.code);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Api-Key", "value": "{{management_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{management_base_url}}/mediation/v1/ad_units",
+              "host": ["{{management_base_url}}"],
+              "path": ["mediation", "v1", "ad_units"]
+            },
+            "description": "Verify Management API key (requires Management Key, not Report Key)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Revenue Reporting API",
+      "description": "Revenue Reporting API - https://r.applovin.com/maxReport\n\nRequest window: 45 days\nTimezone: UTC\nData freshness: 1-2 hours delay",
+      "item": [
+        {
+          "name": "Basic - Day + Application + Revenue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "var data = pm.response.json();",
+                  "console.log('Records: ' + data.count);",
+                  "if (data.results && data.results.length > 0) {",
+                  "    var total = data.results.reduce((s,r) => s + parseFloat(r.estimated_revenue || 0), 0);",
+                  "    console.log('Total Revenue: $' + total.toFixed(2));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,application,package_name,estimated_revenue,impressions,ecpm&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,package_name,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Full Breakdown - All Dimensions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,application,package_name,platform,country,ad_format,max_ad_unit_id,ad_unit_waterfall_name,network,network_placement,device_type,estimated_revenue,impressions,ecpm&format=json&sort_estimated_revenue=DESC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,package_name,platform,country,ad_format,max_ad_unit_id,ad_unit_waterfall_name,network,network_placement,device_type,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_estimated_revenue", "value": "DESC"}
+              ]
+            },
+            "description": "Complete breakdown with all available dimensions"
+          }
+        },
+        {
+          "name": "By Network (with Fill Rate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "var data = pm.response.json();",
+                  "if (data.results && data.results.length > 0) {",
+                  "    console.log('\\n=== Network Performance ===');",
+                  "    data.results.slice(0,10).forEach(r => {",
+                  "        console.log(r.network + ': $' + parseFloat(r.estimated_revenue).toFixed(2) + ' | eCPM: $' + parseFloat(r.ecpm).toFixed(2) + ' | Fill: ' + (parseFloat(r.fill_rate)*100).toFixed(1) + '%');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{week_ago}}&end={{yesterday}}&columns=network,estimated_revenue,impressions,ecpm,attempts,responses,fill_rate&format=json&sort_estimated_revenue=DESC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{week_ago}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "network,estimated_revenue,impressions,ecpm,attempts,responses,fill_rate"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_estimated_revenue", "value": "DESC"}
+              ]
+            },
+            "description": "Network performance with fill rate metrics. Note: attempts/responses/fill_rate ONLY available when including network column."
+          }
+        },
+        {
+          "name": "By Country",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=country,estimated_revenue,impressions,ecpm&format=json&sort_estimated_revenue=DESC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "country,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_estimated_revenue", "value": "DESC"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "By Ad Format",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=ad_format,estimated_revenue,impressions,ecpm&format=json&sort_estimated_revenue=DESC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "ad_format,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_estimated_revenue", "value": "DESC"}
+              ]
+            },
+            "description": "Ad formats: INTER, BANNER, REWARD, MREC, APP_OPEN, NATIVE"
+          }
+        },
+        {
+          "name": "By Platform",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=platform,estimated_revenue,impressions,ecpm&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "platform,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "Platforms: android, fireos, ios"
+          }
+        },
+        {
+          "name": "By Ad Unit Waterfall",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=max_ad_unit_id,ad_unit_waterfall_name,ad_format,estimated_revenue,impressions,ecpm&format=json&sort_estimated_revenue=DESC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "max_ad_unit_id,ad_unit_waterfall_name,ad_format,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_estimated_revenue", "value": "DESC"}
+              ]
+            },
+            "description": "Performance by Ad Unit waterfall name"
+          }
+        },
+        {
+          "name": "By Device Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=device_type,estimated_revenue,impressions,ecpm&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "device_type,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "Device types: phone, tablet, other"
+          }
+        },
+        {
+          "name": "Hourly Data (Last 30 Days)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,hour,application,estimated_revenue,impressions,ecpm&format=json&sort_hour=ASC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,hour,application,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_hour", "value": "ASC"}
+              ]
+            },
+            "description": "Hour column only available for dates in the last 30 days"
+          }
+        },
+        {
+          "name": "Monthly Trend",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{month_ago}}&end={{yesterday}}&columns=day,estimated_revenue,impressions,ecpm&format=json&sort_day=ASC",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{month_ago}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "sort_day", "value": "ASC"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter - Android Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,application,estimated_revenue,impressions,ecpm&format=json&filter_platform=android",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "filter_platform", "value": "android"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter - iOS Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,application,estimated_revenue,impressions,ecpm&format=json&filter_platform=ios",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "filter_platform", "value": "ios"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter - By Ad Unit ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,ad_unit_waterfall_name,network,estimated_revenue,impressions,ecpm&format=json&filter_max_ad_unit_id={{max_ad_unit_id}}",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,ad_unit_waterfall_name,network,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "filter_max_ad_unit_id", "value": "{{max_ad_unit_id}}"}
+              ]
+            },
+            "description": "Filter by specific MAX Ad Unit ID"
+          }
+        },
+        {
+          "name": "Filter - Non-Zero Values",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,application,network,estimated_revenue,impressions,ecpm&format=json&not_zero=1",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,network,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "json"},
+                {"key": "not_zero", "value": "1"}
+              ]
+            },
+            "description": "Filter out rows where all numerical metrics are 0"
+          }
+        },
+        {
+          "name": "Pagination Example",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{month_ago}}&end={{yesterday}}&columns=day,application,network,estimated_revenue,impressions&format=json&limit=100&offset=0",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{month_ago}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,network,estimated_revenue,impressions"},
+                {"key": "format", "value": "json"},
+                {"key": "limit", "value": "100"},
+                {"key": "offset", "value": "0"}
+              ]
+            },
+            "description": "Use limit and offset for pagination"
+          }
+        },
+        {
+          "name": "CSV Export",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{month_ago}}&end={{yesterday}}&columns=day,application,package_name,platform,country,ad_format,network,estimated_revenue,impressions,ecpm&format=csv",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{month_ago}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,package_name,platform,country,ad_format,network,estimated_revenue,impressions,ecpm"},
+                {"key": "format", "value": "csv"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ad Requests (No Network Filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxReport?api_key={{report_api_key}}&start={{yesterday}}&end={{yesterday}}&columns=day,application,ad_format,requests,impressions,ecpm&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{yesterday}}"},
+                {"key": "end", "value": "{{yesterday}}"},
+                {"key": "columns", "value": "day,application,ad_format,requests,impressions,ecpm"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "requests column CANNOT be used with network/network_placement/max_placement columns"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Cohort API",
+      "description": "Cohort API - User performance data by install date\n\nEndpoints:\n- /maxCohort (Revenue)\n- /maxCohort/imp (Impressions)\n- /maxCohort/session (Sessions)\n\nCohort days: 0, 1, 2, 3, 4, 5, 6, 7, 10, 14, 18, 21, 24, 27, 30, 45",
+      "item": [
+        {
+          "name": "Revenue Cohort - 7 Day",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxCohort?api_key={{report_api_key}}&start={{two_weeks_ago}}&end={{week_ago}}&columns=day,application,country,platform,installs,pub_revenue_7&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxCohort"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{two_weeks_ago}}"},
+                {"key": "end", "value": "{{week_ago}}"},
+                {"key": "columns", "value": "day,application,country,platform,installs,pub_revenue_7"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "7-day revenue cohort (pub_revenue_7)"
+          }
+        },
+        {
+          "name": "Revenue Cohort - 30 Day",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxCohort?api_key={{report_api_key}}&start={{month_ago}}&end={{month_ago}}&columns=day,application,country,installs,pub_revenue_30&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxCohort"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{month_ago}}"},
+                {"key": "end", "value": "{{month_ago}}"},
+                {"key": "columns", "value": "day,application,country,installs,pub_revenue_30"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "30-day revenue cohort for LTV analysis"
+          }
+        },
+        {
+          "name": "Impression Cohort",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxCohort/imp?api_key={{report_api_key}}&start={{two_weeks_ago}}&end={{week_ago}}&columns=day,application,platform,installs&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxCohort", "imp"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{two_weeks_ago}}"},
+                {"key": "end", "value": "{{week_ago}}"},
+                {"key": "columns", "value": "day,application,platform,installs"},
+                {"key": "format", "value": "json"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Session Cohort",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/maxCohort/session?api_key={{report_api_key}}&start={{two_weeks_ago}}&end={{week_ago}}&columns=day,application,platform,installs&format=json",
+              "host": ["{{report_base_url}}"],
+              "path": ["maxCohort", "session"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "start", "value": "{{two_weeks_ago}}"},
+                {"key": "end", "value": "{{week_ago}}"},
+                {"key": "columns", "value": "day,application,platform,installs"},
+                {"key": "format", "value": "json"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - User-Level Ad Revenue API",
+      "description": "User-Level Ad Revenue API\n\nBase URL: https://r.applovin.com/max/userAdRevenueReport\nData available: 8 hours after UTC day end",
+      "item": [
+        {
+          "name": "User Revenue Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "var data = pm.response.json();",
+                  "if (data.ad_revenue_report_url) {",
+                  "    console.log('✅ Report URL: ' + data.ad_revenue_report_url);",
+                  "    pm.environment.set('user_report_url', data.ad_revenue_report_url);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{report_base_url}}/max/userAdRevenueReport?api_key={{report_api_key}}&date={{two_days_ago}}&application={{package_name}}",
+              "host": ["{{report_base_url}}"],
+              "path": ["max", "userAdRevenueReport"],
+              "query": [
+                {"key": "api_key", "value": "{{report_api_key}}"},
+                {"key": "date", "value": "{{two_days_ago}}"},
+                {"key": "application", "value": "{{package_name}}"}
+              ]
+            },
+            "description": "Returns S3 URL to download user-level CSV report. Note: data available 8 hours after UTC day end."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Ad Unit Management API",
+      "description": "Ad Unit Management API\n\nBase URL: https://o.applovin.com/mediation/v1/\nAuth: Api-Key header (Management Key)",
+      "item": [
+        {
+          "name": "List All Ad Units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Api-Key", "value": "{{management_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{management_base_url}}/mediation/v1/ad_units",
+              "host": ["{{management_base_url}}"],
+              "path": ["mediation", "v1", "ad_units"]
+            }
+          }
+        },
+        {
+          "name": "Get Ad Unit Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Api-Key", "value": "{{management_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{management_base_url}}/mediation/v1/ad_unit/{{max_ad_unit_id}}",
+              "host": ["{{management_base_url}}"],
+              "path": ["mediation", "v1", "ad_unit", "{{max_ad_unit_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Ad Unit with All Fields",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Api-Key", "value": "{{management_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{management_base_url}}/mediation/v1/ad_unit/{{max_ad_unit_id}}?fields=ad_network_settings,disabled_ad_network_settings,frequency_capping_settings,bid_floors,segments,banner_refresh_settings,mrec_refresh_settings",
+              "host": ["{{management_base_url}}"],
+              "path": ["mediation", "v1", "ad_unit", "{{max_ad_unit_id}}"],
+              "query": [
+                {"key": "fields", "value": "ad_network_settings,disabled_ad_network_settings,frequency_capping_settings,bid_floors,segments,banner_refresh_settings,mrec_refresh_settings"}
+              ]
+            },
+            "description": "Get ad unit with all optional fields"
+          }
+        },
+        {
+          "name": "Create Ad Unit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Api-Key", "value": "{{management_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test_Banner\",\n  \"platform\": \"android\",\n  \"package_name\": \"{{package_name}}\",\n  \"ad_format\": \"BANNER\"\n}"
+            },
+            "url": {
+              "raw": "{{management_base_url}}/mediation/v1/ad_unit/",
+              "host": ["{{management_base_url}}"],
+              "path": ["mediation", "v1", "ad_unit", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Ad Unit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Api-Key", "value": "{{management_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated_Banner_Name\"\n}"
+            },
+            "url": {
+              "raw": "{{management_base_url}}/mediation/v1/ad_unit/{{max_ad_unit_id}}",
+              "host": ["{{management_base_url}}"],
+              "path": ["mediation", "v1", "ad_unit", "{{max_ad_unit_id}}"]
+            },
+            "description": "Only fields present in request will be updated"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-calculate date variables",
+          "var today = new Date();",
+          "",
+          "// Yesterday",
+          "var yesterday = new Date(today);",
+          "yesterday.setDate(yesterday.getDate() - 1);",
+          "pm.environment.set('yesterday', yesterday.toISOString().split('T')[0]);",
+          "",
+          "// Two days ago (for user-level API which needs 8hr delay)",
+          "var twoDaysAgo = new Date(today);",
+          "twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);",
+          "pm.environment.set('two_days_ago', twoDaysAgo.toISOString().split('T')[0]);",
+          "",
+          "// Week ago",
+          "var weekAgo = new Date(today);",
+          "weekAgo.setDate(weekAgo.getDate() - 7);",
+          "pm.environment.set('week_ago', weekAgo.toISOString().split('T')[0]);",
+          "",
+          "// Two weeks ago",
+          "var twoWeeksAgo = new Date(today);",
+          "twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);",
+          "pm.environment.set('two_weeks_ago', twoWeeksAgo.toISOString().split('T')[0]);",
+          "",
+          "// Month ago (within 45 day window)",
+          "var monthAgo = new Date(today);",
+          "monthAgo.setDate(monthAgo.getDate() - 30);",
+          "pm.environment.set('month_ago', monthAgo.toISOString().split('T')[0]);",
+          "",
+          "// 45 days ago (max window)",
+          "var maxWindow = new Date(today);",
+          "maxWindow.setDate(maxWindow.getDate() - 44);",
+          "pm.environment.set('max_window_start', maxWindow.toISOString().split('T')[0]);"
+        ]
+      }
+    }
+  ]
+}

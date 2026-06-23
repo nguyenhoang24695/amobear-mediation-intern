@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph Token["1 token per BM"]
+        T[System User Token]
+    end
+
+    subgraph Gate["Amobear Access Gate"]
+        SSO[SSO Authentication]
+        RBAC[RBAC Policy Engine]
+        AUDIT[Audit Log]
+    end
+
+    subgraph Users["Amobear Staff"]
+        UM1[UA Marketer A<br>Manages BM X only]
+        UM2[UA Marketer B<br>Manages BM X + Y]
+        LEAD[Team Lead<br>Full access to BMs X,Y,Z]
+        VIEW[Finance Viewer<br>Read-only reports, no edit]
+    end
+
+    UM1 --> SSO
+    UM2 --> SSO
+    LEAD --> SSO
+    VIEW --> SSO
+    SSO --> RBAC
+    RBAC -->|If authorized| T
+    RBAC --> AUDIT

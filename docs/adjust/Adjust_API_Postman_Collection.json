@@ -1,0 +1,613 @@
+{
+  "info": {
+    "name": "Adjust Report Service API — Mediation Pro",
+    "_postman_id": "adjust-rs-api-mediation-pro-v1",
+    "description": "Adjust Report Service API collection for Mediation Pro integration.\n\nOfficial API docs: https://dev.adjust.com/en/api (Report service API: https://dev.adjust.com/en/api/rs-api)\n- JSON report: https://dev.adjust.com/en/api/rs-api/reports/\n- Filters data: https://dev.adjust.com/en/api/rs-api/filters-data\n- Pivot: https://dev.adjust.com/en/api/rs-api/pivot/\n\nBase URL: https://automate.adjust.com\nAuth: Bearer token (set ADJUST_API_TOKEN variable)\n\nEndpoints:\n0–2. Filters Data, Events — discover metrics/dimensions, event slugs\n3. JSON Report — main revenue/install/cost report (dimensions + metrics required)\n4. CSV Report — same data in CSV format\n5. Parquet Report — large batch downloads\n6. Pivot Report — breakdown by dimension\n7–10. Multi-app, yesterday, last 7 days, cohort (ROAS/LTV)\n\nAll endpoints: GET + Authorization: Bearer {{ADJUST_API_TOKEN}}",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "https://automate.adjust.com",
+      "type": "string"
+    },
+    {
+      "key": "ADJUST_API_TOKEN",
+      "value": "YOUR_API_TOKEN_HERE",
+      "type": "string",
+      "description": "Get from Adjust Dashboard > Account Settings > My Profile > API Token"
+    },
+    {
+      "key": "APP_TOKEN_1",
+      "value": "abcdef123456",
+      "type": "string",
+      "description": "Your app token from Adjust Dashboard"
+    },
+    {
+      "key": "APP_TOKEN_2",
+      "value": "",
+      "type": "string",
+      "description": "Optional second app token"
+    },
+    {
+      "key": "DATE_START",
+      "value": "2025-02-20",
+      "type": "string"
+    },
+    {
+      "key": "DATE_END",
+      "value": "2025-02-25",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{ADJUST_API_TOKEN}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. List Apps (filters_data=apps)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/filters_data?required_filters=apps",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "filters_data"],
+          "query": [
+            {
+              "key": "required_filters",
+              "value": "apps",
+              "description": "Danh sách app đang thiết lập trên Adjust. Response: { \"apps\": [ { \"id\", \"name\", \"short_name\", \"default_store_app_id\", \"currency\", \"platforms\" } ] }"
+            }
+          ]
+        },
+        "description": "Lấy danh sách app (Report Service filters_data). id = app token dùng cho app_token__in. Mediation Pro đồng bộ vào adjust_apps và map dim_app_identifiers.adjust_id."
+      },
+      "response": []
+    },
+    {
+      "name": "1. Filters Data — List Metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/filters_data?required_filters=event_metrics",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "filters_data"],
+          "query": [
+            {
+              "key": "required_filters",
+              "value": "event_metrics",
+              "description": "event_metrics = all custom event metrics for your apps"
+            }
+          ]
+        },
+        "description": "Retrieve list of valid metrics (including custom events) to use in report requests."
+      }
+    },
+    {
+      "name": "2. Events — List Event Slugs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/events?app_token__in={{APP_TOKEN_1}}",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "events"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}",
+              "description": "Comma-separated app tokens"
+            }
+          ]
+        },
+        "description": "Returns machine-generated slugs for all events associated with the app(s).\nUse these slugs as metric names in JSON/CSV report requests."
+      }
+    },
+    {
+      "name": "3. JSON Report — Revenue + Install by Day & App",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,app_token,country,os_name&metrics=installs,sessions,revenue,ad_revenue,impressions,clicks&currency=USD&attribution_source=dynamic&reattributed=all&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}",
+              "description": "Required. Comma-separated app tokens (no spaces)"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}",
+              "description": "Required. Absolute: YYYY-MM-DD:YYYY-MM-DD. Relative: yesterday, last_7_days, -10d:-3d (10 days ago to 3 days ago). Logical: this_month_until_yesterday. See Adjust JSON report docs."
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,app_token,country,os_name",
+              "description": "Include app_token for Mediation Pro (map to dim_app_identifiers). Available: day, week, month, app, app_token, country, region, partner_name, campaign, campaign_id_network, os_name, device_type, store_type. See Adjust docs."
+            },
+            {
+              "key": "metrics",
+              "value": "installs,sessions,revenue,ad_revenue,impressions,clicks",
+              "description": "Available ad revenue metrics: ad_revenue, ad_impressions (alias: impressions), ad_ecpm, ad_rpm, ad_requests, ad_clicks. UA metrics: installs, reinstalls, reattributions, sessions, revenue, dau, mau, wau, network_cost, network_installs, network_ecpi"
+            },
+            {
+              "key": "currency",
+              "value": "USD",
+              "description": "USD, EUR, or local. Default: USD"
+            },
+            {
+              "key": "attribution_types",
+              "value": "click,engaged_ad,impression",
+              "description": "Optional. Comma-separated: click, engaged_ad, impression. Omit for all. (API uses attribution_types in newer docs.)"
+            },
+            {
+              "key": "attribution_source",
+              "value": "dynamic",
+              "description": "dynamic (default) or first. How in-app activity is attributed."
+            },
+            {
+              "key": "reattributed",
+              "value": "all",
+              "description": "Optional. true | false | all (default). Filter reattributed users only."
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network",
+              "description": "network = use network-reported ad spend. adjust = use Adjust-attributed ad spend"
+            }
+          ]
+        },
+        "description": "Main report for Mediation Pro ingestion. Returns JSON with rows, totals, warnings (and optional pagination).\n\nOptional params (see https://dev.adjust.com/en/api/rs-api/reports/ ): cohort_maturity (mature|immature), iap_revenue_mode (GROSS_60|70|85|100), utc_offset, sort (e.g. -clicks,day), format_dates, sandbox.\n\nResponse: rows[].day|app|app_token|country|os_name|installs|sessions|revenue|ad_revenue|impressions|clicks (+ totals, warnings)."
+      }
+    },
+    {
+      "name": "3b. JSON Report — Revenue by App + Partner Network (Ad Mediation Focus)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,partner_name,country,os_name&metrics=ad_revenue,impressions,clicks,ad_ecpm&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,partner_name,country,os_name",
+              "description": "partner_name = ad network name (AdMob, AppLovin, Meta Audience Network...)"
+            },
+            {
+              "key": "metrics",
+              "value": "ad_revenue,impressions,clicks,ad_ecpm",
+              "description": "ad_ecpm = estimated CPM from ad revenue data"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        },
+        "description": "Breakdown by partner/network — useful to correlate Adjust ad_revenue data with AdMob/AppLovin data in Mediation Pro."
+      }
+    },
+    {
+      "name": "3c. JSON Report — UA Cost by Campaign (for ROI calc)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,partner_name,campaign,os_name&metrics=installs,network_cost,network_installs,network_ecpi,revenue&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,partner_name,campaign,os_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,network_cost,network_installs,network_ecpi,revenue",
+              "description": "network_cost = UA spend, network_ecpi = effective CPI from network, network_installs = network-counted installs"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        },
+        "description": "UA spend per campaign for ROI/ROAS analysis in Mediation Pro."
+      }
+    },
+    {
+      "name": "4. CSV Report — Revenue (for large data / backup)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/csv_report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,country,os_name&metrics=installs,sessions,revenue,ad_revenue,impressions,clicks&currency=USD&ad_spend_mode=network&readable_names=false",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "csv_report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,country,os_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,sessions,revenue,ad_revenue,impressions,clicks"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            },
+            {
+              "key": "readable_names",
+              "value": "false",
+              "description": "false = use slugs (better for programmatic parsing). true = human-readable column names"
+            }
+          ]
+        },
+        "description": "Returns CSV. Use readable_names=false for consistent column slugs in automated jobs.\nSave raw CSV to MinIO before parsing."
+      }
+    },
+    {
+      "name": "5. Parquet Report — Large Batch (recommended for production)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/parquet_report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,country,os_name&metrics=installs,sessions,revenue,ad_revenue,impressions,clicks&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "parquet_report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,country,os_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,sessions,revenue,ad_revenue,impressions,clicks"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        },
+        "description": "Adjust recommends Parquet for large reports. Returns binary Parquet file.\nSave to MinIO, then load into StarRocks via Stream Load with parquet format option."
+      }
+    },
+    {
+      "name": "6. Pivot Report — Breakdown by App Network",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/pivot_report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,partner_name&metrics=installs,ad_revenue,network_cost&index=app&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "pivot_report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,partner_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,ad_revenue,network_cost"
+            },
+            {
+              "key": "index",
+              "value": "app",
+              "description": "The dimension to pivot on. Adds a breakdown sub-object in JSON response."
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        },
+        "description": "Returns JSON with nested breakdown by pivot dimension. Useful for dashboard charts."
+      }
+    },
+    {
+      "name": "7. Multi-App Report (Multiple App Tokens)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}},{{APP_TOKEN_2}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,app_token,country,os_name&metrics=installs,sessions,revenue,ad_revenue,impressions&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}},{{APP_TOKEN_2}}",
+              "description": "Comma-separated, no spaces. Max ~50 apps per request recommended."
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,app_token,country,os_name",
+              "description": "app_token dimension returns the token value per row — important for deduplication in StarRocks"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,sessions,revenue,ad_revenue,impressions"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        },
+        "description": "Fetch data for all apps in one request. Include app_token as dimension to identify each app row."
+      }
+    },
+    {
+      "name": "8. Yesterday Quick Pull (for AdjustSyncRecent job)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}}&date_period=yesterday:yesterday&dimensions=day,app,app_token,country,os_name&metrics=installs,sessions,revenue,ad_revenue,impressions,clicks&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "yesterday:yesterday",
+              "description": "Shorthand date periods: today, yesterday, this_week, last_7_days, last_30_days, this_month, last_month"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,app_token,country,os_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,sessions,revenue,ad_revenue,impressions,clicks"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Last 5 Days (for AdjustSyncDaily job)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}}&date_period=last_7_days:yesterday&dimensions=day,app,app_token,country,os_name&metrics=installs,sessions,revenue,ad_revenue,impressions,clicks&currency=USD&ad_spend_mode=network",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "last_7_days:yesterday",
+              "description": "T-1 to T-7 for daily backfill job"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,app_token,country,os_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,sessions,revenue,ad_revenue,impressions,clicks"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Cohort Report — ROAS / LTV (D0-D30)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ADJUST_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/reports-service/report?app_token__in={{APP_TOKEN_1}}&date_period={{DATE_START}}:{{DATE_END}}&dimensions=day,app,partner_name,os_name&metrics=installs,network_cost,revenue,ad_revenue,cohort_revenue_0d,cohort_revenue_7d,cohort_revenue_30d&currency=USD&ad_spend_mode=network&cohort_maturity=immature",
+          "host": ["{{BASE_URL}}"],
+          "path": ["reports-service", "report"],
+          "query": [
+            {
+              "key": "app_token__in",
+              "value": "{{APP_TOKEN_1}}"
+            },
+            {
+              "key": "date_period",
+              "value": "{{DATE_START}}:{{DATE_END}}"
+            },
+            {
+              "key": "dimensions",
+              "value": "day,app,partner_name,os_name"
+            },
+            {
+              "key": "metrics",
+              "value": "installs,network_cost,revenue,ad_revenue,cohort_revenue_0d,cohort_revenue_7d,cohort_revenue_30d",
+              "description": "cohort_revenue_Nd = cumulative revenue N days after install cohort"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "ad_spend_mode",
+              "value": "network"
+            },
+            {
+              "key": "cohort_maturity",
+              "value": "immature",
+              "description": "immature = include cohorts not yet fully matured. mature = only complete cohorts."
+            }
+          ]
+        },
+        "description": "LTV / ROAS cohort data. cohort_revenue_Xd metrics are only available if Adjust cohorts are configured for the app."
+      }
+    }
+  ]
+}
