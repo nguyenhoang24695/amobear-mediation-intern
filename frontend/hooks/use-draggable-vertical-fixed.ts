@@ -26,7 +26,7 @@ function centerTop(containerHeight: number) {
 
 export function useDraggableVerticalFixed(
   storageKey: string,
-  options?: { capture?: boolean },
+  options?: { capture?: boolean; bottomSafeAreaPx?: number },
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [topPx, setTopPx] = useState<number | null>(null)
@@ -35,9 +35,10 @@ export function useDraggableVerticalFixed(
 
   const clampTop = useCallback((top: number) => {
     const height = containerRef.current?.offsetHeight ?? 0
-    const maxTop = Math.max(VIEWPORT_MARGIN_PX, window.innerHeight - height - VIEWPORT_MARGIN_PX)
+    const bottomSafeAreaPx = options?.bottomSafeAreaPx ?? VIEWPORT_MARGIN_PX
+    const maxTop = Math.max(VIEWPORT_MARGIN_PX, window.innerHeight - height - bottomSafeAreaPx)
     return Math.min(maxTop, Math.max(VIEWPORT_MARGIN_PX, top))
-  }, [])
+  }, [options?.bottomSafeAreaPx])
 
   const syncTop = useCallback(
     (nextTop?: number) => {

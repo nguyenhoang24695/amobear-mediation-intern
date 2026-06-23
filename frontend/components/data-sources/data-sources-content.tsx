@@ -62,15 +62,15 @@ export function DataSourcesContent() {
   const err = errOverview || errTimeline
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-slate-900">Data Sources</h1>
           <p className="text-sm text-slate-500 mt-1">
             Nexus observability: registry, Hangfire schedules, ingestion checkpoints, and catalogued tables
           </p>
         </div>
-        <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50">
+        <Badge variant="outline" className="w-fit border-slate-200 bg-slate-50 text-slate-600">
           {loading ? (
             <span className="inline-flex items-center gap-1">
               <Loader2 className="w-3 h-3 animate-spin" /> Loading
@@ -89,17 +89,17 @@ export function DataSourcesContent() {
         </p>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.label} className="bg-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg bg-slate-50 ${stat.color}`}>
+                <div className={`shrink-0 p-2 rounded-lg bg-slate-50 ${stat.color}`}>
                   <stat.icon className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-semibold text-slate-900 font-mono">{stat.value}</p>
-                  <p className="text-xs text-slate-500">{stat.label}</p>
+                  <p className="break-words text-xs text-slate-500">{stat.label}</p>
                 </div>
               </div>
             </CardContent>
@@ -108,11 +108,13 @@ export function DataSourcesContent() {
       </div>
 
       <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 overflow-x-auto px-1 pb-1">
+          <TabsList className="mb-4 inline-flex h-auto min-w-max justify-start">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="runs">Runs</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="overview" className="space-y-6 mt-0">
           {overview && <SourcesOverviewGrid sources={overview.sources} />}
           {timeline && timeline.jobs.length > 0 && <SyncJobsTimeline timeline={timeline} />}
@@ -135,8 +137,8 @@ export function DataSourcesContent() {
 
           <Card className="border-amber-200 bg-amber-50">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
                 Revenue double-counting prevention
               </CardTitle>
             </CardHeader>

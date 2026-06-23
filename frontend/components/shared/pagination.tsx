@@ -59,15 +59,15 @@ export function Pagination({
   const pageNumbers = getPageNumbers()
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+    <div className="flex flex-col gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50 sm:flex-row sm:items-center sm:justify-between">
       {/* Left: Showing text */}
-      <div className="text-sm text-slate-500">
+      <div className="text-center text-sm text-slate-500 sm:text-left">
         Showing <span className="font-medium">{startItem}</span>-<span className="font-medium">{endItem}</span> of{" "}
         <span className="font-medium">{totalItems}</span> {itemName}
       </div>
 
       {/* Right: Page controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
         {/* Page size selector */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">Rows per page:</span>
@@ -85,12 +85,12 @@ export function Pagination({
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-center gap-1">
           {/* First Page */}
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 bg-transparent"
+            className="hidden h-8 w-8 bg-transparent sm:inline-flex"
             disabled={currentPage === 1}
             onClick={() => onPageChange(1)}
           >
@@ -147,7 +147,7 @@ export function Pagination({
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 bg-transparent"
+            className="hidden h-8 w-8 bg-transparent sm:inline-flex"
             disabled={currentPage === totalPages}
             onClick={() => onPageChange(totalPages)}
           >

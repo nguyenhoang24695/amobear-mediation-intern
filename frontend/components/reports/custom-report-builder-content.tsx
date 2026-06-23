@@ -209,6 +209,7 @@ const MOBILE_APP_COLUMN_WIDTH = 52
 const MOBILE_DATE_COLUMN_WIDTH = 72
 const MOBILE_PLATFORM_COLUMN_WIDTH = 40
 const CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY = "custom-report-mobile-stickers-top-v1"
+const CUSTOM_REPORT_MOBILE_STICKERS_BOTTOM_SAFE_AREA = 128
 
 const DEFAULT_PARAMETER_COLUMN_WIDTH = 160
 const METRIC_COLUMN_WIDTH = 168
@@ -783,7 +784,10 @@ export function CustomReportBuilderContent() {
     topPx: mobileStickersTop,
     consumeDragClick: consumeMobileStickersDragClick,
     dragProps: mobileStickersDragProps,
-  } = useDraggableVerticalFixed(CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY, { capture: true })
+  } = useDraggableVerticalFixed(CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY, {
+    capture: true,
+    bottomSafeAreaPx: CUSTOM_REPORT_MOBILE_STICKERS_BOTTOM_SAFE_AREA,
+  })
   const router = useRouter()
   const searchParams = useSearchParams()
   const reportIdFromUrl = searchParams.get("reportId")
@@ -2913,7 +2917,7 @@ export function CustomReportBuilderContent() {
                       triggerLabel={teamsTriggerLabel}
                       showUsersIcon
                       emptyTeamsMessage="No teams under you or as team lead"
-                      triggerClassName="w-full max-w-none sm:min-w-[11rem] sm:max-w-[280px]"
+                      triggerClassName="w-full min-w-0 max-w-full sm:min-w-[11rem] sm:max-w-[280px]"
                       popoverModal={isMobile ? false : undefined}
                       popoverClassName={cn("w-[320px] p-0", isMobile && "z-[100]")}
                     />
@@ -2928,7 +2932,7 @@ export function CustomReportBuilderContent() {
                       showUserIcon
                       placeholder="Select members"
                       emptyMembersMessage="No members in selected teams"
-                      triggerClassName="w-full max-w-none sm:min-w-[11rem] sm:max-w-[280px]"
+                      triggerClassName="w-full min-w-0 max-w-full sm:min-w-[11rem] sm:max-w-[280px]"
                       popoverModal={isMobile ? false : undefined}
                       popoverClassName={cn("w-[320px] p-0", isMobile && "z-[100]")}
                     />
@@ -3718,11 +3722,11 @@ export function CustomReportBuilderContent() {
                     Date range, apps, and report criteria. Click Apply to refresh data.
                   </SheetDescription>
                 </SheetHeader>
-                <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-                  <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden p-4">
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+                  <div className="box-border w-full min-w-0 max-w-full space-y-4 p-4 [&_*]:min-w-0">
                     {renderFiltersBody()}
                   </div>
-                </ScrollArea>
+                </div>
               </SheetContent>
             </Sheet>
 

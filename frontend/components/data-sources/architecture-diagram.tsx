@@ -29,9 +29,9 @@ export function ArchitectureDiagram() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg font-semibold">Data Pipeline Architecture</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="text-slate-500 hover:text-slate-700">
+          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="w-full justify-start text-slate-500 hover:text-slate-700 sm:w-auto sm:justify-center">
             {isExpanded ? (
               <>
                 <ChevronUp className="w-4 h-4 mr-1" />
@@ -49,7 +49,8 @@ export function ArchitectureDiagram() {
 
       {isExpanded && (
         <CardContent className="pt-4">
-          <div className="flex items-center justify-between gap-4 p-6 bg-slate-50 rounded-lg">
+          <div className="overflow-x-auto rounded-lg bg-slate-50">
+          <div className="flex min-w-[760px] items-center justify-between gap-4 p-4 sm:p-6">
             <div className="flex flex-col items-center gap-2">
               <p className="text-xs font-medium text-slate-500 mb-2">Data Sources</p>
               <div className="flex flex-col gap-1.5">
@@ -113,10 +114,11 @@ export function ArchitectureDiagram() {
               </div>
             </div>
           </div>
+          </div>
 
           <div className="mt-4 p-4 bg-slate-100 rounded-lg">
-            <div className="flex items-center gap-6 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 sm:gap-6">
+              <div className="flex items-center gap-2 shrink-0">
                 <Layers className="w-4 h-4" />
                 <span className="font-medium">Data Flow:</span>
               </div>

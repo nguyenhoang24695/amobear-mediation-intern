@@ -21,9 +21,9 @@ export function Header() {
           <GlobalSearch />
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0 md:gap-3">
+        <div className="ml-auto flex min-w-0 items-center gap-2 md:ml-0 lg:gap-3">
           {isDashboard && (
-            <div className="hidden md:flex">
+            <div className="hidden lg:flex">
               <DashboardDatePicker />
             </div>
           )}

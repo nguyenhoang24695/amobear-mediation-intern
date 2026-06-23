@@ -265,12 +265,12 @@ export function VCardGeneratorPageContent() {
                 type="single"
                 value={qrMode}
                 onValueChange={(v) => setQrMode((v === "embedded" || v === "landing") ? v : "landing")}
-                className="justify-start"
+                className="grid w-full grid-cols-1 justify-start gap-2 sm:inline-grid sm:w-auto sm:grid-cols-2"
               >
-                <ToggleGroupItem value="landing" aria-label="Landing Page">
+                <ToggleGroupItem value="landing" aria-label="Landing Page" className="w-full whitespace-normal sm:w-auto">
                   Landing Page
                 </ToggleGroupItem>
-                <ToggleGroupItem value="embedded" aria-label="Embedded vCard">
+                <ToggleGroupItem value="embedded" aria-label="Embedded vCard" className="w-full whitespace-normal sm:w-auto">
                   Embedded vCard
                 </ToggleGroupItem>
               </ToggleGroup>
@@ -504,21 +504,23 @@ export function VCardGeneratorPageContent() {
               <Textarea id="notes" value={form.notes ?? ""} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={3} />
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 type="button"
+                className="w-full sm:w-auto"
                 onClick={handleGenerateQrClick}
                 disabled={isGeneratingQr || !form.firstName.trim() || !form.lastName.trim()}
               >
                 Generate QR
               </Button>
-              <Button type="button" variant="outline" onClick={downloadVcf} disabled={!vcardText}>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={downloadVcf} disabled={!vcardText}>
                 <Download className="w-4 h-4 mr-2" />
                 Download .vcf
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   setForm((p) => ({
                     ...p,
@@ -542,11 +544,11 @@ export function VCardGeneratorPageContent() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-6 flex-col sm:flex-row">
-                <div className="rounded-lg border bg-white p-3">
+                <div className="w-full overflow-x-auto rounded-lg border bg-white p-3 sm:w-auto">
                   <div ref={qrRef} />
                 </div>
-                <div className="space-y-2">
-                  <Button type="button" variant="outline" onClick={downloadQrPng} disabled={!isQrReady}>
+                <div className="w-full space-y-2 sm:w-auto">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={downloadQrPng} disabled={!isQrReady}>
                     <Download className="w-4 h-4 mr-2" />
                     Download QR (PNG)
                   </Button>

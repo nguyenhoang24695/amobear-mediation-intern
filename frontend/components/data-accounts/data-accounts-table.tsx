@@ -236,7 +236,7 @@ export function DataAccountsTable({
   if (loading) {
     return (
       <Card className="border-slate-200">
-        <CardContent className="flex flex-col items-center justify-center py-16">
+        <CardContent className="flex flex-col items-center justify-center px-4 py-16 text-center">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
           <p className="text-sm text-slate-500">Loading accounts...</p>
         </CardContent>
@@ -248,7 +248,7 @@ export function DataAccountsTable({
   if (filteredAccounts.length === 0) {
     return (
       <Card className="border-slate-200">
-        <CardContent className="flex flex-col items-center justify-center py-16">
+        <CardContent className="flex flex-col items-center justify-center px-4 py-16 text-center">
           {hasFilters ? (
             <>
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
@@ -267,7 +267,7 @@ export function DataAccountsTable({
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-1">No data accounts yet</h3>
               <p className="text-sm text-slate-500 mb-4">Connect your first ad network account to start syncing data</p>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={onAddAccount}>
+              <Button className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700 min-[360px]:w-auto" onClick={onAddAccount}>
                 <Plus className="w-4 h-4" />
                 Add Account
               </Button>
@@ -432,16 +432,16 @@ export function DataAccountsTable({
               onClick={() => router.push(`/data-accounts/${account.network}-${account.id}`)}
             >
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 rounded-lg">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="h-10 w-10 shrink-0 rounded-lg">
                       <AvatarFallback className={`rounded-lg text-sm font-semibold ${net.bgColor}`}>
                         {net.initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-semibold text-slate-900">{account.name}</p>
-                      <p className="text-xs text-slate-500">{account.accountId}</p>
+                    <div className="min-w-0">
+                      <p className="break-words font-semibold text-slate-900">{account.name}</p>
+                      <p className="break-all text-xs text-slate-500">{account.accountId}</p>
                     </div>
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
@@ -509,7 +509,7 @@ export function DataAccountsTable({
         })}
 
         {/* Mobile Pagination */}
-        <div className="flex items-center justify-between py-2">
+        <div className="flex flex-col gap-2 py-2 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
           <p className="text-sm text-slate-500">
             {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, sortedAccounts.length)} of{" "}
             {sortedAccounts.length}
@@ -518,6 +518,7 @@ export function DataAccountsTable({
             <Button
               variant="outline"
               size="sm"
+              className="flex-1 min-[360px]:flex-none"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
             >
@@ -526,6 +527,7 @@ export function DataAccountsTable({
             <Button
               variant="outline"
               size="sm"
+              className="flex-1 min-[360px]:flex-none"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
             >

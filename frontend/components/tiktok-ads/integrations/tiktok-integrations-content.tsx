@@ -427,8 +427,8 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           {!embedded ? (
             <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
               <span>TikTok Ads</span>
@@ -437,18 +437,18 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
             </nav>
           ) : null}
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-pink-50 p-2">
+            <div className="shrink-0 rounded-lg bg-pink-50 p-2">
               <Link2 className="h-5 w-5 text-pink-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl font-bold text-slate-900">TikTok Integrations</h1>
               <p className="text-sm text-slate-500">Manage TikTok Marketing API credentials, OAuth tokens, and advertiser sync.</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {canCreate ? (
-            <Button className="bg-blue-600 text-white hover:bg-blue-700" size="sm" onClick={openCreate}>
+            <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" size="sm" onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Create Integration
             </Button>
@@ -707,16 +707,16 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
               </div>
             </div>
           </div>
-          <DialogFooter className="flex flex-shrink-0 items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <Button variant="ghost" className="w-full text-slate-600 sm:w-auto" onClick={() => setDrawerOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => void handleTestConnection()} disabled={submitting || testingConnection || !canEdit}>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleTestConnection()} disabled={submitting || testingConnection || !canEdit}>
                 {testingConnection ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                 Test Connection
               </Button>
-              <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
+              <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
                 {submitting ? "Saving..." : editTarget ? "Save Changes" : "Create Integration"}
               </Button>
             </div>

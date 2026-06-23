@@ -113,9 +113,9 @@ function DataAccountsListPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <h1 className="text-2xl font-bold text-slate-900">Data Accounts</h1>
             <Badge variant="secondary" className="rounded-full">
               {loading ? "..." : `${stats.total} accounts`}
@@ -125,15 +125,18 @@ function DataAccountsListPanel() {
             Manage external ad network accounts for data synchronization
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {false && (
-            <Button variant="outline" className="gap-2 bg-transparent">
+            <Button variant="outline" className="w-full gap-2 bg-transparent sm:w-auto">
               <Download className="w-4 h-4" />
               Export
             </Button>
           )}
           {canCreate ? (
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => setAddModalOpen(true)}>
+            <Button
+              className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+              onClick={() => setAddModalOpen(true)}
+            >
               <Plus className="w-4 h-4" />
               Add Account
             </Button>
@@ -142,15 +145,15 @@ function DataAccountsListPanel() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+      <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-slate-100">
               <Key className="w-5 h-5 text-slate-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.total}</p>
-              <p className="text-sm text-slate-500">Total Accounts</p>
+              <p className="break-words text-sm text-slate-500">Total Accounts</p>
             </div>
           </div>
         </div>
@@ -159,9 +162,9 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-green-50">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.active}</p>
-              <p className="text-sm text-slate-500">Active</p>
+              <p className="break-words text-sm text-slate-500">Active</p>
             </div>
           </div>
         </div>
@@ -170,9 +173,9 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-red-50">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.errors}</p>
-              <p className="text-sm text-slate-500">Errors</p>
+              <p className="break-words text-sm text-slate-500">Errors</p>
             </div>
           </div>
         </div>
@@ -181,9 +184,9 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-amber-50">
               <Smartphone className="w-5 h-5 text-amber-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.admob}</p>
-              <p className="text-sm text-slate-500">AdMob Accounts</p>
+              <p className="break-words text-sm text-slate-500">AdMob Accounts</p>
             </div>
           </div>
         </div>
@@ -192,9 +195,9 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-violet-50">
               <Layers className="w-5 h-5 text-violet-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.applovin}</p>
-              <p className="text-sm text-slate-500">AppLovin Accounts</p>
+              <p className="break-words text-sm text-slate-500">AppLovin Accounts</p>
             </div>
           </div>
         </div>
@@ -203,9 +206,9 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-purple-50">
               <Layers className="w-5 h-5 text-purple-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.xmp}</p>
-              <p className="text-sm text-slate-500">XMP Accounts</p>
+              <p className="break-words text-sm text-slate-500">XMP Accounts</p>
             </div>
           </div>
         </div>
@@ -214,9 +217,9 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-sky-50">
               <Smartphone className="w-5 h-5 text-sky-700" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.appsflyer}</p>
-              <p className="text-sm text-slate-500">AppsFlyer</p>
+              <p className="break-words text-sm text-slate-500">AppsFlyer</p>
             </div>
           </div>
         </div>
@@ -225,16 +228,16 @@ function DataAccountsListPanel() {
             <div className="p-2 rounded-lg bg-fuchsia-50">
               <Layers className="w-5 h-5 text-fuchsia-700" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.qonversion}</p>
-              <p className="text-sm text-slate-500">Qonversion</p>
+              <p className="break-words text-sm text-slate-500">Qonversion</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative w-full flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search by name, email or account ID..."
@@ -244,7 +247,7 @@ function DataAccountsListPanel() {
           />
         </div>
         <Select value={networkFilter} onValueChange={(v) => handleFilterChange("Network", v)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Network" />
           </SelectTrigger>
           <SelectContent>
@@ -258,7 +261,7 @@ function DataAccountsListPanel() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => handleFilterChange("Status", v)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -360,11 +363,16 @@ export function DataAccountsContent() {
     <div className="space-y-6">
       {showTabs ? (
         <Tabs value={activeTab} onValueChange={(value) => router.push(buildTabUrl(pathname, searchParamsKey, value as DataAccountsTab))}>
-          <TabsList className="grid w-full max-w-2xl" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
+          <div className="-mx-1 overflow-x-auto px-1 pb-1">
+            <TabsList
+              className="inline-flex h-auto min-w-max max-w-none justify-start sm:grid sm:w-full sm:max-w-2xl"
+              style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}
+            >
             {canViewAccounts ? <TabsTrigger value="accounts">Accounts</TabsTrigger> : null}
             {canViewMetaIntegrations ? <TabsTrigger value="meta-integrations">Meta Integrations</TabsTrigger> : null}
             {canViewTikTokIntegrations ? <TabsTrigger value="tiktok-integrations">TikTok Integrations</TabsTrigger> : null}
-          </TabsList>
+            </TabsList>
+          </div>
         </Tabs>
       ) : null}
 

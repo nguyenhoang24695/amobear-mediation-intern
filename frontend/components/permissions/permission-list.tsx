@@ -119,12 +119,12 @@ export function PermissionList({
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-2">
-              <LayoutGrid className="w-4 h-4" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+              <LayoutGrid className="h-4 w-4 shrink-0" />
               Screen Permissions
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative w-48">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative w-full sm:w-48">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input
                   placeholder="Filter screens..."
@@ -134,7 +134,7 @@ export function PermissionList({
                 />
               </div>
               <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="h-8 w-36 text-sm">
+                <SelectTrigger className="h-8 w-full text-sm sm:w-36">
                   <SelectValue placeholder="Module" />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,8 +149,8 @@ export function PermissionList({
             </div>
           </div>
           {/* Toolbar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={allSelected ? true : someSelected ? "indeterminate" : false}
@@ -169,7 +169,7 @@ export function PermissionList({
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-slate-500 h-7 px-2"
+              className="h-7 w-full justify-start px-2 text-xs text-slate-500 sm:w-auto sm:justify-center"
               onClick={allExpanded ? collapseAll : expandAll}
             >
               <ToggleLeft className="w-3.5 h-3.5 mr-1.5" />
@@ -260,7 +260,7 @@ export function PermissionList({
 
                         {/* Screen name and badge */}
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-slate-700">
+                          <span className="break-words text-sm font-medium text-slate-700">
                             {screen.name}
                           </span>
                         </div>
@@ -283,7 +283,7 @@ export function PermissionList({
 
                       {/* Expanded: function toggles */}
                       {isExpanded && (
-                        <div className="px-4 pb-3 pt-1 ml-7">
+                        <div className="ml-0 px-3 pb-3 pt-1 sm:ml-7 sm:px-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                             {screen.functions.map((fn) => {
                               const isGranted = screenFns.includes(fn.id)
@@ -291,7 +291,7 @@ export function PermissionList({
                                 <label
                                   key={fn.id}
                                   className={cn(
-                                    "flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors",
+                                    "flex items-center gap-3 rounded-md px-2 py-2 transition-colors sm:px-3",
                                     isGranted
                                       ? "bg-blue-50/60 hover:bg-blue-50"
                                       : "hover:bg-slate-50",
@@ -308,7 +308,7 @@ export function PermissionList({
                                   />
                                   <span
                                     className={cn(
-                                      "text-sm select-none",
+                                      "min-w-0 break-words text-sm select-none",
                                       isGranted
                                         ? "text-slate-700 font-medium"
                                         : "text-slate-500",
