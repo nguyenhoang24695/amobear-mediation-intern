@@ -108,7 +108,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
 
             <div className="space-y-4 py-4">
               {error && (
-                <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <Alert variant="destructive" className="border-destructive/30 bg-destructive/10">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-sm">{error}</AlertDescription>
                 </Alert>
@@ -131,7 +131,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                   >
                     {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -152,7 +152,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                   >
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -161,11 +161,11 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                   {passwordValidation.map((req) => (
                     <div key={req.id} className="flex items-center gap-2">
                       {req.met ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                       ) : (
-                        <Circle className="w-3.5 h-3.5 text-slate-300" />
+                        <Circle className="w-3.5 h-3.5 text-muted-foreground" />
                       )}
-                      <span className={`text-xs ${req.met ? "text-green-600" : "text-slate-500"}`}>{req.label}</span>
+                      <span className={`text-xs ${req.met ? "text-emerald-600 dark:text-emerald-300" : "text-muted-foreground"}`}>{req.label}</span>
                     </div>
                   ))}
                 </div>
@@ -185,12 +185,12 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {confirmPassword && !passwordsMatch && <p className="text-xs text-red-500">Passwords don&apos;t match</p>}
+                {confirmPassword && !passwordsMatch && <p className="text-xs text-destructive">Passwords don&apos;t match</p>}
               </div>
             </div>
 
@@ -199,7 +199,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                 Cancel
               </Button>
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90"
                 onClick={handleSubmit}
                 disabled={!canSubmit || isLoading}
               >
@@ -217,15 +217,15 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
         ) : (
           <>
             <div className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-300" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Password changed</h2>
-              <p className="text-sm text-slate-500 mb-2">Your password has been updated successfully.</p>
-              <p className="text-xs text-slate-400">You may need to sign in again on other devices.</p>
+              <h2 className="text-xl font-bold text-foreground mb-1">Password changed</h2>
+              <p className="text-sm text-muted-foreground mb-2">Your password has been updated successfully.</p>
+              <p className="text-xs text-muted-foreground">You may need to sign in again on other devices.</p>
             </div>
             <DialogFooter>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+              <Button className="bg-primary hover:bg-primary/90" onClick={handleClose}>
                 Done
               </Button>
             </DialogFooter>

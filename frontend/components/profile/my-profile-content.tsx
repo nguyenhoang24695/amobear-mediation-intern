@@ -427,17 +427,17 @@ export function MyProfileContent() {
             {telegramTestDialog.ok ? (
               <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
             ) : (
-              <AlertTriangle className="h-10 w-10 text-red-600" aria-hidden />
+              <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden />
             )}
-            <p className="text-sm text-slate-700 whitespace-pre-wrap">{telegramTestDialog.message}</p>
-            <p className="text-xs text-slate-500">Auto-closes in {telegramTestAutoCloseSeconds} seconds</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{telegramTestDialog.message}</p>
+            <p className="text-xs text-muted-foreground">Auto-closes in {telegramTestAutoCloseSeconds} seconds</p>
           </div>
         </DialogContent>
       </Dialog>
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
-        <p className="text-sm text-slate-500 mt-1">Manage your account settings</p>
+        <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage your account settings</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -450,7 +450,7 @@ export function MyProfileContent() {
                 <div className="relative group">
                   <Avatar className="h-24 w-24">
                     {displayUser?.avatarUrl && <AvatarImage src={displayUser.avatarUrl} />}
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-bold">
+                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
                       {getUserInitials(displayUser)}
                     </AvatarFallback>
                   </Avatar>
@@ -460,26 +460,26 @@ export function MyProfileContent() {
                 </div>
                 <div>
                   {userLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   ) : (
                     <>
-                      <h2 className="text-xl font-bold text-slate-900">
+                      <h2 className="text-xl font-bold text-foreground">
                         {displayUser?.fullName || displayUser?.firstName || displayUser?.email || "User"}
                       </h2>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm text-slate-500">{displayUser?.email || ""}</span>
+                        <span className="text-sm text-muted-foreground">{displayUser?.email || ""}</span>
                         {displayUser?.emailVerified && (
-                          <Badge variant="outline" className="text-xs border-green-200 text-green-700">
+                          <Badge variant="outline" className="text-xs border-emerald-500/25 text-emerald-700 dark:text-emerald-300">
                             Verified
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge className="bg-purple-100 text-purple-700">
+                        <Badge className="bg-purple-500/10 text-purple-700 hover:bg-purple-500/10 dark:text-purple-300">
                           {displayUser?.role || "User"}
                         </Badge>
                         {displayUser?.organization && (
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-muted-foreground">
                             {displayUser.organization.name}
                           </span>
                         )}
@@ -513,31 +513,31 @@ export function MyProfileContent() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-slate-500">First Name</p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-xs text-muted-foreground">First Name</p>
+                  <p className="text-sm font-medium text-foreground">
                     {displayUser?.firstName || "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Last Name</p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-xs text-muted-foreground">Last Name</p>
+                  <p className="text-sm font-medium text-foreground">
                     {displayUser?.lastName || "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Email</p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium text-foreground">
                     {displayUser?.email || "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Role</p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-xs text-muted-foreground">Role</p>
+                  <p className="text-sm font-medium text-foreground">
                     {displayUser?.role || "—"}
                   </p>
                 </div>
                 <div className="col-span-2 space-y-4">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     Metric-scoped Slack alerts use the webhook for the rule frequency (real-time, hourly, daily). If that
                     URL is empty, the Direct message webhook is used. Leave any field empty and save to clear it.
                   </p>
@@ -560,7 +560,7 @@ export function MyProfileContent() {
                     const hasTestTarget = !!getSlackWebhookUrlForTest(key)
                     return (
                       <div key={key}>
-                        <p className="text-xs text-slate-500">{label}</p>
+                        <p className="text-xs text-muted-foreground">{label}</p>
                         <div className="flex gap-2 mt-1.5 items-start">
                           <div className="min-w-0 flex-1">
                             {isEditing ? (
@@ -574,7 +574,7 @@ export function MyProfileContent() {
                                 autoComplete="off"
                               />
                             ) : (
-                              <p className="text-sm font-medium text-slate-900 break-all">{saved || "—"}</p>
+                              <p className="text-sm font-medium text-foreground break-all">{saved || "—"}</p>
                             )}
                           </div>
                           {hasTestTarget ? (
@@ -601,8 +601,8 @@ export function MyProfileContent() {
                 <div className="col-span-2 space-y-3 border-t pt-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Telegram destinations</p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-sm font-semibold text-foreground">Telegram destinations</p>
+                      <p className="text-xs text-muted-foreground mt-1">
                         Lưu các preset (tên gợi nhớ + Chat ID / Message thread ID) để dùng nhanh khi tạo My Alerts.
                       </p>
                     </div>
@@ -625,10 +625,10 @@ export function MyProfileContent() {
                   </div>
 
                   {isEditing ? (
-                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                    <div className="overflow-hidden rounded-lg border border-border">
                       <table className="w-full border-collapse text-sm">
                         <thead>
-                          <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-600">
+                          <tr className="border-b border-border bg-muted/40 text-left text-xs font-medium text-muted-foreground">
                             <th className="min-w-[7rem] px-3 py-2 align-bottom">Name</th>
                             <th className="min-w-[8rem] px-3 py-2 align-bottom">Chat ID</th>
                             <th className="min-w-[6rem] px-3 py-2 align-bottom">Message thread ID (optional)</th>
@@ -649,7 +649,7 @@ export function MyProfileContent() {
                           ).map((row) => {
                             const hasChat = !!row.chatId.trim()
                             return (
-                              <tr key={row.id} className="border-b border-slate-100 bg-white last:border-b-0">
+                              <tr key={row.id} className="border-b border-border bg-card last:border-b-0">
                                 <td className="px-3 py-2 align-middle">
                                   <Input
                                     value={row.name}
@@ -698,7 +698,7 @@ export function MyProfileContent() {
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="gap-2 bg-white"
+                                        className="gap-2 bg-card"
                                         disabled={telegramTestRowId !== null || telegramRemoveRowId !== null}
                                         onClick={() =>
                                           void sendTelegramTestForPreset(row.id, row.chatId, row.messageThreadId)
@@ -715,7 +715,7 @@ export function MyProfileContent() {
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 px-2 text-slate-500"
+                                        className="h-8 px-2 text-muted-foreground"
                                         onClick={() =>
                                           setTelegramDestinationDrafts((prev) =>
                                             prev.filter((x) => x.id !== row.id),
@@ -736,12 +736,12 @@ export function MyProfileContent() {
                   ) : (
                     <div>
                       {parseTelegramDestinationsJson(displayUser?.telegramDestinationsJson).length === 0 ? (
-                        <p className="text-sm text-slate-500">—</p>
+                        <p className="text-sm text-muted-foreground">—</p>
                       ) : (
-                        <div className="overflow-hidden rounded-lg border border-slate-200">
+                        <div className="overflow-hidden rounded-lg border border-border">
                           <table className="w-full border-collapse text-sm">
                             <thead>
-                              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-600">
+                              <tr className="border-b border-border bg-muted/40 text-left text-xs font-medium text-muted-foreground">
                                 <th className="min-w-[7rem] px-3 py-2">Name</th>
                                 <th className="min-w-[8rem] px-3 py-2">Chat ID</th>
                                 <th className="min-w-[6rem] px-3 py-2">Message thread ID</th>
@@ -754,15 +754,15 @@ export function MyProfileContent() {
                                 return (
                                   <tr
                                     key={d.id}
-                                    className="border-b border-slate-100 bg-white last:border-b-0 hover:bg-slate-50/60"
+                                    className="border-b border-border bg-card last:border-b-0 hover:bg-muted/40"
                                   >
-                                    <td className="px-3 py-2 align-middle font-medium text-slate-900">
+                                    <td className="px-3 py-2 align-middle font-medium text-foreground">
                                       {d.name?.trim() || "Telegram destination"}
                                     </td>
-                                    <td className="max-w-[12rem] px-3 py-2 align-middle break-all text-slate-700">
+                                    <td className="max-w-[12rem] px-3 py-2 align-middle break-all text-foreground">
                                       {d.chatId?.trim() || "—"}
                                     </td>
-                                    <td className="px-3 py-2 align-middle text-slate-700">
+                                    <td className="px-3 py-2 align-middle text-foreground">
                                       {d.messageThreadId?.trim() || "—"}
                                     </td>
                                     <td className="px-3 py-2 align-middle text-right">
@@ -772,7 +772,7 @@ export function MyProfileContent() {
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            className="gap-2 bg-white"
+                                            className="gap-2 bg-card"
                                             disabled={telegramTestRowId !== null || telegramRemoveRowId !== null}
                                             onClick={() =>
                                               void sendTelegramTestForPreset(
@@ -792,7 +792,7 @@ export function MyProfileContent() {
                                           type="button"
                                           variant="ghost"
                                           size="sm"
-                                          className="h-8 px-2 text-red-600 hover:text-red-700"
+                                          className="h-8 px-2 text-destructive hover:text-destructive"
                                           disabled={telegramTestRowId !== null || telegramRemoveRowId !== null}
                                           onClick={() => void removeTelegramDestinationPreset(d.id)}
                                         >
@@ -821,7 +821,7 @@ export function MyProfileContent() {
                     Cancel
                   </Button>
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-primary hover:bg-primary/90"
                     onClick={handleSaveProfile}
                     disabled={profileSaving}
                   >
@@ -843,12 +843,12 @@ export function MyProfileContent() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
-                    <KeyRound className="w-5 h-5 text-slate-600" />
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <KeyRound className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Password</p>
-                    <p className="text-xs text-slate-500">Last changed 30 days ago</p>
+                    <p className="text-sm font-medium text-foreground">Password</p>
+                    <p className="text-xs text-muted-foreground">Last changed 30 days ago</p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
@@ -857,12 +857,12 @@ export function MyProfileContent() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-slate-600" />
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Two-Factor Authentication</p>
-                    <p className="text-xs text-slate-500">Not enabled</p>
+                    <p className="text-sm font-medium text-foreground">Two-Factor Authentication</p>
+                    <p className="text-xs text-muted-foreground">Not enabled</p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm">
@@ -880,7 +880,7 @@ export function MyProfileContent() {
                 <Button
                   variant="link"
                   size="sm"
-                  className="text-blue-600 p-0 h-auto"
+                  className="text-primary p-0 h-auto"
                   onClick={() => setShowAllSessions((prev) => !prev)}
                 >
                   {showAllSessions ? "View Less" : "View All"}
@@ -889,24 +889,24 @@ export function MyProfileContent() {
             </CardHeader>
             <CardContent className="space-y-3">
               {sessionsLoading ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Loading active sessions...
                 </div>
               ) : sessionsError ? (
-                <p className="text-sm text-red-600">{sessionsError}</p>
+                <p className="text-sm text-destructive">{sessionsError}</p>
               ) : activeSessions.length === 0 ? (
-                <p className="text-sm text-slate-500">No active remembered sessions found.</p>
+                <p className="text-sm text-muted-foreground">No active remembered sessions found.</p>
               ) : (
                 (showAllSessions ? activeSessions : activeSessions.slice(0, 3)).map((session) => (
                   <div key={session.id} className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${session.isCurrent ? "bg-green-100" : "bg-slate-100"}`}>
-                        <Monitor className={`w-5 h-5 ${session.isCurrent ? "text-green-600" : "text-slate-600"}`} />
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${session.isCurrent ? "bg-emerald-500/10" : "bg-muted"}`}>
+                        <Monitor className={`w-5 h-5 ${session.isCurrent ? "text-emerald-600 dark:text-emerald-300" : "text-muted-foreground"}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{session.deviceInfo || "Unknown device"}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-sm font-medium text-foreground truncate">{session.deviceInfo || "Unknown device"}</p>
+                        <p className="text-xs text-muted-foreground">
                           {getSessionSubtitle(session)}
                           {session.ipAddress ? ` • IP ${session.ipAddress}` : ""}
                         </p>
@@ -927,7 +927,7 @@ export function MyProfileContent() {
               )}
               <Button 
                 variant="link" 
-                className="text-red-600 p-0 h-auto text-sm"
+                className="text-destructive p-0 h-auto text-sm"
                 onClick={handleLogoutAll}
               >
                 Sign out all other devices
@@ -983,56 +983,56 @@ export function MyProfileContent() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Collapsible open={showApps} onOpenChange={setShowApps}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/40 rounded-lg hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-900">Apps I can access</span>
+                <span className="text-sm font-medium text-foreground">Apps I can access</span>
                 <Badge variant="secondary" className="text-xs">
                   {myApps.length}
                 </Badge>
               </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showApps ? "rotate-180" : ""}`} />
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showApps ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {myApps.length > 0 ? (
                   Object.entries(displayUser?.permissions || {}).map(([appId, permission]) => (
                     <div key={appId} className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm text-slate-900">{appId}</span>
+                      <span className="text-sm text-foreground">{appId}</span>
                       <Badge variant="outline" className="text-xs">
                         {permission as string}
                       </Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500 col-span-2">No app permissions found</p>
+                  <p className="text-sm text-muted-foreground col-span-2">No app permissions found</p>
                 )}
               </div>
             </CollapsibleContent>
           </Collapsible>
 
           <Collapsible open={showTeams} onOpenChange={setShowTeams}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/40 rounded-lg hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-900">Teams I belong to</span>
+                <span className="text-sm font-medium text-foreground">Teams I belong to</span>
                 <Badge variant="secondary" className="text-xs">
                   {myTeams.length}
                 </Badge>
               </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showTeams ? "rotate-180" : ""}`} />
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showTeams ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {myTeams.length > 0 ? (
                   myTeams.map((team: any) => (
                     <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm text-slate-900">{team.name}</span>
+                      <span className="text-sm text-foreground">{team.name}</span>
                       <Badge variant="outline" className="text-xs">
                         {team.role}
                       </Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500 col-span-2">No teams found</p>
+                  <p className="text-sm text-muted-foreground col-span-2">No teams found</p>
                 )}
               </div>
             </CollapsibleContent>
@@ -1045,7 +1045,7 @@ export function MyProfileContent() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <BadgePercent className="w-4 h-4 text-slate-500" />
+              <BadgePercent className="w-4 h-4 text-muted-foreground" />
               My Commission
             </CardTitle>
           </CardHeader>
