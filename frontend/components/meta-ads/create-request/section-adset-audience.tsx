@@ -526,19 +526,19 @@ export function AdSetAudienceSection({
   })()
 
   return (
-    <Card className="border-slate-200">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-          <Users className="w-4 h-4 text-slate-500" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Users className="h-4 w-4 text-muted-foreground" />
           Ad Set - Audience &amp; Placement
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-3">
-            <Label className="text-xs font-medium text-slate-700">Ad Set Name <span className="text-red-500">*</span></Label>
-            <div className="flex items-center gap-2 text-[11px] text-slate-600">
-              <Wand2 className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Label className="text-xs font-medium text-foreground">Ad Set Name <span className="text-destructive">*</span></Label>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Auto-generate</span>
               <Switch checked={isAutoNameEnabled} onCheckedChange={(checked) => {
                 setIsAutoEnabled(checked)
@@ -552,16 +552,16 @@ export function AdSetAudienceSection({
             value={form.adSetName}
             onChange={(event) => handleNameInputChange(event.target.value)}
           />
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 space-y-1.5">
-            <p className="text-[11px] text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">GEO_AGE_GENDER_PLACEMENT</code></p>
-            <p className={`text-xs font-mono ${generatedAdSetName ? "text-slate-700" : "text-slate-400 italic"}`}>
+          <div className="space-y-1.5 rounded-md border border-border bg-muted/40 px-3 py-2">
+            <p className="text-[11px] text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5 text-foreground">GEO_AGE_GENDER_PLACEMENT</code></p>
+            <p className={`font-mono text-xs ${generatedAdSetName ? "text-foreground" : "text-muted-foreground italic"}`}>
               {generatedAdSetName || "Select a geo mode and target to generate an ad set name."}
             </p>
             {!isAutoNameEnabled && generatedAdSetName ? (
               <button
                 type="button"
                 onClick={applyGeneratedName}
-                className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                className="text-[11px] font-medium text-primary hover:underline"
               >
                 Use generated name
               </button>
@@ -570,53 +570,53 @@ export function AdSetAudienceSection({
         </div>
 
         {isSkanCampaign ? (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600" />
+          <div className="flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-3 text-sm text-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
             <div className="space-y-1">
               <p className="font-medium">iOS 14+ / SKAN targeting locked</p>
-              <p className="text-[12px] text-blue-800">
-                user_os sẽ gửi <code className="rounded bg-white/70 px-1 py-0.5 font-mono">iOS_ver_14.0_and_above</code> + user_device iPhone/iPad/iPod, app gắn ở cấp campaign. Giới hạn 9 campaign iOS 14+/ad account, tối đa 5 ad set/campaign.
+              <p className="text-[12px] text-muted-foreground">
+                user_os sẽ gửi <code className="rounded bg-background/70 px-1 py-0.5 font-mono text-foreground">iOS_ver_14.0_and_above</code> + user_device iPhone/iPad/iPod, app gắn ở cấp campaign. Giới hạn 9 campaign iOS 14+/ad account, tối đa 5 ad set/campaign.
               </p>
-              {appPlatform ? <p className="text-[11px] text-blue-700">Selected app platform: {appPlatform}</p> : null}
+              {appPlatform ? <p className="text-[11px] text-primary">Selected app platform: {appPlatform}</p> : null}
             </div>
           </div>
         ) : null}
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <Label className="text-xs font-medium text-slate-700">Geo Mode <span className="text-red-500">*</span></Label>
-            <span className="text-[11px] text-slate-400">One mode only</span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Label className="text-xs font-medium text-foreground">Geo Mode <span className="text-destructive">*</span></Label>
+            <span className="text-[11px] text-muted-foreground">One mode only</span>
           </div>
-          <div className="flex flex-wrap overflow-hidden rounded-md border border-slate-300 w-fit">
+          <div className="grid w-full grid-cols-2 overflow-hidden rounded-md border border-border sm:flex sm:w-fit sm:flex-wrap">
             {(["GLOBAL", "COUNTRY", "REGION", "COUNTRY_GROUP", "CITY"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setGeoMode(mode)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${form.geoMode === mode ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"} ${mode !== "GLOBAL" ? "border-l border-slate-300" : ""}`}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${form.geoMode === mode ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"} ${mode !== "GLOBAL" ? "border-l border-border" : ""}`}
               >
                 {mode === "COUNTRY_GROUP" ? "Country Group" : mode.charAt(0) + mode.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
             {geoModeDescription}
           </div>
         </div>
 
         {form.geoMode === "GLOBAL" ? (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900 flex items-start gap-2">
-            <Globe2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div className="flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-3 text-sm text-foreground">
+            <Globe2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
             <div>
               <p className="font-medium">Global targeting</p>
-              <p className="text-[12px] text-blue-800 mt-0.5">This request will not send country or city lists to Meta. App platform, age, gender, and placements still apply.</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">This request will not send country or city lists to Meta. App platform, age, gender, and placements still apply.</p>
             </div>
           </div>
         ) : null}
 
         {form.geoMode === "COUNTRY" ? (
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-slate-700">Countries <span className="text-red-500">*</span></Label>
+            <Label className="text-xs font-medium text-foreground">Countries <span className="text-destructive">*</span></Label>
             <Popover open={countryPopoverOpen} onOpenChange={setCountryPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -624,9 +624,9 @@ export function AdSetAudienceSection({
                   variant="outline"
                   role="combobox"
                   aria-expanded={countryPopoverOpen}
-                  className="h-9 w-full justify-between bg-white px-3 text-left font-normal"
+                  className="h-9 w-full justify-between bg-background px-3 text-left font-normal"
                 >
-                  <span className="min-w-0 flex-1 truncate text-left text-sm text-slate-700">
+                  <span className="min-w-0 flex-1 truncate text-left text-sm text-foreground">
                     {form.countries.length === 0
                       ? "Select countries"
                       : form.countries.length <= 2
@@ -636,7 +636,7 @@ export function AdSetAudienceSection({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+              <PopoverContent className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] min-w-0 p-0 sm:min-w-[360px]" align="start">
                 <Command>
                   <CommandInput placeholder="Search countries by name or code..." />
                   <CommandList>
@@ -654,7 +654,7 @@ export function AdSetAudienceSection({
                           >
                             <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                             <span className="min-w-0 flex-1 truncate">{country.label}</span>
-                            {isExcluded && <span className="text-[10px] text-red-500 font-medium ml-2">Excluded</span>}
+                            {isExcluded && <span className="ml-2 text-[10px] font-medium text-destructive">Excluded</span>}
                           </CommandItem>
                         )
                       })}
@@ -663,13 +663,13 @@ export function AdSetAudienceSection({
                 </Command>
               </PopoverContent>
             </Popover>
-            <p className="text-[11px] text-slate-500">Select one or more countries. Search by country name or ISO code.</p>
+            <p className="text-[11px] text-muted-foreground">Select one or more countries. Search by country name or ISO code.</p>
             {form.countries.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {[...form.countries]
                   .sort((left, right) => getCountryLabel(left).localeCompare(getCountryLabel(right)))
                   .map((country) => (
-                    <Badge key={country} className="bg-blue-100 text-blue-800 gap-1 pr-1 text-xs max-w-full">
+                    <Badge key={country} className="max-w-full gap-1 bg-primary/10 pr-1 text-xs text-primary">
                       <span className="truncate">{getCountryLabel(country)}</span>
                       <button type="button" onClick={() => toggleCountry(country)}>
                         <X className="w-3 h-3" />
@@ -683,9 +683,9 @@ export function AdSetAudienceSection({
 
         {form.geoMode === "REGION" ? (
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-700">Regions <span className="text-red-500">*</span></Label>
-            {regionsLoading ? <p className="text-xs text-slate-500 flex items-center gap-1"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading region references...</p> : null}
-            {regionsMessage ? <p className="text-xs text-red-600">{regionsMessage}</p> : null}
+            <Label className="text-xs font-medium text-foreground">Regions <span className="text-destructive">*</span></Label>
+            {regionsLoading ? <p className="flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading region references...</p> : null}
+            {regionsMessage ? <p className="text-xs text-destructive">{regionsMessage}</p> : null}
             {!regionsLoading && !regionsMessage ? (
               <div className="flex flex-wrap gap-1.5">
                 {regions.map((region) => (
@@ -695,12 +695,12 @@ export function AdSetAudienceSection({
                     onClick={() => toggleRegion(region.key)}
                     className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors ${
                       form.regionKeys.includes(region.key)
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-slate-600 border-slate-300 hover:border-blue-300"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-primary"
                     }`}
                     title={`${region.countryCount} countries`}
                   >
-                    {region.label} <span className={`ml-1 ${form.regionKeys.includes(region.key) ? "text-blue-100" : "text-slate-400"}`}>({region.countryCount})</span>
+                    {region.label} <span className={`ml-1 ${form.regionKeys.includes(region.key) ? "text-primary-foreground/80" : "text-muted-foreground"}`}>({region.countryCount})</span>
                   </button>
                 ))}
               </div>
@@ -708,7 +708,7 @@ export function AdSetAudienceSection({
             {form.regionKeys.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {form.regionKeys.map((regionKey) => (
-                  <Badge key={regionKey} className="bg-blue-100 text-blue-800 gap-1 pr-1 text-xs">
+                  <Badge key={regionKey} className="gap-1 bg-primary/10 pr-1 text-xs text-primary">
                     {regions.find((region) => region.key === regionKey)?.label ?? regionKey}
                     <button type="button" onClick={() => toggleRegion(regionKey)}>
                       <X className="w-3 h-3" />
@@ -737,7 +737,7 @@ export function AdSetAudienceSection({
         {form.geoMode === "CITY" ? (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Cities <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-medium text-foreground">Cities <span className="text-destructive">*</span></Label>
               <Input
                 placeholder={metaAdAccountId ? "Search city name..." : "Select a Meta ad account first"}
                 className="h-9 text-sm"
@@ -745,11 +745,11 @@ export function AdSetAudienceSection({
                 disabled={!metaAdAccountId}
                 onChange={(event) => setCityQuery(event.target.value)}
               />
-              {cityLoading ? <p className="text-xs text-slate-500 flex items-center gap-1"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Searching Meta cities...</p> : null}
-              {cityError ? <p className="text-xs text-red-600">{cityError}</p> : null}
+              {cityLoading ? <p className="flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching Meta cities...</p> : null}
+              {cityError ? <p className="text-xs text-destructive">{cityError}</p> : null}
             </div>
             {cityResults.length > 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-white max-h-56 overflow-auto divide-y divide-slate-100">
+              <div className="max-h-56 overflow-auto rounded-lg border border-border bg-background divide-y divide-border">
                 {cityResults.map((city) => {
                   const isExcluded = !!(city.countryCode && form.excludedCountries?.includes(city.countryCode.toUpperCase()))
                   return (
@@ -759,19 +759,19 @@ export function AdSetAudienceSection({
                       disabled={isExcluded}
                       onClick={() => addCity(city)}
                       className={cn(
-                        "w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors",
+                        "w-full px-3 py-2 text-left transition-colors hover:bg-accent",
                         isExcluded && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-800 truncate">{city.name}</p>
-                          <p className="text-[11px] text-slate-500 truncate">
+                          <p className="truncate text-sm font-medium text-foreground">{city.name}</p>
+                          <p className="truncate text-[11px] text-muted-foreground">
                             {[city.region, city.countryName, city.countryCode].filter(Boolean).join(" - ")}
                             {isExcluded && " (Country Excluded)"}
                           </p>
                         </div>
-                        <span className="text-[10px] font-mono text-slate-400">{city.key}</span>
+                        <span className="font-mono text-[10px] text-muted-foreground">{city.key}</span>
                       </div>
                     </button>
                   )
@@ -781,7 +781,7 @@ export function AdSetAudienceSection({
             {form.cityTargets.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {form.cityTargets.map((city) => (
-                  <Badge key={city.key} className="bg-blue-100 text-blue-800 gap-1 pr-1 text-xs max-w-full">
+                  <Badge key={city.key} className="max-w-full gap-1 bg-primary/10 pr-1 text-xs text-primary">
                     <MapPin className="w-3 h-3" />
                     <span className="truncate">{city.name}{city.countryCode ? ` (${city.countryCode})` : ""}</span>
                     <button type="button" onClick={() => removeCity(city.key)}>
@@ -795,16 +795,16 @@ export function AdSetAudienceSection({
         ) : null}
 
         {isEuDsaRequired ? (
-          <div className="space-y-3 pt-2 border-t border-slate-100">
+          <div className="space-y-3 border-t border-border pt-2">
             <div>
-              <Label className="text-xs font-medium text-slate-700">EU advertiser and payer details <span className="text-red-500">*</span></Label>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <Label className="text-xs font-medium text-foreground">EU advertiser and payer details <span className="text-destructive">*</span></Label>
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 Enter the advertiser name for EU DSA transparency. This is free text and is sent as dsa_beneficiary/dsa_payor.
               </p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
+            <div className="space-y-3 rounded-lg border border-border bg-background p-3">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-medium text-slate-700">Advertiser / Beneficiary <span className="text-red-500">*</span></Label>
+                <Label className="text-[11px] font-medium text-foreground">Advertiser / Beneficiary <span className="text-destructive">*</span></Label>
                 <Input
                   placeholder="e.g. Amobear"
                   className="h-9 text-sm"
@@ -812,8 +812,8 @@ export function AdSetAudienceSection({
                   onChange={(event) => onChange({ dsaBeneficiary: event.target.value })}
                 />
               </div>
-              <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 border border-slate-200 px-2.5 py-2">
-                <span className="text-[11px] text-slate-600">The advertiser and payer are different</span>
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-[11px] text-muted-foreground">The advertiser and payer are different</span>
                 <Switch
                   checked={form.dsaPayor != null && form.dsaPayor !== ""}
                   onCheckedChange={(checked) => onChange({ dsaPayor: checked ? (form.dsaPayor || form.dsaBeneficiary || "") : "" })}
@@ -821,7 +821,7 @@ export function AdSetAudienceSection({
               </div>
               {form.dsaPayor ? (
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-medium text-slate-700">Payer</Label>
+                  <Label className="text-[11px] font-medium text-foreground">Payer</Label>
                   <Input
                     placeholder="e.g. Amobear"
                     className="h-9 text-sm"
@@ -835,8 +835,8 @@ export function AdSetAudienceSection({
         ) : null}
 
         {showFinancialProductsToggle ? (
-          <div className="space-y-2 pt-2 border-t border-slate-100">
-            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-white p-3">
+          <div className="space-y-2 border-t border-border pt-2">
+            <div className="flex items-start gap-2.5 rounded-lg border border-border bg-background p-3">
               <Checkbox
                 id="includes-financial-products"
                 checked={form.includesFinancialProducts}
@@ -844,14 +844,14 @@ export function AdSetAudienceSection({
                 className="mt-0.5"
               />
               <div className="space-y-1">
-                <Label htmlFor="includes-financial-products" className="text-xs font-medium text-slate-800 cursor-pointer">
+                <Label htmlFor="includes-financial-products" className="cursor-pointer text-xs font-medium text-foreground">
                   This ad set includes ads related to financial products and services
                 </Label>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-muted-foreground">
                   Only tick this when the ads are genuinely about financial products/services. Targeting Australia or India will declare the FINSERV regulated category and require a verified advertiser &amp; payer per location. Leave unticked for non-financial apps (e.g. games).
                 </p>
                 {form.includesFinancialProducts ? (
-                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 flex items-start gap-1.5">
+                  <p className="flex items-start gap-1.5 rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
                     <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                     <span>Meta may require an additional verification task for these locations before the ads can deliver.</span>
                   </p>
@@ -862,25 +862,25 @@ export function AdSetAudienceSection({
         ) : null}
 
         {adTransparencyCategories.length > 0 ? (
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <div className="flex items-start justify-between gap-3">
+          <div className="space-y-3 border-t border-border pt-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <Label className="text-xs font-medium text-slate-700">Regional ad transparency <span className="text-red-500">*</span></Label>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <Label className="text-xs font-medium text-foreground">Regional ad transparency <span className="text-destructive">*</span></Label>
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   Select the verified Business Manager advertiser for regulated locations. Value sent to Meta is the BM ID.
                 </p>
               </div>
               {regulationIdentityLoading ? (
-                <span className="text-[11px] text-slate-500 flex items-center gap-1"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading identities</span>
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading identities</span>
               ) : null}
             </div>
             {regulationIdentityError ? (
-              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2">
+              <p className="rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-700 dark:text-amber-300">
                 Business suggestions are unavailable. Seed fallback should still provide known AMOBEAR business identities.
               </p>
             ) : null}
             {!regulationIdentityLoading && !regulationIdentityError && regulationIdentities.length === 0 ? (
-              <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2">
+              <p className="rounded-md border border-border bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground">
                 No Business identities were returned for this account.
               </p>
             ) : null}
@@ -892,18 +892,18 @@ export function AdSetAudienceSection({
                 const payerDifferent = payerValue != null
                 const isRequired = requiredAdTransparencyCategoryKeys.has(category.key)
                 return (
-                  <div key={category.key} className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={category.key} className="space-y-3 rounded-lg border border-border bg-background p-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs font-semibold text-slate-800">{category.label}</p>
-                        <p className="text-[10px] font-mono text-slate-400">{category.category}</p>
+                        <p className="text-xs font-semibold text-foreground">{category.label}</p>
+                        <p className="font-mono text-[10px] text-muted-foreground">{category.category}</p>
                       </div>
-                      <Badge className={isRequired ? "bg-red-50 text-red-700 border-red-200" : "bg-slate-100 text-slate-600 border-slate-200"}>{isRequired ? "Required" : "Optional"}</Badge>
+                      <Badge className={isRequired ? "border-destructive/25 bg-destructive/10 text-destructive" : "border-border bg-muted text-muted-foreground"}>{isRequired ? "Required" : "Optional"}</Badge>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-slate-700">Advertiser / Beneficiary {isRequired ? <span className="text-red-500">*</span> : null}</Label>
+                      <Label className="text-[11px] font-medium text-foreground">Advertiser / Beneficiary {isRequired ? <span className="text-destructive">*</span> : null}</Label>
                       <select
-                        className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 disabled:opacity-60"
+                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground disabled:opacity-60"
                         value={beneficiaryValue ?? ""}
                         disabled={regulationIdentities.length === 0}
                         onChange={(event) => updateRegulationIdentity(category.beneficiaryField, event.target.value || null)}
@@ -913,10 +913,10 @@ export function AdSetAudienceSection({
                           <option key={identity.id} value={identity.id}>{getIdentityOptionLabel(identity)}</option>
                         ))}
                       </select>
-                      {beneficiaryValue ? <p className="text-[10px] text-slate-500 truncate">{getIdentityLabel(beneficiaryValue)}</p> : null}
+                      {beneficiaryValue ? <p className="truncate text-[10px] text-muted-foreground">{getIdentityLabel(beneficiaryValue)}</p> : null}
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 border border-slate-200 px-2.5 py-2">
-                      <span className="text-[11px] text-slate-600">The advertiser and payer are different</span>
+                    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-[11px] text-muted-foreground">The advertiser and payer are different</span>
                       <Switch
                         checked={payerDifferent}
                         onCheckedChange={(checked) => updateRegulationIdentity(category.payerField, checked ? (payerValue ?? beneficiaryValue ?? "") : null)}
@@ -924,9 +924,9 @@ export function AdSetAudienceSection({
                     </div>
                     {payerDifferent ? (
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] font-medium text-slate-700">Payer</Label>
+                        <Label className="text-[11px] font-medium text-foreground">Payer</Label>
                         <select
-                          className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 disabled:opacity-60"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground disabled:opacity-60"
                           value={payerValue ?? ""}
                           disabled={regulationIdentities.length === 0}
                           onChange={(event) => updateRegulationIdentity(category.payerField, event.target.value || null)}
@@ -936,7 +936,7 @@ export function AdSetAudienceSection({
                             <option key={identity.id} value={identity.id}>{getIdentityOptionLabel(identity)}</option>
                           ))}
                         </select>
-                        {payerValue ? <p className="text-[10px] text-slate-500 truncate">{getIdentityLabel(payerValue)}</p> : null}
+                        {payerValue ? <p className="truncate text-[10px] text-muted-foreground">{getIdentityLabel(payerValue)}</p> : null}
                       </div>
                     ) : null}
                   </div>
@@ -947,10 +947,10 @@ export function AdSetAudienceSection({
         ) : null}
 
         {/* Exclude Countries Section */}
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <div className="flex items-center justify-between gap-3">
-            <Label className="text-xs font-medium text-slate-700">Exclude Countries</Label>
-            <span className="text-[11px] text-slate-400">Optional</span>
+        <div className="space-y-2 border-t border-border pt-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Label className="text-xs font-medium text-foreground">Exclude Countries</Label>
+            <span className="text-[11px] text-muted-foreground">Optional</span>
           </div>
           <Popover open={excludeCountryPopoverOpen} onOpenChange={setExcludeCountryPopoverOpen}>
             <PopoverTrigger asChild>
@@ -959,9 +959,9 @@ export function AdSetAudienceSection({
                 variant="outline"
                 role="combobox"
                 aria-expanded={excludeCountryPopoverOpen}
-                className="h-9 w-full justify-between bg-white px-3 text-left font-normal"
+                className="h-9 w-full justify-between bg-background px-3 text-left font-normal"
               >
-                <span className="min-w-0 flex-1 truncate text-left text-sm text-slate-700">
+                <span className="min-w-0 flex-1 truncate text-left text-sm text-foreground">
                   {!form.excludedCountries || form.excludedCountries.length === 0
                     ? "Select countries to exclude"
                     : form.excludedCountries.length <= 2
@@ -971,7 +971,7 @@ export function AdSetAudienceSection({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+            <PopoverContent className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] min-w-0 p-0 sm:min-w-[360px]" align="start">
               <Command>
                 <CommandInput placeholder="Search countries to exclude..." />
                 <CommandList>
@@ -992,8 +992,8 @@ export function AdSetAudienceSection({
                         >
                           <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                           <span className="min-w-0 flex-1 truncate">{country.label}</span>
-                          {isIncluded && <span className="text-[10px] text-red-500 font-medium ml-2">Currently Included</span>}
-                          {isCityConflict && <span className="text-[10px] text-red-500 font-medium ml-2">City Target Conflict</span>}
+                          {isIncluded && <span className="ml-2 text-[10px] font-medium text-destructive">Currently Included</span>}
+                          {isCityConflict && <span className="ml-2 text-[10px] font-medium text-destructive">City Target Conflict</span>}
                         </CommandItem>
                       )
                     })}
@@ -1002,16 +1002,16 @@ export function AdSetAudienceSection({
               </Command>
             </PopoverContent>
           </Popover>
-          <p className="text-[11px] text-slate-500">Exclude one or more countries from your geo targeting. Excluded countries cannot overlap with included locations.</p>
+          <p className="text-[11px] text-muted-foreground">Exclude one or more countries from your geo targeting. Excluded countries cannot overlap with included locations.</p>
           {form.excludedCountries && form.excludedCountries.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {[...form.excludedCountries]
                 .sort((left, right) => getCountryLabel(left).localeCompare(getCountryLabel(right)))
                 .map((country) => (
-                  <Badge key={country} className="bg-red-50 text-red-800 border-red-200 gap-1 pr-1 text-xs max-w-full">
+                  <Badge key={country} className="max-w-full gap-1 border-destructive/25 bg-destructive/10 pr-1 text-xs text-destructive">
                     <span className="truncate">{getCountryLabel(country)}</span>
                     <button type="button" onClick={() => toggleExcludedCountry(country)}>
-                      <X className="w-3 h-3 text-red-500 hover:text-red-700" />
+                      <X className="h-3 w-3 text-destructive" />
                     </button>
                   </Badge>
                 ))}
@@ -1019,10 +1019,10 @@ export function AdSetAudienceSection({
           ) : null}
         </div>
 
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <div className="flex items-center justify-between gap-3">
-            <Label className="text-xs font-medium text-slate-700">Target Languages</Label>
-            <span className="text-[11px] text-slate-400">Optional</span>
+        <div className="space-y-2 border-t border-border pt-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Label className="text-xs font-medium text-foreground">Target Languages</Label>
+            <span className="text-[11px] text-muted-foreground">Optional</span>
           </div>
           <Popover open={languagePopoverOpen} onOpenChange={setLanguagePopoverOpen}>
             <PopoverTrigger asChild>
@@ -1032,9 +1032,9 @@ export function AdSetAudienceSection({
                 role="combobox"
                 aria-expanded={languagePopoverOpen}
                 disabled={!metaAdAccountId}
-                className="h-9 w-full justify-between bg-white px-3 text-left font-normal disabled:opacity-60"
+                className="h-9 w-full justify-between bg-background px-3 text-left font-normal disabled:opacity-60"
               >
-                <span className="min-w-0 flex-1 truncate text-left text-sm text-slate-700">
+                <span className="min-w-0 flex-1 truncate text-left text-sm text-foreground">
                   {!metaAdAccountId
                     ? "Select a Meta ad account first"
                     : (form.localeKeys ?? []).length === 0
@@ -1046,7 +1046,7 @@ export function AdSetAudienceSection({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+            <PopoverContent className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] min-w-0 p-0 sm:min-w-[360px]" align="start">
               <Command shouldFilter={false}>
                 <CommandInput
                   placeholder="Search languages, e.g. English..."
@@ -1055,12 +1055,12 @@ export function AdSetAudienceSection({
                 />
                 <CommandList>
                   {languageLoading ? (
-                    <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 px-3 py-3 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       Searching Meta languages...
                     </div>
                   ) : null}
-                  {languageError ? <p className="px-3 py-2 text-xs text-red-600">{languageError}</p> : null}
+                  {languageError ? <p className="px-3 py-2 text-xs text-destructive">{languageError}</p> : null}
                   {!languageLoading && !languageError && languageResults.length === 0 ? (
                     <CommandEmpty>{languageQuery.trim().length === 1 ? "Type at least 2 characters." : "No language found."}</CommandEmpty>
                   ) : null}
@@ -1076,7 +1076,7 @@ export function AdSetAudienceSection({
                           >
                             <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                             <span className="min-w-0 flex-1 truncate">{locale.name}</span>
-                            <span className="text-[10px] font-mono text-slate-400">{locale.key}</span>
+                            <span className="font-mono text-[10px] text-muted-foreground">{locale.key}</span>
                           </CommandItem>
                         )
                       })}
@@ -1086,17 +1086,17 @@ export function AdSetAudienceSection({
               </Command>
             </PopoverContent>
           </Popover>
-          <p className="text-[11px] text-slate-500">Leave empty to target all languages, which is Meta&apos;s default.</p>
+          <p className="text-[11px] text-muted-foreground">Leave empty to target all languages, which is Meta&apos;s default.</p>
           {(form.localeKeys ?? []).length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {[...(form.localeKeys ?? [])]
                 .sort((left, right) => getLanguageLabel(left).localeCompare(getLanguageLabel(right)))
                 .map((key) => (
-                  <Badge key={key} className="bg-violet-50 text-violet-800 border-violet-200 gap-1 pr-1 text-xs max-w-full">
+                  <Badge key={key} className="max-w-full gap-1 border-violet-500/25 bg-violet-500/10 pr-1 text-xs text-violet-700 dark:text-violet-300">
                     <span className="truncate">{getLanguageLabel(key)}</span>
-                    <span className="font-mono text-[10px] text-violet-500">{key}</span>
+                    <span className="font-mono text-[10px] text-violet-600 dark:text-violet-300">{key}</span>
                     <button type="button" onClick={() => removeLanguage(key)}>
-                      <X className="w-3 h-3 text-violet-500 hover:text-violet-700" />
+                      <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 ))}
@@ -1104,27 +1104,27 @@ export function AdSetAudienceSection({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-700">Age Range</Label>
+            <Label className="text-xs font-medium text-foreground">Age Range</Label>
             <div className="flex items-center gap-2">
               <Input type="number" min={13} max={65} className="h-9 text-sm w-20" value={form.ageMin} onChange={(event) => onChange({ ageMin: Number(event.target.value) })} />
-              <span className="text-slate-400 text-sm">-</span>
+              <span className="text-sm text-muted-foreground">-</span>
               <Input type="number" min={13} max={65} className="h-9 text-sm w-20" value={form.ageMax} onChange={(event) => onChange({ ageMax: Number(event.target.value) })} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-700">Gender</Label>
-            <div className="flex rounded-md overflow-hidden border border-slate-300 w-fit">
+            <Label className="text-xs font-medium text-foreground">Gender</Label>
+            <div className="grid w-full grid-cols-3 overflow-hidden rounded-md border border-border sm:flex sm:w-fit">
               {(["ALL", "MALE", "FEMALE"] as const).map((gender) => (
                 <button
                   key={gender}
                   type="button"
                   onClick={() => onChange({ gender })}
                   className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    form.gender === gender ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
-                  } ${gender !== "ALL" ? "border-l border-slate-300" : ""}`}
+                    form.gender === gender ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  } ${gender !== "ALL" ? "border-l border-border" : ""}`}
                 >
                   {gender === "ALL" ? "All" : gender.charAt(0) + gender.slice(1).toLowerCase()}
                 </button>
@@ -1134,16 +1134,16 @@ export function AdSetAudienceSection({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-slate-700">Placement Mode</Label>
-          <div className="flex rounded-md overflow-hidden border border-slate-300 w-fit">
+          <Label className="text-xs font-medium text-foreground">Placement Mode</Label>
+          <div className="grid w-full grid-cols-2 overflow-hidden rounded-md border border-border sm:flex sm:w-fit">
             {(["AUTOMATIC", "MANUAL"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => onChange({ placementMode: mode })}
                 className={`px-4 py-1.5 text-xs font-medium transition-colors ${
-                  form.placementMode === mode ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
-                } ${mode === "MANUAL" ? "border-l border-slate-300" : ""}`}
+                  form.placementMode === mode ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                } ${mode === "MANUAL" ? "border-l border-border" : ""}`}
               >
                 {mode.charAt(0) + mode.slice(1).toLowerCase()}
               </button>
@@ -1151,13 +1151,13 @@ export function AdSetAudienceSection({
           </div>
 
           {form.placementMode === "MANUAL" ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3">
-              <p className="text-[11px] text-slate-500">Manual placement values must map cleanly to backend payload fields.</p>
+            <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-[11px] text-muted-foreground">Manual placement values must map cleanly to backend payload fields.</p>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-700">Publisher Platforms</p>
+                <p className="text-xs font-medium text-foreground">Publisher Platforms</p>
                 <div className="flex flex-wrap gap-3">
                   {publisherPlatformOptions.map((platform) => (
-                    <label key={platform} className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                    <label key={platform} className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                       <Checkbox checked={form.publisherPlatforms.includes(platform)} onCheckedChange={() => togglePlatform(platform)} />
                       {platform}
                     </label>
@@ -1165,10 +1165,10 @@ export function AdSetAudienceSection({
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-700">Facebook Positions</p>
+                <p className="text-xs font-medium text-foreground">Facebook Positions</p>
                 <div className="flex flex-wrap gap-3">
                   {fbPositionOptions.map((position) => (
-                    <label key={position} className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                    <label key={position} className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                       <Checkbox checked={form.facebookPositions.includes(position)} onCheckedChange={() => toggleFbPos(position)} />
                       {position}
                     </label>
@@ -1176,10 +1176,10 @@ export function AdSetAudienceSection({
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-700">Instagram Positions</p>
+                <p className="text-xs font-medium text-foreground">Instagram Positions</p>
                 <div className="flex flex-wrap gap-3">
                   {igPositionOptions.map((position) => (
-                    <label key={position} className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                    <label key={position} className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                       <Checkbox checked={form.instagramPositions.includes(position)} onCheckedChange={() => toggleIgPos(position)} />
                       {position}
                     </label>
@@ -1191,10 +1191,12 @@ export function AdSetAudienceSection({
         </div>
 
         <div className="space-y-1.5 opacity-50">
-          <Label className="text-xs font-medium text-slate-700">Custom Audience <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-normal ml-1">Coming soon</span></Label>
+          <Label className="text-xs font-medium text-foreground">Custom Audience <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">Coming soon</span></Label>
           <Input disabled placeholder="Custom audience selection" className="h-9 text-sm" />
         </div>
       </CardContent>
     </Card>
   )
 }
+
+

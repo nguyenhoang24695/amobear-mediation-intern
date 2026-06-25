@@ -150,24 +150,24 @@ export function GroupedMemberMultiSelect({
           id={id}
           variant="outline"
           className={cn(
-            "h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal",
+            "h-10 min-w-[11rem] max-w-[280px] justify-between bg-card border-border font-normal",
             triggerClassName,
           )}
           type="button"
           disabled={isTriggerDisabled}
         >
           <span className="flex items-center gap-2 truncate">
-            {showUserIcon ? <UserRound className="w-4 h-4 text-slate-400 shrink-0" /> : null}
+            {showUserIcon ? <UserRound className="w-4 h-4 text-muted-foreground shrink-0" /> : null}
             <span
               className={cn(
                 "truncate",
-                (selectedMemberIds.length === 0 || loading) && "text-slate-500",
+                (selectedMemberIds.length === 0 || loading) && "text-muted-foreground",
               )}
             >
               {resolvedTriggerLabel}
             </span>
           </span>
-          <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={popoverClassName} align="start">
@@ -175,7 +175,7 @@ export function GroupedMemberMultiSelect({
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptySearchMessage}</CommandEmpty>
-            <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
+            <div className="flex gap-2 px-2 py-1.5 border-b border-border">
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAll}>
                 Select all
               </Button>
@@ -184,7 +184,7 @@ export function GroupedMemberMultiSelect({
               </Button>
             </div>
             {totalMembers === 0 ? (
-              <div className="px-3 py-4 text-sm text-slate-500">{emptyMembersMessage}</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">{emptyMembersMessage}</div>
             ) : null}
             {displaySections.map((section) => {
               const sectionMemberIds = section.members.map((member) => member.userId)
@@ -194,7 +194,7 @@ export function GroupedMemberMultiSelect({
                   <div
                     role="button"
                     tabIndex={0}
-                    className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground cursor-pointer rounded-sm hover:bg-slate-50"
+                    className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground cursor-pointer rounded-sm hover:bg-muted/50"
                     onClick={() => toggleSection(sectionMemberIds, sectionSelection !== true)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -211,7 +211,7 @@ export function GroupedMemberMultiSelect({
                       onClick={(event) => event.stopPropagation()}
                       aria-label={`Select all members in ${section.teamLabel}`}
                     />
-                    <span className="text-slate-700">{section.teamLabel}</span>
+                    <span className="text-foreground">{section.teamLabel}</span>
                   </div>
                   {section.members.map((member) => (
                     <CommandItem

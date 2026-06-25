@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useCallback, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
@@ -308,54 +308,54 @@ export function WaterfallConfigsPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary/20 bg-primary/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Configs</p>
-                <p className="mt-1 text-2xl font-bold text-blue-600">{totalConfigs}</p>
+                <p className="text-sm font-medium text-primary">Total Configs</p>
+                <p className="mt-1 text-2xl font-bold text-primary">{totalConfigs}</p>
               </div>
-              <div className="rounded-lg border border-blue-200 bg-white p-2.5">
-                <Settings className="h-5 w-5 text-blue-600" />
+              <div className="rounded-lg border border-primary/20 bg-background p-2.5">
+                <Settings className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Assigned Apps</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{totalAssignedApps}</p>
+                <p className="text-sm font-medium text-muted-foreground">Assigned Apps</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{totalAssignedApps}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                <Smartphone className="h-5 w-5 text-slate-600" />
+              <div className="rounded-lg border border-border bg-background p-2.5">
+                <Smartphone className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Draft Configs</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{draftConfigCount}</p>
+                <p className="text-sm font-medium text-muted-foreground">Draft Configs</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{draftConfigCount}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                <Settings className="h-5 w-5 text-slate-600" />
+              <div className="rounded-lg border border-border bg-background p-2.5">
+                <Settings className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Global Default</p>
-                <p className="mt-1 text-2xl font-bold text-slate-600">{globalConfigExists ? "Yes" : "No"}</p>
+                <p className="text-sm font-medium text-muted-foreground">Global Default</p>
+                <p className="mt-1 text-2xl font-bold text-muted-foreground">{globalConfigExists ? "Yes" : "No"}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                <Globe className="h-5 w-5 text-slate-600" />
+              <div className="rounded-lg border border-border bg-background p-2.5">
+                <Globe className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
@@ -365,7 +365,7 @@ export function WaterfallConfigsPanel({
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search configs, apps, notes..."
               className="pl-9"
@@ -388,7 +388,7 @@ export function WaterfallConfigsPanel({
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {canManageConfigs && (
             <Button
-              className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
               onClick={() => setCreateConfigOpen(true)}
             >
               <Settings className="mr-2 h-4 w-4" />
@@ -397,7 +397,7 @@ export function WaterfallConfigsPanel({
           )}
           <Button
             variant="ghost"
-            className="w-full text-slate-600 sm:w-auto"
+            className="w-full text-muted-foreground sm:w-auto"
             onClick={() => {
               refetchConfigs()
               toast({ title: "Refreshed", description: "Configs refreshed" })
@@ -450,3 +450,4 @@ export function WaterfallConfigsPanel({
     </div>
   )
 }
+

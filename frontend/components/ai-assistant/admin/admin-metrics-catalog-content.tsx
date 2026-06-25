@@ -333,11 +333,11 @@ export function AdminMetricsCatalogContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+              <h1 className="text-2xl font-semibold  flex items-center gap-2">
                 <Database className="h-6 w-6" />
                 Metrics Catalog
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm ">
                 <Badge variant="outline" className="mr-1 text-xs">
                   {metrics.length} metrics
                 </Badge>

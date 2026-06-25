@@ -93,10 +93,10 @@ const insights = [
 ]
 
 const colorMap: Record<string, string> = {
-  blue: "bg-blue-50 text-blue-600",
-  green: "bg-green-50 text-green-600",
-  amber: "bg-amber-50 text-amber-600",
-  purple: "bg-purple-50 text-purple-600",
+  blue: "bg-primary/10 text-primary",
+  green: "bg-green-500/10 text-green-700 dark:text-green-300",
+  amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  purple: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
 }
 
 export function RevenueReportContent() {
@@ -136,13 +136,13 @@ export function RevenueReportContent() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Revenue Report</h1>
-          <p className="text-sm text-slate-500 mt-1">Analyze your ad revenue across apps and networks</p>
+          <h1 className="text-2xl font-semibold text-foreground">Revenue Report</h1>
+          <p className="text-sm text-muted-foreground mt-1">Analyze your ad revenue across apps and networks</p>
         </div>
       </div>
 
       {/* Report Controls Bar */}
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Date Range Picker */}
@@ -151,7 +151,7 @@ export function RevenueReportContent() {
                 <div className="flex items-center gap-2">
                   <Select value={datePreset} onValueChange={handleDatePresetChange}>
                     <SelectTrigger className="w-40 h-9">
-                      <CalendarIcon className="w-4 h-4 mr-2 text-slate-500" />
+                      <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -194,9 +194,9 @@ export function RevenueReportContent() {
             </div>
 
             {/* Compare Toggle */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-md">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md">
               <Switch id="compare" checked={compareEnabled} onCheckedChange={setCompareEnabled} className="scale-90" />
-              <Label htmlFor="compare" className="text-sm text-slate-600 cursor-pointer">
+              <Label htmlFor="compare" className="text-sm text-muted-foreground cursor-pointer">
                 Compare to previous period
               </Label>
             </div>
@@ -224,7 +224,7 @@ export function RevenueReportContent() {
             {/* Export Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="default" size="sm" className="h-9 gap-2 bg-blue-600 hover:bg-blue-700">
+                <Button variant="default" size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90">
                   <Download className="w-4 h-4" />
                   Export
                   <ChevronDown className="w-3 h-3" />
@@ -252,13 +252,13 @@ export function RevenueReportContent() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryCards.map((card, idx) => (
-          <Card key={idx} className="border-slate-200">
+          <Card key={idx} className="border-border">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-slate-500 mb-1">{card.label}</p>
-                  <p className="text-2xl font-semibold text-slate-900">{card.value}</p>
-                  {card.subValue && <p className="text-sm text-slate-500 mt-0.5">{card.subValue}</p>}
+                  <p className="text-sm text-muted-foreground mb-1">{card.label}</p>
+                  <p className="text-2xl font-semibold text-foreground">{card.value}</p>
+                  {card.subValue && <p className="text-sm text-muted-foreground mt-0.5">{card.subValue}</p>}
                 </div>
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorMap[card.color]}`}>
                   <card.icon className="w-5 h-5" />
@@ -275,7 +275,7 @@ export function RevenueReportContent() {
                     {card.change > 0 ? "+" : ""}
                     {card.change}%
                   </span>
-                  <span className="text-sm text-slate-400">vs previous period</span>
+                  <span className="text-sm text-muted-foreground">vs previous period</span>
                 </div>
               )}
             </CardContent>
@@ -284,23 +284,23 @@ export function RevenueReportContent() {
       </div>
 
       {/* Main Chart Section */}
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-base font-semibold text-slate-900">Revenue Over Time</CardTitle>
-              <CardDescription className="text-sm text-slate-500">
+              <CardTitle className="text-base font-semibold text-foreground">Revenue Over Time</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 {compareEnabled && "Dashed line shows previous period"}
               </CardDescription>
             </div>
             <div className="flex items-center gap-3">
               {/* Chart Type Selector */}
-              <div className="flex items-center bg-slate-100 rounded-md p-0.5">
+              <div className="flex items-center bg-muted rounded-md p-0.5">
                 <Button
                   variant="ghost"
                   size="sm"
                   className={`h-8 px-3 ${
-                    chartType === "line" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+                    chartType === "line" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                   onClick={() => setChartType("line")}
                 >
@@ -310,7 +310,7 @@ export function RevenueReportContent() {
                   variant="ghost"
                   size="sm"
                   className={`h-8 px-3 ${
-                    chartType === "bar" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+                    chartType === "bar" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                   onClick={() => setChartType("bar")}
                 >
@@ -320,7 +320,7 @@ export function RevenueReportContent() {
                   variant="ghost"
                   size="sm"
                   className={`h-8 px-3 ${
-                    chartType === "area" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+                    chartType === "area" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                   onClick={() => setChartType("area")}
                 >
@@ -331,7 +331,7 @@ export function RevenueReportContent() {
               {/* Metrics Toggle */}
               <div className="flex items-center gap-1">
                 {[
-                  { key: "revenue", label: "Revenue", color: "bg-blue-600" },
+                  { key: "revenue", label: "Revenue", color: "bg-primary" },
                   { key: "ecpm", label: "eCPM", color: "bg-green-600" },
                   { key: "impressions", label: "Impressions", color: "bg-purple-600" },
                   { key: "fillRate", label: "Fill Rate", color: "bg-amber-500" },
@@ -342,8 +342,8 @@ export function RevenueReportContent() {
                     size="sm"
                     className={`h-8 px-3 gap-2 ${
                       selectedMetrics.includes(metric.key)
-                        ? "border-slate-400 bg-slate-50"
-                        : "border-slate-200 text-slate-500"
+                        ? "border-border bg-muted/50"
+                        : "border-border text-muted-foreground"
                     }`}
                     onClick={() => toggleMetric(metric.key)}
                   >
@@ -361,7 +361,7 @@ export function RevenueReportContent() {
       </Card>
 
       {/* Breakdown Section */}
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-0">
           <Tabs value={breakdownTab} onValueChange={setBreakdownTab}>
             <TabsList className="h-10">
@@ -389,23 +389,23 @@ export function RevenueReportContent() {
       </Card>
 
       {/* Insights Card */}
-      <Card className="border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50">
+      <Card className="border-border bg-muted/40">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Lightbulb className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Lightbulb className="w-4 h-4 text-primary" />
             </div>
-            <CardTitle className="text-base font-semibold text-slate-900">Auto-Generated Insights</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Auto-Generated Insights</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {insights.map((insight, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-3 bg-white/60 rounded-lg border border-white">
+              <div key={idx} className="flex items-start gap-3 p-3 bg-card/60 rounded-lg border border-border">
                 {insight.type === "positive" && <TrendingUp className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />}
-                {insight.type === "info" && <BarChart3 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />}
+                {insight.type === "info" && <BarChart3 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />}
                 {insight.type === "highlight" && <Star className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />}
-                <p className="text-sm text-slate-700">{insight.message}</p>
+                <p className="text-sm text-foreground">{insight.message}</p>
               </div>
             ))}
           </div>

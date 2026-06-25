@@ -178,7 +178,7 @@ export function MetaMediaPickerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-hidden p-0 sm:max-w-6xl" showCloseButton>
-        <DialogHeader className="border-b px-6 pt-6 pb-4">
+        <DialogHeader className="border-b px-4 pt-5 pb-4 sm:px-6 sm:pt-6">
           <DialogTitle>From Meta</DialogTitle>
           <DialogDescription>
             {isMultiple
@@ -187,9 +187,9 @@ export function MetaMediaPickerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 px-6 py-4">
+        <div className="flex flex-col gap-4 px-4 py-4 sm:px-6">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AssetTab)}>
-            <TabsList className="grid w-[220px] grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 sm:w-[220px]">
               <TabsTrigger value="images" className="gap-1.5"><ImageIcon className="h-3.5 w-3.5" />Images</TabsTrigger>
               <TabsTrigger value="videos" className="gap-1.5"><Video className="h-3.5 w-3.5" />Videos</TabsTrigger>
             </TabsList>
@@ -255,7 +255,7 @@ export function MetaMediaPickerDialog({
                 </div>
               ) : null}
 
-              <div className="grid max-h-[420px] grid-cols-2 gap-4 overflow-y-auto pr-1 md:grid-cols-3 xl:grid-cols-4">
+              <div className="grid max-h-[420px] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {items.map((item) => {
                   const isSelectable = selectableAssetType === null ? true : item.assetType === selectableAssetType
                   const selectionKey = getMetaMediaSelectionKey(item)
@@ -341,12 +341,12 @@ export function MetaMediaPickerDialog({
                 })}
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t pt-3">
+              <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-slate-500">
                   Showing {items.length} {activeTab === "images" ? "images" : "videos"}.
                   {isMultiple ? ` Selected ${multiSelectedCount}/${selectionLimit}.` : ""}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {hasMore && nextCursor ? (
                     <Button type="button" variant="outline" onClick={() => setAfter(nextCursor)} disabled={mediaApi.loading}>
                       {mediaApi.loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -386,4 +386,5 @@ export function MetaMediaPickerDialog({
     </Dialog>
   )
 }
+
 

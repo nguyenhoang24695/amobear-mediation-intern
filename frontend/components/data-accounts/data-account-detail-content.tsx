@@ -43,18 +43,18 @@ import { useToast } from "@/hooks/use-toast"
 type NetworkType = "admob" | "applovin" | "xmp" | "appsflyer" | "qonversion" | "apple"
 
 const networkConfig: Record<NetworkType, { label: string; color: string; badgeClass: string }> = {
-  admob: { label: "AdMob", color: "bg-blue-500", badgeClass: "bg-blue-100 text-blue-700 border-blue-200" },
-  applovin: { label: "AppLovin", color: "bg-green-500", badgeClass: "bg-green-100 text-green-700 border-green-200" },
+  admob: { label: "AdMob", color: "bg-primary", badgeClass: "bg-primary/10 text-primary border-primary/20" },
+  applovin: { label: "AppLovin", color: "bg-emerald-500", badgeClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25" },
   xmp: { label: "XMP / Mintegral", color: "bg-purple-500", badgeClass: "bg-purple-100 text-purple-700 border-purple-200" },
   appsflyer: { label: "AppsFlyer", color: "bg-sky-500", badgeClass: "bg-sky-100 text-sky-800 border-sky-200" },
   qonversion: { label: "Qonversion", color: "bg-fuchsia-500", badgeClass: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200" },
-  apple: { label: "Apple App Store", color: "bg-slate-600", badgeClass: "bg-slate-100 text-slate-800 border-slate-200" },
+  apple: { label: "Apple App Store", color: "bg-muted-foreground", badgeClass: "bg-muted text-foreground border-border" },
 }
 
 const statusConfig: Record<string, { label: string; badgeClass: string; dotClass: string }> = {
-  active: { label: "Active", badgeClass: "bg-green-100 text-green-700 border-green-200", dotClass: "bg-green-500" },
-  error: { label: "Error", badgeClass: "bg-red-100 text-red-700 border-red-200", dotClass: "bg-red-500" },
-  disabled: { label: "Disabled", badgeClass: "bg-slate-100 text-slate-600 border-slate-200", dotClass: "bg-slate-400" },
+  active: { label: "Active", badgeClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25", dotClass: "bg-emerald-500" },
+  error: { label: "Error", badgeClass: "bg-destructive/10 text-destructive border-destructive/30", dotClass: "bg-destructive/100" },
+  disabled: { label: "Disabled", badgeClass: "bg-muted text-muted-foreground border-border", dotClass: "bg-muted-foreground" },
 }
 
 // ─── Network avatar icon ──────────────────────────────────────────────────────
@@ -62,12 +62,12 @@ const statusConfig: Record<string, { label: string; badgeClass: string; dotClass
 function NetworkAvatar({ network }: { network: NetworkType }) {
   const initials: Record<NetworkType, string> = { admob: "AM", applovin: "AL", xmp: "XM", appsflyer: "AF", qonversion: "QO", apple: "AP" }
   const colors: Record<NetworkType, string> = {
-    admob: "bg-blue-100 text-blue-700",
-    applovin: "bg-green-100 text-green-700",
+    admob: "bg-primary/10 text-primary",
+    applovin: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     xmp: "bg-purple-100 text-purple-700",
     appsflyer: "bg-sky-100 text-sky-800",
     qonversion: "bg-fuchsia-100 text-fuchsia-800",
-    apple: "bg-slate-200 text-slate-800",
+    apple: "bg-muted text-foreground",
   }
   return (
     <div className={`h-16 w-16 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${colors[network]}`}>
@@ -80,9 +80,9 @@ function NetworkAvatar({ network }: { network: NetworkType }) {
 
 function InfoCard({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1">
-      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-      <div className="text-sm font-medium text-slate-900">{children}</div>
+    <div className="bg-card border border-border rounded-xl p-4 space-y-1">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+      <div className="text-sm font-medium text-foreground">{children}</div>
     </div>
   )
 }
@@ -116,8 +116,8 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
-        <p className="text-sm text-slate-500">Loading account details...</p>
+        <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+        <p className="text-sm text-muted-foreground">Loading account details...</p>
       </div>
     )
   }
@@ -125,8 +125,8 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
   if (!account || !parsed) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <p className="text-lg font-semibold text-slate-900 mb-2">Account not found</p>
-        <p className="text-sm text-slate-500 mb-4">The requested data account does not exist.</p>
+        <p className="text-lg font-semibold text-foreground mb-2">Account not found</p>
+        <p className="text-sm text-muted-foreground mb-4">The requested data account does not exist.</p>
         <Button asChild variant="outline">
           <Link href="/data-accounts">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -271,7 +271,7 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
         {/* Breadcrumb */}
         <Link
           href="/data-accounts"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Data Accounts
@@ -283,13 +283,13 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
             <NetworkAvatar network={account.network as NetworkType} />
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold text-slate-900">{account.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{account.name}</h1>
                 <Badge className={stat.badgeClass}>
                   <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${stat.dotClass}`} />
                   {stat.label}
                 </Badge>
               </div>
-              <p className="text-sm text-slate-500 mt-0.5 font-mono">{account.accountId}</p>
+              <p className="text-sm text-muted-foreground mt-0.5 font-mono">{account.accountId}</p>
             </div>
           </div>
 
@@ -327,21 +327,21 @@ export function DataAccountDetailContent({ accountId }: DataAccountDetailContent
 
           <InfoCard label="Created">
             <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-              <span className="text-xs text-slate-600">{new Date(account.createdAt).toLocaleDateString()}</span>
+              <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs text-muted-foreground">{new Date(account.createdAt).toLocaleDateString()}</span>
             </div>
           </InfoCard>
 
           <InfoCard label="Last Updated">
             <div className="flex items-center gap-2">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-              <span className="text-xs font-normal text-slate-600">{new Date(account.updatedAt).toLocaleDateString()}</span>
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-normal text-muted-foreground">{new Date(account.updatedAt).toLocaleDateString()}</span>
             </div>
           </InfoCard>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-slate-100 flex flex-wrap h-auto gap-1 py-1">
+          <TabsList className="bg-muted flex flex-wrap h-auto gap-1 py-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             {account.network === "appsflyer" && (
               <TabsTrigger value="af-apps">AF Apps</TabsTrigger>

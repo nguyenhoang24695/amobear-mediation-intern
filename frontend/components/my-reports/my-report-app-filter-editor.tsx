@@ -55,39 +55,39 @@ function AppCheckboxRow({
   const initials = appName.slice(0, 2).toUpperCase()
 
   return (
-    <label className="flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md px-1.5 py-2 hover:bg-gray-50">
+    <label className="flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md px-1.5 py-2 hover:bg-muted/60">
       <Checkbox checked={checked} onCheckedChange={onToggle} className="mt-1 shrink-0" />
       <Avatar className="h-9 w-9 shrink-0 rounded-lg">
         {app.iconUri?.trim() ? (
           <AvatarImage src={app.iconUri.trim()} alt={appName} className="rounded-lg object-cover" />
         ) : null}
-        <AvatarFallback className="rounded-lg bg-slate-100 text-[10px] font-medium text-slate-600">
+        <AvatarFallback className="rounded-lg bg-muted text-[10px] font-medium text-muted-foreground">
           {initials}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 overflow-hidden">
         <div className="flex items-start justify-between gap-2">
-          <p className="truncate text-sm font-medium leading-tight text-gray-900" title={appName}>
+          <p className="truncate text-sm font-medium leading-tight text-foreground" title={appName}>
             {appName}
           </p>
           {platformLabel ? (
             <Badge
               variant="outline"
-              className="h-5 shrink-0 px-1.5 text-[10px] font-normal text-gray-600"
+              className="h-5 shrink-0 px-1.5 text-[10px] font-normal text-muted-foreground"
             >
               {platformLabel}
             </Badge>
           ) : null}
         </div>
         <p
-          className="mt-0.5 truncate font-mono text-[11px] leading-tight text-gray-500"
+          className="mt-0.5 truncate font-mono text-[11px] leading-tight text-muted-foreground"
           title={app.appId}
         >
           App ID: {app.appId}
         </p>
         {storeId ? (
           <p
-            className="truncate font-mono text-[11px] leading-tight text-gray-400"
+            className="truncate font-mono text-[11px] leading-tight text-muted-foreground"
             title={storeId}
           >
             Store ID: {storeId}
@@ -108,10 +108,10 @@ function AppListBody({
   children: ReactNode
 }) {
   if (listLoading) {
-    return <p className="px-1 py-4 text-sm text-gray-500">Loading apps…</p>
+    return <p className="px-1 py-4 text-sm text-muted-foreground">Loading apps…</p>
   }
   if (emptyMessage) {
-    return <p className="px-1 py-4 text-sm text-gray-500">{emptyMessage}</p>
+    return <p className="px-1 py-4 text-sm text-muted-foreground">{emptyMessage}</p>
   }
   return <>{children}</>
 }
@@ -201,9 +201,9 @@ export function MyReportAppFilterEditor({
   return (
     <div className="flex max-h-[min(calc(80vh-2rem),520px)] w-full min-w-0 flex-col gap-3 overflow-hidden">
       <div className="shrink-0 space-y-3">
-        <Label className="text-xs font-medium text-gray-500">Apps</Label>
+        <Label className="text-xs font-medium text-muted-foreground">Apps</Label>
 
-        <div className="flex rounded-md border border-gray-200 bg-gray-50 p-0.5">
+        <div className="flex rounded-md border border-border bg-muted/50 p-0.5">
           {MY_REPORT_APP_SELECTION_MODES.map((option) => (
             <button
               key={option.value}
@@ -211,8 +211,8 @@ export function MyReportAppFilterEditor({
               className={cn(
                 "flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
                 mode === option.value
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900",
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => handleModeChange(option.value)}
             >
@@ -222,7 +222,7 @@ export function MyReportAppFilterEditor({
         </div>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -240,7 +240,7 @@ export function MyReportAppFilterEditor({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         {noSearchResults ? (
-          <p className="px-1 py-4 text-sm text-gray-500">No apps match your search.</p>
+          <p className="px-1 py-4 text-sm text-muted-foreground">No apps match your search.</p>
         ) : mode === "permission" ? (
           <AppListBody
             listLoading={listLoading}
@@ -266,7 +266,7 @@ export function MyReportAppFilterEditor({
           >
             {filteredTeamGroups.map((group) => (
               <div key={group.teamId} className="pb-2">
-                <p className="sticky top-0 z-[1] bg-white py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <p className="sticky top-0 z-[1] bg-popover py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {group.teamName}
                 </p>
                 <div className="space-y-0.5">

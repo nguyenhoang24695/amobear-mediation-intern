@@ -22,11 +22,11 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import type { DataQualityRowDto } from "@/types/api"
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  healthy: { label: "Healthy", className: "bg-green-100 text-green-700 border-green-200" },
+  healthy: { label: "Healthy", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25" },
   warning: { label: "Warning", className: "bg-amber-100 text-amber-700 border-amber-200" },
-  critical: { label: "Critical", className: "bg-red-100 text-red-700 border-red-200" },
-  scheduled_only: { label: "Scheduled", className: "bg-slate-100 text-slate-600 border-slate-200" },
-  unknown: { label: "Unknown", className: "bg-slate-100 text-slate-500 border-slate-200" },
+  critical: { label: "Critical", className: "bg-destructive/10 text-destructive border-destructive/30" },
+  scheduled_only: { label: "Scheduled", className: "bg-muted text-muted-foreground border-border" },
+  unknown: { label: "Unknown", className: "bg-muted text-muted-foreground border-border" },
 }
 
 type SortKey = "source" | "table" | "lastUpdated" | "rowCount" | "status" | "layer"
@@ -99,11 +99,11 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
   }
 
   const SortIcon = ({ column }: { column: SortKey }) => {
-    if (sortKey !== column) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+    if (sortKey !== column) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-muted-foreground" />
     return sortDir === "asc" ? (
-      <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowUp className="w-3.5 h-3.5 ml-1 text-primary" />
     ) : (
-      <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowDown className="w-3.5 h-3.5 ml-1 text-primary" />
     )
   }
 
@@ -112,7 +112,7 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
       <button
         type="button"
         onClick={() => toggleSort(column)}
-        className="inline-flex items-center font-medium text-slate-700 hover:text-slate-900"
+        className="inline-flex items-center font-medium text-foreground hover:text-foreground"
       >
         {label}
         <SortIcon column={column} />
@@ -158,7 +158,7 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
       <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
+            <TableRow className="bg-muted/40">
               {sortableHead("Source", "source")}
               {sortableHead("Layer", "layer", "w-[90px]")}
               {sortableHead("Table", "table")}
@@ -171,22 +171,22 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
             {filteredSorted.map((row) => {
               const cfg = statusConfig[row.status] ?? statusConfig.unknown
               return (
-                <TableRow key={row.id} className="hover:bg-slate-50/80">
-                  <TableCell className="text-sm text-slate-800">{row.sourceName}</TableCell>
+                <TableRow key={row.id} className="hover:bg-muted/40">
+                  <TableCell className="text-sm text-foreground">{row.sourceName}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[10px]">
                       {row.layer}
                     </Badge>
                   </TableCell>
                   <TableCell className="align-top">
-                    <div className="font-mono text-xs text-slate-800">{row.tableName}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{row.description}</div>
-                    {row.notes && <div className="text-[11px] text-slate-400 italic mt-1">{row.notes}</div>}
+                    <div className="font-mono text-xs text-foreground">{row.tableName}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{row.description}</div>
+                    {row.notes && <div className="text-[11px] text-muted-foreground italic mt-1">{row.notes}</div>}
                   </TableCell>
-                  <TableCell className="text-xs text-slate-600 whitespace-nowrap align-top">
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap align-top">
                     {row.lastUpdatedRelative || "—"}
                   </TableCell>
-                  <TableCell className="text-xs font-mono text-slate-700 text-right align-top">{row.rowCount ?? "—"}</TableCell>
+                  <TableCell className="text-xs font-mono text-foreground text-right align-top">{row.rowCount ?? "—"}</TableCell>
                   <TableCell className="text-right align-top">
                     <Badge variant="outline" className={cfg.className}>
                       {cfg.label}
@@ -198,7 +198,7 @@ export function DataQualityMonitor({ rows }: { rows: DataQualityRowDto[] }) {
           </TableBody>
         </Table>
         {filteredSorted.length === 0 && (
-          <p className="text-sm text-slate-500 py-6 text-center">No rows match filters.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">No rows match filters.</p>
         )}
       </CardContent>
     </Card>

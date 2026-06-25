@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo, useCallback, useEffect } from "react"
 import type React from "react"
@@ -469,14 +469,14 @@ export function PermissionManagementContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   if (error && roles.length === 0) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
         <p className="font-medium">Could not load permissions</p>
         <p className="text-sm mt-1">{error}</p>
       </div>
@@ -486,71 +486,71 @@ export function PermissionManagementContent() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-amber-800 text-sm">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-800 dark:text-amber-300">
           {error}
         </div>
       )}
       {/* Header + compact stats */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="rounded-lg bg-blue-50 p-2">
-            <Shield className="h-6 w-6 text-blue-600" />
+          <div className="rounded-lg bg-primary/10 p-2">
+            <Shield className="h-6 w-6 text-primary" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-balance text-slate-900 lg:text-3xl">
+            <h1 className="text-2xl font-bold text-balance text-foreground lg:text-3xl">
               Permission Management
             </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               Define role-based access control for screens and functions
             </p>
           </div>
         </div>
 
         <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:gap-3">
-          <Card className="border-slate-200 bg-slate-50 py-0 shadow-none">
+          <Card className="bg-muted/25 py-0 shadow-none">
             <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
-                <p className="truncate text-[11px] font-medium text-slate-500">Total Roles</p>
-                <p className="text-lg font-bold leading-tight text-slate-900">{totalRoles}</p>
+                <p className="truncate text-[11px] font-medium text-muted-foreground">Total Roles</p>
+                <p className="text-lg font-bold leading-tight text-foreground">{totalRoles}</p>
               </div>
-              <Shield className="h-4 w-4 shrink-0 text-slate-400" />
+              <Shield className="h-4 w-4 shrink-0 text-muted-foreground" />
             </CardContent>
           </Card>
-          <Card className="border-slate-200 bg-slate-50 py-0 shadow-none">
+          <Card className="bg-muted/25 py-0 shadow-none">
             <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
-                <p className="truncate text-[11px] font-medium text-slate-500">Screens</p>
-                <p className="text-lg font-bold leading-tight text-slate-900">{totalScreens}</p>
+                <p className="truncate text-[11px] font-medium text-muted-foreground">Screens</p>
+                <p className="text-lg font-bold leading-tight text-foreground">{totalScreens}</p>
               </div>
-              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+              <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-blue-50 py-0 shadow-none">
+          <Card className="border-primary/20 bg-primary/10 py-0 shadow-none">
             <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
-                <p className="truncate text-[11px] font-medium text-blue-700">Granted</p>
-                <p className="text-lg font-bold leading-tight text-blue-600">
+                <p className="truncate text-[11px] font-medium text-primary">Granted</p>
+                <p className="text-lg font-bold leading-tight text-primary">
                   {totalPermissionsGranted}
-                  <span className="ml-0.5 text-[11px] font-normal text-blue-400">/ {maxPermissions}</span>
+                  <span className="ml-0.5 text-[11px] font-normal text-primary/70">/ {maxPermissions}</span>
                 </p>
               </div>
-              <Lock className="h-4 w-4 shrink-0 text-blue-500" />
+              <Lock className="h-4 w-4 shrink-0 text-primary" />
             </CardContent>
           </Card>
-          <Card className="border-slate-200 bg-slate-50 py-0 shadow-none">
+          <Card className="bg-muted/25 py-0 shadow-none">
             <CardContent className="flex items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
-                <p className="truncate text-[11px] font-medium text-slate-500">Users in Role</p>
-                <p className="text-lg font-bold leading-tight text-slate-900">{selectedRole.userCount}</p>
+                <p className="truncate text-[11px] font-medium text-muted-foreground">Users in Role</p>
+                <p className="text-lg font-bold leading-tight text-foreground">{selectedRole.userCount}</p>
               </div>
-              <Users className="h-4 w-4 shrink-0 text-slate-400" />
+              <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
             </CardContent>
           </Card>
         </div>
       </div>
 
       {showSavedToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex animate-in fade-in slide-in-from-bottom-4 items-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-white shadow-lg duration-300">
+        <div className="fixed bottom-6 right-6 z-50 flex animate-in fade-in slide-in-from-bottom-4 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-white shadow-lg duration-300">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
@@ -576,9 +576,9 @@ export function PermissionManagementContent() {
             disabled={!canChange || !quickMappingEditMode}
             notice={
               quickMappingEditMode && hasUnsavedChangesAnyRole ? (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+                <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
                   <div className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
-                  <span className="text-sm font-medium text-amber-700">
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
                     You have unsaved changes across {dirtyRoleIds.length} role(s)
                   </span>
                 </div>
@@ -616,7 +616,7 @@ export function PermissionManagementContent() {
                 {quickMappingEditMode && hasUnsavedChangesAnyRole && (
                   <Button
                     variant="outline"
-                    className="border-slate-300 text-slate-600 bg-transparent"
+                    className="border-border text-muted-foreground bg-transparent"
                     onClick={handleDiscardAllChanged}
                   >
                     Discard
@@ -624,7 +624,7 @@ export function PermissionManagementContent() {
                 )}
                 {quickMappingEditMode && (
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
                     disabled={!hasUnsavedChangesAnyRole || saving || loadingPermissions || !canChange}
                     onClick={handleSaveAllChanged}
                     title={!canChange ? "You don't have permission to change permissions" : undefined}
@@ -649,19 +649,19 @@ export function PermissionManagementContent() {
         </TabsContent>
 
         <TabsContent value="role-configuration">
-          {/* Role Configuration actions — sticky while scrolling */}
-          <div className="sticky top-0 z-30 -mx-1 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-white/95 py-3 px-1 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
+          {/* Role Configuration actions - sticky while scrolling */}
+          <div className="sticky top-0 z-30 -mx-1 flex flex-wrap items-center justify-end gap-2 border-b border-border bg-background/95 py-3 px-1 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80">
             {hasUnsavedChangesSelected && (
               <Button
                 variant="outline"
-                className="border-slate-300 text-slate-600 bg-transparent"
+                className="border-border text-muted-foreground bg-transparent"
                 onClick={handleDiscardSelected}
               >
                 Discard
               </Button>
             )}
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={!hasUnsavedChangesSelected || saving || loadingPermissions || !canChange}
               onClick={handleSaveSelected}
               title={!canChange ? "You don't have permission to change permissions" : undefined}
@@ -678,9 +678,9 @@ export function PermissionManagementContent() {
           </div>
 
           {hasUnsavedChangesSelected && (
-            <div className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200">
-              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-sm font-medium text-amber-700">
+            <div className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
                 You have unsaved changes for the &quot;{selectedRole.name}&quot; role
               </span>
             </div>
@@ -735,13 +735,13 @@ export function PermissionManagementContent() {
               Keep editing
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-slate-900 hover:bg-slate-800"
+              className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleConfirmDiscard}
             >
               Discard
             </AlertDialogAction>
             <AlertDialogAction
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={(e) => {
                 // prevent radix from closing instantly while async save runs
                 e.preventDefault()
@@ -756,3 +756,4 @@ export function PermissionManagementContent() {
     </div>
   )
 }
+

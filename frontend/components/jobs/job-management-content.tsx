@@ -215,14 +215,14 @@ export function JobManagementContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-slate-100">
-            <Briefcase className="w-6 h-6 text-slate-600" />
+          <div className="rounded-lg bg-primary/10 p-2">
+            <Briefcase className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl">
+            <h1 className="text-2xl font-bold lg:text-3xl">
               Job Management
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Manage Hangfire recurring jobs and schedules
             </p>
           </div>
@@ -237,14 +237,14 @@ export function JobManagementContent() {
           {canReload && (
             <Button
               variant="outline"
-              className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 sm:w-auto"
+              className="w-full border-primary/20 text-primary hover:bg-primary/10 hover:text-primary sm:w-auto"
               onClick={() => setReloadOpen(true)}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Reload Schedules
             </Button>
           )}
-          <Button variant="ghost" className="w-full text-slate-600 sm:w-auto" onClick={handleRefresh}>
+          <Button variant="ghost" className="w-full text-muted-foreground sm:w-auto" onClick={handleRefresh}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
@@ -253,65 +253,65 @@ export function JobManagementContent() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Total Jobs</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">
+                <p className="text-sm font-medium text-muted-foreground">Total Jobs</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
                   {loading ? "..." : jobs.length}
                 </p>
               </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <Briefcase className="w-5 h-5 text-slate-600" />
+              <div className="rounded-lg border bg-background p-2.5">
+                <Briefcase className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-emerald-500/20 bg-emerald-500/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Enabled</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Enabled</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
                   {loading ? "..." : enabledCount}
                 </p>
               </div>
-              <div className="p-2.5 rounded-lg bg-white border border-green-200">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+              <div className="rounded-lg border border-emerald-500/20 bg-background p-2.5">
+                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Disabled</p>
-                <p className="text-2xl font-bold text-slate-600 mt-1">
+                <p className="text-sm font-medium text-muted-foreground">Disabled</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
                   {loading ? "..." : disabledCount}
                 </p>
               </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <XCircle className="w-5 h-5 text-slate-500" />
+              <div className="rounded-lg border bg-background p-2.5">
+                <XCircle className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Last Reload</p>
-                <p className="text-sm font-semibold text-slate-600 mt-1">
+                <p className="text-sm font-medium text-muted-foreground">Last Reload</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
                   {lastReloadLabel}
                 </p>
               </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <Clock className="w-5 h-5 text-slate-500" />
+              <div className="rounded-lg border bg-background p-2.5">
+                <Clock className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
@@ -322,7 +322,7 @@ export function JobManagementContent() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search jobs..."
               className="pl-9"
@@ -359,10 +359,10 @@ export function JobManagementContent() {
 
       {/* Jobs Table */}
       {loading ? (
-        <Card className="border-slate-200">
+        <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 text-slate-400 animate-spin mb-3" />
-            <p className="text-sm text-slate-500">Loading jobs...</p>
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading jobs...</p>
           </CardContent>
         </Card>
       ) : (
@@ -456,7 +456,7 @@ export function JobManagementContent() {
               <>
                 <AlertDialogCancel>Hủy</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={(e) => {
                     e.preventDefault()
                     if (!confirmRunAfterSaveJob) return
@@ -488,7 +488,7 @@ export function JobManagementContent() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={reloading}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={(e) => {
                 e.preventDefault()
                 handleReload()

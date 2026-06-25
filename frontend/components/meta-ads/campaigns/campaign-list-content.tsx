@@ -185,13 +185,13 @@ function SearchableFilterCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("h-9 w-full justify-between bg-white text-sm font-normal", className)}
+          className={cn("h-9 w-full justify-between bg-background text-sm font-normal hover:bg-muted/60 hover:text-foreground", className)}
         >
           <span className="truncate">{selectedOption?.label ?? placeholder}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start">
+      <PopoverContent className="w-[min(320px,calc(100vw-2rem))] p-0" align="start">
         <Command shouldFilter>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -209,7 +209,7 @@ function SearchableFilterCombobox({
                   <Check className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
                   <div className="flex min-w-0 flex-col text-left">
                     <span className="truncate font-medium">{option.label}</span>
-                    {option.helperText ? <span className="truncate text-xs text-slate-500">{option.helperText}</span> : null}
+                    {option.helperText ? <span className="truncate text-xs text-muted-foreground">{option.helperText}</span> : null}
                   </div>
                 </CommandItem>
               ))}
@@ -242,7 +242,7 @@ function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: App
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-full justify-between bg-white text-sm font-normal"
+          className="h-9 w-full justify-between bg-background text-sm font-normal hover:bg-muted/60 hover:text-foreground"
         >
           {selectedOption?.value === "all" ? (
             <span className="truncate">All Apps</span>
@@ -250,20 +250,20 @@ function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: App
             <span className="flex min-w-0 items-center gap-2">
               <Avatar className="h-5 w-5 shrink-0 rounded">
                 <AvatarImage src={selectedOption?.iconUri || "/placeholder.svg"} alt={selectedOption?.label ?? "App"} className="rounded object-cover" />
-                <AvatarFallback className="rounded bg-slate-100 text-[10px] font-semibold text-slate-600">
+                <AvatarFallback className="rounded bg-muted text-[10px] font-semibold text-muted-foreground">
                   {getInitials(selectedOption?.label)}
                 </AvatarFallback>
               </Avatar>
               <span className="min-w-0 text-left">
                 <span className="block truncate">{selectedOption?.label ?? "All Apps"}</span>
-                {selectedMeta ? <span className="block truncate text-[11px] text-slate-500">{selectedMeta}</span> : null}
+                {selectedMeta ? <span className="block truncate text-[11px] text-muted-foreground">{selectedMeta}</span> : null}
               </span>
             </span>
           )}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[360px] p-0" align="start">
+      <PopoverContent className="w-[min(360px,calc(100vw-2rem))] p-0" align="start">
         <Command shouldFilter>
           <CommandInput placeholder="Search by app name or app ID..." />
           <CommandList>
@@ -285,13 +285,13 @@ function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: App
                     <>
                       <Avatar className="h-8 w-8 shrink-0 rounded">
                         <AvatarImage src={option.iconUri || "/placeholder.svg"} alt={option.label} className="rounded object-cover" />
-                        <AvatarFallback className="rounded bg-slate-100 text-xs font-semibold text-slate-600">
+                        <AvatarFallback className="rounded bg-muted text-xs font-semibold text-muted-foreground">
                           {getInitials(option.label)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex min-w-0 flex-col text-left">
                         <span className="truncate font-medium">{option.label}</span>
-                        <span className="truncate text-xs text-slate-500">
+                        <span className="truncate text-xs text-muted-foreground">
                           {[formatPlatformDisplay(option.platform), formatAppIdDisplay(option.appId)].filter(Boolean).join(" ")}
                         </span>
                       </div>
@@ -309,19 +309,19 @@ function AppFilterCombobox({ open, onOpenChange, value, onChange, options }: App
 
 function getStatusBadgeClass(value?: string | null): string {
   const normalized = (value ?? "UNKNOWN").trim().toUpperCase()
-  if (normalized === "ACTIVE") return "bg-green-100 text-green-700 border-green-200"
-  if (normalized.includes("PAUSED")) return "bg-amber-100 text-amber-700 border-amber-200"
-  if (issueStatuses.has(normalized)) return "bg-red-100 text-red-700 border-red-200"
-  if (normalized === "UNKNOWN") return "bg-slate-100 text-slate-600 border-slate-200"
-  return "bg-blue-100 text-blue-700 border-blue-200"
+  if (normalized === "ACTIVE") return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/25"
+  if (normalized.includes("PAUSED")) return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25"
+  if (issueStatuses.has(normalized)) return "bg-destructive/10 text-destructive border-destructive/25"
+  if (normalized === "UNKNOWN") return "bg-muted text-muted-foreground border-border"
+  return "bg-primary/10 text-primary border-primary/25"
 }
 
 function renderAppCell(item: MetaCampaignListItemDto) {
   if (item.isUnmapped || !item.appDisplayName) {
     return (
       <div className="space-y-1">
-        <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Unmapped Meta App</Badge>
-        <p className="text-xs text-slate-500">Resolve app mapping to attach this campaign to a project app.</p>
+        <Badge className="border border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300">Unmapped Meta App</Badge>
+        <p className="text-xs text-muted-foreground">Resolve app mapping to attach this campaign to a project app.</p>
       </div>
     )
   }
@@ -329,8 +329,8 @@ function renderAppCell(item: MetaCampaignListItemDto) {
   const appHref = item.appId ? `/apps/${item.appId}` : undefined
   const title = (
     <div className="min-w-0">
-      <div className="truncate font-medium text-slate-900">{item.appDisplayName}</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <div className="truncate font-medium text-foreground">{item.appDisplayName}</div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {item.platform ? <span>{toTitleCase(item.platform)}</span> : null}
         {item.appId ? <span className="font-mono">{item.appId}</span> : null}
       </div>
@@ -342,7 +342,7 @@ function renderAppCell(item: MetaCampaignListItemDto) {
     <div className="flex min-w-0 items-center gap-3">
       <Avatar className="h-9 w-9 shrink-0 rounded-lg">
         <AvatarImage src={item.appIconUri || "/placeholder.svg"} alt={item.appDisplayName} className="rounded-lg object-cover" />
-        <AvatarFallback className="rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-600">
+        <AvatarFallback className="rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">
           {getInitials(item.appDisplayName)}
         </AvatarFallback>
       </Avatar>
@@ -358,26 +358,26 @@ function renderAppCell(item: MetaCampaignListItemDto) {
 function renderAccountCell(item: MetaCampaignListItemDto) {
   return (
     <div className="min-w-0 space-y-1">
-      <div className="truncate font-medium text-slate-900">{item.metaAdAccountName ?? item.metaAdAccountId}</div>
-      <div className="truncate font-mono text-xs text-slate-500">{formatPrefixedIdentifier(item.metaAdAccountId, "act")}</div>
-      {item.businessId ? <div className="truncate font-mono text-xs text-slate-400">{formatPrefixedIdentifier(item.businessId, "biz")}</div> : null}
+      <div className="truncate font-medium text-foreground">{item.metaAdAccountName ?? item.metaAdAccountId}</div>
+      <div className="truncate font-mono text-xs text-muted-foreground">{formatPrefixedIdentifier(item.metaAdAccountId, "act")}</div>
+      {item.businessId ? <div className="truncate font-mono text-xs text-muted-foreground/70">{formatPrefixedIdentifier(item.businessId, "biz")}</div> : null}
     </div>
   )
 }
 
 function SummaryCard({ title, value, tone = "default" }: { title: string; value: string | number; tone?: "default" | "good" | "warn" | "danger" }) {
   const toneClass = tone === "good"
-    ? "border-green-200 bg-green-50"
+    ? "border-green-500/25 bg-green-500/10"
     : tone === "warn"
-      ? "border-amber-200 bg-amber-50"
+      ? "border-amber-500/25 bg-amber-500/10"
       : tone === "danger"
-        ? "border-red-200 bg-red-50"
-        : "border-slate-200 bg-white"
+        ? "border-destructive/25 bg-destructive/10"
+        : "border-border bg-background"
 
   return (
     <div className={cn("rounded-xl border px-4 py-3", toneClass)}>
-      <div className="text-xs uppercase tracking-wide text-slate-500">{title}</div>
-      <div className="mt-1 text-2xl font-semibold text-slate-900">{value}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{title}</div>
+      <div className="mt-1 text-2xl font-semibold text-foreground">{value}</div>
     </div>
   )
 }
@@ -744,28 +744,28 @@ export function CampaignListContent() {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>Meta Ads</span>
             <ChevronRight className="h-3 w-3" />
-            <span className="font-medium text-slate-900">Campaigns</span>
+            <span className="font-medium text-foreground">Campaigns</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-blue-50 p-2">
-              <Megaphone className="h-5 w-5 text-blue-600" />
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Megaphone className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Meta Campaigns</h1>
-              <p className="text-sm text-slate-500">Monitor campaigns already known in Mediation Pro and drill into synced Meta structure.</p>
+              <h1 className="text-xl font-bold text-foreground">Meta Campaigns</h1>
+              <p className="text-sm text-muted-foreground">Monitor campaigns already known in Mediation Pro and drill into synced Meta structure.</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right text-xs text-slate-500">
-            <div className="font-medium text-slate-700">Last synced</div>
+          <div className="text-right text-xs text-muted-foreground">
+            <div className="font-medium text-foreground">Last synced</div>
             <div>{summary?.lastSyncedAt ? `${formatRelativeTime(summary.lastSyncedAt)} (${formatDateTime(summary.lastSyncedAt)})` : "No campaign sync yet"}</div>
           </div>
           {canSync ? (
-            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleSync} disabled={syncing}>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSync} disabled={syncing}>
               {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Sync from Meta
             </Button>
@@ -784,11 +784,11 @@ export function CampaignListContent() {
         <SummaryCard title="Stale Sync" value={summary?.staleSync ?? 0} tone="warn" />
       </div>
 
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="space-y-3">
-              <CardTitle className="text-base font-semibold text-slate-900">Live Campaign Monitor</CardTitle>
+              <CardTitle className="text-base font-semibold text-foreground">Live Campaign Monitor</CardTitle>
               <div className="flex flex-wrap gap-2">
                 {([
                   { key: "all", label: "All", count: summary?.total ?? 0 },
@@ -801,13 +801,15 @@ export function CampaignListContent() {
                     type="button"
                     variant="outline"
                     className={cn(
-                      "h-9 rounded-full border-slate-200 px-4 text-sm",
-                      quickFilter === item.key ? "border-blue-200 bg-blue-50 text-blue-700" : "bg-white text-slate-600"
+                      "h-9 rounded-full border-border px-4 text-sm transition-colors",
+                      quickFilter === item.key
+                        ? "border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                        : "bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     )}
                     onClick={() => setQuickFilter(item.key)}
                   >
                     {item.label}
-                    <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-xs text-slate-500">{item.count}</span>
+                    <span className="ml-2 rounded-full bg-background/80 px-2 py-0.5 text-xs text-muted-foreground">{item.count}</span>
                   </Button>
                 ))}
               </div>
@@ -815,7 +817,7 @@ export function CampaignListContent() {
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
               <div className="relative md:col-span-2 xl:col-span-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -883,25 +885,25 @@ export function CampaignListContent() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="w-[280px] text-xs font-medium text-slate-500">Campaign</TableHead>
-                  <TableHead className="w-[150px] text-xs font-medium text-slate-500">Meta Campaign ID</TableHead>
-                  <TableHead className="w-[240px] text-xs font-medium text-slate-500">App</TableHead>
-                  <TableHead className="w-[220px] text-xs font-medium text-slate-500">Ad Account</TableHead>
-                  <TableHead className="w-[140px] text-xs font-medium text-slate-500">Objective</TableHead>
-                  <TableHead className="w-[140px] text-xs font-medium text-slate-500">Effective Status</TableHead>
-                  <TableHead className="w-[120px] text-xs font-medium text-slate-500">Status</TableHead>
-                  <TableHead className="w-[150px] text-xs font-medium text-slate-500">Source</TableHead>
-                  <TableHead className="w-[150px] text-xs font-medium text-slate-500">Last Synced</TableHead>
-                  <TableHead className="w-[150px] text-xs font-medium text-slate-500">Created</TableHead>
-                  <TableHead className="w-[70px] text-right text-xs font-medium text-slate-500">Actions</TableHead>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="w-[280px] text-xs font-medium text-muted-foreground">Campaign</TableHead>
+                  <TableHead className="w-[150px] text-xs font-medium text-muted-foreground">Meta Campaign ID</TableHead>
+                  <TableHead className="w-[240px] text-xs font-medium text-muted-foreground">App</TableHead>
+                  <TableHead className="w-[220px] text-xs font-medium text-muted-foreground">Ad Account</TableHead>
+                  <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Objective</TableHead>
+                  <TableHead className="w-[140px] text-xs font-medium text-muted-foreground">Effective Status</TableHead>
+                  <TableHead className="w-[120px] text-xs font-medium text-muted-foreground">Status</TableHead>
+                  <TableHead className="w-[150px] text-xs font-medium text-muted-foreground">Source</TableHead>
+                  <TableHead className="w-[150px] text-xs font-medium text-muted-foreground">Last Synced</TableHead>
+                  <TableHead className="w-[150px] text-xs font-medium text-muted-foreground">Created</TableHead>
+                  <TableHead className="w-[70px] text-right text-xs font-medium text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={11} className="py-16 text-center">
-                      <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading campaigns...
                       </div>
@@ -909,13 +911,13 @@ export function CampaignListContent() {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-16 text-center text-sm text-red-600">
+                    <TableCell colSpan={11} className="py-16 text-center text-sm text-destructive">
                       {error.message}
                     </TableCell>
                   </TableRow>
                 ) : (response?.items.length ?? 0) === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-16 text-center text-sm text-slate-400">
+                    <TableCell colSpan={11} className="py-16 text-center text-sm text-muted-foreground/70">
                       No campaigns found for the current filters.
                     </TableCell>
                   </TableRow>
@@ -930,17 +932,17 @@ export function CampaignListContent() {
                     const statusBusy = statusUpdatingId === item.id
                     const menuBusy = duplicatingCampaignId === item.id || readinessBusy || statusBusy
                     return (
-                      <TableRow key={item.id} className={cn(hasIssue && "bg-amber-50/40")}>
+                      <TableRow key={item.id} className={cn(hasIssue ? "bg-amber-500/10 hover:bg-amber-500/15" : "hover:bg-muted/40")}>
                         <TableCell>
                           <div className="space-y-1">
-                            <Link href={`/meta-ads/campaigns/${item.id}`} className="font-medium text-slate-900 hover:text-blue-700 hover:underline">
+                            <Link href={`/meta-ads/campaigns/${item.id}`} className="font-medium text-foreground hover:text-primary hover:underline">
                               {item.name}
                             </Link>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <span>{item.adSetCount} ad sets</span>
                               <span>{item.adCount} ads</span>
                               {hasIssue ? (
-                                <span className="inline-flex items-center gap-1 text-amber-700">
+                                <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
                                   <AlertTriangle className="h-3.5 w-3.5" />
                                   Attention
                                 </span>
@@ -949,12 +951,12 @@ export function CampaignListContent() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-mono text-sm text-slate-700">{item.externalCampaignId}</div>
+                          <div className="font-mono text-sm text-foreground">{item.externalCampaignId}</div>
                         </TableCell>
                         <TableCell>{renderAppCell(item)}</TableCell>
                         <TableCell>{renderAccountCell(item)}</TableCell>
                         <TableCell>
-                          <div className="text-sm font-medium text-slate-700">{toTitleCase(item.objective)}</div>
+                          <div className="text-sm font-medium text-foreground">{toTitleCase(item.objective)}</div>
                         </TableCell>
                         <TableCell>
                           <Badge className={cn("border", getStatusBadgeClass(item.effectiveStatus))}>{toTitleCase(item.effectiveStatus)}</Badge>
@@ -963,25 +965,25 @@ export function CampaignListContent() {
                           <Badge className={cn("border", getStatusBadgeClass(item.status))}>{toTitleCase(item.status)}</Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="space-y-1 text-sm text-slate-700">
+                          <div className="space-y-1 text-sm text-foreground">
                             <div>{getSourceLabel(item.source)}</div>
                             {item.createdFromRequestId ? (
-                              <Link href={`/meta-ads/requests/${item.createdFromRequestId}`} className="text-xs text-blue-600 hover:underline">
+                              <Link href={`/meta-ads/requests/${item.createdFromRequestId}`} className="text-xs text-primary hover:underline">
                                 Request #{item.createdFromRequestId}
                               </Link>
                             ) : null}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="space-y-1 text-sm text-slate-700">
+                          <div className="space-y-1 text-sm text-foreground">
                             <div className="font-medium">{formatRelativeTime(item.lastSyncedAt)}</div>
-                            <div className="text-xs text-slate-500">{formatDateTime(item.lastSyncedAt)}</div>
+                            <div className="text-xs text-muted-foreground">{formatDateTime(item.lastSyncedAt)}</div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="space-y-1 text-sm text-slate-700">
+                          <div className="space-y-1 text-sm text-foreground">
                             <div className="font-medium">{formatRelativeTime(item.createdAt)}</div>
-                            <div className="text-xs text-slate-500">{formatDateTime(item.createdAt)}</div>
+                            <div className="text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</div>
                           </div>
                         </TableCell>
                         <TableCell className="w-[70px] text-right">
@@ -1083,11 +1085,11 @@ export function CampaignListContent() {
               {statusUpdateError?.action === "pause" ? "Pause" : "Resume"} Campaign Failed
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 break-words">
-              <span className="block rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <span className="block rounded-md border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
                 {statusUpdateError?.message ?? "Meta campaign status update failed."}
               </span>
-              <span className="block text-xs text-slate-600">
-                Campaign: <span className="font-medium text-slate-900">{statusUpdateError?.campaignName ?? "Selected campaign"}</span>
+              <span className="block text-xs text-muted-foreground">
+                Campaign: <span className="font-medium text-foreground">{statusUpdateError?.campaignName ?? "Selected campaign"}</span>
                 {statusUpdateError ? ` - ID: ${statusUpdateError.campaignId} - ${formatDateTime(statusUpdateError.occurredAt)}` : null}
               </span>
             </AlertDialogDescription>
@@ -1095,7 +1097,7 @@ export function CampaignListContent() {
           <AlertDialogFooter className="flex-wrap">
             <AlertDialogCancel>Close</AlertDialogCancel>
             <Button
-              className="bg-blue-600 text-white hover:bg-blue-700"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => {
                 if (!statusUpdateError) return
                 router.push(`/meta-ads/campaigns/${statusUpdateError.campaignId}`)
@@ -1123,8 +1125,8 @@ export function CampaignListContent() {
               <span className="block">
                 {statusTargetAction?.confirmDescription ?? "This will update the campaign status on Meta."}
               </span>
-              <span className="block rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="block break-all font-medium text-slate-900">{statusTarget?.name ?? "Selected campaign"}</span>
+              <span className="block rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                <span className="block break-all font-medium text-foreground">{statusTarget?.name ?? "Selected campaign"}</span>
                 <span className="mt-1 block">Status: {toTitleCase(statusTarget?.status)} · Effective: {toTitleCase(statusTarget?.effectiveStatus)} · Target: {toTitleCase(statusTargetAction?.targetStatus)}</span>
               </span>
             </AlertDialogDescription>
@@ -1132,7 +1134,7 @@ export function CampaignListContent() {
           <AlertDialogFooter className="flex-wrap">
             <AlertDialogCancel disabled={statusUpdatingId !== null}>Cancel</AlertDialogCancel>
             <Button
-              className={statusTargetAction?.action === "pause" ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-emerald-600 text-white hover:bg-emerald-700"}
+              className={statusTargetAction?.action === "pause" ? "bg-amber-600 text-primary-foreground hover:bg-amber-700" : "bg-green-600 text-primary-foreground hover:bg-green-700"}
               disabled={!statusTarget || !statusTargetAction || statusUpdatingId !== null}
               onClick={() => {
                 if (statusTarget) {
@@ -1167,7 +1169,7 @@ export function CampaignListContent() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <div className="text-sm font-medium text-slate-700">Number of copies</div>
+            <div className="text-sm font-medium text-foreground">Number of copies</div>
             <Input
               type="number"
               min={1}
@@ -1176,12 +1178,12 @@ export function CampaignListContent() {
               onChange={(event) => setDuplicateQuantity(event.target.value)}
               disabled={duplicatingCampaignId !== null}
             />
-            <div className={cn("text-xs", duplicateQuantityValid ? "text-slate-500" : "text-red-600")}>Create between 1 and 10 paused campaign copies.</div>
+            <div className={cn("text-xs", duplicateQuantityValid ? "text-muted-foreground" : "text-destructive")}>Create between 1 and 10 paused campaign copies.</div>
           </div>
           <AlertDialogFooter className="flex-wrap">
             <AlertDialogCancel disabled={duplicatingCampaignId !== null}>Cancel</AlertDialogCancel>
             <Button
-              className="bg-blue-600 text-white hover:bg-blue-700"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={!duplicateTarget || duplicatingCampaignId !== null || duplicateTargetReadiness?.isReady !== true || !duplicateQuantityValid}
               onClick={() => {
                 if (duplicateTarget) {
@@ -1198,4 +1200,5 @@ export function CampaignListContent() {
     </div>
   )
 }
+
 

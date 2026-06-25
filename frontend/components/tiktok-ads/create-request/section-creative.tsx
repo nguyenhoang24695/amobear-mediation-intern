@@ -249,10 +249,10 @@ export function CreativeSection({
       ready={ready}
     >
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-[220px]">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,220px)]">
           <div className="space-y-2">
             <Label>Ad format</Label>
-            <div className="flex h-10 items-center rounded-md border bg-slate-50 px-3 text-sm font-medium text-slate-700">
+            <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 text-sm font-medium text-foreground">
               Single video
             </div>
           </div>
@@ -264,8 +264,8 @@ export function CreativeSection({
         />
 
         <Tabs value={activeCreativeTab} onValueChange={setActiveCreativeTab} className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-slate-50 p-2">
-            <TabsList className="flex h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+          <div className="flex flex-col items-stretch gap-3 rounded-md border bg-muted/40 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <TabsList className="grid h-auto max-w-full grid-cols-1 gap-1 bg-transparent p-0 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:justify-start">
               {creatives.map((creative, index) => {
                 const tabReady = isCreativeReady(creative)
                 const label = creative.adName.trim() || `Ad ${index + 1}`
@@ -274,16 +274,16 @@ export function CreativeSection({
                   <TabsTrigger
                     key={index}
                     value={creativeTabValue(index)}
-                    className="min-w-[110px] justify-start gap-2 px-3 py-2 text-xs data-[state=active]:bg-white"
+                    className="min-w-0 justify-start gap-2 px-3 py-2 text-xs data-[state=active]:bg-background sm:min-w-[110px]"
                   >
                     <span className={tabReady && !hasMessage ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-amber-500"} />
-                    <span className="max-w-[120px] truncate">{label}</span>
-                    {creatives.length > 1 ? <span className="text-[10px] text-slate-400">#{index + 1}</span> : null}
+                    <span className="min-w-0 max-w-[120px] truncate">{label}</span>
+                    {creatives.length > 1 ? <span className="text-[10px] text-muted-foreground">#{index + 1}</span> : null}
                   </TabsTrigger>
                 )
               })}
             </TabsList>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddCreative}>
+            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleAddCreative}>
               <Plus className="mr-2 h-4 w-4" />
               Add video asset
             </Button>
@@ -333,7 +333,7 @@ export function CreativeSection({
             const imageAssetFallback = creative.imageAssetIds.length ? `Uploaded image asset #${creative.imageAssetIds.join(", ")}` : undefined
             const generatedAdName = buildCreativeAdName(form, creative, index)
             const previewFallback = (
-              <div className="flex flex-col items-center gap-2 text-slate-400">
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Play className="h-8 w-8" />
                 <p className="max-w-[160px] truncate text-xs">{creative.videoIds?.[0] || creative.videoId || videoAssetFallback || "Media preview"}</p>
               </div>
@@ -341,34 +341,34 @@ export function CreativeSection({
 
             return (
               <TabsContent key={index} value={creativeTabValue(index)} className="mt-0">
-                <div className="rounded-lg border bg-white p-4 shadow-sm">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-slate-100 text-slate-700">Video asset #{index + 1}</Badge>
+                <div className="rounded-lg border bg-card p-3 text-card-foreground shadow-sm sm:p-4">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <Badge className="bg-muted text-muted-foreground">Video asset #{index + 1}</Badge>
                       <Badge variant="outline">Video: {mediaModeLabel(videoMode)}</Badge>
                       <Badge variant="outline">Thumbnail: {mediaModeLabel(imageMode)}</Badge>
                       {videoRatio ? <Badge variant="outline">Video {videoRatio.label}</Badge> : null}
                     </div>
-                    <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleDuplicateCreative(index)}>
+                    <div className="grid grid-cols-2 gap-2 sm:flex">
+                      <Button type="button" variant="outline" size="sm" className="min-w-0" onClick={() => handleDuplicateCreative(index)}>
                         <Copy className="mr-2 h-4 w-4" />
-                        Duplicate
+                        <span className="truncate">Duplicate</span>
                       </Button>
-                      <Button type="button" variant="outline" size="sm" disabled={creatives.length <= 1} onClick={() => handleRemoveCreative(index)}>
+                      <Button type="button" variant="outline" size="sm" className="min-w-0" disabled={creatives.length <= 1} onClick={() => handleRemoveCreative(index)}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Remove
+                        <span className="truncate">Remove</span>
                       </Button>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <div className="space-y-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-3 rounded-md border bg-slate-50 p-3">
-                          <div className="flex items-center justify-between gap-3">
+                  <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="min-w-0 space-y-4">
+                      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                        <div className="min-w-0 space-y-3 rounded-md border bg-muted/40 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
                             <Label className="text-sm font-semibold">Video</Label>
                             <Select value={videoMode} onValueChange={(value) => handleVideoModeChange(index, creative, value as TikTokMediaMode)}>
-                              <SelectTrigger className="h-8 w-[160px] bg-white text-xs">
+                              <SelectTrigger className="h-8 w-full bg-background text-xs min-[420px]:w-[160px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -408,15 +408,15 @@ export function CreativeSection({
                                 renderValue={(option) => (
                                   <span className="flex min-w-0 items-center gap-2">
                                     {option.videoCoverUrl ? <img src={option.videoCoverUrl} alt="" className="h-8 w-8 shrink-0 rounded object-cover" /> : null}
-                                    <span className="min-w-0 truncate font-medium text-slate-900">{option.fileName || option.videoId}</span>
+                                    <span className="min-w-0 truncate font-medium text-foreground">{option.fileName || option.videoId}</span>
                                   </span>
                                 )}
                                 renderOption={(option) => (
                                   <div className="flex min-w-0 items-center gap-2 py-0.5">
                                     {option.videoCoverUrl ? <img src={option.videoCoverUrl} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : null}
                                     <div className="min-w-0">
-                                      <div className="truncate text-sm font-medium text-slate-900">{option.fileName || option.videoId}</div>
-                                      <div className="truncate font-mono text-xs text-slate-400">
+                                      <div className="truncate text-sm font-medium text-foreground">{option.fileName || option.videoId}</div>
+                                      <div className="truncate font-mono text-xs text-muted-foreground">
                                         {option.width && option.height ? `${option.width}x${option.height}` : ""}{option.duration ? ` / ${option.duration}s` : ""}
                                       </div>
                                     </div>
@@ -424,12 +424,12 @@ export function CreativeSection({
                                 )}
                               />
                               {selectedLibraryVideo && !selectedLibraryVideo.displayable ? (
-                                <p className="text-xs text-amber-700">Preview unavailable because the current TikTok account has no permission to read this video. The video_id is still retained for submit.</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300">Preview unavailable because the current TikTok account has no permission to read this video. The video_id is still retained for submit.</p>
                               ) : null}
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <Label className="text-xs text-slate-600">TikTok video_id</Label>
+                              <Label className="text-xs text-muted-foreground">TikTok video_id</Label>
                               <Input
                                 value={(creative.videoIds?.length ? creative.videoIds : creative.videoId ? [creative.videoId] : []).join("\n")}
                                 onChange={(event) => { const videoIds = event.target.value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean).slice(0, 50); onCreativeChange(index, { ...creative, videoId: videoIds[0] ?? "", videoIds, videoAssetId: undefined, videoAssetIds: [] }) }}
@@ -439,11 +439,11 @@ export function CreativeSection({
                           )}
                         </div>
 
-                        <div className="space-y-3 rounded-md border bg-slate-50 p-3">
-                          <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 space-y-3 rounded-md border bg-muted/40 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
                             <Label className="text-sm font-semibold">Cover image</Label>
                             <Select value={imageMode} onValueChange={(value) => handleImageModeChange(index, creative, value as TikTokMediaMode)}>
-                              <SelectTrigger className="h-8 w-[160px] bg-white text-xs">
+                              <SelectTrigger className="h-8 w-full bg-background text-xs min-[420px]:w-[160px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -465,11 +465,11 @@ export function CreativeSection({
                                 disabledReason={imageUploadDisabled ? imageUploadDisabledReason : undefined}
                                 onUpload={(file) => onUpload(index, "image", file)}
                               />
-                              <div className="rounded-md border bg-white px-3 py-2">
+                              <div className="rounded-md border bg-background px-3 py-2">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
-                                  <div>
-                                    <p className="text-xs font-medium text-slate-700">Create thumbnail from video frame</p>
-                                    <p className="mt-0.5 text-xs text-slate-500">
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-foreground">Create thumbnail from video frame</p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
                                       {localVideoFile && videoMode === "upload"
                                         ? "Open editor to capture any frame from the uploaded local video."
                                         : "Upload a local video first to extract a thumbnail frame."}
@@ -479,6 +479,7 @@ export function CreativeSection({
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    className="w-full sm:w-auto"
                                     disabled={uploadingImage || videoMode !== "upload" || !localVideoFile || imageUploadDisabled}
                                     onClick={() => setThumbnailEditorIndex(index)}
                                   >
@@ -515,15 +516,15 @@ export function CreativeSection({
                                 renderValue={(option) => (
                                   <span className="flex min-w-0 items-center gap-2">
                                     {option.imageUrl ? <img src={option.imageUrl} alt="" className="h-8 w-8 shrink-0 rounded object-cover" /> : null}
-                                    <span className="min-w-0 truncate font-medium text-slate-900">{option.fileName || option.imageId}</span>
+                                    <span className="min-w-0 truncate font-medium text-foreground">{option.fileName || option.imageId}</span>
                                   </span>
                                 )}
                                 renderOption={(option) => (
                                   <div className="flex min-w-0 items-center gap-2 py-0.5">
                                     {option.imageUrl ? <img src={option.imageUrl} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : null}
                                     <div className="min-w-0">
-                                      <div className="truncate text-sm font-medium text-slate-900">{option.fileName || option.imageId}</div>
-                                      <div className="truncate font-mono text-xs text-slate-400">
+                                      <div className="truncate text-sm font-medium text-foreground">{option.fileName || option.imageId}</div>
+                                      <div className="truncate font-mono text-xs text-muted-foreground">
                                         {option.width && option.height ? `${option.width}x${option.height}` : ""}
                                       </div>
                                     </div>
@@ -531,12 +532,12 @@ export function CreativeSection({
                                 )}
                               />
                               {selectedLibraryImage && !selectedLibraryImage.displayable ? (
-                                <p className="text-xs text-amber-700">Preview unavailable because the current TikTok account has no permission to read this image. The image_id is still retained for submit.</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300">Preview unavailable because the current TikTok account has no permission to read this image. The image_id is still retained for submit.</p>
                               ) : null}
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <Label className="text-xs text-slate-600">TikTok cover image_ids</Label>
+                              <Label className="text-xs text-muted-foreground">TikTok cover image_ids</Label>
                               <Input
                                 value={creative.imageIds.join(", ")}
                                 onChange={(event) => onCreativeChange(index, { ...creative, imageIds: splitCsv(event.target.value), imageAssetIds: [] })}
@@ -548,14 +549,14 @@ export function CreativeSection({
                       </div>
 
                       {validationMessage ? (
-                        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                        <div className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
                           {validationMessage}
                         </div>
                       ) : null}
 
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2 md:col-span-2">
-                          <div className="flex items-center justify-between gap-3">
+                      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                        <div className="min-w-0 space-y-2 md:col-span-2">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
                             <Label>Ad name</Label>
                             <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={!generatedAdName} onClick={() => applyGeneratedAdName(index, creative)}>
                               <Wand2 className="mr-1.5 h-3.5 w-3.5" />
@@ -563,12 +564,12 @@ export function CreativeSection({
                             </Button>
                           </div>
                           <Input value={creative.adName} onChange={(event) => handleAdNameChange(index, creative, event.target.value)} />
-                          <div className="rounded-md border bg-slate-50 px-3 py-2">
-                            <p className="text-xs text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">ADGROUP_FORMAT_INDEX</code></p>
-                            <p className={generatedAdName ? "mt-1 font-mono text-xs text-slate-700" : "mt-1 text-xs italic text-slate-400"}>{generatedAdName || "Enter an ad group name to generate an ad name."}</p>
+                          <div className="rounded-md border bg-muted/40 px-3 py-2">
+                            <p className="text-xs text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5">ADGROUP_FORMAT_INDEX</code></p>
+                            <p className={generatedAdName ? "mt-1 font-mono text-xs text-foreground" : "mt-1 text-xs italic text-muted-foreground"}>{generatedAdName || "Enter an ad group name to generate an ad name."}</p>
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label>TikTok identity</Label>
                           <SearchableSelect
                             value={selectedIdentityKey}
@@ -591,31 +592,31 @@ export function CreativeSection({
                             getSearchText={(option) => `${option.label} ${option.identityId} ${option.identityType} ${option.identityAuthorizedBcId ?? ""}`}
                             renderValue={(option) => (
                               <span className="flex min-w-0 items-center gap-2">
-                                <span className="truncate font-medium text-slate-900">{option.displayName || option.identityId}</span>
-                                <span className="truncate font-mono text-xs text-slate-500">{option.identityType}</span>
+                                <span className="truncate font-medium text-foreground">{option.displayName || option.identityId}</span>
+                                <span className="truncate font-mono text-xs text-muted-foreground">{option.identityType}</span>
                               </span>
                             )}
                             renderOption={(option) => (
                               <div className="min-w-0 py-0.5">
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">{option.identityType}</Badge>
-                                  {option.identityAuthorizedBcId ? <span className="truncate font-mono text-xs text-slate-500">BC {option.identityAuthorizedBcId}</span> : null}
+                                  {option.identityAuthorizedBcId ? <span className="truncate font-mono text-xs text-muted-foreground">BC {option.identityAuthorizedBcId}</span> : null}
                                 </div>
-                                <div className="truncate text-sm font-medium text-slate-900">{option.displayName || option.identityId}</div>
-                                <div className="truncate font-mono text-xs text-slate-400">{option.identityId}</div>
+                                <div className="truncate text-sm font-medium text-foreground">{option.displayName || option.identityId}</div>
+                                <div className="truncate font-mono text-xs text-muted-foreground">{option.identityId}</div>
                               </div>
                             )}
                           />
                           {form.tikTokAdAccountRowId && !identityLoading && identitySelectOptions.length === 0 ? (
-                            <p className="text-xs text-amber-700">{identityEmptyMessage}</p>
+                            <p className="text-xs text-amber-700 dark:text-amber-300">{identityEmptyMessage}</p>
                           ) : selectedIdentityKey && !selectedIdentityKnown ? (
-                            <p className="text-xs text-amber-700">{selectedIdentitySupported ? "This identity is not available from TikTok anymore. Choose a current Business Center authorized identity before submit." : "The previously selected identity is not supported. Choose a Business Center authorized TikTok identity before submit."}</p>
+                            <p className="text-xs text-amber-700 dark:text-amber-300">{selectedIdentitySupported ? "This identity is not available from TikTok anymore. Choose a current Business Center authorized identity before submit." : "The previously selected identity is not supported. Choose a Business Center authorized TikTok identity before submit."}</p>
                           ) : null}
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label>Call to action</Label>
                           <Select value={creative.callToAction ?? "INSTALL_NOW"} onValueChange={(value) => onCreativeChange(index, { ...creative, callToAction: value })}>
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full min-w-0">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -625,39 +626,39 @@ export function CreativeSection({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label>Landing page URL</Label>
                           <Input value={creative.landingPageUrl ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, landingPageUrl: event.target.value })} />
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label>Tracking URL</Label>
                           <Input value={creative.trackingUrl ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, trackingUrl: event.target.value })} />
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label>Display name</Label>
                           <Input value={creative.displayName ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, displayName: event.target.value })} />
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label>App name</Label>
                           <Input value={creative.appName ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, appName: event.target.value })} />
                         </div>
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="min-w-0 space-y-2 md:col-span-2">
                           <Label>Avatar icon web URI</Label>
                           <Input value={creative.avatarIconWebUri ?? ""} onChange={(event) => onCreativeChange(index, { ...creative, avatarIconWebUri: event.target.value })} />
                         </div>
                       </div>
                     </div>
 
-                    <div className="sticky top-4 h-fit rounded-[24px] border border-slate-900 bg-slate-950 p-1 shadow-sm">
-                      <div className="overflow-hidden rounded-[18px] bg-white">
+                    <div className="h-fit w-full max-w-[260px] justify-self-center rounded-[24px] border border-zinc-900 bg-zinc-950 p-1 shadow-sm xl:sticky xl:top-4 xl:max-w-none">
+                      <div className="overflow-hidden rounded-[18px] bg-background">
                         <div className="flex items-center gap-2 border-b px-3 py-2">
-                          <div className="h-7 w-7 rounded-full bg-slate-900" />
+                          <div className="h-7 w-7 rounded-full bg-foreground" />
                           <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-slate-900">{creative.displayName || creative.appName || "TikTok identity"}</p>
-                            <p className="text-[10px] text-slate-500">Sponsored</p>
+                            <p className="truncate text-xs font-semibold text-foreground">{creative.displayName || creative.appName || "TikTok identity"}</p>
+                            <p className="text-[10px] text-muted-foreground">Sponsored</p>
                           </div>
                         </div>
-                        <div className="flex aspect-[9/16] items-center justify-center bg-slate-100">
+                        <div className="flex aspect-[9/16] items-center justify-center bg-muted">
                           {selectedLibraryVideo?.previewUrl ? (
                             <video className="h-full w-full object-cover" controls src={selectedLibraryVideo.previewUrl} poster={selectedLibraryVideo.videoCoverUrl ?? undefined} />
                           ) : selectedLibraryVideo?.videoCoverUrl ? (
@@ -673,8 +674,8 @@ export function CreativeSection({
                           )}
                         </div>
                         <div className="space-y-2 p-3">
-                          <p className="line-clamp-3 text-xs text-slate-800">{form.adGroup.adTexts?.find((item) => item.trim()) || "Ad text preview"}</p>
-                          <div className="rounded bg-slate-900 px-3 py-2 text-center text-xs font-semibold text-white">{creative.callToAction || "INSTALL_NOW"}</div>
+                          <p className="line-clamp-3 text-xs text-foreground">{form.adGroup.adTexts?.find((item) => item.trim()) || "Ad text preview"}</p>
+                          <div className="rounded bg-foreground px-3 py-2 text-center text-xs font-semibold text-background">{creative.callToAction || "INSTALL_NOW"}</div>
                         </div>
                       </div>
                     </div>
@@ -704,17 +705,17 @@ function TikTokAdTextVariationEditor({
   const rows = normalizeTextRows(values)
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <Label className="text-xs font-medium text-slate-700">Ad texts <span className="text-red-500">*</span></Label>
-          <p className="text-[11px] text-slate-400">Add up to {maxTikTokAdTexts} texts. TikTok rotates these texts with all videos in this ad set.</p>
+    <div className="space-y-2 rounded-lg border bg-muted/40 p-3 md:col-span-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <Label className="text-xs font-medium text-foreground">Ad texts <span className="text-destructive">*</span></Label>
+          <p className="text-[11px] text-muted-foreground">Add up to {maxTikTokAdTexts} texts. TikTok rotates these texts with all videos in this ad set.</p>
         </div>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 text-xs"
+          className="h-8 w-full text-xs sm:w-auto"
           onClick={() => onChange([...rows, ""])}
           disabled={rows.length >= maxTikTokAdTexts}
         >
@@ -733,13 +734,13 @@ function TikTokAdTextVariationEditor({
                 nextValues[textIndex] = event.target.value
                 onChange(nextValues)
               }}
-              className="resize-none bg-white text-sm"
+              className="min-w-0 resize-none bg-background text-sm"
             />
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="mt-1 h-8 px-2 text-red-600"
+              className="mt-1 h-8 px-2 text-destructive"
               onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== textIndex))}
               disabled={rows.length <= 1}
             >
@@ -772,18 +773,18 @@ function UploadBox({
   onUpload: (file: File | null) => void
 }) {
   return (
-    <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-4">
+    <div className="rounded-md border border-dashed bg-muted/40 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <Label className="text-sm font-semibold">{label}</Label>
-          <p className="mt-1 truncate text-xs text-slate-500">{assetLabel(asset, fallback)}</p>
-          {disabled && disabledReason ? <p className="mt-1 text-xs text-amber-700">{disabledReason}</p> : null}
+          <p className="mt-1 truncate text-xs text-muted-foreground">{assetLabel(asset, fallback)}</p>
+          {disabled && disabledReason ? <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{disabledReason}</p> : null}
         </div>
         <Badge variant="outline">{kind === "image" ? <ImageIcon className="mr-1 h-3 w-3" /> : null}{kind}</Badge>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
-          className="max-w-md"
+          className="w-full sm:max-w-md"
           type="file"
           accept={kind === "image" ? "image/png,image/jpeg,image/webp" : "video/mp4,video/quicktime,video/x-m4v"}
           disabled={uploading || disabled}
@@ -792,7 +793,7 @@ function UploadBox({
             event.currentTarget.value = ""
           }}
         />
-        <Button type="button" variant="outline" disabled={uploading || disabled}>
+        <Button type="button" variant="outline" className="w-full sm:w-auto" disabled={uploading || disabled}>
           {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
           {uploading ? "Uploading" : "Stored asset"}
         </Button>

@@ -161,7 +161,7 @@ export function InsightTemplatesPageContent() {
 
   if (!canContextLibrary) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted-foreground">
         Bạn không có quyền truy cập AI Insight templates hoặc kho context.
       </p>
     )
@@ -169,20 +169,20 @@ export function InsightTemplatesPageContent() {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-[1920px] mx-auto">
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/apps" className="hover:text-slate-700">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href="/apps" className="hover:text-foreground">
           Apps
         </Link>
         <ChevronRight className="w-4 h-4" />
-        <span className="text-slate-900 font-medium">AI Insight Templates</span>
+        <span className="text-foreground font-medium">AI Insight Templates</span>
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Sparkles className="w-7 h-7 text-indigo-600" />
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Sparkles className="w-7 h-7 text-primary" />
           AI Insight
         </h1>
-        <p className="text-sm text-slate-600 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Cấu trúc insight theo loại app và kho mẫu context áp dụng cho từng app.
         </p>
       </div>
@@ -209,7 +209,7 @@ export function InsightTemplatesPageContent() {
           <TabsContent value="sections" className="mt-0 flex flex-col gap-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-end">
               <Button
-                className="bg-indigo-600 hover:bg-indigo-700 shrink-0 sm:ml-auto"
+                className="bg-primary hover:bg-primary/90 shrink-0 sm:ml-auto"
                 onClick={() => {
                   setEditing(null)
                   setShowCreate(true)
@@ -221,24 +221,24 @@ export function InsightTemplatesPageContent() {
             </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-slate-500 text-sm py-12 justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm py-12 justify-center">
           <Loader2 className="w-4 h-4 animate-spin" />
           Đang tải…
         </div>
       ) : templates.length === 0 ? (
         <>
-          <Card className="border-dashed border-slate-300">
+          <Card className="border-dashed border-border">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="relative w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-slate-400" />
-                <Sparkles className="w-4 h-4 text-indigo-500 absolute translate-x-5 -translate-y-3" />
+              <div className="relative w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-muted-foreground" />
+                <Sparkles className="w-4 h-4 text-primary absolute translate-x-5 -translate-y-3" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Chưa có template</h3>
-              <p className="text-sm text-slate-500 text-center mb-4 max-w-md">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Chưa có template</h3>
+              <p className="text-sm text-muted-foreground text-center mb-4 max-w-md">
                 Tạo template đầu tiên hoặc đảm bảo API đã seed template mặc định (EnsureDefaultsAsync).
               </p>
               <Button
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-primary hover:bg-primary/90"
                 onClick={() => {
                   setEditing(null)
                   setShowCreate(true)
@@ -259,16 +259,16 @@ export function InsightTemplatesPageContent() {
             const cat = category || "Custom"
             const emoji = iconByCategory[cat] ?? "📊"
             return (
-              <Card key={t.id} className="min-h-[200px] hover:shadow-md transition-shadow border-slate-200">
+              <Card key={t.id} className="min-h-[200px] hover:shadow-md transition-shadow border-border">
                 <CardContent className="p-5 flex flex-col h-full">
                   <div className="flex items-start justify-between mb-3 gap-2">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-2xl shrink-0">{emoji}</span>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-lg text-slate-900 truncate">{t.name}</h3>
+                          <h3 className="font-semibold text-lg text-foreground truncate">{t.name}</h3>
                           {t.isDefault ? (
-                            <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 border-0 shrink-0">
+                            <Badge className="border-0 bg-primary/10 text-primary hover:bg-primary/10 shrink-0">
                               Default
                             </Badge>
                           ) : null}
@@ -280,11 +280,11 @@ export function InsightTemplatesPageContent() {
                     </div>
                   </div>
 
-                  <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-1">
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
                     {body || t.description || "—"}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mb-4">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-4">
                     <span>{t.sections?.length ?? 0} sections</span>
                     <span>•</span>
                     <span>Batch {t.maxAppsPerBatch} · parallel {t.parallelDegree}</span>
@@ -292,7 +292,7 @@ export function InsightTemplatesPageContent() {
                     <span>Cập nhật {formatRelativeTime(t.updatedAt)}</span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
                     <Button variant="outline" size="sm" onClick={() => setEditing(t)}>
                       <Edit2 className="w-3.5 h-3.5 mr-1.5" />
                       Sửa
@@ -330,7 +330,7 @@ export function InsightTemplatesPageContent() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           disabled
-                          className="text-slate-400"
+                          className="text-muted-foreground"
                           onClick={() =>
                             toast({ title: "Xóa template", description: "API xóa chưa có — chỉnh qua DB nếu cần." })
                           }

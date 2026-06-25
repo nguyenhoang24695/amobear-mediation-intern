@@ -40,10 +40,10 @@ function SearchableFilterSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("h-10 w-full justify-between bg-white px-3 text-left font-normal", className)}
+          className={cn("h-10 w-full justify-between bg-background px-3 text-left font-normal", className)}
         >
           <span className="min-w-0 flex-1 truncate text-left">
-            {selectedOption ? selectedOption.label || selectedOption.value : <span className="text-slate-500">{allLabel}</span>}
+            {selectedOption ? selectedOption.label || selectedOption.value : <span className="text-muted-foreground">{allLabel}</span>}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -118,10 +118,10 @@ export function MetaInsightsFilters({
   onRefresh,
 }: MetaInsightsFiltersProps) {
   return (
-    <Card className="border-slate-200 bg-white p-4 shadow-sm">
+    <Card className="p-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Filters</h2>
           <DateRangePicker value={range} onChange={onRangeChange} className="flex-wrap" />
         </div>
 
@@ -159,7 +159,7 @@ export function MetaInsightsFilters({
           <Button
             type="button"
             variant="outline"
-            className="h-10 border-slate-200 bg-white text-slate-700"
+            className="h-10 border-border bg-background text-foreground hover:bg-accent"
             onClick={onRefresh}
             disabled={refreshing}
           >
@@ -169,7 +169,7 @@ export function MetaInsightsFilters({
         </div>
       </div>
 
-      {loading ? <div className="mt-3 text-xs text-slate-500">Refreshing filter options...</div> : null}
+      {loading ? <div className="mt-3 text-xs text-muted-foreground">Refreshing filter options...</div> : null}
     </Card>
   )
 }

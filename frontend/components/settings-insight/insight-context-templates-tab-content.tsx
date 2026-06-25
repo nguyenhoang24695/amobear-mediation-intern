@@ -14,12 +14,12 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
 const TYPE_BADGE: Record<string, string> = {
-  "game-design": "bg-purple-100 text-purple-800",
-  monetization: "bg-green-100 text-green-800",
-  "user-flow": "bg-blue-100 text-blue-800",
+  "game-design": "bg-purple-500/10 text-purple-700 dark:text-purple-300",
+  monetization: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  "user-flow": "bg-primary/10 text-primary",
   "geo-strategy": "bg-amber-100 text-amber-800",
   "query-context": "bg-cyan-100 text-cyan-900",
-  custom: "bg-slate-100 text-slate-800",
+  custom: "bg-muted text-foreground",
 }
 
 export function InsightContextTemplatesTabContent() {
@@ -81,15 +81,15 @@ export function InsightContextTemplatesTabContent() {
   }
 
   if (!canView) {
-    return <p className="text-sm text-slate-500">Bạn không có quyền xem kho context AI.</p>
+    return <p className="text-sm text-muted-foreground">Bạn không có quyền xem kho context AI.</p>
   }
 
   return (
     <div className="flex w-full max-w-[1920px] flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Kho mẫu App context cho AI</h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <h2 className="text-xl font-semibold text-foreground">Kho mẫu App context cho AI</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Các khối nội dung có sẵn để áp dụng nhanh trong App detail → Insight config. Catalog mặc định gồm 8 mẫu (doc
             121 + mockup) được tạo khi bảng trống và cập nhật khi chạy migration cơ sở dữ liệu.
           </p>
@@ -104,7 +104,7 @@ export function InsightContextTemplatesTabContent() {
                 </Label>
               </div>
               <Button
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-primary hover:bg-primary/90"
                 onClick={() => {
                   setEditing(null)
                   setModalOpen(true)
@@ -119,40 +119,40 @@ export function InsightContextTemplatesTabContent() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-slate-500">
+        <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Đang tải…
         </div>
       ) : list.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="py-16 text-center text-sm text-slate-500">Chưa có mẫu context.</CardContent>
+          <CardContent className="py-16 text-center text-sm text-muted-foreground">Chưa có mẫu context.</CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.map((t) => (
-            <Card key={t.id} className="border-slate-200">
+            <Card key={t.id} className="border-border">
               <CardContent className="space-y-3 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900">{t.name}</h3>
-                    <p className="text-xs text-slate-500">Tiêu đề khi áp dụng: {t.defaultTitle}</p>
+                    <h3 className="font-semibold text-foreground">{t.name}</h3>
+                    <p className="text-xs text-muted-foreground">Tiêu đề khi áp dụng: {t.defaultTitle}</p>
                   </div>
                   <Badge className={TYPE_BADGE[t.contextType] ?? TYPE_BADGE.custom}>{t.contextType}</Badge>
                 </div>
-                {t.description ? <p className="text-sm text-slate-600">{t.description}</p> : null}
-                <p className="line-clamp-4 font-mono text-xs text-slate-700">{t.body}</p>
+                {t.description ? <p className="text-sm text-muted-foreground">{t.description}</p> : null}
+                <p className="line-clamp-4 font-mono text-xs text-foreground">{t.body}</p>
                 {!t.isActive ? (
                   <Badge variant="outline" className="text-amber-700">
                     Đã tắt
                   </Badge>
                 ) : null}
                 {canManage ? (
-                  <div className="flex gap-2 border-t border-slate-100 pt-3">
+                  <div className="flex gap-2 border-t border-border pt-3">
                     <Button variant="outline" size="sm" onClick={() => { setEditing(t); setModalOpen(true) }}>
                       <Edit2 className="mr-1.5 h-3.5 w-3.5" />
                       Sửa
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-red-600" onClick={() => void handleDelete(t)}>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void handleDelete(t)}>
                       <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                       Xóa
                     </Button>

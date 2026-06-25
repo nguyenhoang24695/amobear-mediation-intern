@@ -30,6 +30,27 @@ import { useEffect, useState } from "react"
 
 const DEFAULT_ORGANIZATION_SLUG = "amobear"
 
+const loginLightThemeVars = {
+  "--background": "oklch(1 0 0)",
+  "--foreground": "oklch(0.145 0 0)",
+  "--card": "oklch(1 0 0)",
+  "--card-foreground": "oklch(0.145 0 0)",
+  "--popover": "oklch(1 0 0)",
+  "--popover-foreground": "oklch(0.145 0 0)",
+  "--primary": "oklch(0.546 0.215 262.881)",
+  "--primary-foreground": "oklch(0.985 0 0)",
+  "--secondary": "oklch(0.97 0 0)",
+  "--secondary-foreground": "oklch(0.205 0 0)",
+  "--muted": "oklch(0.97 0 0)",
+  "--muted-foreground": "oklch(0.556 0 0)",
+  "--accent": "oklch(0.97 0 0)",
+  "--accent-foreground": "oklch(0.205 0 0)",
+  "--destructive": "oklch(0.577 0.245 27.325)",
+  "--border": "oklch(0.922 0 0)",
+  "--input": "oklch(0.922 0 0)",
+  "--ring": "oklch(0.708 0 0)",
+} as React.CSSProperties
+
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -191,14 +212,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
+    <div
+      className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900"
+      style={loginLightThemeVars}
+    >
       {/* Language Selector */}
       <div className="absolute top-4 right-4">
         <Select defaultValue="en">
-          <SelectTrigger className="w-32 bg-white">
+          <SelectTrigger className="w-32 bg-white text-slate-900 dark:bg-white dark:text-slate-900">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="border-slate-200 bg-white text-slate-900">
             <SelectItem value="en">English</SelectItem>
             <SelectItem value="vi">Tiếng Việt</SelectItem>
             <SelectItem value="ja">日本語</SelectItem>
@@ -208,7 +232,7 @@ export default function LoginPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg border-0">
+        <Card className="w-full max-w-md border-0 bg-white text-slate-900 shadow-lg">
           <CardHeader className="space-y-4 text-center pb-2">
             {/* Logo */}
             <div className="flex justify-center">
@@ -228,7 +252,7 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             {/* Error Alert */}
             {error && (
-              <Alert variant="destructive" className="border-red-200 bg-red-50">
+              <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-700">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
@@ -244,7 +268,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="you@company.com"
-                    className={`pl-10 ${validationErrors.email ? "border-red-500" : ""}`}
+                    className={`bg-white pl-10 text-slate-900 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 ${validationErrors.email ? "border-red-500" : ""}`}
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
@@ -261,7 +285,7 @@ export default function LoginPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
-                    className={`pl-10 pr-10 ${validationErrors.password ? "border-red-500" : ""}`}
+                    className={`bg-white pl-10 pr-10 text-slate-900 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 ${validationErrors.password ? "border-red-500" : ""}`}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
@@ -321,7 +345,7 @@ export default function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-transparent"
+                className="w-full bg-transparent text-slate-700 dark:bg-transparent dark:text-slate-700"
                 onClick={() => handleSocialLogin("Google")}
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
@@ -347,7 +371,7 @@ export default function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-transparent"
+                className="w-full bg-transparent text-slate-700 dark:bg-transparent dark:text-slate-700"
                 onClick={() => handleSocialLogin("Microsoft")}
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">

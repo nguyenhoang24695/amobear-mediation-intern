@@ -100,7 +100,7 @@ export function BreakdownByApp() {
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
               width={110}
             />
             <Tooltip
@@ -108,10 +108,10 @@ export function BreakdownByApp() {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload
                   return (
-                    <div className="bg-white border border-slate-200 rounded-lg shadow-md p-3">
-                      <p className="text-sm font-medium text-slate-900">{data.name}</p>
-                      <p className="text-sm text-slate-600">Revenue: ${data.revenue.toLocaleString()}</p>
-                      <p className="text-sm text-slate-600">{data.percent}% of total</p>
+                    <div className="bg-card border border-border rounded-lg shadow-md p-3">
+                      <p className="text-sm font-medium text-foreground">{data.name}</p>
+                      <p className="text-sm text-muted-foreground">Revenue: ${data.revenue.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">{data.percent}% of total</p>
                     </div>
                   )
                 }
@@ -128,23 +128,23 @@ export function BreakdownByApp() {
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="border border-border rounded-lg overflow-hidden">
         <table className="w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Rank</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">App Name</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Revenue</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">% of Total</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">eCPM</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Impressions</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">vs Previous</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">Trend</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Rank</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">App Name</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Revenue</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">% of Total</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">eCPM</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Impressions</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">vs Previous</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Trend</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {appData.map((app) => (
-              <tr key={app.rank} className="hover:bg-slate-50 transition-colors">
+              <tr key={app.rank} className="hover:bg-muted/50 transition-colors">
                 <td className="px-4 py-3">
                   <Badge variant="outline" className="text-xs font-medium">
                     #{app.rank}
@@ -153,25 +153,25 @@ export function BreakdownByApp() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: app.color }} />
-                    <span className="text-sm font-medium text-slate-900">{app.name}</span>
+                    <span className="text-sm font-medium text-foreground">{app.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                <td className="px-4 py-3 text-right text-sm font-semibold text-foreground">
                   ${app.revenue.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${app.percent}%`, backgroundColor: app.color }}
                       />
                     </div>
-                    <span className="text-sm text-slate-600 w-12">{app.percent}%</span>
+                    <span className="text-sm text-muted-foreground w-12">{app.percent}%</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right text-sm text-slate-700">${app.ecpm.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right text-sm text-slate-700">{app.impressions}</td>
+                <td className="px-4 py-3 text-right text-sm text-foreground">${app.ecpm.toFixed(2)}</td>
+                <td className="px-4 py-3 text-right text-sm text-foreground">{app.impressions}</td>
                 <td className="px-4 py-3 text-right">
                   <span className={`text-sm font-medium ${app.change > 0 ? "text-green-600" : "text-red-600"}`}>
                     {app.change > 0 ? "+" : ""}

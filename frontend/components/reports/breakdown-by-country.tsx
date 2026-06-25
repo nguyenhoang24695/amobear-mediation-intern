@@ -149,7 +149,7 @@ export function BreakdownByCountry() {
                   const country = countryData.find((c) => c.name === payload.value)
                   return (
                     <g transform={`translate(${x},${y})`}>
-                      <text x={-10} y={0} dy={4} textAnchor="end" fill="#64748b" fontSize={12}>
+                      <text x={-10} y={0} dy={4} textAnchor="end" fill="var(--muted-foreground)" fontSize={12}>
                         {country?.flag} {payload.value}
                       </text>
                     </g>
@@ -162,12 +162,12 @@ export function BreakdownByCountry() {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload
                     return (
-                      <div className="bg-white border border-slate-200 rounded-lg shadow-md p-3">
-                        <p className="text-sm font-medium text-slate-900">
+                      <div className="bg-card border border-border rounded-lg shadow-md p-3">
+                        <p className="text-sm font-medium text-foreground">
                           {data.flag} {data.name}
                         </p>
-                        <p className="text-sm text-slate-600">Revenue: ${data.revenue.toLocaleString()}</p>
-                        <p className="text-sm text-slate-600">eCPM: ${data.ecpm.toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">Revenue: ${data.revenue.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">eCPM: ${data.ecpm.toFixed(2)}</p>
                       </div>
                     )
                   }
@@ -188,15 +188,15 @@ export function BreakdownByCountry() {
           {countryData.slice(0, 6).map((country) => (
             <div
               key={country.code}
-              className="p-4 border border-slate-200 rounded-lg bg-white hover:shadow-sm transition-shadow"
+              className="p-4 border border-border rounded-lg bg-card hover:shadow-sm transition-shadow"
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">{country.flag}</span>
-                <span className="text-sm font-medium text-slate-900">{country.name}</span>
+                <span className="text-sm font-medium text-foreground">{country.name}</span>
               </div>
-              <p className="text-lg font-semibold text-slate-900">${(country.revenue / 1000).toFixed(1)}k</p>
+              <p className="text-lg font-semibold text-foreground">${(country.revenue / 1000).toFixed(1)}k</p>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-xs text-slate-500">eCPM ${country.ecpm.toFixed(2)}</span>
+                <span className="text-xs text-muted-foreground">eCPM ${country.ecpm.toFixed(2)}</span>
                 <div className="flex items-center gap-1">
                   {country.change > 0 ? (
                     <TrendingUp className="w-3 h-3 text-green-600" />
@@ -215,23 +215,23 @@ export function BreakdownByCountry() {
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="border border-border rounded-lg overflow-hidden">
         <table className="w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Rank</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Country</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Revenue</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">% of Total</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">eCPM</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Impressions</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">vs Previous</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">Trend</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Rank</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Country</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Revenue</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">% of Total</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">eCPM</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Impressions</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">vs Previous</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Trend</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {countryData.map((country) => (
-              <tr key={country.rank} className="hover:bg-slate-50 transition-colors">
+              <tr key={country.rank} className="hover:bg-muted/50 transition-colors">
                 <td className="px-4 py-3">
                   <Badge variant="outline" className="text-xs font-medium">
                     #{country.rank}
@@ -240,22 +240,22 @@ export function BreakdownByCountry() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="text-base">{country.flag}</span>
-                    <span className="text-sm font-medium text-slate-900">{country.name}</span>
+                    <span className="text-sm font-medium text-foreground">{country.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                <td className="px-4 py-3 text-right text-sm font-semibold text-foreground">
                   ${country.revenue.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full bg-blue-500" style={{ width: `${country.percent * 2.5}%` }} />
+                    <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-primary/100" style={{ width: `${country.percent * 2.5}%` }} />
                     </div>
-                    <span className="text-sm text-slate-600 w-12">{country.percent}%</span>
+                    <span className="text-sm text-muted-foreground w-12">{country.percent}%</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right text-sm text-slate-700">${country.ecpm.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right text-sm text-slate-700">{country.impressions}</td>
+                <td className="px-4 py-3 text-right text-sm text-foreground">${country.ecpm.toFixed(2)}</td>
+                <td className="px-4 py-3 text-right text-sm text-foreground">{country.impressions}</td>
                 <td className="px-4 py-3 text-right">
                   <span className={`text-sm font-medium ${country.change > 0 ? "text-green-600" : "text-red-600"}`}>
                     {country.change > 0 ? "+" : ""}

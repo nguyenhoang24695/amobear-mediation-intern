@@ -43,9 +43,9 @@ export type MyReportPivotTableProps = {
 function FilterIconButton({ active }: { active: boolean }) {
   return (
     <span className="relative inline-flex">
-      <Filter className={cn("h-4 w-4", active ? "text-blue-600" : "text-gray-400")} />
+      <Filter className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
       {active ? (
-        <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-600" />
+        <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
       ) : null}
     </span>
   )
@@ -85,7 +85,7 @@ function PivotMetricCell({
   return (
     <div className={cn("space-y-0.5", bold && "font-semibold")}>
       <div>{current}</div>
-      <div className="text-xs font-normal text-gray-500">
+      <div className="text-xs font-normal text-muted-foreground">
         {previousLabel}{" "}
         <span
           className={cn(
@@ -140,12 +140,12 @@ function PivotTreeRow({
   }
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50/50">
+    <tr className="border-b border-border hover:bg-muted/40">
       <td
         style={{ paddingLeft: `${indentPx}px`, ...stickyStyle(PIVOT_DIMENSION_COLUMN_ID) }}
         className={cn(
-          "min-w-[220px] bg-white px-3 py-2.5",
-          stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-white"),
+          "min-w-[220px] bg-background px-3 py-2.5",
+          stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-background"),
         )}
       >
         <div className="flex items-center gap-1.5">
@@ -154,7 +154,7 @@ function PivotTreeRow({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0 text-gray-500 hover:text-gray-800"
+              className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
               aria-label={isExpanded ? "Collapse row" : "Expand row"}
               onClick={() => onToggleExpand(node.key)}
             >
@@ -163,7 +163,7 @@ function PivotTreeRow({
           ) : (
             <span className="inline-block h-6 w-6 shrink-0" aria-hidden />
           )}
-          <span className={cn("truncate text-gray-900", hasChildren && "font-semibold")}>
+          <span className={cn("truncate text-foreground", hasChildren && "font-semibold")}>
             {node.label}
           </span>
         </div>
@@ -173,8 +173,8 @@ function PivotTreeRow({
           key={column.id}
           style={stickyStyle(column.id)}
           className={cn(
-            "px-3 py-2.5 text-right tabular-nums text-gray-900",
-            stickyClass(column.id, "bg-white"),
+            "px-3 py-2.5 text-right tabular-nums text-foreground",
+            stickyClass(column.id, "bg-background"),
           )}
         >
           <PivotMetricCell
@@ -307,29 +307,29 @@ export function MyReportPivotTable({
     <div className="relative px-6 pb-6">
       <table className="min-w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-white">
+          <tr className="border-b border-border bg-card">
             <th
               style={stickyStyle(PIVOT_DIMENSION_COLUMN_ID)}
               className={cn(
-                "min-w-[220px] px-3 py-3 text-left font-medium text-gray-700",
-                stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-white"),
+                "min-w-[220px] px-3 py-3 text-left font-medium text-foreground",
+                stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-card"),
               )}
             >
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 hover:text-blue-600"
+                  className="inline-flex items-center gap-1 hover:text-primary"
                   onClick={() => handleSortColumn(PIVOT_DIMENSION_COLUMN_ID)}
                 >
                   {dimensionHeader}
-                  <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
                 {onTogglePin ? (
                   <button
                     type="button"
                     className={cn(
-                      "inline-flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100",
-                      isPivotDimensionPinned && "text-blue-600",
+                      "inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted",
+                      isPivotDimensionPinned && "text-primary",
                     )}
                     onClick={() => onTogglePin(PIVOT_DIMENSION_COLUMN_ID)}
                     aria-label={isPivotDimensionPinned ? "Unpin column" : "Pin column"}
@@ -346,25 +346,25 @@ export function MyReportPivotTable({
                   key={column.id}
                   style={stickyStyle(column.id)}
                   className={cn(
-                    "min-w-[120px] px-3 py-3 text-right font-medium text-gray-700",
-                    stickyClass(column.id, "bg-white"),
+                    "min-w-[120px] px-3 py-3 text-right font-medium text-foreground",
+                    stickyClass(column.id, "bg-card"),
                   )}
                 >
                   <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 hover:text-blue-600"
+                      className="inline-flex items-center gap-1 hover:text-primary"
                       onClick={() => handleSortColumn(column.id)}
                     >
                       {column.label}
-                      <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                     {onTogglePin ? (
                       <button
                         type="button"
                         className={cn(
-                          "inline-flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100",
-                          isPinned && "text-blue-600",
+                          "inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted",
+                          isPinned && "text-primary",
                         )}
                         onClick={() => onTogglePin(column.id)}
                         aria-label={isPinned ? "Unpin column" : "Pin column"}
@@ -377,10 +377,10 @@ export function MyReportPivotTable({
               )
             })}
           </tr>
-          <tr className="border-b border-gray-200 bg-gray-50/60">
+          <tr className="border-b border-border bg-muted/50">
             <th
               style={stickyStyle(PIVOT_DIMENSION_COLUMN_ID)}
-              className={cn("px-3 py-2", stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-gray-50/60"))}
+              className={cn("px-3 py-2", stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-muted/50"))}
             >
               <div className="flex items-center gap-1">
                 <ColumnFilterPopover
@@ -395,7 +395,7 @@ export function MyReportPivotTable({
                   trigger={
                     <button
                       type="button"
-                      className="inline-flex h-7 w-7 items-center justify-center rounded hover:bg-gray-100"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded hover:bg-muted"
                       aria-label={`Filter ${dimensionHeader}`}
                     >
                       <FilterIconButton
@@ -410,7 +410,7 @@ export function MyReportPivotTable({
                   className="inline-flex h-7 w-7 cursor-not-allowed items-center justify-center rounded opacity-40"
                   aria-hidden
                 >
-                  <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                 </button>
               </div>
             </th>
@@ -421,7 +421,7 @@ export function MyReportPivotTable({
                 <th
                   key={`filter-${column.id}`}
                   style={stickyStyle(column.id)}
-                  className={cn("px-3 py-2", stickyClass(column.id, "bg-gray-50/60"))}
+                  className={cn("px-3 py-2", stickyClass(column.id, "bg-muted/50"))}
                 >
                   <div className="flex items-center justify-end gap-1">
                     <ColumnFilterPopover
@@ -433,7 +433,7 @@ export function MyReportPivotTable({
                       trigger={
                         <button
                           type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded hover:bg-gray-100"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded hover:bg-muted"
                           aria-label={`Filter ${column.label}`}
                         >
                           <FilterIconButton active={filterActive} />
@@ -446,7 +446,7 @@ export function MyReportPivotTable({
                       className="inline-flex h-7 w-7 cursor-not-allowed items-center justify-center rounded opacity-40"
                       aria-hidden
                     >
-                      <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
                 </th>
@@ -459,7 +459,7 @@ export function MyReportPivotTable({
             <tr>
               <td
                 colSpan={orderedMetricColumns.length + 1}
-                className="px-4 py-10 text-center text-sm text-gray-500"
+                className="px-4 py-10 text-center text-sm text-muted-foreground"
               >
                 No rows match the column filters.
               </td>
@@ -479,12 +479,12 @@ export function MyReportPivotTable({
               />
             ))
           )}
-          <tr className="border-t-2 border-gray-300 bg-gray-100 font-semibold">
+          <tr className="border-t-2 border-border bg-muted font-semibold">
             <td
               style={stickyStyle(PIVOT_DIMENSION_COLUMN_ID)}
               className={cn(
-                "px-3 py-3 text-gray-900",
-                stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-gray-100"),
+                "px-3 py-3 text-foreground",
+                stickyClass(PIVOT_DIMENSION_COLUMN_ID, "bg-muted"),
               )}
             >
               Total
@@ -494,8 +494,8 @@ export function MyReportPivotTable({
                 key={column.id}
                 style={stickyStyle(column.id)}
                 className={cn(
-                  "px-3 py-3 text-right tabular-nums text-gray-900",
-                  stickyClass(column.id, "bg-gray-100"),
+                  "px-3 py-3 text-right tabular-nums text-foreground",
+                  stickyClass(column.id, "bg-muted"),
                 )}
               >
                 <PivotMetricCell
@@ -523,7 +523,7 @@ export function MyReportPivotTable({
         <div className="pointer-events-none fixed inset-x-0 bottom-8 z-30 flex justify-center">
           <Button
             type="button"
-            className="pointer-events-auto h-10 gap-2 rounded-full bg-blue-600 px-5 shadow-lg hover:bg-blue-700"
+            className="pointer-events-auto h-10 gap-2 rounded-full bg-primary px-5 shadow-lg hover:bg-primary/90"
             onClick={onReloadData}
           >
             <RefreshCw className="h-4 w-4" />

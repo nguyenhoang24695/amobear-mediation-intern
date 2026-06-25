@@ -62,16 +62,16 @@ const categories = [
   { id: "best_practice", label: "Best Practices", icon: Lightbulb },
 ]
 
-const rulesStyle = { color: "text-amber-600", bgColor: "bg-amber-100", label: "Rules" } as const
+const rulesStyle = { color: "text-amber-700 dark:text-amber-300", bgColor: "bg-amber-500/10", label: "Rules" } as const
 
 const categoryConfig: Record<string, { color: string; bgColor: string; label: string }> = {
-  schema: { color: "text-blue-600", bgColor: "bg-blue-100", label: "Schema" },
-  metric: { color: "text-emerald-600", bgColor: "bg-emerald-100", label: "Metric" },
+  schema: { color: "text-primary", bgColor: "bg-primary/10", label: "Schema" },
+  metric: { color: "text-emerald-700 dark:text-emerald-300", bgColor: "bg-emerald-500/10", label: "Metric" },
   rules: { ...rulesStyle },
   business_rule: { ...rulesStyle },
-  faq: { color: "text-purple-600", bgColor: "bg-purple-100", label: "FAQ" },
-  query_pattern: { color: "text-cyan-600", bgColor: "bg-cyan-100", label: "Query Pattern" },
-  best_practice: { color: "text-pink-600", bgColor: "bg-pink-100", label: "Best Practice" },
+  faq: { color: "text-violet-700 dark:text-violet-300", bgColor: "bg-violet-500/10", label: "FAQ" },
+  query_pattern: { color: "text-cyan-700 dark:text-cyan-300", bgColor: "bg-cyan-500/10", label: "Query Pattern" },
+  best_practice: { color: "text-pink-700 dark:text-pink-300", bgColor: "bg-pink-500/10", label: "Best Practice" },
 }
 
 /** Map legacy DB value business_rule → form/API slug rules */
@@ -299,15 +299,15 @@ export function KnowledgeBaseContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">Knowledge Base</h1>
-              <p className="text-sm text-slate-500">
+              <h1 className="text-2xl font-semibold text-foreground">Knowledge Base</h1>
+              <p className="text-sm text-muted-foreground">
                 Manage AI context entries for better SQL generation
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search entries..."
                 value={searchQuery}
@@ -336,22 +336,22 @@ export function KnowledgeBaseContent() {
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
                     selectedCategory === cat.id && !showReviewQueue
-                      ? "bg-blue-50 text-blue-700 font-medium"
-                      : "text-slate-600 hover:bg-slate-100"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   )}
                 >
                   <cat.icon className="h-4 w-4" />
                   {cat.label}
                 </button>
               ))}
-              <div className="border-t border-slate-200 my-2" />
+              <div className="my-2 border-t" />
               <button
                 onClick={() => setShowReviewQueue(true)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors",
                   showReviewQueue
-                    ? "bg-amber-50 text-amber-700 font-medium"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-amber-500/10 text-amber-700 font-medium dark:text-amber-300"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 )}
               >
                 <span className="flex items-center gap-2">
@@ -383,8 +383,8 @@ export function KnowledgeBaseContent() {
               </div>
             ) : filteredEntries.length === 0 ? (
               <div className="text-center py-12">
-                <BookOpen className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">
+                <BookOpen className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
                   {showReviewQueue
                     ? "Không có entry nào cần review"
                     : searchQuery
@@ -405,7 +405,7 @@ export function KnowledgeBaseContent() {
                     <Card
                       key={entry.id}
                       className={cn(
-                        "hover:shadow-md transition-shadow",
+                        "bg-card text-card-foreground transition-shadow hover:shadow-md",
                         !entry.isActive && "opacity-60"
                       )}
                     >
@@ -413,29 +413,29 @@ export function KnowledgeBaseContent() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-medium text-slate-900">{entry.title}</h3>
+                              <h3 className="font-medium text-foreground">{entry.title}</h3>
                               <Badge
                                 className={cn(
                                   "text-xs",
-                                  categoryConfig[entry.category.toLowerCase()]?.bgColor ?? "bg-slate-100",
-                                  categoryConfig[entry.category.toLowerCase()]?.color ?? "text-slate-600"
+                                  categoryConfig[entry.category.toLowerCase()]?.bgColor ?? "bg-muted",
+                                  categoryConfig[entry.category.toLowerCase()]?.color ?? "text-muted-foreground"
                                 )}
                               >
                                 {categoryConfig[entry.category.toLowerCase()]?.label ?? entry.category}
                               </Badge>
-                              <span className="text-xs text-slate-400">P:{entry.priority}</span>
+                              <span className="text-xs text-muted-foreground">P:{entry.priority}</span>
                               {!entry.isActive && (
-                                <Badge variant="outline" className="text-xs text-slate-400">
+                                <Badge variant="outline" className="text-xs text-muted-foreground">
                                   Inactive
                                 </Badge>
                               )}
                               {entry.isUserSubmitted && !entry.isReviewed && (
-                                <Badge className="text-xs bg-amber-100 text-amber-700">
+                                <Badge className="bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
                                   Pending Review
                                 </Badge>
                               )}
                               {entry.tokenCount > 0 && (
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-muted-foreground">
                                   {entry.tokenCount} tokens
                                 </span>
                               )}
@@ -444,7 +444,7 @@ export function KnowledgeBaseContent() {
                               {entry.tags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded"
+                                  className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                                 >
                                   {tag}
                                 </span>
@@ -452,13 +452,13 @@ export function KnowledgeBaseContent() {
                               {entry.focusAreas.map((fa) => (
                                 <span
                                   key={fa}
-                                  className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded"
+                                  className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary"
                                 >
                                   {fa}
                                 </span>
                               ))}
                             </div>
-                            <p className="text-sm text-slate-600 line-clamp-2 whitespace-pre-wrap">
+                            <p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
                               {entry.content}
                             </p>
                           </div>
@@ -481,7 +481,7 @@ export function KnowledgeBaseContent() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-600"
+                                  className="text-destructive"
                                   onClick={() => handleReview(entry, false)}
                                   disabled={togglingId === entry.id}
                                 >
@@ -502,7 +502,7 @@ export function KnowledgeBaseContent() {
                                   size="sm"
                                   onClick={() => handleToggleActive(entry)}
                                   disabled={togglingId === entry.id}
-                                  className={entry.isActive ? "text-amber-600" : "text-emerald-600"}
+                                  className={entry.isActive ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}
                                 >
                                   {togglingId === entry.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -513,7 +513,7 @@ export function KnowledgeBaseContent() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-600"
+                                  className="text-destructive"
                                   onClick={() => handleDelete(entry)}
                                   disabled={togglingId === entry.id}
                                 >
@@ -530,7 +530,7 @@ export function KnowledgeBaseContent() {
               </ScrollArea>
             )}
             {!loading && filteredEntries.length > 0 && (
-              <div className="mt-4 text-sm text-slate-500">
+              <div className="mt-4 text-sm text-muted-foreground">
                 {filteredEntries.length} of {entries.length} entries
               </div>
             )}

@@ -36,9 +36,9 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
       description="Select the advertiser first, then choose an app known for that advertiser."
       ready={ready}
       aside={
-        <div className="space-y-2 text-xs text-slate-600">
-          <p>Advertiser ID: <span className="font-medium text-slate-900">{selectedAdAccount?.advertiserId ?? "-"}</span></p>
-          <p>TikTok Mobile App ID: <span className="font-medium text-slate-900">{selectedAppMapping?.tikTokAppId ?? "-"}</span></p>
+        <div className="space-y-2 text-xs text-muted-foreground">
+          <p>Advertiser ID: <span className="font-medium text-foreground">{selectedAdAccount?.advertiserId ?? "-"}</span></p>
+          <p>TikTok Mobile App ID: <span className="font-medium text-foreground">{selectedAppMapping?.tikTokAppId ?? "-"}</span></p>
         </div>
       }
     >
@@ -63,22 +63,22 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
             getSearchText={(account) => `${account.name} ${account.advertiserId} ${account.currency ?? ""} ${account.timezone ?? ""} ${account.country ?? ""}`}
             renderValue={(account) => (
               <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-medium text-slate-900">{account.name || account.advertiserId}</span>
-                <span className="truncate font-mono text-xs text-slate-500">{account.advertiserId}</span>
+                <span className="truncate font-medium text-foreground">{account.name || account.advertiserId}</span>
+                <span className="truncate font-mono text-xs text-muted-foreground">{account.advertiserId}</span>
               </span>
             )}
             renderOption={(account) => (
               <div className="min-w-0 py-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-slate-500">{account.advertiserId}</span>
-                  <Badge className={account.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}>{account.isActive ? "Active" : "Inactive"}</Badge>
+                  <span className="font-mono text-xs text-muted-foreground">{account.advertiserId}</span>
+                  <Badge className={account.isActive ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"}>{account.isActive ? "Active" : "Inactive"}</Badge>
                 </div>
-                <div className="truncate text-sm font-medium text-slate-900">{account.name || account.advertiserId} - {account.currency ?? "N/A"} - {account.timezone ?? "N/A"}</div>
+                <div className="truncate text-sm font-medium text-foreground">{account.name || account.advertiserId} - {account.currency ?? "N/A"} - {account.timezone ?? "N/A"}</div>
               </div>
             )}
           />
           <div className="flex flex-wrap gap-2">
-            <Badge className={selectedAdAccount?.isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}>
+            <Badge className={selectedAdAccount?.isActive ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/10 text-amber-700 dark:text-amber-300"}>
               {selectedAdAccount?.isActive ? "Active" : "Needs account"}
             </Badge>
             {selectedAdAccount?.timezone ? <Badge variant="outline">{selectedAdAccount.timezone}</Badge> : null}
@@ -125,41 +125,41 @@ export function AccountAppSection({ form, reference, appMappings, selectedAdAcco
             getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.packageName ?? ""} ${mapping.downloadUrl ?? ""} ${mapping.appPlatform ?? mapping.platform ?? ""} ${mapping.tikTokAppId} ${mapping.normalizedStoreIdentifier ?? ""}`}
             renderValue={(mapping) => (
               <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</span>
-                <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `binding:${mapping.id}`}</span>
+                <span className="truncate font-medium text-foreground">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</span>
+                <span className="truncate font-mono text-xs text-muted-foreground">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `binding:${mapping.id}`}</span>
               </span>
             )}
             renderOption={(mapping) => (
               <div className="flex min-w-0 items-center gap-2 py-0.5">
-                <Badge variant="outline" className={(mapping.appPlatform ?? mapping.platform) === "IOS" ? "border-blue-200 text-blue-700" : "border-emerald-200 text-emerald-700"}>{mapping.appPlatform ?? mapping.platform ?? "APP"}</Badge>
+                <Badge variant="outline" className={(mapping.appPlatform ?? mapping.platform) === "IOS" ? "border-primary/20 text-primary" : "border-emerald-500/20 text-emerald-700 dark:text-emerald-300"}>{mapping.appPlatform ?? mapping.platform ?? "APP"}</Badge>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-slate-900">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</div>
-                  <div className="truncate font-mono text-xs text-slate-400">{mapping.packageName ?? mapping.normalizedStoreIdentifier ?? mapping.downloadUrl ?? mapping.tikTokAppId}</div>
-                  <div className="truncate font-mono text-[11px] text-slate-400">Mobile App ID: {mapping.tikTokAppId}</div>
+                  <div className="truncate text-sm font-medium text-foreground">{mapping.appDisplayName || mapping.appId || mapping.packageName || mapping.normalizedStoreIdentifier || mapping.tikTokAppId}</div>
+                  <div className="truncate font-mono text-xs text-muted-foreground">{mapping.packageName ?? mapping.normalizedStoreIdentifier ?? mapping.downloadUrl ?? mapping.tikTokAppId}</div>
+                  <div className="truncate font-mono text-[11px] text-muted-foreground">Mobile App ID: {mapping.tikTokAppId}</div>
                 </div>
               </div>
             )}
           />
 
           {form.tikTokAdAccountRowId && appMappings.length === 0 ? (
-            <p className="text-xs text-amber-700">This ad account does not have the selected app configured in TikTok.</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">This ad account does not have the selected app configured in TikTok.</p>
           ) : form.tikTokAdAccountRowId && form.paidMediaAppBindingId && !selectedAppMapping ? (
-            <p className="text-xs text-amber-700">This ad account does not have the selected app configured in TikTok.</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">This ad account does not have the selected app configured in TikTok.</p>
           ) : form.tikTokAdAccountRowId ? (
-            <p className="text-xs text-slate-500">Showing {appMappings.length} app mapping{appMappings.length === 1 ? "" : "s"} known for this advertiser.</p>
+            <p className="text-xs text-muted-foreground">Showing {appMappings.length} app mapping{appMappings.length === 1 ? "" : "s"} known for this advertiser.</p>
           ) : (
-            <p className="text-xs text-slate-500">Select an ad account first to load eligible app mappings.</p>
+            <p className="text-xs text-muted-foreground">Select an ad account first to load eligible app mappings.</p>
           )}
 
-          <div className="flex items-center gap-3 rounded-md border bg-slate-50 p-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 p-3">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-slate-900 text-xs text-white">{initials(selectedAppMapping?.appDisplayName || selectedAppMapping?.appId)}</AvatarFallback>
+              <AvatarFallback className="bg-foreground text-xs text-background">{initials(selectedAppMapping?.appDisplayName || selectedAppMapping?.appId)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-900">{selectedAppMapping?.appDisplayName || selectedAppMapping?.appId || "No app selected"}</p>
-              <p className="truncate text-xs text-slate-500">{selectedAppMapping?.downloadUrl || "Download URL missing"}</p>
+              <p className="truncate text-sm font-medium text-foreground">{selectedAppMapping?.appDisplayName || selectedAppMapping?.appId || "No app selected"}</p>
+              <p className="truncate text-xs text-muted-foreground">{selectedAppMapping?.downloadUrl || "Download URL missing"}</p>
             </div>
-            <Badge className={selectedAppMapping?.isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}>
+            <Badge className={selectedAppMapping?.isActive ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/10 text-amber-700 dark:text-amber-300"}>
               {selectedAppMapping?.isActive ? "Mapped" : "Unmapped"}
             </Badge>
           </div>

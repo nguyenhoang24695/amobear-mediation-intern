@@ -46,7 +46,7 @@ function ConfigRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 border-b border-gray-100 py-2.5 last:border-b-0",
+        "flex items-center gap-2.5 border-b border-border py-2.5 last:border-b-0",
         dimmed && "opacity-40",
       )}
     >
@@ -57,8 +57,8 @@ function ConfigRow({
         className={cn(disabled && "opacity-70")}
       />
       <div className="flex min-w-0 flex-1 items-center justify-between gap-3 text-sm">
-        <span className="truncate text-gray-800">{label}</span>
-        <span className="shrink-0 text-gray-500">{value}</span>
+        <span className="truncate text-foreground">{label}</span>
+        <span className="shrink-0 text-muted-foreground">{value}</span>
       </div>
     </div>
   )
@@ -93,9 +93,9 @@ export function MyReportDataConfigurationPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-gray-100 px-3 py-2.5">
+      <div className="shrink-0 border-b border-border px-3 py-2.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -107,11 +107,11 @@ export function MyReportDataConfigurationPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-1">
         {filteredCategories.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-500">No matching filters.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">No matching filters.</p>
         ) : (
           filteredCategories.map((category) => (
             <div key={category.id} className="py-1">
-              <p className="py-2 text-xs font-medium text-gray-500">{category.label}</p>
+              <p className="py-2 text-xs font-medium text-muted-foreground">{category.label}</p>
               {category.itemKeys.map((key) => {
                 const locked = MY_REPORT_LOCKED_CONFIG_KEYS.includes(key)
                 const checked = enabledKeys.has(key)
@@ -132,13 +132,13 @@ export function MyReportDataConfigurationPanel({
         )}
       </div>
 
-      <div className="shrink-0 flex gap-2 border-t border-gray-100 bg-white p-3">
+      <div className="shrink-0 flex gap-2 border-t border-border bg-card p-3">
         <Button type="button" variant="outline" className="h-9 flex-1" onClick={onReset}>
           Reset
         </Button>
         <Button
           type="button"
-          className="h-9 flex-1 bg-blue-600 hover:bg-blue-700"
+          className="h-9 flex-1 bg-primary hover:bg-primary/90"
           disabled={applyDisabled}
           onClick={onApply}
         >

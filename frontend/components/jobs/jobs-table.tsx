@@ -168,11 +168,11 @@ export function JobsTable({
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field)
-      return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+      return <ArrowUpDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
     return sortDir === "asc" ? (
-      <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowUp className="ml-1 h-3.5 w-3.5 text-primary" />
     ) : (
-      <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary" />
     )
   }
 
@@ -211,22 +211,21 @@ export function JobsTable({
   // Empty State
   if (filteredJobs.length === 0) {
     return (
-      <Card className="border-slate-200">
+      <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">
           {hasFilters ? (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-slate-400" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <Search className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
+              <h3 className="mb-1 text-lg font-semibold text-foreground">
                 No jobs found
               </h3>
-              <p className="text-sm text-slate-500 mb-4">
+              <p className="mb-4 text-sm text-muted-foreground">
                 Try adjusting your search or filters
               </p>
               <Button
                 variant="link"
-                className="text-blue-600"
                 onClick={onClearFilters}
               >
                 Clear filters
@@ -234,13 +233,13 @@ export function JobsTable({
             </>
           ) : (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Briefcase className="w-8 h-8 text-slate-400" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <Briefcase className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
+              <h3 className="mb-1 text-lg font-semibold text-foreground">
                 No jobs configured
               </h3>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 No Hangfire recurring jobs have been set up yet
               </p>
             </>
@@ -254,8 +253,8 @@ export function JobsTable({
     <TooltipProvider delayDuration={200}>
       {/* Bulk Actions Bar */}
       {selectedJobs.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
-          <span className="text-sm font-medium text-blue-700">
+        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/10 px-4 py-2.5">
+          <span className="text-sm font-medium text-primary">
             {selectedJobs.length} job{selectedJobs.length > 1 ? "s" : ""}{" "}
             selected
           </span>
@@ -263,7 +262,7 @@ export function JobsTable({
             <Button
               variant="outline"
               size="sm"
-              className="border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 bg-transparent"
+              className="border-emerald-500/30 bg-transparent text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-300"
               onClick={handleBulkEnable}
             >
               Enable Selected
@@ -271,7 +270,7 @@ export function JobsTable({
             <Button
               variant="outline"
               size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-100 bg-transparent"
+              className="bg-transparent text-muted-foreground hover:bg-muted"
               onClick={handleBulkDisable}
             >
               Disable Selected
@@ -279,7 +278,7 @@ export function JobsTable({
             <Button
               variant="ghost"
               size="sm"
-              className="text-slate-600"
+              className="text-muted-foreground"
               onClick={() => setSelectedJobs([])}
             >
               Clear Selection
@@ -289,12 +288,12 @@ export function JobsTable({
       )}
 
       {/* Desktop / Tablet Table */}
-      <Card className="border-slate-200 hidden md:block">
+      <Card className="hidden overflow-hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-12">
                     <Checkbox
                       checked={
@@ -306,7 +305,7 @@ export function JobsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("name")}
                     >
                       Job Name
@@ -315,7 +314,7 @@ export function JobsTable({
                   </TableHead>
                   <TableHead className="w-24">
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("status")}
                     >
                       Status
@@ -324,7 +323,7 @@ export function JobsTable({
                   </TableHead>
                   <TableHead className="w-48">
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("schedule")}
                     >
                       Schedule
@@ -333,7 +332,7 @@ export function JobsTable({
                   </TableHead>
                   <TableHead className="w-64">
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("type")}
                     >
                       Type
@@ -342,7 +341,7 @@ export function JobsTable({
                   </TableHead>
                   <TableHead className="w-40">
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("updatedAt")}
                     >
                       Last Updated
@@ -356,7 +355,7 @@ export function JobsTable({
                 {paginatedJobs.map((job) => (
                   <TableRow
                     key={job.jobId}
-                    className={`hover:bg-slate-50 transition-colors ${!job.enabled ? "opacity-60" : ""}`}
+                    className={`transition-colors hover:bg-muted/40 ${!job.enabled ? "opacity-60" : ""}`}
                   >
                     <TableCell>
                       <Checkbox
@@ -368,14 +367,14 @@ export function JobsTable({
                     {/* Job Name */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded bg-slate-100">
-                          <Briefcase className="w-4 h-4 text-slate-500" />
+                        <div className="rounded bg-muted p-1.5">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 truncate">
+                          <p className="truncate font-medium text-foreground">
                             {job.displayName || job.jobId}
                           </p>
-                          <p className="text-xs text-slate-500 truncate">
+                          <p className="truncate text-xs text-muted-foreground">
                             {job.jobId}
                           </p>
                         </div>
@@ -385,13 +384,13 @@ export function JobsTable({
                     {/* Status */}
                     <TableCell>
                       {job.enabled ? (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
+                        <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
+                          <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
                           Enabled
                         </Badge>
                       ) : (
-                        <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5" />
+                        <Badge className="bg-muted text-muted-foreground hover:bg-muted">
+                          <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
                           Disabled
                         </Badge>
                       )}
@@ -402,10 +401,10 @@ export function JobsTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="cursor-default">
-                            <p className="text-sm font-mono text-slate-700">
+                            <p className="font-mono text-sm text-foreground">
                               {job.cronExpression}
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                               {job.timeZoneId}
                             </p>
                           </div>
@@ -423,10 +422,10 @@ export function JobsTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="min-w-0 cursor-default">
-                            <p className="text-sm text-slate-600 truncate max-w-56">
+                            <p className="max-w-56 truncate text-sm text-muted-foreground">
                               {job.jobTypeName || "N/A"}
                             </p>
-                            <p className="text-xs text-slate-500 font-mono truncate max-w-56">
+                            <p className="max-w-56 truncate font-mono text-xs text-muted-foreground">
                               {job.jobMethodName || "N/A"}
                             </p>
                           </div>
@@ -442,7 +441,7 @@ export function JobsTable({
 
                     {/* Last Updated */}
                     <TableCell>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-muted-foreground">
                         {job.updatedAtLabel}
                       </p>
                     </TableCell>
@@ -538,7 +537,7 @@ export function JobsTable({
         {paginatedJobs.map((job) => (
           <Card
             key={job.jobId}
-            className={`border-slate-200 ${!job.enabled ? "opacity-60" : ""}`}
+            className={!job.enabled ? "opacity-60" : ""}
           >
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
@@ -547,14 +546,14 @@ export function JobsTable({
                     checked={selectedJobs.includes(job.jobId)}
                     onCheckedChange={() => toggleSelectJob(job.jobId)}
                   />
-                  <div className="p-1.5 rounded bg-slate-100">
-                    <Briefcase className="w-4 h-4 text-slate-500" />
+                  <div className="rounded bg-muted p-1.5">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-medium text-slate-900">
+                    <p className="font-medium text-foreground">
                       {job.displayName || job.jobId}
                     </p>
-                    <p className="text-xs text-slate-500">{job.jobId}</p>
+                    <p className="text-xs text-muted-foreground">{job.jobId}</p>
                   </div>
                 </div>
                 <DropdownMenu>
@@ -608,34 +607,34 @@ export function JobsTable({
 
               <div className="mt-3 ml-12 grid grid-cols-2 gap-y-2 gap-x-4">
                 <div>
-                  <p className="text-xs text-slate-400">Status</p>
+                  <p className="text-xs text-muted-foreground">Status</p>
                   {job.enabled ? (
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
+                    <Badge className="mt-0.5 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
+                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       Enabled
                     </Badge>
                   ) : (
-                    <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5" />
+                    <Badge className="mt-0.5 bg-muted text-muted-foreground hover:bg-muted">
+                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
                       Disabled
                     </Badge>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Schedule</p>
-                  <p className="text-sm font-mono text-slate-700 mt-0.5">
+                  <p className="text-xs text-muted-foreground">Schedule</p>
+                  <p className="mt-0.5 font-mono text-sm text-foreground">
                     {job.cronExpression}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Timezone</p>
-                  <p className="text-sm text-slate-600 mt-0.5">
+                  <p className="text-xs text-muted-foreground">Timezone</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {job.timeZoneId}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Updated</p>
-                  <p className="text-sm text-slate-500 mt-0.5">
+                  <p className="text-xs text-muted-foreground">Updated</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {job.updatedAtLabel}
                   </p>
                 </div>

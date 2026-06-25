@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
@@ -115,17 +115,17 @@ export function PermissionList({
   const allExpanded = filteredScreens.every((s) => expandedScreens.has(s.id))
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-border">
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               <LayoutGrid className="h-4 w-4 shrink-0" />
               Screen Permissions
             </CardTitle>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <div className="relative w-full sm:w-48">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Filter screens..."
                   className="pl-8 h-8 text-sm"
@@ -158,18 +158,18 @@ export function PermissionList({
                   aria-label="Toggle all permissions"
                   disabled={disabled}
                 />
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   {allSelected ? "Deselect all" : "Select all"}
                 </span>
               </div>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {totalGranted} / {totalAvailable} granted
               </span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-full justify-start px-2 text-xs text-slate-500 sm:w-auto sm:justify-center"
+              className="h-7 w-full justify-start px-2 text-xs text-muted-foreground sm:w-auto sm:justify-center"
               onClick={allExpanded ? collapseAll : expandAll}
             >
               <ToggleLeft className="w-3.5 h-3.5 mr-1.5" />
@@ -181,23 +181,23 @@ export function PermissionList({
       <CardContent className="p-0">
         {filteredScreens.length === 0 ? (
           <div className="text-center py-12 px-4">
-            <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-500">
+            <Search className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">
               No screens match your filter
             </p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Try adjusting your search or module filter
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border">
             {groupedScreens.map(([module, moduleScreens]) => (
               <div key={module}>
                 {/* Module header */}
-                <div className="px-4 py-2 bg-slate-50/80 border-b border-slate-100">
+                <div className="px-4 py-2 bg-muted/40 border-b border-border">
                   <Badge
                     variant="secondary"
-                    className="text-[10px] font-semibold uppercase tracking-wider bg-slate-200 text-slate-600"
+                    className="text-[10px] font-semibold uppercase tracking-wider bg-muted text-muted-foreground"
                   >
                     {module}
                   </Badge>
@@ -213,12 +213,12 @@ export function PermissionList({
                     screenFns.length > 0 && !allScreenSelected
 
                   return (
-                    <div key={screen.id} className="border-b border-slate-50 last:border-b-0">
+                    <div key={screen.id} className="border-b border-border last:border-b-0">
                       {/* Screen header row */}
                       <div
                         className={cn(
-                          "flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer hover:bg-slate-50/60",
-                          isExpanded && "bg-slate-50/40",
+                          "flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer hover:bg-muted/40",
+                          isExpanded && "bg-muted/30",
                         )}
                         onClick={() => toggleExpand(screen.id)}
                         onKeyDown={(e) => {
@@ -233,9 +233,9 @@ export function PermissionList({
                       >
                         {/* Expand icon */}
                         {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         )}
 
                         {/* Select all for screen */}
@@ -260,7 +260,7 @@ export function PermissionList({
 
                         {/* Screen name and badge */}
                         <div className="flex-1 min-w-0">
-                          <span className="break-words text-sm font-medium text-slate-700">
+                          <span className="break-words text-sm font-medium text-muted-foreground">
                             {screen.name}
                           </span>
                         </div>
@@ -271,10 +271,10 @@ export function PermissionList({
                           className={cn(
                             "text-xs font-medium flex-shrink-0",
                             allScreenSelected
-                              ? "bg-blue-100 text-blue-700"
+                              ? "bg-primary/10 text-primary"
                               : someScreenSelected
-                                ? "bg-blue-50 text-blue-500"
-                                : "bg-slate-100 text-slate-400",
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground",
                           )}
                         >
                           {screenFns.length} / {screen.functions.length}
@@ -293,8 +293,8 @@ export function PermissionList({
                                   className={cn(
                                     "flex items-center gap-3 rounded-md px-2 py-2 transition-colors sm:px-3",
                                     isGranted
-                                      ? "bg-blue-50/60 hover:bg-blue-50"
-                                      : "hover:bg-slate-50",
+                                      ? "bg-primary/10 hover:bg-primary/10"
+                                      : "hover:bg-muted/40",
                                   )}
                                 >
                                   <Switch
@@ -302,7 +302,7 @@ export function PermissionList({
                                     onCheckedChange={() =>
                                       onToggleFunction(screen.id, fn.id)
                                     }
-                                    className="data-[state=checked]:bg-blue-600 scale-90"
+                                    className="data-[state=checked]:bg-primary scale-90"
                                     aria-label={`${fn.label} for ${screen.name}`}
                                     disabled={disabled}
                                   />
@@ -310,8 +310,8 @@ export function PermissionList({
                                     className={cn(
                                       "min-w-0 break-words text-sm select-none",
                                       isGranted
-                                        ? "text-slate-700 font-medium"
-                                        : "text-slate-500",
+                                        ? "text-muted-foreground font-medium"
+                                        : "text-muted-foreground",
                                     )}
                                   >
                                     {fn.label}
@@ -333,3 +333,4 @@ export function PermissionList({
     </Card>
   )
 }
+

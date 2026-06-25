@@ -112,7 +112,7 @@ export function MyReportSaveDialog({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <Checkbox checked={overwrite} onCheckedChange={(checked) => setOverwrite(checked === true)} />
             Overwrite an existing template
           </label>
@@ -122,7 +122,7 @@ export function MyReportSaveDialog({
               <Label htmlFor="template-overwrite">Existing template</Label>
               <select
                 id="template-overwrite"
-                className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm"
+                className="h-10 w-full rounded-md border border-border bg-card px-3 text-sm text-foreground"
                 value={selectedTemplateId}
                 onChange={(event) => setSelectedTemplateId(event.target.value)}
                 disabled={loadingList}

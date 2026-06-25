@@ -57,23 +57,23 @@ import { useRouter } from "next/navigation"
 const SCREEN_META_REQUESTS = "s-meta-requests"
 
 const statusConfig: Record<MetaRequestStatus, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-slate-100 text-slate-600" },
+  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
   pending_approval: { label: "Pending Approval", className: "bg-amber-100 text-amber-700" },
-  approved: { label: "Approved", className: "bg-blue-100 text-blue-700" },
-  rejected: { label: "Rejected", className: "bg-red-100 text-red-700" },
-  executing: { label: "Executing", className: "bg-purple-100 text-purple-700" },
+  approved: { label: "Approved", className: "bg-primary/10 text-primary" },
+  rejected: { label: "Rejected", className: "bg-destructive/10 text-destructive" },
+  executing: { label: "Executing", className: "bg-violet-500/10 text-violet-700 dark:text-violet-300" },
   completed: { label: "Completed", className: "bg-green-100 text-green-700" },
-  failed: { label: "Failed", className: "bg-red-100 text-red-700" },
+  failed: { label: "Failed", className: "bg-destructive/10 text-destructive" },
 }
 
 const rowColorClass: Record<MetaRequestStatus, string> = {
   draft: "",
-  pending_approval: "bg-amber-50/50",
-  approved: "bg-blue-50/40",
-  rejected: "bg-red-50/30",
-  executing: "bg-purple-50/40",
+  pending_approval: "bg-amber-500/5",
+  approved: "bg-primary/5",
+  rejected: "bg-destructive/5",
+  executing: "bg-violet-500/5",
   completed: "",
-  failed: "bg-red-50/50",
+  failed: "bg-destructive/5",
 }
 
 type ConfirmAction = "approve" | "reject" | "execute" | "retry"
@@ -240,24 +240,24 @@ export function RequestListContent() {
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>Meta Ads</span>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">Requests</span>
+            <span className="font-medium text-foreground">Requests</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <FileText className="w-5 h-5 text-blue-600" />
+            <div className="rounded-lg bg-primary/10 p-2">
+              <FileText className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Meta Campaign Requests</h1>
-              <p className="text-sm text-slate-500">Manage internal Meta campaign requests and approvals</p>
+              <h1 className="text-xl font-bold text-foreground">Meta Campaign Requests</h1>
+              <p className="text-sm text-muted-foreground">Manage internal Meta campaign requests and approvals</p>
             </div>
           </div>
         </div>
         {canCreate ? (
           <Link href="/meta-ads/requests/create">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button>
               <Plus className="w-4 h-4 mr-2" />
               Create Request
             </Button>
@@ -267,7 +267,7 @@ export function RequestListContent() {
 
       <div className="flex flex-wrap gap-3">
         <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search requests..."
             className="pl-9 h-9 text-sm"
@@ -316,27 +316,27 @@ export function RequestListContent() {
         </Select>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs text-slate-500 font-medium w-28">Request ID</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Campaign Name</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-36">Objective</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-40">App</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-36">Ad Account</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-36">Status</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-28">Requested By</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-28">Approved By</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-28">Created</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-10" />
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="w-28 text-xs font-medium text-muted-foreground">Request ID</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Campaign Name</TableHead>
+              <TableHead className="w-36 text-xs font-medium text-muted-foreground">Objective</TableHead>
+              <TableHead className="w-40 text-xs font-medium text-muted-foreground">App</TableHead>
+              <TableHead className="w-36 text-xs font-medium text-muted-foreground">Ad Account</TableHead>
+              <TableHead className="w-36 text-xs font-medium text-muted-foreground">Status</TableHead>
+              <TableHead className="w-28 text-xs font-medium text-muted-foreground">Requested By</TableHead>
+              <TableHead className="w-28 text-xs font-medium text-muted-foreground">Approved By</TableHead>
+              <TableHead className="w-28 text-xs font-medium text-muted-foreground">Created</TableHead>
+              <TableHead className="w-10 text-xs font-medium text-muted-foreground" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={10} className="py-12">
-                  <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading requests...
                   </div>
@@ -344,18 +344,18 @@ export function RequestListContent() {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={10} className="py-12 text-center text-sm text-destructive">
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-slate-400 text-sm">
+                <TableCell colSpan={10} className="py-12 text-center text-sm text-muted-foreground">
                   No requests found.
                   {canCreate ? (
                     <>
                       {" "}
-                      <Link href="/meta-ads/requests/create" className="text-blue-600 hover:underline">
+                      <Link href="/meta-ads/requests/create" className="text-primary hover:underline">
                         Create one
                       </Link>
                       .
@@ -367,26 +367,26 @@ export function RequestListContent() {
               filtered.map((request) => (
                 <TableRow
                   key={request.id}
-                  className={`text-sm cursor-pointer hover:bg-slate-50 ${rowColorClass[request.status]}`}
+                  className={`cursor-pointer text-sm hover:bg-accent/50 ${rowColorClass[request.status]}`}
                   onClick={() => router.push(`/meta-ads/requests/${request.id}`)}
                 >
-                  <TableCell className="font-mono text-xs text-slate-500">{formatMetaRequestId(request.id)}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{formatMetaRequestId(request.id)}</TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium text-slate-900 text-xs truncate max-w-xs">{request.campaignName}</p>
+                      <p className="max-w-xs truncate text-xs font-medium text-foreground">{request.campaignName}</p>
                       {request.failureSummary ? (
-                        <p className="text-[11px] text-red-600 truncate max-w-xs">{request.failureSummary}</p>
+                        <p className="max-w-xs truncate text-[11px] text-destructive">{request.failureSummary}</p>
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono text-[11px] text-slate-500">{request.objective.replace("OUTCOME_", "")}</TableCell>
-                  <TableCell className="text-xs text-slate-600">{request.appDisplayName ?? request.appId ?? "-"}</TableCell>
-                  <TableCell className="text-[11px] text-slate-500">
+                  <TableCell className="font-mono text-[11px] text-muted-foreground">{request.objective.replace("OUTCOME_", "")}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{request.appDisplayName ?? request.appId ?? "-"}</TableCell>
+                  <TableCell className="text-[11px] text-muted-foreground">
                     <div className="space-y-0.5">
-                      <p className="text-slate-700">{request.metaAdAccountName ?? "-"}</p>
+                      <p className="text-foreground">{request.metaAdAccountName ?? "-"}</p>
                       <p className="font-mono">{request.metaAdAccountId}</p>
                       {request.executionMetaIntegrationName ? (
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-muted-foreground">
                           via {request.executionMetaIntegrationName}
                           {request.executionAuthMode ? ` (${request.executionAuthMode})` : ""}
                         </p>
@@ -398,9 +398,9 @@ export function RequestListContent() {
                       {statusConfig[request.status].label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-600">{formatUserGuidShort(request.requestedBy)}</TableCell>
-                  <TableCell className="text-xs text-slate-600">{formatUserGuidShort(request.approvedBy)}</TableCell>
-                  <TableCell className="text-xs text-slate-500">{formatDateTime(request.createdAt)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatUserGuidShort(request.requestedBy)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatUserGuidShort(request.approvedBy)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDateTime(request.createdAt)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
@@ -433,7 +433,7 @@ export function RequestListContent() {
 
                         {request.status === "approved" && canExecute ? (
                           <DropdownMenuItem
-                            className="text-blue-700"
+                            className="text-primary"
                             onClick={(event) => {
                               event.stopPropagation()
                               setConfirmAction({ type: "execute", request })
@@ -475,7 +475,6 @@ export function RequestListContent() {
             <AlertDialogFooter>
               <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={actionLoading}
                 onClick={(event) => {
                   event.preventDefault()

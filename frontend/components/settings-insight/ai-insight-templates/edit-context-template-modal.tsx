@@ -138,7 +138,7 @@ export function EditContextTemplateModal({
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button type="button" className="bg-indigo-600 hover:bg-indigo-700" onClick={submit}>
+          <Button type="button" className="bg-primary hover:bg-primary/90" onClick={submit}>
             Lưu
           </Button>
         </DialogFooter>

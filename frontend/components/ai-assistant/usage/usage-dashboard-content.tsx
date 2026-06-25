@@ -134,7 +134,7 @@ export function UsageDashboardContent() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">My AI Usage</h1>
+            <h1 className="text-2xl font-semibold ">My AI Usage</h1>
             <p className="text-sm text-slate-500">
               Track your token consumption and costs
             </p>

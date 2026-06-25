@@ -122,7 +122,7 @@ export function Pagination({
                 className={cn(
                   "h-8 min-w-8",
                   page === currentPage
-                    ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                    ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                     : "bg-transparent hover:bg-accent",
                 )}
                 onClick={() => onPageChange(page)}

@@ -127,8 +127,8 @@ export function BackfillDialog({ open, onOpenChange, sourceKey, action, onSucces
           <AlertDialogTitle>Run backfill</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-sm text-muted-foreground text-left overflow-y-auto pr-1">
-              <p className="text-slate-700 m-0">{action.label}</p>
-              <code className="block text-xs bg-slate-100 rounded px-2 py-1 break-all text-slate-800">
+              <p className="text-foreground m-0">{action.label}</p>
+              <code className="block text-xs bg-muted rounded px-2 py-1 break-all text-foreground">
                 POST /api/v1/data-sources/backfill-runs → jobs-test/{action.endpoint}
               </code>
               <div className="grid gap-3 pt-1">
@@ -150,19 +150,19 @@ export function BackfillDialog({ open, onOpenChange, sourceKey, action, onSucces
                   </>
                 )}
               </div>
-              <div className="space-y-2 pt-2 border-t border-slate-200">
+              <div className="space-y-2 pt-2 border-t border-border">
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="bf-log" className="text-slate-800">
+                  <Label htmlFor="bf-log" className="text-foreground">
                     Nhật ký tiến trình
                   </Label>
                   <div className="flex items-center gap-2">
                     <Checkbox id="bf-autoscroll" checked={autoScroll} onCheckedChange={(v) => setAutoScroll(v === true)} />
-                    <Label htmlFor="bf-autoscroll" className="text-xs font-normal text-slate-600 cursor-pointer leading-none">
+                    <Label htmlFor="bf-autoscroll" className="text-xs font-normal text-muted-foreground cursor-pointer leading-none">
                       Tự động cuộn xuống
                     </Label>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 m-0">
+                <p className="text-xs text-muted-foreground m-0">
                   Chạy từng ngày với checkpoint trong DB. Nếu đóng tab giữa chừng, mở tab <span className="font-medium">Runs</span> để
                   resume.
                 </p>
@@ -173,7 +173,7 @@ export function BackfillDialog({ open, onOpenChange, sourceKey, action, onSucces
                   value={logText}
                   rows={10}
                   spellCheck={false}
-                  className="w-full min-h-[160px] max-h-[220px] resize-y rounded-md border border-slate-200 bg-slate-950 px-2 py-1.5 text-xs font-mono text-slate-100 leading-relaxed overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  className="w-full min-h-[160px] max-h-[220px] resize-y rounded-md border border-border bg-muted px-2 py-1.5 text-xs font-mono text-foreground leading-relaxed overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                   aria-label="Nhật ký tiến trình backfill"
                 />
               </div>
@@ -183,7 +183,7 @@ export function BackfillDialog({ open, onOpenChange, sourceKey, action, onSucces
         <AlertDialogFooter className="mt-4 sm:mt-4">
           <AlertDialogCancel disabled={running}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={(e) => {
               e.preventDefault()
               void handleRun()

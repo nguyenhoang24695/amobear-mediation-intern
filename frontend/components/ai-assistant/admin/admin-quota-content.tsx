@@ -208,7 +208,7 @@ export function AdminQuotaContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+              <h1 className="text-2xl font-semibold  flex items-center gap-2">
                 <Settings className="h-6 w-6" />
                 Token Quota Management
               </h1>

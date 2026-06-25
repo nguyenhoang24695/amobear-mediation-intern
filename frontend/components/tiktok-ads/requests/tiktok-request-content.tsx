@@ -25,10 +25,10 @@ const SCREEN = "s-tiktok-requests"
 
 function tone(status?: string) {
   const value = (status ?? "").toLowerCase()
-  if (["completed", "approved"].includes(value)) return "bg-emerald-50 text-emerald-700"
-  if (["failed", "rejected"].includes(value)) return "bg-rose-50 text-rose-700"
-  if (["pending_approval", "executing"].includes(value)) return "bg-amber-50 text-amber-700"
-  return "bg-slate-100 text-slate-700"
+  if (["completed", "approved"].includes(value)) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+  if (["failed", "rejected"].includes(value)) return "bg-destructive/10 text-destructive"
+  if (["pending_approval", "executing"].includes(value)) return "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+  return "bg-muted text-muted-foreground"
 }
 
 function canEditRequestStatus(status?: string | null) {
@@ -70,16 +70,16 @@ function formatLogStatusLabel(status?: string | null): string {
 }
 
 function getLogStatusClasses(status?: string | null): string {
-  if (status === "succeeded") return "bg-green-100 text-green-700"
-  if (status === "failed") return "bg-red-100 text-red-700"
-  if (status === "skipped") return "bg-slate-100 text-slate-600"
-  return "bg-amber-100 text-amber-700"
+  if (status === "succeeded") return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+  if (status === "failed") return "bg-destructive/10 text-destructive"
+  if (status === "skipped") return "bg-muted text-muted-foreground"
+  return "bg-amber-500/10 text-amber-700 dark:text-amber-300"
 }
 
 function getLogStatusIcon(status?: string | null) {
-  if (status === "succeeded") return <CheckCircle2 className="h-4 w-4 text-green-600" />
-  if (status === "failed") return <XCircle className="h-4 w-4 text-red-500" />
-  return <Clock className="h-4 w-4 text-slate-400" />
+  if (status === "succeeded") return <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+  if (status === "failed") return <XCircle className="h-4 w-4 text-destructive" />
+  return <Clock className="h-4 w-4 text-muted-foreground" />
 }
 
 function tryFormatJson(value?: string | null): string {
@@ -213,8 +213,8 @@ export function TikTokRequestListContent() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">TikTok Requests</h1>
-          <p className="text-sm text-slate-500">Create, approve, and execute TikTok campaign requests.</p>
+          <h1 className="text-xl font-semibold text-foreground">TikTok Requests</h1>
+          <p className="text-sm text-muted-foreground">Create, approve, and execute TikTok campaign requests.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
@@ -222,21 +222,21 @@ export function TikTokRequestListContent() {
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-md border bg-white p-3 md:grid-cols-3">
+      <div className="grid gap-3 rounded-md border bg-card p-3 text-card-foreground md:grid-cols-3">
         <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent>{["all", "draft", "pending_approval", "approved", "executing", "completed", "failed", "rejected"].map(x => <SelectItem key={x} value={x}>{x === "all" ? "All statuses" : x}</SelectItem>)}</SelectContent></Select>
         <Select value={accountId} onValueChange={setAccountId}><SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{reference?.adAccounts.map(x => <SelectItem key={x.id} value={String(x.id)}>{x.name ?? x.advertiserId}</SelectItem>)}</SelectContent></Select>
         <Select value={appRowId} onValueChange={setAppRowId}><SelectTrigger><SelectValue placeholder="App" /></SelectTrigger><SelectContent><SelectItem value="all">All apps</SelectItem>{reference?.appMappings.filter(x => x.appRowId != null).map(x => <SelectItem key={x.id} value={String(x.appRowId)}>{x.appDisplayName ?? x.appId ?? x.packageName ?? x.normalizedStoreIdentifier ?? x.tikTokAppId}</SelectItem>)}</SelectContent></Select>
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card text-card-foreground">
         <Table>
           <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Account</TableHead><TableHead>App</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading ? <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">Loading requests...</TableCell></TableRow> : null}
-            {!loading && items.length === 0 ? <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">No TikTok requests found.</TableCell></TableRow> : null}
+            {loading ? <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">Loading requests...</TableCell></TableRow> : null}
+            {!loading && items.length === 0 ? <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">No TikTok requests found.</TableCell></TableRow> : null}
             {items.map(item => (
               <TableRow key={item.id}>
-                <TableCell><Link className="font-medium text-blue-700 hover:underline" href={`/tiktok-ads/requests/${item.id}`}>{item.campaignName || `Request #${item.id}`}</Link><p className="text-xs text-slate-500">{item.objective}</p></TableCell>
+                <TableCell><Link className="font-medium text-primary hover:underline" href={`/tiktok-ads/requests/${item.id}`}>{item.campaignName || `Request #${item.id}`}</Link><p className="text-xs text-muted-foreground">{item.objective}</p></TableCell>
                 <TableCell>{item.tikTokAdAccountName ?? item.tikTokAdAccountRowId}</TableCell>
                 <TableCell>{item.appDisplayName ?? item.appId ?? item.appRowId}</TableCell>
                 <TableCell><Badge className={tone(item.status)}>{item.status}</Badge></TableCell>
@@ -257,7 +257,7 @@ export function TikTokRequestListContent() {
       <Dialog open={!!confirm} onOpenChange={(open) => !open && !actionLoading && setConfirm(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Confirm {confirm?.action}</DialogTitle></DialogHeader>
-          {confirm?.action === "reject" ? <div className="space-y-2"><Label>Reject reason</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} /></div> : <p className="text-sm text-slate-600">Apply this action to {confirm?.item.campaignName}?</p>}
+          {confirm?.action === "reject" ? <div className="space-y-2"><Label>Reject reason</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} /></div> : <p className="text-sm text-muted-foreground">Apply this action to {confirm?.item.campaignName}?</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>Cancel</Button>
             <Button onClick={() => void run()} disabled={actionLoading}>
@@ -336,13 +336,13 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
     toast({ title: copied ? `${label} copied` : `Copy ${label.toLowerCase()} failed`, variant: copied ? "default" : "destructive" })
   }
 
-  if (!detail || !payload) return <div className="py-10 text-center text-sm text-slate-500">Loading request...</div>
+  if (!detail || !payload) return <div className="py-10 text-center text-sm text-muted-foreground">Loading request...</div>
   const mediaLabel = getMediaLabel(payload)
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h1 className="text-xl font-semibold text-slate-900">{detail.campaignName || `Request #${detail.id}`}</h1><p className="text-sm text-slate-500">TikTok request detail and execution logs.</p></div>
+        <div><h1 className="text-xl font-semibold text-foreground">{detail.campaignName || `Request #${detail.id}`}</h1><p className="text-sm text-muted-foreground">TikTok request detail and execution logs.</p></div>
         <div className="flex gap-2">
           {canEditRequestStatus(detail.status) && canCreate ? <Button variant="outline" onClick={() => router.push(`/tiktok-ads/requests/${detail.id}/edit`)}>Edit</Button> : null}
           {canCreate ? <Button variant="outline" onClick={() => void validate()}>Validate</Button> : null}
@@ -354,22 +354,22 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-          <section className="rounded-md border bg-white p-4 lg:col-span-2"><h2 className="mb-3 font-semibold">Request Summary</h2><div className="grid gap-3 text-sm md:grid-cols-2"><Info label="Status" value={<Badge className={tone(detail.status)}>{detail.status}</Badge>} /><Info label="Account" value={detail.tikTokAdAccountName ?? detail.tikTokAdAccountRowId} /><Info label="App" value={detail.appDisplayName ?? detail.appId ?? detail.appRowId} /><Info label="Created" value={formatDate(detail.createdAt)} /><Info label="Campaign budget" value={payload.campaign.budget ?? "-"} /><Info label="Ad group budget" value={payload.adGroup.budget ?? "-"} /><Info label="Creative" value={mediaLabel} /><Info label="Ad text" value={payload.ads.length > 1 ? `${payload.ads.length} creative texts` : payload.ad.adText ?? "-"} /></div></section>
-        <section className="rounded-md border bg-white p-4"><h2 className="mb-3 font-semibold">Lifecycle</h2><div className="space-y-2 text-sm"><Info label="Submitted" value={formatDate(detail.submittedAt)} /><Info label="Approved" value={formatDate(detail.approvedAt)} /><Info label="Executed" value={formatDate(detail.executedAt)} /><Info label="Failed" value={formatDate(detail.failedAt)} /></div></section>
+          <section className="rounded-md border bg-card p-4 text-card-foreground lg:col-span-2"><h2 className="mb-3 font-semibold">Request Summary</h2><div className="grid gap-3 text-sm md:grid-cols-2"><Info label="Status" value={<Badge className={tone(detail.status)}>{detail.status}</Badge>} /><Info label="Account" value={detail.tikTokAdAccountName ?? detail.tikTokAdAccountRowId} /><Info label="App" value={detail.appDisplayName ?? detail.appId ?? detail.appRowId} /><Info label="Created" value={formatDate(detail.createdAt)} /><Info label="Campaign budget" value={payload.campaign.budget ?? "-"} /><Info label="Ad group budget" value={payload.adGroup.budget ?? "-"} /><Info label="Creative" value={mediaLabel} /><Info label="Ad text" value={payload.ads.length > 1 ? `${payload.ads.length} creative texts` : payload.ad.adText ?? "-"} /></div></section>
+        <section className="rounded-md border bg-card p-4 text-card-foreground"><h2 className="mb-3 font-semibold">Lifecycle</h2><div className="space-y-2 text-sm"><Info label="Submitted" value={formatDate(detail.submittedAt)} /><Info label="Approved" value={formatDate(detail.approvedAt)} /><Info label="Executed" value={formatDate(detail.executedAt)} /><Info label="Failed" value={formatDate(detail.failedAt)} /></div></section>
       </div>
 
-      {detail.validationErrors.length > 0 ? <section className="rounded-md border border-rose-200 bg-rose-50 p-4"><h2 className="mb-2 font-semibold text-rose-800">Validation Errors</h2><ul className="list-disc pl-5 text-sm text-rose-700">{detail.validationErrors.map((x, i) => <li key={i}>{x}</li>)}</ul></section> : null}
+      {detail.validationErrors.length > 0 ? <section className="rounded-md border border-destructive/20 bg-destructive/10 p-4"><h2 className="mb-2 font-semibold text-destructive">Validation Errors</h2><ul className="list-disc pl-5 text-sm text-destructive">{detail.validationErrors.map((x, i) => <li key={i}>{x}</li>)}</ul></section> : null}
 
-      <section className="rounded-md border bg-white p-4">
+      <section className="rounded-md border bg-card p-4 text-card-foreground">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-semibold">Operation Logs</h2>
-          <Badge variant="outline" className="font-mono text-[10px] text-slate-500">{detail.operationLogs.length} step{detail.operationLogs.length === 1 ? "" : "s"}</Badge>
+          <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">{detail.operationLogs.length} step{detail.operationLogs.length === 1 ? "" : "s"}</Badge>
         </div>
         {detail.operationLogs.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-500">No logs yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">No logs yet.</p>
         ) : (
           <div className="relative">
-            <div className="absolute bottom-2 left-[13px] top-2 w-px bg-slate-200" />
+            <div className="absolute bottom-2 left-[13px] top-2 w-px bg-border" />
             <div className="space-y-4">
               {detail.operationLogs.map((log) => {
                 const expanded = !!expandedLogs[log.id]
@@ -379,29 +379,29 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
 
                 return (
                   <div key={log.id} className="relative flex items-start gap-3">
-                    <div className="relative z-10 flex-shrink-0 bg-white">{getLogStatusIcon(log.status)}</div>
+                    <div className="relative z-10 flex-shrink-0 bg-card">{getLogStatusIcon(log.status)}</div>
                     <div className="min-w-0 flex-1 pb-1">
                       <Collapsible open={expanded} onOpenChange={(open) => setExpandedLogs((current) => ({ ...current, [log.id]: open }))}>
-                        <div className={`rounded-md border px-4 py-3 ${log.status === "failed" ? "border-red-200 bg-red-50/60" : "border-slate-200 bg-white"}`}>
+                        <div className={`rounded-md border px-4 py-3 ${log.status === "failed" ? "border-destructive/20 bg-destructive/10" : "border-border bg-background"}`}>
                           <CollapsibleTrigger className="w-full text-left">
                             <div className="flex items-start justify-between gap-4">
                               <div className="min-w-0 space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-sm font-semibold text-slate-900">{formatOperationAction(log)}</p>
-                                  <Badge variant="outline" className="border-slate-300 font-mono text-[10px] text-slate-600">{formatStepLabel(log.step)}</Badge>
+                                  <p className="text-sm font-semibold text-foreground">{formatOperationAction(log)}</p>
+                                  <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">{formatStepLabel(log.step)}</Badge>
                                   <Badge className={`text-[10px] ${getLogStatusClasses(log.status)}`}>{formatLogStatusLabel(log.status)}</Badge>
-                                  {log.httpStatusCode ? <Badge variant="outline" className="border-slate-300 font-mono text-[10px] text-slate-600">HTTP {log.httpStatusCode}</Badge> : null}
-                                  {log.tikTokErrorCode ? <Badge variant="outline" className="border-slate-300 font-mono text-[10px] text-slate-600">TikTok {log.tikTokErrorCode}</Badge> : null}
+                                  {log.httpStatusCode ? <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">HTTP {log.httpStatusCode}</Badge> : null}
+                                  {log.tikTokErrorCode ? <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">TikTok {log.tikTokErrorCode}</Badge> : null}
                                 </div>
-                                <p className="text-xs text-slate-500">{log.summaryMessage ?? log.errorMessage ?? "No summary available."}</p>
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                                <p className="text-xs text-muted-foreground">{log.summaryMessage ?? log.errorMessage ?? "No summary available."}</p>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                                   <span>{formatDate(log.startedAt)}</span>
                                   <span>Attempt #{log.attemptNumber}</span>
-                                  {log.resourcePath ? <span className="font-mono text-slate-500">{log.resourcePath}</span> : null}
+                                  {log.resourcePath ? <span className="font-mono text-muted-foreground">{log.resourcePath}</span> : null}
                                   {log.correlationId ? <span className="font-mono">Correlation: {log.correlationId}</span> : null}
                                 </div>
                               </div>
-                              <ChevronDown className={`mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                              <ChevronDown className={`mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
                             </div>
                           </CollapsibleTrigger>
 
@@ -428,14 +428,14 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
                                 emptyLabel="No summary available."
                                 onCopy={() => void handleCopy("Summary", formattedSummary)}
                                 footer={
-                                  <div className="space-y-1 text-[11px] text-slate-500">
-                                    {log.tikTokErrorCode ? <p>Error code: <span className="font-mono text-slate-700">{log.tikTokErrorCode}</span></p> : null}
-                                    {log.resourcePath ? <p>Endpoint: <span className="break-all font-mono text-slate-700">{log.resourcePath}</span></p> : null}
+                                  <div className="space-y-1 text-[11px] text-muted-foreground">
+                                    {log.tikTokErrorCode ? <p>Error code: <span className="font-mono text-foreground">{log.tikTokErrorCode}</span></p> : null}
+                                    {log.resourcePath ? <p>Endpoint: <span className="break-all font-mono text-foreground">{log.resourcePath}</span></p> : null}
                                   </div>
                                 }
                               />
                             </div>
-                            {!hasLogDebugPayload(log) ? <p className="mt-3 text-[11px] text-slate-400">This operation log only contains minimal lifecycle data.</p> : null}
+                            {!hasLogDebugPayload(log) ? <p className="mt-3 text-[11px] text-muted-foreground">This operation log only contains minimal lifecycle data.</p> : null}
                           </CollapsibleContent>
                         </div>
                       </Collapsible>
@@ -448,10 +448,10 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
         )}
       </section>
 
-      <section className="rounded-md border bg-white p-4"><h2 className="mb-3 font-semibold">Payload</h2><pre className="max-h-96 overflow-auto rounded bg-slate-950 p-3 text-xs text-slate-100">{JSON.stringify(payload, null, 2)}</pre></section>
+      <section className="rounded-md border bg-card p-4 text-card-foreground"><h2 className="mb-3 font-semibold">Payload</h2><pre className="max-h-96 overflow-auto rounded bg-zinc-950 p-3 text-xs text-zinc-100 dark:bg-zinc-900">{JSON.stringify(payload, null, 2)}</pre></section>
 
       <Dialog open={!!confirm} onOpenChange={(open) => !open && !actionLoading && setConfirm(null)}>
-        <DialogContent><DialogHeader><DialogTitle>Confirm {confirm}</DialogTitle></DialogHeader>{confirm === "reject" ? <div className="space-y-2"><Label>Reject reason</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} /></div> : <p className="text-sm text-slate-600">Apply this action to the request?</p>}<DialogFooter><Button variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>Cancel</Button><Button onClick={() => void run()} disabled={actionLoading}>{actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{actionLoading && confirm === "execute" ? "Executing..." : actionLoading ? "Processing..." : "Confirm"}</Button></DialogFooter></DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>Confirm {confirm}</DialogTitle></DialogHeader>{confirm === "reject" ? <div className="space-y-2"><Label>Reject reason</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} /></div> : <p className="text-sm text-muted-foreground">Apply this action to the request?</p>}<DialogFooter><Button variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>Cancel</Button><Button onClick={() => void run()} disabled={actionLoading}>{actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{actionLoading && confirm === "execute" ? "Executing..." : actionLoading ? "Processing..." : "Confirm"}</Button></DialogFooter></DialogContent>
       </Dialog>
     </div>
   )
@@ -475,19 +475,19 @@ function OperationLogPanel({
   const hasValue = !!value?.trim()
 
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-600">
+    <div className="rounded-md border bg-muted/30">
+      <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
           {icon}
           <span>{title}</span>
         </div>
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-500" onClick={onCopy}>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={onCopy}>
           <Copy className="mr-1 h-3.5 w-3.5" />
           Copy
         </Button>
       </div>
       <div className="space-y-3 p-3">
-        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-100">
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-md bg-zinc-950 px-3 py-2 text-[11px] leading-5 text-zinc-100 dark:bg-zinc-900">
           {hasValue ? value : emptyLabel}
         </pre>
         {footer}
@@ -497,5 +497,5 @@ function OperationLogPanel({
 }
 
 function Info({ label, value }: { label: string; value: ReactNode }) {
-  return <div><p className="text-xs font-medium uppercase text-slate-500">{label}</p><div className="mt-1 break-words text-slate-900">{value}</div></div>
+  return <div><p className="text-xs font-medium uppercase text-muted-foreground">{label}</p><div className="mt-1 break-words text-foreground">{value}</div></div>
 }

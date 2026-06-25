@@ -52,15 +52,15 @@ export function SearchableSelect<T>({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="h-10 w-full justify-between bg-white px-3 text-left font-normal"
+          className="h-10 w-full justify-between bg-background px-3 text-left font-normal"
         >
           <span className="min-w-0 flex-1 truncate text-left">
-            {selectedOption ? renderValue(selectedOption) : <span className="text-slate-500">{placeholder}</span>}
+            {selectedOption ? renderValue(selectedOption) : <span className="text-muted-foreground">{placeholder}</span>}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[320px] p-0" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] min-w-0 p-0 sm:w-[--radix-popover-trigger-width] sm:min-w-[320px]" align="start">
         <Command shouldFilter={shouldFilter}>
           <CommandInput placeholder={searchPlaceholder} onValueChange={onSearchChange} />
           <CommandList>
@@ -124,15 +124,15 @@ export function TargetingMultiSelect({ values, options, placeholder, searchPlace
             variant="outline"
             role="combobox"
             disabled={disabled}
-            className="min-h-10 w-full justify-between bg-white px-3 text-left font-normal"
+            className="min-h-10 w-full justify-between bg-background px-3 text-left font-normal"
           >
-            <span className={cn("min-w-0 flex-1 truncate", values.length === 0 && "text-slate-500")}>
+            <span className={cn("min-w-0 flex-1 truncate", values.length === 0 && "text-muted-foreground")}>
               {values.length === 0 ? placeholder : `${values.length} selected`}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+        <PopoverContent className="w-[calc(100vw-2rem)] min-w-0 p-0 sm:w-[--radix-popover-trigger-width] sm:min-w-[360px]" align="start">
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
             <CommandList>
@@ -145,7 +145,7 @@ export function TargetingMultiSelect({ values, options, placeholder, searchPlace
                       <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{option.label}</span>
-                        <span className="block truncate text-xs text-slate-400">{option.countryCode ? `${option.countryCode} · ` : ""}{option.path || option.key}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{option.countryCode ? `${option.countryCode} · ` : ""}{option.path || option.key}</span>
                       </span>
                     </CommandItem>
                   )
@@ -159,9 +159,9 @@ export function TargetingMultiSelect({ values, options, placeholder, searchPlace
       {selectedOptions.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {selectedOptions.map((option) => (
-            <Badge key={option.key} variant="outline" className="gap-1 rounded-md bg-white px-2 py-1 text-xs">
-              <span className="max-w-[180px] truncate">{option.label}</span>
-              <button type="button" className="rounded-sm text-slate-400 hover:text-slate-700" onClick={() => remove(option.key)}>
+            <Badge key={option.key} variant="outline" className="gap-1 rounded-md bg-background px-2 py-1 text-xs">
+              <span className="max-w-[calc(100vw-6rem)] truncate sm:max-w-[180px]">{option.label}</span>
+              <button type="button" className="rounded-sm text-muted-foreground hover:text-foreground" onClick={() => remove(option.key)}>
                 <X className="h-3 w-3" />
               </button>
             </Badge>

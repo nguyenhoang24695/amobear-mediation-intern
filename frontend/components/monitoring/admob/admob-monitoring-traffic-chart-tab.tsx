@@ -72,8 +72,8 @@ const UNIT_OPTIONS: Array<{ value: AdmobApiTrafficUnit; label: string; descripti
 ]
 
 const CHART_MARGIN = { top: 12, right: 16, left: 8, bottom: 20 }
-const AXIS_TICK_STYLE = { fontSize: 11, fill: "#64748b" }
-const AXIS_LINE_STYLE = { stroke: "#cbd5e1" }
+const AXIS_TICK_STYLE = { fontSize: 11, fill: "var(--muted-foreground)" }
+const AXIS_LINE_STYLE = { stroke: "var(--border)" }
 
 function bucketSeconds(bucket: AdmobApiTrafficBucket | string) {
   if (bucket === "minute") return 60
@@ -469,7 +469,7 @@ export function AdmobMonitoringTrafficChartTab() {
             </div>
             <Button
               type="button"
-              className="h-10 shrink-0 bg-blue-600 px-4 hover:bg-blue-700"
+              className="h-10 shrink-0 px-4"
               onClick={applyFilters}
               disabled={loading || loadingOptions}
             >
@@ -485,10 +485,10 @@ export function AdmobMonitoringTrafficChartTab() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 border-b bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="flex flex-col gap-3 border-b bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Activity className="h-4 w-4 text-blue-600" />
+              <Activity className="h-4 w-4 text-primary" />
               API call traffic
             </CardTitle>
             <CardDescription>
@@ -498,14 +498,14 @@ export function AdmobMonitoringTrafficChartTab() {
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+              <div className="flex rounded-lg border border-border bg-background p-1">
                 {BUCKET_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
                     type="button"
                     size="sm"
                     variant={bucketMode === option.value ? "default" : "ghost"}
-                    className={cn("h-8 px-3", bucketMode !== option.value && "text-slate-600")}
+                    className={cn("h-8 px-3", bucketMode !== option.value && "text-muted-foreground")}
                     onClick={() => setBucketMode(option.value)}
                     disabled={loading}
                   >
@@ -513,14 +513,14 @@ export function AdmobMonitoringTrafficChartTab() {
                   </Button>
                 ))}
               </div>
-              <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+              <div className="flex rounded-lg border border-border bg-background p-1">
                 {CHART_TYPE_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
                     type="button"
                     size="sm"
                     variant={chartType === option.value ? "default" : "ghost"}
-                    className={cn("h-8 px-3", chartType !== option.value && "text-slate-600")}
+                    className={cn("h-8 px-3", chartType !== option.value && "text-muted-foreground")}
                     onClick={() => setChartType(option.value)}
                     disabled={loading}
                   >
@@ -530,7 +530,7 @@ export function AdmobMonitoringTrafficChartTab() {
               </div>
             </div>
             {chart && totalSummaryValue != null ? (
-              <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
+              <Badge variant="outline" className="border-border bg-background text-foreground">
                 {chartUnit === "tps" ? "Avg TPS" : "Total"}: {formatTrafficValue(totalSummaryValue, chartUnit)}
                 {chartUnit === "tps" ? "/s" : ""}
               </Badge>
@@ -542,14 +542,14 @@ export function AdmobMonitoringTrafficChartTab() {
           <div className="flex flex-col lg:flex-row">
             <div className="min-w-0 flex-1 p-4">
               {loading ? (
-                <div className="flex h-72 items-center justify-center text-sm text-slate-500">
+                <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading chart…
                   </span>
                 </div>
               ) : !chartRows.length ? (
-                <div className="flex h-72 items-center justify-center text-sm text-slate-500">
+                <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
                   Unable to build chart for the selected date range.
                 </div>
               ) : (
@@ -557,7 +557,7 @@ export function AdmobMonitoringTrafficChartTab() {
                   <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     {chartType === "line" ? (
                       <LineChart key={`line-${activeDimension}-${seriesKeys.join("|")}`} data={chartRows} margin={CHART_MARGIN}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                         <XAxis
                           dataKey="label"
                           tick={AXIS_TICK_STYLE}
@@ -594,7 +594,7 @@ export function AdmobMonitoringTrafficChartTab() {
                                 type="monotone"
                                 dataKey="count"
                                 name={chartUnit === "tps" ? "TPS" : "API calls"}
-                                stroke="#3b82f6"
+                                stroke="var(--primary)"
                                 strokeWidth={2}
                                 dot={showChartDots ? { r: 3 } : false}
                                 connectNulls
@@ -604,7 +604,7 @@ export function AdmobMonitoringTrafficChartTab() {
                       </LineChart>
                     ) : (
                       <BarChart key={`bar-${activeDimension}-${seriesKeys.join("|")}`} data={chartRows} margin={CHART_MARGIN}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                         <XAxis
                           dataKey="label"
                           tick={AXIS_TICK_STYLE}
@@ -639,7 +639,7 @@ export function AdmobMonitoringTrafficChartTab() {
                               <Bar
                                 dataKey="count"
                                 name={chartUnit === "tps" ? "TPS" : "API calls"}
-                                fill="#3b82f6"
+                                fill="var(--primary)"
                                 maxBarSize={32}
                                 radius={[4, 4, 0, 0]}
                               />
@@ -652,10 +652,10 @@ export function AdmobMonitoringTrafficChartTab() {
               )}
             </div>
 
-            <aside className="w-full border-t border-slate-200 bg-slate-50/80 p-4 lg:w-72 lg:border-t-0 lg:border-l">
+            <aside className="w-full border-t border-border bg-muted/50 p-4 lg:w-72 lg:border-t-0 lg:border-l">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Unit</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Unit</h3>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -667,7 +667,7 @@ export function AdmobMonitoringTrafficChartTab() {
                           variant={chartUnit === option.value ? "default" : "outline"}
                           className={cn(
                             "h-10 w-full",
-                            chartUnit !== option.value && "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                            chartUnit !== option.value && "border-border bg-background text-foreground hover:bg-accent",
                           )}
                           onClick={() => setChartUnit(option.value)}
                         >
@@ -681,9 +681,9 @@ export function AdmobMonitoringTrafficChartTab() {
                   ))}
                 </div>
 
-                <div className="border-t border-slate-200 pt-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Dimension</h3>
-                  <p className="mt-1 text-xs text-slate-500">Break down stacked bars by series.</p>
+                <div className="border-t border-border pt-4">
+                  <h3 className="text-sm font-semibold text-foreground">Dimension</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Break down stacked bars by series.</p>
                 </div>
 
                 <RadioGroup
@@ -698,26 +698,26 @@ export function AdmobMonitoringTrafficChartTab() {
                       className={cn(
                         "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
                         chartDimension === option.value
-                          ? "border-blue-200 bg-blue-50/70"
-                          : "border-slate-200 bg-white hover:border-slate-300",
+                          ? "border-primary/30 bg-primary/10"
+                          : "border-border bg-background hover:border-ring/60 hover:bg-accent/30",
                       )}
                     >
                       <RadioGroupItem value={option.value} id={`traffic-dimension-${option.value}`} className="mt-0.5" />
                       <span className="min-w-0">
-                        <span className="block text-sm font-medium text-slate-900">{option.label}</span>
-                        <span className="block text-xs text-slate-500">{option.description}</span>
+                        <span className="block text-sm font-medium text-foreground">{option.label}</span>
+                        <span className="block text-xs text-muted-foreground">{option.description}</span>
                       </span>
                     </label>
                   ))}
                 </RadioGroup>
 
                 {isStacked && seriesSummary.length > 0 ? (
-                  <div className="space-y-2 border-t border-slate-200 pt-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Series</p>
+                  <div className="space-y-2 border-t border-border pt-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Series</p>
                     <div className="max-h-48 space-y-1 overflow-auto">
                       {seriesSummary.map((item, index) => (
                         <div key={item.key} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="flex min-w-0 items-center gap-2 text-slate-700">
+                          <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
                             <span
                               className="h-2 w-2 shrink-0 rounded-full"
                               style={{ backgroundColor: SERIES_COLORS[index % SERIES_COLORS.length] }}
@@ -726,7 +726,7 @@ export function AdmobMonitoringTrafficChartTab() {
                               {formatSeriesLabel(item.key, activeDimension)}
                             </span>
                           </span>
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-foreground">
                             {formatTrafficValue(item.value, chartUnit)}
                             {chartUnit === "tps" ? "/s" : ""}
                           </span>
@@ -768,24 +768,24 @@ function TrafficTooltip({
   const valueSuffix = unit === "tps" ? "/s" : ""
 
   return (
-    <div className="max-w-xs rounded-md border border-slate-200 bg-white p-3 text-xs shadow-lg">
-      <p className="mb-2 font-medium text-slate-700">{label}</p>
+    <div className="max-w-xs rounded-md border border-border bg-popover p-3 text-xs text-popover-foreground shadow-lg">
+      <p className="mb-2 font-medium text-foreground">{label}</p>
       <div className="mb-2 flex items-center justify-between gap-4">
-        <span className="text-slate-600">{totalLabel}</span>
-        <span className="font-medium text-slate-950">
+        <span className="text-muted-foreground">{totalLabel}</span>
+        <span className="font-medium text-foreground">
           {formatTrafficValue(total, unit)}
           {valueSuffix}
         </span>
       </div>
       {dimension !== "none" && entries.length > 0 ? (
-        <div className="space-y-1 border-t border-slate-100 pt-2">
+        <div className="space-y-1 border-t border-border pt-2">
           {entries.map((item) => (
             <div key={String(item.dataKey ?? item.name)} className="flex items-center justify-between gap-4">
-              <span className="flex items-center gap-2 text-slate-600">
+              <span className="flex items-center gap-2 text-muted-foreground">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                 {item.name}
               </span>
-              <span className="font-medium text-slate-950">
+              <span className="font-medium text-foreground">
                 {formatTrafficValue(item.value ?? 0, unit)}
                 {valueSuffix}
               </span>

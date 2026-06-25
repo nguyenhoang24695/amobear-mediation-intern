@@ -168,7 +168,7 @@ export function NexusAssetLibraryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-hidden p-0 sm:max-w-6xl" showCloseButton>
-        <DialogHeader className="border-b px-6 pt-6 pb-4">
+        <DialogHeader className="border-b px-4 pt-5 pb-4 sm:px-6 sm:pt-6">
           <DialogTitle>From Library</DialogTitle>
           <DialogDescription>
             {isMultiple
@@ -196,7 +196,7 @@ export function NexusAssetLibraryDialog({
                   <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-500 ring-1 ring-slate-200">{totalOwnerCount}</span>
                 </button>
                 {ownersApi.loading && owners.length === 0 ? (
-                  <div className="flex items-center gap-2 px-2.5 py-2 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" />Loading users...</div>
+                  <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" />Loading users...</div>
                 ) : owners.length === 0 ? (
                   <div className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-4 text-xs text-slate-500">No library users yet.</div>
                 ) : owners.map((owner) => {
@@ -222,14 +222,14 @@ export function NexusAssetLibraryDialog({
             </div>
           </aside>
 
-          <div className="flex min-w-0 flex-col gap-4 px-6 py-4">
+          <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-700">{activeOwnerLabel}</p>
                 <p className="text-[11px] text-slate-500">Showing assets directly under this user folder, including all dated subfolders.</p>
               </div>
               <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AssetTab)}>
-                <TabsList className="grid w-[220px] grid-cols-2">
+                <TabsList className="grid w-full grid-cols-2 sm:w-[220px]">
                   <TabsTrigger value="images" className="gap-1.5"><ImageIcon className="h-3.5 w-3.5" />Images</TabsTrigger>
                   <TabsTrigger value="videos" className="gap-1.5"><Video className="h-3.5 w-3.5" />Videos</TabsTrigger>
                 </TabsList>
@@ -266,7 +266,7 @@ export function NexusAssetLibraryDialog({
                 </div>
               ) : null}
 
-              <div className="grid max-h-[420px] grid-cols-2 gap-4 overflow-y-auto pr-1 md:grid-cols-3 xl:grid-cols-4">
+              <div className="grid max-h-[420px] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {items.map((item) => {
                   const isVideo = item.kind.toLowerCase() === "video"
                   const isSelectable = selectableKind === null ? true : item.kind.toLowerCase() === selectableKind
@@ -354,12 +354,12 @@ export function NexusAssetLibraryDialog({
                 })}
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t pt-3">
+              <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-slate-500">
                   Showing {items.length} of {total} {activeTab === "images" ? "images" : "videos"} in {activeOwnerLabel}.
                   {isMultiple ? ` Selected ${multiSelectedCount}/${selectionLimit}.` : ""}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {hasMore ? (
                     <Button type="button" variant="outline" onClick={() => setPage((current) => current + 1)} disabled={assetsApi.loading}>
                       {assetsApi.loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -399,3 +399,4 @@ export function NexusAssetLibraryDialog({
     </Dialog>
   )
 }
+

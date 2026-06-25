@@ -39,12 +39,12 @@ export function CampaignSettingsSection({ form, reference, selectedAppMapping, l
       description="Set campaign objective and campaign-level budget."
       ready={ready}
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 md:col-span-2">
-          <div className="flex items-center justify-between gap-3">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+        <div className="min-w-0 space-y-2 md:col-span-2">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <Label>Campaign name</Label>
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <Wand2 className="h-3.5 w-3.5 text-slate-400" />
+            <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Auto-generate</span>
               <Switch checked={isAutoEnabled} onCheckedChange={(checked) => { setIsAutoEnabled(checked); if (checked) applyGeneratedName() }} />
             </div>
@@ -54,18 +54,18 @@ export function CampaignSettingsSection({ form, reference, selectedAppMapping, l
             onChange={(event) => { markManual(); onChange({ campaign: { ...form.campaign, campaignName: event.target.value } }) }}
             placeholder="APP_GEO_PLATFORM_OBJECTIVE_YYYYMMDD"
           />
-          <div className="rounded-md border bg-slate-50 px-3 py-2">
-            <p className="text-xs text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">APP_GEO_PLATFORM_OBJECTIVE_YYYYMMDD</code></p>
-            <p className={generatedCampaignName ? "mt-1 font-mono text-xs text-slate-700" : "mt-1 text-xs italic text-slate-400"}>{generatedCampaignName || "Select app and location to generate a campaign name."}</p>
+          <div className="min-w-0 overflow-hidden rounded-md border bg-muted/40 px-3 py-2">
+            <p className="text-xs text-muted-foreground">Pattern: <code className="inline-block max-w-full break-all rounded bg-background px-1 py-0.5 align-bottom">APP_GEO_PLATFORM_OBJECTIVE_YYYYMMDD</code></p>
+            <p className={generatedCampaignName ? "mt-1 break-all font-mono text-xs text-foreground" : "mt-1 text-xs italic text-muted-foreground"}>{generatedCampaignName || "Select app and location to generate a campaign name."}</p>
             {!isAutoEnabled && generatedCampaignName ? (
-              <button type="button" onClick={applyGeneratedName} className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-700">Use generated name</button>
+              <button type="button" onClick={applyGeneratedName} className="mt-1 text-xs font-medium text-primary hover:text-primary/80">Use generated name</button>
             ) : null}
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label>Objective</Label>
           <Select value={form.campaign.objectiveType} onValueChange={(value) => onChange({ campaign: { ...form.campaign, objectiveType: value } })}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full min-w-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -75,10 +75,10 @@ export function CampaignSettingsSection({ form, reference, selectedAppMapping, l
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label>Campaign budget mode</Label>
           <Select value={form.campaign.budgetMode} onValueChange={(value) => onChange({ campaign: { ...form.campaign, budgetMode: value } })}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full min-w-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -88,7 +88,7 @@ export function CampaignSettingsSection({ form, reference, selectedAppMapping, l
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label>Campaign budget</Label>
           <Input
             min={50}
@@ -97,7 +97,7 @@ export function CampaignSettingsSection({ form, reference, selectedAppMapping, l
             value={form.campaign.budget ?? ""}
             onChange={(event) => onChange({ campaign: { ...form.campaign, budget: numberOrUndefined(event.target.value) } })}
           />
-          <p className="text-xs text-slate-500">TikTok requires a minimum budget of $50.</p>
+          <p className="text-xs text-muted-foreground">TikTok requires a minimum budget of $50.</p>
         </div>
       </div>
     </SectionShell>

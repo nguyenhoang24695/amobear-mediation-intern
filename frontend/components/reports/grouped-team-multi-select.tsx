@@ -122,19 +122,19 @@ export function GroupedTeamMultiSelect({
           id={id}
           variant="outline"
           className={cn(
-            "h-10 min-w-[11rem] max-w-[280px] justify-between bg-white border-slate-200 font-normal",
+            "h-10 min-w-[11rem] max-w-[280px] justify-between bg-card border-border font-normal",
             triggerClassName,
           )}
           type="button"
           disabled={disabled || teams.length === 0}
         >
           <span className="flex items-center gap-2 truncate">
-            {showUsersIcon ? <Users className="w-4 h-4 text-slate-400 shrink-0" /> : null}
-            <span className={cn("truncate", selectedTeamIds.length === 0 && "text-slate-500")}>
+            {showUsersIcon ? <Users className="w-4 h-4 text-muted-foreground shrink-0" /> : null}
+            <span className={cn("truncate", selectedTeamIds.length === 0 && "text-muted-foreground")}>
               {resolvedTriggerLabel}
             </span>
           </span>
-          <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={popoverClassName} align="start">
@@ -142,7 +142,7 @@ export function GroupedTeamMultiSelect({
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptySearchMessage}</CommandEmpty>
-            <div className="flex gap-2 px-2 py-1.5 border-b border-slate-100">
+            <div className="flex gap-2 px-2 py-1.5 border-b border-border">
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAll}>
                 Select all
               </Button>
@@ -151,7 +151,7 @@ export function GroupedTeamMultiSelect({
               </Button>
             </div>
             {teams.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-slate-500">{emptyTeamsMessage}</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">{emptyTeamsMessage}</div>
             ) : null}
             {teamsBySection.map(({ section, teams: sectionTeams }) => {
               const sectionTeamIds = sectionTeams.map((team) => team.teamId)
@@ -161,7 +161,7 @@ export function GroupedTeamMultiSelect({
                   <div
                     role="button"
                     tabIndex={0}
-                    className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground cursor-pointer rounded-sm hover:bg-slate-50"
+                    className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground cursor-pointer rounded-sm hover:bg-muted/50"
                     onClick={() => toggleSection(sectionTeamIds, sectionSelection !== true)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -178,7 +178,7 @@ export function GroupedTeamMultiSelect({
                       onClick={(event) => event.stopPropagation()}
                       aria-label={`Select all teams in ${section.label}`}
                     />
-                    <span className="text-slate-700">{section.label}</span>
+                    <span className="text-foreground">{section.label}</span>
                   </div>
                   {sectionTeams.map((team) => (
                     <CommandItem

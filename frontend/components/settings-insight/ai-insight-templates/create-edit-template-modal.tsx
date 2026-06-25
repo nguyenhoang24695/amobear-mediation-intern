@@ -229,21 +229,21 @@ export function CreateEditTemplateModal({
           showCloseButton
           className="flex h-[min(92dvh,920px)] w-[min(96vw,1440px)] max-w-[min(96vw,1440px)] sm:max-w-[min(96vw,1440px)] flex-col gap-0 overflow-hidden p-0 rounded-lg"
         >
-          <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-4 pr-14 text-left">
+          <DialogHeader className="shrink-0 border-b border-border px-6 py-4 pr-14 text-left">
             <DialogTitle>
               {isEdit ? `Sửa template: ${template?.name}` : "Tạo insight template"}
             </DialogTitle>
-            <p className="text-sm text-slate-500 font-normal">
+            <p className="text-sm text-muted-foreground font-normal">
               Trái: thông tin + sections (cuộn độc lập). Phải: Global AI instructions (cuộn độc lập).
             </p>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-slate-200 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border lg:grid-cols-2 lg:divide-x lg:divide-y-0">
             {/* Cột trái */}
             <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain p-4 sm:p-5">
               <div className="space-y-6 pb-4">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-900">Thông tin cơ bản</h3>
+                  <h3 className="font-semibold text-foreground">Thông tin cơ bản</h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Tên template</Label>
@@ -278,17 +278,17 @@ export function CreateEditTemplateModal({
                       placeholder="Template dùng cho loại app/game nào…"
                     />
                   </div>
-                  <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
                     <div>
-                      <p className="font-medium text-slate-900">Đặt làm template mặc định</p>
-                      <p className="text-xs text-slate-500">App chưa gán template sẽ dùng bản default.</p>
+                      <p className="font-medium text-foreground">Đặt làm template mặc định</p>
+                      <p className="text-xs text-muted-foreground">App chưa gán template sẽ dùng bản default.</p>
                     </div>
                     <Switch checked={isDefault} onCheckedChange={setIsDefault} />
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200 pt-4">
-                  <h3 className="font-semibold text-slate-900 mb-3">Vận hành</h3>
+                <div className="border-t border-border pt-4">
+                  <h3 className="font-semibold text-foreground mb-3">Vận hành</h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Provider ưu tiên</Label>
@@ -330,12 +330,12 @@ export function CreateEditTemplateModal({
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200 pt-4">
+                <div className="border-t border-border pt-4">
                   <div className="mb-3">
-                    <h3 className="font-semibold text-slate-900">
-                      Sections <span className="text-slate-500 font-normal">({sections.length})</span>
+                    <h3 className="font-semibold text-foreground">
+                      Sections <span className="text-muted-foreground font-normal">({sections.length})</span>
                     </h3>
-                    <p className="text-sm text-slate-500">Kéo thả để đổi thứ tự khi lưu.</p>
+                    <p className="text-sm text-muted-foreground">Kéo thả để đổi thứ tự khi lưu.</p>
                   </div>
                   <div className="space-y-2">
                     {sections.map((s, index) => (
@@ -345,12 +345,12 @@ export function CreateEditTemplateModal({
                         onDragStart={() => handleDragStart(index)}
                         onDragOver={(e) => handleDragOver(e, index)}
                         onDragEnd={handleDragEnd}
-                        className={`flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 group ${
+                        className={`flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3 group ${
                           draggedIndex === index ? "opacity-50" : ""
                         }`}
                       >
-                        <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-slate-400" />
-                        <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{s.title}</span>
+                        <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground" />
+                        <span className="min-w-0 flex-1 text-sm font-medium text-foreground">{s.title}</span>
                         <Switch
                           checked={s.isActive}
                           onCheckedChange={(c) =>
@@ -366,7 +366,7 @@ export function CreateEditTemplateModal({
                           variant="ghost"
                           size="sm"
                           type="button"
-                          className="text-red-600 opacity-0 group-hover:opacity-100"
+                          className="text-destructive opacity-0 group-hover:opacity-100"
                           onClick={() => handleDeleteSection(s._cid)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -377,7 +377,7 @@ export function CreateEditTemplateModal({
                   <Button
                     type="button"
                     variant="outline"
-                    className="mt-3 w-full border-dashed border-indigo-200 text-indigo-700"
+                    className="mt-3 w-full border-dashed border-primary/30 text-primary"
                     onClick={handleAddSection}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -388,10 +388,10 @@ export function CreateEditTemplateModal({
             </div>
 
             {/* Cột phải — Global AI */}
-            <div className="flex min-h-0 min-w-0 flex-col bg-slate-50/80">
-              <div className="shrink-0 border-b border-slate-200/80 px-4 py-3 sm:px-5">
-                <h3 className="font-semibold text-slate-900">Global AI instructions</h3>
-                <p className="text-xs text-slate-500">Áp dụng cho mọi section của template (tiếng Việt, rubric, team…).</p>
+            <div className="flex min-h-0 min-w-0 flex-col bg-muted/40">
+              <div className="shrink-0 border-b border-border px-4 py-3 sm:px-5">
+                <h3 className="font-semibold text-foreground">Global AI instructions</h3>
+                <p className="text-xs text-muted-foreground">Áp dụng cho mọi section của template (tiếng Việt, rubric, team…).</p>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
                 <Textarea
@@ -404,7 +404,7 @@ export function CreateEditTemplateModal({
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:px-6 flex-wrap sm:justify-end">
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-4 py-3 sm:px-6 flex-wrap sm:justify-end">
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
               Hủy
             </Button>
@@ -423,7 +423,7 @@ export function CreateEditTemplateModal({
             </Button>
             <Button
               type="button"
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={saving}
               onClick={() => void handleSubmit()}
             >

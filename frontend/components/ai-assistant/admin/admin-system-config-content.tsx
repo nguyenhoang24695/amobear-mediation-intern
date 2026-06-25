@@ -263,11 +263,11 @@ export function AdminSystemConfigContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+              <h1 className="text-2xl font-semibold  flex items-center gap-2">
                 <Shield className="h-6 w-6" />
                 AI System Configuration
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm">
                 Quản lý base rules, CRAFT defaults, scoring config và data context
               </p>
             </div>

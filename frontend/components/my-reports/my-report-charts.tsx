@@ -220,7 +220,7 @@ function PanelLayoutToggle({
   onChange: (layout: MyReportPanelLayout) => void
 }) {
   return (
-    <div className="inline-flex rounded-md border border-gray-200 bg-white p-0.5">
+    <div className="inline-flex rounded-md border border-border bg-card p-0.5">
       <UiTooltip>
         <TooltipTrigger asChild>
           <Button
@@ -229,7 +229,7 @@ function PanelLayoutToggle({
             size="icon"
             className={cn(
               "h-8 w-8",
-              layout === "side-by-side" && "bg-gray-100 text-blue-600",
+              layout === "side-by-side" && "bg-muted text-primary",
             )}
             onClick={() => onChange("side-by-side")}
             aria-label="Side by side"
@@ -245,7 +245,7 @@ function PanelLayoutToggle({
             type="button"
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8", layout === "stacked" && "bg-gray-100 text-blue-600")}
+            className={cn("h-8 w-8", layout === "stacked" && "bg-muted text-primary")}
             onClick={() => onChange("stacked")}
             aria-label="View charts full width, stacked"
           >
@@ -296,13 +296,13 @@ function ChartPanel({
   return (
     <div
       className={cn(
-        "flex min-h-[420px] min-w-0 flex-1 overflow-visible rounded-lg border border-gray-200 bg-white",
+        "flex min-h-[420px] min-w-0 flex-1 overflow-visible rounded-lg border border-border bg-card",
         className,
       )}
     >
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
-          <h3 className="min-w-0 truncate text-sm font-medium text-gray-900">{title}</h3>
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <h3 className="min-w-0 truncate text-sm font-medium text-foreground">{title}</h3>
           <div className="flex shrink-0 items-center gap-0.5">
             <UiTooltip>
               <TooltipTrigger asChild>
@@ -310,7 +310,7 @@ function ChartPanel({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-gray-800"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   onClick={onExportImage}
                   aria-label="Export as Image"
                 >
@@ -325,7 +325,7 @@ function ChartPanel({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-gray-800"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   onClick={onDownload}
                   aria-label="Download"
                 >
@@ -341,8 +341,8 @@ function ChartPanel({
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "h-8 w-8 text-gray-500 hover:text-gray-800",
-                    editOpen && "bg-gray-100 text-blue-600",
+                    "h-8 w-8 text-muted-foreground hover:text-foreground",
+                    editOpen && "bg-muted text-primary",
                   )}
                   onClick={onEdit}
                   aria-label="Edit"
@@ -378,7 +378,7 @@ const PIE_MAX_CATEGORIES = 5
 
 function PieUnsupportedMsg({ reason }: { reason: string }) {
   return (
-    <div className="flex items-center justify-center px-6 text-center text-sm text-gray-500" style={{ height: CHART_HEIGHT }}>
+    <div className="flex items-center justify-center px-6 text-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
       {reason}
     </div>
   )
@@ -450,7 +450,7 @@ function TrendChart({
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center text-sm text-gray-500" style={{ height: CHART_HEIGHT }}>
+      <div className="flex items-center justify-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
         No trend data for the selected metric.
       </div>
     )
@@ -465,7 +465,7 @@ function TrendChart({
           const delta = prevTotal != null && prevTotal !== 0 ? ((total - prevTotal) / prevTotal) * 100 : null
           return (
             <div key={mId} className="flex flex-col items-center gap-1.5">
-              <div className="text-xs font-medium text-gray-500">
+              <div className="text-xs font-medium text-muted-foreground">
                 {metricCatalog.find((m) => m.id === mId)?.label ?? mId}
               </div>
               <div
@@ -500,9 +500,9 @@ function TrendChart({
     return (
       <ChartFrame>
         <BarChart data={data} margin={CHART_MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
           <Tooltip formatter={tooltipFmt} />
           {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
           {metricIds.map((mId, i) => (
@@ -510,7 +510,7 @@ function TrendChart({
               fill={SERIES_COLORS[i % SERIES_COLORS.length]} stackId={stacked ? "s" : undefined} />
           ))}
           {singleCompare && (
-            <Bar dataKey={`${primaryId}__prev`} name="Compare" fill="#94a3b8" stackId={stacked ? "s" : undefined} />
+            <Bar dataKey={`${primaryId}__prev`} name="Compare" fill="var(--muted-foreground)" stackId={stacked ? "s" : undefined} />
           )}
         </BarChart>
       </ChartFrame>
@@ -521,9 +521,9 @@ function TrendChart({
     return (
       <ChartFrame>
         <AreaChart data={data} margin={CHART_MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
           <Tooltip formatter={tooltipFmt} />
           {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
           {metricIds.map((mId, i) => (
@@ -533,7 +533,7 @@ function TrendChart({
               fill={`${SERIES_COLORS[i % SERIES_COLORS.length]}33`} />
           ))}
           {singleCompare && (
-            <Area type="monotone" dataKey={`${primaryId}__prev`} name="Compare" stroke="#64748b" fill="#cbd5e1" />
+            <Area type="monotone" dataKey={`${primaryId}__prev`} name="Compare" stroke="var(--muted-foreground)" fill="var(--muted)" />
           )}
         </AreaChart>
       </ChartFrame>
@@ -544,9 +544,9 @@ function TrendChart({
     return (
       <ChartFrame>
         <ComposedChart data={data} margin={CHART_MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
           <Tooltip formatter={tooltipFmt} />
           {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
           {/* First metric as bar, rest as lines */}
@@ -559,7 +559,7 @@ function TrendChart({
           <Line type="monotone" dataKey={primaryId} name={`${metricCatalog.find((m) => m.id === primaryId)?.label ?? primaryId} (trend)`}
             stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} />
           {singleCompare && (
-            <Bar dataKey={`${primaryId}__prev`} name="Compare" fill="#e2e8f0" />
+            <Bar dataKey={`${primaryId}__prev`} name="Compare" fill="var(--muted)" />
           )}
         </ComposedChart>
       </ChartFrame>
@@ -570,9 +570,9 @@ function TrendChart({
   return (
     <ChartFrame>
       <LineChart data={data} margin={CHART_MARGIN}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-        <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
         <Tooltip formatter={tooltipFmt} />
         {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
         {metricIds.map((mId, i) => (
@@ -582,7 +582,7 @@ function TrendChart({
         ))}
         {singleCompare && (
           <Line type="monotone" dataKey={`${primaryId}__prev`} name="Compare"
-            stroke="#64748b" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+            stroke="var(--muted-foreground)" strokeWidth={2} dot={false} strokeDasharray="4 2" />
         )}
       </LineChart>
     </ChartFrame>
@@ -637,7 +637,7 @@ function BreakdownChart({
               <div className="text-3xl font-bold tabular-nums" style={{ color: SERIES_COLORS[index % SERIES_COLORS.length] }}>
                 {formatMetricValue(item.value, primaryId, metricCatalog)}
               </div>
-              <div className="text-xs text-gray-500 truncate max-w-[120px]">{item.label}</div>
+              <div className="text-xs text-muted-foreground truncate max-w-[120px]">{item.label}</div>
             </div>
           ))}
         </div>
@@ -649,9 +649,9 @@ function BreakdownChart({
       return (
         <ChartFrame>
           <BarChart data={seriesData} margin={CHART_MARGIN}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
             <Tooltip formatter={tooltipFmt} />
             <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />
             {seriesKeys.map((key, index) => (
@@ -666,9 +666,9 @@ function BreakdownChart({
       return (
         <ChartFrame>
           <ComposedChart data={seriesData} margin={CHART_MARGIN}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
             <Tooltip formatter={tooltipFmt} />
             <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />
             {seriesKeys.map((key, index) => (
@@ -685,9 +685,9 @@ function BreakdownChart({
     return (
       <ChartFrame>
         <LineChart data={seriesData} margin={CHART_MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} dy={4} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} dy={4} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
           <Tooltip formatter={tooltipFmt} />
           <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />
           {seriesKeys.map((key, index) => (
@@ -700,7 +700,7 @@ function BreakdownChart({
 
   if (barData.length === 0) {
     return (
-      <div className="flex items-center justify-center text-sm text-gray-500" style={{ height: CHART_HEIGHT }}>
+      <div className="flex items-center justify-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
         Add the App dimension to see breakdown chart.
       </div>
     )
@@ -718,7 +718,7 @@ function BreakdownChart({
       <div className="flex flex-wrap items-center justify-center gap-8 px-4" style={{ height: CHART_HEIGHT }}>
         {totals.map((item, i) => (
           <div key={item.mId} className="flex flex-col items-center gap-1.5">
-            <div className="text-xs font-medium text-gray-500">{item.label}</div>
+            <div className="text-xs font-medium text-muted-foreground">{item.label}</div>
             <div className="text-4xl font-bold tabular-nums" style={{ color: SERIES_COLORS[i % SERIES_COLORS.length] }}>
               {formatMetricValue(item.value, item.mId, metricCatalog)}
             </div>
@@ -739,9 +739,9 @@ function BreakdownChart({
   return (
     <ChartFrame>
       <BarChart data={barData} margin={{ ...CHART_MARGIN, bottom: 32 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} interval={0} angle={-25} textAnchor="end" height={52} dy={4} />
-        <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} width={64} tickFormatter={tickFmt} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} interval={0} angle={-25} textAnchor="end" height={52} dy={4} />
+        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--border)" }} width={64} tickFormatter={tickFmt} />
         <Tooltip formatter={(v: number, name: string) => [formatMetricValue(v, name, metricCatalog), metricCatalog.find((m) => m.id === name)?.label ?? name] as [string, string]} />
         {showLegend && <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} />}
         {metricIds.map((mId, i) => (
@@ -915,7 +915,7 @@ export function MyReportCharts({
   )
 
   return (
-    <div className="border-b border-gray-100 bg-white px-6 py-4">
+    <div className="border-b border-border bg-card px-6 py-4">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-4">
         <PanelLayoutToggle layout={panelLayout} onChange={onPanelLayoutChange} />
       </div>

@@ -15,8 +15,8 @@ export function AdmobMonitoringContent() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">AdMob Monitoring</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-foreground">AdMob Monitoring</h1>
+          <p className="text-sm text-muted-foreground">
             Compare bronze sync mismatches and inspect AdMob mediation report API call traffic.
           </p>
         </div>
@@ -27,11 +27,11 @@ export function AdmobMonitoringContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "compare" | "traffic-chart")}>
-        <TabsList className="h-10 w-fit bg-slate-100 p-1">
-          <TabsTrigger value="compare" className="px-4 data-[state=active]:bg-white">
+        <TabsList className="h-10 w-fit bg-muted p-1">
+          <TabsTrigger value="compare" className="px-4 data-[state=active]:bg-background">
             Compare
           </TabsTrigger>
-          <TabsTrigger value="traffic-chart" className="px-4 data-[state=active]:bg-white">
+          <TabsTrigger value="traffic-chart" className="px-4 data-[state=active]:bg-background">
             Traffic Chart
           </TabsTrigger>
         </TabsList>

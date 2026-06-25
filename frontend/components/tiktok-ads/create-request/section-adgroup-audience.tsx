@@ -40,7 +40,7 @@ function OptionChecks({ options, values, onValuesChange }: { options: TikTokOpti
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {options.map((option) => (
-        <label key={option.key} className="flex min-h-10 items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm">
+        <label key={option.key} className="flex min-h-10 items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm">
           <Checkbox checked={values.includes(option.key)} onCheckedChange={(checked) => onValuesChange(toggleValue(values, option.key, checked === true))} />
           <span className="min-w-0 truncate">{optionLabel(option)}</span>
         </label>
@@ -233,9 +233,9 @@ function LocationTreeMultiSelect({
 
     return (
       <div key={node.option.key}>
-        <div className="flex min-h-9 items-center gap-2 px-2 py-1.5 text-sm hover:bg-slate-50" style={{ paddingLeft: 8 + depth * 22 }}>
+        <div className="flex min-h-9 items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted/40" style={{ paddingLeft: Math.min(8 + depth * 22, 52) }}>
           {hasChildren ? (
-            <button type="button" className="rounded-sm p-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800" onClick={() => toggleExpanded(node.option.key)}>
+            <button type="button" className="rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => toggleExpanded(node.option.key)}>
               <ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
             </button>
           ) : (
@@ -243,8 +243,8 @@ function LocationTreeMultiSelect({
           )}
           <Checkbox checked={isSelected} onCheckedChange={() => toggle(node.option.key)} />
           <button type="button" className="min-w-0 flex-1 text-left" onClick={() => toggle(node.option.key)}>
-            <span className={cn("block truncate", isCountryNode(node.option) ? "font-medium text-slate-900" : "text-slate-700")}>{node.option.label}</span>
-            {subtitle ? <span className="block truncate text-xs text-slate-400">{subtitle}</span> : null}
+            <span className={cn("block truncate", isCountryNode(node.option) ? "font-medium text-foreground" : "text-muted-foreground")}>{node.option.label}</span>
+            {subtitle ? <span className="block truncate text-xs text-muted-foreground">{subtitle}</span> : null}
           </button>
         </div>
         {hasChildren && isExpanded ? node.children.map((child) => renderNode(child, depth + 1)) : null}
@@ -261,20 +261,20 @@ function LocationTreeMultiSelect({
             variant="outline"
             role="combobox"
             disabled={disabled}
-            className="min-h-10 w-full justify-between bg-white px-3 text-left font-normal"
+            className="min-h-10 w-full justify-between bg-background px-3 text-left font-normal"
           >
-            <span className={cn("min-w-0 flex-1 truncate", values.length === 0 && "text-slate-500")}>
+            <span className={cn("min-w-0 flex-1 truncate", values.length === 0 && "text-muted-foreground")}>
               {values.length === 0 ? placeholder : `${values.length} selected`}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[420px] p-0" align="start">
+        <PopoverContent className="w-[calc(100vw-2rem)] min-w-0 p-0 sm:w-[--radix-popover-trigger-width] sm:min-w-[420px]" align="start">
           <div className="border-b p-2">
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchPlaceholder} className="h-9" />
           </div>
           <div className="max-h-80 overflow-y-auto py-1">
-            {filteredTree.length > 0 ? filteredTree.map((node) => renderNode(node)) : <div className="px-3 py-6 text-center text-sm text-slate-500">{emptyMessage}</div>}
+            {filteredTree.length > 0 ? filteredTree.map((node) => renderNode(node)) : <div className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyMessage}</div>}
           </div>
         </PopoverContent>
       </Popover>
@@ -282,9 +282,9 @@ function LocationTreeMultiSelect({
       {selectedOptions.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {selectedOptions.map((option) => (
-            <Badge key={option.key} variant="outline" className="gap-1 rounded-md bg-white px-2 py-1 text-xs">
-              <span className="max-w-[180px] truncate">{option.label}</span>
-              <button type="button" className="rounded-sm text-slate-400 hover:text-slate-700" onClick={() => remove(option.key)}>
+            <Badge key={option.key} variant="outline" className="gap-1 rounded-md bg-background px-2 py-1 text-xs">
+              <span className="max-w-[calc(100vw-6rem)] truncate sm:max-w-[180px]">{option.label}</span>
+              <button type="button" className="rounded-sm text-muted-foreground hover:text-foreground" onClick={() => remove(option.key)}>
                 <X className="h-3 w-3" />
               </button>
             </Badge>
@@ -341,33 +341,33 @@ export function AdGroupAudienceSection({
     >
       <div className="space-y-5">
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Label>Ad group name</Label>
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <Wand2 className="h-3.5 w-3.5 text-slate-400" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Auto-generate</span>
               <Switch checked={isAutoEnabled} onCheckedChange={(checked) => { setIsAutoEnabled(checked); if (checked) applyGeneratedName() }} />
             </div>
           </div>
           <Input value={form.adGroup.adGroupName} onChange={(event) => { markManual(); onChange({ adGroup: { ...form.adGroup, adGroupName: event.target.value } }) }} />
-          <div className="rounded-md border bg-slate-50 px-3 py-2">
-            <p className="text-xs text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">GEO_AGE_GENDER_PLACEMENT</code></p>
-            <p className={generatedAdGroupName ? "mt-1 font-mono text-xs text-slate-700" : "mt-1 text-xs italic text-slate-400"}>{generatedAdGroupName || "Select locations to generate an ad group name."}</p>
+          <div className="rounded-md border bg-muted/40 px-3 py-2">
+            <p className="text-xs text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5">GEO_AGE_GENDER_PLACEMENT</code></p>
+            <p className={generatedAdGroupName ? "mt-1 font-mono text-xs text-foreground" : "mt-1 text-xs italic text-muted-foreground"}>{generatedAdGroupName || "Select locations to generate an ad group name."}</p>
             {!isAutoEnabled && generatedAdGroupName ? (
-              <button type="button" onClick={applyGeneratedName} className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-700">Use generated name</button>
+              <button type="button" onClick={applyGeneratedName} className="mt-1 text-xs font-medium text-primary hover:text-primary/80">Use generated name</button>
             ) : null}
           </div>
         </div>
 
-        <div className="rounded-md border bg-slate-50 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">Audience controls</h3>
-              <p className="text-xs text-slate-500">Locations are required and limit who can see the ad.</p>
+        <div className="rounded-md border bg-muted/40 p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Audience controls</h3>
+              <p className="text-xs text-muted-foreground">Locations are required and limit who can see the ad.</p>
             </div>
             <Badge variant="outline">{targetingLoading ? "Loading TikTok options" : targetingOptions?.source ?? "fallback"}</Badge>
           </div>
-          <div className="mb-4 rounded-md border bg-white p-3">
+          <div className="mb-4 rounded-md border bg-background p-3">
             <GeoCountryGroupManager
               groups={countryGroups}
               loading={countryGroupsLoading}
@@ -384,7 +384,7 @@ export function AdGroupAudienceSection({
               selectionDisabled={!hasSelectedAdAccount}
               selectionDisabledMessage="Select a TikTok ad account before choosing country groups."
             />
-            {countryGroupApplyMessage ? <p className="mt-2 text-xs text-amber-700">{countryGroupApplyMessage}</p> : null}
+            {countryGroupApplyMessage ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{countryGroupApplyMessage}</p> : null}
           </div>
           <LocationTreeMultiSelect
             values={form.adGroup.locationIds}
@@ -395,13 +395,13 @@ export function AdGroupAudienceSection({
             disabled={targetingLoading}
             onValuesChange={(values) => onChange({ adGroup: { ...form.adGroup, locationIds: values, countryGroupIds: [] } })}
           />
-          {targetingOptions?.errorMessage ? <p className="mt-2 text-xs text-amber-700">{targetingOptions.errorMessage}</p> : null}
+          {targetingOptions?.errorMessage ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{targetingOptions.errorMessage}</p> : null}
         </div>
 
-        <div className="rounded-md border bg-white p-4">
+        <div className="rounded-md border bg-card p-4 text-card-foreground">
           <div className="mb-3">
-            <h3 className="text-sm font-semibold text-slate-900">Audience suggestions</h3>
-            <p className="text-xs text-slate-500">These guide delivery but do not replace TikTok optimization.</p>
+            <h3 className="text-sm font-semibold text-foreground">Audience suggestions</h3>
+            <p className="text-xs text-muted-foreground">These guide delivery but do not replace TikTok optimization.</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -440,13 +440,13 @@ export function AdGroupAudienceSection({
           </div>
         </div>
 
-        <div className="rounded-md border bg-white p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">Placement</h3>
-              <p className="text-xs text-slate-500">Automatic placement lets TikTok optimize across available inventory.</p>
+        <div className="rounded-md border bg-card p-4 text-card-foreground">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Placement</h3>
+              <p className="text-xs text-muted-foreground">Automatic placement lets TikTok optimize across available inventory.</p>
             </div>
-            <Badge className={form.adGroup.placementType === "PLACEMENT_TYPE_AUTOMATIC" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}>
+            <Badge className={form.adGroup.placementType === "PLACEMENT_TYPE_AUTOMATIC" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-primary/10 text-primary"}>
               {form.adGroup.placementType === "PLACEMENT_TYPE_AUTOMATIC" ? "Automatic" : "Manual"}
             </Badge>
           </div>

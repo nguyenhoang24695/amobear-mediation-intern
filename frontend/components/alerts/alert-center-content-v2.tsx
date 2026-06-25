@@ -168,9 +168,9 @@ function RuleCreatorAvatar({
           className="inline-flex cursor-default rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           tabIndex={0}
         >
-          <Avatar className="h-8 w-8 border border-slate-200 bg-slate-50">
+          <Avatar className="h-8 w-8 border border-border bg-muted">
             <AvatarImage src={info?.avatarUrl ?? undefined} alt="" />
-            <AvatarFallback className="text-[10px] font-semibold bg-slate-100 text-slate-700">
+            <AvatarFallback className="bg-muted text-[10px] font-semibold text-muted-foreground">
               {ruleCreatorInitials(displayName, createdBy)}
             </AvatarFallback>
           </Avatar>
@@ -1024,17 +1024,21 @@ export function AlertCenterContentV2() {
     <>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-500 mb-2">{headerBreadcrumb}</p>
-          <h1 className="text-3xl font-bold text-slate-900">
+          <p className="mb-2 text-sm text-muted-foreground">
+            {headerBreadcrumb}
+          </p>
+          <h1 className="text-3xl font-bold text-foreground">
             {headerTitle}
-            <span className="text-amber-500 text-3xl">.</span>
+            <span className="text-amber-500 dark:text-amber-400 text-3xl">
+              .
+            </span>
           </h1>
-          <p className="text-sm text-slate-500 mt-2">{headerTagline}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{headerTagline}</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {!isMyAlertsTab && canCreateAlertRule ? (
             <Button
-              className="h-10 w-full gap-2 bg-indigo-600 hover:bg-indigo-700 sm:h-9 sm:w-auto"
+              className="h-10 w-full gap-2 sm:h-9 sm:w-auto"
               onClick={() => setShowAiBuilder(true)}
             >
               Create Alert via AI
@@ -1087,17 +1091,17 @@ export function AlertCenterContentV2() {
       </div>
 
       {isMyAlertsTab ? (
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardContent className="p-6 space-y-3">
             <div className="flex items-start justify-between gap-4">
-              <span className="font-semibold text-slate-900">
+              <span className="font-semibold text-foreground">
                 Alert Slots Used
               </span>
-              <span className="text-sm text-slate-500 shrink-0">
+              <span className="shrink-0 text-sm text-muted-foreground">
                 {privateQuota ? `${privateQuota.remaining} remaining` : "—"}
               </span>
             </div>
-            <div className="[&_[data-slot=progress-indicator]]:bg-indigo-600 [&_[data-slot=progress]]:bg-slate-100">
+            <div className="[&_[data-slot=progress-indicator]]:bg-primary [&_[data-slot=progress]]:bg-muted">
               <Progress
                 className="h-2.5"
                 value={
@@ -1112,7 +1116,7 @@ export function AlertCenterContentV2() {
                 }
               />
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {privateQuota
                 ? `${privateQuota.used} of ${privateQuota.max} slots used`
                 : "Loading slot usage…"}
@@ -1121,26 +1125,26 @@ export function AlertCenterContentV2() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardContent className="p-6">
-              <div className="text-2xl font-bold text-slate-900">
+              <div className="text-2xl font-bold text-foreground">
                 {totalOpen}
               </div>
-              <p className="text-sm text-slate-500">Active alerts</p>
-              <p className="text-xs text-slate-400 mt-2">
+              <p className="text-sm text-muted-foreground">Active alerts</p>
+              <p className="mt-2 text-xs text-muted-foreground/80">
                 Open alerts in queue
               </p>
             </CardContent>
           </Card>
-          <Card className="border-slate-200 border-red-200 bg-red-50">
+          <Card className="border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/25">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-red-600">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                     {triggeredNowAlerts.length}
                   </div>
-                  <p className="text-sm text-slate-600">Triggered now</p>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-sm text-muted-foreground">Triggered now</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
                     {
                       triggeredNowAlerts.filter(
                         (a) => a.severity === "critical",
@@ -1154,51 +1158,51 @@ export function AlertCenterContentV2() {
                     warning
                   </p>
                 </div>
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardContent className="p-6">
-              <div className="text-2xl font-bold text-slate-900">
+              <div className="text-2xl font-bold text-foreground">
                 {triggeredTodayAlerts.length}
               </div>
-              <p className="text-sm text-slate-500">Triggered today</p>
-              <p className="text-xs text-slate-400 mt-2">
+              <p className="text-sm text-muted-foreground">Triggered today</p>
+              <p className="mt-2 text-xs text-muted-foreground/80">
                 {triggeredTodayCriticalCount} red • {triggeredTodayWarningCount}{" "}
                 yellow • {triggeredTodayInfoCount} blue
               </p>
             </CardContent>
           </Card>
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardContent className="p-6">
-              <div className="text-2xl font-bold text-slate-900">
+              <div className="text-2xl font-bold text-foreground">
                 {averageResponseMinutes != null
                   ? `${averageResponseMinutes} min`
                   : "--"}
               </div>
-              <p className="text-sm text-slate-500">Avg response time</p>
-              <p className="text-xs text-slate-400 mt-2">
+              <p className="text-sm text-muted-foreground">Avg response time</p>
+              <p className="mt-2 text-xs text-muted-foreground/80">
                 Based on acknowledged/resolved alerts
               </p>
-              </CardContent>
+            </CardContent>
           </Card>
         </div>
       )}
 
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
               <CheckCircle2 className="w-5 h-5" />
               Alert Rules Overview
             </h2>
 
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-1 min-w-[200px] flex-1 max-w-sm">
-                <Label className="text-xs text-slate-500">App</Label>
+                <Label className="text-xs text-muted-foreground">App</Label>
                 <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     className="pl-9"
                     placeholder="Search by app name or appId..."
@@ -1208,7 +1212,7 @@ export function AlertCenterContentV2() {
                 </div>
               </div>
               <div className="flex flex-col gap-1 min-w-[140px]">
-                <Label className="text-xs text-slate-500">Metric</Label>
+                <Label className="text-xs text-muted-foreground">Metric</Label>
                 <Select
                   value={rulesOverviewMetric}
                   onValueChange={setRulesOverviewMetric}
@@ -1227,7 +1231,7 @@ export function AlertCenterContentV2() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1 min-w-[140px]">
-                <Label className="text-xs text-slate-500">Status</Label>
+                <Label className="text-xs text-muted-foreground">Status</Label>
                 <Select
                   value={rulesOverviewStatus}
                   onValueChange={(v) =>
@@ -1247,19 +1251,19 @@ export function AlertCenterContentV2() {
             </div>
 
             {rulesLoading ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+              <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading rules…
               </div>
             ) : filteredRulesOverview.length === 0 ? (
-              <p className="text-sm text-slate-500 py-8 text-center">
+              <p className="py-8 text-center text-sm text-muted-foreground">
                 No rules match the filters.
               </p>
             ) : (
-              <div className="rounded-md border border-slate-200">
+              <div className="rounded-md border border-border">
                 <Table>
                   <TableHeader>
-                    <TableRow className="hover:bg-transparent border-slate-200">
+                    <TableRow className="border-border hover:bg-transparent">
                       <TableHead>Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="min-w-[200px] max-w-[min(28rem,40vw)]">
@@ -1281,10 +1285,10 @@ export function AlertCenterContentV2() {
                     {filteredRulesOverview.map((rule) => {
                       const condSummary = formatRuleConditionsSummary(rule);
                       return (
-                        <TableRow key={rule.id} className="border-slate-200">
+                        <TableRow key={rule.id} className="border-border">
                           <TableCell className="max-w-[220px]">
                             <span
-                              className="font-medium text-slate-900 truncate block"
+                              className="block truncate font-medium text-foreground"
                               title={rule.name}
                             >
                               {rule.name}
@@ -1297,14 +1301,14 @@ export function AlertCenterContentV2() {
                           </TableCell>
                           <TableCell className="max-w-[min(28rem,40vw)] align-top">
                             <span
-                              className="text-xs text-slate-600 whitespace-normal line-clamp-3 leading-snug"
+                              className="line-clamp-3 whitespace-normal text-xs leading-snug text-muted-foreground"
                               title={condSummary}
                             >
                               {condSummary}
                             </span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell max-w-[240px]">
-                            <span className="text-xs text-slate-600 whitespace-normal">
+                            <span className="whitespace-normal text-xs text-muted-foreground">
                               {formatRuleScope(rule)}
                             </span>
                           </TableCell>
@@ -1315,15 +1319,17 @@ export function AlertCenterContentV2() {
                                 lookup={ruleCreatorLookup}
                               />
                             ) : (
-                              <span className="text-xs text-slate-400">—</span>
+                              <span className="text-xs text-muted-foreground/70">
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
                             <Badge
                               className={
                                 rule.isEnabled
-                                  ? "bg-green-100 text-green-700 border-0"
-                                  : "bg-slate-100 text-slate-600 border-0"
+                                  ? "border-0 bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300"
+                                  : "border-0 bg-muted text-muted-foreground"
                               }
                             >
                               {rule.isEnabled ? "Enabled" : "Disabled"}
@@ -1347,7 +1353,7 @@ export function AlertCenterContentV2() {
                                 onClick={() => setDetailsRule(rule)}
                                 title="View details"
                               >
-                                <Eye className="h-4 w-4 text-slate-600" />
+                                <Eye className="h-4 w-4 text-muted-foreground" />
                               </Button>
                               {canEditAlertRule ? (
                                 <Button
@@ -1367,7 +1373,7 @@ export function AlertCenterContentV2() {
                                   {overviewRunningId === rule.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
-                                    <Play className="h-4 w-4 text-indigo-600" />
+                                    <Play className="h-4 w-4 text-primary" />
                                   )}
                                 </Button>
                               ) : null}
@@ -1393,7 +1399,7 @@ export function AlertCenterContentV2() {
                                   disabled={overviewDeletingId === rule.id}
                                   title="Delete"
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                  <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                                 </Button>
                               ) : null}
                             </div>
@@ -1411,10 +1417,10 @@ export function AlertCenterContentV2() {
 
       <div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+          <h2 className="flex flex-wrap items-center gap-2 text-xl font-bold text-foreground">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
             Requires Attention
-            <Badge className="bg-red-100 text-red-700">
+            <Badge className="bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300">
               {openAlertsPage?.TotalCount ?? filteredAlerts.length}
             </Badge>
           </h2>
@@ -1422,7 +1428,7 @@ export function AlertCenterContentV2() {
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0 gap-2 border-slate-300 bg-white"
+            className="shrink-0 gap-2"
             title="Mark all alerts that match the current filters as read (in-app)."
             onClick={() => void handleMarkRequiresAttentionAsRead()}
             disabled={markReadLoading || filteredAlerts.length === 0}
@@ -1436,11 +1442,11 @@ export function AlertCenterContentV2() {
           </Button>
         </div>
 
-        <Card className="border-slate-200 mb-4">
+        <Card className="mb-4 border-border">
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="pl-9"
                   placeholder="Search by title, message, appId, mediation group..."
@@ -1465,15 +1471,15 @@ export function AlertCenterContentV2() {
         </Card>
 
         {loading ? (
-          <Card className="border-slate-200">
-            <CardContent className="py-12 text-center text-slate-500 text-sm flex items-center justify-center gap-2">
+          <Card className="border-border">
+            <CardContent className="flex items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
               Loading alerts...
             </CardContent>
           </Card>
         ) : filteredAlerts.length === 0 ? (
-          <Card className="border-slate-200">
-            <CardContent className="py-12 text-center text-slate-500 text-sm">
+          <Card className="border-border">
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
               No alerts match the current filters.
             </CardContent>
           </Card>
@@ -1485,11 +1491,11 @@ export function AlertCenterContentV2() {
                   key={alert.id}
                   className={`border-l-4 ${
                     alert.severity === "critical"
-                      ? "border-l-red-500 bg-red-50"
+                      ? "border-l-red-500 bg-red-50 dark:bg-red-950/25"
                       : alert.severity === "warning"
-                        ? "border-l-amber-500 bg-amber-50"
-                        : "border-l-blue-500 bg-blue-50"
-                  } border-slate-200`}
+                        ? "border-l-amber-500 bg-amber-50 dark:bg-amber-950/25"
+                        : "border-l-blue-500 bg-blue-50 dark:bg-blue-950/25"
+                  } border-border`}
                 >
                   <CardContent className="p-6">
                     <div className="flex gap-3">
@@ -1502,17 +1508,17 @@ export function AlertCenterContentV2() {
                       />
                       <div className="flex-1 min-w-0 space-y-3">
                         <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-foreground">
                             {alert.title}
                           </span>
-                          <span className="text-xs text-slate-500 shrink-0">
+                          <span className="shrink-0 text-xs text-muted-foreground">
                             Triggered {formatRelativeTime(alert.timestamp)}
                           </span>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
                           {alert.value != null ? (
-                            <span className="font-mono text-sm text-red-600">
+                            <span className="font-mono text-sm text-red-600 dark:text-red-400">
                               {alert.metricLabel}: {alert.value.toFixed(2)}
                               {alert.threshold != null
                                 ? ` (threshold ${alert.threshold.toFixed(2)})`
@@ -1525,7 +1531,7 @@ export function AlertCenterContentV2() {
                           <AlertSlackFinanceRow fin={alert.slackFinance} />
                         ) : null}
 
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-muted-foreground">
                           {alert.description}
                         </p>
 
@@ -1554,7 +1560,7 @@ export function AlertCenterContentV2() {
                           </Button>
                           <Button
                             size="sm"
-                            className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent"
+                            className="border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950/30"
                             onClick={() => handleResolve(alert.numericId)}
                             disabled={actionLoading != null}
                           >
@@ -1590,21 +1596,21 @@ export function AlertCenterContentV2() {
 
       {!isMyAlertsTab ? (
         <div>
-          <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-foreground">
             <Clock className="w-5 h-5" />
             Timeline
             {timelineTotalCount > 0 ? (
-              <span className="text-sm font-normal text-slate-500">
+              <span className="text-sm font-normal text-muted-foreground">
                 ({timelineTotalCount} events)
               </span>
             ) : null}
           </h2>
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardContent className="p-0">
               <div className="flex max-h-[min(520px,58vh)] min-h-[240px] flex-col overflow-hidden md:flex-row">
                 <aside
                   className={cn(
-                    "flex shrink-0 flex-col border-slate-200 bg-white md:min-h-0 md:h-full",
+                    "flex shrink-0 flex-col border-border bg-card md:min-h-0 md:h-full",
                     "border-b md:border-b-0 md:border-r",
                     filtersCollapsed ? "md:w-11" : "md:w-60 lg:w-64",
                     "w-full",
@@ -1614,33 +1620,33 @@ export function AlertCenterContentV2() {
                     type="button"
                     onClick={() => setFiltersCollapsed((c) => !c)}
                     className={cn(
-                      "flex items-center gap-2 border-b border-slate-200 px-3 py-2.5 text-left hover:bg-slate-50",
+                      "flex items-center gap-2 border-b border-border px-3 py-2.5 text-left hover:bg-accent",
                       filtersCollapsed && "md:justify-center md:px-1 md:py-3",
                     )}
                     title={filtersCollapsed ? "Show filters" : "Hide filters"}
                   >
-                    <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-700" />
+                    <SlidersHorizontal className="h-4 w-4 shrink-0 text-muted-foreground" />
                     {!filtersCollapsed ? (
                       <>
-                        <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900">
+                        <span className="min-w-0 flex-1 text-sm font-semibold text-foreground">
                           Filters
                         </span>
                         <ChevronLeft
-                          className="hidden h-4 w-4 shrink-0 text-slate-500 md:block"
+                          className="hidden h-4 w-4 shrink-0 text-muted-foreground md:block"
                           aria-hidden
                         />
                         <ChevronDown
-                          className="ml-auto h-4 w-4 shrink-0 text-slate-500 transition-transform md:hidden rotate-180"
+                          className="ml-auto h-4 w-4 shrink-0 rotate-180 text-muted-foreground transition-transform md:hidden"
                           aria-hidden
                         />
                       </>
                     ) : (
                       <>
-                        <span className="flex-1 text-sm font-semibold text-slate-900 md:hidden">
+                        <span className="flex-1 text-sm font-semibold text-foreground md:hidden">
                           Filters
                         </span>
                         <ChevronDown
-                          className="ml-auto h-4 w-4 shrink-0 text-slate-500 md:hidden"
+                          className="ml-auto h-4 w-4 shrink-0 text-muted-foreground md:hidden"
                           aria-hidden
                         />
                       </>
@@ -1649,14 +1655,14 @@ export function AlertCenterContentV2() {
                   {!filtersCollapsed && (
                     <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3 md:min-h-0">
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-600">
+                        <Label className="text-xs text-muted-foreground">
                           Alert rule
                         </Label>
                         <Select
                           value={filterRuleId}
                           onValueChange={setFilterRuleId}
                         >
-                          <SelectTrigger className="h-9 bg-white">
+                          <SelectTrigger className="h-9 bg-background">
                             <SelectValue placeholder="All rules" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1670,14 +1676,16 @@ export function AlertCenterContentV2() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-600">App</Label>
+                        <Label className="text-xs text-muted-foreground">
+                          App
+                        </Label>
                         <Select
                           value={appFilter.trim() === "" ? "all" : appFilter}
                           onValueChange={(v) =>
                             setAppFilter(v === "all" ? "" : v)
                           }
                         >
-                          <SelectTrigger className="h-9 bg-white">
+                          <SelectTrigger className="h-9 bg-background">
                             <SelectValue placeholder="All apps" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1691,23 +1699,23 @@ export function AlertCenterContentV2() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-600">
+                        <Label className="text-xs text-muted-foreground">
                           From date
                         </Label>
                         <Input
                           type="date"
-                          className="h-9 bg-white"
+                          className="h-9 bg-background"
                           value={filterDateFrom}
                           onChange={(e) => setFilterDateFrom(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-600">
+                        <Label className="text-xs text-muted-foreground">
                           To date
                         </Label>
                         <Input
                           type="date"
-                          className="h-9 bg-white"
+                          className="h-9 bg-background"
                           value={filterDateTo}
                           onChange={(e) => setFilterDateTo(e.target.value)}
                         />
@@ -1716,12 +1724,12 @@ export function AlertCenterContentV2() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="mt-auto w-full bg-white"
+                        className="mt-auto w-full"
                         onClick={clearTimelineFilters}
                       >
                         Clear filters
                       </Button>
-                      <p className="text-[11px] leading-snug text-slate-500">
+                      <p className="text-[11px] leading-snug text-muted-foreground">
                         Also applies to the open-alerts list above. Local
                         calendar dates.
                       </p>
@@ -1734,12 +1742,12 @@ export function AlertCenterContentV2() {
                   className="min-h-0 min-w-0 flex-1 overflow-y-auto p-6 space-y-4"
                 >
                   {timelineLoading ? (
-                    <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-sm">
+                    <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Loading timeline…
                     </div>
                   ) : timelineItems.length === 0 ? (
-                    <p className="text-sm text-slate-500 text-center py-10">
+                    <p className="py-10 text-center text-sm text-muted-foreground">
                       No timeline events yet.
                     </p>
                   ) : (
@@ -1747,25 +1755,25 @@ export function AlertCenterContentV2() {
                       {sortedTimelineItems.map((entry) => (
                         <div
                           key={entry.id}
-                          className="flex gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0"
+                          className="flex gap-3 border-b border-border/70 pb-4 last:border-0 last:pb-0"
                         >
-                          <div className="w-2 h-2 shrink-0 rounded-full bg-slate-400 mt-2" />
+                          <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/60" />
                           <div className="min-w-0 flex-1 space-y-1">
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                               {format(
                                 new Date(entry.occurredAt),
                                 "dd/MM/yyyy HH:mm",
                               )}
                             </p>
-                            <p className="text-sm font-medium text-slate-900">
+                            <p className="text-sm font-medium text-foreground">
                               {entry.title}
                             </p>
                             {entry.subtitle ? (
-                              <p className="text-xs text-slate-600 break-words">
+                              <p className="break-words text-xs text-muted-foreground">
                                 {entry.subtitle}
                               </p>
                             ) : null}
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 uppercase">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs uppercase text-muted-foreground">
                               <span>{entry.action}</span>
                               {entry.actionBy ? (
                                 <span>· {entry.actionBy}</span>
@@ -1776,7 +1784,7 @@ export function AlertCenterContentV2() {
                             </div>
                             <Link
                               href={`/alert-center/${entry.alertResultId}`}
-                              className="inline-block text-xs font-medium text-indigo-600 hover:underline"
+                              className="inline-block text-xs font-medium text-primary hover:underline"
                             >
                               View alert
                             </Link>
@@ -1784,13 +1792,13 @@ export function AlertCenterContentV2() {
                         </div>
                       ))}
                       {timelineLoadingMore ? (
-                        <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-xs">
+                        <div className="flex items-center justify-center gap-2 py-3 text-xs text-muted-foreground">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Loading more…
                         </div>
                       ) : null}
                       {!timelineHasMore && timelineItems.length > 0 ? (
-                        <p className="text-center text-xs text-slate-400 pt-1">
+                        <p className="pt-1 text-center text-xs text-muted-foreground/70">
                           End of timeline
                         </p>
                       ) : null}
@@ -1806,7 +1814,7 @@ export function AlertCenterContentV2() {
       <div className="flex items-center gap-3">
         <Badge
           variant="outline"
-          className="bg-red-100 text-red-700 border-red-200"
+          className="border-red-200 bg-red-100 text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
         >
           {myAlertsSeverityCounts
             ? myAlertsSeverityCounts.critical
@@ -1815,7 +1823,7 @@ export function AlertCenterContentV2() {
         </Badge>
         <Badge
           variant="outline"
-          className="bg-amber-100 text-amber-700 border-amber-200"
+          className="border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-300"
         >
           {myAlertsSeverityCounts
             ? myAlertsSeverityCounts.warning
@@ -1824,7 +1832,7 @@ export function AlertCenterContentV2() {
         </Badge>
         <Badge
           variant="outline"
-          className="bg-blue-100 text-blue-700 border-blue-200"
+          className="border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300"
         >
           {myAlertsSeverityCounts ? myAlertsSeverityCounts.info : infoCount}{" "}
           Info
@@ -1834,13 +1842,13 @@ export function AlertCenterContentV2() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="dark flex flex-col gap-6">
       <Tabs
         value={centerTab}
         onValueChange={handleCenterTabChange}
         className="w-full"
       >
-        <TabsList className="h-10 w-fit bg-slate-100 p-1 mb-2">
+        <TabsList className="mb-2 h-10 w-fit bg-muted p-1">
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
           {showMyAlertsTab ? (
             <TabsTrigger value="my-alerts">My Alerts</TabsTrigger>

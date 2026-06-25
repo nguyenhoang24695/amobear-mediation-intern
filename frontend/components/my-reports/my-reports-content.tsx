@@ -114,12 +114,12 @@ function MyReportTableViewShell({
       </div>
       {isTransitioning ? (
         <div
-          className="absolute inset-0 z-20 flex items-center justify-center bg-white/40"
+          className="absolute inset-0 z-20 flex items-center justify-center bg-background/40"
           role="status"
           aria-live="polite"
           aria-label="Loading table view"
         >
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : null}
     </div>
@@ -167,12 +167,12 @@ function SortableDimensionItem({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
-      className="flex items-center gap-2 rounded bg-gray-50 px-2 py-2"
+      className="flex items-center gap-2 rounded bg-muted/50 px-2 py-2"
     >
-      <button type="button" className="cursor-grab touch-none text-gray-300" {...attributes} {...listeners}>
+      <button type="button" className="cursor-grab touch-none text-muted-foreground/60" {...attributes} {...listeners}>
         <GripVertical className="h-4 w-4" />
       </button>
-      <span className="flex-1 truncate text-sm text-gray-700">{label}</span>
+      <span className="flex-1 truncate text-sm text-foreground">{label}</span>
     </div>
   )
 }
@@ -191,13 +191,13 @@ function SortableMetricItem({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
-      className="flex items-center gap-2 rounded bg-gray-50 px-2 py-2"
+      className="flex items-center gap-2 rounded bg-muted/50 px-2 py-2"
     >
-      <button type="button" className="cursor-grab touch-none text-gray-300" {...attributes} {...listeners}>
+      <button type="button" className="cursor-grab touch-none text-muted-foreground/60" {...attributes} {...listeners}>
         <GripVertical className="h-4 w-4" />
       </button>
-      <span className="flex-1 truncate text-sm text-gray-700">{label}</span>
-      <button type="button" onClick={onRemove} className="text-gray-400 hover:text-red-600">
+      <span className="flex-1 truncate text-sm text-foreground">{label}</span>
+      <button type="button" onClick={onRemove} className="text-muted-foreground hover:text-red-600">
         <Trash2 className="h-4 w-4" />
       </button>
     </div>
@@ -667,10 +667,10 @@ export function MyReportsContent() {
         return (
           <label
             key={id}
-            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted/60"
           >
             <Checkbox checked={checked} onCheckedChange={() => toggleMetric(id)} />
-            <span className="text-sm text-gray-700">{item.label}</span>
+            <span className="text-sm text-foreground">{item.label}</span>
           </label>
         )
       })}
@@ -699,11 +699,11 @@ export function MyReportsContent() {
   const renderEditPanel = (embedded = false) => (
     <div
       className={cn(
-        "flex flex-col bg-white",
-        embedded ? "w-full" : "w-80 shrink-0 border-l border-gray-200",
+        "flex flex-col bg-card",
+        embedded ? "w-full" : "w-80 shrink-0 border-l border-border",
       )}
     >
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-border">
         {(["dimensions", "metrics"] as const).map((tab) => (
           <button
             key={tab}
@@ -712,8 +712,8 @@ export function MyReportsContent() {
             className={cn(
               "flex-1 py-3 text-sm font-medium capitalize",
               editTab === tab
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-500 hover:text-gray-700",
+                ? "border-b-2 border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {tab}
@@ -736,7 +736,7 @@ export function MyReportsContent() {
                   dạng Flat.
                 </p>
               ) : draft.tableViewMode === "pivot" ? (
-                <p className="mb-4 text-xs text-gray-500">
+                <p className="mb-4 text-xs text-muted-foreground">
                   Pivot gom dữ liệu theo thứ tự dimension: cột đầu expand từng cấp, metrics được cộng dồn
                   trên frontend.
                 </p>
@@ -745,19 +745,19 @@ export function MyReportsContent() {
                 {dimensionCatalog.map((dim) => (
                   <label
                     key={dim.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-muted/60"
                   >
                     <Checkbox
                       checked={draft.dimensions.includes(dim.id)}
                       onCheckedChange={() => toggleDimension(dim.id)}
                     />
-                    <span className="text-sm text-gray-700">{dim.label}</span>
+                    <span className="text-sm text-foreground">{dim.label}</span>
                   </label>
                 ))}
               </div>
               {draft.dimensions.length > 0 ? (
                 <div className="mt-4 space-y-1">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Dimension order
                   </p>
                   <DndContext
@@ -788,7 +788,7 @@ export function MyReportsContent() {
                     onClick={() => setMetricTab(tab)}
                     className={cn(
                       "rounded-md px-3 py-1.5 text-xs font-medium capitalize",
-                      metricTab === tab ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600",
+                      metricTab === tab ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
                     )}
                   >
                     {tab}
@@ -808,7 +808,7 @@ export function MyReportsContent() {
                 renderMetricPickerList(resolveMetricIdsForSource(metricCatalog, metricTab))
               )}
               <div className="mt-4 space-y-1">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Column order
                 </p>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMetricDragEnd}>
@@ -844,13 +844,13 @@ export function MyReportsContent() {
   )
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full flex-col bg-background">
       <div className="px-6 pt-3 pb-1">
-        <Link href="/reports" className="text-xs text-gray-500 hover:text-blue-600">
+        <Link href="/reports" className="text-xs text-muted-foreground hover:text-primary">
           All reports
         </Link>
-        <span className="mx-1.5 text-xs text-gray-400">/</span>
-        <span className="text-xs text-gray-600">My Reports</span>
+        <span className="mx-1.5 text-xs text-muted-foreground">/</span>
+        <span className="text-xs text-muted-foreground">My Reports</span>
       </div>
 
       <MyReportsToolbar
@@ -884,10 +884,10 @@ export function MyReportsContent() {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm hover:border-gray-300"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm hover:bg-muted/60"
               >
-                <SlidersHorizontal className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">Data Configuration</span>
+                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">Data Configuration</span>
               </button>
             </PopoverTrigger>
             <PopoverContent
@@ -922,22 +922,22 @@ export function MyReportsContent() {
             </div>
           ) : catalogLoading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : catalogError ? (
             <div className="px-6 py-12 text-center text-sm text-red-600">{catalogError}</div>
           ) : !applied ? (
-            <div className="px-6 py-12 text-center text-sm text-gray-500">
-              Configure filters and click <span className="font-medium text-gray-700">Apply</span>.
+            <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+              Configure filters and click <span className="font-medium text-foreground">Apply</span>.
             </div>
           ) : loading && tableRows.length === 0 ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : error ? (
             <div className="px-6 py-12 text-center text-sm text-red-600">{error}</div>
           ) : tableRows.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-gray-500">No data for the selected filters.</div>
+            <div className="px-6 py-12 text-center text-sm text-muted-foreground">No data for the selected filters.</div>
           ) : (
             <>
               {draft.chartsVisible ? (
@@ -1039,14 +1039,14 @@ export function MyReportsContent() {
                 setMobileFiltersOpen(true)
               }}
               className={cn(
-                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg active:cursor-grabbing",
-                hasPendingApply && "ring-2 ring-blue-300",
+                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg active:cursor-grabbing",
+                hasPendingApply && "ring-2 ring-primary/40",
               )}
               aria-label="Open filters and metrics"
             >
-              <Filter className="h-4 w-4 text-slate-600" />
+              <Filter className="h-4 w-4 text-muted-foreground" />
               <span
-                className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
                 style={{ writingMode: "vertical-rl" }}
               >
                 Filters & Metrics
@@ -1062,14 +1062,14 @@ export function MyReportsContent() {
               side="right"
               className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
             >
-              <SheetHeader className="shrink-0 border-b border-slate-100 px-4 py-4 text-left">
+              <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
                 <SheetTitle className="text-base">Data configuration</SheetTitle>
                 <SheetDescription>
                   Toggle visible filters below; edit values from the filter tags.
                 </SheetDescription>
               </SheetHeader>
               {externalFilterTags.length > 0 ? (
-                <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-100 px-4 py-3">
+                <div className="flex shrink-0 flex-wrap gap-2 border-b border-border px-4 py-3">
                   {renderExternalFilterTags()}
                 </div>
               ) : null}
@@ -1077,14 +1077,14 @@ export function MyReportsContent() {
                 <div className="min-h-0 flex-1 overflow-y-auto">
                   <div className="space-y-4 p-0">
                     <div className="h-[min(55vh,420px)]">{renderDataConfiguration(false)}</div>
-                    <div className="border-t border-slate-100 px-4 pb-4 pt-2">
+                    <div className="border-t border-border px-4 pb-4 pt-2">
                       {renderEditPanel(true)}
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="shrink-0 border-t border-slate-100 p-4">
-                <Button className="h-10 w-full bg-blue-600 hover:bg-blue-700" onClick={handleApply} disabled={loading}>
+              <div className="shrink-0 border-t border-border p-4">
+                <Button className="h-10 w-full bg-primary hover:bg-primary/90" onClick={handleApply} disabled={loading}>
                   Apply
                 </Button>
               </div>

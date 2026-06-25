@@ -474,8 +474,8 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
 
   const TestButtonContent = () => {
     if (testState === "loading") return <><Loader2 className="w-4 h-4 animate-spin" /><span>Testing...</span></>
-    if (testState === "success") return <><CheckCircle2 className="w-4 h-4 text-green-600" /><span className="text-green-700">Connected</span></>
-    if (testState === "error") return <><XCircle className="w-4 h-4 text-red-500" /><span className="text-red-600">Failed</span></>
+    if (testState === "success") return <><CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /><span className="text-emerald-700 dark:text-emerald-300">Connected</span></>
+    if (testState === "error") return <><XCircle className="w-4 h-4 text-destructive" /><span className="text-destructive">Failed</span></>
     return <><Plug className="w-4 h-4" /><span>Test Connection</span></>
   }
 
@@ -502,7 +502,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               }
             }}
           >
-            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 bg-slate-100 ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
+            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 bg-muted ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
               <TabsTrigger value="admob">AdMob</TabsTrigger>
               <TabsTrigger value="applovin">AppLovin</TabsTrigger>
               <TabsTrigger value="xmp">XMP</TabsTrigger>
@@ -515,32 +515,32 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             <TabsContent value="admob" className="mt-5 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="admob-name">
-                  Account Name <span className="text-red-500">*</span>
+                  Account Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="admob-name"
                   placeholder="e.g. AdMob Production"
                   value={admobName}
                   onChange={(e) => { setAdmobName(e.target.value); setErrors((p) => ({ ...p, admobName: "" })) }}
-                  className={errors.admobName ? "border-red-500" : ""}
+                  className={errors.admobName ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.admobName && <p className="text-xs text-red-500">{errors.admobName}</p>}
+                {errors.admobName && <p className="text-xs text-destructive">{errors.admobName}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="publisher-id">
-                  Publisher ID <span className="text-red-500">*</span>
+                  Publisher ID <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="publisher-id"
                   placeholder="pub-XXXXXXXXXXXXXXXX"
                   value={publisherId}
                   onChange={(e) => { setPublisherId(e.target.value); setErrors((p) => ({ ...p, publisherId: "" })) }}
-                  className={errors.publisherId ? "border-red-500" : ""}
+                  className={errors.publisherId ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.publisherId && <p className="text-xs text-red-500">{errors.publisherId}</p>}
+                {errors.publisherId && <p className="text-xs text-destructive">{errors.publisherId}</p>}
               </div>
 
               <div className="space-y-2">
@@ -570,7 +570,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 text-slate-500 hover:text-slate-700 bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground bg-transparent"
                     onClick={() => setShowClientSecret(!showClientSecret)}
                   >
                     {showClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -615,7 +615,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               <div className="space-y-2">
                 <Label htmlFor="default-app-type">Default app type (new apps from sync)</Label>
                 <Select value={admobDefaultAppType || "__none__"} onValueChange={(v) => setAdmobDefaultAppType(v === "__none__" ? "" : v)} disabled={saving}>
-                  <SelectTrigger id="default-app-type" className="bg-white">
+                  <SelectTrigger id="default-app-type" className="bg-background">
                     <SelectValue placeholder="Not set" />
                   </SelectTrigger>
                   <SelectContent>
@@ -624,7 +624,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     <SelectItem value="app">App</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">Applied to <span className="font-mono">apps.type</span> when a new app is inserted for this publisher during structure sync.</p>
+                <p className="text-xs text-muted-foreground">Applied to <span className="font-mono">apps.type</span> when a new app is inserted for this publisher during structure sync.</p>
               </div>
             </TabsContent>
 
@@ -632,17 +632,17 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             <TabsContent value="applovin" className="mt-5 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="al-name">
-                  Account Name <span className="text-red-500">*</span>
+                  Account Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="al-name"
                   placeholder="e.g. AppLovin Main"
                   value={applovinName}
                   onChange={(e) => { setApplovinName(e.target.value); setErrors((p) => ({ ...p, applovinName: "" })) }}
-                  className={errors.applovinName ? "border-red-500" : ""}
+                  className={errors.applovinName ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.applovinName && <p className="text-xs text-red-500">{errors.applovinName}</p>}
+                {errors.applovinName && <p className="text-xs text-destructive">{errors.applovinName}</p>}
               </div>
 
               <div className="space-y-2">
@@ -659,7 +659,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                     onClick={() => setShowReportKey(!showReportKey)}
                   >
                     {showReportKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -683,7 +683,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             <TabsContent value="appsflyer" className="mt-5 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="af-name">
-                  Account Name <span className="text-red-500">*</span>
+                  Account Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="af-name"
@@ -693,14 +693,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     setAppsflyerName(e.target.value)
                     setErrors((p) => ({ ...p, appsflyerName: "" }))
                   }}
-                  className={errors.appsflyerName ? "border-red-500" : ""}
+                  className={errors.appsflyerName ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.appsflyerName && <p className="text-xs text-red-500">{errors.appsflyerName}</p>}
+                {errors.appsflyerName && <p className="text-xs text-destructive">{errors.appsflyerName}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="af-api-token">
-                  API V2 Token {!isEdit && <span className="text-red-500">*</span>}
+                  API V2 Token {!isEdit && <span className="text-destructive">*</span>}
                 </Label>
                 <div className="relative">
                   <Input
@@ -712,19 +712,19 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                       setAfApiV2Token(e.target.value)
                       setErrors((p) => ({ ...p, afApiV2Token: "" }))
                     }}
-                    className={errors.afApiV2Token ? "border-red-500 pr-10" : "pr-10"}
+                    className={errors.afApiV2Token ? "border-destructive pr-10" : "pr-10"}
                     disabled={saving}
                     autoComplete="new-password"
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                     onClick={() => setShowAfApiToken(!showAfApiToken)}
                   >
                     {showAfApiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {errors.afApiV2Token && <p className="text-xs text-red-500">{errors.afApiV2Token}</p>}
+                {errors.afApiV2Token && <p className="text-xs text-destructive">{errors.afApiV2Token}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="af-base-url">API base URL</Label>
@@ -760,32 +760,32 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             <TabsContent value="xmp" className="mt-5 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="xmp-name">
-                  Account Name <span className="text-red-500">*</span>
+                  Account Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="xmp-name"
                   placeholder="e.g. XMP Mintegral Account"
                   value={xmpName}
                   onChange={(e) => { setXmpName(e.target.value); setErrors((p) => ({ ...p, xmpName: "" })) }}
-                  className={errors.xmpName ? "border-red-500" : ""}
+                  className={errors.xmpName ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.xmpName && <p className="text-xs text-red-500">{errors.xmpName}</p>}
+                {errors.xmpName && <p className="text-xs text-destructive">{errors.xmpName}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="xmp-client-id">
-                  Client ID <span className="text-red-500">*</span>
+                  Client ID <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="xmp-client-id"
                   placeholder="Enter Client ID"
                   value={xmpClientId}
                   onChange={(e) => { setXmpClientId(e.target.value); setErrors((p) => ({ ...p, xmpClientId: "" })) }}
-                  className={errors.xmpClientId ? "border-red-500" : ""}
+                  className={errors.xmpClientId ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.xmpClientId && <p className="text-xs text-red-500">{errors.xmpClientId}</p>}
+                {errors.xmpClientId && <p className="text-xs text-destructive">{errors.xmpClientId}</p>}
               </div>
 
               <div className="space-y-2">
@@ -802,7 +802,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                     onClick={() => setShowXmpClientSecret(!showXmpClientSecret)}
                   >
                     {showXmpClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -813,13 +813,13 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
 
             {/* ── Qonversion Tab — org cookie for crawler; per-app keys in App → Settings ── */}
             <TabsContent value="qonversion" className="mt-5 min-w-0 space-y-6">
-              <p className="text-sm text-slate-600 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 leading-relaxed">
-                <span className="font-medium text-slate-800">Web crawler</span> uses the dashboard cookie and default account below.
-                <span className="font-medium text-slate-800"> Project / API / secret per app</span> are set under each app&apos;s Settings, not here.
+              <p className="text-sm text-muted-foreground rounded-lg border border-border bg-muted/40 px-3 py-2 leading-relaxed">
+                <span className="font-medium text-foreground">Web crawler</span> uses the dashboard cookie and default account below.
+                <span className="font-medium text-foreground"> Project / API / secret per app</span> are set under each app&apos;s Settings, not here.
               </p>
               <div className="space-y-2">
                 <Label htmlFor="qon-name">
-                  Account name <span className="text-red-500">*</span>
+                  Account name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="qon-name"
@@ -829,14 +829,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     setQonName(e.target.value)
                     setErrors((p) => ({ ...p, qonName: "" }))
                   }}
-                  className={errors.qonName ? "border-red-500" : ""}
+                  className={errors.qonName ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.qonName && <p className="text-xs text-red-500">{errors.qonName}</p>}
+                {errors.qonName && <p className="text-xs text-destructive">{errors.qonName}</p>}
               </div>
 
               <div className="min-w-0 max-w-full space-y-3 rounded-lg border border-sky-100 bg-sky-50/50 p-4">
-                <h4 className="text-sm font-semibold text-slate-800">Dashboard (web crawler)</h4>
+                <h4 className="text-sm font-semibold text-foreground">Dashboard (web crawler)</h4>
                 <div className="min-w-0 space-y-2">
                   <Label htmlFor="qon-dcookie">Cookie header</Label>
                   <div className="min-w-0 w-full max-w-full overflow-hidden rounded-md border border-input bg-background shadow-xs">
@@ -867,15 +867,15 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                 </div>
               </div>
 
-              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                <h4 className="text-sm font-semibold text-slate-800">Optional — org-wide REST / GCS / webhook</h4>
-                <p className="text-xs text-slate-500">
+              <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
+                <h4 className="text-sm font-semibold text-foreground">Optional — org-wide REST / GCS / webhook</h4>
+                <p className="text-xs text-muted-foreground">
                   Fallback only when no per-app keys are configured. Prefer App → Settings for production.
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="qon-pk">
                     Project key
-                    {isEdit && <span className="text-slate-400 font-normal text-xs ml-1">(leave blank to keep)</span>}
+                    {isEdit && <span className="text-muted-foreground font-normal text-xs ml-1">(leave blank to keep)</span>}
                   </Label>
                   <Input
                     id="qon-pk"
@@ -885,11 +885,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                       setQonProjectKey(e.target.value)
                       setErrors((p) => ({ ...p, qonProjectKey: "" }))
                     }}
-                    className={errors.qonProjectKey ? "border-red-500" : ""}
+                    className={errors.qonProjectKey ? "border-destructive" : ""}
                     disabled={saving}
                     autoComplete="off"
                   />
-                  {errors.qonProjectKey && <p className="text-xs text-red-500">{errors.qonProjectKey}</p>}
+                  {errors.qonProjectKey && <p className="text-xs text-destructive">{errors.qonProjectKey}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="qon-sk">Secret key</Label>
@@ -906,7 +906,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                       onClick={() => setShowQonSecret(!showQonSecret)}
                     >
                       {showQonSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -967,14 +967,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             </TabsContent>
 
             <TabsContent value="apple" className="mt-5 min-w-0 space-y-4">
-              <p className="text-sm text-slate-600 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-sm text-muted-foreground rounded-lg border border-border bg-muted/40 px-3 py-2">
                 App Store Connect API (ASC key) for sales, finance, analytics, and catalog. In-App Purchase key for
                 StoreKit Server API. Keys are encrypted in the database; paste full <span className="font-mono">.p8</span> PEM
                 including <span className="font-mono">BEGIN/END</span> lines.
               </p>
               <div className="space-y-2">
                 <Label htmlFor="apple-name">
-                  Account name <span className="text-red-500">*</span>
+                  Account name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="apple-name"
@@ -984,14 +984,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     setAppleName(e.target.value)
                     setErrors((p) => ({ ...p, appleName: "" }))
                   }}
-                  className={errors.appleName ? "border-red-500" : ""}
+                  className={errors.appleName ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.appleName && <p className="text-xs text-red-500">{errors.appleName}</p>}
+                {errors.appleName && <p className="text-xs text-destructive">{errors.appleName}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="apple-vendor">
-                  Vendor number <span className="text-red-500">*</span>
+                  Vendor number <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="apple-vendor"
@@ -1001,29 +1001,29 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                     setAppleVendorNumber(e.target.value)
                     setErrors((p) => ({ ...p, appleVendorNumber: "" }))
                   }}
-                  className={errors.appleVendorNumber ? "border-red-500" : ""}
+                  className={errors.appleVendorNumber ? "border-destructive" : ""}
                   disabled={saving}
                 />
-                {errors.appleVendorNumber && <p className="text-xs text-red-500">{errors.appleVendorNumber}</p>}
+                {errors.appleVendorNumber && <p className="text-xs text-destructive">{errors.appleVendorNumber}</p>}
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
-                <h4 className="text-sm font-semibold text-slate-800">App Store Connect (ASC)</h4>
+              <div className="rounded-lg border border-border bg-background p-4 space-y-4">
+                <h4 className="text-sm font-semibold text-foreground">App Store Connect (ASC)</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="apple-asc-pem">
-                      Private key (.p8 file) {!isEdit && <span className="text-red-500">*</span>}
+                      Private key (.p8 file) {!isEdit && <span className="text-destructive">*</span>}
                       {isEdit && (
-                        <span className="text-slate-400 font-normal text-xs ml-1">
+                        <span className="text-muted-foreground font-normal text-xs ml-1">
                           (leave empty to keep stored key)
                         </span>
                       )}
                     </Label>
                     <div
                       className={[
-                        "relative flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-3 transition",
-                        appleAscDragOver ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200",
-                        errors.appleAscPem ? "border-red-500" : "",
+                        "relative flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-3 transition",
+                        appleAscDragOver ? "border-primary ring-2 ring-primary/20" : "border-border",
+                        errors.appleAscPem ? "border-destructive" : "",
                       ].join(" ")}
                       onDragEnter={(e) => {
                         e.preventDefault()
@@ -1051,11 +1051,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                       }}
                     >
                       <div className="min-w-0">
-                        <div className="text-sm text-slate-700">
+                        <div className="text-sm text-foreground">
                           Drag & drop <span className="font-mono">AuthKey_*.p8</span> here, or{" "}
-                          <span className="text-blue-600 font-medium">click to upload</span>
+                          <span className="text-primary font-medium">click to upload</span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                        <div className="text-xs text-muted-foreground mt-0.5 truncate">
                           {appleAscFileName
                             ? `Selected: ${appleAscFileName}`
                             : isEdit && editAccount?.appleHasAscPrivateKey
@@ -1087,7 +1087,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                               setAppleAscFileName("")
                               setErrors((p) => ({ ...p, appleAscPem: "" }))
                             }}
-                            className="gap-2 text-slate-600"
+                            className="gap-2 text-muted-foreground"
                           >
                             <X className="w-4 h-4" />
                             Clear
@@ -1108,7 +1108,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                         }}
                       />
                     </div>
-                    {errors.appleAscPem && <p className="text-xs text-red-500">{errors.appleAscPem}</p>}
+                    {errors.appleAscPem && <p className="text-xs text-destructive">{errors.appleAscPem}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="apple-asc-kid">Key ID *</Label>
@@ -1119,10 +1119,10 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                         setAppleAscKeyId(e.target.value)
                         setErrors((p) => ({ ...p, appleAscKeyId: "" }))
                       }}
-                      className={errors.appleAscKeyId ? "border-red-500" : ""}
+                      className={errors.appleAscKeyId ? "border-destructive" : ""}
                       disabled={saving}
                     />
-                    {errors.appleAscKeyId && <p className="text-xs text-red-500">{errors.appleAscKeyId}</p>}
+                    {errors.appleAscKeyId && <p className="text-xs text-destructive">{errors.appleAscKeyId}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="apple-asc-iss">Issuer ID *</Label>
@@ -1133,31 +1133,31 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                         setAppleAscIssuerId(e.target.value)
                         setErrors((p) => ({ ...p, appleAscIssuerId: "" }))
                       }}
-                      className={errors.appleAscIssuerId ? "border-red-500" : ""}
+                      className={errors.appleAscIssuerId ? "border-destructive" : ""}
                       disabled={saving}
                     />
-                    {errors.appleAscIssuerId && <p className="text-xs text-red-500">{errors.appleAscIssuerId}</p>}
+                    {errors.appleAscIssuerId && <p className="text-xs text-destructive">{errors.appleAscIssuerId}</p>}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
-                <h4 className="text-sm font-semibold text-slate-800">In-App Purchase / StoreKit</h4>
+              <div className="rounded-lg border border-border bg-background p-4 space-y-4">
+                <h4 className="text-sm font-semibold text-foreground">In-App Purchase / StoreKit</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="apple-iap-pem">
-                      Private key (.p8 file) {!isEdit && <span className="text-red-500">*</span>}
+                      Private key (.p8 file) {!isEdit && <span className="text-destructive">*</span>}
                       {isEdit && (
-                        <span className="text-slate-400 font-normal text-xs ml-1">
+                        <span className="text-muted-foreground font-normal text-xs ml-1">
                           (leave empty to keep stored key)
                         </span>
                       )}
                     </Label>
                     <div
                       className={[
-                        "relative flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-3 transition",
-                        appleIapDragOver ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200",
-                        errors.appleIapPem ? "border-red-500" : "",
+                        "relative flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-3 transition",
+                        appleIapDragOver ? "border-primary ring-2 ring-primary/20" : "border-border",
+                        errors.appleIapPem ? "border-destructive" : "",
                       ].join(" ")}
                       onDragEnter={(e) => {
                         e.preventDefault()
@@ -1185,11 +1185,11 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                       }}
                     >
                       <div className="min-w-0">
-                        <div className="text-sm text-slate-700">
+                        <div className="text-sm text-foreground">
                           Drag & drop <span className="font-mono">SubscriptionKey_*.p8</span> here, or{" "}
-                          <span className="text-blue-600 font-medium">click to upload</span>
+                          <span className="text-primary font-medium">click to upload</span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                        <div className="text-xs text-muted-foreground mt-0.5 truncate">
                           {appleIapFileName
                             ? `Selected: ${appleIapFileName}`
                             : isEdit && editAccount?.appleHasIapPrivateKey
@@ -1221,7 +1221,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                               setAppleIapFileName("")
                               setErrors((p) => ({ ...p, appleIapPem: "" }))
                             }}
-                            className="gap-2 text-slate-600"
+                            className="gap-2 text-muted-foreground"
                           >
                             <X className="w-4 h-4" />
                             Clear
@@ -1242,7 +1242,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                         }}
                       />
                     </div>
-                    {errors.appleIapPem && <p className="text-xs text-red-500">{errors.appleIapPem}</p>}
+                    {errors.appleIapPem && <p className="text-xs text-destructive">{errors.appleIapPem}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="apple-iap-kid">Key ID *</Label>
@@ -1253,10 +1253,10 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                         setAppleIapKeyId(e.target.value)
                         setErrors((p) => ({ ...p, appleIapKeyId: "" }))
                       }}
-                      className={errors.appleIapKeyId ? "border-red-500" : ""}
+                      className={errors.appleIapKeyId ? "border-destructive" : ""}
                       disabled={saving}
                     />
-                    {errors.appleIapKeyId && <p className="text-xs text-red-500">{errors.appleIapKeyId}</p>}
+                    {errors.appleIapKeyId && <p className="text-xs text-destructive">{errors.appleIapKeyId}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="apple-iap-iss">Issuer ID *</Label>
@@ -1267,10 +1267,10 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                         setAppleIapIssuerId(e.target.value)
                         setErrors((p) => ({ ...p, appleIapIssuerId: "" }))
                       }}
-                      className={errors.appleIapIssuerId ? "border-red-500" : ""}
+                      className={errors.appleIapIssuerId ? "border-destructive" : ""}
                       disabled={saving}
                     />
-                    {errors.appleIapIssuerId && <p className="text-xs text-red-500">{errors.appleIapIssuerId}</p>}
+                    {errors.appleIapIssuerId && <p className="text-xs text-destructive">{errors.appleIapIssuerId}</p>}
                   </div>
                 </div>
               </div>
@@ -1304,7 +1304,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               {/* Save / Update */}
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={saving}
               >
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

@@ -766,10 +766,10 @@ export function ContextLibraryContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">
+              <h1 className="text-2xl font-semibold ">
                 Context Library
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm ">
                 Khám phá và quản lý các context template
               </p>
             </div>

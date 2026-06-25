@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -76,9 +76,9 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
 
   return (
     <>
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-2">
+          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Role Actions
           </CardTitle>
@@ -91,7 +91,7 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             disabled={!canCreate}
             title={!canCreate ? "You don't have permission to create roles" : undefined}
           >
-            <Plus className="w-4 h-4 mr-2 text-blue-600" />
+            <Plus className="w-4 h-4 mr-2 text-primary" />
             Create New Role
           </Button>
           <Button
@@ -101,12 +101,12 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             disabled={selectedRole.isSystem || !canRename}
             title={!canRename ? "You don't have permission to rename roles" : undefined}
           >
-            <Pencil className="w-4 h-4 mr-2 text-slate-500" />
+            <Pencil className="w-4 h-4 mr-2 text-muted-foreground" />
             Rename Role
           </Button>
           <Button
             variant="outline"
-            className="w-full justify-start text-sm text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
+            className="w-full justify-start text-sm text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive bg-transparent"
             onClick={() => setDeleteOpen(true)}
             disabled={selectedRole.isSystem || roles.length <= 1 || !canDelete}
             title={!canDelete ? "You don't have permission to delete roles" : undefined}
@@ -115,7 +115,7 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             Delete Role
           </Button>
           {selectedRole.isSystem && (
-            <p className="text-xs text-slate-400 px-1 pt-1">
+            <p className="text-xs text-muted-foreground px-1 pt-1">
               System roles cannot be renamed or deleted.
             </p>
           )}
@@ -156,7 +156,7 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleCreate}
               disabled={!name.trim()}
             >
@@ -198,7 +198,7 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleRename}
               disabled={!name.trim()}
             >
@@ -216,7 +216,7 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
             <AlertDialogDescription>
               Are you sure you want to delete this role? This action cannot be undone.
               {selectedRole.userCount > 0 && (
-                <span className="block mt-2 font-medium text-red-600">
+                <span className="block mt-2 font-medium text-destructive">
                   Warning: {selectedRole.userCount} user{selectedRole.userCount === 1 ? " is" : "s are"} currently assigned to this role.
                 </span>
               )}
@@ -225,7 +225,7 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}
             >
               Delete Role
@@ -236,3 +236,4 @@ export function RoleEditor({ roles, selectedRole, onCreateRole, onRenameRole, on
     </>
   )
 }
+

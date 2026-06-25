@@ -31,13 +31,13 @@ export function WaterfallRulesContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl text-balance">Waterfall Config</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-balance text-2xl font-bold text-foreground lg:text-3xl">Waterfall Config</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage reusable rule configs, rule groups, and recommendation rules for waterfall optimization.
         </p>
       </div>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b">
         <div className="flex gap-0">
           {canViewConfigs && (
             <button
@@ -45,8 +45,8 @@ export function WaterfallRulesContent() {
               onClick={() => setActiveTab("configs")}
               className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeTab === "configs"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Settings className="h-4 w-4" />
@@ -54,7 +54,7 @@ export function WaterfallRulesContent() {
               <Badge
                 variant="secondary"
                 className={`px-1.5 py-0 text-xs ${
-                  activeTab === "configs" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
+                  activeTab === "configs" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                 }`}
               >
                 Config Master
@@ -67,8 +67,8 @@ export function WaterfallRulesContent() {
               onClick={() => setActiveTab("rules")}
               className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeTab === "rules"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <ListChecks className="h-4 w-4" />

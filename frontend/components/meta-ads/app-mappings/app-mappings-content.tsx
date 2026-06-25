@@ -116,18 +116,18 @@ function normalizePlatform(value?: string | null) {
 function getPlatformBadgeClass(platform?: string | null) {
   switch (normalizePlatform(platform)) {
     case "IOS":
-      return "bg-blue-100 text-blue-700 hover:bg-blue-100 border-none"
+      return "bg-primary/10 text-primary hover:bg-primary/10 border-none"
     case "ANDROID":
-      return "bg-green-100 text-green-700 hover:bg-green-100 border-none"
+      return "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/10 border-none"
     default:
-      return "bg-slate-100 text-slate-600 hover:bg-slate-100 border-none"
+      return "bg-muted text-muted-foreground hover:bg-muted border-none"
   }
 }
 
 function getStatusBadgeClass(status: MetaMappingStatus) {
   return status === "mapped"
-    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none"
-    : "bg-amber-100 text-amber-700 hover:bg-amber-100 border-none"
+    ? "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/10 border-none"
+    : "bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 border-none"
 }
 
 function firstNonEmpty(...values: Array<string | null | undefined>) {
@@ -451,25 +451,25 @@ export function AppMappingsContent() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <GitMerge className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold text-slate-900">Meta Store Mappings</h2>
+            <GitMerge className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold text-foreground">Meta Store Mappings</h2>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Each store app shows whether it is mapped to one or more AdMob accounts.
           </p>
         </div>
         {canCreate ? (
-          <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={openCreate}>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Add Store Mapping
           </Button>
         ) : null}
       </div>
 
-      <div className="rounded-md border border-slate-200 bg-white">
-        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center">
+      <div className="rounded-md border border-border bg-background">
+        <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center">
           <div className="relative min-w-0 flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
             <Input
               className="h-9 pl-9 text-sm"
               placeholder="Search app, store identity, Meta app ID, AdMob account, or AdMob app ID..."
@@ -478,7 +478,7 @@ export function AppMappingsContent() {
             />
           </div>
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="h-9 w-full bg-white text-sm lg:w-40">
+            <SelectTrigger className="h-9 w-full bg-background text-sm lg:w-40">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -488,7 +488,7 @@ export function AppMappingsContent() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 w-full bg-white text-sm lg:w-40">
+            <SelectTrigger className="h-9 w-full bg-background text-sm lg:w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -497,7 +497,7 @@ export function AppMappingsContent() {
               <SelectItem value="unmapped">Unmapped</SelectItem>
             </SelectContent>
           </Select>
-          <div className="text-xs text-slate-500 lg:min-w-28 lg:text-right">{filtered.length} apps</div>
+          <div className="text-xs text-muted-foreground lg:min-w-28 lg:text-right">{filtered.length} apps</div>
         </div>
 
         <Table>
@@ -516,20 +516,20 @@ export function AppMappingsContent() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-28 text-center text-sm text-slate-500">
-                  <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-slate-400" />
+                <TableCell colSpan={8} className="h-28 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-muted-foreground/70" />
                   Loading Meta store mappings...
                 </TableCell>
               </TableRow>
             ) : hasError ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-28 text-center text-sm text-red-600">
+                <TableCell colSpan={8} className="h-28 text-center text-sm text-destructive">
                   Unable to load Meta store mappings.
                 </TableCell>
               </TableRow>
             ) : pagedGroups.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-28 text-center text-sm text-slate-500">
+                <TableCell colSpan={8} className="h-28 text-center text-sm text-muted-foreground">
                   No Meta store mappings found.
                 </TableCell>
               </TableRow>
@@ -543,40 +543,40 @@ export function AppMappingsContent() {
                 const appRouteId = group.app?.appId ?? mapping.appId ?? null
                 const appStoreUrl = getMappingStoreUrl(mapping, group)
                 return (
-                  <TableRow key={group.key}>
+                  <TableRow key={group.key} className="hover:bg-muted/40">
                     <TableCell>
                       <div className="flex min-w-0 items-center gap-3">
                         {appIconUri ? (
                           <img
                             src={appIconUri}
                             alt=""
-                            className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover"
+                            className="h-10 w-10 shrink-0 rounded-lg border border-border bg-muted object-cover"
                           />
                         ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-sm font-semibold text-muted-foreground">
                             {group.appLabel.charAt(0).toUpperCase() || "?"}
                           </div>
                         )}
                         <div className="min-w-0 space-y-0.5">
-                          <p className="max-w-[240px] truncate font-medium text-slate-900">{group.appLabel}</p>
+                          <p className="max-w-[240px] truncate font-medium text-foreground">{group.appLabel}</p>
                           {appRouteId && appStoreUrl ? (
                             <a
                               href={appStoreUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="block max-w-[240px] truncate font-mono text-[11px] text-slate-400 hover:text-blue-600 hover:underline"
+                              className="block max-w-[240px] truncate font-mono text-[11px] text-muted-foreground/70 hover:text-primary hover:underline"
                             >
                               {appStoreUrl}
                             </a>
                           ) : appRouteId ? (
                             <Link
                               href={`/apps/${encodeURIComponent(appRouteId)}`}
-                              className="block max-w-[240px] truncate font-mono text-[11px] text-slate-400 hover:text-blue-600 hover:underline"
+                              className="block max-w-[240px] truncate font-mono text-[11px] text-muted-foreground/70 hover:text-primary hover:underline"
                             >
                               {appRouteId}
                             </Link>
                           ) : (
-                            <p className="max-w-[240px] truncate font-mono text-[11px] text-slate-400">-</p>
+                            <p className="max-w-[240px] truncate font-mono text-[11px] text-muted-foreground/70">-</p>
                           )}
                         </div>
                       </div>
@@ -585,19 +585,19 @@ export function AppMappingsContent() {
                       <Badge className={`text-[11px] ${getPlatformBadgeClass(group.platform)}`}>{group.platform}</Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="block max-w-[220px] truncate font-mono text-xs text-slate-600">{group.storeIdentifier || "-"}</span>
+                      <span className="block max-w-[220px] truncate font-mono text-xs text-muted-foreground">{group.storeIdentifier || "-"}</span>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         {group.metaApplicationIds.map((id) => (
-                          <p key={id} className="max-w-[180px] truncate font-mono text-xs text-slate-700">{id}</p>
+                          <p key={id} className="max-w-[180px] truncate font-mono text-xs text-foreground">{id}</p>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell>
                       {group.admobAccountCount > 0 ? (
                         <div className="space-y-1.5">
-                          <p className="text-xs font-medium text-slate-700">
+                          <p className="text-xs font-medium text-foreground">
                             {group.admobAccountCount} AdMob account{group.admobAccountCount === 1 ? "" : "s"}
                           </p>
                           <div className="space-y-1">
@@ -605,13 +605,13 @@ export function AppMappingsContent() {
                               const bindingAppId = binding.appId ?? binding.externalAppId
                               return (
                                 <div key={binding.bindingId} className="flex min-w-0 items-center gap-2 text-xs">
-                                  <Badge className={binding.isActive ? "bg-emerald-50 text-emerald-700 border-none" : "bg-slate-100 text-slate-500 border-none"}>
+                                  <Badge className={binding.isActive ? "bg-green-500/10 text-green-700 dark:text-green-400 border-none" : "bg-muted text-muted-foreground border-none"}>
                                     {binding.isActive ? "On" : "Off"}
                                   </Badge>
-                                  <span className="truncate font-medium text-slate-700">{binding.admobAccountName ?? "No account"}</span>
+                                  <span className="truncate font-medium text-foreground">{binding.admobAccountName ?? "No account"}</span>
                                   <Link
                                     href={`/apps/${encodeURIComponent(bindingAppId)}`}
-                                    className="truncate font-mono text-blue-700 hover:underline"
+                                    className="truncate font-mono text-primary hover:underline"
                                   >
                                     {binding.externalAppId}
                                   </Link>
@@ -621,13 +621,13 @@ export function AppMappingsContent() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-400">-</span>
+                        <span className="text-sm text-muted-foreground/70">-</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusBadgeClass(group.status)}>{group.status === "mapped" ? "Mapped" : "Unmapped"}</Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatDateTime(group.latestUpdatedAt)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(group.latestUpdatedAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -659,11 +659,11 @@ export function AppMappingsContent() {
         </Table>
 
         {!isLoading && !hasError && filtered.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <span>Rows per page</span>
               <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
-                <SelectTrigger className="h-8 w-20 bg-white text-xs">
+                <SelectTrigger className="h-8 w-20 bg-background text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -701,14 +701,14 @@ export function AppMappingsContent() {
         }}
       >
         <DialogContent className="flex max-h-[90vh] w-full max-w-[720px] flex-col overflow-hidden rounded-xl p-0 gap-0">
-          <DialogHeader className="flex-shrink-0 border-b border-slate-100 px-6 pb-4 pt-6">
-            <DialogTitle className="text-base font-semibold text-slate-900">
+          <DialogHeader className="flex-shrink-0 border-b border-border px-6 pb-4 pt-6">
+            <DialogTitle className="text-base font-semibold text-foreground">
               {editTarget ? "Edit Store Mapping" : "Add Store Mapping"}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Linked App</Label>
+              <Label className="text-xs font-medium text-foreground">Linked App</Label>
               <Popover open={appSelectOpen} onOpenChange={setAppSelectOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -721,29 +721,29 @@ export function AppMappingsContent() {
                     {selectedFormApp ? (
                       <div className="flex min-w-0 flex-1 items-center gap-3 pr-2">
                         {selectedFormApp.iconUri ? (
-                          <img src={selectedFormApp.iconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover" />
+                          <img src={selectedFormApp.iconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-border bg-muted object-cover" />
                         ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-sm font-semibold text-muted-foreground">
                             {getDisplayAppName(selectedFormApp).charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="truncate font-medium text-slate-900">{getDisplayAppName(selectedFormApp)}</span>
+                            <span className="truncate font-medium text-foreground">{getDisplayAppName(selectedFormApp)}</span>
                             <Badge className={`text-[10px] ${getPlatformBadgeClass(selectedFormApp.platform)}`}>
                               {normalizePlatform(selectedFormApp.platform) || "APP"}
                             </Badge>
                           </div>
-                          <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {selectedFormApp.appId}</p>
+                          <p className="truncate font-mono text-xs text-muted-foreground">AdMob App ID - {selectedFormApp.appId}</p>
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-slate-500">Search and select app...</span>
+                      <span className="text-sm text-muted-foreground">Search and select app...</span>
                     )}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <PopoverContent className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] p-0" align="start">
                   <Command shouldFilter className="flex max-h-[360px] flex-col">
                     <CommandInput placeholder="Search by app name, AdMob App ID, or store ID..." />
                     <CommandList className="min-h-0 max-h-[320px] overscroll-contain">
@@ -757,7 +757,7 @@ export function AppMappingsContent() {
                           }}
                         >
                           <Check className={cn("mr-2 h-4 w-4 shrink-0", form.appRowId ? "opacity-0" : "opacity-100")} />
-                          <span className="text-sm text-slate-600">No linked app</span>
+                          <span className="text-sm text-muted-foreground">No linked app</span>
                         </CommandItem>
                         {apps.map((app) => {
                           const isSelected = form.appRowId === app.id.toString()
@@ -773,21 +773,21 @@ export function AppMappingsContent() {
                               <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                               <div className="flex min-w-0 items-center gap-3 py-0.5">
                                 {app.iconUri ? (
-                                  <img src={app.iconUri} alt="" className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover" />
+                                  <img src={app.iconUri} alt="" className="h-9 w-9 shrink-0 rounded-lg border border-border bg-muted object-cover" />
                                 ) : (
-                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-sm font-semibold text-muted-foreground">
                                     {getDisplayAppName(app).charAt(0).toUpperCase()}
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="truncate text-sm font-medium text-slate-900">{getDisplayAppName(app)}</span>
+                                    <span className="truncate text-sm font-medium text-foreground">{getDisplayAppName(app)}</span>
                                     <Badge className={`text-[10px] ${getPlatformBadgeClass(app.platform)}`}>
                                       {normalizePlatform(app.platform) || "APP"}
                                     </Badge>
                                   </div>
-                                  <p className="truncate font-mono text-xs text-slate-500">AdMob App ID - {app.appId}</p>
-                                  <p className="truncate text-[11px] text-slate-400">Store ID - {app.appStoreId || "-"}</p>
+                                  <p className="truncate font-mono text-xs text-muted-foreground">AdMob App ID - {app.appId}</p>
+                                  <p className="truncate text-[11px] text-muted-foreground/70">Store ID - {app.appStoreId || "-"}</p>
                                 </div>
                               </div>
                             </CommandItem>
@@ -801,8 +801,8 @@ export function AppMappingsContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">
-                Meta Application ID <span className="text-red-500">*</span>
+              <Label className="text-xs font-medium text-foreground">
+                Meta Application ID <span className="text-destructive">*</span>
               </Label>
               <Input
                 className="h-9 font-mono text-sm"
@@ -813,19 +813,19 @@ export function AppMappingsContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Object Store URL</Label>
+              <Label className="text-xs font-medium text-foreground">Object Store URL</Label>
               <Input
                 className="h-9 text-sm"
                 value={form.objectStoreUrl}
                 onChange={(event) => setForm((current) => ({ ...current, objectStoreUrl: event.target.value }))}
                 placeholder="https://play.google.com/store/apps/details?id=..."
               />
-              <p className="text-[11px] text-slate-400">Preferred source for package/store identity. If empty, provide package or app store ID below.</p>
+              <p className="text-[11px] text-muted-foreground/70">Preferred source for package/store identity. If empty, provide package or app store ID below.</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Package Name</Label>
+                <Label className="text-xs font-medium text-foreground">Package Name</Label>
                 <Input
                   className="h-9 text-sm"
                   value={form.packageName}
@@ -834,7 +834,7 @@ export function AppMappingsContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Bundle ID</Label>
+                <Label className="text-xs font-medium text-foreground">Bundle ID</Label>
                 <Input
                   className="h-9 text-sm"
                   value={form.bundleId}
@@ -845,7 +845,7 @@ export function AppMappingsContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">App Store ID</Label>
+              <Label className="text-xs font-medium text-foreground">App Store ID</Label>
               <Input
                 className="h-9 text-sm"
                 value={form.appStoreId}
@@ -856,7 +856,7 @@ export function AppMappingsContent() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Legacy Deep Link URL Override</Label>
+                <Label className="text-xs font-medium text-foreground">Legacy Deep Link URL Override</Label>
                 <Input
                   className="h-9 text-sm"
                   value={form.deepLinkUrlOverride}
@@ -865,7 +865,7 @@ export function AppMappingsContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Store URL Override</Label>
+                <Label className="text-xs font-medium text-foreground">Store URL Override</Label>
                 <Input
                   className="h-9 text-sm"
                   value={form.storeUrlOverride}
@@ -877,15 +877,15 @@ export function AppMappingsContent() {
 
             <div className="flex items-center gap-2">
               <Switch checked={form.isActive} onCheckedChange={(value) => setForm((current) => ({ ...current, isActive: value }))} />
-              <Label className="cursor-pointer text-sm text-slate-700">Enabled</Label>
+              <Label className="cursor-pointer text-sm text-foreground">Enabled</Label>
             </div>
           </div>
-          <DialogFooter className="flex-shrink-0 border-t border-slate-100 bg-slate-50 px-6 py-4">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex-shrink-0 border-t border-border bg-muted/40 px-6 py-4">
+            <Button variant="ghost" className="text-muted-foreground" onClick={() => setDrawerOpen(false)} disabled={submitting}>
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 text-white hover:bg-blue-700"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => void handleSubmit()}
               disabled={submitting || !canSave}
             >
@@ -897,3 +897,4 @@ export function AppMappingsContent() {
     </div>
   )
 }
+

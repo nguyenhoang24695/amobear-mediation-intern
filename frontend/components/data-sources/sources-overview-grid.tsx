@@ -33,7 +33,7 @@ export function SourcesOverviewGrid({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-900">
+      <h2 className="text-lg font-semibold text-foreground">
         Data Sources Overview
       </h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -43,8 +43,8 @@ export function SourcesOverviewGrid({
             <CardHeader className="pb-2 space-y-1">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <h3 className="break-words font-semibold text-slate-900">{src.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  <h3 className="break-words font-semibold text-foreground">{src.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-snug">
                     {src.role}
                   </p>
                 </div>
@@ -61,13 +61,13 @@ export function SourcesOverviewGrid({
                     onOpenChange={(v) =>
                       setOpen((prev) => ({ ...prev, [dk]: v }))
                     }
-                    className="border border-slate-100 rounded-md"
+                    className="border border-border rounded-md"
                   >
                     <CollapsibleTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-between h-9 px-2 font-medium text-slate-700"
+                        className="w-full justify-between h-9 px-2 font-medium text-foreground"
                       >
                         <span className="min-w-0 truncate text-xs">{dom.label}</span>
                         {expanded ? (
@@ -78,22 +78,22 @@ export function SourcesOverviewGrid({
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-2 pb-2 space-y-2">
-                      <p className="text-[11px] text-slate-500 leading-snug">
+                      <p className="text-[11px] text-muted-foreground leading-snug">
                         {dom.description}
                       </p>
                       {dom.minioPathPattern && (
-                        <p className="text-[10px] font-mono text-slate-400 break-all">
+                        <p className="text-[10px] font-mono text-muted-foreground break-all">
                           MinIO: {dom.minioPathPattern}
                         </p>
                       )}
                       {dom.starRocksNotes && (
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-[10px] text-muted-foreground">
                           {dom.starRocksNotes}
                         </p>
                       )}
                       <div className="space-y-1.5">
                         {dom.jobs.length === 0 && (
-                          <p className="text-[11px] text-slate-400 italic py-1">
+                          <p className="text-[11px] text-muted-foreground italic py-1">
                             No Hangfire recurring jobs mapped — add schedules in
                             Job Management or update the Data Sources registry.
                           </p>
@@ -101,9 +101,9 @@ export function SourcesOverviewGrid({
                         {dom.jobs.map((j) => (
                           <div
                             key={j.jobId}
-                            className="flex flex-wrap items-center gap-1.5 text-[11px] bg-slate-50 rounded px-2 py-1.5"
+                            className="flex flex-wrap items-center gap-1.5 text-[11px] bg-muted/40 rounded px-2 py-1.5"
                           >
-                            <span className="min-w-0 break-all font-mono text-slate-700">
+                            <span className="min-w-0 break-all font-mono text-foreground">
                               {j.displayName || j.jobId}
                             </span>
                             <Badge
@@ -113,13 +113,13 @@ export function SourcesOverviewGrid({
                               {j.enabled ? "on" : "off"}
                             </Badge>
                             {j.lastCheckpointAt && (
-                              <span className="text-slate-500">
+                              <span className="text-muted-foreground">
                                 checkpoint {formatIso(j.lastCheckpointAt)}
                               </span>
                             )}
                             <Link
                               href={`/jobs?search=${encodeURIComponent(j.jobId)}`}
-                              className="inline-flex items-center gap-0.5 text-blue-600 hover:underline sm:ml-auto"
+                              className="inline-flex items-center gap-0.5 text-primary hover:underline sm:ml-auto"
                             >
                               Jobs <ExternalLink className="w-3 h-3" />
                             </Link>

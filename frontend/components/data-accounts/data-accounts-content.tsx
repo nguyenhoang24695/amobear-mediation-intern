@@ -116,12 +116,12 @@ function DataAccountsListPanel() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">Data Accounts</h1>
+            <h1 className="text-2xl font-bold text-foreground">Data Accounts</h1>
             <Badge variant="secondary" className="rounded-full">
               {loading ? "..." : `${stats.total} accounts`}
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Manage external ad network accounts for data synchronization
           </p>
         </div>
@@ -134,7 +134,7 @@ function DataAccountsListPanel() {
           )}
           {canCreate ? (
             <Button
-              className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+              className="w-full gap-2 sm:w-auto"
               onClick={() => setAddModalOpen(true)}
             >
               <Plus className="w-4 h-4" />
@@ -146,91 +146,91 @@ function DataAccountsListPanel() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-slate-100">
-              <Key className="w-5 h-5 text-slate-600" />
+            <div className="p-2 rounded-lg bg-muted">
+              <Key className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.total}</p>
-              <p className="break-words text-sm text-slate-500">Total Accounts</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.total}</p>
+              <p className="break-words text-sm text-muted-foreground">Total Accounts</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-50">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.active}</p>
-              <p className="break-words text-sm text-slate-500">Active</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.active}</p>
+              <p className="break-words text-sm text-muted-foreground">Active</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-50">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.errors}</p>
-              <p className="break-words text-sm text-slate-500">Errors</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.errors}</p>
+              <p className="break-words text-sm text-muted-foreground">Errors</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-50">
               <Smartphone className="w-5 h-5 text-amber-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.admob}</p>
-              <p className="break-words text-sm text-slate-500">AdMob Accounts</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.admob}</p>
+              <p className="break-words text-sm text-muted-foreground">AdMob Accounts</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-violet-50">
               <Layers className="w-5 h-5 text-violet-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.applovin}</p>
-              <p className="break-words text-sm text-slate-500">AppLovin Accounts</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.applovin}</p>
+              <p className="break-words text-sm text-muted-foreground">AppLovin Accounts</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-purple-50">
               <Layers className="w-5 h-5 text-purple-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.xmp}</p>
-              <p className="break-words text-sm text-slate-500">XMP Accounts</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.xmp}</p>
+              <p className="break-words text-sm text-muted-foreground">XMP Accounts</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-sky-50">
               <Smartphone className="w-5 h-5 text-sky-700" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.appsflyer}</p>
-              <p className="break-words text-sm text-slate-500">AppsFlyer</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.appsflyer}</p>
+              <p className="break-words text-sm text-muted-foreground">AppsFlyer</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-fuchsia-50">
               <Layers className="w-5 h-5 text-fuchsia-700" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.qonversion}</p>
-              <p className="break-words text-sm text-slate-500">Qonversion</p>
+              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.qonversion}</p>
+              <p className="break-words text-sm text-muted-foreground">Qonversion</p>
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@ function DataAccountsListPanel() {
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative w-full flex-1 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name, email or account ID..."
             className="pl-9"
@@ -275,20 +275,20 @@ function DataAccountsListPanel() {
 
       {activeFilters.length > 0 ? (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-slate-500">Active filters:</span>
+          <span className="text-sm text-muted-foreground">Active filters:</span>
           {activeFilters.map((filter) => (
             <Badge
               key={filter.type}
               variant="secondary"
-              className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
+              className="gap-1 border border-primary/20 bg-primary/10 pr-1 text-primary"
             >
               {filter.type}: {filter.value}
-              <button onClick={() => removeFilter(filter.type)} className="ml-1 hover:bg-blue-100 rounded p-0.5">
+              <button onClick={() => removeFilter(filter.type)} className="ml-1 rounded p-0.5 hover:bg-primary/20">
                 <X className="w-3 h-3" />
               </button>
             </Badge>
           ))}
-          <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:underline">
+          <button onClick={clearAllFilters} className="text-sm text-primary hover:underline">
             Clear all
           </button>
         </div>

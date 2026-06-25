@@ -77,7 +77,7 @@ export function MyReportIapFilterEditor({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-xs font-medium text-gray-500">Global IAP rate</Label>
+        <Label className="text-xs font-medium text-muted-foreground">Global IAP rate</Label>
         <Select
           value={globalMode === "custom" ? CUSTOM_GLOBAL : String(draft.iapRevenueMode)}
           onValueChange={handleGlobalPreset}
@@ -106,23 +106,23 @@ export function MyReportIapFilterEditor({
               onBlur={handleCustomGlobalBlur}
               className="h-9"
             />
-            <span className="text-sm text-gray-500">% of Gross</span>
+            <span className="text-sm text-muted-foreground">% of Gross</span>
           </div>
         ) : null}
       </div>
 
       {overrideApps.length > 0 ? (
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-gray-500">Per-app overrides</Label>
-          <ScrollArea className="max-h-48 rounded border border-gray-100">
-            <div className="divide-y divide-gray-100">
+          <Label className="text-xs font-medium text-muted-foreground">Per-app overrides</Label>
+          <ScrollArea className="max-h-48 rounded border border-border">
+            <div className="divide-y divide-border">
               {overrideApps.map((app) => {
                 const override = draft.iapRevenueModeOverrides[app.appId]
                 const selectValue =
                   override == null ? "inherit" : isPresetRate(override) ? String(override) : "custom"
                 return (
                   <div key={app.appId} className="flex items-center gap-2 px-2 py-2">
-                    <span className="min-w-0 flex-1 truncate text-sm text-gray-700">
+                    <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                       {app.displayName ?? app.name ?? app.appId}
                     </span>
                     <Select
@@ -168,7 +168,7 @@ export function MyReportIapFilterEditor({
           </ScrollArea>
         </div>
       ) : (
-        <p className="text-xs text-gray-500">Select apps to configure per-app IAP rates.</p>
+        <p className="text-xs text-muted-foreground">Select apps to configure per-app IAP rates.</p>
       )}
 
       {Object.keys(draft.iapRevenueModeOverrides).length > 0 ? (

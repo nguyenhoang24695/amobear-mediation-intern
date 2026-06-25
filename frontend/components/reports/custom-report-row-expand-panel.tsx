@@ -39,16 +39,16 @@ function ParameterCard({
   return (
     <div
       className={cn(
-        "min-w-0 rounded-lg border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm",
+        "min-w-0 rounded-lg border border-border/80 bg-card px-3 py-2.5 shadow-sm",
         equalHeight && "flex h-full min-h-full w-full flex-col",
       )}
     >
-      <div className={cn("shrink-0 text-xs font-medium text-slate-500", !centeredValue && "mb-1")}>
+      <div className={cn("shrink-0 text-xs font-medium text-muted-foreground", !centeredValue && "mb-1")}>
         {label}
       </div>
       <div
         className={cn(
-          "min-w-0 text-sm text-slate-900",
+          "min-w-0 text-sm text-foreground",
           equalHeight && "flex-1",
           centeredValue && equalHeight && "flex items-center justify-center text-center",
         )}
@@ -122,8 +122,8 @@ export const CustomReportRowExpandPanel = memo(function CustomReportRowExpandPan
   )
 
   return (
-    <div className="box-border w-full min-w-0 max-w-full overflow-hidden border-t border-blue-100 bg-blue-50/40 px-3 py-3 sm:px-5 sm:py-4">
-      <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+    <div className="box-border w-full min-w-0 max-w-full overflow-hidden border-t border-primary/20 bg-primary/10 px-3 py-3 sm:px-5 sm:py-4">
+      <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Row {rowIndex + 1} details
       </p>
 
@@ -144,7 +144,7 @@ export const CustomReportRowExpandPanel = memo(function CustomReportRowExpandPan
 
       {metrics.length > 0 ? (
         <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-blue-700">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-primary">
             <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Metrics
           </div>
@@ -154,11 +154,11 @@ export const CustomReportRowExpandPanel = memo(function CustomReportRowExpandPan
                 key={metric.id}
                 className={cn(
                   "min-w-0 rounded-lg border px-3 py-2.5 shadow-sm",
-                  "border-blue-100 bg-blue-50/60",
+                  "border-primary/20 bg-primary/10",
                 )}
               >
-                <div className="mb-0.5 text-xs font-medium text-slate-500">{metric.label}</div>
-                <div className="text-sm font-semibold break-words text-slate-900 tabular-nums">
+                <div className="mb-0.5 text-xs font-medium text-muted-foreground">{metric.label}</div>
+                <div className="text-sm font-semibold break-words text-foreground tabular-nums">
                   {metric.value}
                 </div>
               </div>
