@@ -63,9 +63,9 @@ const activities = [
 
 export function RecentActivities() {
   return (
-    <Card className="bg-white border-slate-200 shadow-sm">
+    <Card className="border-slate-200 shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-slate-900">Recent Activities</CardTitle>
+        <CardTitle className="text-base font-semibold ">Recent Activities</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="relative">

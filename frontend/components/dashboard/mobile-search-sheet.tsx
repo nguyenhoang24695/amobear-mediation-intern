@@ -99,11 +99,11 @@ export function MobileSearchSheet({ open, onOpenChange }: MobileSearchSheetProps
         </SheetHeader>
 
         <div className="relative mt-2">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
             placeholder="Search apps, networks, reports..."
-            className="h-11 border-slate-200 bg-slate-50 pl-9"
+            className="h-11 bg-background pl-9"
             value={query}
             onChange={(e) => handleSearch(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -112,14 +112,14 @@ export function MobileSearchSheet({ open, onOpenChange }: MobileSearchSheetProps
 
         <div className="mt-3 flex-1 overflow-y-auto">
           {loading && results.length === 0 && (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-400">
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading...
             </div>
           )}
 
           {!loading && query.trim().length > 0 && results.length === 0 && (
-            <div className="py-8 text-center text-sm text-slate-400">
+            <div className="py-8 text-center text-sm text-muted-foreground">
               No results found for &ldquo;{query}&rdquo;
             </div>
           )}
@@ -132,7 +132,7 @@ export function MobileSearchSheet({ open, onOpenChange }: MobileSearchSheetProps
 
                 return (
                   <div key={cat}>
-                    <div className="flex items-center gap-1.5 px-1 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <div className="flex items-center gap-1.5 px-1 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <CatIcon className="h-3 w-3" />
                       {categoryLabels[cat]}
                     </div>
@@ -146,7 +146,7 @@ export function MobileSearchSheet({ open, onOpenChange }: MobileSearchSheetProps
                           type="button"
                           className={cn(
                             "flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm transition-colors",
-                            isActive ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50",
+                            isActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
                           )}
                           onMouseEnter={() => setActiveIndex(currentIndex)}
                           onClick={() => navigateTo(item)}
@@ -155,16 +155,16 @@ export function MobileSearchSheet({ open, onOpenChange }: MobileSearchSheetProps
                             <img
                               src={item.icon}
                               alt=""
-                              className="h-8 w-8 flex-shrink-0 rounded-md bg-slate-100 object-contain"
+                              className="h-8 w-8 flex-shrink-0 rounded-md bg-muted object-contain"
                             />
                           ) : (
-                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-slate-100">
-                              <CatIcon className="h-4 w-4 text-slate-400" />
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-muted">
+                              <CatIcon className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[13px] font-medium">{item.title}</p>
-                            <p className="truncate text-[11px] text-slate-400">{item.subtitle}</p>
+                            <p className="truncate text-[11px] text-muted-foreground">{item.subtitle}</p>
                           </div>
                         </button>
                       )

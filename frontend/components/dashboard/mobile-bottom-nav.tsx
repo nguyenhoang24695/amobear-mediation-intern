@@ -157,7 +157,7 @@ function MobileBottomNavInner() {
         className="fixed inset-x-0 bottom-0 z-50 flex items-end gap-2 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden"
         aria-label="Mobile navigation"
       >
-        <div className="flex h-[4.25rem] min-w-0 flex-1 items-center justify-around rounded-full border border-slate-200/80 bg-white/95 px-1 shadow-[0_4px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+        <div className="flex h-[4.25rem] min-w-0 flex-1 items-center justify-around rounded-full border bg-card/95 px-1 shadow-[0_4px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
           {visibleBottomItems.map((item) => {
             const href = resolveMobileMoreNavHref(item.label, item.href)
             const isActive = item.match ? item.match(pathname) : pathname === href
@@ -169,12 +169,12 @@ function MobileBottomNavInner() {
                 className={cn(
                   "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition-colors",
                   isActive
-                    ? "bg-slate-200/70 text-blue-600"
-                    : "text-slate-500 active:bg-slate-100/60 active:text-slate-700",
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground active:bg-accent active:text-accent-foreground",
                 )}
               >
                 <item.icon className={cn("h-[22px] w-[22px]", isActive && "stroke-[2.25]")} />
-                <span className={cn("truncate text-[10px] font-medium leading-none", isActive && "text-blue-600")}>
+                <span className={cn("truncate text-[10px] font-medium leading-none", isActive && "text-primary")}>
                   {item.label}
                 </span>
               </Link>
@@ -187,8 +187,8 @@ function MobileBottomNavInner() {
             className={cn(
               "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition-colors",
               isMoreActive
-                ? "bg-slate-200/70 text-blue-600"
-                : "text-slate-500 active:bg-slate-100/60 active:text-slate-700",
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground active:bg-accent active:text-accent-foreground",
             )}
             aria-label="More navigation"
           >
@@ -200,7 +200,7 @@ function MobileBottomNavInner() {
                 </span>
               )}
             </span>
-            <span className={cn("text-[10px] font-medium leading-none", isMoreActive && "text-blue-600")}>
+            <span className={cn("text-[10px] font-medium leading-none", isMoreActive && "text-primary")}>
               More
             </span>
           </button>
@@ -209,7 +209,7 @@ function MobileBottomNavInner() {
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 text-slate-700 shadow-[0_4px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm transition-colors active:bg-slate-50"
+          className="flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center rounded-full border bg-card/95 text-foreground shadow-[0_4px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm transition-colors active:bg-accent"
           aria-label="Search"
         >
           <Search className="h-6 w-6" />
@@ -241,7 +241,7 @@ function MobileBottomNavInner() {
                   }}
                   className={cn(
                     "flex flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center transition-colors",
-                    isActive ? "bg-slate-200/70 text-blue-600" : "text-slate-600 hover:bg-slate-100/60",
+                    isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                 >
                   <Icon className="h-5 w-5" />

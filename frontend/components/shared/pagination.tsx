@@ -59,9 +59,9 @@ export function Pagination({
   const pageNumbers = getPageNumbers()
 
   return (
-    <div className="flex flex-col gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-t bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Left: Showing text */}
-      <div className="text-center text-sm text-slate-500 sm:text-left">
+      <div className="text-center text-sm text-muted-foreground sm:text-left">
         Showing <span className="font-medium">{startItem}</span>-<span className="font-medium">{endItem}</span> of{" "}
         <span className="font-medium">{totalItems}</span> {itemName}
       </div>
@@ -70,9 +70,9 @@ export function Pagination({
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
         {/* Page size selector */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">Rows per page:</span>
+          <span className="text-sm text-muted-foreground">Rows per page:</span>
           <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
-            <SelectTrigger className="w-20 h-8 bg-white">
+            <SelectTrigger className="h-8 w-20 bg-card">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -111,7 +111,7 @@ export function Pagination({
           {/* Page Numbers */}
           {pageNumbers.map((page, index) =>
             page === "ellipsis" ? (
-              <span key={`ellipsis-${index}`} className="text-slate-400 px-1">
+              <span key={`ellipsis-${index}`} className="px-1 text-muted-foreground">
                 ...
               </span>
             ) : (
@@ -123,7 +123,7 @@ export function Pagination({
                   "h-8 min-w-8",
                   page === currentPage
                     ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
-                    : "bg-transparent hover:bg-slate-100",
+                    : "bg-transparent hover:bg-accent",
                 )}
                 onClick={() => onPageChange(page)}
               >

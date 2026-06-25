@@ -139,7 +139,7 @@ export function NotificationPopup() {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="icon" className="h-9 w-9 relative bg-transparent">
-          <Bell className="w-4 h-4 text-slate-600" />
+          <Bell className="h-4 w-4 text-muted-foreground" />
           {headerUnseen > 0 && (
             <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-xs">
               {formatAlertBadgeCount(headerUnseen)}
@@ -148,10 +148,10 @@ export function NotificationPopup() {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[calc(100vw-1rem)] max-w-[380px] p-0 shadow-lg" sideOffset={8}>
-        <div className="border-b border-slate-200">
+        <div className="border-b">
           <div className="flex flex-col gap-1 px-3 py-3 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:px-4">
-            <h3 className="font-semibold text-slate-900">Notifications</h3>
-            <span className="text-xs text-slate-500 min-[360px]:text-right min-[360px]:text-sm">
+            <h3 className="font-semibold text-foreground">Notifications</h3>
+            <span className="text-xs text-muted-foreground min-[360px]:text-right min-[360px]:text-sm">
             {totalOpenCount > 0 || insightNotes.length > 0
               ? `${headerUnseen} new · alerts + insights`
               : "No notifications"}
@@ -164,8 +164,8 @@ export function NotificationPopup() {
               className={cn(
                 "text-sm font-medium rounded-full px-3 py-1 transition-colors",
                 listFilter === "all"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
               All
@@ -176,8 +176,8 @@ export function NotificationPopup() {
               className={cn(
                 "text-sm font-medium rounded-full px-3 py-1 transition-colors inline-flex items-center gap-1.5",
                 listFilter === "unread"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
               Unread
@@ -185,7 +185,7 @@ export function NotificationPopup() {
                 <span
                   className={cn(
                     "tabular-nums text-xs min-w-[1.25rem] text-center rounded-full px-1",
-                    listFilter === "unread" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    listFilter === "unread" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
                   )}
                 >
                   {formatAlertBadgeCount(unreadTabBadgeCount)}
@@ -197,7 +197,7 @@ export function NotificationPopup() {
 
         {displayedMerged.length > 0 ? (
           <div className="max-h-[min(420px,70vh)] overflow-y-auto overscroll-y-contain">
-            <div className="divide-y divide-slate-100 pb-1">
+            <div className="divide-y divide-border pb-1">
               {displayedMerged.map((item) => {
                 if (item.kind === "insight") {
                   const note = item.note
@@ -212,19 +212,19 @@ export function NotificationPopup() {
                         }
                       }}
                       className={cn(
-                        "flex items-start gap-3 px-3 py-3 hover:bg-slate-50 transition-colors min-[360px]:px-4",
-                        !note.read && "bg-indigo-50/50",
+                        "flex items-start gap-3 px-3 py-3 transition-colors hover:bg-accent min-[360px]:px-4",
+                        !note.read && "bg-primary/10",
                       )}
                     >
                       <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100">
                         <Sparkles className="w-4 h-4 text-indigo-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 line-clamp-2">{note.title}</p>
+                        <p className="line-clamp-2 text-sm font-medium text-foreground">{note.title}</p>
                         {note.body ? (
-                          <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{note.body}</p>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{note.body}</p>
                         ) : null}
-                        <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(note.createdAt)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{formatRelativeTime(note.createdAt)}</p>
                       </div>
                     </Link>
                   )
@@ -242,12 +242,12 @@ export function NotificationPopup() {
                     href={href}
                     onClick={() => void markAlertsViewed([alert.id])}
                     className={cn(
-                      "flex items-start gap-3 px-3 py-3 hover:bg-slate-50 transition-colors min-[360px]:px-4",
-                      isUnread && "bg-slate-50/80"
+                      "flex items-start gap-3 px-3 py-3 transition-colors hover:bg-accent min-[360px]:px-4",
+                      isUnread && "bg-primary/10"
                     )}
                   >
                     <div className="relative h-10 w-10 shrink-0">
-                      <Avatar className="h-10 w-10 rounded-lg border border-slate-200/80 bg-slate-50">
+                      <Avatar className="h-10 w-10 rounded-lg border bg-muted">
                         {alert.appIconUri ? (
                           <AvatarImage
                             src={alert.appIconUri}
@@ -255,7 +255,7 @@ export function NotificationPopup() {
                             className="object-cover"
                           />
                         ) : null}
-                        <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-sm font-medium">
+                        <AvatarFallback className="rounded-lg bg-muted text-sm font-medium text-muted-foreground">
                           {appAvatarInitial(alert)}
                         </AvatarFallback>
                       </Avatar>
@@ -270,9 +270,9 @@ export function NotificationPopup() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 line-clamp-2">{formatAlertCardTitle(alert)}</p>
-                      <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{alert.message}</p>
-                      <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(alert.triggeredAt)}</p>
+                      <p className="line-clamp-2 text-sm font-medium text-foreground">{formatAlertCardTitle(alert)}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{alert.message}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatRelativeTime(alert.triggeredAt)}</p>
                     </div>
                   </Link>
                 )
@@ -280,7 +280,7 @@ export function NotificationPopup() {
               {hasMoreItems && (
                 <a
                   href="#"
-                  className="block w-full text-center py-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
+                  className="block w-full py-2.5 text-center text-sm font-medium text-primary transition-colors hover:bg-accent"
                   onClick={(e) => {
                     e.preventDefault()
                     setVisibleItemCount((n) => n + NOTIFICATIONS_PAGE_SIZE)
@@ -293,27 +293,27 @@ export function NotificationPopup() {
           </div>
         ) : listFilter === "unread" && (alerts.length > 0 || insightNotes.length > 0) ? (
           <div className="flex flex-col items-center justify-center px-3 py-12 min-[360px]:px-4">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-              <Bell className="w-6 h-6 text-slate-400" />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Bell className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-slate-900">No unread items</p>
-            <p className="text-xs text-slate-500 mt-1 text-center">Switch to All to see read insights and alerts.</p>
+            <p className="text-sm font-medium text-foreground">No unread items</p>
+            <p className="mt-1 text-center text-xs text-muted-foreground">Switch to All to see read insights and alerts.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center px-3 py-12 min-[360px]:px-4">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-              <BellOff className="w-6 h-6 text-slate-400" />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <BellOff className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-slate-900">No notifications</p>
-            <p className="text-xs text-slate-500 mt-1">Alerts và daily insight sẽ hiện ở đây.</p>
+            <p className="text-sm font-medium text-foreground">No notifications</p>
+            <p className="mt-1 text-xs text-muted-foreground">Alerts và daily insight sẽ hiện ở đây.</p>
           </div>
         )}
 
-        <div className="border-t border-slate-200">
+        <div className="border-t">
           <Link
             href="/alert-center"
             onClick={markAllAlertsViewed}
-            className="flex items-center justify-center gap-1 px-3 py-3 text-center text-sm text-blue-600 hover:text-blue-700 hover:bg-slate-50 transition-colors"
+            className="flex items-center justify-center gap-1 px-3 py-3 text-center text-sm text-primary transition-colors hover:bg-accent"
           >
             View All Notifications
             <ArrowRight className="w-4 h-4" />

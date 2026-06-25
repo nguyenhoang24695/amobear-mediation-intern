@@ -94,20 +94,20 @@ export function AlertSummary() {
   }
 
   return (
-    <Card className="bg-white border-slate-200 shadow-sm">
+    <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               {summaryLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               ) : (
                 <>
                   {severityCounts.critical > 0 && (
                     <Link href="/alert-center?severity=CRITICAL">
                       <Badge
                         variant="destructive"
-                        className="gap-1 px-2.5 py-1 cursor-pointer hover:bg-red-600 transition-colors"
+                        className="cursor-pointer gap-1 px-2.5 py-1 transition-colors hover:bg-destructive/90"
                       >
                         <AlertTriangle className="w-3.5 h-3.5" />
                         {severityCounts.critical} Critical
@@ -116,7 +116,7 @@ export function AlertSummary() {
                   )}
                   {severityCounts.high > 0 && (
                     <Link href="/alert-center?severity=HIGH">
-                      <Badge className="gap-1 px-2.5 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer transition-colors">
+                      <Badge className="cursor-pointer gap-1 bg-orange-100 px-2.5 py-1 text-orange-700 transition-colors hover:bg-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:hover:bg-orange-500/25">
                         <AlertOctagon className="w-3.5 h-3.5" />
                         {severityCounts.high} High
                       </Badge>
@@ -124,7 +124,7 @@ export function AlertSummary() {
                   )}
                   {severityCounts.medium > 0 && (
                     <Link href="/alert-center?severity=MEDIUM">
-                      <Badge className="gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer transition-colors">
+                      <Badge className="cursor-pointer gap-1 bg-amber-100 px-2.5 py-1 text-amber-700 transition-colors hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {severityCounts.medium} Medium
                       </Badge>
@@ -132,7 +132,7 @@ export function AlertSummary() {
                   )}
                   {severityCounts.low > 0 && (
                     <Link href="/alert-center?severity=LOW">
-                      <Badge className="gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors">
+                      <Badge className="cursor-pointer gap-1 bg-blue-100 px-2.5 py-1 text-blue-700 transition-colors hover:bg-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25">
                         <Info className="w-3.5 h-3.5" />
                         {severityCounts.low} Low
                       </Badge>
@@ -144,32 +144,32 @@ export function AlertSummary() {
           </div>
           <div className="flex items-center gap-2">
             <Link href="/alert-center">
-              <Button variant="link" className="text-sm text-blue-600 hover:text-blue-700 p-0 h-auto">
+              <Button variant="link" className="h-auto p-0 text-sm text-primary">
                 View All Alerts
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" className="text-slate-500" onClick={() => setExpanded(!expanded)}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setExpanded(!expanded)}>
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
           </div>
         </div>
 
         {expanded && (
-          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+          <div className="mt-4 space-y-3 border-t pt-4">
             {alertsLoading ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : alerts.length === 0 ? (
-              <div className="text-center py-4 text-sm text-slate-500">No active alerts</div>
+              <div className="py-4 text-center text-sm text-muted-foreground">No active alerts</div>
             ) : (
               alerts.map((alert) => (
                 <Tooltip key={alert.id}>
                   <TooltipTrigger asChild>
                     <Link
                       href={`/alert-center/${alert.id}`}
-                      className="flex items-start gap-3 p-3 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block"
+                      className="flex cursor-pointer items-start gap-3 rounded-md bg-muted/50 p-3 transition-colors hover:bg-accent"
                     >
                       <AlertAppAvatar
                         appIconUri={alert.appIconUri}
@@ -179,19 +179,19 @@ export function AlertSummary() {
                         size="sm"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">
+                        <p className="truncate text-sm font-medium text-foreground">
                           {formatAlertCardTitle(alert)}
                         </p>
-                        <p className="text-sm text-slate-700 mt-0.5">{alert.message}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{alert.message}</p>
                         {(() => {
                           const fin = parseSlackFinanceFromAdditionalData(alert.additionalData)
                           return fin ? <AlertSlackFinanceRow fin={fin} className="mt-1.5" /> : null
                         })()}
                         {alert.alertRuleName && (
-                          <p className="text-xs text-slate-500 mt-0.5">{alert.alertRuleName}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{alert.alertRuleName}</p>
                         )}
                       </div>
-                      <span className="text-xs text-slate-400 whitespace-nowrap">
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">
                         {alert.triggeredAt
                           ? formatDistanceToNow(new Date(alert.triggeredAt), { addSuffix: true })
                           : "—"}

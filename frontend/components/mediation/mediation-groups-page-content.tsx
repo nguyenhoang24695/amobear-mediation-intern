@@ -276,16 +276,16 @@ export function MediationGroupsPageContent() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">Mediation Groups</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Mediation Groups</h1>
             {groupsLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
-              <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
+              <Badge variant="secondary" className="font-medium">
                 {summaryStats.total}
               </Badge>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">Configure and optimize your ad waterfall settings</p>
+          <p className="mt-1 text-sm text-muted-foreground">Configure and optimize your ad waterfall settings</p>
         </div>
       </div>
 
@@ -294,12 +294,12 @@ export function MediationGroupsPageContent() {
         {/* Left: Search & Filters */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search groups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 bg-white border-slate-200"
+              className="h-10 bg-card pl-9"
             />
           </div>
 
@@ -311,7 +311,7 @@ export function MediationGroupsPageContent() {
                   variant="outline"
                   role="combobox"
                   aria-expanded={appPopoverOpen}
-                  className="w-52 min-w-0 h-10 justify-between bg-white"
+                  className="h-10 w-52 min-w-0 justify-between bg-card"
                   disabled={apps.length === 0}
                 >
                   {selectedApp === "all" ? (
@@ -324,7 +324,7 @@ export function MediationGroupsPageContent() {
                           {opt.iconUri ? (
                             <img src={opt.iconUri} alt="" className="h-5 w-5 rounded shrink-0" />
                           ) : (
-                            <span className="h-5 w-5 rounded bg-slate-200 flex items-center justify-center text-xs font-medium shrink-0">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
                               {(opt.label || "?").charAt(0).toUpperCase()}
                             </span>
                           )}
@@ -371,7 +371,7 @@ export function MediationGroupsPageContent() {
                               )}
                               <div className="flex flex-col min-w-0 text-left">
                                 <span className="font-medium truncate">{opt.label}</span>
-                                <span className="text-xs text-slate-500">
+                                <span className="text-xs text-muted-foreground">
                                   {[formatPlatformDisplay(opt.platform), formatAppIdDisplay(opt.appId ?? "")].filter(Boolean).join(" · ")}
                                 </span>
                               </div>
@@ -386,7 +386,7 @@ export function MediationGroupsPageContent() {
             </Popover>
 
             <Select value={format} onValueChange={(v) => handleFilterChange("Format", v)}>
-              <SelectTrigger className="w-36 h-10 bg-white">
+              <SelectTrigger className="h-10 w-36 bg-card">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
@@ -399,7 +399,7 @@ export function MediationGroupsPageContent() {
             </Select>
 
             <Select value={status} onValueChange={(v) => handleFilterChange("Status", v)}>
-              <SelectTrigger className="w-32 h-10 bg-white">
+              <SelectTrigger className="h-10 w-32 bg-card">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -412,13 +412,13 @@ export function MediationGroupsPageContent() {
             </Select>
 
             {/* Only show issues checkbox */}
-            {/* <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-md bg-white h-10">
+            {/* <div className="flex h-10 items-center gap-2 rounded-md border bg-card px-3 py-2">
               <Checkbox
                 id="issues"
                 checked={onlyShowIssues}
                 onCheckedChange={(checked) => handleIssuesToggle(checked as boolean)}
               />
-              <label htmlFor="issues" className="text-sm text-slate-600 cursor-pointer whitespace-nowrap">
+              <label htmlFor="issues" className="cursor-pointer whitespace-nowrap text-sm text-muted-foreground">
                 Only show issues
               </label>
             </div> */}
@@ -440,7 +440,7 @@ export function MediationGroupsPageContent() {
             </Button>
           )}
           {SHOW_GROUP_ACTIONS && canConfig && (
-            <Button className="h-10 gap-2 bg-blue-600 hover:bg-blue-700">
+            <Button className="h-10 gap-2">
               <Plus className="w-4 h-4" />
               Create Group
             </Button>
@@ -451,20 +451,20 @@ export function MediationGroupsPageContent() {
       {/* Active Filter Chips */}
       {activeFilters.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-slate-500">Active filters:</span>
+          <span className="text-sm text-muted-foreground">Active filters:</span>
           {activeFilters.map((filter) => (
             <Badge
               key={filter.type}
               variant="secondary"
-              className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
+              className="gap-1 border border-primary/20 bg-primary/10 pr-1 text-primary"
             >
               {filter.type}: {filter.value}
-              <button onClick={() => removeFilter(filter.type)} className="ml-1 hover:bg-blue-100 rounded p-0.5">
+              <button onClick={() => removeFilter(filter.type)} className="ml-1 rounded p-0.5 hover:bg-primary/15">
                 <X className="w-3 h-3" />
               </button>
             </Badge>
           ))}
-          <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:underline">
+          <button onClick={clearAllFilters} className="text-sm text-primary hover:underline">
             Clear all
           </button>
         </div>
@@ -472,82 +472,82 @@ export function MediationGroupsPageContent() {
 
       {/* Summary Cards - Added A/B Tests Running card */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-slate-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <Layers className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total Groups</p>
+              <p className="text-xs text-muted-foreground">Total Groups</p>
               {groupsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.total}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.total}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-500/15">
+              <Layers className="h-5 w-5 text-green-600 dark:text-green-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Active</p>
+              <p className="text-xs text-muted-foreground">Active</p>
               {groupsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.active}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.active}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <FlaskConical className="w-5 h-5 text-purple-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-500/15">
+              <FlaskConical className="h-5 w-5 text-purple-600 dark:text-purple-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">A/B Tests Running</p>
+              <p className="text-xs text-muted-foreground">A/B Tests Running</p>
               {groupsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.abTests}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.abTests}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/15">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Need Attention</p>
+              <p className="text-xs text-muted-foreground">Need Attention</p>
               <div className="flex items-center gap-1.5">
                 {groupsLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-xl font-semibold text-slate-900">{summaryStats.issues}</p>
-                    {summaryStats.issues > 0 && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                    <p className="text-xl font-semibold text-foreground">{summaryStats.issues}</p>
+                    {summaryStats.issues > 0 && <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-300" />}
                   </>
                 )}
               </div>
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/15">
+              <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Avg eCPM</p>
+              <p className="text-xs text-muted-foreground">Avg eCPM</p>
               {groupsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">
+                <p className="text-xl font-semibold text-foreground">
                   {summaryStats.avgEcpm > 0 ? `$${summaryStats.avgEcpm.toFixed(2)}` : '—'}
                 </p>
               )}
@@ -558,30 +558,30 @@ export function MediationGroupsPageContent() {
 
       {/* Bulk Actions Bar */}
       {selectedGroups.length > 0 && (
-        <div className="bg-slate-900 text-white rounded-lg px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-primary">
           <span className="text-sm font-medium">{selectedGroups.length} groups selected</span>
           <div className="flex items-center gap-2">
             {canConfig && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Pause All
               </Button>
             )}
             {canConfig && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Resume All
               </Button>
             )}
             {canConfig && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Bulk Edit eCPM
               </Button>
             )}
             {canExport && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Export
               </Button>
             )}
-            <button onClick={() => setSelectedGroups([])} className="text-sm text-slate-300 hover:text-white ml-2">
+            <button onClick={() => setSelectedGroups([])} className="ml-2 text-sm text-primary hover:underline">
               Clear selection
             </button>
           </div>

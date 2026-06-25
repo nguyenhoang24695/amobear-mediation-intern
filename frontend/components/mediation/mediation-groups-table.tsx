@@ -433,20 +433,20 @@ export function MediationGroupsTable({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Active":
-        return <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
+        return <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300">Active</Badge>
       case "Paused":
-        return <Badge className="bg-slate-100 text-slate-600 border-0">Paused</Badge>
+        return <Badge className="border-0 bg-muted text-muted-foreground">Paused</Badge>
       case "Error":
-        return <Badge className="bg-red-100 text-red-700 border-0">Error</Badge>
+        return <Badge className="border-0 bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300">Error</Badge>
       default:
-        return <Badge className="bg-slate-100 text-slate-700 border-0">{status}</Badge>
+        return <Badge className="border-0 bg-muted text-muted-foreground">{status}</Badge>
     }
   }
 
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <button
       onClick={() => handleSort(field)}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+      className="flex items-center gap-1 transition-colors hover:text-foreground"
     >
       {children}
       {sortField === field ? (
@@ -464,10 +464,10 @@ export function MediationGroupsTable({
   // Loading state
   if (loading) {
     return (
-      <Card className="border-slate-200">
+      <Card>
         <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-slate-400 mb-4" />
-          <p className="text-sm text-slate-500">Loading mediation groups...</p>
+          <Loader2 className="mb-4 h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading mediation groups...</p>
         </div>
       </Card>
     )
@@ -476,14 +476,14 @@ export function MediationGroupsTable({
   // Empty state
   if (filteredGroups.length === 0) {
     return (
-      <Card className="border-slate-200">
+      <Card>
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <Layers className="w-8 h-8 text-slate-400" />
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Layers className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">No mediation groups found</h3>
-          <p className="text-sm text-slate-500 mb-4">Try adjusting your filters or create a new group</p>
-          <Button className="bg-blue-600 hover:bg-blue-700">Create Mediation Group</Button>
+          <h3 className="mb-1 text-lg font-semibold text-foreground">No mediation groups found</h3>
+          <p className="mb-4 text-sm text-muted-foreground">Try adjusting your filters or create a new group</p>
+          <Button>Create Mediation Group</Button>
         </div>
       </Card>
     )
@@ -491,11 +491,11 @@ export function MediationGroupsTable({
 
   return (
     <TooltipProvider>
-      <Card className="border-slate-200 overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-              <tr className="text-xs text-slate-500 font-medium">
+            <thead className="sticky top-0 border-b bg-muted/60">
+              <tr className="text-xs font-medium text-muted-foreground">
                 <th className="px-4 py-3 text-left">
                   <Checkbox
                     checked={selectedGroups.length === paginatedGroups.length && paginatedGroups.length > 0}
@@ -520,7 +520,7 @@ export function MediationGroupsTable({
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {paginatedGroups.map((group) => {
                 const FormatIcon = getFormatIcon(group.formatKey)
                 // Get countries from group data (prefer countries array, fallback to _original)
@@ -539,11 +539,11 @@ export function MediationGroupsTable({
                     onClick={() => handleRowClick(group.id)}
                     className={cn(
                       "transition-colors cursor-pointer",
-                      selectedGroups.includes(group.id) && "bg-blue-50 hover:bg-blue-50",
-                      group.hasError && "bg-red-50/50",
-                      group.hasWarning && !group.hasError && "bg-amber-50/50",
+                      selectedGroups.includes(group.id) && "bg-primary/10 hover:bg-primary/10",
+                      group.hasError && "bg-red-100/60 dark:bg-red-500/10",
+                      group.hasWarning && !group.hasError && "bg-amber-100/60 dark:bg-amber-500/10",
                       group.status === "Paused" && "opacity-60",
-                      !selectedGroups.includes(group.id) && !group.hasError && !group.hasWarning && "hover:bg-slate-50",
+                      !selectedGroups.includes(group.id) && !group.hasError && !group.hasWarning && "hover:bg-accent/60",
                     )}
                   >
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -563,14 +563,14 @@ export function MediationGroupsTable({
                           <Link
                             href={`/mediation/${group.mediationGroupId ?? group.id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                            className="text-sm font-medium text-primary hover:underline"
                           >
                             {group.name}
                           </Link>
                           <Link
                             href={group.appAdMobId ? `/apps/${group.appAdMobId}` : "#"}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-xs text-slate-500 hover:text-slate-700 block"
+                            className="block text-xs text-muted-foreground transition-colors hover:text-foreground"
                           >
                             {group.appName}
                           </Link>
@@ -585,21 +585,21 @@ export function MediationGroupsTable({
                       >
                         <Avatar className="h-8 w-8 rounded-lg">
                           <AvatarImage src={group.appIcon || "/placeholder.svg"} alt={group.appName} />
-                          <AvatarFallback className="rounded-lg bg-slate-100">
-                            <ImageIcon className="w-4 h-4 text-slate-400" />
+                          <AvatarFallback className="rounded-lg bg-muted">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
                           </AvatarFallback>
                         </Avatar>
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200">
+                      <Badge variant="outline" className="gap-1 bg-muted">
                         <FormatIcon className="w-3 h-3" />
                         {group.format}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <span className="text-sm text-slate-600">{adSourcesInfo.length}</span>
+                        <span className="text-sm text-muted-foreground">{adSourcesInfo.length}</span>
                         {adSourcesInfo.length > 0 && (
                           <div className="flex items-center -space-x-1 ml-1">
                             {adSourcesInfo.slice(0, 4).map((adSource: { adSourceId: string; title: string }, idx: number) => {
@@ -610,16 +610,16 @@ export function MediationGroupsTable({
                                   <TooltipTrigger asChild>
                                     <div
                                       className={cn(
-                                        "w-6 h-6 rounded-sm border-2 border-white flex items-center justify-center text-xs",
+                                        "flex h-6 w-6 items-center justify-center rounded-sm border-2 border-background text-xs",
                                         networkInfo.color,
-                                        !networkInfo.emoji && "bg-slate-400",
+                                        !networkInfo.emoji && "bg-muted",
                                       )}
                                       title={displayName}
                                     >
                                       {networkInfo.emoji ? (
                                         <span>{networkInfo.emoji}</span>
                                       ) : (
-                                        <span className="text-white font-semibold text-[10px]">
+                                        <span className="text-[10px] font-semibold text-white">
                                           {displayName.charAt(0).toUpperCase()}
                                         </span>
                                       )}
@@ -627,7 +627,7 @@ export function MediationGroupsTable({
                                   </TooltipTrigger>
                                   <TooltipContent side="top">
                                     <p className="font-medium">{displayName}</p>
-                                    <p className="text-xs text-slate-400">{adSource.adSourceId}</p>
+                                    <p className="text-xs text-muted-foreground">{adSource.adSourceId}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )
@@ -635,8 +635,8 @@ export function MediationGroupsTable({
                             {adSourcesInfo.length > 4 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="w-6 h-6 rounded-sm bg-slate-200 border-2 border-white flex items-center justify-center">
-                                    <span className="text-[10px] font-semibold text-slate-600">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-sm border-2 border-background bg-muted">
+                                    <span className="text-[10px] font-semibold text-muted-foreground">
                                       +{adSourcesInfo.length - 4}
                                     </span>
                                   </div>
@@ -661,7 +661,7 @@ export function MediationGroupsTable({
                     </td>
                     <td className="px-4 py-3">
                       {isGlobal ? (
-                        <div className="flex items-center gap-1 text-sm text-slate-600">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Globe className="w-4 h-4" />
                           Global
                         </div>
@@ -673,28 +673,28 @@ export function MediationGroupsTable({
                             </span>
                           ))}
                           {countries.length > 3 && (
-                            <span className="text-xs text-slate-500 ml-1">+{countries.length - 3}</span>
+                            <span className="ml-1 text-xs text-muted-foreground">+{countries.length - 3}</span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-400">-</span>
+                        <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-slate-900">
+                      <span className="text-sm font-medium text-foreground">
                         {(group as any).revenue > 0 ? `$${(group as any).revenue.toFixed(2)}` : "—"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium text-slate-900">
+                        <span className="text-sm font-medium text-foreground">
                           {group.ecpm > 0 ? `$${group.ecpm.toFixed(2)}` : "—"}
                         </span>
                         {group.ecpmTrend !== 0 && group.ecpm > 0 && (
                           <span
                             className={cn(
                               "flex items-center text-xs",
-                              group.ecpmTrend > 0 ? "text-green-600" : "text-red-600",
+                              group.ecpmTrend > 0 ? "text-green-600 dark:text-green-300" : "text-red-600 dark:text-red-300",
                             )}
                             title={`${group.ecpmTrend > 0 ? "+" : ""}${group.ecpmTrend.toFixed(1)}%`}
                           >
@@ -711,7 +711,7 @@ export function MediationGroupsTable({
                     <td className="px-4 py-3">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="text-sm text-slate-500 cursor-default">{group.lastModified}</span>
+                          <span className="cursor-default text-sm text-muted-foreground">{group.lastModified}</span>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="text-xs">by {group.lastModifiedBy}</p>
@@ -722,7 +722,7 @@ export function MediationGroupsTable({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">

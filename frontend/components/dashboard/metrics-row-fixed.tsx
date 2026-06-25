@@ -222,10 +222,10 @@ export function MetricsRow() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="bg-white border-slate-200 shadow-sm">
+          <Card key={i}>
             <CardContent className="p-6">
               <div className="flex items-center justify-center h-24">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -238,9 +238,9 @@ export function MetricsRow() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="bg-white border-slate-200 shadow-sm">
+          <Card key={i}>
             <CardContent className="p-6">
-              <div className="text-center text-sm text-slate-500">No data available</div>
+              <div className="text-center text-sm text-muted-foreground">No data available</div>
             </CardContent>
           </Card>
         ))}
@@ -251,12 +251,12 @@ export function MetricsRow() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {metrics.map((metric) => (
-        <Card key={metric.title} className="bg-white border-slate-200 shadow-sm">
+        <Card key={metric.title}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm text-slate-500 font-medium">{metric.title}</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">{metric.value}</p>
+                <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
+                <p className="mt-1 text-3xl font-bold text-foreground">{metric.value}</p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <Badge
                     variant="secondary"
@@ -271,7 +271,7 @@ export function MetricsRow() {
                     )}
                     {metric.change}
                   </Badge>
-                  <span className="text-xs text-slate-400">vs yesterday</span>
+                  <span className="text-xs text-muted-foreground">vs yesterday</span>
                 </div>
               </div>
               <div className="w-20 h-12">

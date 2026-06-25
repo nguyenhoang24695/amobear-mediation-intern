@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/components/auth/auth-provider"
+import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 const GA_MEASUREMENT_ID = "G-PS43R0F8VW"
@@ -33,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Google Analytics — chỉ chạy ở production */}
         {process.env.NODE_ENV === "production" && (
@@ -54,9 +55,11 @@ export default function RootLayout({
         )}
       </head>
       <body className={`font-sans antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
         {process.env.VERCEL === "1" ? <Analytics /> : null}
       </body>
     </html>

@@ -99,14 +99,14 @@ export function DashboardDatePicker() {
       )}
 
       {preset !== "custom" && displayRange && (
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-muted-foreground">
           {format(displayRange.from, "MMM dd")} - {format(displayRange.to, "MMM dd, yyyy")}
         </span>
       )}
 
       <Button
         onClick={applyDateRange}
-        className="h-9 px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+        className="h-9 px-4 text-sm"
       >
         Apply
       </Button>
@@ -118,7 +118,7 @@ export function DashboardDatePicker() {
         onClick={refresh}
         title="Refresh data"
       >
-        <RefreshCw className="w-4 h-4 text-slate-600" />
+        <RefreshCw className="h-4 w-4 text-muted-foreground" />
       </Button>
     </div>
   )

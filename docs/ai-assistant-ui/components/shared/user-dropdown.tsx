@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,7 +49,7 @@ export function UserDropdown() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [logoutAllDevices, setLogoutAllDevices] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [theme, setTheme] = useState("system")
+  const { theme = "system", setTheme } = useTheme()
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
