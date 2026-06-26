@@ -76,10 +76,10 @@ interface OrgUsersTabProps {
 }
 
 const roleColorConfig: Record<string, string> = {
-  super_admin: "bg-purple-100 text-purple-700",
-  admin: "bg-blue-100 text-blue-700",
-  editor: "bg-cyan-100 text-cyan-700",
-  viewer: "bg-slate-100 text-slate-700",
+  super_admin: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
+  admin: "bg-primary/10 text-primary",
+  editor: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+  viewer: "bg-muted text-muted-foreground",
 };
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
@@ -247,20 +247,20 @@ export function OrgUsersTab({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-foreground">
               Organization Users
             </h2>
             <Badge variant="secondary" className="rounded-full">
               {total}
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Manage users in this organization
           </p>
         </div>
         {canManage && (
           <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
             onClick={() => setAddUserOpen(true)}
           >
             <Plus className="w-4 h-4" />
@@ -272,7 +272,7 @@ export function OrgUsersTab({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or email..."
             className="pl-9"
@@ -282,7 +282,7 @@ export function OrgUsersTab({
         </div>
         <Select value={teamFilter} onValueChange={setTeamFilter}>
           <SelectTrigger className="w-40">
-            <Users className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
+            <Users className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
             <SelectValue placeholder="Team" />
           </SelectTrigger>
           <SelectContent>
@@ -323,26 +323,26 @@ export function OrgUsersTab({
       {/* Stats Row */}
       {!loading && !error && (
         <div className="flex flex-wrap items-center gap-6 text-sm">
-          <span className="text-slate-500">
-            Total: <span className="font-semibold text-slate-900">{total}</span>
+          <span className="text-muted-foreground">
+            Total: <span className="font-semibold text-foreground">{total}</span>
           </span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">
+          <span className="text-border">|</span>
+          <span className="text-muted-foreground">
             Active:{" "}
-            <span className="font-semibold text-green-600">{activeCount}</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{activeCount}</span>
           </span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">
+          <span className="text-border">|</span>
+          <span className="text-muted-foreground">
             Inactive:{" "}
-            <span className="font-semibold text-red-600">{inactiveCount}</span>
+            <span className="font-semibold text-destructive">{inactiveCount}</span>
           </span>
         </div>
       )}
 
       {/* Bulk Actions Bar */}
       {selectedUsers.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <span className="text-sm font-medium text-blue-700">
+        <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+          <span className="text-sm font-medium text-primary">
             {selectedUsers.length} users selected
           </span>
           <div className="flex items-center gap-2 ml-auto">
@@ -391,7 +391,7 @@ export function OrgUsersTab({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+              className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 bg-transparent"
             >
               Remove
             </Button>
@@ -410,15 +410,15 @@ export function OrgUsersTab({
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       )}
 
       {/* Error State */}
       {error && !loading && (
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-destructive mb-4">{error}</p>
             <Button onClick={fetchUsers}>Try Again</Button>
           </CardContent>
         </Card>
@@ -426,15 +426,15 @@ export function OrgUsersTab({
 
       {/* Empty State */}
       {!loading && !error && users.length === 0 && (
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Users className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">
+            <h3 className="text-lg font-semibold text-foreground mb-1">
               No users found
             </h3>
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               {debouncedSearch ||
               roleFilter !== "all" ||
               statusFilter !== "all" ||
@@ -448,7 +448,7 @@ export function OrgUsersTab({
               statusFilter === "all" &&
               teamFilter === "all" && (
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
                   onClick={() => setAddUserOpen(true)}
                 >
                   <Plus className="w-4 h-4" />
@@ -461,12 +461,12 @@ export function OrgUsersTab({
 
       {/* Table */}
       {!loading && !error && users.length > 0 && (
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="w-12">
                       <Checkbox
                         checked={
@@ -512,7 +512,7 @@ export function OrgUsersTab({
                     return (
                       <TableRow
                         key={user.id}
-                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${user.status === "inactive" ? "opacity-60" : ""}`}
+                        className={`hover:bg-muted/40 transition-colors cursor-pointer ${user.status === "inactive" ? "opacity-60" : ""}`}
                         onClick={() =>
                           router.push(
                             `/organizations/${orgId}/users/${user.id}`,
@@ -537,15 +537,15 @@ export function OrgUsersTab({
                               {user.avatarUrl && (
                                 <AvatarImage src={user.avatarUrl} />
                               )}
-                              <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                              <AvatarFallback className="bg-primary/10 text-primary text-sm">
                                 {getInitials(user.fullName || user.email)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-slate-900">
+                              <p className="font-medium text-foreground">
                                 {user.fullName || "—"}
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-muted-foreground">
                                 {user.email}
                               </p>
                             </div>
@@ -561,7 +561,7 @@ export function OrgUsersTab({
                                 roleKey;
                               const roleColor =
                                 roleColorConfig[roleKey] ||
-                                "bg-slate-100 text-slate-700";
+                                "bg-muted text-muted-foreground";
                               return (
                                 <Badge
                                   key={`${user.id}-${roleKey}`}
@@ -581,10 +581,10 @@ export function OrgUsersTab({
                             <span className="text-sm">{status.label}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-slate-500">
+                        <TableCell className="text-sm text-muted-foreground">
                           {formatDate(user.createdAt)}
                         </TableCell>
-                        <TableCell className="text-sm text-slate-500">
+                        <TableCell className="text-sm text-muted-foreground">
                           {formatLastActive(user.lastLoginAt)}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>

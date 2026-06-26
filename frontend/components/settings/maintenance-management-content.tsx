@@ -186,20 +186,20 @@ export function MaintenanceManagementContent() {
           </div>
 
           <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div className="rounded-lg border bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Scheduled start</p>
+            <div className="rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Scheduled start</p>
               <p className="mt-1 font-medium">{formatDateTime(status?.enabledAt ?? null)}</p>
             </div>
-            <div className="rounded-lg border bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Estimated completion</p>
+            <div className="rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estimated completion</p>
               <p className="mt-1 font-medium">{formatDateTime(status?.estimatedEndAt ?? null)}</p>
             </div>
-            <div className="rounded-lg border bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Last updated</p>
+            <div className="rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Last updated</p>
               <p className="mt-1 font-medium">{formatDateTime(status?.updatedAt ?? null)}</p>
             </div>
-            <div className="rounded-lg border bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Updated by</p>
+            <div className="rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Updated by</p>
               <p className="mt-1 font-medium">{status?.updatedByEmail ?? "—"}</p>
             </div>
           </div>
