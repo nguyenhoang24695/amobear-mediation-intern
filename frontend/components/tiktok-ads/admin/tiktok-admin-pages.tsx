@@ -38,9 +38,9 @@ import type {
 
 function statusTone(value?: string) {
   const normalized = (value || "").toLowerCase()
-  if (["valid", "active", "approved", "completed"].includes(normalized)) return "bg-emerald-50 text-emerald-700"
-  if (["disabled", "rejected", "failed", "invalid", "revoked"].includes(normalized)) return "bg-rose-50 text-rose-700"
-  return "bg-slate-100 text-slate-700"
+  if (["valid", "active", "approved", "completed"].includes(normalized)) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+  if (["disabled", "rejected", "failed", "invalid", "revoked"].includes(normalized)) return "bg-destructive/10 text-destructive"
+  return "bg-muted text-muted-foreground"
 }
 
 function formatDateTime(value?: string | null) {
@@ -74,11 +74,11 @@ type TikTokAppMappingGroup = {
 function getPlatformBadgeClass(platform?: string | null) {
   switch (normalizePlatform(platform)) {
     case "IOS":
-      return "bg-blue-100 text-blue-700"
+      return "bg-primary/10 text-primary"
     case "ANDROID":
-      return "bg-green-100 text-green-700"
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
     default:
-      return "bg-slate-100 text-slate-600"
+      return "bg-muted text-muted-foreground"
   }
 }
 
@@ -103,8 +103,8 @@ function getTikTokMappingPlatform(app?: App | null, mapping?: TikTokAppMappingDt
 
 function getStatusBadgeClass(status: TikTokMappingStatus) {
   return status === "mapped"
-    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none"
-    : "bg-amber-100 text-amber-700 hover:bg-amber-100 border-none"
+    ? "border-none bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
+    : "border-none bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
 }
 
 function isHttpUrl(value?: string | null) {
@@ -248,8 +248,8 @@ function PageShell({ title, subtitle, children, action }: { title: string; subti
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-          <p className="text-sm text-slate-500">{subtitle}</p>
+          <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
         {action}
       </div>
@@ -260,7 +260,7 @@ function PageShell({ title, subtitle, children, action }: { title: string; subti
 
 function ErrorBox({ message }: { message?: string }) {
   if (!message) return null
-  return <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{message}</div>
+  return <div className="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{message}</div>
 }
 
 function SearchableAdAccountFilterSelect({
@@ -317,10 +317,10 @@ function SearchableAdAccountFilterSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("h-9 justify-between bg-white px-3 text-left font-normal", className)}
+          className={cn("h-9 justify-between bg-background px-3 text-left font-normal", className)}
         >
-          <span className={cn("min-w-0 flex-1 truncate", !value && "text-slate-500")}>{value || placeholder}</span>
-          {loading ? <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-slate-400" /> : <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
+          <span className={cn("min-w-0 flex-1 truncate", !value && "text-muted-foreground")}>{value || placeholder}</span>
+          {loading ? <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-muted-foreground" /> : <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[320px] p-0" align="start">
@@ -340,12 +340,12 @@ function SearchableAdAccountFilterSelect({
               </CommandItem>
             </CommandGroup>
             {loading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-500">
+              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading...
               </div>
             ) : options.length === 0 ? (
-              <div className="px-2 py-4 text-center text-sm text-slate-500">{emptyMessage}</div>
+              <div className="px-2 py-4 text-center text-sm text-muted-foreground">{emptyMessage}</div>
             ) : (
               <CommandGroup>
                 {options.map((option) => (
@@ -523,11 +523,11 @@ export function TikTokIntegrationsPage() {
       action={<Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}
     >
       <ErrorBox message={error} />
-      <div className="rounded-md border bg-white p-4">
+      <div className="rounded-md border bg-card p-4 text-card-foreground">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-950">{editingId ? "Edit integration" : "Create integration"}</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="text-base font-semibold text-foreground">{editingId ? "Edit integration" : "Create integration"}</h2>
+            <p className="text-sm text-muted-foreground">
               {editingId ? "Leave secret/token empty to keep the saved encrypted values." : "Add app credentials before OAuth or paste an existing access token."}
             </p>
           </div>
@@ -541,21 +541,21 @@ export function TikTokIntegrationsPage() {
           <div><Label>Scopes</Label><Input value={form.scopes} onChange={(e) => setForm({ ...form, scopes: e.target.value })} /></div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-5">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <Checkbox checked={form.isEnabled} onCheckedChange={(checked) => setForm({ ...form, isEnabled: checked === true })} />
             Enabled
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <Checkbox checked={form.isDefault} onCheckedChange={(checked) => setForm({ ...form, isDefault: checked === true })} />
             Default
           </label>
           {editingId && (
             <>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox checked={form.clearAppSecret} onCheckedChange={(checked) => setForm({ ...form, clearAppSecret: checked === true, appSecret: checked ? "" : form.appSecret })} />
                 Clear secret
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox checked={form.clearAccessToken} onCheckedChange={(checked) => setForm({ ...form, clearAccessToken: checked === true, accessToken: checked ? "" : form.accessToken })} />
                 Clear token
               </label>
@@ -567,7 +567,7 @@ export function TikTokIntegrationsPage() {
           {editingId ? "Update" : "Create"}
         </Button>
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card text-card-foreground">
         <Table>
           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Developer App ID</TableHead><TableHead>Secret</TableHead><TableHead>Token</TableHead><TableHead>Status</TableHead><TableHead>Enabled</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
@@ -674,18 +674,18 @@ export function TikTokAdAccountsPage() {
           onChange={setCountryFilter}
         />
       </div>
-      <div className="overflow-x-auto rounded-md border bg-white">
+      <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
         <Table>
           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Advertiser ID</TableHead><TableHead>Country</TableHead><TableHead>Currency</TableHead><TableHead>Timezone</TableHead><TableHead>Balance</TableHead><TableHead>Grant Balance</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">Loading ad accounts...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">Loading ad accounts...</TableCell></TableRow>
             ) : data.items.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">No ad accounts found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">No ad accounts found.</TableCell></TableRow>
             ) : data.items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell className="font-mono text-xs text-blue-700">{item.advertiserId}</TableCell>
+                <TableCell className="font-mono text-xs text-primary">{item.advertiserId}</TableCell>
                 <TableCell>{item.country ?? "-"}</TableCell>
                 <TableCell>{item.currency ?? "-"}</TableCell>
                 <TableCell>{item.timezone ?? "-"}</TableCell>
@@ -773,7 +773,7 @@ export function TikTokAppMappingsPage() {
       <ErrorBox message={error} />
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-72">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="h-9 pl-8 text-sm"
             placeholder="Search by app, store ID, TikTok or AdMob app ID..."
@@ -782,7 +782,7 @@ export function TikTokAppMappingsPage() {
           />
         </div>
         <Select value={platformFilter} onValueChange={setPlatformFilter}>
-          <SelectTrigger className="h-9 w-36 bg-white text-sm">
+          <SelectTrigger className="h-9 w-36 bg-background text-sm">
             <SelectValue placeholder="Platform" />
           </SelectTrigger>
           <SelectContent>
@@ -793,7 +793,7 @@ export function TikTokAppMappingsPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-40 bg-white text-sm">
+          <SelectTrigger className="h-9 w-40 bg-background text-sm">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -802,29 +802,29 @@ export function TikTokAppMappingsPage() {
             <SelectItem value="unmapped">Unmapped</SelectItem>
           </SelectContent>
         </Select>
-        <span className="ml-auto text-xs text-slate-400">
+        <span className="ml-auto text-xs text-muted-foreground">
           {filteredMappings.length} store app{filteredMappings.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-md border bg-white">
+      <div className="overflow-x-auto rounded-md border bg-card text-card-foreground">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs font-medium text-slate-500">App</TableHead>
-              <TableHead className="w-32 text-xs font-medium text-slate-500">Platform</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Store Identity</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">TikTok App ID</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">AdMob Mapping</TableHead>
-              <TableHead className="w-28 text-xs font-medium text-slate-500">Status</TableHead>
-              <TableHead className="w-36 text-xs font-medium text-slate-500">Updated</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs font-medium text-muted-foreground">App</TableHead>
+              <TableHead className="w-32 text-xs font-medium text-muted-foreground">Platform</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Store Identity</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">TikTok App ID</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">AdMob Mapping</TableHead>
+              <TableHead className="w-28 text-xs font-medium text-muted-foreground">Status</TableHead>
+              <TableHead className="w-36 text-xs font-medium text-muted-foreground">Updated</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">Loading app mappings...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">Loading app mappings...</TableCell></TableRow>
             ) : filteredMappings.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">No app mappings found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">No app mappings found.</TableCell></TableRow>
             ) : paginatedMappings.map((group) => {
               const mapping = group.primaryMapping
               const firstAdmobBinding = group.admobBindings[0]
@@ -834,36 +834,36 @@ export function TikTokAppMappingsPage() {
               const storeUrl = getTikTokMappingStoreUrl(mapping, group)
 
               return (
-                <TableRow key={group.key} className="text-sm hover:bg-slate-50">
+                <TableRow key={group.key} className="text-sm hover:bg-muted/40">
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-3">
                       {appIconUri ? (
-                        <img src={appIconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-cover" />
+                        <img src={appIconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-border bg-muted object-cover" />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-sm font-semibold text-muted-foreground">
                           {group.appLabel.charAt(0).toUpperCase() || "?"}
                         </div>
                       )}
                       <div className="min-w-0 space-y-0.5">
-                        <p className="max-w-[240px] truncate font-medium text-slate-900">{group.appLabel}</p>
+                        <p className="max-w-[240px] truncate font-medium text-foreground">{group.appLabel}</p>
                         {storeUrl ? (
                           <a
                             href={storeUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="block max-w-[240px] truncate font-mono text-[11px] text-slate-400 hover:text-blue-600 hover:underline"
+                            className="block max-w-[240px] truncate font-mono text-[11px] text-muted-foreground hover:text-primary hover:underline"
                           >
                             {storeUrl}
                           </a>
                         ) : appRouteId ? (
                           <Link
                             href={`/apps/${encodeURIComponent(appRouteId)}`}
-                            className="block max-w-[240px] truncate font-mono text-[11px] text-slate-400 hover:text-blue-600 hover:underline"
+                            className="block max-w-[240px] truncate font-mono text-[11px] text-muted-foreground hover:text-primary hover:underline"
                           >
                             {appRouteId}
                           </Link>
                         ) : (
-                          <p className="max-w-[240px] truncate font-mono text-[11px] text-slate-400">-</p>
+                          <p className="max-w-[240px] truncate font-mono text-[11px] text-muted-foreground">-</p>
                         )}
                       </div>
                     </div>
@@ -872,19 +872,19 @@ export function TikTokAppMappingsPage() {
                     <Badge className={`text-[11px] ${getPlatformBadgeClass(group.platform)}`}>{group.platform || "UNKNOWN"}</Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="block max-w-[220px] truncate font-mono text-xs text-slate-600">{group.storeIdentifier || "-"}</span>
+                    <span className="block max-w-[220px] truncate font-mono text-xs text-muted-foreground">{group.storeIdentifier || "-"}</span>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
                       {group.tikTokAppIds.map((id) => (
-                        <p key={id} className="max-w-[180px] truncate font-mono text-xs text-blue-700">{id}</p>
+                        <p key={id} className="max-w-[180px] truncate font-mono text-xs text-primary">{id}</p>
                       ))}
                     </div>
                   </TableCell>
                   <TableCell>
                     {group.admobAccountCount > 0 ? (
                       <div className="space-y-1.5">
-                        <p className="text-xs font-medium text-slate-700">
+                        <p className="text-xs font-medium text-foreground">
                           {group.admobAccountCount} AdMob account{group.admobAccountCount === 1 ? "" : "s"}
                         </p>
                         <div className="space-y-1">
@@ -892,13 +892,13 @@ export function TikTokAppMappingsPage() {
                             const bindingAppId = binding.appId ?? binding.externalAppId
                             return (
                               <div key={binding.bindingId} className="flex min-w-0 items-center gap-2 text-xs">
-                                <Badge className={binding.isActive ? "bg-emerald-50 text-emerald-700 border-none" : "bg-slate-100 text-slate-500 border-none"}>
+                                <Badge className={binding.isActive ? "border-none bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "border-none bg-muted text-muted-foreground"}>
                                   {binding.isActive ? "On" : "Off"}
                                 </Badge>
-                                <span className="truncate font-medium text-slate-700">{binding.admobAccountName ?? "No account"}</span>
+                                <span className="truncate font-medium text-foreground">{binding.admobAccountName ?? "No account"}</span>
                                 <Link
                                   href={`/apps/${encodeURIComponent(bindingAppId)}`}
-                                  className="truncate font-mono text-blue-700 hover:underline"
+                                  className="truncate font-mono text-primary hover:underline"
                                 >
                                   {binding.externalAppId}
                                 </Link>
@@ -908,13 +908,13 @@ export function TikTokAppMappingsPage() {
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-slate-400">-</span>
+                      <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell>
                     <Badge className={getStatusBadgeClass(group.status)}>{group.status === "mapped" ? "Mapped" : "Unmapped"}</Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-500">{formatDateTime(group.latestUpdatedAt)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDateTime(group.latestUpdatedAt)}</TableCell>
                 </TableRow>
               )
             })}
@@ -993,12 +993,12 @@ export function TikTokRequestsPage() {
   return (
     <PageShell title="TikTok Requests" subtitle="Create, approve, and dry-run campaign execution requests." action={<Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>}>
       <ErrorBox message={error} />
-      <div className="rounded-md border bg-white p-4">
+      <div className="rounded-md border bg-card p-4 text-card-foreground">
         <Label>Request JSON</Label>
         <Textarea className="mt-2 min-h-72 font-mono text-xs" value={draftJson} onChange={(e) => setDraftJson(e.target.value)} />
         <Button className="mt-4" onClick={create}><Send className="mr-2 h-4 w-4" />Create Draft</Button>
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card text-card-foreground">
         <Table>
           <TableHeader><TableRow><TableHead>Campaign</TableHead><TableHead>Account</TableHead><TableHead>App</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>{items.map((item) => <TableRow key={item.id}><TableCell>{item.campaignName}</TableCell><TableCell>{item.tikTokAdAccountName}</TableCell><TableCell>{item.appDisplayName ?? item.appId}</TableCell><TableCell><Badge className={statusTone(item.status)}>{item.status}</Badge></TableCell><TableCell className="space-x-2 text-right"><Button size="sm" variant="outline" onClick={() => run(item.id, "submit")}><Send className="h-4 w-4" /></Button><Button size="sm" variant="outline" onClick={() => run(item.id, "approve")}><CheckCircle2 className="h-4 w-4" /></Button><Button size="sm" variant="outline" onClick={() => run(item.id, "reject")}><XCircle className="h-4 w-4" /></Button><Button size="sm" onClick={() => run(item.id, item.status === "failed" ? "retry" : "execute")}><Play className="h-4 w-4" /></Button></TableCell></TableRow>)}</TableBody>

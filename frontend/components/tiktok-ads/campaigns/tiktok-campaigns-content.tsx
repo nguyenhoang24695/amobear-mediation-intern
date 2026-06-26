@@ -23,10 +23,10 @@ import type { TikTokAdAccountDto, TikTokAppMappingDto, TikTokCampaignListItemDto
 
 function statusTone(value?: string | null) {
   const normalized = (value || "").toUpperCase()
-  if (["ENABLE", "ACTIVE", "COMPLETED"].includes(normalized)) return "bg-emerald-50 text-emerald-700"
-  if (["DISABLE", "PAUSED"].includes(normalized)) return "bg-amber-50 text-amber-700"
-  if (["FAILED", "DELETED", "ARCHIVED", "DISAPPROVED", "WITH_ISSUES"].includes(normalized)) return "bg-rose-50 text-rose-700"
-  return "bg-slate-100 text-slate-700"
+  if (["ENABLE", "ACTIVE", "COMPLETED"].includes(normalized)) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+  if (["DISABLE", "PAUSED"].includes(normalized)) return "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+  if (["FAILED", "DELETED", "ARCHIVED", "DISAPPROVED", "WITH_ISSUES"].includes(normalized)) return "bg-destructive/10 text-destructive"
+  return "bg-muted text-muted-foreground"
 }
 
 function formatDateTime(value?: string | null) {
@@ -119,12 +119,12 @@ function SearchableFilterCombobox({
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className="h-9 w-full justify-between bg-white text-sm font-normal">
+        <Button variant="outline" role="combobox" aria-expanded={open} className="h-9 w-full justify-between bg-background text-sm font-normal">
           <span className="truncate">{selectedOption?.label ?? placeholder}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] p-0 sm:w-[320px]" align="start">
         <Command shouldFilter>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -142,7 +142,7 @@ function SearchableFilterCombobox({
                   <Check className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
                   <div className="flex min-w-0 flex-col text-left">
                     <span className="truncate font-medium">{option.label}</span>
-                    {option.helperText ? <span className="truncate text-xs text-slate-500">{option.helperText}</span> : null}
+                    {option.helperText ? <span className="truncate text-xs text-muted-foreground">{option.helperText}</span> : null}
                   </div>
                 </CommandItem>
               ))}
@@ -175,25 +175,25 @@ function AppFilterCombobox({
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className="h-9 w-full justify-between bg-white text-sm font-normal">
+        <Button variant="outline" role="combobox" aria-expanded={open} className="h-9 w-full justify-between bg-background text-sm font-normal">
           {selectedOption?.value === "all" ? (
             <span className="truncate">All apps</span>
           ) : (
             <span className="flex min-w-0 items-center gap-2">
               <Avatar className="h-5 w-5 shrink-0 rounded">
                 <AvatarImage src={selectedOption?.iconUri || "/placeholder.svg"} alt={selectedOption?.label ?? "App"} className="rounded object-cover" />
-                <AvatarFallback className="rounded bg-slate-100 text-[10px] font-semibold text-slate-600">{getInitials(selectedOption?.label)}</AvatarFallback>
+                <AvatarFallback className="rounded bg-muted text-[10px] font-semibold text-muted-foreground">{getInitials(selectedOption?.label)}</AvatarFallback>
               </Avatar>
               <span className="min-w-0 text-left">
                 <span className="block truncate">{selectedOption?.label ?? "All apps"}</span>
-                {selectedMeta ? <span className="block truncate text-[11px] text-slate-500">{selectedMeta}</span> : null}
+                {selectedMeta ? <span className="block truncate text-[11px] text-muted-foreground">{selectedMeta}</span> : null}
               </span>
             </span>
           )}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[360px] p-0" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] p-0 sm:w-[360px]" align="start">
         <Command shouldFilter>
           <CommandInput placeholder="Search app name or app ID..." />
           <CommandList>
@@ -215,11 +215,11 @@ function AppFilterCombobox({
                     <>
                       <Avatar className="h-8 w-8 shrink-0 rounded">
                         <AvatarImage src={option.iconUri || "/placeholder.svg"} alt={option.label} className="rounded object-cover" />
-                        <AvatarFallback className="rounded bg-slate-100 text-xs font-semibold text-slate-600">{getInitials(option.label)}</AvatarFallback>
+                        <AvatarFallback className="rounded bg-muted text-xs font-semibold text-muted-foreground">{getInitials(option.label)}</AvatarFallback>
                       </Avatar>
                       <div className="flex min-w-0 flex-col text-left">
                         <span className="truncate font-medium">{option.label}</span>
-                        <span className="truncate text-xs text-slate-500">{[normalizePlatform(option.platform), formatAppIdDisplay(option.appId)].filter(Boolean).join(" ")}</span>
+                        <span className="truncate text-xs text-muted-foreground">{[normalizePlatform(option.platform), formatAppIdDisplay(option.appId)].filter(Boolean).join(" ")}</span>
                       </div>
                     </>
                   )}
@@ -235,13 +235,13 @@ function AppFilterCombobox({
 
 function renderAppCell(item: TikTokCampaignListItemDto) {
   if (item.isUnmapped || (!item.appDisplayName && !item.appId)) {
-    return <Badge className="bg-amber-50 text-amber-700">Unmapped</Badge>
+    return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">Unmapped</Badge>
   }
 
   const title = (
     <div className="min-w-0">
-      <div className="truncate text-sm font-medium text-slate-900">{item.appDisplayName ?? item.appId}</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <div className="truncate text-sm font-medium text-foreground">{item.appDisplayName ?? item.appId}</div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {item.platform ? <span>{toTitleCase(item.platform)}</span> : null}
         {item.appId ? <span className="font-mono">{item.appId}</span> : null}
       </div>
@@ -252,7 +252,7 @@ function renderAppCell(item: TikTokCampaignListItemDto) {
     <div className="flex min-w-0 items-center gap-3">
       <Avatar className="h-9 w-9 shrink-0 rounded-lg">
         <AvatarImage src={item.appIconUri || "/placeholder.svg"} alt={item.appDisplayName ?? item.appId ?? "App"} className="rounded-lg object-cover" />
-        <AvatarFallback className="rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-600">{getInitials(item.appDisplayName ?? item.appId)}</AvatarFallback>
+        <AvatarFallback className="rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">{getInitials(item.appDisplayName ?? item.appId)}</AvatarFallback>
       </Avatar>
       {item.appId ? <Link href={`/apps/${encodeURIComponent(item.appId)}`} className="min-w-0 hover:underline">{title}</Link> : title}
     </div>
@@ -260,11 +260,11 @@ function renderAppCell(item: TikTokCampaignListItemDto) {
 }
 
 function SummaryCard({ title, value, tone = "default" }: { title: string; value: number; tone?: "default" | "good" | "warn" | "danger" }) {
-  const toneClass = tone === "good" ? "text-emerald-700" : tone === "warn" ? "text-amber-700" : tone === "danger" ? "text-rose-700" : "text-slate-900"
+  const toneClass = tone === "good" ? "text-emerald-700 dark:text-emerald-300" : tone === "warn" ? "text-amber-700 dark:text-amber-300" : tone === "danger" ? "text-destructive" : "text-foreground"
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="border-border bg-card text-card-foreground shadow-sm">
       <CardContent className="p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{title}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
         <p className={`mt-2 text-2xl font-semibold ${toneClass}`}>{value.toLocaleString()}</p>
       </CardContent>
     </Card>
@@ -408,28 +408,28 @@ export function TikTokCampaignsContent() {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>TikTok Ads</span>
             <ChevronRight className="h-3 w-3" />
-            <span className="font-medium text-slate-900">Campaigns</span>
+            <span className="font-medium text-foreground">Campaigns</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-cyan-50 p-2">
-              <Megaphone className="h-5 w-5 text-cyan-700" />
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Megaphone className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">TikTok Campaigns</h1>
-              <p className="text-sm text-slate-500">Monitor synced TikTok campaign structure and drill into ad groups and ads.</p>
+              <h1 className="text-xl font-bold text-foreground">TikTok Campaigns</h1>
+              <p className="text-sm text-muted-foreground">Monitor synced TikTok campaign structure and drill into ad groups and ads.</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right text-xs text-slate-500">
-            <div className="font-medium text-slate-700">Last synced</div>
+          <div className="text-right text-xs text-muted-foreground">
+            <div className="font-medium text-foreground">Last synced</div>
             <div>{summary?.lastSyncedAt ? `${formatRelativeTime(summary.lastSyncedAt)} (${formatDateTime(summary.lastSyncedAt)})` : "No campaign sync yet"}</div>
           </div>
           {canSync ? (
-            <Button className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={sync} disabled={syncing}>
+            <Button onClick={sync} disabled={syncing}>
               {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Sync from TikTok
             </Button>
@@ -437,7 +437,7 @@ export function TikTokCampaignsContent() {
         </div>
       </div>
 
-      {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+      {error ? <div className="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
 
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <SummaryCard title="Total" value={summary?.total ?? 0} />
@@ -448,13 +448,13 @@ export function TikTokCampaignsContent() {
         <SummaryCard title="Stale Sync" value={summary?.staleSync ?? 0} tone="warn" />
       </div>
 
-      <Card className="border-slate-200">
+      <Card className="border-border bg-card text-card-foreground">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <CardTitle className="text-base font-semibold text-slate-900">Campaign Mirror</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Campaign Mirror</CardTitle>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign or ID" className="h-9 pl-9 text-sm" />
               </div>
               <SearchableFilterCombobox
@@ -495,7 +495,7 @@ export function TikTokCampaignsContent() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="px-4">Campaign</TableHead>
                   <TableHead className="px-4">Account</TableHead>
                   <TableHead className="px-4">App</TableHead>
@@ -509,30 +509,30 @@ export function TikTokCampaignsContent() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">Loading TikTok campaigns...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">Loading TikTok campaigns...</TableCell></TableRow>
                 ) : rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">No TikTok campaigns found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">No TikTok campaigns found.</TableCell></TableRow>
                 ) : rows.map((item: TikTokCampaignListItemDto) => (
                   <TableRow key={item.id}>
                     <TableCell className="px-4 py-3">
                       <Link href={`/tiktok-ads/campaigns/${item.id}`} className="block group">
-                        <div className="font-medium text-slate-900 group-hover:underline">{item.name || item.tikTokCampaignId}</div>
-                        <div className="font-mono text-xs text-slate-500">{item.tikTokCampaignId}</div>
-                        {item.createdFromRequestId ? <div className="text-xs text-cyan-700 mt-0.5">Request #{item.createdFromRequestId}</div> : null}
+                        <div className="font-medium text-foreground group-hover:underline">{item.name || item.tikTokCampaignId}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{item.tikTokCampaignId}</div>
+                        {item.createdFromRequestId ? <div className="mt-0.5 text-xs text-primary">Request #{item.createdFromRequestId}</div> : null}
                       </Link>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="text-sm text-slate-700">{item.tikTokAdAccountName || item.advertiserId}</div>
-                      <div className="font-mono text-xs text-slate-500">{item.advertiserId}</div>
+                      <div className="text-sm text-foreground">{item.tikTokAdAccountName || item.advertiserId}</div>
+                      <div className="font-mono text-xs text-muted-foreground">{item.advertiserId}</div>
                     </TableCell>
                     <TableCell className="px-4 py-3">{renderAppCell(item)}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-slate-600">{item.objective || "-"}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.objective || "-"}</TableCell>
                     <TableCell className="px-4 py-3"><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
-                    <TableCell className="px-4 py-3 text-right text-sm text-slate-700">{item.adGroupCount}</TableCell>
-                    <TableCell className="px-4 py-3 text-right text-sm text-slate-700">{item.adCount}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-slate-600">
+                    <TableCell className="px-4 py-3 text-right text-sm text-foreground">{item.adGroupCount}</TableCell>
+                    <TableCell className="px-4 py-3 text-right text-sm text-foreground">{item.adCount}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground">
                       <div>{formatRelativeTime(item.lastSyncedAt)}</div>
-                      <div className="text-xs text-slate-400">{formatDateTime(item.lastSyncedAt)}</div>
+                      <div className="text-xs text-muted-foreground">{formatDateTime(item.lastSyncedAt)}</div>
                     </TableCell>
                     <TableCell className="px-4 py-3 text-right">
                       <Button asChild size="sm" variant="outline">
@@ -544,7 +544,7 @@ export function TikTokCampaignsContent() {
               </TableBody>
             </Table>
           </div>
-          <div className="border-t border-slate-200 px-4 py-3">
+          <div className="border-t border-border px-4 py-3">
             <Pagination
               currentPage={data?.page ?? page}
               totalPages={data?.totalPages ?? 1}

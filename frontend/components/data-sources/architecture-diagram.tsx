@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp, Database, Server, HardDrive, ArrowRight, Layers } from "lucide-react"
 
 const sources = [
-  { name: "AdMob", color: "bg-green-500" },
+  { name: "AdMob", color: "bg-emerald-500/100" },
   { name: "Firebase", color: "bg-amber-500" },
-  { name: "AppLovin", color: "bg-blue-500" },
-  { name: "AppMetrica", color: "bg-red-500" },
-  { name: "XMP", color: "bg-blue-600" },
+  { name: "AppLovin", color: "bg-primary/100" },
+  { name: "AppMetrica", color: "bg-destructive/100" },
+  { name: "XMP", color: "bg-primary" },
   { name: "Adjust", color: "bg-teal-500" },
   { name: "AppsFlyer", color: "bg-sky-600" },
   { name: "Qonversion", color: "bg-purple-500" },
@@ -19,7 +19,7 @@ const sources = [
 
 const layers = [
   { name: "Bronze", description: "Raw Data", color: "bg-amber-600", textColor: "text-amber-600" },
-  { name: "Silver", description: "Cleaned & Normalized", color: "bg-slate-400", textColor: "text-slate-500" },
+  { name: "Silver", description: "Cleaned & Normalized", color: "bg-muted-foreground", textColor: "text-muted-foreground" },
   { name: "Gold", description: "Business-Ready", color: "bg-yellow-500", textColor: "text-yellow-600" },
 ]
 
@@ -31,7 +31,7 @@ export function ArchitectureDiagram() {
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg font-semibold">Data Pipeline Architecture</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="w-full justify-start text-slate-500 hover:text-slate-700 sm:w-auto sm:justify-center">
+          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="w-full justify-start text-muted-foreground hover:text-foreground sm:w-auto sm:justify-center">
             {isExpanded ? (
               <>
                 <ChevronUp className="w-4 h-4 mr-1" />
@@ -49,10 +49,10 @@ export function ArchitectureDiagram() {
 
       {isExpanded && (
         <CardContent className="pt-4">
-          <div className="overflow-x-auto rounded-lg bg-slate-50">
+          <div className="overflow-x-auto rounded-lg bg-muted/40">
           <div className="flex min-w-[760px] items-center justify-between gap-4 p-4 sm:p-6">
             <div className="flex flex-col items-center gap-2">
-              <p className="text-xs font-medium text-slate-500 mb-2">Data Sources</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Data Sources</p>
               <div className="flex flex-col gap-1.5">
                 {sources.map((source) => (
                   <div
@@ -67,33 +67,33 @@ export function ArchitectureDiagram() {
             </div>
 
             <div className="flex flex-col items-center gap-1">
-              <ArrowRight className="w-6 h-6 text-slate-400" />
-              <span className="text-xs text-slate-400">API Pull</span>
+              <ArrowRight className="w-6 h-6 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">API Pull</span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <p className="text-xs font-medium text-slate-500 mb-2">Ingestion</p>
-              <div className="p-4 bg-white rounded-lg border-2 border-dashed border-slate-300 text-center">
-                <Server className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-700">Hangfire</p>
-                <p className="text-xs text-slate-500">Job Scheduler</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Ingestion</p>
+              <div className="p-4 bg-card rounded-lg border-2 border-dashed border-border text-center">
+                <Server className="w-8 h-8 text-primary mx-auto mb-2" />
+                <p className="text-sm font-medium text-foreground">Hangfire</p>
+                <p className="text-xs text-muted-foreground">Job Scheduler</p>
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-1">
-              <ArrowRight className="w-6 h-6 text-slate-400" />
-              <span className="text-xs text-slate-400">Transform</span>
+              <ArrowRight className="w-6 h-6 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Transform</span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <p className="text-xs font-medium text-slate-500 mb-2">Data Lake</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Data Lake</p>
               <div className="flex flex-col gap-2">
                 {layers.map((layer) => (
-                  <div key={layer.name} className="flex items-center gap-3 px-4 py-2 bg-white rounded-lg border border-slate-200">
+                  <div key={layer.name} className="flex items-center gap-3 px-4 py-2 bg-card rounded-lg border border-border">
                     <div className={`w-3 h-3 rounded-full ${layer.color}`} />
                     <div>
                       <p className={`text-sm font-medium ${layer.textColor}`}>{layer.name}</p>
-                      <p className="text-xs text-slate-500">{layer.description}</p>
+                      <p className="text-xs text-muted-foreground">{layer.description}</p>
                     </div>
                   </div>
                 ))}
@@ -101,23 +101,23 @@ export function ArchitectureDiagram() {
             </div>
 
             <div className="flex flex-col items-center gap-1">
-              <ArrowRight className="w-6 h-6 text-slate-400" />
-              <span className="text-xs text-slate-400">Backup</span>
+              <ArrowRight className="w-6 h-6 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Backup</span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <p className="text-xs font-medium text-slate-500 mb-2">Storage</p>
-              <div className="p-4 bg-white rounded-lg border-2 border-dashed border-slate-300 text-center">
-                <HardDrive className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-700">MinIO</p>
-                <p className="text-xs text-slate-500">Object Storage</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Storage</p>
+              <div className="p-4 bg-card rounded-lg border-2 border-dashed border-border text-center">
+                <HardDrive className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm font-medium text-foreground">MinIO</p>
+                <p className="text-xs text-muted-foreground">Object Storage</p>
               </div>
             </div>
           </div>
           </div>
 
-          <div className="mt-4 p-4 bg-slate-100 rounded-lg">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 sm:gap-6">
+          <div className="mt-4 p-4 bg-muted rounded-lg">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:gap-6">
               <div className="flex items-center gap-2 shrink-0">
                 <Layers className="w-4 h-4" />
                 <span className="font-medium">Data Flow:</span>

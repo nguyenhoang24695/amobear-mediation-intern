@@ -134,7 +134,7 @@ export function TikTokDashboardFilters({
   onRefresh,
 }: TikTokDashboardFiltersProps) {
   return (
-    <Card className="border-slate-200 bg-white p-4 shadow-sm">
+    <Card className="border-slate-200  p-4 shadow-sm">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>

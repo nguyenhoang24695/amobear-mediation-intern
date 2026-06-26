@@ -62,26 +62,26 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-lg font-semibold">Sync jobs timeline &amp; status</CardTitle>
-            <p className="text-xs text-slate-500 mt-1">{windowLabel}</p>
+            <p className="text-xs text-muted-foreground mt-1">{windowLabel}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-slate-500 max-w-[220px] sm:max-w-none">
+              <span className="text-muted-foreground max-w-[220px] sm:max-w-none">
                 Bar fill follows each source (row); icon shows success / failed / running.
               </span>
               <span className="inline-flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> Success
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" /> Success
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <XCircle className="w-3.5 h-3.5 text-red-600" /> Failed
+                  <XCircle className="w-3.5 h-3.5 text-destructive" /> Failed
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Loader2 className="w-3.5 h-3.5 text-blue-600" /> Running
+                  <Loader2 className="w-3.5 h-3.5 text-primary" /> Running
                 </span>
               </span>
             </div>
-            <Link href="/jobs" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+            <Link href="/jobs" className="text-primary hover:underline inline-flex items-center gap-1">
               Job Management <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -93,7 +93,7 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
             <div className="relative overflow-x-auto">
               <div className="flex ml-24 mb-2 min-w-[520px]">
                 {hours.map((hour) => (
-                  <div key={hour} className="flex-1 text-xs text-slate-400 text-center">
+                  <div key={hour} className="flex-1 text-xs text-muted-foreground text-center">
                     {hour % 4 === 0 ? `${hour.toString().padStart(2, "0")}:00` : ""}
                   </div>
                 ))}
@@ -104,33 +104,33 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
                   <div key={row.sourceKey} className="flex items-center gap-4">
                     <div className="w-28 shrink-0 flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full shrink-0 ${row.sourceColorClass}`} />
-                      <span className="text-sm font-medium text-slate-700 truncate" title={row.sourceName}>
+                      <span className="text-sm font-medium text-foreground truncate" title={row.sourceName}>
                         {row.sourceName}
                       </span>
                     </div>
 
-                    <div className="flex-1 relative h-8 bg-slate-50 rounded-md">
+                    <div className="flex-1 relative h-8 bg-muted/40 rounded-md">
                       {hours.map((hour) => (
                         <div
                           key={hour}
-                          className="absolute top-0 bottom-0 border-l border-slate-200"
+                          className="absolute top-0 bottom-0 border-l border-border"
                           style={{ left: `${(hour / WINDOW_HOURS) * 100}%` }}
                         />
                       ))}
 
                       <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                        className="absolute top-0 bottom-0 w-0.5 bg-destructive/100 z-10"
                         style={{ left: `${(currentHour / WINDOW_HOURS) * 100}%` }}
                       >
-                        <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full" />
+                        <div className="absolute -top-1 -left-1 w-2 h-2 bg-destructive/100 rounded-full" />
                       </div>
 
                       {row.bars.map((job: DataSourcesVisualBarDto) => {
                         const st = barStatus(job.status)
-                        const sourceHue = row.sourceColorClass?.trim() || "bg-slate-500"
+                        const sourceHue = row.sourceColorClass?.trim() || "bg-muted/400"
                         const barTone =
                           st === "failed"
-                            ? "bg-red-600 opacity-95 ring-1 ring-red-900/25"
+                            ? "bg-destructive opacity-95 ring-1 ring-red-900/25"
                             : st === "running"
                               ? `${sourceHue} opacity-95 animate-pulse ring-1 ring-white/40`
                               : `${sourceHue} opacity-92 hover:opacity-100`
@@ -153,18 +153,18 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
                             <TooltipContent className="p-3 max-w-xs">
                               <div className="space-y-1">
                                 <p className="font-semibold text-sm">{job.displayName}</p>
-                                <p className="text-xs text-slate-500 font-mono">{job.jobId}</p>
-                                <p className="text-xs text-slate-500">Started: {rel(job.createdAtUtc)}</p>
-                                <p className="text-xs text-slate-500">Duration: ~{durMin} min (from Hangfire states)</p>
-                                <p className="text-xs text-slate-500">Rows (checkpoint): {job.recordsLabel}</p>
+                                <p className="text-xs text-muted-foreground font-mono">{job.jobId}</p>
+                                <p className="text-xs text-muted-foreground">Started: {rel(job.createdAtUtc)}</p>
+                                <p className="text-xs text-muted-foreground">Duration: ~{durMin} min (from Hangfire states)</p>
+                                <p className="text-xs text-muted-foreground">Rows (checkpoint): {job.recordsLabel}</p>
                                 <Badge
                                   variant="outline"
                                   className={
                                     st === "success"
-                                      ? "bg-green-50 text-green-700 border-green-200"
+                                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25"
                                       : st === "failed"
-                                        ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-blue-50 text-blue-700 border-blue-200"
+                                        ? "bg-destructive/10 text-destructive border-destructive/30"
+                                        : "bg-primary/10 text-primary border-primary/20"
                                   }
                                 >
                                   {st.charAt(0).toUpperCase() + st.slice(1)}
@@ -193,7 +193,7 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
             <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
+                  <TableRow className="bg-muted/40">
                     <TableHead className="w-[200px]">Job</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Cron</TableHead>
@@ -206,19 +206,19 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
                 </TableHeader>
                 <TableBody>
                   {jobs.map((j) => (
-                    <TableRow key={j.jobId} className="hover:bg-slate-50">
+                    <TableRow key={j.jobId} className="hover:bg-muted/40">
                       <TableCell className="font-mono text-xs">
                         <Link
                           href={`/jobs?search=${encodeURIComponent(j.jobId)}`}
-                          className="text-blue-600 hover:underline"
+                          className="text-primary hover:underline"
                         >
                           {j.displayName || j.jobId}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
+                      <TableCell className="text-xs text-muted-foreground">
                         {j.sourceKey ? `${j.sourceKey}${j.domainKey ? ` / ${j.domainKey}` : ""}` : "—"}
                       </TableCell>
-                      <TableCell className="text-xs font-mono text-slate-500 max-w-[140px] truncate" title={j.cronExpression}>
+                      <TableCell className="text-xs font-mono text-muted-foreground max-w-[140px] truncate" title={j.cronExpression}>
                         {j.cronExpression || "—"}
                       </TableCell>
                       <TableCell>
@@ -226,8 +226,8 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
                           {j.enabled ? "yes" : "no"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">{rel(j.lastExecution)}</TableCell>
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">{rel(j.nextExecution)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{rel(j.lastExecution)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{rel(j.nextExecution)}</TableCell>
                       <TableCell className="text-xs">
                         {j.lastJobState ? (
                           <Badge variant="outline" className="text-[10px] font-normal">
@@ -237,7 +237,7 @@ export function SyncJobsTimeline({ timeline }: { timeline: DataSourcesTimelineDt
                           "—"
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">{rel(j.lastCheckpointAt)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{rel(j.lastCheckpointAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

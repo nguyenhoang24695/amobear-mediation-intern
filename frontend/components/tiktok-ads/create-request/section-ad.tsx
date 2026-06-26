@@ -36,20 +36,20 @@ export function AdSection({ form, reference, onChange }: Props) {
     >
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Label>Ad name</Label>
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <Wand2 className="h-3.5 w-3.5 text-slate-400" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Auto-generate</span>
               <Switch checked={isAutoEnabled} onCheckedChange={(checked) => { setIsAutoEnabled(checked); if (checked) applyGeneratedName() }} />
             </div>
           </div>
           <Input value={form.ad.adName} onChange={(event) => { markManual(); onChange({ ad: { ...form.ad, adName: event.target.value } }) }} />
-          <div className="rounded-md border bg-slate-50 px-3 py-2">
-            <p className="text-xs text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">ADGROUP_FORMAT</code></p>
-            <p className={generatedAdName ? "mt-1 font-mono text-xs text-slate-700" : "mt-1 text-xs italic text-slate-400"}>{generatedAdName || "Enter an ad group name to generate an ad name."}</p>
+          <div className="rounded-md border bg-muted/40 px-3 py-2">
+            <p className="text-xs text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5">ADGROUP_FORMAT</code></p>
+            <p className={generatedAdName ? "mt-1 font-mono text-xs text-foreground" : "mt-1 text-xs italic text-muted-foreground"}>{generatedAdName || "Enter an ad group name to generate an ad name."}</p>
             {!isAutoEnabled && generatedAdName ? (
-              <button type="button" onClick={applyGeneratedName} className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-700">Use generated name</button>
+              <button type="button" onClick={applyGeneratedName} className="mt-1 text-xs font-medium text-primary hover:text-primary/80">Use generated name</button>
             ) : null}
           </div>
         </div>

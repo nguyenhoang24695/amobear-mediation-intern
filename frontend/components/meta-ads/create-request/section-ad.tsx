@@ -26,19 +26,19 @@ export function AdSection({ form, onChange }: Props) {
   )
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-border bg-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-          <Tv className="w-4 h-4 text-slate-500" />
+        <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Tv className="w-4 h-4 text-muted-foreground" />
           Ad
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-3">
-            <Label className="text-xs font-medium text-slate-700">Ad Name <span className="text-red-500">*</span></Label>
-            <div className="flex items-center gap-2 text-[11px] text-slate-600">
-              <Wand2 className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Label className="text-xs font-medium text-foreground">Ad Name <span className="text-destructive">*</span></Label>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Wand2 className="w-3.5 h-3.5 text-muted-foreground/70" />
               <span>Auto-generate</span>
               <Switch checked={isAutoNameEnabled} onCheckedChange={(checked) => {
                 setIsAutoEnabled(checked)
@@ -55,16 +55,16 @@ export function AdSection({ form, onChange }: Props) {
               onChange({ adName: e.target.value })
             }}
           />
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 space-y-1.5">
-            <p className="text-[11px] text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">ADSET_CREATIVE</code></p>
-            <p className={`text-xs font-mono ${generatedAdName ? "text-slate-700" : "text-slate-400 italic"}`}>
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-2 space-y-1.5">
+            <p className="text-[11px] text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5 text-foreground">ADSET_CREATIVE</code></p>
+            <p className={`text-xs font-mono ${generatedAdName ? "text-foreground" : "text-muted-foreground italic"}`}>
               {generatedAdName || "Complete ad set naming first to generate an ad name."}
             </p>
             {!isAutoNameEnabled && generatedAdName ? (
               <button
                 type="button"
                 onClick={applyGeneratedName}
-                className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                className="text-[11px] font-medium text-primary hover:text-primary/80"
               >
                 Use generated name
               </button>
@@ -73,18 +73,18 @@ export function AdSection({ form, onChange }: Props) {
         </div>
 
         {/* Advanced collapsible */}
-        <div className="border border-slate-200 rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           <button
             type="button"
             onClick={() => setAdvancedOpen(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/40 hover:bg-muted transition-colors"
           >
-            <span className="text-xs font-medium text-slate-600">Advanced Settings</span>
-            {advancedOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            <span className="text-xs font-medium text-muted-foreground">Advanced Settings</span>
+            {advancedOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </button>
           {advancedOpen && (
             <div className="px-4 py-3 space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Tracking Specs JSON <span className="text-slate-400 font-normal">(optional)</span></Label>
+              <Label className="text-xs font-medium text-foreground">Tracking Specs JSON <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Textarea
                 placeholder={'[{"action.type":["app_install"],"app":[1234567890]}]'}
                 className="text-xs font-mono resize-none"
@@ -92,7 +92,7 @@ export function AdSection({ form, onChange }: Props) {
                 value={form.trackingSpecs}
                 onChange={e => onChange({ trackingSpecs: e.target.value })}
               />
-              <p className="text-[11px] text-slate-400">Raw JSON array for tracking specs. Leave empty if not required.</p>
+              <p className="text-[11px] text-muted-foreground">Raw JSON array for tracking specs. Leave empty if not required.</p>
             </div>
           )}
         </div>

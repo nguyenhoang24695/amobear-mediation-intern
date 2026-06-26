@@ -261,17 +261,17 @@ export function AppsPageContent() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">Apps</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Apps</h1>
             {appsLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
-              <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
+              <Badge variant="secondary" className="font-medium">
                 {summaryStats.total}
                 {backgroundAppsLoading ? "…" : ""}
               </Badge>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">Manage your mobile applications and ad units</p>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your mobile applications and ad units</p>
         </div>
       </div>
 
@@ -280,18 +280,18 @@ export function AppsPageContent() {
         {/* Left: Search & Filters */}
         <div className="flex min-w-0 flex-col xl:flex-row xl:items-center gap-3">
           <div className="relative w-full xl:w-80 xl:shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name, app ID, or store ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 bg-white border-slate-200"
+              className="h-10 bg-card pl-9"
             />
           </div>
 
           <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap xl:w-auto xl:flex-nowrap">
             <Select value={platform} onValueChange={(v) => handleFilterChange("Platform", v)}>
-              <SelectTrigger className="h-10 w-full bg-white lg:w-36">
+              <SelectTrigger className="h-10 w-full bg-card lg:w-36">
                 <SelectValue placeholder="Platform" />
               </SelectTrigger>
               <SelectContent>
@@ -304,7 +304,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={status} onValueChange={(v) => handleFilterChange("Status", v)}>
-              <SelectTrigger className="h-10 w-full bg-white lg:w-32">
+              <SelectTrigger className="h-10 w-full bg-card lg:w-32">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -317,7 +317,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={type} onValueChange={(v) => handleFilterChange("Type", v)}>
-              <SelectTrigger className="h-10 w-full bg-white lg:w-32">
+              <SelectTrigger className="h-10 w-full bg-card lg:w-32">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -330,7 +330,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={network} onValueChange={(v) => handleFilterChange("Network", v)}>
-              <SelectTrigger className="h-10 w-full bg-white lg:w-36">
+              <SelectTrigger className="h-10 w-full bg-card lg:w-36">
                 <SelectValue placeholder="Network" />
               </SelectTrigger>
               <SelectContent>
@@ -343,7 +343,7 @@ export function AppsPageContent() {
             </Select>
 
             <Select value={admobAccount} onValueChange={(v) => handleFilterChange("AdMob Account", v)}>
-              <SelectTrigger className="h-10 w-full bg-white lg:w-44">
+              <SelectTrigger className="h-10 w-full bg-card lg:w-44">
                 <SelectValue placeholder="AdMob Account" />
               </SelectTrigger>
               <SelectContent>
@@ -357,7 +357,7 @@ export function AppsPageContent() {
             
 
             <Select value={wfFilter} onValueChange={(v) => handleFilterChange("% WF", v)}>
-              <SelectTrigger className="h-10 w-full bg-white lg:w-32">
+              <SelectTrigger className="h-10 w-full bg-card lg:w-32">
                 <SelectValue placeholder="% WF" />
               </SelectTrigger>
               <SelectContent>
@@ -395,144 +395,144 @@ export function AppsPageContent() {
       {/* Active Filter Chips */}
       {activeFilters.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-slate-500">Active filters:</span>
+          <span className="text-sm text-muted-foreground">Active filters:</span>
           {activeFilters.map((filter) => (
             <Badge
               key={filter.type}
               variant="secondary"
-              className="bg-blue-50 text-blue-700 border border-blue-200 gap-1 pr-1"
+              className="gap-1 border border-primary/20 bg-primary/10 pr-1 text-primary"
             >
               {filter.type}: {filter.value}
-              <button onClick={() => removeFilter(filter.type)} className="ml-1 hover:bg-blue-100 rounded p-0.5">
+              <button onClick={() => removeFilter(filter.type)} className="ml-1 rounded p-0.5 hover:bg-primary/15">
                 <X className="w-3 h-3" />
               </button>
             </Badge>
           ))}
-          <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:underline">
+          <button onClick={clearAllFilters} className="text-sm text-primary hover:underline">
             Clear all
           </button>
         </div>
       )}
 
       {/* Sync Status Bar */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2 text-slate-600">
-            <Cloud className="w-4 h-4 text-blue-500" />
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Cloud className="h-4 w-4 text-primary" />
             <span>
-              Last synced: <span className="font-medium text-slate-900">
+              Last synced: <span className="font-medium text-foreground">
                 {apps && apps.length > 0 && apps[0].lastSyncedAt 
                   ? new Date(apps[0].lastSyncedAt).toLocaleString()
                   : 'Never'}
               </span>
             </span>
           </div>
-          <div className="hidden sm:block w-px h-4 bg-blue-200" />
-          <span className="text-slate-600">
-            <span className="font-medium text-slate-900">{summaryStats.total}</span> apps
+          <div className="hidden h-4 w-px bg-primary/20 sm:block" />
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">{summaryStats.total}</span> apps
           </span>
-          <span className="text-slate-300">•</span>
-          <span className="text-slate-600">
-            <span className="font-medium text-slate-900">{summaryStats.totalAdUnits.toLocaleString()}</span> ad units
+          <span className="text-muted-foreground/60">•</span>
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">{summaryStats.totalAdUnits.toLocaleString()}</span> ad units
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Auto-sync:</span>
-          <Badge className="bg-green-100 text-green-700 border-0">Enabled</Badge>
+          <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300">Enabled</Badge>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-slate-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total Apps</p>
+              <p className="text-xs text-muted-foreground">Total Apps</p>
               {appsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.total}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.total}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-500/15">
+              <Smartphone className="h-5 w-5 text-green-600 dark:text-green-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Active</p>
+              <p className="text-xs text-muted-foreground">Active</p>
               {appsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.active}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.active}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/15">
+              <Layers className="h-5 w-5 text-blue-600 dark:text-blue-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total Ad Units</p>
+              <p className="text-xs text-muted-foreground">Total Ad Units</p>
               {appsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.totalAdUnits.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.totalAdUnits.toLocaleString()}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-violet-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-500/15">
+              <Layers className="h-5 w-5 text-violet-600 dark:text-violet-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total Waterfall Ad Units</p>
+              <p className="text-xs text-muted-foreground">Total Waterfall Ad Units</p>
               {appsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">{summaryStats.totalWaterfallAdUnits.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-foreground">{summaryStats.totalWaterfallAdUnits.toLocaleString()}</p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-amber-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/15">
+              <DollarSign className="h-5 w-5 text-amber-600 dark:text-amber-300" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Avg eCPM</p>
+              <p className="text-xs text-muted-foreground">Avg eCPM</p>
               {appsLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
-                <p className="text-xl font-semibold text-slate-900">
+                <p className="text-xl font-semibold text-foreground">
                   {summaryStats.avgEcpm > 0 ? `$${summaryStats.avgEcpm.toFixed(2)}` : '—'}
                 </p>
               )}
             </div>
           </div>
         </Card>
-        <Card className="p-4 border-slate-200">
+        <Card className="border-border p-4">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-orange-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-500/15">
+                <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-300" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Unused Waterfalls</p>
+                <p className="text-xs text-muted-foreground">Unused Waterfalls</p>
                 {orphanWaterfallLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-slate-400 mt-1" />
+                  <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted-foreground" />
                 ) : (
-                  <p className="text-xl font-semibold text-slate-900">{summaryStats.orphanWaterfallCount.toLocaleString()}</p>
+                  <p className="text-xl font-semibold text-foreground">{summaryStats.orphanWaterfallCount.toLocaleString()}</p>
                 )}
               </div>
             </div>
@@ -551,21 +551,21 @@ export function AppsPageContent() {
 
       {/* Bulk Actions Bar */}
       {selectedApps.length > 0 && (canPause || canResume || canExport || canSetType) && (
-        <div className="bg-slate-900 text-white rounded-lg px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-primary">
           <span className="text-sm font-medium">{selectedApps.length} apps selected</span>
           <div className="flex items-center gap-2">
             {canPause && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Pause Selected
               </Button>
             )}
             {canResume && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Resume Selected
               </Button>
             )}
             {canExport && (
-              <Button variant="secondary" size="sm" className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0">
+              <Button variant="secondary" size="sm" className="h-8 border-0">
                 Export Selected
               </Button>
             )}
@@ -574,7 +574,7 @@ export function AppsPageContent() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
+                  className="h-8 border-0"
                   disabled={updatingType !== null}
                   onClick={() => bulkSetType("game")}
                 >
@@ -583,7 +583,7 @@ export function AppsPageContent() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-8 bg-slate-700 hover:bg-slate-600 text-white border-0"
+                  className="h-8 border-0"
                   disabled={updatingType !== null}
                   onClick={() => bulkSetType("app")}
                 >
@@ -591,7 +591,7 @@ export function AppsPageContent() {
                 </Button>
               </>
             )}
-            <button onClick={() => setSelectedApps([])} className="text-sm text-slate-300 hover:text-white ml-2">
+            <button onClick={() => setSelectedApps([])} className="ml-2 text-sm text-primary hover:underline">
               Clear selection
             </button>
           </div>

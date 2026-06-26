@@ -297,17 +297,17 @@ export function WaterfallPageContent() {
     <button
       type="button"
       onClick={() => handleSort(field)}
-      className={`inline-flex items-center gap-1 transition-colors hover:text-slate-900 ${align === "right" ? "w-full justify-end" : ""}`}
+      className={`inline-flex items-center gap-1 transition-colors hover:text-foreground ${align === "right" ? "w-full justify-end" : ""}`}
     >
       <span>{label}</span>
       {sortField === field ? (
         sortDirection === "asc" ? (
-          <ArrowUp className="h-3.5 w-3.5 text-slate-900" />
+          <ArrowUp className="h-3.5 w-3.5 text-foreground" />
         ) : (
-          <ArrowDown className="h-3.5 w-3.5 text-slate-900" />
+          <ArrowDown className="h-3.5 w-3.5 text-foreground" />
         )
       ) : (
-        <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
       )}
     </button>
   )
@@ -318,16 +318,16 @@ export function WaterfallPageContent() {
         <div>
           <Link
             href="/apps"
-            className="mb-2 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
+            className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Apps
           </Link>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold ">
             <Layers className="h-6 w-6 text-orange-500" />
             Waterfalls
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {filterMode === FILTER_UNUSED
               ? "Waterfall ad units not linked to any ad unit in a mediation group."
               : filterMode === FILTER_NO_REVENUE
@@ -335,12 +335,12 @@ export function WaterfallPageContent() {
                 : `Waterfall ad units with no ad requests in the selected range (${selectedRangeLabel}).`}
           </p>
           {activeFilterSummary ? (
-            <p className="mt-1 text-xs text-slate-500">{activeFilterSummary}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{activeFilterSummary}</p>
           ) : null}
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+      <div className="space-y-4 rounded-xl border bg-card p-4">
         <RadioGroup value={filterMode} onValueChange={setFilterMode} className="flex flex-wrap gap-6">
           <div className="flex items-center gap-2">
             <RadioGroupItem value={FILTER_UNUSED} id="filter-unused" />
@@ -364,7 +364,7 @@ export function WaterfallPageContent() {
 
         <div className="grid gap-3 lg:grid-cols-3">
           <div className="space-y-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Publisher</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Publisher</p>
             <WaterfallFilterCombobox
               value={filters.publisherId}
               placeholder="All Publishers"
@@ -387,7 +387,7 @@ export function WaterfallPageContent() {
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">App</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">App</p>
             <WaterfallFilterCombobox
               value={filters.appAdMobId}
               placeholder="All Apps"
@@ -411,7 +411,7 @@ export function WaterfallPageContent() {
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">AdMob</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">AdMob</p>
             <WaterfallFilterCombobox
               value={filters.admobId}
               placeholder="All AdMob Waterfalls"
@@ -439,13 +439,13 @@ export function WaterfallPageContent() {
         </div>
       </div>
 
-      <Card className="overflow-hidden border-slate-200">
+      <Card className="overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : items.length === 0 ? (
-          <div className="py-16 text-center text-slate-500">
+          <div className="py-16 text-center text-muted-foreground">
             {filterMode === FILTER_UNUSED
               ? "No unused waterfalls."
               : filterMode === FILTER_NO_REVENUE
@@ -457,29 +457,29 @@ export function WaterfallPageContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80">
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">
+                  <tr className="border-b bg-muted/60">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       <SortHeader field="displayName" label="Display Name" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       <SortHeader field="app" label="App" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       <SortHeader field="info" label="Info" />
                     </th>
-                    <th className="px-4 py-3 text-right font-medium text-slate-700">
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       <SortHeader field="revenue" label="Revenue" align="right" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       <SortHeader field="mediationGroup" label="Mediation Group" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       <SortHeader field="admobId" label="AdMob ID" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       <SortHeader field="publisher" label="Publisher" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -495,19 +495,19 @@ export function WaterfallPageContent() {
                       : null
 
                     return (
-                      <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                      <tr key={row.id} className="border-b transition-colors hover:bg-accent/60">
                         <td className="px-4 py-3">
                           {admobUrl ? (
                             <a
                               href={admobUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                              className="text-sm font-medium text-primary hover:underline"
                             >
                               {row.displayName || "-"}
                             </a>
                           ) : (
-                            <span className="text-slate-800">{row.displayName || "-"}</span>
+                            <span className="text-foreground">{row.displayName || "-"}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -521,73 +521,73 @@ export function WaterfallPageContent() {
                                 <img
                                   src={row.appIconUri}
                                   alt=""
-                                  className="h-8 w-8 rounded-lg object-cover transition-all group-hover:ring-2 group-hover:ring-blue-400"
+                                  className="h-8 w-8 rounded-lg object-cover transition-all group-hover:ring-2 group-hover:ring-primary/50"
                                 />
                               ) : (
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 transition-all group-hover:ring-2 group-hover:ring-blue-400">
-                                  <Layers className="h-4 w-4 text-slate-400" />
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted transition-all group-hover:ring-2 group-hover:ring-primary/50">
+                                  <Layers className="h-4 w-4 text-muted-foreground" />
                                 </div>
                               )}
                             </Link>
                           ) : (
-                            <span className="text-slate-500">-</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="space-y-0.5 text-xs">
-                            <div className="text-slate-600"><span className="text-slate-400">Format:</span> {row.format ?? "-"}</div>
-                            <div className="text-slate-500"><span className="text-slate-400">Floor:</span> {formatFloor(row.globalFloorMicros)}</div>
-                            <div className="text-slate-500"><span className="text-slate-400">Synced:</span> {formatDateTime(row.lastSyncedAt)}</div>
+                            <div className="text-muted-foreground"><span className="text-muted-foreground/75">Format:</span> {row.format ?? "-"}</div>
+                            <div className="text-muted-foreground"><span className="text-muted-foreground/75">Floor:</span> {formatFloor(row.globalFloorMicros)}</div>
+                            <div className="text-muted-foreground"><span className="text-muted-foreground/75">Synced:</span> {formatDateTime(row.lastSyncedAt)}</div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-slate-900">
+                        <td className="px-4 py-3 text-right font-medium text-foreground">
                           {formatRevenue(row.revenue)}
                         </td>
                         <td className="px-4 py-3">
                           {row.mappingDisplayName || row.adUnitDisplayName ? (
                             <div className="space-y-0.5">
                               {row.mappingDisplayName ? (
-                                <div className="text-xs font-medium text-slate-800">{row.mappingDisplayName}</div>
+                                <div className="text-xs font-medium text-foreground">{row.mappingDisplayName}</div>
                               ) : null}
                               {row.adUnitDisplayName ? (
-                                <div className="text-xs text-slate-500">Ad Unit: {row.adUnitDisplayName}</div>
+                                <div className="text-xs text-muted-foreground">Ad Unit: {row.adUnitDisplayName}</div>
                               ) : null}
                               {row.mappingState ? (
                                 <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] ${
                                   row.mappingState === "ENABLED"
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-slate-100 text-slate-600"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300"
+                                    : "bg-muted text-muted-foreground"
                                 }`}>
                                   {row.mappingState}
                                 </span>
                               ) : null}
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400">-</span>
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <button
                             type="button"
                             onClick={() => copyId(row.admobNetworkWaterfallAdUnitId)}
-                            className="inline-flex items-center gap-1 font-mono text-xs text-slate-600 hover:text-slate-900"
+                            className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
                           >
                             {row.admobNetworkWaterfallAdUnitId}
                             {copiedId === row.admobNetworkWaterfallAdUnitId ? (
-                              <span className="text-green-600">Copied</span>
+                              <span className="text-green-600 dark:text-green-300">Copied</span>
                             ) : (
                               <Copy className="h-3 w-3" />
                             )}
                           </button>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-600">{row.publisherId}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{row.publisherId}</td>
                         <td className="px-4 py-3">
                           {admobUrl ? (
                             <a
                               href={admobUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                               AdMob
@@ -601,7 +601,7 @@ export function WaterfallPageContent() {
               </table>
             </div>
             {totalCount > 0 ? (
-              <div className="border-t border-slate-200 px-4 py-3">
+              <div className="border-t px-4 py-3">
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}

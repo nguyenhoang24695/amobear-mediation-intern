@@ -86,13 +86,13 @@ export function NetworkPerformance() {
 
   if (loading) {
     return (
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-slate-900">Revenue by Ad Network</CardTitle>
+          <CardTitle className="text-base font-semibold ">Revenue by Ad Network</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </CardContent>
       </Card>
@@ -101,21 +101,21 @@ export function NetworkPerformance() {
 
   if (networks.length === 0) {
     return (
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-slate-900">Revenue by Ad Network</CardTitle>
+          <CardTitle className="text-base font-semibold ">Revenue by Ad Network</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="text-center text-sm text-slate-500 py-8">No network data available</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">No network data available</div>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="bg-white border-slate-200 shadow-sm">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-slate-900">Revenue by Ad Network</CardTitle>
+        <CardTitle className="text-base font-semibold ">Revenue by Ad Network</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-4">
@@ -124,14 +124,14 @@ export function NetworkPerformance() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: network.color }} />
-                  <span className="text-sm font-medium text-slate-700">{network.name}</span>
+                  <span className="text-sm font-medium ">{network.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-slate-500">{network.revenue}</span>
-                  <span className="text-sm font-semibold text-slate-900 w-12 text-right">{network.percentage.toFixed(1)}%</span>
+                  <span className="text-sm ">{network.revenue}</span>
+                  <span className="text-sm font-semibold  w-12 text-right">{network.percentage.toFixed(1)}%</span>
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
@@ -145,10 +145,10 @@ export function NetworkPerformance() {
         </div>
 
         {/* Summary */}
-        <div className="mt-6 pt-4 border-t border-slate-100">
+        <div className="mt-6 border-t pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500">Total Revenue</span>
-            <span className="text-lg font-bold text-slate-900">{totalRevenue}</span>
+            <span className="text-sm ">Total Revenue</span>
+            <span className="text-lg font-bold text-foreground">{totalRevenue}</span>
           </div>
         </div>
       </CardContent>

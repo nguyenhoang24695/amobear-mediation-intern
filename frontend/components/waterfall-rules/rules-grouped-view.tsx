@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -80,19 +80,19 @@ interface RulesGroupedViewProps {
 }
 
 const actionColorMap: Record<string, string> = {
-  REMOVE: "bg-red-100 text-red-700",
-  KEEP: "bg-blue-100 text-blue-700",
-  "TEST REDUCE": "bg-amber-100 text-amber-700",
-  "INCREASE 10%": "bg-green-100 text-green-700",
-  "INCREASE 20%": "bg-green-100 text-green-700",
-  "ADD LAYER": "bg-purple-100 text-purple-700",
-  "ADD HIGHER": "bg-purple-100 text-purple-700",
+  REMOVE: "bg-destructive/10 text-destructive",
+  KEEP: "bg-primary/10 text-primary",
+  "TEST REDUCE": "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  "INCREASE 10%": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  "INCREASE 20%": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  "ADD LAYER": "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  "ADD HIGHER": "bg-violet-500/10 text-violet-700 dark:text-violet-300",
 }
 
 const priorityColorMap: Record<string, string> = {
-  high: "bg-red-100 text-red-700",
-  medium: "bg-amber-100 text-amber-700",
-  low: "bg-blue-100 text-blue-700",
+  high: "bg-destructive/10 text-destructive",
+  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  low: "bg-primary/10 text-primary",
 }
 
 function conditionsSummary(rule: WaterfallRule): string {
@@ -205,27 +205,27 @@ export function RulesGroupedView({
 
   if (rules.length === 0) {
     return (
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardContent className="flex flex-col items-center justify-center py-16">
           {hasFilters ? (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Search className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No rules found</h3>
-              <p className="text-sm text-slate-500 mb-4">Try adjusting your search or filters</p>
-              <Button variant="link" className="text-blue-600" onClick={onClearFilters}>
+              <h3 className="text-lg font-semibold text-foreground mb-1">No rules found</h3>
+              <p className="text-sm text-muted-foreground mb-4">Try adjusting your search or filters</p>
+              <Button variant="link" className="text-primary" onClick={onClearFilters}>
                 Clear filters
               </Button>
             </>
           ) : (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <ListChecks className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <ListChecks className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No rules configured</h3>
-              <p className="text-sm text-slate-500 mb-4">Create your first rule to get started</p>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onCreateNew()}>
+              <h3 className="text-lg font-semibold text-foreground mb-1">No rules configured</h3>
+              <p className="text-sm text-muted-foreground mb-4">Create your first rule to get started</p>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => onCreateNew()}>
                 Create Rule
               </Button>
             </>
@@ -255,42 +255,42 @@ export function RulesGroupedView({
           
           return (
             <Collapsible key={group.id} open={isExpanded} onOpenChange={() => toggleGroup(group.id)}>
-              <Card className={`border-slate-200 overflow-hidden ${!group.isActive && group.id !== "ungrouped" ? "opacity-60" : ""}`}>
+              <Card className={`border-border overflow-hidden ${!group.isActive && group.id !== "ungrouped" ? "opacity-60" : ""}`}>
                 <div
-                  className="flex items-center justify-between px-4 py-3 border-b border-slate-100"
+                  className="flex items-center justify-between px-4 py-3 border-b border-border"
                   style={group.color ? { borderLeftWidth: 4, borderLeftColor: group.color } : undefined}
                 >
                   <CollapsibleTrigger asChild>
-                    <div className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors flex-1 -ml-2 pl-2 py-1 rounded">
+                    <div className="flex items-center gap-3 cursor-pointer hover:bg-muted/40 transition-colors flex-1 -ml-2 pl-2 py-1 rounded">
                       {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-slate-500" />
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
                       ) : (
-                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
                       )}
                       {isExpanded ? (
-                        <FolderOpen className="w-5 h-5 text-slate-600" />
+                        <FolderOpen className="w-5 h-5 text-muted-foreground" />
                       ) : (
-                        <Folder className="w-5 h-5 text-slate-600" />
+                        <Folder className="w-5 h-5 text-muted-foreground" />
                       )}
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900">{group.name}</span>
+                          <span className="font-semibold text-foreground">{group.name}</span>
                           <Badge variant="secondary" className="text-xs">
                             {group.rules.length} rule{group.rules.length !== 1 ? "s" : ""}
                           </Badge>
                           {group.id !== "ungrouped" && group.appCount > 0 && (
-                            <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">
+                            <Badge variant="outline" className="text-xs text-primary border-primary/30">
                               {group.appCount} app{group.appCount !== 1 ? "s" : ""}
                             </Badge>
                           )}
                           {activeRulesCount < group.rules.length && (
-                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                            <Badge variant="outline" className="text-xs text-amber-700 dark:text-amber-300 border-amber-500/30">
                               {activeRulesCount} active
                             </Badge>
                           )}
                         </div>
                         {group.description && (
-                          <p className="text-xs text-slate-500 mt-0.5">{group.description}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
                         )}
                       </div>
                     </div>
@@ -298,7 +298,7 @@ export function RulesGroupedView({
                   
                   <div className="flex items-center gap-2">
                     {group.id !== "ungrouped" && !group.isActive && (
-                      <Badge variant="outline" className="text-xs text-slate-500">
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
                         Disabled
                       </Badge>
                     )}
@@ -308,7 +308,7 @@ export function RulesGroupedView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-500 hover:text-slate-700"
+                            className="h-8 w-8 text-muted-foreground hover:text-muted-foreground"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <MoreHorizontal className="w-4 h-4" />
@@ -336,7 +336,7 @@ export function RulesGroupedView({
                               {!group.isDefault && (
                                 <DropdownMenuItem
                                   onClick={() => setDeleteGroupId(group.id as number)}
-                                  className="text-red-600 focus:text-red-600"
+                                  className="text-destructive focus:text-destructive"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Delete Group
@@ -352,13 +352,13 @@ export function RulesGroupedView({
                 
                 <CollapsibleContent>
                   {group.rules.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-sm text-slate-500">
+                    <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                       No rules in this group
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
                           <TableHead className="w-16 text-xs font-medium uppercase tracking-wide">Order</TableHead>
                           <TableHead className="text-xs font-medium uppercase tracking-wide">Rule Name</TableHead>
                           <TableHead className="w-24 text-xs font-medium uppercase tracking-wide">Status</TableHead>
@@ -372,22 +372,22 @@ export function RulesGroupedView({
                         {group.rules.map((rule) => (
                           <TableRow
                             key={rule.id}
-                            className={`hover:bg-slate-50 transition-colors ${!rule.active ? "opacity-60" : ""}`}
+                            className={`hover:bg-muted/40 transition-colors ${!rule.active ? "opacity-60" : ""}`}
                           >
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                <GripVertical className="w-4 h-4 text-slate-300" />
-                                <span className="text-sm font-mono text-slate-500">{rule.displayOrder}</span>
+                                <GripVertical className="w-4 h-4 text-muted-foreground/50" />
+                                <span className="text-sm font-mono text-muted-foreground">{rule.displayOrder}</span>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="p-1.5 rounded bg-slate-100">
-                                  <ListChecks className="w-4 h-4 text-slate-500" />
+                                <div className="p-1.5 rounded bg-muted">
+                                  <ListChecks className="w-4 h-4 text-muted-foreground" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-medium text-slate-900">{rule.name}</p>
-                                  <p className="text-xs text-slate-500 truncate max-w-[200px]">
+                                  <p className="font-medium text-foreground">{rule.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                                     {conditionsSummary(rule) || "No conditions"}
                                   </p>
                                 </div>
@@ -395,13 +395,13 @@ export function RulesGroupedView({
                             </TableCell>
                             <TableCell>
                               {rule.active ? (
-                                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
+                                <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
+                                  <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
                                   Active
                                 </Badge>
                               ) : (
-                                <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5" />
+                                <Badge className="bg-muted text-muted-foreground hover:bg-muted">
+                                  <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
                                   Inactive
                                 </Badge>
                               )}
@@ -409,7 +409,7 @@ export function RulesGroupedView({
                             <TableCell>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <p className="text-xs text-slate-600 truncate max-w-[240px] cursor-default">
+                                  <p className="text-xs text-muted-foreground truncate max-w-[240px] cursor-default">
                                     {conditionsSummary(rule) || "No conditions"}
                                   </p>
                                 </TooltipTrigger>
@@ -419,7 +419,7 @@ export function RulesGroupedView({
                               </Tooltip>
                             </TableCell>
                             <TableCell>
-                              <Badge className={`${actionColorMap[rule.actionType] || "bg-slate-100 text-slate-700"} hover:opacity-90`}>
+                              <Badge className={`${actionColorMap[rule.actionType] || "bg-muted text-muted-foreground"} hover:opacity-90`}>
                                 {rule.actionType}
                               </Badge>
                             </TableCell>
@@ -461,7 +461,7 @@ export function RulesGroupedView({
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       onClick={() => setDeleteId(rule.id)}
-                                      className="text-red-600 focus:text-red-600"
+                                      className="text-destructive focus:text-destructive"
                                     >
                                       <Trash2 className="w-4 h-4 mr-2" />
                                       Delete
@@ -493,7 +493,7 @@ export function RulesGroupedView({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
               onClick={() => {
                 if (deleteId) {
                   onDelete(deleteId)
@@ -518,7 +518,7 @@ export function RulesGroupedView({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
               onClick={() => {
                 if (deleteGroupId) {
                   onDeleteGroup(deleteGroupId)
@@ -534,4 +534,5 @@ export function RulesGroupedView({
     </TooltipProvider>
   )
 }
+
 

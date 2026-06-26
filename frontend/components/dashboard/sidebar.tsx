@@ -415,7 +415,7 @@ export function Sidebar(props: SidebarProps) {
       fallback={
         <aside
           className={cn(
-            "fixed left-0 top-0 z-40 hidden h-screen border-r border-slate-200 bg-white md:flex",
+            "fixed left-0 top-0 z-40 hidden h-screen border-r bg-sidebar md:flex",
             props.collapsed ? "w-16" : "w-60",
           )}
         />
@@ -550,22 +550,22 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-slate-200 bg-white transition-all duration-300 md:flex",
+          "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 md:flex",
           collapsed ? "w-16" : "w-60",
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
+        <div className="h-16 flex items-center justify-between border-b px-4">
           <div className="flex items-center gap-2">
             <Logo size={32} className="rounded-lg overflow-hidden" />
 
 
-            {!collapsed && <span className="font-semibold text-slate-900">Nexus</span>}
+            {!collapsed && <span className="font-semibold text-sidebar-foreground">Nexus</span>}
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-slate-400 hover:text-slate-600"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={onToggle}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -573,7 +573,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
           {sidebarNavItems.map((item) => {
             const isVisible =
               item.isShow === undefined
@@ -602,7 +602,9 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
               <div
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                  isActive ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
                 <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -628,7 +630,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                     {hasSubmenu && (
                       <ChevronRight
                         className={cn(
-                          "w-4 h-4 text-slate-400 transition-transform",
+                          "w-4 h-4 text-muted-foreground transition-transform",
                           isExpanded && "rotate-90",
                         )}
                       />
@@ -702,8 +704,8 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                           className={cn(
                             "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
                             childActive
-                              ? "bg-blue-50 text-blue-600"
-                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                              ? "bg-primary/10 text-primary"
+                              : "text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                           )}
                         >
                           {child.icon && <child.icon className="w-3.5 h-3.5 flex-shrink-0" />}
@@ -725,7 +727,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
 
         {/* Divider */}
         <div className="px-4">
-          <div className="border-t border-slate-200" />
+          <div className="border-t" />
         </div>
 
         {/* Help Link */}
@@ -737,8 +739,8 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
                   pathname.startsWith("/help")
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                    ? "bg-primary/10 text-primary"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
                 <HelpCircle className="w-5 h-5 flex-shrink-0" />
@@ -754,7 +756,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-slate-200">
+        <div className="border-t p-4">
           <div className={cn("flex items-center gap-3 group", collapsed && "justify-center")}>
             <Link href="/profile" className={cn("flex items-center gap-3 flex-1 min-w-0", collapsed && "justify-center")}>
               <Avatar className="h-9 w-9">
@@ -765,10 +767,10 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
               </Avatar>
               {!collapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-600">
+                  <p className="truncate text-sm font-medium text-sidebar-foreground group-hover:text-primary">
                     {getUserDisplayName(user)}
                   </p>
-                  <p className="text-xs text-slate-500 truncate">{getUserRoleDisplayName(user)}</p>
+                  <p className="truncate text-xs text-muted-foreground">{getUserRoleDisplayName(user)}</p>
                 </div>
               )}
             </Link>
@@ -778,7 +780,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-slate-400 hover:text-slate-600"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowLogoutModal(true)}
                   >
                     <LogOut className="w-4 h-4" />
@@ -815,7 +817,7 @@ function SidebarInner({ collapsed, onToggle }: SidebarProps) {
               <label htmlFor="sidebar-logout-all" className="text-sm font-medium cursor-pointer">
                 Log out from all devices
               </label>
-              <p className="text-xs text-slate-500">This will end all your active sessions</p>
+              <p className="text-xs text-muted-foreground">This will end all your active sessions</p>
             </div>
           </div>
 

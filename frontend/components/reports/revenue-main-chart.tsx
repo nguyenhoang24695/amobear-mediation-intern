@@ -383,7 +383,7 @@ export function RevenueMainChart({ chartType, selectedMetrics, compareEnabled }:
           dataKey="date"
           axisLine={false}
           tickLine={false}
-          tick={{ fontSize: 11, fill: "#64748b" }}
+          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
           dy={10}
           interval="preserveStartEnd"
         />
@@ -392,7 +392,7 @@ export function RevenueMainChart({ chartType, selectedMetrics, compareEnabled }:
         <YAxis
           axisLine={false}
           tickLine={false}
-          tick={{ fontSize: 11, fill: "#64748b" }}
+          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
           tickFormatter={(v) => {
             if (selectedMetrics[0] === "revenue") return `$${(v / 1000).toFixed(1)}k`
             if (selectedMetrics[0] === "ecpm") return `$${v}`
@@ -402,14 +402,14 @@ export function RevenueMainChart({ chartType, selectedMetrics, compareEnabled }:
           dx={-10}
         />
       ),
-      grid: <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />,
+      grid: <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />,
       tooltip: (
         <Tooltip
           content={({ active, payload, label }) => {
             if (active && payload && payload.length) {
               return (
-                <div className="bg-white border border-slate-200 rounded-lg shadow-md p-3 min-w-40">
-                  <p className="text-sm font-medium text-slate-900 mb-2">{label}</p>
+                <div className="bg-card border border-border rounded-lg shadow-md p-3 min-w-40">
+                  <p className="text-sm font-medium text-foreground mb-2">{label}</p>
                   {payload.map((entry, idx) => {
                     const metricKey = entry.dataKey?.toString().replace("previous", "").toLowerCase() || ""
                     const config = metricConfig[metricKey] || metricConfig[entry.dataKey?.toString() || "revenue"]
@@ -421,9 +421,9 @@ export function RevenueMainChart({ chartType, selectedMetrics, compareEnabled }:
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: entry.color, opacity: isPrevious ? 0.5 : 1 }}
                           />
-                          <span className="text-slate-600">{isPrevious ? `Prev ${config?.label}` : config?.label}</span>
+                          <span className="text-muted-foreground">{isPrevious ? `Prev ${config?.label}` : config?.label}</span>
                         </div>
-                        <span className="font-medium text-slate-900">{config?.format(entry.value as number)}</span>
+                        <span className="font-medium text-foreground">{config?.format(entry.value as number)}</span>
                       </div>
                     )
                   })}

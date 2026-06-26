@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useCallback, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
@@ -259,44 +259,44 @@ export function WaterfallRulesPanel({ canManageRules }: WaterfallRulesPanelProps
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Total Groups</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{totalGroups}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{totalRules} rules</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Groups</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{totalGroups}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{totalRules} rules</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                <ListChecks className="h-5 w-5 text-slate-600" />
+              <div className="rounded-lg border border-border bg-background p-2.5">
+                <ListChecks className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-emerald-500/20 bg-emerald-500/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Active Groups</p>
-                <p className="mt-1 text-2xl font-bold text-green-600">{activeGroupsCount}</p>
-                <p className="mt-0.5 text-xs text-green-500">{activeRulesCount} active rules</p>
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Active Groups</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-300">{activeGroupsCount}</p>
+                <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-300">{activeRulesCount} active rules</p>
               </div>
-              <div className="rounded-lg border border-green-200 bg-white p-2.5">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+              <div className="rounded-lg border border-emerald-500/20 bg-background p-2.5">
+                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="bg-muted/25">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Inactive Groups</p>
-                <p className="mt-1 text-2xl font-bold text-slate-600">{inactiveGroupsCount}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{inactiveRulesCount} inactive rules</p>
+                <p className="text-sm font-medium text-muted-foreground">Inactive Groups</p>
+                <p className="mt-1 text-2xl font-bold text-muted-foreground">{inactiveGroupsCount}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{inactiveRulesCount} inactive rules</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                <XCircle className="h-5 w-5 text-slate-500" />
+              <div className="rounded-lg border border-border bg-background p-2.5">
+                <XCircle className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
@@ -306,7 +306,7 @@ export function WaterfallRulesPanel({ canManageRules }: WaterfallRulesPanelProps
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex w-full flex-wrap gap-3 sm:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={ruleSearch} onChange={(event) => setRuleSearch(event.target.value)} placeholder="Search rules..." className="pl-9" />
           </div>
           <Select value={ruleStatusFilter} onValueChange={setRuleStatusFilter}>
@@ -342,14 +342,14 @@ export function WaterfallRulesPanel({ canManageRules }: WaterfallRulesPanelProps
         </div>
         <div className="flex items-center gap-2">
           {canManageRules && (
-            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setCreateGroupOpen(true)}>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setCreateGroupOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create Group
             </Button>
           )}
           <Button
             variant="ghost"
-            className="text-slate-600"
+            className="text-muted-foreground"
             onClick={() => {
               void Promise.all([refetchRules(), refetchRuleGroups()])
               toast({ title: "Refreshed", description: "Rules refreshed" })
@@ -422,3 +422,4 @@ export function WaterfallRulesPanel({ canManageRules }: WaterfallRulesPanelProps
     </div>
   )
 }
+

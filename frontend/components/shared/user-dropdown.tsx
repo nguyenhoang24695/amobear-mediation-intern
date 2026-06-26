@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
 import {
   getCurrentUser,
@@ -53,7 +54,7 @@ export function UserDropdown() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [logoutAllDevices, setLogoutAllDevices] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [theme, setTheme] = useState("system")
+  const { theme = "system", setTheme } = useTheme()
   const [user, setUser] = useState<AuthUser | null>(null)
 
   const { toast } = useToast()
@@ -104,7 +105,7 @@ export function UserDropdown() {
                 {getUserInitials(user)}
               </AvatarFallback>
             </Avatar>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
@@ -118,9 +119,9 @@ export function UserDropdown() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-medium text-slate-900">{getUserDisplayName(user)}</span>
-                <span className="text-xs font-normal text-slate-500 truncate">{user?.email || "No email"}</span>
-                <Badge variant="secondary" className="w-fit mt-1 text-xs bg-blue-100 text-blue-700">
+                <span className="font-medium text-foreground">{getUserDisplayName(user)}</span>
+                <span className="truncate text-xs font-normal text-muted-foreground">{user?.email || "No email"}</span>
+                <Badge variant="secondary" className="mt-1 w-fit text-xs">
                   {getUserRoleDisplayName(user)}
                 </Badge>
               </div>
@@ -214,7 +215,7 @@ export function UserDropdown() {
               <label htmlFor="logout-all" className="text-sm font-medium cursor-pointer">
                 Log out from all devices
               </label>
-              <p className="text-xs text-slate-500">This will end all your active sessions</p>
+              <p className="text-xs text-muted-foreground">This will end all your active sessions</p>
             </div>
           </div>
 

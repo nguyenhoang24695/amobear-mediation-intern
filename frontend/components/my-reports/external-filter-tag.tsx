@@ -61,10 +61,10 @@ function FilterTagButton({
   showChevron?: boolean
 }) {
   return (
-    <span className="inline-flex h-8 max-w-[280px] cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm hover:border-gray-300">
-      {label ? <span className="text-gray-600">{label}</span> : null}
-      <span className="truncate font-medium text-blue-600">{value}</span>
-      {showChevron ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" /> : null}
+    <span className="inline-flex h-8 max-w-[280px] cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm hover:bg-muted/60">
+      {label ? <span className="text-muted-foreground">{label}</span> : null}
+      <span className="truncate font-medium text-primary">{value}</span>
+      {showChevron ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" /> : null}
     </span>
   )
 }
@@ -186,7 +186,7 @@ function renderFilterEditor(
     case MY_REPORT_CONFIG_KEY.teams:
       return (
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-gray-500">Teams</Label>
+          <Label className="text-xs font-medium text-muted-foreground">Teams</Label>
           <GroupedTeamMultiSelect
             teams={filterTeams}
             teamGroups={filterTeamGroups}
@@ -217,7 +217,7 @@ function renderFilterEditor(
     case MY_REPORT_CONFIG_KEY.revenueSource:
       return (
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-gray-500">Revenue source</Label>
+          <Label className="text-xs font-medium text-muted-foreground">Revenue source</Label>
           <Select
             value={draft.revenueSource}
             onValueChange={(v) => updateDraft({ revenueSource: v })}

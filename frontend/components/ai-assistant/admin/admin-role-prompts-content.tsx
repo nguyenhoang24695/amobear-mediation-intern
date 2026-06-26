@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -52,6 +52,13 @@ const craftSections: { key: CraftKey; label: string; badge: string }[] = [
   { key: "craftFormat", label: "Format", badge: "F" },
   { key: "craftTone", label: "Tone", badge: "T" },
 ]
+
+const craftBadgeClass =
+  "border-primary/20 bg-primary/10 text-primary text-[11px] font-bold px-1.5 py-0"
+const sectionPanelClass =
+  "rounded-lg border bg-muted/25 p-4 transition-colors hover:bg-muted/35"
+const codeBlockClass =
+  "rounded-md border bg-background p-3 font-mono text-xs text-foreground/80 whitespace-pre-wrap"
 
 const emptyRoleForm = {
   roleKey: "",
@@ -295,8 +302,8 @@ export function AdminRolePromptsContent() {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     )
@@ -304,8 +311,8 @@ export function AdminRolePromptsContent() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="min-h-screen bg-muted/20 p-6">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link href="/ai-assistant">
@@ -313,11 +320,11 @@ export function AdminRolePromptsContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
-                <Tag className="h-6 w-6" />
+              <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+                <Tag className="h-6 w-6 text-primary" />
                 AI Role Prompt Management
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Quản lý CRAFT prompts cho từng role, global rules và defaults
               </p>
             </div>
@@ -330,7 +337,7 @@ export function AdminRolePromptsContent() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-slate-500" />
+                  <Shield className="h-4 w-4 text-primary" />
                   Base Rules
                 </CardTitle>
                 <div className="flex items-center gap-2">
@@ -345,7 +352,7 @@ export function AdminRolePromptsContent() {
               </div>
             </CardHeader>
             <CardContent>
-              <pre className="text-xs text-slate-600 font-mono whitespace-pre-wrap bg-slate-50 rounded-md p-3 line-clamp-4">
+              <pre className={cn(codeBlockClass, "line-clamp-4")}>
                 {baseRulesConfig?.configValue?.slice(0, 300) ?? "Not configured"}...
               </pre>
             </CardContent>
@@ -355,7 +362,7 @@ export function AdminRolePromptsContent() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-slate-500" />
+                  <Settings className="h-4 w-4 text-primary" />
                   CRAFT Defaults
                 </CardTitle>
                 <div className="flex items-center gap-2">
@@ -372,12 +379,12 @@ export function AdminRolePromptsContent() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-xs text-slate-600">
-                <span className="font-medium text-slate-700">Format:</span>{" "}
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Format:</span>{" "}
                 {formatDefaultConfig?.configValue?.slice(0, 80) ?? "Not configured"}...
               </div>
-              <div className="text-xs text-slate-600">
-                <span className="font-medium text-slate-700">Tone:</span>{" "}
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Tone:</span>{" "}
                 {toneDefaultConfig?.configValue?.slice(0, 80) ?? "Not configured"}...
               </div>
             </CardContent>
@@ -386,14 +393,14 @@ export function AdminRolePromptsContent() {
 
         {/* Role Prompt Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex h-auto max-w-full flex-wrap justify-start">
             {roles.map((role) => (
               <TabsTrigger key={role.roleKey} value={role.roleKey} className="gap-1.5">
                 {role.roleKey.toUpperCase()}
-                {!role.isActive && <span className="text-slate-400">(inactive)</span>}
+                {!role.isActive && <span className="text-muted-foreground">(inactive)</span>}
               </TabsTrigger>
             ))}
-            <TabsTrigger value="__new" className="gap-1.5 text-slate-400" onClick={() => setShowCreateDialog(true)}>
+            <TabsTrigger value="__new" className="gap-1.5 text-muted-foreground" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4" />
               New Role
             </TabsTrigger>
@@ -403,12 +410,12 @@ export function AdminRolePromptsContent() {
           <TabsContent value="__new">
             <Card>
               <CardContent className="py-16 text-center">
-                <Plus className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-700 mb-2">Create New Role Prompt</h3>
-                <p className="text-sm text-slate-500 mb-6">
+                <Plus className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mb-2 text-lg font-medium text-foreground">Create New Role Prompt</h3>
+                <p className="mb-6 text-sm text-muted-foreground">
                   Thêm role mới với CRAFT prompt riêng cho team hoặc use case cụ thể
                 </p>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateDialog(true)}>
+                <Button onClick={() => setShowCreateDialog(true)}>
                   <Plus className="h-4 w-4 mr-1" />
                   Create Role
                 </Button>
@@ -421,13 +428,13 @@ export function AdminRolePromptsContent() {
             <TabsContent key={role.roleKey} value={role.roleKey}>
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                       <div>
-                        <CardTitle className="text-lg font-semibold text-slate-900">
+                        <CardTitle className="text-lg font-semibold text-foreground">
                           {role.displayName}
                         </CardTitle>
-                        <p className="text-sm text-slate-500 mt-0.5">
+                        <p className="mt-0.5 text-sm text-muted-foreground">
                           Updated: {new Date(role.updatedAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -439,7 +446,7 @@ export function AdminRolePromptsContent() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-500 hover:text-red-700"
+                        className="text-destructive hover:text-destructive"
                         onClick={() => setShowDeleteConfirm(role)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -451,8 +458,8 @@ export function AdminRolePromptsContent() {
                         disabled={isSaving}
                         className={cn(
                           role.isActive
-                            ? "bg-emerald-600 hover:bg-emerald-700"
-                            : "text-slate-500"
+                            ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                            : "text-muted-foreground"
                         )}
                       >
                         {role.isActive ? (
@@ -479,26 +486,26 @@ export function AdminRolePromptsContent() {
                     const value = role[key]
 
                     return (
-                      <div key={key} className="border rounded-lg p-4 bg-slate-50/50">
-                        <div className="flex items-center justify-between mb-2">
+                      <div key={key} className={sectionPanelClass}>
+                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-2">
                             <Badge
                               variant="outline"
-                              className="text-[11px] font-bold px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200"
+                              className={craftBadgeClass}
                             >
                               {badge}
                             </Badge>
-                            <span className="text-sm font-medium text-slate-700">{label}</span>
+                            <span className="text-sm font-medium text-foreground">{label}</span>
                           </div>
                           {isOverridable ? (
                             <div className="flex items-center gap-2">
-                              <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
+                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                                 <input
                                   type="checkbox"
                                   checked={isOverridden}
                                   onChange={() => handleOverrideToggle(role, key as "craftFormat" | "craftTone")}
                                   disabled={isSaving}
-                                  className="rounded border-slate-300"
+                                  className="rounded border-input accent-primary"
                                 />
                                 Override default
                               </label>
@@ -528,9 +535,9 @@ export function AdminRolePromptsContent() {
                         </div>
 
                         {isOverridable && !isOverridden ? (
-                          <p className="text-xs text-slate-400 italic">Using global default</p>
+                          <p className="text-xs italic text-muted-foreground">Using global default</p>
                         ) : (
-                          <pre className="text-xs text-slate-600 font-mono whitespace-pre-wrap bg-white rounded-md p-3 border border-slate-100">
+                          <pre className={codeBlockClass}>
                             {value || "(empty)"}
                           </pre>
                         )}
@@ -539,20 +546,20 @@ export function AdminRolePromptsContent() {
                   })}
 
                   {/* Topics */}
-                  <div className="border rounded-lg p-4 bg-slate-50/50">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Tag className="h-4 w-4 text-slate-500" />
-                      <span className="text-sm font-medium text-slate-700">Topics</span>
+                  <div className={sectionPanelClass}>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium text-foreground">Topics</span>
                     </div>
                     <div className="space-y-2">
                       {role.includedTopics.length > 0 && (
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-slate-500 w-16">Included:</span>
+                          <span className="w-16 text-xs text-muted-foreground">Included:</span>
                           {role.includedTopics.map((t) => (
                             <Badge
                               key={t}
                               variant="outline"
-                              className="text-[11px] border-emerald-300 text-emerald-700 bg-emerald-50"
+                              className="border-emerald-500/30 bg-emerald-500/10 text-[11px] text-emerald-700 dark:text-emerald-300"
                             >
                               {t}
                             </Badge>
@@ -561,12 +568,12 @@ export function AdminRolePromptsContent() {
                       )}
                       {role.excludedTopics.length > 0 && (
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-slate-500 w-16">Excluded:</span>
+                          <span className="w-16 text-xs text-muted-foreground">Excluded:</span>
                           {role.excludedTopics.map((t) => (
                             <Badge
                               key={t}
                               variant="outline"
-                              className="text-[11px] border-red-300 text-red-700 bg-red-50"
+                              className="border-destructive/30 bg-destructive/10 text-[11px] text-destructive"
                             >
                               {t}
                             </Badge>
@@ -574,7 +581,7 @@ export function AdminRolePromptsContent() {
                         </div>
                       )}
                       {role.includedTopics.length === 0 && role.excludedTopics.length === 0 && (
-                        <p className="text-xs text-slate-400 italic">No topic filters configured</p>
+                        <p className="text-xs italic text-muted-foreground">No topic filters configured</p>
                       )}
                     </div>
                   </div>
@@ -614,7 +621,7 @@ export function AdminRolePromptsContent() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              Edit [{editingCraft?.label}] — {selectedRole?.displayName}
+              Edit [{editingCraft?.label}] - {selectedRole?.displayName}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -637,7 +644,7 @@ export function AdminRolePromptsContent() {
             <Button variant="outline" onClick={() => setEditingCraft(null)}>
               Cancel
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={saveCraftEdit} disabled={isSaving}>
+            <Button onClick={saveCraftEdit} disabled={isSaving}>
               {isSaving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               <Check className="h-4 w-4 mr-1" />
               Save
@@ -650,26 +657,26 @@ export function AdminRolePromptsContent() {
       <Dialog open={showVersionHistory} onOpenChange={setShowVersionHistory}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Version History — {selectedRole?.displayName}</DialogTitle>
+            <DialogTitle>Version History - {selectedRole?.displayName}</DialogTitle>
           </DialogHeader>
           {isLoadingVersions ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : versions.length === 0 ? (
-            <p className="text-sm text-slate-500 py-4 text-center">No version history yet</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">No version history yet</p>
           ) : (
-            <div className="space-y-3 py-2 max-h-[400px] overflow-y-auto">
+            <div className="max-h-[400px] space-y-3 overflow-y-auto py-2">
               {versions.map((v, idx) => (
-                <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border bg-slate-50">
+                <div key={v.id} className="flex items-center justify-between rounded-lg border bg-muted/25 p-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">v{v.version}</span>
-                      {idx === 0 && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Previous</Badge>}
+                      <span className="font-medium text-foreground">v{v.version}</span>
+                      {idx === 0 && <Badge className="bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-300">Previous</Badge>}
                     </div>
-                    <p className="text-sm text-slate-600 mt-0.5">{v.changeNote || "No note"}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {v.createdByEmail || "System"} • {new Date(v.createdAt).toLocaleDateString()}
+                    <p className="mt-0.5 text-sm text-muted-foreground">{v.changeNote || "No note"}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {v.createdByEmail || "System"} - {new Date(v.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <Button
@@ -698,7 +705,7 @@ export function AdminRolePromptsContent() {
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              <span>Assembled L1 Prompt — {selectedRole?.displayName}</span>
+              <span>Assembled L1 Prompt - {selectedRole?.displayName}</span>
               {previewContent && (
                 <Badge variant="secondary" className="text-xs font-normal">
                   ~{Math.round(tokenCount).toLocaleString()} tokens
@@ -708,10 +715,10 @@ export function AdminRolePromptsContent() {
           </DialogHeader>
           {isLoadingPreview ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="overflow-y-auto max-h-[60vh] p-4 bg-slate-50 rounded-lg relative">
+            <div className="relative max-h-[60vh] overflow-y-auto rounded-lg border bg-muted/25 p-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -721,7 +728,7 @@ export function AdminRolePromptsContent() {
                 <Copy className="h-3 w-3 mr-1" />
                 Copy
               </Button>
-              <pre className="text-sm text-slate-800 whitespace-pre-wrap font-mono">{previewContent}</pre>
+              <pre className="whitespace-pre-wrap font-mono text-sm text-foreground">{previewContent}</pre>
             </div>
           )}
           <DialogFooter>
@@ -736,7 +743,7 @@ export function AdminRolePromptsContent() {
       <Dialog open={showTest} onOpenChange={setShowTest}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Test Prompt — {selectedRole?.displayName}</DialogTitle>
+            <DialogTitle>Test Prompt - {selectedRole?.displayName}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -749,7 +756,7 @@ export function AdminRolePromptsContent() {
                   onKeyDown={(e) => { if (e.key === "Enter") handleTest() }}
                 />
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                  className="shrink-0"
                   onClick={handleTest}
                   disabled={testLoading || !testQuestion.trim()}
                 >
@@ -761,7 +768,7 @@ export function AdminRolePromptsContent() {
             {testResponse && (
               <div className="space-y-2">
                 <Label>Response</Label>
-                <pre className="text-sm text-slate-800 font-mono whitespace-pre-wrap bg-slate-50 rounded-lg p-4 border max-h-[400px] overflow-y-auto">
+                <pre className="max-h-[400px] overflow-y-auto rounded-lg border bg-muted/25 p-4 font-mono text-sm text-foreground whitespace-pre-wrap">
                   {testResponse}
                 </pre>
               </div>
@@ -769,7 +776,7 @@ export function AdminRolePromptsContent() {
 
             {testLoading && (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             )}
           </div>
@@ -789,7 +796,7 @@ export function AdminRolePromptsContent() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
-              <Label>Role Key <span className="text-red-500">*</span></Label>
+              <Label>Role Key <span className="text-destructive">*</span></Label>
               <Input
                 placeholder="e.g. marketing"
                 value={createForm.roleKey}
@@ -797,7 +804,7 @@ export function AdminRolePromptsContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Display Name <span className="text-red-500">*</span></Label>
+              <Label>Display Name <span className="text-destructive">*</span></Label>
               <Input
                 placeholder="e.g. Marketing Analyst"
                 value={createForm.displayName}
@@ -805,7 +812,7 @@ export function AdminRolePromptsContent() {
               />
             </div>
             <div className="col-span-2 space-y-2">
-              <Label>Context <span className="text-red-500">*</span></Label>
+              <Label>Context <span className="text-destructive">*</span></Label>
               <Textarea
                 placeholder="You are part of..."
                 value={createForm.craftContext}
@@ -814,7 +821,7 @@ export function AdminRolePromptsContent() {
               />
             </div>
             <div className="col-span-2 space-y-2">
-              <Label>Role <span className="text-red-500">*</span></Label>
+              <Label>Role <span className="text-destructive">*</span></Label>
               <Textarea
                 placeholder="You are a..."
                 value={createForm.craftRole}
@@ -823,7 +830,7 @@ export function AdminRolePromptsContent() {
               />
             </div>
             <div className="col-span-2 space-y-2">
-              <Label>Action <span className="text-red-500">*</span></Label>
+              <Label>Action <span className="text-destructive">*</span></Label>
               <Textarea
                 placeholder="Generate..."
                 value={createForm.craftAction}
@@ -871,7 +878,6 @@ export function AdminRolePromptsContent() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
               onClick={handleCreateRole}
               disabled={isSaving || !createForm.roleKey || !createForm.displayName || !createForm.craftContext || !createForm.craftRole || !createForm.craftAction}
             >
@@ -888,7 +894,7 @@ export function AdminRolePromptsContent() {
           <DialogHeader>
             <DialogTitle>Delete Role Prompt</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-600 py-4">
+          <p className="py-4 text-sm text-muted-foreground">
             Are you sure you want to delete <strong>{showDeleteConfirm?.displayName}</strong>? This action cannot be undone.
           </p>
           <DialogFooter>

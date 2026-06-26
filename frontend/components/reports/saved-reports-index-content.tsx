@@ -140,14 +140,14 @@ function ReportsTable({
 }) {
   if (reports.length === 0) {
     return (
-      <p className="px-4 py-6 text-sm text-slate-500">No reports in this folder.</p>
+      <p className="px-4 py-6 text-sm text-muted-foreground">No reports in this folder.</p>
     )
   }
 
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+        <TableRow className="bg-muted/80 hover:bg-muted/80">
           <TableHead>Name</TableHead>
           <TableHead className="w-[220px]">Updated</TableHead>
           <TableHead className="w-[120px]" />
@@ -156,16 +156,16 @@ function ReportsTable({
       </TableHeader>
       <TableBody>
         {reports.map((report) => (
-          <TableRow key={report.id} className="hover:bg-slate-50/80">
+          <TableRow key={report.id} className="hover:bg-muted/80">
             <TableCell>
               <Link
                 href={`/reports?reportId=${report.id}`}
-                className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                className="font-medium text-primary hover:text-primary hover:underline"
               >
                 {report.name}
               </Link>
             </TableCell>
-            <TableCell className="text-sm text-slate-500">
+            <TableCell className="text-sm text-muted-foreground">
               {formatUpdatedAt(report.updatedAt)}
             </TableCell>
             <TableCell>
@@ -237,7 +237,7 @@ function ReportsTable({
                     {canDeleteReports ? (
                       <DropdownMenuItem
                         disabled={deletingReportId === report.id}
-                        className="text-red-600 focus:text-red-700"
+                        className="text-red-600 focus:text-red-700 dark:text-red-300"
                         onClick={() => onDelete(report)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -595,8 +595,8 @@ export function SavedReportsIndexContent({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Reports</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-foreground">Reports</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Browse folders and open saved custom reports.
           </p>
         </div>
@@ -608,7 +608,7 @@ export function SavedReportsIndexContent({
             </Button>
           ) : null}
           {canCreateReports ? (
-            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Button asChild className="bg-primary hover:bg-primary/90">
               <Link href="/reports?new=1">
                 <Plus className="mr-2 h-4 w-4" />
                 New report
@@ -619,7 +619,7 @@ export function SavedReportsIndexContent({
       </div>
 
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search by report name..."
           className="pl-9"
@@ -629,8 +629,8 @@ export function SavedReportsIndexContent({
       </div>
 
       {folderGroups.length === 0 ? (
-        <Card className="border-slate-200">
-          <CardContent className="py-12 text-center text-sm text-slate-500">
+        <Card className="border-border">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {searchQuery.trim()
               ? "No reports match your search."
               : canCreateReports || canManageFolders
@@ -648,25 +648,25 @@ export function SavedReportsIndexContent({
                 : `/reports?new=1&folder=${encodeURIComponent(group.label)}`
 
             return (
-              <Card key={group.key} className="overflow-hidden border-slate-200">
+              <Card key={group.key} className="overflow-hidden border-border">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-left transition-colors hover:bg-slate-100/80"
+                  className="flex w-full items-center gap-3 border-b border-border bg-muted/80 px-4 py-3 text-left transition-colors hover:bg-muted/80"
                   onClick={() => toggleFolder(group.key)}
                 >
                   {expanded ? (
-                    <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
                   {expanded ? (
-                    <FolderOpen className="h-5 w-5 shrink-0 text-blue-600" />
+                    <FolderOpen className="h-5 w-5 shrink-0 text-primary" />
                   ) : (
-                    <Folder className="h-5 w-5 shrink-0 text-blue-600" />
+                    <Folder className="h-5 w-5 shrink-0 text-primary" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900">{group.label}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-foreground">{group.label}</p>
+                    <p className="text-xs text-muted-foreground">
                       {group.reports.length} report{group.reports.length === 1 ? "" : "s"}
                     </p>
                   </div>
@@ -675,7 +675,7 @@ export function SavedReportsIndexContent({
                       asChild
                       variant="ghost"
                       size="sm"
-                      className="shrink-0 text-blue-600 hover:text-blue-700"
+                      className="shrink-0 text-primary hover:text-primary"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Link href={newReportHref}>
@@ -713,7 +713,7 @@ export function SavedReportsIndexContent({
         </div>
       )}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         {totalVisibleReports} report{totalVisibleReports === 1 ? "" : "s"}
         {searchQuery.trim() ? ` matching "${searchQuery.trim()}"` : ""}
         {" · "}
@@ -753,7 +753,7 @@ export function SavedReportsIndexContent({
             </Button>
             <Button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={creatingFolder || !newFolderName.trim()}
               onClick={() => void handleCreateFolder()}
             >
@@ -809,7 +809,7 @@ export function SavedReportsIndexContent({
             </Button>
             <Button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={Boolean(renamingReportId) || !renameReportName.trim()}
               onClick={() => void handleRenameReport()}
             >
@@ -857,7 +857,7 @@ export function SavedReportsIndexContent({
               </SelectContent>
             </Select>
             {canManageFolders ? (
-              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <div className="space-y-2 rounded-md border border-border bg-muted/50 p-3">
                 <Label htmlFor="change-report-new-folder">New folder</Label>
                 <div className="flex gap-2">
                   <Input
@@ -880,7 +880,7 @@ export function SavedReportsIndexContent({
                     {creatingFolderForMove ? "Creating…" : "Create"}
                   </Button>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   The new folder will be created and selected automatically.
                 </p>
               </div>
@@ -900,7 +900,7 @@ export function SavedReportsIndexContent({
             </Button>
             <Button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={Boolean(changingFolderReportId) || creatingFolderForMove}
               onClick={() => void handleChangeFolder()}
             >

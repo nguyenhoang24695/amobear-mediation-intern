@@ -91,16 +91,16 @@ export function ReportDatePeriodPicker({
   }
 
   return (
-    <div className="flex w-[min(95vw,720px)] flex-col overflow-hidden rounded-md bg-white">
+    <div className="flex w-[min(95vw,720px)] flex-col overflow-hidden rounded-md bg-card">
       <div className="flex min-h-0">
-        <aside className="w-[148px] shrink-0 border-r border-gray-100 py-1">
+        <aside className="w-[148px] shrink-0 border-r border-border py-1">
           {REPORT_DATE_PERIOD_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
               className={cn(
-                "w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50",
-                activePresetId === preset.id && "bg-blue-50 font-medium text-blue-600",
+                "w-full px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-muted/50",
+                activePresetId === preset.id && "bg-primary/10 font-medium text-primary",
               )}
               onClick={() => handlePresetClick(preset.id)}
             >
@@ -124,9 +124,9 @@ export function ReportDatePeriodPicker({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-gray-100 px-4 py-3">
+      <div className="flex items-center gap-3 border-t border-border px-4 py-3">
 
-        <span className="min-w-0 flex-1 truncate text-center text-sm text-gray-600">
+        <span className="min-w-0 flex-1 truncate text-center text-sm text-muted-foreground">
           {footerLabel}
         </span>
 
@@ -136,7 +136,7 @@ export function ReportDatePeriodPicker({
           </Button>
           <Button
             type="button"
-            className="h-8 bg-blue-600 px-4 hover:bg-blue-700"
+            className="h-8 bg-primary px-4 hover:bg-primary/90"
             disabled={!canApply}
             onClick={handleApply}
           >

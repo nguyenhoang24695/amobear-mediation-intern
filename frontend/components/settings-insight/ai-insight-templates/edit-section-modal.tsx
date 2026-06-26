@@ -139,14 +139,14 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
         showCloseButton
         className="flex h-[min(92dvh,820px)] w-[min(96vw,1100px)] max-w-[min(96vw,1100px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,1100px)]"
       >
-        <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-4 pr-14 text-left">
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4 pr-14 text-left">
           <DialogTitle>Section: {section?.title ?? ""}</DialogTitle>
-          <p className="text-sm font-normal text-slate-500">
+          <p className="text-sm font-normal text-muted-foreground">
             Trái: metadata & metrics. Phải: hướng dẫn AI & anomaly (cuộn độc lập).
           </p>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-slate-200 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border lg:grid-cols-2 lg:divide-x lg:divide-y-0">
           <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain p-4 sm:p-5">
             <div className="space-y-5 pb-2">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -170,7 +170,7 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
                   checked={isActive}
                   onCheckedChange={(c) => setIsActive(!!c)}
                 />
-                <label htmlFor="sec-active" className="text-sm text-slate-700">
+                <label htmlFor="sec-active" className="text-sm text-foreground">
                   Section đang bật
                 </label>
               </div>
@@ -183,7 +183,7 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
                       {k}
                       <button
                         type="button"
-                        className="rounded-full p-0.5 hover:bg-slate-300"
+                        className="rounded-full p-0.5 hover:bg-muted"
                         onClick={() => setMetrics((m) => m.filter((x) => x !== k))}
                       >
                         <X className="h-3 w-3" />
@@ -192,7 +192,7 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
                   ))}
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     className="pl-9"
                     placeholder="Tìm metric…"
@@ -200,21 +200,21 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
                     onChange={(e) => setMetricSearch(e.target.value)}
                   />
                   {metricSearch.trim() ? (
-                    <div className="z-10 mt-1 max-h-40 overflow-auto rounded-md border bg-white shadow-sm">
+                    <div className="z-10 mt-1 max-h-40 overflow-auto rounded-md border bg-card shadow-sm">
                       {filteredMetrics
                         .filter((m) => !metrics.includes(m.key))
                         .map((m) => (
                           <button
                             key={m.key}
                             type="button"
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-muted/40"
                             onClick={() => {
                               setMetrics((prev) => [...prev, m.key])
                               setMetricSearch("")
                             }}
                           >
-                            <span className="font-mono text-slate-600">{m.key}</span>
-                            <span className="ml-2 text-slate-500">{m.name}</span>
+                            <span className="font-mono text-muted-foreground">{m.key}</span>
+                            <span className="ml-2 text-muted-foreground">{m.name}</span>
                           </button>
                         ))}
                     </div>
@@ -268,10 +268,10 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
             </div>
           </div>
 
-          <div className="flex min-h-0 min-w-0 flex-col bg-slate-50/80 lg:border-l lg:border-slate-200">
-            <div className="shrink-0 border-b border-slate-200/80 px-4 py-3 sm:px-5">
-              <h3 className="text-sm font-semibold text-slate-900">Hướng dẫn AI & Anomaly</h3>
-              <p className="text-xs text-slate-500">Nội dung gửi kèm section trong prompt và ngưỡng rule-based.</p>
+          <div className="flex min-h-0 min-w-0 flex-col bg-muted/40 lg:border-l lg:border-border">
+            <div className="shrink-0 border-b border-border px-4 py-3 sm:px-5">
+              <h3 className="text-sm font-semibold text-foreground">Hướng dẫn AI & Anomaly</h3>
+              <p className="text-xs text-muted-foreground">Nội dung gửi kèm section trong prompt và ngưỡng rule-based.</p>
             </div>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-5">
               <div className="space-y-2">
@@ -295,17 +295,17 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
                   }}
                   placeholder='{"revenuePctVs7d":20}'
                 />
-                {jsonError ? <p className="text-xs text-red-600">{jsonError}</p> : null}
+                {jsonError ? <p className="text-xs text-destructive">{jsonError}</p> : null}
               </div>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-4 py-3 sm:px-6">
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button className="bg-indigo-600 hover:bg-indigo-700" type="button" onClick={handleSave}>
+          <Button className="bg-primary hover:bg-primary/90" type="button" onClick={handleSave}>
             Lưu section
           </Button>
         </DialogFooter>

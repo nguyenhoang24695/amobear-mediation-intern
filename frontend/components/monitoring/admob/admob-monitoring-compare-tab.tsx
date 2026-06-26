@@ -83,9 +83,9 @@ function formatNumber(value: number) {
 }
 
 function statusBadgeClass(status: string) {
-  if (status.toLowerCase() === "running") return "border-blue-200 bg-blue-50 text-blue-700"
+  if (status.toLowerCase() === "running") return "border-primary/20 bg-primary/10 text-primary"
   if (status.toLowerCase() === "waiting") return "border-amber-200 bg-amber-50 text-amber-700"
-  return "border-slate-200 bg-slate-50 text-slate-700"
+  return "border-border bg-muted text-muted-foreground"
 }
 
 function sourceLabel(value: string) {
@@ -103,7 +103,7 @@ function renderPlatformBadge(platformValue: string) {
         "gap-1",
         isAndroid
           ? "border-green-200 bg-green-50 text-green-700"
-          : "border-slate-200 bg-slate-50 text-slate-700",
+          : "border-border bg-muted text-muted-foreground",
       )}
     >
       {isAndroid ? (
@@ -354,7 +354,7 @@ export function AdmobMonitoringCompareTab() {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader className="flex flex-col gap-3 border-b bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="flex flex-col gap-3 border-b bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">Compare Queue</CardTitle>
             <CardDescription>
@@ -363,7 +363,7 @@ export function AdmobMonitoringCompareTab() {
           </div>
           {selectedCount > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-slate-600">{selectedCount} selected</span>
+              <span className="text-sm font-medium text-muted-foreground">{selectedCount} selected</span>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex">
@@ -439,7 +439,7 @@ export function AdmobMonitoringCompareTab() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="h-28 text-center text-slate-500">
+                    <TableCell colSpan={12} className="h-28 text-center text-muted-foreground">
                       <span className="inline-flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading rows…
@@ -448,7 +448,7 @@ export function AdmobMonitoringCompareTab() {
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="h-28 text-center text-slate-500">
+                    <TableCell colSpan={12} className="h-28 text-center text-muted-foreground">
                       No compare rows found.
                     </TableCell>
                   </TableRow>
@@ -470,23 +470,23 @@ export function AdmobMonitoringCompareTab() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 rounded-lg">
                               <AvatarImage src={item.appIconUri || "/placeholder.svg"} alt={item.appName || item.appId} />
-                              <AvatarFallback className="rounded-lg bg-slate-100">
-                                <ImageIcon className="h-5 w-5 text-slate-400" />
+                              <AvatarFallback className="rounded-lg bg-muted">
+                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
                               <Link
                                 href={`/apps/${item.appId}`}
-                                className="block truncate text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                                className="block truncate text-sm font-medium text-primary hover:underline"
                                 title={item.appName || item.appId}
                               >
                                 {item.appName || item.appId}
                               </Link>
-                              <div className="truncate text-xs text-slate-500" title={item.appId}>
+                              <div className="truncate text-xs text-muted-foreground" title={item.appId}>
                                 {item.appId}
                               </div>
                               {item.appStoreId ? (
-                                <div className="truncate font-mono text-[11px] text-slate-400" title={item.appStoreId}>
+                                <div className="truncate font-mono text-[11px] text-muted-foreground" title={item.appStoreId}>
                                   Store: {item.appStoreId}
                                 </div>
                               ) : null}
@@ -505,11 +505,11 @@ export function AdmobMonitoringCompareTab() {
                         <TableCell className="text-right font-mono text-xs">{formatNumber(item.delta)}</TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div>{formatDateTime(item.detectedAt)}</div>
-                          <div className="text-xs text-slate-400">{formatRelative(item.detectedAt)}</div>
+                          <div className="text-xs text-muted-foreground">{formatRelative(item.detectedAt)}</div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div>{formatDateTime(item.lastSyncAttemptAt)}</div>
-                          <div className="text-xs text-slate-400">{formatRelative(item.lastSyncAttemptAt)}</div>
+                          <div className="text-xs text-muted-foreground">{formatRelative(item.lastSyncAttemptAt)}</div>
                         </TableCell>
                         <TableCell className="max-w-[260px]">
                           {item.lastError ? (
@@ -518,7 +518,7 @@ export function AdmobMonitoringCompareTab() {
                               <span className="line-clamp-2">{item.lastError}</span>
                             </div>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       </TableRow>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import {
   useCallback,
@@ -107,7 +107,7 @@ export function QuickMappingGrid({
 
   if (rolesSorted.length === 0 || screensSorted.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
+      <div className="rounded-lg border border-border bg-background p-6 text-sm text-muted-foreground">
         No roles/screens found.
       </div>
     )
@@ -116,11 +116,11 @@ export function QuickMappingGrid({
   const gridTemplateColumns = `minmax(340px, 1fr) repeat(${rolesSorted.length}, minmax(160px, 220px))`
 
   return (
-    <div className="flex max-h-[calc(100dvh-18rem)] min-h-[24rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div className="flex max-h-[calc(100dvh-18rem)] min-h-[24rem] flex-col overflow-hidden rounded-lg border border-border bg-background">
       {/* Header stays fixed; body scrolls vertically below */}
-      <div className="z-30 shrink-0 border-b border-slate-200 bg-white shadow-sm">
+      <div className="z-30 shrink-0 border-b border-border bg-background shadow-sm">
         {toolbar != null && (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-200/80 px-3 py-3 sm:px-4">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-b border-border/80 px-3 py-3 sm:px-4">
             {toolbar}
           </div>
         )}
@@ -129,14 +129,14 @@ export function QuickMappingGrid({
           className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           onScroll={onHeaderScroll}
         >
-          <div className="grid bg-slate-50" style={{ gridTemplateColumns }}>
-            <div className="border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <div className="grid bg-muted/40" style={{ gridTemplateColumns }}>
+            <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Screen Permissions
             </div>
             {rolesSorted.map((r) => (
               <div
                 key={r.id}
-                className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                className="border-b border-border px-4 py-3 text-sm font-semibold text-muted-foreground"
                 title={r.description}
               >
                 {r.name}
@@ -146,27 +146,27 @@ export function QuickMappingGrid({
         </div>
       </div>
 
-      {notice != null && <div className="shrink-0 bg-white px-3 pb-3 pt-0 sm:px-4">{notice}</div>}
+      {notice != null && <div className="shrink-0 bg-background px-3 pb-3 pt-0 sm:px-4">{notice}</div>}
 
       <div
         ref={bodyScrollRef}
         className="min-h-0 flex-1 overflow-auto overscroll-contain"
         onScroll={onBodyScroll}
       >
-        <div className="grid bg-white" style={{ gridTemplateColumns }}>
+        <div className="grid bg-background" style={{ gridTemplateColumns }}>
           {/* Body */}
           {screensSorted.map((screen) => {
             const isExpanded = expandedScreens.has(screen.id)
             return (
               <div key={screen.id} className="contents">
                 {/* Screen header row (toggle all functions per role) */}
-                <div className="sticky left-0 z-10 border-b border-slate-100 bg-white px-4 py-3">
+                <div className="sticky left-0 z-10 border-b border-border bg-background px-4 py-3">
                   <div className="flex items-start gap-2">
                     <button
                       type="button"
                       className={cn(
-                        "mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
-                        disabled && "cursor-not-allowed opacity-60 hover:bg-white",
+                        "mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-muted/40",
+                        disabled && "cursor-not-allowed opacity-60 hover:bg-background",
                       )}
                       disabled={disabled}
                       onClick={() => toggleExpand(screen.id)}
@@ -179,10 +179,10 @@ export function QuickMappingGrid({
                       )}
                     </button>
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-slate-800">
+                      <span className="text-sm font-semibold text-foreground">
                         {screen.name}
                       </span>
-                      <span className="text-xs text-slate-400">{screen.module}</span>
+                      <span className="text-xs text-muted-foreground">{screen.module}</span>
                     </div>
                   </div>
                 </div>
@@ -192,8 +192,8 @@ export function QuickMappingGrid({
                     <div
                       key={role.id}
                       className={cn(
-                        "flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50",
-                        disabled && "cursor-not-allowed hover:bg-white",
+                        "flex items-center gap-2 border-b border-border px-4 py-3 text-left hover:bg-muted/40",
+                        disabled && "cursor-not-allowed hover:bg-background",
                       )}
                       role="button"
                       tabIndex={disabled ? -1 : 0}
@@ -214,7 +214,7 @@ export function QuickMappingGrid({
                         aria-label={`${role.name} - ${screen.name} (all functions)`}
                         disabled={disabled}
                       />
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-muted-foreground">
                         {state === "all" ? "All" : state === "none" ? "None" : "Some"}
                       </span>
                     </div>
@@ -225,9 +225,9 @@ export function QuickMappingGrid({
                 {isExpanded &&
                   screen.functions.map((fn) => (
                     <div key={fn.id} className="contents">
-                      <div className="sticky left-0 z-10 border-b border-slate-50 bg-white px-4 py-2 pl-12">
+                      <div className="sticky left-0 z-10 border-b border-border bg-background px-4 py-2 pl-12">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-slate-600">
+                          <span className="text-xs font-medium text-muted-foreground">
                             {fn.label}
                           </span>
                         </div>
@@ -238,8 +238,8 @@ export function QuickMappingGrid({
                           <div
                             key={role.id}
                             className={cn(
-                              "flex items-center gap-2 border-b border-slate-50 px-4 py-2 text-left hover:bg-slate-50",
-                              disabled && "cursor-not-allowed hover:bg-white",
+                              "flex items-center gap-2 border-b border-border px-4 py-2 text-left hover:bg-muted/40",
+                              disabled && "cursor-not-allowed hover:bg-background",
                             )}
                             role="button"
                             tabIndex={disabled ? -1 : 0}
@@ -271,4 +271,5 @@ export function QuickMappingGrid({
     </div>
   )
 }
+
 

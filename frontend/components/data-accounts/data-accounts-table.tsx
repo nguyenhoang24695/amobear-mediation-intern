@@ -65,18 +65,18 @@ type SortField = "name" | "network" | "accountId" | "status" | "createdAt"
 type SortDir = "asc" | "desc"
 
 const networkConfig: Record<string, { label: string; className: string; initials: string; bgColor: string }> = {
-  admob: { label: "AdMob", className: "bg-amber-50 text-amber-700 border-amber-200", initials: "AM", bgColor: "bg-amber-100 text-amber-700" },
-  applovin: { label: "AppLovin", className: "bg-violet-50 text-violet-700 border-violet-200", initials: "AL", bgColor: "bg-violet-100 text-violet-700" },
-  xmp: { label: "XMP", className: "bg-blue-50 text-blue-700 border-blue-200", initials: "XM", bgColor: "bg-blue-100 text-blue-700" },
-  appsflyer: { label: "AppsFlyer", className: "bg-sky-50 text-sky-800 border-sky-200", initials: "AF", bgColor: "bg-sky-100 text-sky-800" },
-  qonversion: { label: "Qonversion", className: "bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200", initials: "QO", bgColor: "bg-fuchsia-100 text-fuchsia-800" },
-  apple: { label: "Apple", className: "bg-slate-100 text-slate-800 border-slate-200", initials: "AP", bgColor: "bg-slate-200 text-slate-800" },
+  admob: { label: "AdMob", className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300", initials: "AM", bgColor: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+  applovin: { label: "AppLovin", className: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300", initials: "AL", bgColor: "bg-violet-500/15 text-violet-700 dark:text-violet-300" },
+  xmp: { label: "XMP", className: "border-primary/25 bg-primary/10 text-primary", initials: "XM", bgColor: "bg-primary/15 text-primary" },
+  appsflyer: { label: "AppsFlyer", className: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300", initials: "AF", bgColor: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  qonversion: { label: "Qonversion", className: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300", initials: "QO", bgColor: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300" },
+  apple: { label: "Apple", className: "border-border bg-muted text-foreground", initials: "AP", bgColor: "bg-muted text-foreground" },
 }
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
-  active: { label: "Active", dotColor: "bg-green-500" },
-  error: { label: "Error", dotColor: "bg-red-500" },
-  disabled: { label: "Disabled", dotColor: "bg-slate-400" },
+  active: { label: "Active", dotColor: "bg-emerald-500" },
+  error: { label: "Error", dotColor: "bg-destructive" },
+  disabled: { label: "Disabled", dotColor: "bg-muted-foreground" },
   pending: { label: "Pending", dotColor: "bg-amber-500" },
 }
 
@@ -224,21 +224,21 @@ export function DataAccountsTable({
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+    if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-muted-foreground" />
     return sortDir === "asc" ? (
-      <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowUp className="w-3.5 h-3.5 ml-1 text-primary" />
     ) : (
-      <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowDown className="w-3.5 h-3.5 ml-1 text-primary" />
     )
   }
 
   // Loading State
   if (loading) {
     return (
-      <Card className="border-slate-200">
+      <Card>
         <CardContent className="flex flex-col items-center justify-center px-4 py-16 text-center">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
-          <p className="text-sm text-slate-500">Loading accounts...</p>
+          <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+          <p className="text-sm text-muted-foreground">Loading accounts...</p>
         </CardContent>
       </Card>
     )
@@ -247,27 +247,27 @@ export function DataAccountsTable({
   // Empty State
   if (filteredAccounts.length === 0) {
     return (
-      <Card className="border-slate-200">
+      <Card>
         <CardContent className="flex flex-col items-center justify-center px-4 py-16 text-center">
           {hasFilters ? (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Search className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No accounts found</h3>
-              <p className="text-sm text-slate-500 mb-4">Try adjusting your search or filters</p>
-              <Button variant="link" className="text-blue-600" onClick={onClearFilters}>
+              <h3 className="text-lg font-semibold text-foreground mb-1">No accounts found</h3>
+              <p className="text-sm text-muted-foreground mb-4">Try adjusting your search or filters</p>
+              <Button variant="link" className="text-primary" onClick={onClearFilters}>
                 Clear all filters
               </Button>
             </>
           ) : (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Key className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Key className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No data accounts yet</h3>
-              <p className="text-sm text-slate-500 mb-4">Connect your first ad network account to start syncing data</p>
-              <Button className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700 min-[360px]:w-auto" onClick={onAddAccount}>
+              <h3 className="text-lg font-semibold text-foreground mb-1">No data accounts yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">Connect your first ad network account to start syncing data</p>
+              <Button className="w-full gap-2 min-[360px]:w-auto" onClick={onAddAccount}>
                 <Plus className="w-4 h-4" />
                 Add Account
               </Button>
@@ -283,15 +283,15 @@ export function DataAccountsTable({
   return (
     <>
       {/* Desktop / Tablet Table */}
-      <Card className="border-slate-200 hidden md:block">
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                       onClick={() => toggleSort("name")}
                     >
                       Account
@@ -300,7 +300,7 @@ export function DataAccountsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                       onClick={() => toggleSort("network")}
                     >
                       Network
@@ -309,7 +309,7 @@ export function DataAccountsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                       onClick={() => toggleSort("accountId")}
                     >
                       Account ID
@@ -318,7 +318,7 @@ export function DataAccountsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                       onClick={() => toggleSort("status")}
                     >
                       Status
@@ -327,7 +327,7 @@ export function DataAccountsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                       onClick={() => toggleSort("createdAt")}
                     >
                       Created
@@ -344,7 +344,7 @@ export function DataAccountsTable({
                   return (
                     <TableRow
                       key={`${account.network}-${account.id}`}
-                      className={`hover:bg-slate-50 cursor-pointer transition-colors ${!account.enabled ? "opacity-60" : ""}`}
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${!account.enabled ? "opacity-60" : ""}`}
                       onClick={() => router.push(`/data-accounts/${account.network}-${account.id}`)}
                     >
                       <TableCell>
@@ -355,8 +355,8 @@ export function DataAccountsTable({
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-semibold text-slate-900">{account.name}</p>
-                            <p className="text-xs text-slate-500">{account.isDefault ? "Default" : ""}</p>
+                            <p className="font-semibold text-foreground">{account.name}</p>
+                            <p className="text-xs text-muted-foreground">{account.isDefault ? "Default" : ""}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -365,14 +365,14 @@ export function DataAccountsTable({
                           {net.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600 font-mono">{account.accountId}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground font-mono">{account.accountId}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${stat.dotColor}`} />
                           <span className="text-sm">{stat.label}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-500">
+                      <TableCell className="text-sm text-muted-foreground">
                         {new Date(account.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -428,7 +428,7 @@ export function DataAccountsTable({
           return (
             <Card
               key={`${account.network}-${account.id}`}
-              className={`border-slate-200 cursor-pointer transition-colors hover:border-slate-300 ${!account.enabled ? "opacity-60" : ""}`}
+              className={`cursor-pointer transition-colors hover:border-primary/40 ${!account.enabled ? "opacity-60" : ""}`}
               onClick={() => router.push(`/data-accounts/${account.network}-${account.id}`)}
             >
               <CardContent className="p-4">
@@ -440,8 +440,8 @@ export function DataAccountsTable({
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="break-words font-semibold text-slate-900">{account.name}</p>
-                      <p className="break-all text-xs text-slate-500">{account.accountId}</p>
+                      <p className="break-words font-semibold text-foreground">{account.name}</p>
+                      <p className="break-all text-xs text-muted-foreground">{account.accountId}</p>
                     </div>
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
@@ -483,7 +483,7 @@ export function DataAccountsTable({
                         {canDelete && <DropdownMenuSeparator />}
                         {canDelete && (
                           <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
+                            className="text-destructive focus:text-destructive"
                             onClick={() => setDeleteAccount({ id: account.id, name: account.name, network: account.network })}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -500,7 +500,7 @@ export function DataAccountsTable({
                   </Badge>
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${stat.dotColor}`} />
-                    <span className="text-slate-600">{stat.label}</span>
+                    <span className="text-muted-foreground">{stat.label}</span>
                   </div>
                 </div>
               </CardContent>
@@ -510,7 +510,7 @@ export function DataAccountsTable({
 
         {/* Mobile Pagination */}
         <div className="flex flex-col gap-2 py-2 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, sortedAccounts.length)} of{" "}
             {sortedAccounts.length}
           </p>
@@ -544,14 +544,14 @@ export function DataAccountsTable({
             <AlertDialogTitle>Delete Account</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete{" "}
-              <span className="font-semibold text-slate-900">{deleteAccount?.name}</span>? This action cannot be undone
+              <span className="font-semibold text-foreground">{deleteAccount?.name}</span>? This action cannot be undone
               and will permanently remove the account and stop all data synchronization.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDelete}
               disabled={deleting}
             >

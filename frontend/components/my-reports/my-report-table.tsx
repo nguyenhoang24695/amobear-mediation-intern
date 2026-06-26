@@ -44,9 +44,9 @@ export type MyReportTableProps = {
 function FilterIconButton({ active }: { active: boolean }) {
   return (
     <span className="relative inline-flex">
-      <Filter className={cn("h-4 w-4", active ? "text-blue-600" : "text-gray-400")} />
+      <Filter className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
       {active ? (
-        <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-600" />
+        <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
       ) : null}
     </span>
   )
@@ -80,7 +80,7 @@ function MetricCompareCell({
   return (
     <div className="space-y-0.5">
       <div>{current}</div>
-      <div className="text-xs font-normal text-gray-500">
+      <div className="text-xs font-normal text-muted-foreground">
         {previousLabel}{" "}
         <span
           className={cn(
@@ -166,7 +166,7 @@ export function MyReportTable({
     <div className="relative">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-white">
+          <tr className="border-b border-border bg-card">
             {orderedColumns.map((column) => {
               const isPinned = pinnedColumnIds.includes(column.id)
               return (
@@ -174,9 +174,9 @@ export function MyReportTable({
                   key={column.id}
                   style={stickyStyle(column.id)}
                   className={cn(
-                    "min-w-[120px] px-4 py-3 font-medium text-gray-700",
+                    "min-w-[120px] px-4 py-3 font-medium text-foreground",
                     column.kind === "metric" ? "text-right" : "text-left",
-                    stickyClass(column.id, "bg-white"),
+                    stickyClass(column.id, "bg-card"),
                   )}
                 >
                   <div
@@ -187,18 +187,18 @@ export function MyReportTable({
                   >
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 hover:text-blue-600"
+                      className="inline-flex items-center gap-1 hover:text-primary"
                       onClick={() => onSortColumn(column.id)}
                     >
                       {column.label}
-                      <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                     {onTogglePin ? (
                       <button
                         type="button"
                         className={cn(
-                          "inline-flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100",
-                          isPinned && "text-blue-600",
+                          "inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted",
+                          isPinned && "text-primary",
                         )}
                         onClick={() => onTogglePin(column.id)}
                         aria-label={isPinned ? "Unpin column" : "Pin column"}
@@ -211,7 +211,7 @@ export function MyReportTable({
               )
             })}
           </tr>
-          <tr className="border-b border-gray-200 bg-gray-50/60">
+          <tr className="border-b border-border bg-muted/50">
             {orderedColumns.map((column) => {
               const savedConditions = filtersByColumn[column.id] ?? []
               const filterActive = savedConditions.length > 0
@@ -219,7 +219,7 @@ export function MyReportTable({
                 <th
                   key={`filter-${column.id}`}
                   style={stickyStyle(column.id)}
-                  className={cn("px-4 py-2", stickyClass(column.id, "bg-gray-50/60"))}
+                  className={cn("px-4 py-2", stickyClass(column.id, "bg-muted/50"))}
                 >
                   <div
                     className={cn(
@@ -236,7 +236,7 @@ export function MyReportTable({
                       trigger={
                         <button
                           type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded hover:bg-gray-100"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded hover:bg-muted"
                           aria-label={`Filter ${column.label}`}
                         >
                           <FilterIconButton active={filterActive} />
@@ -249,7 +249,7 @@ export function MyReportTable({
                       className="inline-flex h-7 w-7 cursor-not-allowed items-center justify-center rounded opacity-40"
                       aria-hidden
                     >
-                      <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
                 </th>
@@ -260,21 +260,21 @@ export function MyReportTable({
         <tbody>
           {displayRows.length === 0 ? (
             <tr>
-              <td colSpan={orderedColumns.length} className="px-4 py-10 text-center text-sm text-gray-500">
+              <td colSpan={orderedColumns.length} className="px-4 py-10 text-center text-sm text-muted-foreground">
                 No rows match the column filters.
               </td>
             </tr>
           ) : (
             displayRows.map((row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50/50">
+              <tr key={idx} className="border-b border-border hover:bg-muted/40">
                 {orderedColumns.map((column) => (
                   <td
                     key={`${idx}-${column.id}`}
                     style={stickyStyle(column.id)}
                     className={cn(
-                      "px-4 py-3 text-gray-900",
+                      "px-4 py-3 text-foreground",
                       column.kind === "metric" && "text-right tabular-nums",
-                      stickyClass(column.id, "bg-white"),
+                      stickyClass(column.id, "bg-background"),
                     )}
                   >
                     {column.kind === "dimension" ? (
@@ -292,15 +292,15 @@ export function MyReportTable({
               </tr>
             ))
           )}
-          <tr className="border-t-2 border-gray-300 bg-gray-100 font-semibold">
+          <tr className="border-t-2 border-border bg-muted font-semibold">
             {orderedColumns.map((column, colIndex) => (
               <td
                 key={`total-${column.id}`}
                 style={stickyStyle(column.id)}
                 className={cn(
-                  "px-4 py-3 text-gray-900",
+                  "px-4 py-3 text-foreground",
                   column.kind === "metric" && "text-right tabular-nums",
-                  stickyClass(column.id, "bg-gray-100"),
+                  stickyClass(column.id, "bg-muted"),
                 )}
               >
                 {column.kind === "dimension" && colIndex === 0 ? (
@@ -333,7 +333,7 @@ export function MyReportTable({
         <div className="pointer-events-none fixed inset-x-0 bottom-8 z-30 flex justify-center">
           <Button
             type="button"
-            className="pointer-events-auto h-10 gap-2 rounded-full bg-blue-600 px-5 shadow-lg hover:bg-blue-700"
+            className="pointer-events-auto h-10 gap-2 rounded-full bg-primary px-5 shadow-lg hover:bg-primary/90"
             onClick={onReloadData}
           >
             <RefreshCw className="h-4 w-4" />

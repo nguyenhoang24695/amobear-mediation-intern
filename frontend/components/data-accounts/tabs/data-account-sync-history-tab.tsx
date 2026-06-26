@@ -84,12 +84,12 @@ const allHistory = generateHistory()
 const statusBadge: Record<SyncStatus, { label: string; className: string; icon: React.ReactNode }> = {
   success: {
     label: "Success",
-    className: "bg-green-100 text-green-700 border-green-200",
+    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
   failed: {
     label: "Failed",
-    className: "bg-red-100 text-red-700 border-red-200",
+    className: "bg-destructive/10 text-destructive border-destructive/30",
     icon: <XCircle className="w-3 h-3" />,
   },
   running: {
@@ -159,10 +159,10 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+    if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-muted-foreground" />
     return sortDir === "asc"
-      ? <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
-      : <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      ? <ArrowUp className="w-3.5 h-3.5 ml-1 text-primary" />
+      : <ArrowDown className="w-3.5 h-3.5 ml-1 text-primary" />
   }
 
   const successCount = filtered.filter((r) => r.status === "success").length
@@ -198,15 +198,15 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
 
           {/* Summary stats */}
           <div className="flex flex-wrap items-center gap-5 text-sm">
-            <span className="text-slate-500">Total: <span className="font-semibold text-slate-900">{filtered.length}</span></span>
-            <span className="text-slate-300">|</span>
-            <span className="text-slate-500">Success: <span className="font-semibold text-green-600">{successCount}</span></span>
-            <span className="text-slate-300">|</span>
-            <span className="text-slate-500">Failed: <span className="font-semibold text-red-600">{failedCount}</span></span>
+            <span className="text-muted-foreground">Total: <span className="font-semibold text-foreground">{filtered.length}</span></span>
+            <span className="text-muted-foreground">|</span>
+            <span className="text-muted-foreground">Success: <span className="font-semibold text-emerald-600 dark:text-emerald-300">{successCount}</span></span>
+            <span className="text-muted-foreground">|</span>
+            <span className="text-muted-foreground">Failed: <span className="font-semibold text-destructive">{failedCount}</span></span>
             {runningCount > 0 && (
               <>
-                <span className="text-slate-300">|</span>
-                <span className="text-slate-500">Running: <span className="font-semibold text-amber-600">{runningCount}</span></span>
+                <span className="text-muted-foreground">|</span>
+                <span className="text-muted-foreground">Running: <span className="font-semibold text-amber-600">{runningCount}</span></span>
               </>
             )}
           </div>
@@ -214,13 +214,13 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
 
         {/* Table */}
         {paginated.length === 0 ? (
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <History className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <History className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No sync records</h3>
-              <p className="text-sm text-slate-500">No syncs match the current filters</p>
+              <h3 className="text-lg font-semibold text-foreground mb-1">No sync records</h3>
+              <p className="text-sm text-muted-foreground">No syncs match the current filters</p>
               <Button
                 variant="outline"
                 className="mt-4 bg-transparent"
@@ -232,15 +232,15 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
                       <TableHead>
                         <button
-                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                           onClick={() => toggleSort("syncTime")}
                         >
                           Sync Time <SortIcon field="syncTime" />
@@ -248,7 +248,7 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
                       </TableHead>
                       <TableHead>
                         <button
-                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                           onClick={() => toggleSort("duration")}
                         >
                           Duration <SortIcon field="duration" />
@@ -256,7 +256,7 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
                       </TableHead>
                       <TableHead>
                         <button
-                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                           onClick={() => toggleSort("status")}
                         >
                           Status <SortIcon field="status" />
@@ -264,7 +264,7 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
                       </TableHead>
                       <TableHead>
                         <button
-                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                          className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                           onClick={() => toggleSort("records")}
                         >
                           Records Synced <SortIcon field="records" />
@@ -279,16 +279,16 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
                     {paginated.map((record) => {
                       const sb = statusBadge[record.status]
                       return (
-                        <TableRow key={record.id} className="hover:bg-slate-50 transition-colors">
-                          <TableCell className="text-sm text-slate-700 whitespace-nowrap">{record.syncTime}</TableCell>
-                          <TableCell className="text-sm text-slate-600 whitespace-nowrap">{record.duration}</TableCell>
+                        <TableRow key={record.id} className="hover:bg-muted/40 transition-colors">
+                          <TableCell className="text-sm text-foreground whitespace-nowrap">{record.syncTime}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{record.duration}</TableCell>
                           <TableCell>
                             <Badge className={`gap-1 ${sb.className}`}>
                               {sb.icon}
                               {sb.label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-700">
+                          <TableCell className="text-sm text-foreground">
                             {record.status === "running" ? (
                               <span className="text-amber-600 font-medium">In progress…</span>
                             ) : (
@@ -299,14 +299,14 @@ export function DataAccountSyncHistoryTab({ accountId: _accountId }: SyncHistory
                             {record.errorMessage ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <p className="text-sm text-red-600 truncate cursor-default">{record.errorMessage}</p>
+                                  <p className="text-sm text-destructive truncate cursor-default">{record.errorMessage}</p>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-xs">
                                   <p className="text-xs">{record.errorMessage}</p>
                                 </TooltipContent>
                               </Tooltip>
                             ) : (
-                              <span className="text-slate-300 text-sm">—</span>
+                              <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </TableCell>
                         </TableRow>

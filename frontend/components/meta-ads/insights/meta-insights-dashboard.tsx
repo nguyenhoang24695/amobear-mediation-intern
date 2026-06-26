@@ -99,18 +99,18 @@ export function MetaInsightsDashboard() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>Meta Ads</span>
             <ChevronRight className="h-3 w-3" />
-            <span className="font-medium text-slate-900">Insights</span>
+            <span className="font-medium text-foreground">Insights</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-blue-50 p-2.5">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
+            <div className="rounded-xl bg-primary/10 p-2.5">
+              <BarChart3 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Meta Ads Insights</h1>
-              <p className="text-sm text-slate-500">Campaign-level Meta spend, installs, CPI, CTR, CPC, CPM, reach, frequency, impressions, plus Adjust-attributed revenue and ROAS.</p>
+              <h1 className="text-2xl font-bold text-foreground">Meta Ads Insights</h1>
+              <p className="text-sm text-muted-foreground">Campaign-level Meta spend, installs, CPI, CTR, CPC, CPM, reach, frequency, impressions, plus Adjust-attributed revenue and ROAS.</p>
             </div>
           </div>
         </div>
@@ -132,8 +132,8 @@ export function MetaInsightsDashboard() {
       />
 
       {overviewApi.error || dailyApi.error ? (
-        <Card className="border-rose-200 bg-rose-50 shadow-sm">
-          <CardContent className="p-4 text-sm text-rose-700">
+        <Card className="border-destructive/30 bg-destructive/10 shadow-sm">
+          <CardContent className="p-4 text-sm text-destructive">
             {overviewApi.error?.message ?? dailyApi.error?.message}
           </CardContent>
         </Card>
@@ -143,8 +143,8 @@ export function MetaInsightsDashboard() {
       <MetaSpendChart daily={dailyApi.data ?? []} loading={dailyApi.loading} />
 
       {hasEmptyState ? (
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-10 text-center text-sm text-slate-500">
+        <Card>
+          <CardContent className="p-10 text-center text-sm text-muted-foreground">
             No data available for the selected Meta insights range and filters.
           </CardContent>
         </Card>

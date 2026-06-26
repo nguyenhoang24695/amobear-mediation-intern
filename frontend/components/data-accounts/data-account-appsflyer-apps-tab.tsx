@@ -141,8 +141,8 @@ export function DataAccountAppsFlyerAppsTab({ accountId }: DataAccountAppsFlyerA
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">AppsFlyer app IDs</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
+          <h3 className="text-sm font-semibold text-foreground">AppsFlyer app IDs</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xl leading-relaxed">
             Each row is an AF <span className="font-mono">app_id</span> (Android package or iOS{" "}
             <span className="font-mono">id…</span>) used by sync jobs. Map the same value to{" "}
             <span className="font-mono">silver.dim_app_identifiers.appsflyer_af_app_id</span> so StarRocks UA
@@ -157,17 +157,17 @@ export function DataAccountAppsFlyerAppsTab({ accountId }: DataAccountAppsFlyerA
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : apps.length === 0 ? (
-        <p className="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-200 rounded-lg">
+        <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
           No AF apps yet. Add at least one app id for Pull/Master sync.
         </p>
       ) : (
-        <div className="border border-slate-200 rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50">
+              <TableRow className="bg-muted/40">
                 <TableHead className="text-xs">Af App ID</TableHead>
                 <TableHead className="text-xs">Display name</TableHead>
                 <TableHead className="text-xs w-24">Enabled</TableHead>
@@ -184,7 +184,7 @@ export function DataAccountAppsFlyerAppsTab({ accountId }: DataAccountAppsFlyerA
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(row)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => setDeleteRow(row)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteRow(row)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>
@@ -255,7 +255,7 @@ export function DataAccountAppsFlyerAppsTab({ accountId }: DataAccountAppsFlyerA
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

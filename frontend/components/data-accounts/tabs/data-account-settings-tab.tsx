@@ -59,12 +59,12 @@ const networkLabels: Record<NetworkType, string> = {
 }
 
 const networkBadge: Record<NetworkType, string> = {
-  admob: "bg-blue-100 text-blue-700 border-blue-200",
-  applovin: "bg-green-100 text-green-700 border-green-200",
+  admob: "bg-primary/10 text-primary border-primary/20",
+  applovin: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
   xmp: "bg-purple-100 text-purple-700 border-purple-200",
   appsflyer: "bg-sky-100 text-sky-800 border-sky-200",
   qonversion: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
-  apple: "bg-slate-100 text-slate-800 border-slate-200",
+  apple: "bg-muted text-foreground border-border",
 }
 
 
@@ -112,19 +112,19 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
 
 
       {/* ── Danger Zone ───────────────────────────────────────────── */}
-      <Card className="border-red-200">
+      <Card className="border-destructive/30">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold text-red-700">Danger Zone</CardTitle>
+          <CardTitle className="text-base font-semibold text-destructive">Danger Zone</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
 
           {/* Disable / Enable */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 {isDisabled ? "Enable Account" : "Disable Account"}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {isDisabled
                   ? "Re-enable syncing for this account."
                   : "Temporarily pause all syncing for this account without deleting any data."}
@@ -142,14 +142,14 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
           {/* Delete */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-900">Delete Account</p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-sm font-medium text-foreground">Delete Account</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Permanently remove this data account and all its sync history. This action cannot be undone.
               </p>
             </div>
             <Button
               variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50 bg-transparent flex-shrink-0"
+              className="border-destructive/30 text-destructive hover:bg-destructive/10 bg-transparent flex-shrink-0"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="w-4 h-4 mr-2" />
@@ -167,9 +167,9 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className={`flex items-center gap-3 mb-2`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDisabled ? 'bg-green-100' : 'bg-amber-100'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDisabled ? 'bg-emerald-500/10' : 'bg-amber-100'}`}>
                 {isDisabled ? (
-                  <Upload className="w-5 h-5 text-green-600" />
+                  <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
                 ) : (
                   <AlertTriangle className="w-5 h-5 text-amber-600" />
                 )}
@@ -180,9 +180,9 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
               <div className="space-y-3">
                 <p>
                   Are you sure you want to {isDisabled ? "enable" : "disable"}{" "}
-                  <span className="font-semibold text-slate-900">{account.name}</span>?
+                  <span className="font-semibold text-foreground">{account.name}</span>?
                 </p>
-                <p className="text-slate-500">
+                <p className="text-muted-foreground">
                   {isDisabled
                     ? "The account will resume data syncing on schedule."
                     : "All scheduled syncs will be paused. Existing data will be preserved and the account can be re-enabled at any time."
@@ -190,7 +190,7 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
                 </p>
                 <div className="space-y-2 pt-2">
                   <Label htmlFor="disableConfirm" className="text-sm">
-                    Type <span className="font-mono font-semibold text-slate-900">{isDisabled ? "ENABLE" : "DISABLE"}</span> to confirm
+                    Type <span className="font-mono font-semibold text-foreground">{isDisabled ? "ENABLE" : "DISABLE"}</span> to confirm
                   </Label>
                   <Input
                     id="disableConfirm"
@@ -205,7 +205,7 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDisableConfirm("")}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={isDisabled ? "bg-green-600 hover:bg-green-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"}
+              className={isDisabled ? "bg-emerald-600 text-emerald-50 hover:bg-emerald-700 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400" : "bg-amber-600 text-amber-50 hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-400"}
               disabled={disableConfirm !== (isDisabled ? "ENABLE" : "DISABLE") || isSubmitting}
               onClick={(e) => {
                 e.preventDefault()
@@ -227,32 +227,32 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-destructive" />
               </div>
               <AlertDialogTitle>Delete Data Account Permanently</AlertDialogTitle>
             </div>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p className="font-medium text-slate-900">This action is permanent and cannot be undone.</p>
-                <ul className="space-y-1.5 text-sm text-slate-600">
+                <p className="font-medium text-foreground">This action is permanent and cannot be undone.</p>
+                <ul className="space-y-1.5 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-destructive/100 flex-shrink-0" />
                     All sync history will be permanently deleted
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-destructive/100 flex-shrink-0" />
                     Linked apps will lose access to network data
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-destructive/100 flex-shrink-0" />
                     Credentials and configuration will be removed
                   </li>
                 </ul>
                 <div className="space-y-2 pt-2">
                   <Label htmlFor="deleteConfirm" className="text-sm">
                     Type{" "}
-                    <span className="font-mono font-semibold text-slate-900">{account.name}</span>{" "}
+                    <span className="font-mono font-semibold text-foreground">{account.name}</span>{" "}
                     to confirm
                   </Label>
                   <Input
@@ -268,7 +268,7 @@ export function DataAccountSettingsTab({ account, onEdit, onToggleStatus, onDele
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteConfirm("")}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteConfirm !== account.name || isDeleting}
               onClick={(e) => {
                 e.preventDefault()

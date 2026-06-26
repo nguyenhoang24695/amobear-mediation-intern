@@ -73,15 +73,15 @@ function SearchableSelect<T>({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("h-9 w-full justify-between bg-white px-3 text-left font-normal", className)}
+          className={cn("h-9 w-full justify-between bg-background px-3 text-left font-normal", className)}
         >
           <span className="min-w-0 flex-1 truncate text-left">
-            {selectedOption ? renderValue(selectedOption) : <span className="text-slate-500">{placeholder}</span>}
+            {selectedOption ? renderValue(selectedOption) : <span className="text-muted-foreground">{placeholder}</span>}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[320px] p-0" align="start">
+      <PopoverContent className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] min-w-0 p-0 sm:min-w-[320px]" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -115,7 +115,7 @@ function SearchableSelect<T>({
 function StatusRow({ ok, label }: { ok: boolean | null; label: string }) {
   if (ok === null) {
     return (
-      <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <AlertCircle className="w-3.5 h-3.5" />
         <span>{label}</span>
       </div>
@@ -123,12 +123,12 @@ function StatusRow({ ok, label }: { ok: boolean | null; label: string }) {
   }
 
   return ok ? (
-    <div className="flex items-center gap-2 text-xs text-green-700">
-      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+    <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-400">
+      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
       <span>{label}</span>
     </div>
   ) : (
-    <div className="flex items-center gap-2 text-xs text-red-600">
+    <div className="flex items-center gap-2 text-xs text-destructive">
       <XCircle className="w-3.5 h-3.5" />
       <span>{label}</span>
     </div>
@@ -138,16 +138,16 @@ function StatusRow({ ok, label }: { ok: boolean | null; label: string }) {
 function TokenStatusBadge({ state }: { state: TokenState }) {
   if (state === "none") return null
   const configs = {
-    ready: { icon: ShieldCheck, label: "Token Ready", cls: "bg-green-50 border-green-200 text-green-800" },
-    not_tested: { icon: AlertTriangle, label: "Not Tested", cls: "bg-amber-50 border-amber-200 text-amber-800" },
-    expired: { icon: ShieldAlert, label: "Token Expired", cls: "bg-red-50 border-red-200 text-red-800" },
-    missing_permissions: { icon: ShieldAlert, label: "Missing Permissions", cls: "bg-red-50 border-red-200 text-red-800" },
-    invalid: { icon: ShieldAlert, label: "Invalid Connection", cls: "bg-red-50 border-red-200 text-red-800" },
-    disabled: { icon: ShieldOff, label: "Integration Disabled", cls: "bg-slate-100 border-slate-200 text-slate-600" },
+    ready: { icon: ShieldCheck, label: "Token Ready", cls: "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400" },
+    not_tested: { icon: AlertTriangle, label: "Not Tested", cls: "border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-300" },
+    expired: { icon: ShieldAlert, label: "Token Expired", cls: "border-destructive/25 bg-destructive/10 text-destructive" },
+    missing_permissions: { icon: ShieldAlert, label: "Missing Permissions", cls: "border-destructive/25 bg-destructive/10 text-destructive" },
+    invalid: { icon: ShieldAlert, label: "Invalid Connection", cls: "border-destructive/25 bg-destructive/10 text-destructive" },
+    disabled: { icon: ShieldOff, label: "Integration Disabled", cls: "border-border bg-muted text-muted-foreground" },
   }
   const { icon: Icon, label, cls } = configs[state]
   return (
-    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs font-medium ${cls}`}>
+    <div className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs font-medium ${cls}`}>
       <Icon className="w-3.5 h-3.5" />
       {label}
     </div>
@@ -177,10 +177,10 @@ export function AccountAppSection({
   const selectedIntegration = integrations.find((integration) => integration.id.toString() === form.executionIntegrationId)
 
   return (
-    <Card className="border-slate-200">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-slate-500" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
           Account &amp; App Readiness
         </CardTitle>
       </CardHeader>
@@ -188,8 +188,8 @@ export function AccountAppSection({
         <div className="grid gap-4 md:grid-cols-2 md:items-start">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">
-                Meta Integration <span className="text-red-500">*</span>
+              <Label className="text-xs font-medium text-foreground">
+                Meta Integration <span className="text-destructive">*</span>
               </Label>
               <SearchableSelect
                 value={form.executionIntegrationId}
@@ -203,32 +203,32 @@ export function AccountAppSection({
                 getSearchText={(integration) => `${integration.displayName} ${integration.authMode} ${integration.metaBusinessName ?? ""}`}
                 renderValue={(integration) => (
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-slate-900">{integration.displayName}</span>
-                    <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0 border-slate-200 text-slate-600">
+                    <span className="truncate font-medium text-foreground">{integration.displayName}</span>
+                    <Badge variant="outline" className="shrink-0 border-border px-1.5 py-0 text-[10px] text-muted-foreground">
                       {integration.authMode === "system_user_token" ? "System User" : "User Token"}
                     </Badge>
                   </span>
                 )}
                 renderOption={(integration) => (
-                  <div className="flex items-center gap-3 py-0.5">
-                    <Badge className={integration.authMode === "system_user_token" ? "bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0" : "bg-violet-100 text-violet-700 text-[10px] px-1.5 py-0"}>
+                  <div className="flex min-w-0 flex-col gap-1 py-0.5 sm:flex-row sm:items-center sm:gap-3">
+                    <Badge className={integration.authMode === "system_user_token" ? "w-fit bg-primary/10 px-1.5 py-0 text-[10px] text-primary" : "w-fit bg-violet-500/10 px-1.5 py-0 text-[10px] text-violet-700 dark:text-violet-300"}>
                       {integration.authMode === "system_user_token" ? "System User" : "User Token"}
                     </Badge>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-slate-900">{integration.displayName}</div>
-                      <div className="truncate text-xs text-slate-400">{integration.metaBusinessName ?? integration.metaBusinessId ?? integration.tokenStatus}</div>
+                      <div className="truncate text-sm font-medium text-foreground">{integration.displayName}</div>
+                      <div className="truncate text-xs text-muted-foreground">{integration.metaBusinessName ?? integration.metaBusinessId ?? integration.tokenStatus}</div>
                     </div>
                   </div>
                 )}
               />
               {!canChangeExecutionIntegration ? (
-                <p className="text-[11px] text-slate-500">Execution integration is locked after the request leaves draft.</p>
+                <p className="text-[11px] text-muted-foreground">Execution integration is locked after the request leaves draft.</p>
               ) : null}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">
-                Meta Ad Account <span className="text-red-500">*</span>
+              <Label className="text-xs font-medium text-foreground">
+                Meta Ad Account <span className="text-destructive">*</span>
               </Label>
               <SearchableSelect
                 value={form.adAccountId}
@@ -242,20 +242,20 @@ export function AccountAppSection({
                 getSearchText={(account) => `${account.metaAdAccountId} ${account.name} ${account.currency ?? ""} ${account.timeZoneName ?? ""}`}
                 renderValue={(account) => (
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-slate-900">{account.name}</span>
-                    <span className="truncate font-mono text-xs text-slate-500">{account.metaAdAccountId}</span>
+                    <span className="truncate font-medium text-foreground">{account.name}</span>
+                    <span className="truncate font-mono text-xs text-muted-foreground">{account.metaAdAccountId}</span>
                   </span>
                 )}
                 renderOption={(account) => (
                   <div className="flex items-center gap-3 py-0.5">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-slate-500">{account.metaAdAccountId}</span>
-                        <Badge className={account.isActive ? "bg-green-100 text-green-700 text-[10px] px-1.5 py-0" : "bg-red-100 text-red-600 text-[10px] px-1.5 py-0"}>
+                        <span className="font-mono text-xs text-muted-foreground">{account.metaAdAccountId}</span>
+                        <Badge className={account.isActive ? "bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400" : "bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"}>
                           {account.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </div>
-                      <div className="truncate text-sm font-medium text-slate-900">
+                      <div className="truncate text-sm font-medium text-foreground">
                         {account.name} - {account.currency ?? "-"} - {account.timeZoneName ?? "-"}
                       </div>
                     </div>
@@ -263,22 +263,22 @@ export function AccountAppSection({
                 )}
               />
               {!canChangeAdAccount ? (
-                <p className="text-[11px] text-slate-500">Ad account is locked while this draft reuses an existing Meta creative.</p>
+                <p className="text-[11px] text-muted-foreground">Ad account is locked while this draft reuses an existing Meta creative.</p>
               ) : null}
             </div>
 
             {form.adAccountId ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-600">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Integration Status{selectedIntegration?.displayName ? ` - ${selectedIntegration.displayName}` : integrationName ? ` - ${integrationName}` : ""}
                   </span>
                   <TokenStatusBadge state={tokenState} />
                 </div>
                 {isTokenBlocking ? (
-                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-red-700">
+                  <div className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-destructive" />
+                    <p className="text-xs text-destructive">
                       {tokenState === "expired" && "The selected integration token is missing or expired. Update the access token and test the integration again before submitting."}
                       {tokenState === "missing_permissions" && "The selected integration is missing required permissions (ads_management, ads_read)."}
                       {tokenState === "invalid" && "The selected integration failed its last connection test. Review the access token, app credentials, and business permissions."}
@@ -287,9 +287,9 @@ export function AccountAppSection({
                     </p>
                   </div>
                 ) : tokenState === "not_tested" ? (
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-amber-800">
+                  <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
                       This integration has not been tested recently. Request execution may still work, but operators should validate the Meta connection from the integration screen.
                     </p>
                   </div>
@@ -299,8 +299,8 @@ export function AccountAppSection({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-700">
-              App <span className="text-red-500">*</span>
+            <Label className="text-xs font-medium text-foreground">
+              App <span className="text-destructive">*</span>
             </Label>
             <SearchableSelect
               value={form.paidMediaAppBindingId}
@@ -317,15 +317,15 @@ export function AccountAppSection({
               getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.platform ?? ""} ${mapping.metaApplicationId ?? ""}`}
               renderValue={(mapping) => (
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate font-medium text-slate-900">{mapping.appDisplayName ?? mapping.appId ?? mapping.packageName ?? mapping.normalizedStoreIdentifier ?? `Store ${mapping.id}`}</span>
-                  <span className="truncate font-mono text-xs text-slate-500">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `store:${mapping.id}`}</span>
+                  <span className="truncate font-medium text-foreground">{mapping.appDisplayName ?? mapping.appId ?? mapping.packageName ?? mapping.normalizedStoreIdentifier ?? `Store ${mapping.id}`}</span>
+                  <span className="truncate font-mono text-xs text-muted-foreground">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `store:${mapping.id}`}</span>
                 </span>
               )}
               renderOption={(mapping) => (
                 <div className="flex items-center gap-2 py-0.5">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] px-1.5 py-0 ${resolveMetaAppMappingPlatform(mapping) === "IOS" ? "border-blue-200 text-blue-700" : "border-green-200 text-green-700"}`}
+                    className={`px-1.5 py-0 text-[10px] ${resolveMetaAppMappingPlatform(mapping) === "IOS" ? "border-primary/30 text-primary" : "border-green-500/30 text-green-700 dark:text-green-400"}`}
                   >
                     {resolveMetaAppMappingPlatform(mapping) ?? "APP"}
                   </Badge>
@@ -333,74 +333,74 @@ export function AccountAppSection({
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm font-medium">{mapping.appDisplayName ?? mapping.appId ?? `Store ${mapping.id}`}</span>
                       {(!mapping.metaApplicationId || !(mapping.objectStoreUrl || mapping.storeUrlOverride)) ? (
-                        <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Missing Mapping</Badge>
+                        <Badge className="bg-amber-500/10 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-300">Missing Mapping</Badge>
                       ) : null}
                     </div>
-                    <div className="truncate text-xs text-slate-400 font-mono">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `binding:${mapping.id}`}</div>
+                    <div className="truncate font-mono text-xs text-muted-foreground">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `binding:${mapping.id}`}</div>
                   </div>
                 </div>
               )}
             />
 
             {!form.adAccountId ? (
-              <p className="text-[11px] text-slate-500">Select a Meta ad account first. The app list is filtered by the account&apos;s advertisable applications.</p>
+              <p className="text-[11px] text-muted-foreground">Select a Meta ad account first. The app list is filtered by the account&apos;s advertisable applications.</p>
             ) : appMappingsLoading ? (
-              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 Loading apps available for this ad account...
               </div>
             ) : appMappingsMessage ? (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-[11px] text-red-700">{appMappingsMessage}</p>
+              <div className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-destructive" />
+                <p className="text-[11px] text-destructive">{appMappingsMessage}</p>
               </div>
             ) : appMappings.length === 0 ? (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <p className="text-[11px] text-amber-800">No active app mappings are currently advertisable for the selected Meta ad account.</p>
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                <p className="text-[11px] text-amber-800 dark:text-amber-200">No active app mappings are currently advertisable for the selected Meta ad account.</p>
               </div>
             ) : (
-              <p className="text-[11px] text-slate-500">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
+              <p className="text-[11px] text-muted-foreground">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
             )}
           </div>
         </div>
 
         {selectedAppMapping ? (
-          <div className={`rounded-lg border p-3 space-y-2 ${hasMappingIssue ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Promoted Object</p>
+          <div className={`space-y-2 rounded-lg border p-3 ${hasMappingIssue ? "border-amber-500/25 bg-amber-500/10" : "border-border bg-muted/40"}`}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Promoted Object</p>
               {hasMappingIssue ? (
-                <Badge className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 gap-1">
+                <Badge className="gap-1 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
                   <AlertTriangle className="w-2.5 h-2.5" />
                   Missing Meta App Mapping
                 </Badge>
               ) : (
-                <Badge className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 gap-1">
+                <Badge className="gap-1 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-700 dark:text-green-400">
                   <CheckCircle2 className="w-2.5 h-2.5" />
                   Valid
                 </Badge>
               )}
             </div>
-            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-              <span className="text-slate-500">Application ID</span>
-              <span className={`font-mono ${selectedAppMapping.metaApplicationId ? "text-slate-900" : "text-amber-700 italic"}`}>
+            <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-xs sm:grid-cols-[auto_1fr]">
+              <span className="text-muted-foreground">Application ID</span>
+              <span className={`font-mono ${selectedAppMapping.metaApplicationId ? "text-foreground" : "text-amber-700 italic dark:text-amber-300"}`}>
                 {selectedAppMapping.metaApplicationId || "Not configured"}
               </span>
-              <span className="text-slate-500">Platform</span>
-              <span className="text-slate-900">{selectedAppPlatform ?? "-"}</span>
-              <span className="text-slate-500">Store URL</span>
-              <span className={`truncate ${mappingUrl ? "text-slate-900" : "text-amber-700 italic"}`}>
+              <span className="text-muted-foreground">Platform</span>
+              <span className="text-foreground">{selectedAppPlatform ?? "-"}</span>
+              <span className="text-muted-foreground">Store URL</span>
+              <span className={`truncate ${mappingUrl ? "text-foreground" : "text-amber-700 italic dark:text-amber-300"}`}>
                 {mappingUrl || "Not configured"}
               </span>
             </div>
             {hasMappingIssue ? (
-              <p className="text-[11px] text-amber-800">
-                App campaigns require a valid <code className="bg-amber-100 px-1 rounded">promoted_object</code> with application_id + store URL.
+              <p className="text-[11px] text-amber-800 dark:text-amber-200">
+                App campaigns require a valid <code className="rounded bg-amber-500/10 px-1">promoted_object</code> with application_id + store URL.
                 Configure the mapping in <strong>Meta Ads &gt; App Mappings</strong>.
               </p>
             ) : null}
             {selectedAppPlatform ? (
-              <p className="text-[11px] text-slate-600">
+              <p className="text-[11px] text-muted-foreground">
                 {selectedAppPlatform === "ANDROID" ? "Android" : "iOS"} targeting will be derived automatically for app promotion ad sets.
               </p>
             ) : null}
@@ -410,10 +410,10 @@ export function AccountAppSection({
         {selectedAppMapping ? (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <Label htmlFor="deferredDeepLinkUrl" className="text-xs font-medium text-slate-700">
+              <Label htmlFor="deferredDeepLinkUrl" className="text-xs font-medium text-foreground">
                 Deferred deep link
               </Label>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-slate-200 text-slate-500 font-normal">
+              <Badge variant="outline" className="border-border px-1.5 py-0 text-[10px] font-normal text-muted-foreground">
                 Optional
               </Badge>
             </div>
@@ -424,7 +424,7 @@ export function AccountAppSection({
               onChange={(e) => onChange({ deferredDeepLinkUrl: e.target.value })}
               placeholder="Enter the deferred deep link URL"
             />
-            <p className="text-[11px] text-slate-500 leading-normal">
+            <p className="text-[11px] leading-normal text-muted-foreground">
               Use Android App Link, custom URL scheme, or Facebook App Link. Requires app deep linking setup.
             </p>
           </div>
@@ -433,10 +433,10 @@ export function AccountAppSection({
         {selectedAppMapping ? (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <Label htmlFor="customStoreListingId" className="text-xs font-medium text-slate-700">
+              <Label htmlFor="customStoreListingId" className="text-xs font-medium text-foreground">
                 Custom store listing
               </Label>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-slate-200 text-slate-500 font-normal">
+              <Badge variant="outline" className="border-border px-1.5 py-0 text-[10px] font-normal text-muted-foreground">
                 Optional
               </Badge>
             </div>
@@ -449,20 +449,20 @@ export function AccountAppSection({
               disabled={selectedAppPlatform !== "ANDROID"}
             />
             {selectedAppPlatform === "ANDROID" ? (
-              <p className="text-[11px] text-slate-500 leading-normal">
-                For Google Play custom store listings. The ID is appended to the Play Store URL as <code className="text-slate-800 bg-slate-100 px-0.5 rounded font-mono">listing=...</code>.
+              <p className="text-[11px] leading-normal text-muted-foreground">
+                For Google Play custom store listings. The ID is appended to the Play Store URL as <code className="rounded bg-muted px-0.5 font-mono text-foreground">listing=...</code>.
               </p>
             ) : selectedAppPlatform === "IOS" ? (
-              <p className="text-[11px] text-amber-600 leading-normal">
+              <p className="text-[11px] leading-normal text-amber-700 dark:text-amber-300">
                 Custom store listing is only supported for Google Play apps (Android).
               </p>
             ) : null}
           </div>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 rounded-md border border-slate-200 p-3 space-y-1.5">
-            <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">App Mapping</p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5 rounded-md border border-border bg-muted/40 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">App Mapping</p>
             <StatusRow
               ok={form.paidMediaAppBindingId ? (selectedAppMapping?.metaApplicationId ? true : false) : null}
               label={!form.paidMediaAppBindingId ? "Select an app" : selectedAppMapping?.metaApplicationId ? "Meta App ID set" : "Meta App ID missing"}
@@ -472,8 +472,8 @@ export function AccountAppSection({
               label={!form.paidMediaAppBindingId ? "Store URL" : mappingUrl ? "Store URL set" : "Store URL missing"}
             />
           </div>
-          <div className="bg-slate-50 rounded-md border border-slate-200 p-3 space-y-1.5">
-            <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Integration</p>
+          <div className="space-y-1.5 rounded-md border border-border bg-muted/40 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Integration</p>
             <StatusRow
               ok={form.adAccountId ? (tokenState === "ready" ? true : tokenState === "not_tested" ? null : false) : null}
               label={!form.adAccountId ? "Select an account" : tokenState === "ready" ? "Integration enabled" : tokenState === "not_tested" ? "Integration not tested" : "Integration issue"}
@@ -486,7 +486,7 @@ export function AccountAppSection({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-slate-700">Business Objective</Label>
+          <Label className="text-xs font-medium text-foreground">Business Objective</Label>
           <div className="flex flex-wrap gap-2">
             {objectives.map((objective) => (
               <button
@@ -498,8 +498,8 @@ export function AccountAppSection({
                 })}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                   form.campaignObjective === objective.key
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-primary"
                 }`}
                 title={objective.description}
               >

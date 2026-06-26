@@ -52,7 +52,7 @@ function WaterfallReportAppRow({
   const appStoreId = app.appStoreId?.trim()
 
   return (
-    <label className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 hover:bg-gray-50">
+    <label className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 hover:bg-muted/50">
       <input
         type="checkbox"
         className="mt-1 shrink-0"
@@ -63,19 +63,19 @@ function WaterfallReportAppRow({
         {app.iconUri?.trim() ? (
           <AvatarImage src={app.iconUri.trim()} alt={primaryLabel} className="rounded-md object-cover" />
         ) : null}
-        <AvatarFallback className="rounded-md bg-slate-100">
-          <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+        <AvatarFallback className="rounded-md bg-muted">
+          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900" title={primaryLabel}>
+        <p className="truncate text-sm font-medium text-foreground" title={primaryLabel}>
           {primaryLabel}
         </p>
-        <p className="truncate font-mono text-[11px] text-gray-500" title={app.appId}>
+        <p className="truncate font-mono text-[11px] text-muted-foreground" title={app.appId}>
           {app.appId}
         </p>
         {appStoreId ? (
-          <p className="truncate font-mono text-[10px] text-gray-400" title={appStoreId}>
+          <p className="truncate font-mono text-[10px] text-muted-foreground" title={appStoreId}>
             {appStoreId}
           </p>
         ) : null}
@@ -142,48 +142,48 @@ export function WaterfallReportContent() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="border-b border-gray-100 px-6 py-4">
-        <Link href="/reports" className="text-xs text-gray-500 hover:text-blue-600">
+    <div className="flex h-full flex-col bg-card">
+      <div className="border-b border-border px-6 py-4">
+        <Link href="/reports" className="text-xs text-muted-foreground hover:text-primary">
           All reports
         </Link>
-        <span className="mx-1.5 text-xs text-gray-400">/</span>
-        <span className="text-xs text-gray-600">Waterfall optimization</span>
-        <h1 className="mt-2 text-2xl font-semibold text-gray-900">Waterfall Optimization Report</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <span className="mx-1.5 text-xs text-muted-foreground">/</span>
+        <span className="text-xs text-muted-foreground">Waterfall optimization</span>
+        <h1 className="mt-2 text-2xl font-semibold text-foreground">Waterfall Optimization Report</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Revenue, eCPM, fill rate and Share of Wallet by ad network from mediation data.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 border-b border-gray-100 px-6 py-4">
+      <div className="flex flex-wrap items-end gap-4 border-b border-border px-6 py-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-gray-600">From</span>
+          <span className="text-muted-foreground">From</span>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="h-9 rounded-md border border-gray-200 px-2"
+            className="h-9 rounded-md border border-border px-2"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-gray-600">To</span>
+          <span className="text-muted-foreground">To</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="h-9 rounded-md border border-gray-200 px-2"
+            className="h-9 rounded-md border border-border px-2"
           />
         </label>
-        <Button type="button" className="h-9 bg-blue-600 hover:bg-blue-700" disabled={loading} onClick={handleRun}>
+        <Button type="button" className="h-9 bg-primary hover:bg-primary/90" disabled={loading} onClick={handleRun}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
         </Button>
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="w-80 shrink-0 overflow-y-auto border-r border-gray-100 p-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Apps</p>
+        <div className="w-80 shrink-0 overflow-y-auto border-r border-border p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Apps</p>
           <div className="relative mb-3">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               value={appSearchQuery}
@@ -194,7 +194,7 @@ export function WaterfallReportContent() {
           </div>
           <div className="space-y-1">
             {filteredApps.length === 0 ? (
-              <p className="px-2 py-6 text-center text-sm text-gray-500">
+              <p className="px-2 py-6 text-center text-sm text-muted-foreground">
                 {apps.length === 0 ? "No apps available." : "No apps match your search."}
               </p>
             ) : (
@@ -213,10 +213,10 @@ export function WaterfallReportContent() {
         <div className="min-h-0 flex-1 overflow-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : networks.length === 0 ? (
-            <p className="py-12 text-center text-sm text-gray-500">
+            <p className="py-12 text-center text-sm text-muted-foreground">
               Select apps and date range, then click Apply.
             </p>
           ) : (
@@ -224,11 +224,11 @@ export function WaterfallReportContent() {
               {totals ? (
                 <div className="mb-6 flex flex-wrap gap-6 text-sm">
                   <div>
-                    <span className="text-gray-500">Total revenue</span>
+                    <span className="text-muted-foreground">Total revenue</span>
                     <p className="text-xl font-semibold tabular-nums">{formatCurrency(totals.revenue)}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Total impressions</span>
+                    <span className="text-muted-foreground">Total impressions</span>
                     <p className="text-xl font-semibold tabular-nums">{totals.impressions.toLocaleString()}</p>
                   </div>
                 </div>
@@ -249,9 +249,9 @@ export function WaterfallReportContent() {
                 </div>
               ) : null}
 
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-left text-xs font-medium uppercase text-gray-500">
+                  <thead className="bg-muted/50 text-left text-xs font-medium uppercase text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3">Network</th>
                       <th className="px-4 py-3 text-right">Impressions</th>
@@ -263,7 +263,7 @@ export function WaterfallReportContent() {
                   </thead>
                   <tbody>
                     {networks.map((row, i) => (
-                      <tr key={row.adSourceId} className="border-t border-gray-100">
+                      <tr key={row.adSourceId} className="border-t border-border">
                         <td className="px-4 py-2.5">
                           <span
                             className="mr-2 inline-block h-2 w-2 rounded-full"

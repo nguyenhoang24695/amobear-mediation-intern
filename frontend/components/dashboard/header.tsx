@@ -14,7 +14,7 @@ export function Header() {
 
   return (
     <TooltipProvider>
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4 md:h-16 md:px-6">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/85 md:h-16 md:px-6">
         <Logo size={28} className="shrink-0 overflow-hidden rounded-lg md:hidden" />
 
         <div className="hidden min-w-0 flex-1 md:block">

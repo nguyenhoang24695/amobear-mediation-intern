@@ -36,13 +36,13 @@ function statusBadgeClass(status: string): string {
       return "bg-emerald-100 text-emerald-800 border-emerald-200"
     case "running":
     case "queued":
-      return "bg-blue-100 text-blue-800 border-blue-200"
+      return "bg-primary/10 text-primary border-primary/20"
     case "failed":
-      return "bg-red-100 text-red-800 border-red-200"
+      return "bg-destructive/10 text-destructive border-destructive/30"
     case "interrupted":
       return "bg-amber-100 text-amber-800 border-amber-200"
     default:
-      return "bg-slate-100 text-slate-700 border-slate-200"
+      return "bg-muted text-foreground border-border"
   }
 }
 
@@ -134,15 +134,15 @@ export function DataSourceRunsTab({
   }
 
   if (!enabled) {
-    return <p className="text-sm text-slate-500">Switch to this tab to load backfill runs.</p>
+    return <p className="text-sm text-muted-foreground">Switch to this tab to load backfill runs.</p>
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Runs — backfill history</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="text-lg font-semibold text-foreground">Runs — backfill history</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Tiến trình lưu trong DB (checkpoint theo ngày). Có thể xem log hoặc resume khi failed/interrupted.
           </p>
         </div>
@@ -180,24 +180,24 @@ export function DataSourceRunsTab({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Recent runs</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading && items.length === 0 ? (
-            <div className="flex items-center gap-2 text-slate-600 text-sm p-6">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm p-6">
               <Loader2 className="w-4 h-4 animate-spin" /> Loading…
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-slate-500 p-6">No backfill runs yet. Start one from the Details tab.</p>
+            <p className="text-sm text-muted-foreground p-6">No backfill runs yet. Start one from the Details tab.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left text-slate-500">
+                  <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="px-4 py-2 font-medium">Status</th>
                     <th className="px-4 py-2 font-medium">Source</th>
                     <th className="px-4 py-2 font-medium">Label</th>
@@ -213,7 +213,7 @@ export function DataSourceRunsTab({
                     const pct = p && p.totalDays > 0 ? Math.round(((p.completedDates?.length ?? 0) / p.totalDays) * 100) : 0
                     const canResume = run.status === "failed" || run.status === "interrupted"
                     return (
-                      <tr key={run.id} className="border-b border-slate-50 hover:bg-slate-50/80">
+                      <tr key={run.id} className="border-b border-border hover:bg-muted/40">
                         <td className="px-4 py-2">
                           <Badge variant="outline" className={cn("text-[10px] capitalize", statusBadgeClass(run.status))}>
                             {run.status}
@@ -228,13 +228,13 @@ export function DataSourceRunsTab({
                         </td>
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2 min-w-[100px]">
-                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className="h-full bg-primary/100 rounded-full transition-all" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-mono text-slate-600">{progressLabel(run)}</span>
+                            <span className="text-xs font-mono text-muted-foreground">{progressLabel(run)}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">
+                        <td className="px-4 py-2 text-xs text-muted-foreground whitespace-nowrap">
                           {run.startedAt ? new Date(run.startedAt).toLocaleString() : "—"}
                         </td>
                         <td className="px-4 py-2">
@@ -286,7 +286,7 @@ export function DataSourceRunsTab({
               </Label>
             </div>
             {streaming && (
-              <span className="text-xs text-blue-600 inline-flex items-center gap-1">
+              <span className="text-xs text-primary inline-flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Live
               </span>
             )}
@@ -296,7 +296,7 @@ export function DataSourceRunsTab({
             value={logText}
             rows={14}
             spellCheck={false}
-            className="w-full min-h-[200px] rounded-md border border-slate-200 bg-slate-950 px-2 py-1.5 text-xs font-mono text-slate-100 leading-relaxed overflow-y-auto"
+            className="w-full min-h-[200px] rounded-md border border-border bg-muted px-2 py-1.5 text-xs font-mono text-foreground leading-relaxed overflow-y-auto"
           />
           <DialogFooter>
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeLogs}>

@@ -99,10 +99,10 @@ function TrafficTimeRangePanel({
   }
 
   return (
-    <div className="flex w-[min(95vw,760px)] flex-col overflow-hidden rounded-md bg-white">
+    <div className="flex w-[min(95vw,760px)] flex-col overflow-hidden rounded-md bg-popover text-popover-foreground">
       <div className="flex min-h-0">
-        <aside className="flex w-[240px] shrink-0 flex-col border-r border-slate-200">
-          <div className="border-b border-slate-200 p-3">
+        <aside className="flex w-[240px] shrink-0 flex-col border-r border-border">
+          <div className="border-b border-border p-3">
             <Input
               value={relativeInput}
               onChange={(event) => setRelativeInput(event.target.value)}
@@ -122,24 +122,24 @@ function TrafficTimeRangePanel({
                 key={preset.id}
                 type="button"
                 className={cn(
-                  "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50",
-                  activePresetId === preset.id && "bg-blue-50 font-medium text-blue-700",
+                  "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+                  activePresetId === preset.id && "bg-primary/10 font-medium text-primary",
                 )}
                 onClick={() => applyPreset(preset.id)}
               >
                 <span>{preset.label}</span>
-                <span className="shrink-0 text-xs text-slate-400">{preset.shorthand}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{preset.shorthand}</span>
               </button>
             ))}
           </div>
         </aside>
 
         <div className="min-w-0 flex-1 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Start and end times</h3>
+          <h3 className="text-sm font-semibold text-foreground">Start and end times</h3>
 
           <div className="mt-4 space-y-5">
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-slate-500">Start time</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Start time</Label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <div className="relative">
@@ -149,9 +149,9 @@ function TrafficTimeRangePanel({
                       onChange={(event) => updateDraftPart("from", "date", event.target.value)}
                       className="h-10 pr-10"
                     />
-                    <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-slate-400">Date format: yyyy-mm-dd</p>
+                  <p className="text-xs text-muted-foreground">Date format: yyyy-mm-dd</p>
                 </div>
                 <div className="space-y-1.5">
                   <div className="relative">
@@ -162,14 +162,14 @@ function TrafficTimeRangePanel({
                       onChange={(event) => updateDraftPart("from", "time", event.target.value)}
                       className="h-10 pr-10"
                     />
-                    <Clock3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Clock3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-slate-500">End time</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">End time</Label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <div className="relative">
@@ -179,9 +179,9 @@ function TrafficTimeRangePanel({
                       onChange={(event) => updateDraftPart("to", "date", event.target.value)}
                       className="h-10 pr-10"
                     />
-                    <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-slate-400">Date format: yyyy-mm-dd</p>
+                  <p className="text-xs text-muted-foreground">Date format: yyyy-mm-dd</p>
                 </div>
                 <div className="space-y-1.5">
                   <div className="relative">
@@ -192,7 +192,7 @@ function TrafficTimeRangePanel({
                       onChange={(event) => updateDraftPart("to", "time", event.target.value)}
                       className="h-10 pr-10"
                     />
-                    <Clock3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Clock3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
                 </div>
               </div>
@@ -201,8 +201,8 @@ function TrafficTimeRangePanel({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-slate-200 px-4 py-3">
-        <span className="min-w-0 flex-1 truncate text-sm text-slate-500">
+      <div className="flex items-center gap-3 border-t border-border px-4 py-3">
+        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
           {validationMessage ?? formatTrafficTimeRangeLabel(draft)}
         </span>
         <div className="flex shrink-0 gap-2">
@@ -211,7 +211,7 @@ function TrafficTimeRangePanel({
           </Button>
           <Button
             type="button"
-            className="h-8 bg-blue-600 px-4 hover:bg-blue-700"
+            className="h-8 px-4"
             disabled={!isValid}
             onClick={() => onApply(draft)}
           >
@@ -233,15 +233,15 @@ export function TrafficTimeRangePicker({ value, onChange, maxDays = 90, classNam
         <button
           type="button"
           className={cn(
-            "inline-flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm hover:border-slate-300",
+            "inline-flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm transition-colors hover:border-ring/60 hover:bg-accent/30",
             className,
           )}
         >
           <span className="truncate text-left">
-            <span className="text-slate-500">Created </span>
-            <span className="font-medium text-blue-600">{label}</span>
+            <span className="text-muted-foreground">Created </span>
+            <span className="font-medium text-primary">{label}</span>
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" collisionPadding={16}>

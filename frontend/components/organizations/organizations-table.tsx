@@ -54,8 +54,8 @@ type SortField = "name" | "users" | "status" | "created"
 type SortDir = "asc" | "desc"
 
 const statusConfig: Record<string, { label: string; dotColor: string }> = {
-  active: { label: "Active", dotColor: "bg-green-500" },
-  inactive: { label: "Inactive", dotColor: "bg-red-500" },
+  active: { label: "Active", dotColor: "bg-emerald-500" },
+  inactive: { label: "Inactive", dotColor: "bg-destructive" },
 }
 
 export function OrganizationsTable({
@@ -133,11 +133,11 @@ export function OrganizationsTable({
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
     return sortDir === "asc" ? (
-      <ArrowUp className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowUp className="ml-1 h-3.5 w-3.5 text-primary" />
     ) : (
-      <ArrowDown className="w-3.5 h-3.5 ml-1 text-blue-600" />
+      <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary" />
     )
   }
 
@@ -145,29 +145,29 @@ export function OrganizationsTable({
   // Empty State
   if (filteredOrgs.length === 0) {
     return (
-      <Card className="border-slate-200">
+      <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">
           {hasFilters ? (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-slate-400" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <Search className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No organizations found</h3>
-              <p className="text-sm text-slate-500 mb-4">Try adjusting your search or filters</p>
-              <Button variant="link" className="text-blue-600" onClick={onClearFilters}>
+              <h3 className="mb-1 text-lg font-semibold text-foreground">No organizations found</h3>
+              <p className="mb-4 text-sm text-muted-foreground">Try adjusting your search or filters</p>
+              <Button variant="link" onClick={onClearFilters}>
                 Clear all filters
               </Button>
             </>
           ) : (
             <>
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Building2 className="w-8 h-8 text-slate-400" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <Building2 className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No organizations yet</h3>
-              <p className="text-sm text-slate-500 mb-4">Create your first organization to get started</p>
+              <h3 className="mb-1 text-lg font-semibold text-foreground">No organizations yet</h3>
+              <p className="mb-4 text-sm text-muted-foreground">Create your first organization to get started</p>
               {canCreate && (
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={onCreateOrg}>
-                  <Plus className="w-4 h-4" />
+                <Button className="gap-2" onClick={onCreateOrg}>
+                  <Plus className="h-4 w-4" />
                   Create Organization
                 </Button>
               )}
@@ -181,15 +181,15 @@ export function OrganizationsTable({
   return (
     <>
       {/* Desktop / Tablet Table */}
-      <Card className="border-slate-200 hidden md:block">
+      <Card className="hidden overflow-hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("name")}
                     >
                       Organization
@@ -198,7 +198,7 @@ export function OrganizationsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("users")}
                     >
                       Users
@@ -207,7 +207,7 @@ export function OrganizationsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("status")}
                     >
                       Status
@@ -216,7 +216,7 @@ export function OrganizationsTable({
                   </TableHead>
                   <TableHead>
                     <button
-                      className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                      className="flex items-center text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort("created")}
                     >
                       Created
@@ -232,40 +232,40 @@ export function OrganizationsTable({
                   return (
                     <TableRow
                       key={org.id}
-                      className={`hover:bg-slate-50 cursor-pointer transition-colors ${!org.isActive ? "opacity-60" : ""}`}
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${!org.isActive ? "opacity-60" : ""}`}
                     >
                       <TableCell>
                         {canViewDetails ? (
                           <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
                             <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                             <div>
-                              <p className="font-semibold text-slate-900">{org.name}</p>
-                              <p className="text-xs text-slate-500">{org.slug}.com</p>
+                              <p className="font-semibold text-foreground">{org.name}</p>
+                              <p className="text-xs text-muted-foreground">{org.slug}.com</p>
                             </div>
                           </Link>
                         ) : (
                           <div className="flex items-center gap-3">
                             <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                             <div>
-                              <p className="font-semibold text-slate-900">{org.name}</p>
-                              <p className="text-xs text-slate-500">{org.slug}.com</p>
+                              <p className="font-semibold text-foreground">{org.name}</p>
+                              <p className="text-xs text-muted-foreground">{org.slug}.com</p>
                             </div>
                           </div>
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-600">
-                          <Users className="w-3.5 h-3.5 text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           {org.userCount} users
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${statusConfig[status].dotColor}`} />
-                          <span className="text-sm">{statusConfig[status].label}</span>
+                          <span className="text-sm text-foreground">{statusConfig[status].label}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-500">{formatDate(org.createdAt)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatDate(org.createdAt)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -308,7 +308,7 @@ export function OrganizationsTable({
                             )}
                             {canDelete && (
                               <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
+                                className="text-destructive focus:text-destructive"
                                 onClick={() => onDeleteOrg(org)}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -345,23 +345,23 @@ export function OrganizationsTable({
         {paginatedOrgs.map((org) => {
           const status = org.isActive ? "active" : "inactive"
           return (
-            <Card key={org.id} className={`border-slate-200 ${!org.isActive ? "opacity-60" : ""}`}>
+            <Card key={org.id} className={!org.isActive ? "opacity-60" : ""}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   {canViewDetails ? (
                     <Link href={`/organizations/${org.id}`} className="flex items-center gap-3">
                       <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                       <div>
-                        <p className="font-semibold text-slate-900">{org.name}</p>
-                        <p className="text-xs text-slate-500">{org.slug}.com</p>
+                        <p className="font-semibold text-foreground">{org.name}</p>
+                        <p className="text-xs text-muted-foreground">{org.slug}.com</p>
                       </div>
                     </Link>
                   ) : (
                     <div className="flex items-center gap-3">
                       <OrganizationLogoMark orgName={org.name} logoUrl={org.logoUrl} size="md" />
                       <div>
-                        <p className="font-semibold text-slate-900">{org.name}</p>
-                        <p className="text-xs text-slate-500">{org.slug}.com</p>
+                        <p className="font-semibold text-foreground">{org.name}</p>
+                        <p className="text-xs text-muted-foreground">{org.slug}.com</p>
                       </div>
                     </div>
                   )}
@@ -406,7 +406,7 @@ export function OrganizationsTable({
                       )}
                       {canDelete && (
                         <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
+                          className="text-destructive focus:text-destructive"
                           onClick={() => onDeleteOrg(org)}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -417,16 +417,16 @@ export function OrganizationsTable({
                   </DropdownMenu>
                 </div>
                 <div className="mt-3 ml-13 flex flex-wrap items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1.5 text-slate-600">
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
                     {org.userCount} users
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${statusConfig[status].dotColor}`} />
-                    <span className="text-slate-600">{statusConfig[status].label}</span>
+                    <span className="text-muted-foreground">{statusConfig[status].label}</span>
                   </div>
-                  <span className="text-slate-400">|</span>
-                  <span className="text-slate-500">{formatDate(org.createdAt)}</span>
+                  <span className="text-muted-foreground">|</span>
+                  <span className="text-muted-foreground">{formatDate(org.createdAt)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -435,7 +435,7 @@ export function OrganizationsTable({
 
         {/* Mobile Pagination */}
         <div className="flex items-center justify-between py-2">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, sortedOrgs.length)} of{" "}
             {sortedOrgs.length}
           </p>

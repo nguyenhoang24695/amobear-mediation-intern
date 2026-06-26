@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 
@@ -80,11 +80,11 @@ function getApplyModeLabel(mode: string | null | undefined): string {
 function getApplyModeBadgeClass(mode: string | null | undefined): string {
   switch ((mode ?? "").toLowerCase()) {
     case "semi_auto":
-      return "border-amber-200 bg-amber-50 text-amber-700"
+      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
     case "auto":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700"
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
     default:
-      return "border-slate-200 bg-slate-50 text-slate-700"
+      return "border-border bg-muted/40 text-muted-foreground"
   }
 }
 
@@ -264,7 +264,7 @@ function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
         <CardContent className="space-y-5 pt-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_minmax(220px,0.75fr)_160px]">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">App</label>
+              <label className="text-sm font-medium text-muted-foreground">App</label>
               <WaterfallFilterCombobox
                 value={selectedAppId}
                 placeholder="All apps"
@@ -282,9 +282,9 @@ function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Mode</label>
+              <label className="text-sm font-medium text-muted-foreground">Mode</label>
               <Select value={applyMode} onValueChange={handleFilterChange(setApplyMode)}>
-                <SelectTrigger className="h-10 bg-white">
+                <SelectTrigger className="h-10 bg-background">
                   <SelectValue placeholder="All automation" />
                 </SelectTrigger>
                 <SelectContent>
@@ -295,9 +295,9 @@ function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Search</label>
+              <label className="text-sm font-medium text-muted-foreground">Search</label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(event) => {
@@ -305,11 +305,11 @@ function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
                     setPage(1)
                   }}
                   placeholder="App name, App Id, Mediation groups"
-                  className="h-10 bg-white pl-9"
+                  className="h-10 bg-background pl-9"
                 />
               </div>
             </div>
-            <label className="flex items-end gap-2 pb-2 text-sm text-slate-700">
+            <label className="flex items-end gap-2 pb-2 text-sm text-muted-foreground">
               <Checkbox checked={dueOnly} onCheckedChange={(checked) => setDueOnly(checked === true)} />
               Due only
             </label>
@@ -321,10 +321,10 @@ function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
             <Card className="gap-3 py-5">
               <CardContent className="flex items-center justify-between px-5">
                 <div>
-                  <p className="text-sm text-slate-500">Due now</p>
-                  <p className="mt-1 text-2xl font-semibold text-slate-900">{data?.dueNowCount ?? 0}</p>
+                  <p className="text-sm text-muted-foreground">Due now</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{data?.dueNowCount ?? 0}</p>
                 </div>
-                <CalendarClock className="h-5 w-5 text-slate-400" />
+                <CalendarClock className="h-5 w-5 text-muted-foreground" />
               </CardContent>
             </Card>
           </div>
@@ -340,33 +340,33 @@ function ActiveAutomationTab({ canManage }: { canManage: boolean }) {
         </CardHeader>
         <CardContent className="px-0 pt-0">
           {loading ? (
-            <div className="flex items-center justify-center gap-2 px-6 py-14 text-sm text-slate-500">
+            <div className="flex items-center justify-center gap-2 px-6 py-14 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading active automation...
             </div>
           ) : displayedItems.length === 0 ? (
-            <div className="px-6 py-14 text-center text-sm text-slate-500">
+            <div className="px-6 py-14 text-center text-sm text-muted-foreground">
               No mediation groups match the current filters.
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/40">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">App</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Mediation group</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Mode</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Interval</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Next due GMT+7</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Last observed apply</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Apply source</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Platform / format</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">App</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mediation group</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mode</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interval</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Next due GMT+7</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last observed apply</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Apply source</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Platform / format</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
+                  <tbody className="divide-y divide-border bg-background">
                     {displayedItems.map((item) => (
                       <ActivePolicyRow
                         key={item.mediationGroupId}
@@ -433,8 +433,8 @@ function SummaryCard({ label, value, mode }: { label: string; value: number; mod
     <Card className="gap-3 py-5">
       <CardContent className="flex items-center justify-between px-5">
         <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
         </div>
         <Badge variant="outline" className={cn("capitalize", getApplyModeBadgeClass(mode))}>
           {getApplyModeLabel(mode)}
@@ -454,28 +454,28 @@ function ActivePolicyRow({
   onModeChange: (applyMode: ApplyMode) => void
 }) {
   return (
-    <tr className="align-top hover:bg-slate-50/60">
+    <tr className="align-top hover:bg-muted/40">
       <td className="px-4 py-4">
         <div className="flex items-start gap-3">
           {item.appIconUri ? (
-            <img src={item.appIconUri} alt="" className="h-9 w-9 rounded-md border border-slate-200 object-cover" />
+            <img src={item.appIconUri} alt="" className="h-9 w-9 rounded-md border border-border object-cover" />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
               <Smartphone className="h-4 w-4" />
             </div>
           )}
           <div className="space-y-1">
-            <div className="font-medium text-slate-900">{item.appName}</div>
-            <div className="text-xs text-slate-500">{item.appId}</div>
+            <div className="font-medium text-foreground">{item.appName}</div>
+            <div className="text-xs text-muted-foreground">{item.appId}</div>
           </div>
         </div>
       </td>
       <td className="px-4 py-4">
         <div className="space-y-1">
-          <div className="font-medium text-slate-900">{item.mediationGroupName}</div>
-          <div className="text-xs text-slate-500">{item.mediationGroupId}</div>
-          <div className="text-xs text-slate-500">State: {item.state || "-"}</div>
-          <div className="text-xs text-slate-500">Rule group: {item.effectiveRuleGroupName || "-"}</div>
+          <div className="font-medium text-foreground">{item.mediationGroupName}</div>
+          <div className="text-xs text-muted-foreground">{item.mediationGroupId}</div>
+          <div className="text-xs text-muted-foreground">State: {item.state || "-"}</div>
+          <div className="text-xs text-muted-foreground">Rule group: {item.effectiveRuleGroupName || "-"}</div>
         </div>
       </td>
       <td className="px-4 py-4">
@@ -483,18 +483,18 @@ function ActivePolicyRow({
           {getApplyModeLabel(item.applyMode)}
         </Badge>
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{formatIntervalLabel(item.intervalDays)}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(item.dueAt)}</td>
+      <td className="px-4 py-4 text-sm text-muted-foreground">{formatIntervalLabel(item.intervalDays)}</td>
+      <td className="px-4 py-4 text-sm text-muted-foreground">{formatDateTime(item.dueAt)}</td>
       <td className="px-4 py-4">
-        <Badge variant="outline" className={item.isDue ? "border-rose-200 bg-rose-50 text-rose-700" : "border-slate-200 bg-slate-50 text-slate-700"}>
+        <Badge variant="outline" className={item.isDue ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}>
           {item.isDue ? "Due now" : "On schedule"}
         </Badge>
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(item.lastObservedApplyAt)}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">{item.lastApplySource || "-"}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">
+      <td className="px-4 py-4 text-sm text-muted-foreground">{formatDateTime(item.lastObservedApplyAt)}</td>
+      <td className="px-4 py-4 text-sm text-muted-foreground">{item.lastApplySource || "-"}</td>
+      <td className="px-4 py-4 text-sm text-muted-foreground">
         <div>{item.platform || "-"}</div>
-        <div className="text-xs text-slate-500">{item.adFormat || "-"}</div>
+        <div className="text-xs text-muted-foreground">{item.adFormat || "-"}</div>
       </td>
       <td className="px-4 py-4">
         <div className="flex min-w-48 flex-col gap-2">
@@ -503,7 +503,7 @@ function ActivePolicyRow({
             onValueChange={(value) => onModeChange(value as ApplyMode)}
             disabled={!canManage}
           >
-            <SelectTrigger className="h-9 bg-white">
+            <SelectTrigger className="h-9 bg-background">
               <SelectValue placeholder="Change mode" />
             </SelectTrigger>
             <SelectContent>
@@ -537,8 +537,8 @@ export function WaterfallApplyContent() {
   return (
     <div className="space-y-6 p-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Waterfall Automation</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-foreground">Waterfall Automation</h1>
+        <p className="text-sm text-muted-foreground">
           Monitor active automation or configure apply mode in bulk.
         </p>
       </div>
@@ -837,7 +837,7 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
                 Bulk update apply mode for mediation groups. This screen only changes policy mode and does not apply waterfall changes directly.
               </CardDescription>
             </div>
-            <Badge variant="outline" className="w-fit border-blue-200 bg-blue-50 text-blue-700">
+            <Badge variant="outline" className="w-fit border-primary/20 bg-primary/10 text-primary">
               Settings
             </Badge>
           </div>
@@ -845,9 +845,9 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
         <CardContent className="space-y-5 pt-6">
           <div className="grid gap-4 xl:grid-cols-[180px_minmax(0,1fr)_200px_180px_auto]">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Filter type</label>
+              <label className="text-sm font-medium text-muted-foreground">Filter type</label>
               <Select value={filterType} onValueChange={handleFilterTypeChange}>
-                <SelectTrigger className="h-10 bg-white">
+                <SelectTrigger className="h-10 bg-background">
                   <SelectValue placeholder="Select filter type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -858,7 +858,7 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-muted-foreground">
                 {filterType === "app" ? "App" : "Rule Group"}
               </label>
               {filterType === "app" ? (
@@ -876,7 +876,7 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
                 />
               ) : (
                 <Select value={selectedRuleGroupId || undefined} onValueChange={handleRuleGroupChange} disabled={ruleGroupsLoading}>
-                  <SelectTrigger className="h-10 bg-white">
+                  <SelectTrigger className="h-10 bg-background">
                     <SelectValue placeholder="Select rule group" />
                   </SelectTrigger>
                   <SelectContent>
@@ -891,9 +891,9 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Target apply mode</label>
+              <label className="text-sm font-medium text-muted-foreground">Target apply mode</label>
               <Select value={targetApplyMode} onValueChange={handleTargetApplyModeChange}>
-                <SelectTrigger className="h-10 bg-white">
+                <SelectTrigger className="h-10 bg-background">
                   <SelectValue placeholder="Select apply mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -907,7 +907,7 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Interval (days)</label>
+              <label className="text-sm font-medium text-muted-foreground">Interval (days)</label>
               <Input
                 type="number"
                 min={MIN_INTERVAL_DAYS}
@@ -916,9 +916,9 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
                 value={intervalDays}
                 onChange={(event) => handleIntervalDaysChange(event.target.value)}
                 disabled={targetApplyMode === "manual"}
-                className="h-10 bg-white disabled:bg-slate-50"
+                className="h-10 bg-background disabled:bg-muted/40"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {targetApplyMode === "manual"
                   ? "Manual mode keeps each mediation group's existing interval."
                   : `Valid range: ${MIN_INTERVAL_DAYS}-${MAX_INTERVAL_DAYS} days.`}
@@ -937,27 +937,27 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
             <Card className="gap-3 py-5">
               <CardContent className="flex items-center justify-between px-5">
                 <div>
-                  <p className="text-sm text-slate-500">Matched</p>
-                  <p className="mt-1 text-2xl font-semibold text-slate-900">{totalCount}</p>
+                  <p className="text-sm text-muted-foreground">Matched</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalCount}</p>
                 </div>
-                <Layers className="h-5 w-5 text-slate-400" />
+                <Layers className="h-5 w-5 text-muted-foreground" />
               </CardContent>
             </Card>
             <Card className="gap-3 py-5">
               <CardContent className="flex items-center justify-between px-5">
                 <div>
-                  <p className="text-sm text-slate-500">Selected</p>
-                  <p className="mt-1 text-2xl font-semibold text-slate-900">{selectedIds.length}</p>
+                  <p className="text-sm text-muted-foreground">Selected</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{selectedIds.length}</p>
                 </div>
-                <ListChecks className="h-5 w-5 text-slate-400" />
+                <ListChecks className="h-5 w-5 text-muted-foreground" />
               </CardContent>
             </Card>
             {MODE_ORDER.map((mode) => (
               <Card key={mode} className="gap-3 py-5">
                 <CardContent className="flex items-center justify-between px-5">
                   <div>
-                    <p className="text-sm text-slate-500">{getApplyModeLabel(mode)}</p>
-                    <p className="mt-1 text-2xl font-semibold text-slate-900">{selectionSummary[mode]}</p>
+                    <p className="text-sm text-muted-foreground">{getApplyModeLabel(mode)}</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">{selectionSummary[mode]}</p>
                   </div>
                   <Badge variant="outline" className={cn("capitalize", getApplyModeBadgeClass(mode))}>
                     {getApplyModeLabel(mode)}
@@ -996,18 +996,18 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
         </CardHeader>
         <CardContent className="px-0 pt-0">
           {!previewData ? (
-            <div className="px-6 py-14 text-center text-sm text-slate-500">
+            <div className="px-6 py-14 text-center text-sm text-muted-foreground">
               Select a filter and click Preview matches to confirm the mediation groups before applying.
             </div>
           ) : totalCount === 0 ? (
-            <div className="px-6 py-14 text-center text-sm text-slate-500">
+            <div className="px-6 py-14 text-center text-sm text-muted-foreground">
               No mediation groups matched the selected filter.
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/40">
                     <tr>
                       <th className="w-12 px-4 py-3 text-left">
                         <Checkbox
@@ -1016,17 +1016,17 @@ function BulkConfigureTab({ canManage }: { canManage: boolean }) {
                           aria-label="Select current page"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Mediation group</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">App</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Effective rule group</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Rule source</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Current mode</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{dueColumnLabel}</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Last observed apply</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Platform / format</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mediation group</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">App</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Effective rule group</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rule source</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current mode</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{dueColumnLabel}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last observed apply</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Platform / format</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
+                  <tbody className="divide-y divide-border bg-background">
                     {pagedTargets.map((target) => (
                       <PreviewRow
                         key={target.mediationGroupId}
@@ -1098,7 +1098,7 @@ function PreviewRow({ target, targetApplyMode, checked, onCheckedChange }: Previ
     : (target.previewDueAt ?? target.dueAt)
 
   return (
-    <tr className="align-top hover:bg-slate-50/60">
+    <tr className="align-top hover:bg-muted/40">
       <td className="px-4 py-4">
         <Checkbox
           checked={checked}
@@ -1108,31 +1108,31 @@ function PreviewRow({ target, targetApplyMode, checked, onCheckedChange }: Previ
       </td>
       <td className="px-4 py-4">
         <div className="space-y-1">
-          <div className="font-medium text-slate-900">{target.mediationGroupName}</div>
-          <div className="text-xs text-slate-500">{target.mediationGroupId}</div>
-          <div className="text-xs text-slate-500">State: {target.state || "-"}</div>
+          <div className="font-medium text-foreground">{target.mediationGroupName}</div>
+          <div className="text-xs text-muted-foreground">{target.mediationGroupId}</div>
+          <div className="text-xs text-muted-foreground">State: {target.state || "-"}</div>
         </div>
       </td>
       <td className="px-4 py-4">
         <div className="flex items-start gap-3">
           {target.appIconUri ? (
-            <img src={target.appIconUri} alt="" className="h-9 w-9 rounded-md border border-slate-200 object-cover" />
+            <img src={target.appIconUri} alt="" className="h-9 w-9 rounded-md border border-border object-cover" />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
               <Smartphone className="h-4 w-4" />
             </div>
           )}
           <div className="space-y-1">
-            <div className="font-medium text-slate-900">{target.appName}</div>
-            <div className="text-xs text-slate-500">{target.appId}</div>
+            <div className="font-medium text-foreground">{target.appName}</div>
+            <div className="text-xs text-muted-foreground">{target.appId}</div>
           </div>
         </div>
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">
+      <td className="px-4 py-4 text-sm text-muted-foreground">
         {target.effectiveRuleGroupName || "No effective rule group"}
       </td>
       <td className="px-4 py-4">
-        <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+        <Badge variant="outline" className="border-border bg-muted/40 text-muted-foreground">
           {getRuleSourceLabel(target.ruleGroupSource)}
         </Badge>
       </td>
@@ -1140,19 +1140,20 @@ function PreviewRow({ target, targetApplyMode, checked, onCheckedChange }: Previ
         <Badge variant="outline" className={getApplyModeBadgeClass(target.currentApplyMode)}>
           {getApplyModeLabel(target.currentApplyMode)}
         </Badge>
-        <div className="mt-1 text-xs text-slate-500">
+        <div className="mt-1 text-xs text-muted-foreground">
           Current interval: {formatIntervalLabel(target.currentIntervalDays)}
         </div>
         {!target.hasPersistedPolicy ? (
-          <div className="mt-1 text-xs text-slate-500">Virtual manual</div>
+          <div className="mt-1 text-xs text-muted-foreground">Virtual manual</div>
         ) : null}
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(displayedDueAt)}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">{formatDateTime(target.lastObservedApplyAt)}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">
+      <td className="px-4 py-4 text-sm text-muted-foreground">{formatDateTime(displayedDueAt)}</td>
+      <td className="px-4 py-4 text-sm text-muted-foreground">{formatDateTime(target.lastObservedApplyAt)}</td>
+      <td className="px-4 py-4 text-sm text-muted-foreground">
         <div>{target.platform || "-"}</div>
-        <div className="text-xs text-slate-500">{target.adFormat || "-"}</div>
+        <div className="text-xs text-muted-foreground">{target.adFormat || "-"}</div>
       </td>
     </tr>
   )
 }
+

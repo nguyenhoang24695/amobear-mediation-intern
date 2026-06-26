@@ -39,7 +39,7 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
         {Array.from({ length: cardConfig.length }).map((_, index) => (
-          <Card key={index} className="border-slate-200 bg-white shadow-sm">
+          <Card key={index}>
             <CardContent className="space-y-4 p-5">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-10 w-32" />
@@ -64,12 +64,12 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
         const gradientId = `meta-${item.key}-gradient`
 
         return (
-          <Card key={item.key} className="border-slate-200 bg-white shadow-sm">
+          <Card key={item.key}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                  <p className="mt-1 text-3xl font-bold text-slate-900">{formatMetricValue(item.key, current)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+                  <p className="mt-1 text-3xl font-bold text-foreground">{formatMetricValue(item.key, current)}</p>
                   <div className="mt-3 flex items-center gap-2">
                     <Badge
                       variant="secondary"
@@ -78,7 +78,7 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
                       {trend === "up" ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
                       {`${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}
                     </Badge>
-                    <span className="text-xs text-slate-400">vs previous period</span>
+                    <span className="text-xs text-muted-foreground">vs previous period</span>
                   </div>
                 </div>
                 <div className="h-16 w-24 shrink-0">
@@ -95,7 +95,7 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-slate-400">No trend</div>
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No trend</div>
                   )}
                 </div>
               </div>

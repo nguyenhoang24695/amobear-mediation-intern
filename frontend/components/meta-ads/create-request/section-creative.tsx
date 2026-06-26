@@ -1315,32 +1315,32 @@ export function CreativeSection({
 
   return (
     <>
-    <Card className="border-slate-200">
+    <Card className="border-border">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-slate-500" />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-muted-foreground" />
             Creative
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">{form.creativeType}</Badge>
-            <Badge className={completion.complete ? "bg-green-100 text-green-700 text-[10px] px-2 py-0.5 gap-1" : "bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 gap-1"}>
+            <Badge variant="outline" className="text-[10px] text-muted-foreground border-border font-mono px-2 py-0.5">{form.creativeType}</Badge>
+            <Badge className={completion.complete ? "gap-1 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-700 dark:text-green-400" : "gap-1 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"}>
               {completion.complete ? <CheckCircle2 className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
               {completion.complete ? "Complete" : "Incomplete"}
             </Badge>
           </div>
         </div>
-        <p className="text-[11px] text-slate-400 mt-1">Draft the Meta creative here. Uploaded media stays in Nexus until execute time.</p>
+        <p className="text-[11px] text-muted-foreground mt-1">Draft the Meta creative here. Uploaded media stays in Nexus until execute time.</p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-[1fr_220px] gap-6">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_220px]">
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-3">
-                  <Label className="text-xs font-medium text-slate-700">Creative Name <span className="text-red-500">*</span></Label>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                    <Wand2 className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <Label className="text-xs font-medium text-foreground">Creative Name <span className="text-destructive">*</span></Label>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Wand2 className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>Auto-generate</span>
                     <Switch checked={isAutoNameEnabled} onCheckedChange={(checked) => {
                       setIsAutoEnabled(checked)
@@ -1357,16 +1357,16 @@ export function CreativeSection({
                   placeholder="e.g. WeatherApp_US_IMG_v1"
                   className="h-9 text-sm"
                 />
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 space-y-1.5">
-                  <p className="text-[11px] text-slate-500">Pattern: <code className="rounded bg-white px-1 py-0.5">APP_GEO_CREATIVE_v1</code></p>
-                  <p className={`text-xs font-mono ${generatedCreativeName ? "text-slate-700" : "text-slate-400 italic"}`}>
+                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 space-y-1.5">
+                  <p className="text-[11px] text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5">APP_GEO_CREATIVE_v1</code></p>
+                  <p className={`text-xs font-mono ${generatedCreativeName ? "text-foreground" : "text-muted-foreground italic"}`}>
                     {generatedCreativeName || "Select an app and geo targeting to generate a creative name."}
                   </p>
                   {!isAutoNameEnabled && generatedCreativeName ? (
                     <button
                       type="button"
                       onClick={applyGeneratedName}
-                      className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                      className="text-[11px] font-medium text-primary hover:text-primary"
                     >
                       Use generated name
                     </button>
@@ -1374,10 +1374,10 @@ export function CreativeSection({
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <div className="flex items-start justify-between gap-3">
-                  <Label className="text-xs font-medium text-slate-700">Facebook Page ID <span className="text-red-500">*</span></Label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <Label className="text-xs font-medium text-foreground">Facebook Page ID <span className="text-destructive">*</span></Label>
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -1424,7 +1424,7 @@ export function CreativeSection({
                                         className="h-5 w-5 rounded-full object-cover shrink-0"
                                       />
                                     ) : (
-                                      <span className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-semibold text-slate-500 shrink-0">
+                                      <span className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-semibold text-muted-foreground shrink-0">
                                         {selectedPage.name.substring(0, 2).toUpperCase()}
                                       </span>
                                     )}
@@ -1438,7 +1438,7 @@ export function CreativeSection({
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[420px] p-0" align="start">
+                    <PopoverContent className="w-[min(420px,calc(100vw-2rem))] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search page name or ID..." />
                         <CommandList>
@@ -1462,7 +1462,7 @@ export function CreativeSection({
                                        className="h-7 w-7 rounded-full object-cover"
                                      />
                                    ) : (
-                                     <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-semibold text-slate-500">
+                                     <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
                                        {page.name.substring(0, 2).toUpperCase()}
                                      </div>
                                    )}
@@ -1471,7 +1471,7 @@ export function CreativeSection({
                                    <div className="text-sm font-medium truncate flex items-center gap-1.5">
                                      <span className="truncate">{page.name}</span>
                                    </div>
-                                   <div className="text-[11px] text-slate-400 font-mono truncate">
+                                   <div className="text-[11px] text-muted-foreground font-mono truncate">
                                      ID: {page.id}{page.category ? ` · ${page.category}` : ""}
                                    </div>
                                  </div>
@@ -1483,31 +1483,31 @@ export function CreativeSection({
                     </PopoverContent>
                   </Popover>
                 )}
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-muted-foreground">
                   {pageEntryMode === "manual"
                     ? "Manual mode lets you paste a Facebook Page ID even when it is not returned by Meta page lookup."
                     : (facebookPageSource === "access_token_all"
                         ? "Showing all pages accessible by the current access token."
                         : "Showing promote pages scoped to the selected ad account.")}
                 </p>
-                {facebookPagesMessage && pageEntryMode !== "manual" ? <p className="text-[11px] text-red-600">{facebookPagesMessage}</p> : null}
-                {!facebookPagesMessage && !facebookPagesLoading && facebookPages.length === 0 && pageEntryMode !== "manual" ? <p className="text-[11px] text-amber-700">{facebookPageSource === "access_token_all" ? "No accessible Facebook pages were found for the current access token." : "No accessible Facebook pages were found for the selected ad account."}</p> : null}
+                {facebookPagesMessage && pageEntryMode !== "manual" ? <p className="text-[11px] text-destructive">{facebookPagesMessage}</p> : null}
+                {!facebookPagesMessage && !facebookPagesLoading && facebookPages.length === 0 && pageEntryMode !== "manual" ? <p className="text-[11px] text-amber-700 dark:text-amber-300">{facebookPageSource === "access_token_all" ? "No accessible Facebook pages were found for the current access token." : "No accessible Facebook pages were found for the selected ad account."}</p> : null}
                 {form.facebookPageId && (
-                  <div className="flex items-center gap-2 text-xs mt-1 bg-slate-50 border border-slate-100 rounded px-2.5 py-1.5 w-fit">
-                    <span className="text-slate-500 font-medium">URL ID:</span>
+                  <div className="mt-1 flex w-full flex-wrap items-center gap-2 sm:w-fit rounded border border-border bg-muted/40 px-2.5 py-1.5 text-xs">
+                    <span className="text-muted-foreground font-medium">URL ID:</span>
                     {loadingProfileMap[form.facebookPageId] ? (
-                      <span className="text-slate-400 flex items-center gap-1 font-normal">
-                        <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> Resolving URL ID...
+                      <span className="text-muted-foreground flex items-center gap-1 font-normal">
+                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" /> Resolving URL ID...
                       </span>
                     ) : profileMap[form.facebookPageId]?.id ? (
-                      <span className="font-mono text-slate-700 flex items-center gap-1.5 font-semibold">
+                      <span className="font-mono text-foreground flex items-center gap-1.5 font-semibold">
                         {profileMap[form.facebookPageId].id}
                         {profileMap[form.facebookPageId].url && (
                           <a
                             href={profileMap[form.facebookPageId].url!}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-500 hover:text-blue-600 inline-flex items-center"
+                            className="text-primary hover:text-primary inline-flex items-center"
                             title="Open Facebook Page public web"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
@@ -1515,36 +1515,36 @@ export function CreativeSection({
                         )}
                       </span>
                     ) : (
-                      <span className="text-slate-400 font-normal">—</span>
+                      <span className="text-muted-foreground font-normal">—</span>
                     )}
                   </div>
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700">Instagram Actor ID</Label>
+                <Label className="text-xs font-medium text-foreground">Instagram Actor ID</Label>
                 <Input value={form.instagramActorId} onChange={(event) => onChange({ instagramActorId: event.target.value })} placeholder="Optional" className="h-9 text-sm" />
               </div>
             </div>
 
             {form.creativeType !== "EXISTING_POST" && form.creativeType !== "EXISTING_CREATIVE" && (
-              <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 p-4 space-y-4">
-                <div className="flex items-center justify-between gap-4">
+              <div className="rounded-xl border border-primary/25 bg-primary/10 p-4 space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="h-7 w-7 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600">
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                       <Wand2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                         Advantage+ Creative
-                        <Badge variant="secondary" className="bg-blue-100/70 text-blue-700 text-[9px] hover:bg-blue-100/70 font-semibold uppercase tracking-wider px-1.5 py-0">
+                        <Badge variant="secondary" className="bg-primary/10/70 text-primary text-[9px] hover:bg-primary/10/70 font-semibold uppercase tracking-wider px-1.5 py-0">
                           Meta AI
                         </Badge>
                       </h4>
-                      <p className="text-[11px] text-slate-500">Automatically optimize your creative assets to get more conversions.</p>
+                      <p className="text-[11px] text-muted-foreground">Automatically optimize your creative assets to get more conversions.</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-                    <Label htmlFor="all-optimizations" className="text-xs font-medium text-slate-700 cursor-pointer">
+                  <div className="flex items-center gap-2 border-t border-border pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+                    <Label htmlFor="all-optimizations" className="text-xs font-medium text-foreground cursor-pointer">
                       All optimizations
                     </Label>
                     <Switch
@@ -1565,14 +1565,14 @@ export function CreativeSection({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-3 border-t border-border pt-2 sm:grid-cols-2">
                   {/* Add overlays */}
-                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-2 rounded-lg hover:bg-muted/40 transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor="add-text-overlay" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      <Label htmlFor="add-text-overlay" className="text-xs font-medium text-foreground cursor-pointer">
                         Add overlays
                       </Label>
-                      <p className="text-[10px] text-slate-400">Add info overlays, like price or rating, automatically.</p>
+                      <p className="text-[10px] text-muted-foreground">Add info overlays, like price or rating, automatically.</p>
                     </div>
                     <Switch
                       id="add-text-overlay"
@@ -1596,12 +1596,12 @@ export function CreativeSection({
                   </div>
 
                   {/* Visual touch-ups */}
-                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-2 rounded-lg hover:bg-muted/40 transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor="image-touchups" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      <Label htmlFor="image-touchups" className="text-xs font-medium text-foreground cursor-pointer">
                         Visual touch-ups
                       </Label>
-                      <p className="text-[10px] text-slate-400">Adjust brightness, contrast, or apply visual templates.</p>
+                      <p className="text-[10px] text-muted-foreground">Adjust brightness, contrast, or apply visual templates.</p>
                     </div>
                     <Switch
                       id="image-touchups"
@@ -1625,12 +1625,12 @@ export function CreativeSection({
                   </div>
 
                   {/* Add music */}
-                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-2 rounded-lg hover:bg-muted/40 transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor="music-generation" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      <Label htmlFor="music-generation" className="text-xs font-medium text-foreground cursor-pointer">
                         Add music
                       </Label>
-                      <p className="text-[10px] text-slate-400">Generate background music matching your image or video.</p>
+                      <p className="text-[10px] text-muted-foreground">Generate background music matching your image or video.</p>
                     </div>
                     <Switch
                       id="music-generation"
@@ -1654,12 +1654,12 @@ export function CreativeSection({
                   </div>
 
                   {/* Text improvements */}
-                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-2 rounded-lg hover:bg-muted/40 transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor="text-optimizations" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      <Label htmlFor="text-optimizations" className="text-xs font-medium text-foreground cursor-pointer">
                         Text improvements
                       </Label>
-                      <p className="text-[10px] text-slate-400">Swap primary text and headlines to boost response rate.</p>
+                      <p className="text-[10px] text-muted-foreground">Swap primary text and headlines to boost response rate.</p>
                     </div>
                     <Switch
                       id="text-optimizations"
@@ -1683,12 +1683,12 @@ export function CreativeSection({
                   </div>
 
                   {/* Add animation */}
-                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-2 rounded-lg hover:bg-muted/40 transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor="image-animation" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      <Label htmlFor="image-animation" className="text-xs font-medium text-foreground cursor-pointer">
                         Add animation
                       </Label>
-                      <p className="text-[10px] text-slate-400">Create subtle motion effects on static image assets.</p>
+                      <p className="text-[10px] text-muted-foreground">Create subtle motion effects on static image assets.</p>
                     </div>
                     <Switch
                       id="image-animation"
@@ -1712,12 +1712,12 @@ export function CreativeSection({
                   </div>
 
                   {/* Add details to ad layout */}
-                  <div className="flex items-start justify-between gap-4 p-2 rounded-lg hover:bg-slate-50/60 transition-colors">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-2 rounded-lg hover:bg-muted/40 transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor="inline-comment" className="text-xs font-medium text-slate-700 cursor-pointer">
+                      <Label htmlFor="inline-comment" className="text-xs font-medium text-foreground cursor-pointer">
                         Add details to ad layout
                       </Label>
-                      <p className="text-[10px] text-slate-400">Display relevant social comments directly under the ad.</p>
+                      <p className="text-[10px] text-muted-foreground">Display relevant social comments directly under the ad.</p>
                     </div>
                     <Switch
                       id="inline-comment"
@@ -1744,29 +1744,29 @@ export function CreativeSection({
             )}
 
             <Tabs value={form.creativeType} onValueChange={(value) => onChange({ creativeType: value as RequestFormState["creativeType"] })}>
-              <TabsList className="h-10 bg-slate-100 p-1 w-fit">
-                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-white"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single image or video</TabsTrigger>
-                <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
-                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-white"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible ad</TabsTrigger>
-                <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-white"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
-                <TabsTrigger value="EXISTING_CREATIVE" disabled className="text-xs px-3 data-[state=active]:bg-white"><Copy className="w-3.5 h-3.5 mr-1.5" />Reused</TabsTrigger>
-                <TabsTrigger value="PLAYABLE" className="text-xs px-3 data-[state=active]:bg-white"><Video className="w-3.5 h-3.5 mr-1.5" />Playable</TabsTrigger>
+              <TabsList className="h-auto w-full flex-wrap justify-start bg-muted p-1 sm:w-fit">
+                <TabsTrigger value="SINGLE_MEDIA" className="text-xs px-3 data-[state=active]:bg-background"><ImageIcon className="w-3.5 h-3.5 mr-1.5" />Single image or video</TabsTrigger>
+                <TabsTrigger value="CAROUSEL_IMAGE" className="text-xs px-3 data-[state=active]:bg-background"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Carousel</TabsTrigger>
+                <TabsTrigger value="FLEXIBLE" className="text-xs px-3 data-[state=active]:bg-background"><GalleryHorizontal className="w-3.5 h-3.5 mr-1.5" />Flexible ad</TabsTrigger>
+                <TabsTrigger value="EXISTING_POST" className="text-xs px-3 data-[state=active]:bg-background"><FileText className="w-3.5 h-3.5 mr-1.5" />Existing Post</TabsTrigger>
+                <TabsTrigger value="EXISTING_CREATIVE" disabled className="text-xs px-3 data-[state=active]:bg-background"><Copy className="w-3.5 h-3.5 mr-1.5" />Reused</TabsTrigger>
+                <TabsTrigger value="PLAYABLE" className="text-xs px-3 data-[state=active]:bg-background"><Video className="w-3.5 h-3.5 mr-1.5" />Playable</TabsTrigger>
               </TabsList>
 
               <TabsContent value="EXISTING_CREATIVE" className="mt-4">
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-4">
+                <div className="rounded-lg border border-primary/25 bg-primary/10 p-4 space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Reused creative</Badge>
+                        <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Reused creative</Badge>
                         {form.existingCreativeOriginalType ? (
-                          <Badge variant="outline" className="font-mono text-[10px] text-slate-600">{form.existingCreativeOriginalType}</Badge>
+                          <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">{form.existingCreativeOriginalType}</Badge>
                         ) : null}
                       </div>
-                      <p className="text-sm font-semibold text-slate-900 truncate">
+                      <p className="text-sm font-semibold text-foreground truncate">
                         {form.existingCreativeName || form.creativeName || "Existing Meta creative"}
                       </p>
-                      <p className="font-mono text-xs text-slate-600 truncate">
+                      <p className="font-mono text-xs text-muted-foreground truncate">
                         {form.existingCreativeExternalId || "No creative id"}
                       </p>
                     </div>
@@ -1774,7 +1774,7 @@ export function CreativeSection({
                       Edit creative
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted-foreground">
                     This draft will reuse the existing Meta creative when executed. Editing creative content switches this variant to create a new creative with the same prepared assets.
                   </p>
                 </div>
@@ -1782,16 +1782,16 @@ export function CreativeSection({
 
               <TabsContent value="SINGLE_MEDIA" className="mt-4 space-y-4">
                 {hasMultipleSingleTexts && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-800 flex items-start gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600" />
+                  <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                     <div>
                       Single image or video uses the first primary text and headline only. Use Flexible ad for multiple text variations.
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Primary Text</Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Primary Text</Label>
                   <Textarea
                     rows={3}
                     value={form.singleImagePrimaryText || getFirstFilledVariation(form.singleImagePrimaryTexts, "")}
@@ -1805,13 +1805,13 @@ export function CreativeSection({
                         singleVideoPrimaryTexts: [val],
                       })
                     }}
-                    className="text-sm resize-none bg-white"
+                    className="text-sm resize-none bg-background"
                   />
-                  <p className="text-[11px] text-slate-400">Enter the primary text for your ad.</p>
+                  <p className="text-[11px] text-muted-foreground">Enter the primary text for your ad.</p>
                 </div>
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Headline</Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Headline</Label>
                   <Input
                     value={form.singleImageHeadline || getFirstFilledVariation(form.singleImageHeadlines, "")}
                     placeholder="Enter headline"
@@ -1824,9 +1824,9 @@ export function CreativeSection({
                         singleVideoHeadlines: [val],
                       })
                     }}
-                    className="h-9 text-sm bg-white"
+                    className="h-9 text-sm bg-background"
                   />
-                  <p className="text-[11px] text-slate-400">Enter the headline for your ad.</p>
+                  <p className="text-[11px] text-muted-foreground">Enter the headline for your ad.</p>
                 </div>
 
                 {/* Per-variant image/video picker(s). Each variation = one ad, sharing all text above and the settings below. */}
@@ -1918,19 +1918,19 @@ export function CreativeSection({
                           previewRequiresAuth,
                           isComplete: !!variant.existingCreativeExternalId,
                           editor: (
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
-                              <div className="flex items-start justify-between gap-4">
+                            <div className="rounded-lg border border-primary/25 bg-primary/10 p-4 space-y-3">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0 space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Reused creative</Badge>
+                                    <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Reused creative</Badge>
                                     {variant.existingCreativeOriginalType ? (
-                                      <Badge variant="outline" className="font-mono text-[10px] text-slate-600">{variant.existingCreativeOriginalType}</Badge>
+                                      <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">{variant.existingCreativeOriginalType}</Badge>
                                     ) : null}
                                   </div>
-                                  <p className="text-sm font-semibold text-slate-900 truncate">
+                                  <p className="text-sm font-semibold text-foreground truncate">
                                     {variant.existingCreativeName || variant.creativeName || "Existing Meta creative"}
                                   </p>
-                                  <p className="font-mono text-xs text-slate-600 truncate">
+                                  <p className="font-mono text-xs text-muted-foreground truncate">
                                     {variant.existingCreativeExternalId || "No creative id"}
                                   </p>
                                 </div>
@@ -1938,7 +1938,7 @@ export function CreativeSection({
                                   Edit creative
                                 </Button>
                               </div>
-                              <p className="text-xs text-slate-600">
+                              <p className="text-xs text-muted-foreground">
                                 This variation will reuse the existing Meta creative when executed. Editing creative content switches only this variation to create a new creative with the same prepared assets.
                               </p>
                             </div>
@@ -2003,13 +2003,13 @@ export function CreativeSection({
                 />
 
                 {/* Shared below variations: Description, CTA, Link URL */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Description</Label>
+                    <Label className="text-xs font-medium text-foreground">Description</Label>
                     <Input value={form.singleImageDescription} onChange={(event) => onChange({ singleImageDescription: event.target.value })} className="h-9 text-sm" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Label className="text-xs font-medium text-foreground">Call To Action <span className="text-destructive">*</span></Label>
                     <Select value={form.singleImageCallToAction} onValueChange={(value) => onChange({ singleImageCallToAction: value })}>
                       <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
@@ -2017,20 +2017,20 @@ export function CreativeSection({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                  <Label className="text-xs font-medium text-foreground">Link URL</Label>
                   <Input value={form.singleImageLinkUrl} onChange={(event) => onChange({ singleImageLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
-                  <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
+                  <p className="text-[11px] text-muted-foreground">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                 </div>
               </TabsContent>
 
               <TabsContent value="CAROUSEL_IMAGE" className="mt-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Primary Text</Label>
+                    <Label className="text-xs font-medium text-foreground">Primary Text</Label>
                     <Textarea rows={3} value={form.carouselPrimaryText} onChange={(event) => onChange({ carouselPrimaryText: event.target.value })} className="text-sm resize-none" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Label className="text-xs font-medium text-foreground">Call To Action <span className="text-destructive">*</span></Label>
                     <Select value={form.carouselCallToAction} onValueChange={(value) => onChange({ carouselCallToAction: value })}>
                       <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
@@ -2038,36 +2038,36 @@ export function CreativeSection({
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-xs font-medium text-slate-700">Carousel Cards</p>
-                      <p className="text-[11px] text-slate-400">Use 2-10 image cards.</p>
+                      <p className="text-xs font-medium text-foreground">Carousel Cards</p>
+                      <p className="text-[11px] text-muted-foreground">Use 2-10 image cards.</p>
                     </div>
                     <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onChange({ carouselCards: [...form.carouselCards, createEmptyCarouselCard()] })} disabled={form.carouselCards.length >= 10}>
                       <Plus className="w-3.5 h-3.5 mr-1" />Add Card
                     </Button>
                   </div>
                   {form.carouselCards.map((card, index) => (
-                    <div key={card.id} className="rounded-lg border border-slate-200 p-3 space-y-3 bg-slate-50">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-700">Card {index + 1}</p>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-red-600" onClick={() => onChange({ carouselCards: form.carouselCards.filter((_, cardIndex) => cardIndex !== index) })} disabled={form.carouselCards.length <= 2}>
+                    <div key={card.id} className="rounded-lg border border-border p-3 space-y-3 bg-muted/40">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs font-semibold text-foreground">Card {index + 1}</p>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => onChange({ carouselCards: form.carouselCards.filter((_, cardIndex) => cardIndex !== index) })} disabled={form.carouselCards.length <= 2}>
                           <Trash2 className="w-3.5 h-3.5 mr-1" />Remove
                         </Button>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-medium text-slate-700">Headline <span className="text-red-500">*</span></Label>
+                          <Label className="text-xs font-medium text-foreground">Headline <span className="text-destructive">*</span></Label>
                           <Input value={card.headline} onChange={(event) => updateCarouselCard(index, { headline: event.target.value })} className="h-9 text-sm" />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                          <Label className="text-xs font-medium text-foreground">Link URL</Label>
                           <Input value={card.linkUrl} onChange={(event) => updateCarouselCard(index, { linkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
-                          <p className="text-[11px] text-slate-400">Use a valid absolute URL or leave blank to use the app mapping fallback URL.</p>
+                          <p className="text-[11px] text-muted-foreground">Use a valid absolute URL or leave blank to use the app mapping fallback URL.</p>
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-slate-700">Description</Label>
+                        <Label className="text-xs font-medium text-foreground">Description</Label>
                         <Input value={card.description} onChange={(event) => updateCarouselCard(index, { description: event.target.value })} className="h-9 text-sm" />
                       </div>
                       <InlineMediaSourceEditor selection={card.image} uploading={uploadingKey?.startsWith(`carousel:${index}:`) ?? false} adAccountId={adAccountId ?? null} integrationId={executionIntegrationId ?? null} assetPreparationById={assetPreparationById} assetPreparationLoading={assetPreparationLoading} onRetryAssetPreparation={onRetryAssetPreparation} onModeChange={(mode) => updateCarouselCardImage(index, { mode })} onPatch={(patch) => updateCarouselCardImage(index, patch)} onUpload={(file) => handleCarouselUpload(index, file)} onMetaSelect={(media) => handleCarouselMetaSelection(index, media)} onLibrarySelect={(asset) => handleCarouselLibrarySelection(index, asset)}/>
@@ -2078,7 +2078,7 @@ export function CreativeSection({
 
 
               <TabsContent value="FLEXIBLE" className="mt-4 space-y-4">
-                <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-[11px] text-blue-700">
+                <div className="rounded-lg border border-primary/25 bg-primary/10 p-3 text-[11px] text-primary">
                   <strong>Flexible ad:</strong> Use multiple assets and text variations in one ad. Meta delivers the best-performing combination automatically.
                 </div>
                 <TextVariationEditor
@@ -2096,25 +2096,25 @@ export function CreativeSection({
                   placeholder="Enter headline variation"
                   onChange={(values) => onChange({ flexibleHeadlines: normalizeVariationRows(values) })}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Call To Action <span className="text-red-500">*</span></Label>
+                    <Label className="text-xs font-medium text-foreground">Call To Action <span className="text-destructive">*</span></Label>
                     <Select value={form.flexibleCallToAction} onValueChange={(value) => onChange({ flexibleCallToAction: value })}>
                       <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>{ctaOptions.map((cta) => <SelectItem key={cta} value={cta}>{cta}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                    <Label className="text-xs font-medium text-foreground">Link URL</Label>
                     <Input value={form.flexibleLinkUrl} onChange={(event) => onChange({ flexibleLinkUrl: event.target.value })} placeholder="https://example.com" className="h-9 text-sm" />
-                    <p className="text-[11px] text-slate-400">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
+                    <p className="text-[11px] text-muted-foreground">Enter a valid absolute URL starting with http:// or https://. Leave blank to use the app mapping fallback URL.</p>
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-xs font-medium text-slate-700">Assets <span className="text-slate-400 font-normal">({form.flexibleAssets.length}/{maxFlexibleAssets})</span></p>
-                      <p className="text-[11px] text-slate-400">Add 1-{maxFlexibleAssets} images or videos for this flexible ad group.</p>
+                      <p className="text-xs font-medium text-foreground">Assets <span className="text-muted-foreground font-normal">({form.flexibleAssets.length}/{maxFlexibleAssets})</span></p>
+                      <p className="text-[11px] text-muted-foreground">Add 1-{maxFlexibleAssets} images or videos for this flexible ad group.</p>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <input
@@ -2152,7 +2152,7 @@ export function CreativeSection({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10">
                     {form.flexibleAssets.map((asset, index) => {
                       const isVideoAsset = asset.assetType === "VIDEO"
                       const thumbnailPreview = getSelectionPreviewSource(asset.thumbnail)
@@ -2172,8 +2172,8 @@ export function CreativeSection({
                           type="button"
                           onClick={() => setActiveFlexibleAssetId(asset.id)}
                           title={`Asset #${index + 1} (${isVideoAsset ? "Video" : "Image"})`}
-                          className={`group relative aspect-square overflow-hidden rounded-md border bg-white text-left transition ${
-                            isActive ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-300"
+                          className={`group relative aspect-square overflow-hidden rounded-md border bg-background text-left transition ${
+                            isActive ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border"
                           }`}
                         >
                           {previewUrl ? (
@@ -2182,19 +2182,19 @@ export function CreativeSection({
                               requiresAuth={previewRequiresAuth}
                               alt={`Flexible asset ${index + 1}`}
                               className="h-full w-full object-cover"
-                              fallback={<div className="flex h-full items-center justify-center text-slate-300"><AssetIcon className="h-5 w-5" /></div>}
+                              fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><AssetIcon className="h-5 w-5" /></div>}
                             />
                           ) : (
-                            <div className="flex h-full items-center justify-center text-slate-300"><AssetIcon className="h-5 w-5" /></div>
+                            <div className="flex h-full items-center justify-center text-muted-foreground"><AssetIcon className="h-5 w-5" /></div>
                           )}
-                          <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-4 text-white">
+                          <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-4 text-primary-foreground">
                             #{index + 1}
                           </span>
                           <span
-                            className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-1 ring-white ${isComplete ? "bg-green-500" : "bg-amber-400"}`}
+                            className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-1 ring-background ${isComplete ? "bg-green-500" : "bg-amber-400"}`}
                             title={isComplete ? "Media selected" : "No media yet"}
                           />
-                          <span className="absolute bottom-1 left-1 flex h-5 w-5 items-center justify-center rounded bg-white/90 text-slate-500 shadow-sm">
+                          <span className="absolute bottom-1 left-1 flex h-5 w-5 items-center justify-center rounded bg-background/90 text-muted-foreground shadow-sm">
                             <AssetIcon className="h-3 w-3" />
                           </span>
                           {form.flexibleAssets.length > 1 ? (
@@ -2205,7 +2205,7 @@ export function CreativeSection({
                                 event.stopPropagation()
                                 handleRemoveFlexibleAsset(index)
                               }}
-                              className="absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded bg-white/90 text-red-500 shadow-sm hover:bg-red-50 group-hover:flex"
+                              className="absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded bg-background/90 text-destructive shadow-sm hover:bg-destructive/10 group-hover:flex"
                               title="Delete this asset"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -2220,7 +2220,7 @@ export function CreativeSection({
                         onClick={handleAddFlexibleAsset}
                         disabled={flexibleBulkUploading}
                         title="Add a new flexible asset"
-                        className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 bg-white text-slate-400 transition hover:border-slate-400 hover:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-300 disabled:hover:text-slate-400"
+                        className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border disabled:hover:text-muted-foreground"
                       >
                         <Plus className="h-5 w-5" />
                         <span className="text-[10px]">Add</span>
@@ -2229,18 +2229,18 @@ export function CreativeSection({
                   </div>
 
                   {activeFlexibleAsset ? (
-                    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold text-slate-700">Editing Asset #{resolvedActiveFlexibleAssetIndex + 1}</p>
+                    <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs font-semibold text-foreground">Editing Asset #{resolvedActiveFlexibleAssetIndex + 1}</p>
                         <div className="flex items-center gap-2">
                           <Select value={activeFlexibleAsset.assetType} onValueChange={(value) => updateFlexibleAsset(resolvedActiveFlexibleAssetIndex, { assetType: value as "IMAGE" | "VIDEO" })} disabled={flexibleBulkUploading}>
-                            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-8 w-full text-xs sm:w-[150px]"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="IMAGE">Image</SelectItem>
                               <SelectItem value="VIDEO">Video</SelectItem>
                             </SelectContent>
                           </Select>
-                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600" onClick={() => handleRemoveFlexibleAsset(resolvedActiveFlexibleAssetIndex)} disabled={flexibleBulkUploading || form.flexibleAssets.length <= 1}>
+                          <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => handleRemoveFlexibleAsset(resolvedActiveFlexibleAssetIndex)} disabled={flexibleBulkUploading || form.flexibleAssets.length <= 1}>
                             <Trash2 className="w-3.5 h-3.5 mr-1" />Remove
                           </Button>
                         </div>
@@ -2284,8 +2284,8 @@ export function CreativeSection({
               </TabsContent>
               <TabsContent value="EXISTING_POST" className="mt-4 space-y-4">
                 <div className="space-y-1.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <Label className="text-xs font-medium text-slate-700">Source Post ID <span className="text-red-500">*</span></Label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <Label className="text-xs font-medium text-foreground">Source Post ID <span className="text-destructive">*</span></Label>
                     <Button
                       type="button"
                       variant={existingPostEntryMode === "manual" ? "default" : "outline"}
@@ -2316,7 +2316,7 @@ export function CreativeSection({
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[460px] p-0" align="start">
+                      <PopoverContent className="w-[min(460px,calc(100vw-2rem))] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search post text, story, or post ID..." />
                           <CommandList>
@@ -2334,7 +2334,7 @@ export function CreativeSection({
                                   <Check className={`mr-2 h-4 w-4 ${form.existingPostId === post.id ? "opacity-100" : "opacity-0"}`} />
                                   <div className="min-w-0 flex-1">
                                     <div className="text-sm font-medium truncate">{getExistingPostOptionLabel(post)}</div>
-                                    <div className="text-[11px] text-slate-400 font-mono truncate">
+                                    <div className="text-[11px] text-muted-foreground font-mono truncate">
                                       {post.id}
                                       {formatExistingPostDate(post.createdTime) ? ` - ${formatExistingPostDate(post.createdTime)}` : ""}
                                       {post.type ? ` - ${post.type}` : ""}
@@ -2349,26 +2349,26 @@ export function CreativeSection({
                     </Popover>
                   )}
 
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-muted-foreground">
                     {existingPostEntryMode === "manual"
                       ? "Manual mode lets you paste object_story_id directly, including posts not returned in the recent page post picker."
                       : "Picker mode loads recent posts from the selected Facebook Page. Switch to manual mode for older or unavailable posts."}
                   </p>
-                  {existingPostEntryMode !== "manual" && facebookPagePostsMessage ? <p className="text-[11px] text-red-600">{facebookPagePostsMessage}</p> : null}
-                  {existingPostEntryMode !== "manual" && !facebookPagePostsMessage && !facebookPagePostsLoading && facebookPagePosts.length === 0 ? <p className="text-[11px] text-amber-700">No recent posts were returned for the selected Facebook Page.</p> : null}
+                  {existingPostEntryMode !== "manual" && facebookPagePostsMessage ? <p className="text-[11px] text-destructive">{facebookPagePostsMessage}</p> : null}
+                  {existingPostEntryMode !== "manual" && !facebookPagePostsMessage && !facebookPagePostsLoading && facebookPagePosts.length === 0 ? <p className="text-[11px] text-amber-700 dark:text-amber-300">No recent posts were returned for the selected Facebook Page.</p> : null}
                   {existingPostEntryMode !== "manual" && form.existingPostId && !selectedExistingPost && !facebookPagePostsLoading ? (
-                    <p className="text-[11px] text-amber-700">The current post ID is not in the loaded recent posts. Switch to manual mode if you want to keep using it.</p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">The current post ID is not in the loaded recent posts. Switch to manual mode if you want to keep using it.</p>
                   ) : null}
                   {selectedExistingPost ? (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 space-y-1.5">
-                      <p className="text-xs font-medium text-slate-700 line-clamp-2">{selectedExistingPost.message?.trim() || selectedExistingPost.story?.trim() || selectedExistingPost.id}</p>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 space-y-1.5">
+                      <p className="text-xs font-medium text-foreground line-clamp-2">{selectedExistingPost.message?.trim() || selectedExistingPost.story?.trim() || selectedExistingPost.id}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                         <span className="font-mono">{selectedExistingPost.id}</span>
                         {formatExistingPostDate(selectedExistingPost.createdTime) ? <span>{formatExistingPostDate(selectedExistingPost.createdTime)}</span> : null}
                         {selectedExistingPost.type ? <span>{selectedExistingPost.type}</span> : null}
                       </div>
                       {selectedExistingPost.permalinkUrl ? (
-                        <a href={selectedExistingPost.permalinkUrl} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-blue-600 hover:text-blue-700">
+                        <a href={selectedExistingPost.permalinkUrl} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-primary hover:text-primary">
                           Open post
                         </a>
                       ) : null}
@@ -2378,37 +2378,37 @@ export function CreativeSection({
               </TabsContent>
 
               <TabsContent value="PLAYABLE" className="mt-4 space-y-4">
-                <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-[11px] text-violet-800 flex items-start gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-violet-600" />
+                <div className="flex items-start gap-1.5 rounded-lg border border-violet-500/25 bg-violet-500/10 p-3 text-[11px] text-violet-700 dark:text-violet-300">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-violet-600 dark:text-violet-300" />
                   <div>Playable ad: upload a self-contained <strong>index.html</strong> (≤10MB, no external requests) plus a lead-in video. App Promotion objective only; CTA is fixed to Install.</div>
                 </div>
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Primary Text</Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Primary Text</Label>
                   <Textarea
                     rows={3}
                     value={form.playablePrimaryText || getFirstFilledVariation(form.playablePrimaryTexts, "")}
                     placeholder="Enter primary text"
                     onChange={(event) => { const val = event.target.value; onChange({ playablePrimaryText: val, playablePrimaryTexts: [val] }) }}
-                    className="text-sm resize-none bg-white"
+                    className="text-sm resize-none bg-background"
                   />
                 </div>
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Headline</Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Headline</Label>
                   <Input
                     value={form.playableHeadline || getFirstFilledVariation(form.playableHeadlines, "")}
                     placeholder="Enter headline"
                     onChange={(event) => { const val = event.target.value; onChange({ playableHeadline: val, playableHeadlines: [val] }) }}
-                    className="h-9 text-sm bg-white"
+                    className="h-9 text-sm bg-background"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Call To Action</Label>
+                    <Label className="text-xs font-medium text-foreground">Call To Action</Label>
                     <Select value={form.playableCallToAction || "INSTALL_MOBILE_APP"} onValueChange={(value) => onChange({ playableCallToAction: value })}>
-                      <SelectTrigger className="h-9 text-sm bg-white"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-sm bg-background"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INSTALL_MOBILE_APP">Install Now</SelectItem>
                         <SelectItem value="PLAY_GAME">Play Game</SelectItem>
@@ -2416,18 +2416,18 @@ export function CreativeSection({
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Link URL</Label>
+                    <Label className="text-xs font-medium text-foreground">Link URL</Label>
                     <Input
                       value={form.playableLinkUrl}
                       placeholder="Store URL (optional, falls back to app mapping)"
                       onChange={(event) => onChange({ playableLinkUrl: event.target.value })}
-                      className="h-9 text-sm bg-white"
+                      className="h-9 text-sm bg-background"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Playable Source (HTML) <span className="text-red-500">*</span></Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Playable Source (HTML) <span className="text-destructive">*</span></Label>
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
@@ -2440,13 +2440,13 @@ export function CreativeSection({
                       Upload .html
                     </Button>
                     {form.playableSource.uploadedAssetId
-                      ? <span className="text-[11px] text-slate-600 truncate">{form.playableSource.uploadedAssetName || `Asset #${form.playableSource.uploadedAssetId}`}</span>
-                      : <span className="text-[11px] text-slate-400">No file selected</span>}
+                      ? <span className="text-[11px] text-muted-foreground truncate">{form.playableSource.uploadedAssetName || `Asset #${form.playableSource.uploadedAssetId}`}</span>
+                      : <span className="text-[11px] text-muted-foreground">No file selected</span>}
                   </div>
                 </div>
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Lead-in Video <span className="text-red-500">*</span></Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Lead-in Video <span className="text-destructive">*</span></Label>
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
@@ -2462,13 +2462,13 @@ export function CreativeSection({
                       From Library
                     </Button>
                     {form.playableLeadInVideo.uploadedAssetId
-                      ? <span className="text-[11px] text-slate-600 truncate">{form.playableLeadInVideo.uploadedAssetName || `Asset #${form.playableLeadInVideo.uploadedAssetId}`}</span>
-                      : <span className="text-[11px] text-slate-400">No video selected</span>}
+                      ? <span className="text-[11px] text-muted-foreground truncate">{form.playableLeadInVideo.uploadedAssetName || `Asset #${form.playableLeadInVideo.uploadedAssetId}`}</span>
+                      : <span className="text-[11px] text-muted-foreground">No video selected</span>}
                   </div>
                 </div>
 
-                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <Label className="text-xs font-medium text-slate-700">Thumbnail (optional)</Label>
+                <div className="space-y-1.5 bg-muted/40 border border-border rounded-lg p-3">
+                  <Label className="text-xs font-medium text-foreground">Thumbnail (optional)</Label>
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
@@ -2481,19 +2481,19 @@ export function CreativeSection({
                       Upload image
                     </Button>
                     {form.playableThumbnail.uploadedAssetId
-                      ? <span className="text-[11px] text-slate-600 truncate">{form.playableThumbnail.uploadedAssetName || `Asset #${form.playableThumbnail.uploadedAssetId}`}</span>
-                      : <span className="text-[11px] text-slate-400">Auto-generated from video if empty</span>}
+                      ? <span className="text-[11px] text-muted-foreground truncate">{form.playableThumbnail.uploadedAssetName || `Asset #${form.playableThumbnail.uploadedAssetId}`}</span>
+                      : <span className="text-[11px] text-muted-foreground">Auto-generated from video if empty</span>}
                   </div>
                 </div>
               </TabsContent>
             </Tabs>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-2">Creative Checklist</p>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="bg-muted/40 border border-border rounded-lg p-3">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Creative Checklist</p>
+              <div className="grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2">
                 {completion.items.map((item) => (
-                  <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
-                    {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                  <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
+                    {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" /> : <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
                     <span>{item.label}</span>
                   </div>
                 ))}
@@ -2502,15 +2502,15 @@ export function CreativeSection({
           </div>
 
           <div className="flex flex-col items-center">
-            <p className="text-[11px] text-slate-400 mb-2 font-medium uppercase tracking-wide">Preview</p>
-            <div className="w-44 rounded-2xl border-2 border-slate-300 bg-white shadow-sm overflow-hidden">
-              <div className="bg-slate-100 px-3 py-1.5 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wide">Preview</p>
+            <div className="w-full max-w-44 rounded-2xl border-2 border-border bg-background shadow-sm overflow-hidden">
+              <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
               </div>
               <div className="p-2 space-y-1.5">
-                <div className="w-full h-20 bg-slate-100 rounded flex items-center justify-center border border-slate-200 overflow-hidden">
+                <div className="w-full h-20 bg-muted rounded flex items-center justify-center border border-border overflow-hidden">
                   {previewImage.url ? (
                     <ProtectedMediaImage
                       src={previewImage.url}
@@ -2518,17 +2518,17 @@ export function CreativeSection({
                       alt="Creative preview"
                       className="w-full h-full object-cover rounded"
                     />
-                  ) : form.creativeType === "EXISTING_CREATIVE" ? <Copy className="w-6 h-6 text-slate-300" /> : (form.creativeType === "SINGLE_VIDEO" || (form.creativeType === "SINGLE_MEDIA" && form.mediaType === "VIDEO")) ? <Video className="w-6 h-6 text-slate-300" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-slate-300" /> : <ImageIcon className="w-6 h-6 text-slate-300" />}
+                  ) : form.creativeType === "EXISTING_CREATIVE" ? <Copy className="w-6 h-6 text-muted-foreground" /> : (form.creativeType === "SINGLE_VIDEO" || (form.creativeType === "SINGLE_MEDIA" && form.mediaType === "VIDEO")) ? <Video className="w-6 h-6 text-muted-foreground" /> : form.creativeType === "EXISTING_POST" ? <FileText className="w-6 h-6 text-muted-foreground" /> : <ImageIcon className="w-6 h-6 text-muted-foreground" />}
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-semibold text-slate-900 leading-tight line-clamp-2">{getPreviewHeadline(form) || "Creative headline"}</p>
-                  <p className="text-[9px] text-slate-500 leading-tight line-clamp-2">{getPreviewMessage(form) || "Creative preview will update as you fill the form."}</p>
+                  <p className="text-[10px] font-semibold text-foreground leading-tight line-clamp-2">{getPreviewHeadline(form) || "Creative headline"}</p>
+                  <p className="text-[9px] text-muted-foreground leading-tight line-clamp-2">{getPreviewMessage(form) || "Creative preview will update as you fill the form."}</p>
                 </div>
-                <div className="pt-0.5"><div className="bg-blue-600 rounded text-center py-1"><span className="text-[9px] text-white font-semibold">{getPreviewCta(form)}</span></div></div>
-                <p className="text-[8px] text-slate-400">Sponsored</p>
+                <div className="pt-0.5"><div className="bg-primary rounded text-center py-1"><span className="text-[9px] text-primary-foreground font-semibold">{getPreviewCta(form)}</span></div></div>
+                <p className="text-[8px] text-muted-foreground">Sponsored</p>
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400"><Smartphone className="w-3 h-3" /><span>Preview only</span></div>
+            <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground"><Smartphone className="w-3 h-3" /><span>Preview only</span></div>
           </div>
         </div>
       </CardContent>
@@ -2656,14 +2656,14 @@ function VariationGallery({
   const canBulkMediaUpload = !!onBulkMediaUpload && (canAddVariant || cells[0]?.isComplete === false)
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
-      <div className="flex items-start justify-between gap-2">
+    <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold text-slate-700">
+          <p className="text-xs font-semibold text-foreground">
             {label}
-            <span className="ml-1.5 text-[11px] font-normal text-slate-500">({totalVariants}/{MAX_AD_VARIANTS})</span>
+            <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">({totalVariants}/{MAX_AD_VARIANTS})</span>
           </p>
-          <p className="text-[11px] text-slate-500">{helper}</p>
+          <p className="text-[11px] text-muted-foreground">{helper}</p>
         </div>
         {canAddVariant || canBulkMediaUpload || onOpenBulkLibrary || onOpenBulkMeta ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -2740,7 +2740,7 @@ function VariationGallery({
       </div>
 
       {/* Gallery: one tile per variation. Click to edit it in the detail pane below. */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10">
         {cells.map((cell, index) => {
           const isActive = cell.key === selectedCell?.key
           const isPrimary = cell.sequenceNumber === "primary"
@@ -2750,8 +2750,8 @@ function VariationGallery({
               type="button"
               onClick={() => onActiveVariantTabChange?.(cell.key)}
               title={`Variation #${index + 1}`}
-              className={`group relative aspect-square overflow-hidden rounded-md border bg-white text-left transition ${
-                isActive ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-300"
+              className={`group relative aspect-square overflow-hidden rounded-md border bg-background text-left transition ${
+                isActive ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border"
               }`}
             >
               {cell.previewUrl ? (
@@ -2760,18 +2760,18 @@ function VariationGallery({
                   requiresAuth={cell.previewRequiresAuth}
                   alt={`Variation ${index + 1}`}
                   className="h-full w-full object-cover"
-                  fallback={<div className="flex h-full items-center justify-center text-slate-300"><PlaceholderIcon className="h-5 w-5" /></div>}
+                  fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><PlaceholderIcon className="h-5 w-5" /></div>}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-slate-300"><PlaceholderIcon className="h-5 w-5" /></div>
+                <div className="flex h-full items-center justify-center text-muted-foreground"><PlaceholderIcon className="h-5 w-5" /></div>
               )}
               {/* Index badge */}
-              <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-4 text-white">
+              <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-4 text-primary-foreground">
                 #{index + 1}
               </span>
               {/* Complete / empty status dot */}
               <span
-                className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-1 ring-white ${cell.isComplete ? "bg-green-500" : "bg-amber-400"}`}
+                className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-1 ring-background ${cell.isComplete ? "bg-green-500" : "bg-amber-400"}`}
                 title={cell.isComplete ? "Media selected" : "No media yet"}
               />
               {/* Delete (additional variants only) — appears on hover/active */}
@@ -2783,7 +2783,7 @@ function VariationGallery({
                     event.stopPropagation()
                     onDeleteVariant?.(cell.sequenceNumber as number)
                   }}
-                  className="absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded bg-white/90 text-red-500 shadow-sm hover:bg-red-50 group-hover:flex"
+                  className="absolute bottom-1 right-1 hidden h-5 w-5 items-center justify-center rounded bg-background/90 text-destructive shadow-sm hover:bg-destructive/10 group-hover:flex"
                   title="Delete this variation"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -2799,7 +2799,7 @@ function VariationGallery({
             onClick={onAddVariant}
             disabled={bulkUploading}
             title="Add a new variation"
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 bg-white text-slate-400 transition hover:border-slate-400 hover:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-slate-300 disabled:hover:text-slate-400"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border disabled:hover:text-muted-foreground"
           >
             <Plus className="h-5 w-5" />
             <span className="text-[10px]">Add</span>
@@ -2809,9 +2809,9 @@ function VariationGallery({
 
       {/* Detail pane: edit the selected variation. */}
       {selectedCell ? (
-        <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-slate-700">
+        <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="text-xs font-semibold text-foreground">
               Editing Variation #{cells.findIndex((cell) => cell.key === selectedCell.key) + 1}
             </p>
             <div className="flex items-center gap-1">
@@ -2819,7 +2819,7 @@ function VariationGallery({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-[11px] text-slate-600 hover:text-slate-900"
+                className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                 onClick={() => onDuplicateVariant?.(selectedCell.sequenceNumber)}
                 disabled={!canAddVariant}
                 title={canAddVariant ? "Duplicate this variation" : `Maximum ${MAX_AD_VARIANTS} variations`}
@@ -2832,7 +2832,7 @@ function VariationGallery({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => onDeleteVariant?.(selectedCell.sequenceNumber as number)}
                   title="Delete this variation"
                 >
@@ -2975,10 +2975,10 @@ function UnifiedMediaEditor({
   if (!mediaType) {
     // No media selected yet — any image or video source is valid, then we detect its type.
     return (
-      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+      <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
+        <div className="flex items-center gap-2 text-xs font-medium text-foreground">
           <span>Media</span>
-          <span className="text-red-500">*</span>
+          <span className="text-destructive">*</span>
         </div>
         <input
           ref={initialUploadInputRef}
@@ -2990,13 +2990,13 @@ function UnifiedMediaEditor({
             event.currentTarget.value = ""
           }}
         />
-        <div className="rounded-lg border-2 border-dashed border-slate-300 bg-white p-5">
-          <div className="flex flex-col items-center gap-3 text-center text-slate-500">
-            <div className="flex items-center gap-2 text-slate-400">
+        <div className="rounded-lg border-2 border-dashed border-border bg-background p-5">
+          <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <ImageIcon className="h-7 w-7" />
               <Video className="h-7 w-7" />
             </div>
-            <p className="text-xs font-medium text-slate-700">Select an image or video asset</p>
+            <p className="text-xs font-medium text-foreground">Select an image or video asset</p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => initialUploadInputRef.current?.click()}>
                 Upload file
@@ -3008,7 +3008,7 @@ function UnifiedMediaEditor({
                 From Meta
               </Button>
             </div>
-            {!adAccountId ? <p className="text-[11px] text-amber-600">Select a Meta ad account first to browse media from Meta.</p> : null}
+            {!adAccountId ? <p className="text-[11px] text-amber-600 dark:text-amber-400">Select a Meta ad account first to browse media from Meta.</p> : null}
           </div>
         </div>
         <NexusAssetLibraryDialog
@@ -3033,12 +3033,12 @@ function UnifiedMediaEditor({
   if (mediaType === "VIDEO") {
     return (
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-slate-500 font-medium">Video selected</span>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-[11px] text-muted-foreground font-medium">Video selected</span>
           <button
             type="button"
             onClick={() => onMediaTypeChange("IMAGE")}
-            className="text-[11px] text-blue-600 hover:text-blue-700 underline"
+            className="text-[11px] text-primary hover:text-primary underline"
           >
             Switch to image
           </button>
@@ -3077,12 +3077,12 @@ function UnifiedMediaEditor({
   // IMAGE mode
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] text-slate-500 font-medium">Image selected</span>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-[11px] text-muted-foreground font-medium">Image selected</span>
         <button
           type="button"
           onClick={() => onMediaTypeChange("VIDEO")}
-          className="text-[11px] text-blue-600 hover:text-blue-700 underline"
+          className="text-[11px] text-primary hover:text-primary underline"
         >
           Switch to video
         </button>
@@ -3127,8 +3127,8 @@ function AssetPreparationStatusBadge({
 
   if (!adAccountId) {
     return (
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-amber-700">
-        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Waiting for ad account</Badge>
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300">
+        <Badge variant="outline" className="border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300">Waiting for ad account</Badge>
         {label ? <span>{label}</span> : null}
       </div>
     )
@@ -3136,8 +3136,8 @@ function AssetPreparationStatusBadge({
 
   if (!preparation) {
     return (
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-        <Badge variant="outline" className="border-slate-200 bg-white text-slate-600">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+        <Badge variant="outline" className="border-border bg-background text-muted-foreground">
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
           {loading ? "Checking Meta upload" : "Queued after save"}
         </Badge>
@@ -3148,21 +3148,21 @@ function AssetPreparationStatusBadge({
 
   const status = preparation.status
   const statusMeta: Record<string, { text: string; className: string; icon?: React.ReactNode }> = {
-    pending: { text: "Queued", className: "border-slate-200 bg-white text-slate-600" },
-    uploading: { text: "Uploading to Meta", className: "border-blue-200 bg-blue-50 text-blue-700", icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-    processing: { text: "Processing video", className: "border-blue-200 bg-blue-50 text-blue-700", icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-    ready: { text: "Ready on Meta", className: "border-green-200 bg-green-50 text-green-700", icon: <CheckCircle2 className="h-3 w-3" /> },
-    failed: { text: "Failed", className: "border-red-200 bg-red-50 text-red-700", icon: <AlertTriangle className="h-3 w-3" /> },
+    pending: { text: "Queued", className: "border-border bg-background text-muted-foreground" },
+    uploading: { text: "Uploading to Meta", className: "border-primary/25 bg-primary/10 text-primary", icon: <Loader2 className="h-3 w-3 animate-spin" /> },
+    processing: { text: "Processing video", className: "border-primary/25 bg-primary/10 text-primary", icon: <Loader2 className="h-3 w-3 animate-spin" /> },
+    ready: { text: "Ready on Meta", className: "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400", icon: <CheckCircle2 className="h-3 w-3" /> },
+    failed: { text: "Failed", className: "border-destructive/25 bg-destructive/10 text-destructive", icon: <AlertTriangle className="h-3 w-3" /> },
   }
   const meta = statusMeta[status] ?? statusMeta.pending
   const metaId = preparation.metaImageHash || preparation.metaVideoId
 
   return (
     <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <Badge variant="outline" className={meta.className}>{meta.icon}{meta.text}</Badge>
         {label ? <span>{label}</span> : null}
-        {metaId ? <span className="font-mono text-[10px] text-slate-400">{metaId}</span> : null}
+        {metaId ? <span className="font-mono text-[10px] text-muted-foreground">{metaId}</span> : null}
         {status === "failed" && onRetry ? (
           <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => void onRetry(assetId)}>
             Retry upload to Meta
@@ -3170,7 +3170,7 @@ function AssetPreparationStatusBadge({
         ) : null}
       </div>
       {status === "failed" && preparation.errorMessage ? (
-        <p className="text-[11px] text-red-600">{preparation.errorMessage}</p>
+        <p className="text-[11px] text-destructive">{preparation.errorMessage}</p>
       ) : null}
     </div>
   )
@@ -3288,17 +3288,17 @@ function MediaSourceEditor({
 
   const renderThumbnailImage = (className: string) => {
     return (
-      <div className={`${className} overflow-hidden rounded-md bg-slate-100`}>
+      <div className={`${className} overflow-hidden rounded-md bg-muted`}>
         {thumbnailImageUrl ? (
           <ProtectedMediaImage
             src={thumbnailImageUrl}
             requiresAuth={thumbnailImageRequiresAuth}
             alt="Video thumbnail preview"
             className="h-full w-full object-cover"
-            fallback={<div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-5 w-5" /></div>}
+            fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><ImageIcon className="h-5 w-5" /></div>}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-slate-400"><Video className="h-5 w-5" /></div>
+          <div className="flex h-full items-center justify-center text-muted-foreground"><Video className="h-5 w-5" /></div>
         )}
       </div>
     )
@@ -3312,11 +3312,11 @@ function MediaSourceEditor({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <Label className="text-xs font-medium text-slate-700">{title} {optional ? <span className="text-slate-400 font-normal">(optional)</span> : <span className="text-red-500">*</span>}</Label>
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Label className="text-xs font-medium text-foreground">{title} {optional ? <span className="text-muted-foreground font-normal">(optional)</span> : <span className="text-destructive">*</span>}</Label>
         <Select value={editorMode} onValueChange={handleEditorModeChange}>
-          <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-full text-xs sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
         </Select>
       </div>
@@ -3328,8 +3328,8 @@ function MediaSourceEditor({
               From Library
             </Button>
           </div>
-          {uploading ? <p className="text-[11px] text-slate-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</p> : null}
-          {selection.uploadedAssetId ? <p className="text-[11px] text-green-700">Stored asset: {selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p> : null}
+          {uploading ? <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</p> : null}
+          {selection.uploadedAssetId ? <p className="text-[11px] text-green-700 dark:text-green-400">Stored asset: {selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p> : null}
           <AssetPreparationStatusBadge
             assetId={selection.uploadedAssetId}
             preparation={preparation}
@@ -3339,42 +3339,42 @@ function MediaSourceEditor({
             onRetry={onRetryAssetPreparation}
           />
           {kind === "image" && preview.url ? (
-            <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-2">
-              <div className="h-16 w-16 overflow-hidden rounded-md bg-slate-100">
+            <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
+              <div className="h-16 w-16 overflow-hidden rounded-md bg-muted">
                 <ProtectedMediaImage
                   src={preview.url}
                   requiresAuth={preview.requiresAuth}
                   alt={selection.uploadedAssetName || title}
                   className="h-full w-full object-cover"
-                  fallback={<div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-5 w-5" /></div>}
+                  fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><ImageIcon className="h-5 w-5" /></div>}
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-slate-800">{selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p>
-                <p className="text-[11px] text-slate-500">Uploaded image preview</p>
+                <p className="truncate text-xs font-medium text-foreground">{selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p>
+                <p className="text-[11px] text-muted-foreground">Uploaded image preview</p>
               </div>
             </div>
           ) : null}
         </div>
       ) : editorMode === "external_url" ? (
         <div className="space-y-1.5">
-          <Label className="text-[11px] text-slate-500">Image URL</Label>
+          <Label className="text-[11px] text-muted-foreground">Image URL</Label>
           <Input value={selection.imageUrl} onChange={(event) => onPatch(clearMetaReferenceDecoration({ imageUrl: event.target.value, metaRefSource: "manual" }))} className="h-9 text-sm" />
         </div>
       ) : kind === "video" && hasSelectedMetaMedia ? (
         <div className="space-y-2">
           {!adAccountId ? (
-            <p className="text-[11px] text-amber-600">Select a Meta ad account first to browse media from Meta.</p>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">Select a Meta ad account first to browse media from Meta.</p>
           ) : null}
-          <div className="flex items-start gap-3 rounded-md border border-slate-200 bg-white p-3">
+          <div className="flex items-start gap-3 rounded-md border border-border bg-background p-3">
             {renderThumbnailImage("h-16 w-16")}
             <div className="min-w-0 flex-1 space-y-1">
-              <p className="truncate text-xs font-medium text-slate-800">{selection.metaAssetName || selection.videoId || "Meta video selected"}</p>
-              <p className="truncate font-mono text-[11px] text-slate-500">{selection.videoId || selection.metaAssetId || "-"}</p>
-              <p className="text-[11px] text-slate-500">Selected from Meta library.</p>
+              <p className="truncate text-xs font-medium text-foreground">{selection.metaAssetName || selection.videoId || "Meta video selected"}</p>
+              <p className="truncate font-mono text-[11px] text-muted-foreground">{selection.videoId || selection.metaAssetId || "-"}</p>
+              <p className="text-[11px] text-muted-foreground">Selected from Meta library.</p>
               {renderThumbnailStatus()}
             </div>
-            <div className="flex max-w-[260px] flex-wrap items-center justify-end gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:max-w-[260px] sm:justify-end">
               <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setPickerOpen(true)} disabled={!adAccountId}>
                 From Meta
               </Button>
@@ -3412,11 +3412,11 @@ function MediaSourceEditor({
           />
         </div>
       ) : (
-        <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
+        <div className="space-y-3 rounded-md border border-border bg-background p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Browse Meta library</p>
-              <p className="text-[11px] text-slate-500">Search existing {kind === "video" ? "videos" : "images"} from the selected Meta ad account.</p>
+              <p className="text-xs font-medium text-foreground">Browse Meta library</p>
+              <p className="text-[11px] text-muted-foreground">Search existing {kind === "video" ? "videos" : "images"} from the selected Meta ad account.</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setPickerOpen(true)} disabled={!adAccountId}>
               From Meta
@@ -3426,26 +3426,26 @@ function MediaSourceEditor({
             </Button>
           </div>
           {!adAccountId ? (
-            <p className="text-[11px] text-amber-600">Select a Meta ad account first to browse media from Meta.</p>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">Select a Meta ad account first to browse media from Meta.</p>
           ) : null}
           {hasSelectedMetaMedia ? (
-            <div className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-              <div className="h-16 w-16 overflow-hidden rounded-md bg-slate-100">
+            <div className="flex items-start gap-3 rounded-md border border-border bg-muted/40 p-3">
+              <div className="h-16 w-16 overflow-hidden rounded-md bg-muted">
                 {preview.url ? (
                   <ProtectedMediaImage
                     src={preview.url}
                     requiresAuth={preview.requiresAuth}
                     alt={selection.metaAssetName || selection.metaAssetId || title}
                     className="h-full w-full object-cover"
-                    fallback={<div className="flex h-full items-center justify-center text-slate-400">{kind === "video" ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}</div>}
+                    fallback={<div className="flex h-full items-center justify-center text-muted-foreground">{kind === "video" ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}</div>}
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-slate-400">{kind === "video" ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}</div>
+                  <div className="flex h-full items-center justify-center text-muted-foreground">{kind === "video" ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}</div>
                 )}
               </div>
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="truncate text-xs font-medium text-slate-800">{selection.metaAssetName || (kind === "video" ? selection.videoId : selection.imageHash) || "Meta asset selected"}</p>
-                <p className="truncate font-mono text-[11px] text-slate-500">{kind === "video" ? (selection.videoId || selection.metaAssetId || "-") : (selection.imageHash || selection.metaAssetId || "-")}</p>
+                <p className="truncate text-xs font-medium text-foreground">{selection.metaAssetName || (kind === "video" ? selection.videoId : selection.imageHash) || "Meta asset selected"}</p>
+                <p className="truncate font-mono text-[11px] text-muted-foreground">{kind === "video" ? (selection.videoId || selection.metaAssetId || "-") : (selection.imageHash || selection.metaAssetId || "-")}</p>
               </div>
               {kind === "video" ? (
                 <Button
@@ -3552,11 +3552,11 @@ function InlineMediaSourceEditor({
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-      <div className="flex items-center justify-between gap-3">
-        <Label className="text-xs font-medium text-slate-700">Card Image <span className="text-red-500">*</span></Label>
+    <div className="space-y-2 rounded-md border border-border bg-background p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Label className="text-xs font-medium text-foreground">Card Image <span className="text-destructive">*</span></Label>
         <Select value={editorMode} onValueChange={handleEditorModeChange}>
-          <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-full text-xs sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="from_meta">From Meta</SelectItem>
             <SelectItem value="external_url">External URL</SelectItem>
@@ -3572,8 +3572,8 @@ function InlineMediaSourceEditor({
               From Library
             </Button>
           </div>
-          {uploading ? <p className="text-[11px] text-slate-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</p> : null}
-          {selection.uploadedAssetId ? <p className="text-[11px] text-green-700">Stored asset: {selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p> : null}
+          {uploading ? <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</p> : null}
+          {selection.uploadedAssetId ? <p className="text-[11px] text-green-700 dark:text-green-400">Stored asset: {selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p> : null}
           <AssetPreparationStatusBadge
             assetId={selection.uploadedAssetId}
             preparation={preparation}
@@ -3583,19 +3583,19 @@ function InlineMediaSourceEditor({
             onRetry={onRetryAssetPreparation}
           />
           {preview.url ? (
-            <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 p-2">
-              <div className="h-14 w-14 overflow-hidden rounded-md bg-slate-100">
+            <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-2">
+              <div className="h-14 w-14 overflow-hidden rounded-md bg-muted">
                 <ProtectedMediaImage
                   src={preview.url}
                   requiresAuth={preview.requiresAuth}
                   alt={selection.uploadedAssetName || "Uploaded image"}
                   className="h-full w-full object-cover"
-                  fallback={<div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-4 w-4" /></div>}
+                  fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><ImageIcon className="h-4 w-4" /></div>}
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-slate-800">{selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p>
-                <p className="text-[11px] text-slate-500">Uploaded image preview</p>
+                <p className="truncate text-xs font-medium text-foreground">{selection.uploadedAssetName || `Asset #${selection.uploadedAssetId}`}</p>
+                <p className="text-[11px] text-muted-foreground">Uploaded image preview</p>
               </div>
             </div>
           ) : null}
@@ -3603,26 +3603,26 @@ function InlineMediaSourceEditor({
       ) : editorMode === "external_url" ? (
         <Input value={selection.imageUrl} onChange={(event) => onPatch(clearMetaReferenceDecoration({ imageUrl: event.target.value, metaRefSource: "manual" }))} className="h-9 text-sm" />
       ) : (
-        <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+        <div className="space-y-3 rounded-md border border-border bg-muted/40 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[11px] text-slate-500">Pick an image from Meta for this carousel card.</p>
+            <p className="text-[11px] text-muted-foreground">Pick an image from Meta for this carousel card.</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setPickerOpen(true)} disabled={!adAccountId}>From Meta</Button>
               <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setLibraryOpen(true)}>From Library</Button>
             </div>
           </div>
           {hasSelectedMetaImage ? (
-            <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-2">
-              <div className="h-14 w-14 overflow-hidden rounded-md bg-slate-100">
+            <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
+              <div className="h-14 w-14 overflow-hidden rounded-md bg-muted">
                 {preview.url ? (
-                  <ProtectedMediaImage src={preview.url} requiresAuth={preview.requiresAuth} alt={selection.metaAssetName || selection.imageHash || "Card image"} className="h-full w-full object-cover" fallback={<div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-4 w-4" /></div>} />
+                  <ProtectedMediaImage src={preview.url} requiresAuth={preview.requiresAuth} alt={selection.metaAssetName || selection.imageHash || "Card image"} className="h-full w-full object-cover" fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><ImageIcon className="h-4 w-4" /></div>} />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-slate-400"><ImageIcon className="h-4 w-4" /></div>
+                  <div className="flex h-full items-center justify-center text-muted-foreground"><ImageIcon className="h-4 w-4" /></div>
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-slate-800">{selection.metaAssetName || selection.imageHash || "Meta image selected"}</p>
-                <p className="truncate font-mono text-[11px] text-slate-500">{selection.imageHash || selection.metaAssetId || "-"}</p>
+                <p className="truncate text-xs font-medium text-foreground">{selection.metaAssetName || selection.imageHash || "Meta image selected"}</p>
+                <p className="truncate font-mono text-[11px] text-muted-foreground">{selection.imageHash || selection.metaAssetId || "-"}</p>
               </div>
             </div>
           ) : null}
@@ -3666,11 +3666,11 @@ function TextVariationEditor({
   const rows = normalizeVariationRows(values)
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <div className="flex items-center justify-between gap-3">
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Label className="text-xs font-medium text-slate-700">{label} {required ? <span className="text-red-500">*</span> : null}</Label>
-          <p className="text-[11px] text-slate-400">Add up to {maxCreativeTextVariations} variations. Meta can rotate these variations at delivery time.</p>
+          <Label className="text-xs font-medium text-foreground">{label} {required ? <span className="text-destructive">*</span> : null}</Label>
+          <p className="text-[11px] text-muted-foreground">Add up to {maxCreativeTextVariations} variations. Meta can rotate these variations at delivery time.</p>
         </div>
         <Button
           type="button"
@@ -3697,7 +3697,7 @@ function TextVariationEditor({
                     nextValues[index] = event.target.value
                     onChange(nextValues)
                   }}
-                  className="text-sm resize-none bg-white"
+                  className="text-sm resize-none bg-background"
                 />
               ) : (
                 <Input
@@ -3708,7 +3708,7 @@ function TextVariationEditor({
                     nextValues[index] = event.target.value
                     onChange(nextValues)
                   }}
-                  className="h-9 text-sm bg-white"
+                  className="h-9 text-sm bg-background"
                 />
               )}
             </div>
@@ -3716,7 +3716,7 @@ function TextVariationEditor({
               type="button"
               variant="ghost"
               size="sm"
-              className="mt-1 h-8 px-2 text-red-600"
+              className="mt-1 h-8 px-2 text-destructive"
               onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
               disabled={rows.length <= 1}
             >
@@ -3885,3 +3885,5 @@ function getPreviewCta(form: RequestFormState): string {
 function formatCta(value: string): string {
   return value ? value.replaceAll("_", " ") : "LEARN MORE"
 }
+
+

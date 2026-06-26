@@ -79,7 +79,7 @@ function SortButton({
     <button
       type="button"
       onClick={onClick}
-      className="ml-auto inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-900"
+      className="ml-auto inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
       aria-label={`Sort by ${label}`}
     >
       <span>{label}</span>
@@ -104,7 +104,7 @@ function KpiCard({
   tone: string
 }) {
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="border-border bg-card shadow-sm">
       <CardContent className="p-5">
         {loading ? (
           <div className="space-y-3">
@@ -115,9 +115,9 @@ function KpiCard({
         ) : (
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-500">{title}</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
-              <p className="mt-2 text-xs text-slate-500">{helper}</p>
+              <p className="text-sm font-medium text-muted-foreground">{title}</p>
+              <p className="mt-1 text-3xl font-bold text-foreground">{value}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{helper}</p>
             </div>
             <div className={cn("rounded-lg p-2.5", tone)}>
               <Icon className="h-5 w-5" />
@@ -132,11 +132,11 @@ function KpiCard({
 function KpiGrid({ overview, loading }: { overview: TikTokDashboardOverviewDto | null; loading: boolean }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-      <KpiCard title="Spend" value={formatCurrency(overview?.totalSpend ?? 0)} helper={`CPI ${formatCurrency(overview?.avgCpi ?? 0)}`} icon={DollarSign} loading={loading} tone="bg-cyan-50 text-cyan-700" />
-      <KpiCard title="MMP Installs" value={formatNumber(overview?.totalInstalls ?? 0)} helper="Gold installs come from MMP attribution" icon={TrendingUp} loading={loading} tone="bg-emerald-50 text-emerald-700" />
-      <KpiCard title="Clicks / CTR" value={`${formatCompact(overview?.totalClicks ?? 0)} / ${formatPercent(overview?.avgCtr ?? 0)}`} helper={`${formatCompact(overview?.totalImpressions ?? 0)} impressions`} icon={MousePointerClick} loading={loading} tone="bg-violet-50 text-violet-700" />
-      <KpiCard title="ROAS D7" value={formatRoas(overview?.avgRoasD7)} helper="Adjust cohort attribution" icon={Target} loading={loading} tone="bg-rose-50 text-rose-700" />
-      <KpiCard title="Balance" value={formatCurrency(overview?.accountBalance ?? 0)} helper={`${formatNumber(overview?.activeCampaigns ?? 0)} active campaigns`} icon={WalletCards} loading={loading} tone="bg-amber-50 text-amber-700" />
+      <KpiCard title="Spend" value={formatCurrency(overview?.totalSpend ?? 0)} helper={`CPI ${formatCurrency(overview?.avgCpi ?? 0)}`} icon={DollarSign} loading={loading} tone="bg-cyan-500/10 text-cyan-700 dark:text-cyan-300" />
+      <KpiCard title="MMP Installs" value={formatNumber(overview?.totalInstalls ?? 0)} helper="Gold installs come from MMP attribution" icon={TrendingUp} loading={loading} tone="bg-green-500/10 text-green-700 dark:text-green-400" />
+      <KpiCard title="Clicks / CTR" value={`${formatCompact(overview?.totalClicks ?? 0)} / ${formatPercent(overview?.avgCtr ?? 0)}`} helper={`${formatCompact(overview?.totalImpressions ?? 0)} impressions`} icon={MousePointerClick} loading={loading} tone="bg-violet-500/10 text-violet-700 dark:text-violet-300" />
+      <KpiCard title="ROAS D7" value={formatRoas(overview?.avgRoasD7)} helper="Adjust cohort attribution" icon={Target} loading={loading} tone="bg-destructive/10 text-destructive" />
+      <KpiCard title="Balance" value={formatCurrency(overview?.accountBalance ?? 0)} helper={`${formatNumber(overview?.activeCampaigns ?? 0)} active campaigns`} icon={WalletCards} loading={loading} tone="bg-amber-500/10 text-amber-700 dark:text-amber-300" />
     </div>
   )
 }
@@ -156,7 +156,7 @@ function TrendChart({ daily, loading }: { daily: TikTokDashboardDailyDto[]; load
 
   if (loading) {
     return (
-      <Card className="border-slate-200 bg-white shadow-sm">
+      <Card className="border-border bg-card shadow-sm">
         <CardHeader><Skeleton className="h-5 w-48" /><Skeleton className="h-4 w-72" /></CardHeader>
         <CardContent><Skeleton className="h-[320px] w-full" /></CardContent>
       </Card>
@@ -164,14 +164,14 @@ function TrendChart({ daily, loading }: { daily: TikTokDashboardDailyDto[]; load
   }
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="border-border bg-card shadow-sm">
       <CardHeader>
-        <CardTitle className="text-base font-semibold text-slate-900">30 Day Trend</CardTitle>
-        <CardDescription className="text-sm text-slate-500">TikTok spend, MMP installs, CPI, CTR, and Adjust-attributed ROAS D7 grouped by report date.</CardDescription>
+        <CardTitle className="text-base font-semibold text-foreground">30 Day Trend</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">TikTok spend, MMP installs, CPI, CTR, and Adjust-attributed ROAS D7 grouped by report date.</CardDescription>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <div className="flex h-[320px] items-center justify-center text-sm text-slate-500">No daily TikTok data for this range.</div>
+          <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">No daily TikTok data for this range.</div>
         ) : (
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -206,19 +206,19 @@ function DiscrepancyChart({ rows, loading }: { rows: TikTokInstallDiscrepancyDto
   }))
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="border-border bg-card shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <CardTitle className="text-base font-semibold text-slate-900">Install Discrepancy</CardTitle>
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <CardTitle className="text-base font-semibold text-foreground">Install Discrepancy</CardTitle>
         </div>
-        <CardDescription className="text-sm text-slate-500">Compare TikTok reported installs with MMP installs; rows above 20% are alert candidates.</CardDescription>
+        <CardDescription className="text-sm text-muted-foreground">Compare TikTok reported installs with MMP installs; rows above 20% are alert candidates.</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
           <Skeleton className="h-[260px] w-full" />
         ) : data.length === 0 ? (
-          <div className="flex h-[260px] items-center justify-center text-sm text-slate-500">No discrepancy rows for the selected range.</div>
+          <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">No discrepancy rows for the selected range.</div>
         ) : (
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -300,11 +300,11 @@ function CampaignTable({
   }
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="border-border bg-card shadow-sm">
       <CardHeader className="gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <CardTitle className="text-base font-semibold text-slate-900">Campaign Performance</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">Read-only TikTok campaign metrics with MMP-attributed installs and ROAS.</p>
+          <CardTitle className="text-base font-semibold text-foreground">Campaign Performance</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">Read-only TikTok campaign metrics with MMP-attributed installs and ROAS.</p>
         </div>
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <SearchableFilterSelect
@@ -317,8 +317,8 @@ function CampaignTable({
             className="min-w-[220px] text-sm"
           />
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign" className="h-10 border-slate-200 pl-9" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign" className="h-10 border-border pl-9" />
           </div>
         </div>
       </CardHeader>
@@ -326,7 +326,7 @@ function CampaignTable({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50">
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="px-4">Campaign</TableHead>
                 <TableHead className="px-4">Advertiser</TableHead>
                 <TableHead className="px-4 text-right"><SortButton label="Spend" active={sortBy === "spend"} dir={sortDir} onClick={() => handleSort("spend")} /></TableHead>
@@ -342,28 +342,28 @@ function CampaignTable({
                   <TableRow key={index}><TableCell colSpan={7} className="px-4 py-3"><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                 ))
               ) : error ? (
-                <TableRow><TableCell colSpan={7} className="px-4 py-10 text-center text-sm text-rose-600">{error.message}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="px-4 py-10 text-center text-sm text-destructive">{error.message}</TableCell></TableRow>
               ) : rows.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">No campaigns match this range.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">No campaigns match this range.</TableCell></TableRow>
               ) : (
                 rows.map((item: TikTokCampaignPerformanceDto) => {
                   const url = buildTikTokCampaignUrl(item.advertiserId, item.campaignId)
                   return (
-                    <TableRow key={`${item.advertiserId}-${item.campaignId}`} className="hover:bg-slate-50/80">
+                    <TableRow key={`${item.advertiserId}-${item.campaignId}`} className="hover:bg-muted/40">
                       <TableCell className="px-4 py-3">
                         <div className="space-y-1">
-                          <div className="font-medium text-slate-900">{item.campaignName || item.campaignId}</div>
-                          <div className="text-xs text-slate-500">{item.campaignId}</div>
-                          {item.appId ? <div className="text-xs text-slate-400">App: {item.appId}</div> : null}
-                          {url ? <a href={url} target="_blank" rel="noreferrer noopener" className="text-xs font-medium text-cyan-700 hover:text-cyan-800">Open in TikTok</a> : null}
+                          <div className="font-medium text-foreground">{item.campaignName || item.campaignId}</div>
+                          <div className="text-xs text-muted-foreground">{item.campaignId}</div>
+                          {item.appId ? <div className="text-xs text-muted-foreground/70">App: {item.appId}</div> : null}
+                          {url ? <a href={url} target="_blank" rel="noreferrer noopener" className="text-xs font-medium text-cyan-700 dark:text-cyan-300 hover:text-cyan-800 dark:hover:text-cyan-200">Open in TikTok</a> : null}
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-slate-600">{item.advertiserId}</TableCell>
-                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatCurrency(item.spend)}</TableCell>
-                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatNumber(item.installs)}</TableCell>
-                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatCurrency(item.cpi)}</TableCell>
-                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-slate-700">{formatRoas(item.roas)}</TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-slate-600">{item.status || "UNKNOWN"}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.advertiserId}</TableCell>
+                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-foreground">{formatCurrency(item.spend)}</TableCell>
+                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-foreground">{formatNumber(item.installs)}</TableCell>
+                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-foreground">{formatCurrency(item.cpi)}</TableCell>
+                      <TableCell className="px-4 py-3 text-right text-sm font-medium text-foreground">{formatRoas(item.roas)}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.status || "UNKNOWN"}</TableCell>
                     </TableRow>
                   )
                 })
@@ -371,7 +371,7 @@ function CampaignTable({
             </TableBody>
           </Table>
         </div>
-        <div className="border-t border-slate-200 px-4 py-3">
+        <div className="border-t border-border px-4 py-3">
           <Pagination currentPage={data?.page ?? page} totalPages={totalPages} totalItems={data?.total ?? rows.length} pageSize={pageSize} itemName="campaigns" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1) }} />
         </div>
       </CardContent>
@@ -427,18 +427,18 @@ export function TikTokDashboard() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>TikTok Ads</span>
             <ChevronRight className="h-3 w-3" />
-            <span className="font-medium text-slate-900">Dashboard</span>
+            <span className="font-medium text-foreground">Dashboard</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-cyan-50 p-2.5">
-              <BarChart3 className="h-5 w-5 text-cyan-700" />
+            <div className="rounded-xl bg-cyan-500/10 p-2.5">
+              <BarChart3 className="h-5 w-5 text-cyan-700 dark:text-cyan-300" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">TikTok Ads Dashboard</h1>
-              <p className="text-sm text-slate-500">Read-only spend, campaign performance, MMP installs, attribution ROAS, and discrepancy monitoring.</p>
+              <h1 className="text-2xl font-bold text-foreground">TikTok Ads Dashboard</h1>
+              <p className="text-sm text-muted-foreground">Read-only spend, campaign performance, MMP installs, attribution ROAS, and discrepancy monitoring.</p>
             </div>
           </div>
         </div>
@@ -458,8 +458,8 @@ export function TikTokDashboard() {
       />
 
       {overviewApi.error || dailyApi.error || discrepancyApi.error ? (
-        <Card className="border-rose-200 bg-rose-50 shadow-sm">
-          <CardContent className="p-4 text-sm text-rose-700">{overviewApi.error?.message ?? dailyApi.error?.message ?? discrepancyApi.error?.message}</CardContent>
+        <Card className="border-destructive/30 bg-destructive/10 shadow-sm">
+          <CardContent className="p-4 text-sm text-destructive">{overviewApi.error?.message ?? dailyApi.error?.message ?? discrepancyApi.error?.message}</CardContent>
         </Card>
       ) : null}
 
@@ -470,3 +470,4 @@ export function TikTokDashboard() {
     </div>
   )
 }
+

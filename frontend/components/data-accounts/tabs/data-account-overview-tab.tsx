@@ -78,13 +78,13 @@ interface OverviewProps {
 
 const DetailItem = ({ label, value, isCode }: { label: string; value: React.ReactNode; isCode?: boolean }) => (
   <div className="flex flex-col gap-1">
-    <span className="text-sm font-medium text-slate-500">{label}</span>
+    <span className="text-sm font-medium text-muted-foreground">{label}</span>
     {isCode ? (
-      <code className="text-sm bg-slate-50 px-2 py-1 rounded text-slate-800 font-mono break-all w-fit max-w-full">
+      <code className="text-sm bg-muted/40 px-2 py-1 rounded text-foreground font-mono break-all w-fit max-w-full">
         {value}
       </code>
     ) : (
-      <span className="text-sm text-slate-900 break-words">{value}</span>
+      <span className="text-sm text-foreground break-words">{value}</span>
     )}
   </div>
 )
@@ -129,9 +129,9 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
     <div className="space-y-6">
 
       {/* Account Details */}
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold text-slate-900">Account Details</CardTitle>
+          <CardTitle className="text-base font-semibold text-foreground">Account Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
@@ -234,11 +234,11 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
       </Card>
 
       {/* Linked Apps */}
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div>
-            <CardTitle className="text-base font-semibold text-slate-900">Linked Apps</CardTitle>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <CardTitle className="text-base font-semibold text-foreground">Linked Apps</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {appsLoading ? "Loading..." : `${apps.length} apps using this account`}
             </p>
           </div>
@@ -246,11 +246,11 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
         <CardContent className="p-0">
           {appsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
             </div>
           ) : apps.length === 0 ? (
             <div className="text-center py-8 px-4">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 {isAdMob
                   ? "No apps found for this account"
                   : account.network === "appsflyer"
@@ -267,7 +267,7 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
                       <TableHead className="text-xs font-medium uppercase tracking-wide pl-4">App</TableHead>
                       <TableHead className="text-xs font-medium uppercase tracking-wide">Platform</TableHead>
                       <TableHead className="text-xs font-medium uppercase tracking-wide pr-4">App ID</TableHead>
@@ -277,18 +277,18 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
                     {displayedApps.map((app) => (
                       <TableRow
                         key={app.id}
-                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        className="hover:bg-muted/40 transition-colors cursor-pointer"
                         onClick={() => router.push(`/apps/${app.appId}?from=account&accountId=${account.network}-${account.id}`)}
                       >
                         <TableCell className="pl-4">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-7 w-7 rounded-lg">
                               <AvatarImage src={app.iconUri || "/placeholder.svg"} alt={app.displayName || app.appId} />
-                              <AvatarFallback className="rounded-lg bg-slate-100">
-                                <ImageIcon className="w-4 h-4 text-slate-400" />
+                              <AvatarFallback className="rounded-lg bg-muted">
+                                <ImageIcon className="w-4 h-4 text-muted-foreground" />
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm font-medium text-slate-900">
+                            <span className="text-sm font-medium text-foreground">
                               {app.displayName || app.appId}
                             </span>
                           </div>
@@ -297,14 +297,14 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
                           <Badge
                             className={
                               app.platform === "IOS"
-                                ? "bg-blue-100 text-blue-700 border-blue-200 text-xs"
-                                : "bg-green-100 text-green-700 border-green-200 text-xs"
+                                ? "bg-primary/10 text-primary border-primary/20 text-xs"
+                                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25 text-xs"
                             }
                           >
                             {app.platform === "IOS" ? "iOS" : "Android"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-500 pr-4 font-mono">{app.appId}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground pr-4 font-mono">{app.appId}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -312,19 +312,19 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
               </div>
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-                  <div className="text-sm text-slate-500">
-                    Showing <span className="font-medium text-slate-900">{startIndex + 1}</span> to{" "}
-                    <span className="font-medium text-slate-900">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+                  <div className="text-sm text-muted-foreground">
+                    Showing <span className="font-medium text-foreground">{startIndex + 1}</span> to{" "}
+                    <span className="font-medium text-foreground">
                       {Math.min(endIndex, apps.length)}
                     </span>{" "}
-                    of <span className="font-medium text-slate-900">{apps.length}</span> apps
+                    of <span className="font-medium text-foreground">{apps.length}</span> apps
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 px-2.5 text-xs text-slate-600 border-slate-200 hover:bg-slate-50 disabled:opacity-50"
+                      className="h-8 px-2.5 text-xs text-muted-foreground border-border hover:bg-muted/40 disabled:opacity-50"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                     >
@@ -337,8 +337,8 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
                           key={page}
                           onClick={() => handlePageChange(page)}
                           className={`min-w-[28px] h-7 rounded flex items-center justify-center text-xs font-medium transition-colors ${currentPage === page
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-slate-600 hover:bg-slate-100"
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted"
                             }`}
                         >
                           {page}
@@ -349,7 +349,7 @@ export function DataAccountOverviewTab({ account }: OverviewProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 px-2.5 text-xs text-slate-600 border-slate-200 hover:bg-slate-50 disabled:opacity-50"
+                      className="h-8 px-2.5 text-xs text-muted-foreground border-border hover:bg-muted/40 disabled:opacity-50"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
                     >

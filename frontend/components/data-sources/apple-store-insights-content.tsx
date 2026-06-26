@@ -169,13 +169,13 @@ export function AppleStoreInsightsContent() {
         <div>
           <Link
             href="/data-sources"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 mb-2"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Data Sources
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">Apple App Store</h1>
-          <p className="text-sm text-slate-600 max-w-3xl mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Apple App Store</h1>
+          <p className="text-sm text-muted-foreground max-w-3xl mt-1">
             Compare gold tables in StarRocks (sales vs Qonversion reconciliation) and download monthly finance artifacts
             stored in the data lake for accounting.
           </p>
@@ -216,7 +216,7 @@ export function AppleStoreInsightsContent() {
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-sm font-semibold text-slate-800 mb-2">Reconciliation (Qon vs Apple)</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-2">Reconciliation (Qon vs Apple)</h3>
               <div className="border rounded-lg overflow-x-auto max-h-[360px] overflow-y-auto">
                 <Table>
                   <TableHeader>
@@ -231,7 +231,7 @@ export function AppleStoreInsightsContent() {
                   <TableBody>
                     {reconRows.length === 0 ? (
                       <TableRow>
-                        <TableCell className="text-sm text-slate-500">
+                        <TableCell className="text-sm text-muted-foreground">
                           No rows — pick a range and load, or run the Apple reconciliation job.
                         </TableCell>
                       </TableRow>
@@ -251,7 +251,7 @@ export function AppleStoreInsightsContent() {
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-800 mb-2">Apple store daily (sales-derived)</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-2">Apple store daily (sales-derived)</h3>
               <div className="border rounded-lg overflow-x-auto max-h-[360px] overflow-y-auto">
                 <Table>
                   <TableHeader>
@@ -266,7 +266,7 @@ export function AppleStoreInsightsContent() {
                   <TableBody>
                     {dailyRows.length === 0 ? (
                       <TableRow>
-                        <TableCell className="text-sm text-slate-500">
+                        <TableCell className="text-sm text-muted-foreground">
                           No rows — widen the date range or run sales sync + transforms.
                         </TableCell>
                       </TableRow>
@@ -341,7 +341,7 @@ export function AppleStoreInsightsContent() {
           </div>
           <div className="border rounded-lg divide-y max-h-[280px] overflow-y-auto">
             {artifacts.length === 0 ? (
-              <p className="text-sm text-slate-500 p-4">No files listed yet.</p>
+              <p className="text-sm text-muted-foreground p-4">No files listed yet.</p>
             ) : (
               artifacts.map((a) => (
                 <div key={a.objectName} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
@@ -349,7 +349,7 @@ export function AppleStoreInsightsContent() {
                     <p className="font-mono text-xs truncate" title={a.objectName}>
                       {a.objectName}
                     </p>
-                    <p className="text-xs text-slate-500">{new Date(a.lastModified).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(a.lastModified).toLocaleString()}</p>
                   </div>
                   <Button type="button" size="sm" variant="outline" className="gap-1 shrink-0" onClick={() => void downloadArtifact(a.objectName)}>
                     <Download className="w-3.5 h-3.5" />
@@ -400,7 +400,7 @@ export function AppleStoreInsightsContent() {
             Fetch JSON
           </Button>
           {storeKitJson ? (
-            <pre className="text-xs bg-slate-950 text-slate-50 rounded-lg p-4 overflow-x-auto max-h-[400px] overflow-y-auto">
+            <pre className="text-xs bg-muted text-foreground rounded-lg p-4 overflow-x-auto max-h-[400px] overflow-y-auto">
               {storeKitJson}
             </pre>
           ) : null}

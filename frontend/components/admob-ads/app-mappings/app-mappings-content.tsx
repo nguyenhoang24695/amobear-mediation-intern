@@ -143,24 +143,24 @@ function normalizePlatform(value?: string | null) {
 function getPlatformBadgeClass(platform?: string | null) {
   switch (normalizePlatform(platform)) {
     case "IOS":
-      return "bg-blue-100 text-blue-700"
+      return "bg-primary/10 text-primary"
     case "ANDROID":
-      return "bg-green-100 text-green-700"
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
     default:
-      return "bg-slate-100 text-slate-600"
+      return "bg-muted text-muted-foreground"
   }
 }
 
 function getStatusBadgeClass(status: AdmobAppMappingGroupStatus) {
   switch (status) {
     case "mapped":
-      return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none"
+      return "border-none bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
     case "mixed":
-      return "bg-blue-100 text-blue-700 hover:bg-blue-100 border-none"
+      return "border-none bg-primary/10 text-primary hover:bg-primary/15"
     case "unmapped":
-      return "bg-amber-100 text-amber-700 hover:bg-amber-100 border-none"
+      return "border-none bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
     default:
-      return "bg-slate-100 text-slate-600 hover:bg-slate-100 border-none"
+      return "border-none bg-muted text-muted-foreground hover:bg-muted/80"
   }
 }
 
@@ -652,24 +652,24 @@ export function AdmobAppMappingsContent() {
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>AdMob Ads</span>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">App Mappings</span>
+            <span className="font-medium text-foreground">App Mappings</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <GitMerge className="w-5 h-5 text-blue-600" />
+            <div className="rounded-lg bg-primary/10 p-2">
+              <GitMerge className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">AdMob App Mappings</h1>
-              <p className="text-sm text-slate-500">Gom nhiều AdMob App ID theo cùng store identity và AdMob account.</p>
+              <h1 className="text-xl font-bold text-foreground">AdMob App Mappings</h1>
+              <p className="text-sm text-muted-foreground">Gom nhiều AdMob App ID theo cùng store identity và AdMob account.</p>
             </div>
           </div>
         </div>
         <div>
           {canCreate && (
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={openCreate}>
+            <Button size="sm" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
               Add App Mapping
             </Button>
@@ -679,7 +679,7 @@ export function AdmobAppMappingsContent() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-72">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by app, app ID, AdMob account..."
             className="h-9 text-sm pl-8"
@@ -688,7 +688,7 @@ export function AdmobAppMappingsContent() {
           />
         </div>
         <Select value={platformFilter} onValueChange={setPlatformFilter}>
-          <SelectTrigger className="h-9 w-36 text-sm bg-white">
+          <SelectTrigger className="h-9 w-36 bg-background text-sm">
             <SelectValue placeholder="Platform" />
           </SelectTrigger>
           <SelectContent>
@@ -698,7 +698,7 @@ export function AdmobAppMappingsContent() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-36 text-sm bg-white">
+          <SelectTrigger className="h-9 w-36 bg-background text-sm">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -709,21 +709,21 @@ export function AdmobAppMappingsContent() {
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-xs text-slate-400 ml-auto">
+        <span className="ml-auto text-xs text-muted-foreground">
           {filtered.length} app{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-lg border bg-card text-card-foreground">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs text-slate-500 font-medium">App</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-24">Platform</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Store Identity</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">AdMob Bindings</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-28">Status</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-32">Updated</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs font-medium text-muted-foreground">App</TableHead>
+              <TableHead className="w-24 text-xs font-medium text-muted-foreground">Platform</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Store Identity</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">AdMob Bindings</TableHead>
+              <TableHead className="w-28 text-xs font-medium text-muted-foreground">Status</TableHead>
+              <TableHead className="w-32 text-xs font-medium text-muted-foreground">Updated</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -731,7 +731,7 @@ export function AdmobAppMappingsContent() {
             {mappingsLoading || appsLoading || accountsLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="py-12">
-                  <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading app mappings...
                   </div>
@@ -739,13 +739,13 @@ export function AdmobAppMappingsContent() {
               </TableRow>
             ) : mappingsError || appsError || accountsError ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={7} className="py-12 text-center text-sm text-destructive">
                   {mappingsError?.message ?? appsError?.message ?? accountsError?.message}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                   No app mappings found.
                 </TableCell>
               </TableRow>
@@ -756,25 +756,25 @@ export function AdmobAppMappingsContent() {
                 const linkedAppIds = uniqueStrings(group.bindings.map((binding) => binding.appId))
                 const appMetaLabel = linkedAppIds.length > 1 ? `${linkedAppIds.length} linked app IDs` : linkedAppIds[0] ?? group.storeIdentifier
                 return (
-                  <TableRow key={group.key} className="text-sm hover:bg-slate-50">
+                  <TableRow key={group.key} className="text-sm hover:bg-muted/40">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {group.app?.iconUri ? (
-                          <img src={group.app.iconUri} alt="" className="h-10 w-10 rounded-lg border border-slate-200 bg-slate-100 object-cover shrink-0" />
+                          <img src={group.app.iconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border bg-muted object-cover" />
                         ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted text-sm font-semibold text-muted-foreground">
                             {group.appLabel.charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div className="min-w-0 space-y-0.5">
                           {group.app?.appId ? (
-                            <Link href={`/apps/${encodeURIComponent(group.app.appId)}`} className="block font-medium text-slate-900 transition-colors hover:text-blue-600 hover:underline">
+                            <Link href={`/apps/${encodeURIComponent(group.app.appId)}`} className="block font-medium text-foreground transition-colors hover:text-primary hover:underline">
                               {group.appLabel}
                             </Link>
                           ) : (
-                            <p className="font-medium text-slate-900">{group.appLabel}</p>
+                            <p className="font-medium text-foreground">{group.appLabel}</p>
                           )}
-                          {appMetaLabel ? <p className="truncate font-mono text-[11px] text-slate-400">{appMetaLabel}</p> : null}
+                          {appMetaLabel ? <p className="truncate font-mono text-[11px] text-muted-foreground">{appMetaLabel}</p> : null}
                         </div>
                       </div>
                     </TableCell>
@@ -782,7 +782,7 @@ export function AdmobAppMappingsContent() {
                       <Badge className={`text-[11px] ${getPlatformBadgeClass(group.platform)}`}>{group.platform}</Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="truncate max-w-[220px] block font-mono text-xs text-slate-600">{group.storeIdentifier || "-"}</span>
+                      <span className="block max-w-[220px] truncate font-mono text-xs text-muted-foreground">{group.storeIdentifier || "-"}</span>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1.5">
@@ -790,11 +790,11 @@ export function AdmobAppMappingsContent() {
                           const account = binding.admobAccountId ? accountMap.get(binding.admobAccountId) : undefined
                           return (
                             <div key={binding.id} className="flex min-w-0 items-center gap-2 text-xs">
-                              <Badge className={binding.isActive ? "bg-emerald-50 text-emerald-700 border-none" : "bg-slate-100 text-slate-500 border-none"}>
+                              <Badge className={binding.isActive ? "border-none bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "border-none bg-muted text-muted-foreground"}>
                                 {binding.isActive ? "On" : "Off"}
                               </Badge>
-                              <span className="font-medium text-slate-700">{account?.name ?? "No account"}</span>
-                              <span className="truncate font-mono text-blue-700">{binding.externalAppId}</span>
+                              <span className="font-medium text-foreground">{account?.name ?? "No account"}</span>
+                              <span className="truncate font-mono text-primary">{binding.externalAppId}</span>
                             </div>
                           )
                         })}
@@ -803,7 +803,7 @@ export function AdmobAppMappingsContent() {
                     <TableCell>
                       <Badge className={getStatusBadgeClass(group.status)}>{getStatusLabel(group.status)}</Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatDateTime(group.latestUpdatedAt)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(group.latestUpdatedAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -834,11 +834,11 @@ export function AdmobAppMappingsContent() {
           </TableBody>
         </Table>
         {!mappingsLoading && !appsLoading && !accountsLoading && !mappingsError && !appsError && !accountsError && filtered.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-3 border-t px-4 py-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <span>Rows per page</span>
               <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
-                <SelectTrigger className="h-8 w-20 bg-white text-xs">
+                <SelectTrigger className="h-8 w-20 bg-background text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -870,24 +870,24 @@ export function AdmobAppMappingsContent() {
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DialogContent className="w-full max-w-[860px] p-0 gap-0 rounded-xl overflow-hidden max-h-[90vh] flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
-            <DialogTitle className="text-base font-semibold text-slate-900">
+          <DialogHeader className="flex-shrink-0 border-b px-6 pb-4 pt-6">
+            <DialogTitle className="text-base font-semibold text-foreground">
               {drawerGroup ? "Edit App Mapping" : "Add App Mapping"}
             </DialogTitle>
           </DialogHeader>
           <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
             {drawerGroup?.storeIdentifier ? (
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="text-xs font-medium text-slate-500">Store identity</p>
-                <p className="truncate font-mono text-sm text-slate-800">{drawerGroup.storeIdentifier}</p>
+              <div className="rounded-md border bg-muted/40 px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">Store identity</p>
+                <p className="truncate font-mono text-sm text-foreground">{drawerGroup.storeIdentifier}</p>
               </div>
             ) : null}
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-xs font-medium text-slate-700">AdMob bindings</Label>
-                  <p className="text-xs text-slate-400">Manage all AdMob account/app-id mappings for this app.</p>
+                  <Label className="text-xs font-medium text-foreground">AdMob bindings</Label>
+                  <p className="text-xs text-muted-foreground">Manage all AdMob account/app-id mappings for this app.</p>
                 </div>
                 {canCreate && (
                   <Button type="button" variant="outline" size="sm" onClick={addBindingForm}>
@@ -898,7 +898,7 @@ export function AdmobAppMappingsContent() {
               </div>
 
               {visibleBindingForms.length === 0 ? (
-                <div className="rounded-md border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
                   No AdMob bindings. Add one to save this app mapping.
                 </div>
               ) : (
@@ -915,15 +915,15 @@ export function AdmobAppMappingsContent() {
                     const accountAppsError = accountId ? accountAppsErrorById[accountId] : null
 
                     return (
-                      <div key={form.tempId} className="rounded-lg border border-slate-200 p-4 space-y-3">
+                      <div key={form.tempId} className="space-y-3 rounded-lg border p-4">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-medium text-slate-900">Binding {index + 1}</div>
+                          <div className="text-sm font-medium text-foreground">Binding {index + 1}</div>
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
                               <Switch checked={form.isActive} onCheckedChange={(value) => updateBindingForm(form.tempId, { isActive: value })} disabled={!canDisableEnable && !!form.id} />
-                              <span className="text-xs text-slate-500">Enabled</span>
+                              <span className="text-xs text-muted-foreground">Enabled</span>
                             </div>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => removeBindingForm(form)}>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeBindingForm(form)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -931,7 +931,7 @@ export function AdmobAppMappingsContent() {
 
                         <div className="space-y-3">
                           <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-slate-700">AdMob Account</Label>
+                            <Label className="text-xs font-medium text-foreground">AdMob Account</Label>
                             <Select value={form.admobAccountId} onValueChange={(value) => handleAccountChange(form.tempId, value)}>
                               <SelectTrigger className="h-9 w-full text-sm">
                                 <SelectValue placeholder="Select AdMob Account..." />
@@ -947,7 +947,7 @@ export function AdmobAppMappingsContent() {
                           </div>
 
                           <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-slate-700">AdMob App</Label>
+                            <Label className="text-xs font-medium text-foreground">AdMob App</Label>
                             <Popover open={appPickerOpenId === form.tempId} onOpenChange={(open) => setAppPickerOpenId(open ? form.tempId : null)}>
                               <PopoverTrigger asChild>
                                 <Button
@@ -955,7 +955,7 @@ export function AdmobAppMappingsContent() {
                                   variant="outline"
                                   role="combobox"
                                   aria-expanded={appPickerOpenId === form.tempId}
-                                  className="h-auto min-h-11 w-full justify-between bg-white px-3 py-2 text-left font-normal"
+                                  className="h-auto min-h-11 w-full justify-between bg-background px-3 py-2 text-left font-normal"
                                   disabled={!accountId || accountAppsLoading}
                                 >
                                   {selectedAccountApp ? (
@@ -963,24 +963,24 @@ export function AdmobAppMappingsContent() {
                                       {selectedAccountApp.iconUri ? (
                                         <img src={selectedAccountApp.iconUri} alt="" className="h-7 w-7 rounded shrink-0" />
                                       ) : (
-                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-100 text-xs font-medium text-slate-500">
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
                                           {(selectedAccountApp.displayName ?? selectedAccountApp.name ?? "?").charAt(0).toUpperCase()}
                                         </span>
                                       )}
                                       <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-sm text-slate-900">{selectedAccountApp.displayName ?? selectedAccountApp.name}</span>
-                                        <span className="block truncate font-mono text-xs text-slate-500">{formatAppIdDisplay(selectedAccountApp.appId)}</span>
+                                        <span className="block truncate text-sm text-foreground">{selectedAccountApp.displayName ?? selectedAccountApp.name}</span>
+                                        <span className="block truncate font-mono text-xs text-muted-foreground">{formatAppIdDisplay(selectedAccountApp.appId)}</span>
                                       </span>
                                     </span>
                                   ) : (
-                                    <span className="truncate text-slate-500">
+                                    <span className="truncate text-muted-foreground">
                                       {!accountId ? "Select AdMob account first" : accountAppsLoading ? "Loading apps..." : "Select AdMob App..."}
                                     </span>
                                   )}
                                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[360px] p-0" align="start">
+                              <PopoverContent className="w-[calc(100vw-2rem)] min-w-0 p-0 sm:w-[--radix-popover-trigger-width] sm:min-w-[360px]" align="start">
                                 <Command shouldFilter={true}>
                                   <CommandInput placeholder="Search by app name, app ID, or store identity..." />
                                   <CommandList>
@@ -1009,10 +1009,10 @@ export function AdmobAppMappingsContent() {
                                             )}
                                             <div className="flex min-w-0 flex-col text-left">
                                               <span className="truncate font-medium">{label}</span>
-                                              <span className="truncate text-xs text-slate-500">
+                                              <span className="truncate text-xs text-muted-foreground">
                                                 {[platform, formatAppIdDisplay(app.appId)].filter(Boolean).join(" - ")}
                                               </span>
-                                              {storeIdentity ? <span className="truncate font-mono text-[11px] text-slate-400">{storeIdentity}</span> : null}
+                                              {storeIdentity ? <span className="truncate font-mono text-[11px] text-muted-foreground">{storeIdentity}</span> : null}
                                             </div>
                                           </CommandItem>
                                         )
@@ -1022,40 +1022,40 @@ export function AdmobAppMappingsContent() {
                                 </Command>
                               </PopoverContent>
                             </Popover>
-                            {accountAppsError ? <p className="text-xs text-red-500">{accountAppsError}</p> : null}
+                            {accountAppsError ? <p className="text-xs text-destructive">{accountAppsError}</p> : null}
                           </div>
                         </div>
 
                         {selectedAccountApp ? (
-                          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                          <div className="rounded-md border bg-muted/40 px-3 py-3">
                             <div className="flex items-start gap-3">
                               {selectedAccountApp.iconUri ? (
-                                <img src={selectedAccountApp.iconUri} alt="" className="h-10 w-10 rounded-lg border border-slate-200 bg-white object-cover shrink-0" />
+                                <img src={selectedAccountApp.iconUri} alt="" className="h-10 w-10 shrink-0 rounded-lg border bg-background object-cover" />
                               ) : (
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-500">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-background text-sm font-semibold text-muted-foreground">
                                   {(selectedAccountApp.displayName ?? selectedAccountApp.name ?? "?").charAt(0).toUpperCase()}
                                 </div>
                               )}
                               <div className="min-w-0 flex-1 space-y-2">
                                 <div>
-                                  <p className="truncate text-sm font-medium text-slate-900">{selectedAccountApp.displayName ?? selectedAccountApp.name}</p>
-                                  <p className="truncate font-mono text-xs text-blue-700">{selectedAccountApp.appId}</p>
+                                  <p className="truncate text-sm font-medium text-foreground">{selectedAccountApp.displayName ?? selectedAccountApp.name}</p>
+                                  <p className="truncate font-mono text-xs text-primary">{selectedAccountApp.appId}</p>
                                 </div>
                                 <div className="grid grid-cols-3 gap-3 text-xs">
                                   <div>
-                                    <p className="text-slate-400">OS</p>
+                                    <p className="text-muted-foreground">OS</p>
                                     <Badge className={`mt-1 text-[10px] ${getPlatformBadgeClass(form.platform)}`}>{normalizePlatform(form.platform) || "APP"}</Badge>
                                   </div>
                                   <div className="min-w-0 col-span-2">
-                                    <p className="text-slate-400">Store identity</p>
-                                    <p className="truncate font-mono text-slate-700">{getFormStoreIdentifier(form) || "-"}</p>
+                                    <p className="text-muted-foreground">Store identity</p>
+                                    <p className="truncate font-mono text-foreground">{getFormStoreIdentifier(form) || "-"}</p>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-md border border-dashed border-slate-200 py-5 text-center text-xs text-slate-400">
+                          <div className="rounded-md border border-dashed py-5 text-center text-xs text-muted-foreground">
                             Select an AdMob app to preview its store identity.
                           </div>
                         )}
@@ -1066,11 +1066,11 @@ export function AdmobAppMappingsContent() {
               )}
             </div>
           </div>
-          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex-shrink-0 border-t bg-muted/40 px-6 py-4">
+            <Button variant="ghost" onClick={() => setDrawerOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => void handleSubmit()} disabled={submitting || visibleBindingForms.length === 0}>
+            <Button onClick={() => void handleSubmit()} disabled={submitting || visibleBindingForms.length === 0}>
               {submitting ? "Saving..." : drawerGroup ? "Save Changes" : "Add App Mapping"}
             </Button>
           </DialogFooter>

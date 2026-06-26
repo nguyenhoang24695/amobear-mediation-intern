@@ -805,7 +805,7 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
 
   if (loading || !reference || !form) {
     return (
-      <div className="flex min-h-[320px] items-center justify-center rounded-md border bg-white text-sm text-slate-500">
+      <div className="flex min-h-[320px] items-center justify-center rounded-md border bg-card text-sm text-muted-foreground">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         Loading TikTok request form...
       </div>
@@ -817,50 +817,50 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
-            <Link className="hover:text-slate-900" href="/tiktok-ads/requests">TikTok Requests</Link>
+      <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+            <Link className="hover:text-foreground" href="/tiktok-ads/requests">TikTok Requests</Link>
             <ChevronRight className="h-4 w-4" />
-            <span className="text-slate-900">{title}</span>
+            <span className="text-foreground">{title}</span>
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-normal text-slate-950">{title}</h1>
+            <h1 className="text-2xl font-semibold tracking-normal text-foreground">{title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="outline">Status: {serverStatus ?? "draft"}</Badge>
-              {draftId ? <Badge variant="outline">Request #{draftId}</Badge> : <Badge className="bg-slate-100 text-slate-700">Unsaved draft</Badge>}
-              {isDirty ? <Badge className="bg-amber-50 text-amber-700">Unsaved changes</Badge> : null}
+              {draftId ? <Badge variant="outline">Request #{draftId}</Badge> : <Badge className="bg-muted text-muted-foreground">Unsaved draft</Badge>}
+              {isDirty ? <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">Unsaved changes</Badge> : null}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => (isDirty ? setDiscardOpen(true) : discard())}>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:justify-end">
+          <Button type="button" variant="outline" className="min-w-0" onClick={() => (isDirty ? setDiscardOpen(true) : discard())}>
             <Trash2 className="mr-2 h-4 w-4" />
             Discard
           </Button>
-          <Button type="button" variant="outline" onClick={() => void handleSaveDraft()} disabled={saveDisabled}>
+          <Button type="button" variant="outline" className="min-w-0" onClick={() => void handleSaveDraft()} disabled={saveDisabled}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Draft
           </Button>
-          <Button type="button" variant="outline" onClick={() => void handleValidate()} disabled={saveDisabled}>
+          <Button type="button" variant="outline" className="min-w-0" onClick={() => void handleValidate()} disabled={saveDisabled}>
             {validating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
             Validate
           </Button>
-          <Button type="button" onClick={() => setSubmitOpen(true)} disabled={saveDisabled}>
+          <Button type="button" className="min-w-0" onClick={() => setSubmitOpen(true)} disabled={saveDisabled}>
             <Send className="mr-2 h-4 w-4" />
             Submit
           </Button>
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      <div className="flex items-start gap-3 rounded-md border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
         <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
         <p>Request only creates an internal draft on save/submit; new media is uploaded to TikTok during Execute after approval.</p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-5">
           <div id={requestSectionIds["account-app"]} className={cn(getSectionWrapperClass("account-app", highlightedSection))}>
             <AccountAppSection form={form} reference={reference} appMappings={accountScopedAppMappings} selectedAdAccount={selectedAdAccount} selectedAppMapping={selectedAccountAppMapping} onChange={updateForm} />
           </div>
@@ -868,18 +868,18 @@ export function CreateTikTokRequestContent({ requestId }: Props) {
             <CampaignSettingsSection form={form} reference={reference} selectedAppMapping={selectedAccountAppMapping} locations={targetingOptions?.locations} onChange={updateForm} />
           </div>
           {form.adGroups.length > 1 ? (
-            <div className="rounded-xl border bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Adsets copied from source campaign</h3>
-                  <p className="text-xs text-slate-500">Choose an adset to edit its targeting, budget, and creatives.</p>
+            <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground">Adsets copied from source campaign</h3>
+                  <p className="text-xs text-muted-foreground">Choose an adset to edit its targeting, budget, and creatives.</p>
                 </div>
                 <Badge variant="secondary">{form.adGroups.length} adsets</Badge>
               </div>
               <div className="flex flex-wrap gap-2">
                 {form.adGroups.map((group, index) => (
-                  <Button key={`${group.adGroup.adGroupName}-${index}`} type="button" size="sm" variant={index === activeAdGroupIndex ? "default" : "outline"} onClick={() => selectAdGroup(index)}>
-                    Adset #{index + 1}: {group.adGroup.adGroupName || "Untitled"} ({group.ads.length} ads)
+                  <Button key={`${group.adGroup.adGroupName}-${index}`} type="button" size="sm" variant={index === activeAdGroupIndex ? "default" : "outline"} className="max-w-full justify-start" onClick={() => selectAdGroup(index)}>
+                    <span className="truncate">Adset #{index + 1}: {group.adGroup.adGroupName || "Untitled"} ({group.ads.length} ads)</span>
                   </Button>
                 ))}
               </div>

@@ -66,7 +66,7 @@ export function MyReportComparePicker({ draft, onApply, onCancel }: MyReportComp
 
   return (
     <div className="flex w-[min(95vw,640px)] flex-col sm:flex-row">
-      <div className="w-full shrink-0 border-b border-gray-100 sm:w-48 sm:border-b-0 sm:border-r">
+      <div className="w-full shrink-0 border-b border-border sm:w-48 sm:border-b-0 sm:border-r">
         <div className="p-2">
           {COMPARE_TO_PRESET_OPTIONS.map((option) => (
             <button
@@ -76,8 +76,8 @@ export function MyReportComparePicker({ draft, onApply, onCancel }: MyReportComp
               className={cn(
                 "w-full rounded-md px-3 py-2 text-left text-sm",
                 preset === option.id
-                  ? "bg-blue-50 font-medium text-blue-700"
-                  : "text-gray-700 hover:bg-gray-50",
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-foreground hover:bg-muted/60",
               )}
             >
               {option.label}
@@ -96,13 +96,13 @@ export function MyReportComparePicker({ draft, onApply, onCancel }: MyReportComp
             className="p-3"
           />
         ) : (
-          <div className="flex flex-1 flex-col justify-center p-6 text-sm text-gray-600">
+          <div className="flex flex-1 flex-col justify-center p-6 text-sm text-muted-foreground">
             {preset === "none" ? (
               <p>Comparison disabled. Metrics show primary period only.</p>
             ) : previewRange ? (
               <p>
                 Compare range:{" "}
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-foreground">
                   {formatAdjustStyleDateRange(previewRange.start, previewRange.end)}
                 </span>
               </p>
@@ -111,11 +111,11 @@ export function MyReportComparePicker({ draft, onApply, onCancel }: MyReportComp
             )}
           </div>
         )}
-        <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="button" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleApply}>
+          <Button type="button" size="sm" className="bg-primary hover:bg-primary/90" onClick={handleApply}>
             Apply
           </Button>
         </div>

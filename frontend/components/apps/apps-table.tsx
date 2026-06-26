@@ -265,7 +265,7 @@ export function AppsTable({
 
   const getStatusBadge = (status: string) => {
     if (status === "Active") {
-      return <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
+      return <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300">Active</Badge>
     }
     const label =
       status === "IN_REVIEW"
@@ -273,7 +273,7 @@ export function AppsTable({
         : status === "ACTION_REQUIRED"
           ? "Action required"
           : status
-    return <Badge className="bg-slate-100 text-slate-600 border-0">{label}</Badge>
+    return <Badge className="border-0 bg-muted text-muted-foreground">{label}</Badge>
   }
 
 
@@ -319,7 +319,7 @@ export function AppsTable({
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <button
       onClick={() => handleSort(field)}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+      className="flex items-center gap-1 transition-colors hover:text-foreground"
     >
       {children}
       {sortField === field ? (
@@ -337,10 +337,10 @@ export function AppsTable({
   // Loading state
   if (loading) {
     return (
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-slate-400 mb-4" />
-          <p className="text-sm text-slate-500">Loading apps...</p>
+          <Loader2 className="mb-4 h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading apps...</p>
         </div>
       </Card>
     )
@@ -349,13 +349,13 @@ export function AppsTable({
   // Empty state
   if (filteredApps.length === 0) {
     return (
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <Smartphone className="w-8 h-8 text-slate-400" />
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Smartphone className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">No apps found</h3>
-          <p className="text-sm text-slate-500 mb-4">
+          <h3 className="mb-1 text-lg font-semibold text-foreground">No apps found</h3>
+          <p className="mb-4 text-sm text-muted-foreground">
             {searchQuery || platformFilter !== "All Platforms" || statusFilter !== "All Status"
               ? "Try adjusting your filters"
               : "Connect your AdMob account to get started"}
@@ -368,12 +368,12 @@ export function AppsTable({
 
   return (
     <>
-      <Card className="border-slate-200 overflow-hidden">
+      <Card className="overflow-hidden border-border">
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-              <tr className="text-xs text-slate-500 font-medium">
+            <thead className="sticky top-0 border-b bg-muted/60">
+              <tr className="text-xs font-medium text-muted-foreground">
                 <th className="px-4 py-3 text-left">
                   <Checkbox
                     checked={selectedApps.length === paginatedApps.length && paginatedApps.length > 0}
@@ -410,15 +410,15 @@ export function AppsTable({
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {paginatedApps.map((app) => (
                 <tr
                   key={app.id}
                   onClick={() => handleRowClick(app.appId)}
                   className={cn(
-                    "hover:bg-slate-50 transition-colors",
+                    "transition-colors hover:bg-accent/60",
                     canViewDetails && "cursor-pointer",
-                    selectedApps.includes(app.id) && "bg-blue-50 hover:bg-blue-50",
+                    selectedApps.includes(app.id) && "bg-primary/10 hover:bg-primary/10",
                   )}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -432,8 +432,8 @@ export function AppsTable({
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 rounded-lg">
                         <AvatarImage src={app.icon || "/placeholder.svg"} alt={app.name} />
-                        <AvatarFallback className="rounded-lg bg-slate-100">
-                          <ImageIcon className="w-5 h-5 text-slate-400" />
+                        <AvatarFallback className="rounded-lg bg-muted">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -441,19 +441,19 @@ export function AppsTable({
                           <Link
                             href={`/apps/${app.appId}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                            className="text-sm font-medium text-primary hover:underline"
                           >
                             {app.name}
                           </Link>
                         ) : (
-                          <span className="text-sm font-medium text-slate-900">{app.name}</span>
+                          <span className="text-sm font-medium text-foreground">{app.name}</span>
                         )}
-                        <p className="text-xs text-slate-500 truncate" title={app.appId}>
+                        <p className="truncate text-xs text-muted-foreground" title={app.appId}>
                           {app.appId}
                         </p>
                         {app.appStoreId ? (
                           <p
-                            className="text-[11px] font-mono text-slate-400 truncate"
+                            className="truncate font-mono text-[11px] text-muted-foreground/75"
                             title={app.appStoreId}
                           >
                             {app.appStoreId}
@@ -468,8 +468,8 @@ export function AppsTable({
                       className={cn(
                         "gap-1",
                         app.platform === "ANDROID"
-                          ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-slate-200 bg-slate-50 text-slate-700",
+                          ? "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300"
+                          : "border-border bg-muted text-muted-foreground",
                       )}
                     >
                       {app.platform === "ANDROID" ? (
@@ -490,22 +490,22 @@ export function AppsTable({
                         <Link
                           href={`/apps/${app.appId}?tab=ad-units`}
                           onClick={(e) => e.stopPropagation()}
-                          className="text-blue-600 hover:underline"
+                          className="text-primary hover:underline"
                         >
                           {app.adUnits} ad
                         </Link>
                       ) : (
-                        <span className="text-slate-700">{app.adUnits} ad</span>
+                        <span className="text-foreground">{app.adUnits} ad</span>
                       )}
-                      <span className="text-slate-700">{app.waterfallAdUnits} waterfall</span>
+                      <span className="text-muted-foreground">{app.waterfallAdUnits} waterfall</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1 text-sm">
-                      <div className="flex flex-col gap-0.5 text-slate-700">
+                      <div className="flex flex-col gap-0.5 text-muted-foreground">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-slate-500">ad unit</span>
-                          <span className="font-medium text-slate-900">${app.adUnitsRevenue.toFixed(2)}</span>
+                          <span className="text-xs text-muted-foreground">ad unit</span>
+                          <span className="font-medium text-foreground">${app.adUnitsRevenue.toFixed(2)}</span>
                         </div>
                         <div
                           className={cn(
@@ -521,9 +521,9 @@ export function AppsTable({
                           {Math.abs(app.adUnitsRevenueTrend).toFixed(2)}%
                         </div>
                       </div>
-                      <div className="flex flex-col gap-0.5 text-slate-700">
+                      <div className="flex flex-col gap-0.5 text-muted-foreground">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-slate-500">waterfall</span>
+                          <span className="text-xs text-muted-foreground">waterfall</span>
                           <span>${app.waterfallAdUnitsRevenue.toFixed(2)}</span>
                         </div>
                         <div
@@ -559,10 +559,10 @@ export function AppsTable({
                     })()}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-slate-900">${app.ecpm.toFixed(2)}</span>
+                    <span className="text-sm text-foreground">${app.ecpm.toFixed(2)}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-slate-900">{formatNumber(app.impressions)}</span>
+                    <span className="text-sm text-foreground">{formatNumber(app.impressions)}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn("text-sm font-medium", getFillRateColor(app.fillRate))}>
@@ -570,20 +570,20 @@ export function AppsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 text-sm text-slate-900">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                    <div className="flex items-center gap-1.5 text-sm text-foreground">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="font-medium tabular-nums">{app.activeUserPermissionCount}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(app.status)}</td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-slate-500">{app.lastSync}</span>
+                    <span className="text-sm text-muted-foreground">{app.lastSync}</span>
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">

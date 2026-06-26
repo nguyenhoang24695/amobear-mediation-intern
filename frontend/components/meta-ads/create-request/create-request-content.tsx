@@ -93,7 +93,7 @@ const requestSectionIds: Record<RequestSectionTarget, string> = {
 function getSectionWrapperClass(target: RequestSectionTarget, highlightedSection: RequestSectionTarget | null): string {
   const base = "-m-2 rounded-2xl p-2 scroll-mt-24 transition-all duration-500"
   if (highlightedSection !== target) return base
-  return `${base} bg-amber-50/80 ring-2 ring-amber-200 ring-offset-2 ring-offset-amber-100/60 shadow-[0_0_0_8px_rgba(253,230,138,0.22)] animate-pulse`
+  return `${base} bg-amber-500/10 ring-2 ring-amber-500/30 ring-offset-2 ring-offset-background shadow-[0_0_0_8px_rgba(245,158,11,0.14)] animate-pulse`
 }
 
 function formatDateTimeLocal(date: Date) {
@@ -1427,7 +1427,7 @@ export function CreateRequestContent({ requestId }: Props) {
 
   if (referenceLoading || (isEditMode && editLoading && loadedRequestId == null)) {
     return (
-      <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading request form...
       </div>
@@ -1436,7 +1436,7 @@ export function CreateRequestContent({ requestId }: Props) {
 
   if (referenceError || !referenceData || (isEditMode && editError)) {
     return (
-      <div className="py-24 text-center text-sm text-red-600">
+      <div className="py-24 text-center text-sm text-destructive">
         {editError?.message ?? referenceError?.message ?? "Unable to load Meta Ads reference data."}
       </div>
     )
@@ -1444,28 +1444,28 @@ export function CreateRequestContent({ requestId }: Props) {
 
   return (
     <div className="space-y-0">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
-            <Link href="/meta-ads/requests" className="hover:text-slate-700">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <Link href="/meta-ads/requests" className="hover:text-foreground">
               Meta Ads
             </Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/meta-ads/requests" className="hover:text-slate-700">
+            <Link href="/meta-ads/requests" className="hover:text-foreground">
               Requests
             </Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">{isEditMode ? "Edit" : "Create"}</span>
+            <span className="font-medium text-foreground">{isEditMode ? "Edit" : "Create"}</span>
           </nav>
-          <h1 className="text-xl font-bold text-slate-900">{isEditMode ? "Edit Meta Campaign Request" : "Create Meta Campaign Request"}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl font-bold text-foreground">{isEditMode ? "Edit Meta Campaign Request" : "Create Meta Campaign Request"}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {isEditMode
               ? "Update the request payload. Saving changes for a non-draft request sends it back for approval."
               : "Internal request only. Meta objects are created after approval and execution. Campaign starts PAUSED; Ad Set and Ads start ACTIVE."}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="ghost" size="sm" className="text-slate-600" onClick={() => (isDirty ? setDiscardOpen(true) : router.push(discardHref))}>
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:flex-shrink-0">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => (isDirty ? setDiscardOpen(true) : router.push(discardHref))}>
             Discard
           </Button>
           <Button variant="outline" size="sm" onClick={() => void handleSaveDraft()} disabled={saving || referenceLoading || editLoading}>
@@ -1487,7 +1487,7 @@ export function CreateRequestContent({ requestId }: Props) {
           {showSubmitButton ? (
             <Button
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              className="disabled:opacity-50"
               disabled={isSubmitBlocked}
               onClick={() => setSubmitOpen(true)}
               title={tokenState !== "ready" && tokenState !== "none" ? "Integration readiness issue" : ""}
@@ -1498,9 +1498,9 @@ export function CreateRequestContent({ requestId }: Props) {
         </div>
       </div>
 
-      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5">
-        <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-        <div className="text-xs text-amber-900">
+      <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+        <div className="text-xs text-amber-900 dark:text-amber-200">
           {isEditMode ? (
             <>
               <strong>Editing an approved, rejected, completed, or failed request will require approval again.</strong> Existing execution history stays visible in activity logs, but the request itself returns to the approval flow after changes are saved.
@@ -1512,17 +1512,17 @@ export function CreateRequestContent({ requestId }: Props) {
           )}
         </div>
       </div>
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
         <div className="flex-1 min-w-0 space-y-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-border bg-background p-4 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-end gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-3 mb-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Apply template</label>
-                  {templatesError ? <span className="text-xs text-red-600">{templatesError.message}</span> : null}
+                <div className="mb-1.5 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Apply template</label>
+                  {templatesError ? <span className="text-xs text-destructive">{templatesError.message}</span> : null}
                 </div>
                 <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId} disabled={templatesLoading || (requestTemplates ?? []).length === 0}>
-                  <SelectTrigger className="w-full bg-white">
+                  <SelectTrigger className="w-full bg-background">
                     <SelectValue placeholder={templatesLoading ? "Loading templates..." : (requestTemplates ?? []).length === 0 ? "No saved templates" : "Choose a template"} />
                   </SelectTrigger>
                   <SelectContent className="max-w-xl">
@@ -1531,8 +1531,8 @@ export function CreateRequestContent({ requestId }: Props) {
                       return (
                         <SelectItem key={template.id} value={template.id.toString()}>
                           <span className="flex flex-col items-start gap-0.5 py-0.5">
-                            <span className="font-medium text-slate-900">{template.name}</span>
-                            <span className="max-w-[28rem] truncate text-xs text-slate-500">{summarizeTemplateSettings(settings)}</span>
+                            <span className="font-medium text-foreground">{template.name}</span>
+                            <span className="max-w-[28rem] truncate text-xs text-muted-foreground">{summarizeTemplateSettings(settings)}</span>
                           </span>
                         </SelectItem>
                       )
@@ -1540,9 +1540,9 @@ export function CreateRequestContent({ requestId }: Props) {
                   </SelectContent>
                 </Select>
                 {selectedTemplate ? (
-                  <p className="mt-2 text-xs text-slate-500">{selectedTemplateSummary}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{selectedTemplateSummary}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-slate-400">Only templates created by your user are listed here.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Only templates created by your user are listed here.</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -1552,7 +1552,7 @@ export function CreateRequestContent({ requestId }: Props) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => void handleDeleteTemplate()}
                   disabled={!selectedTemplate || deletingTemplateId === selectedTemplate?.id}
                   title="Delete selected template"
@@ -1651,7 +1651,7 @@ export function CreateRequestContent({ requestId }: Props) {
           </div>
         </div>
 
-        <div className="w-72 flex-shrink-0 sticky top-20">
+        <div className="w-full xl:w-72 xl:flex-shrink-0 xl:sticky xl:top-20">
           <RequestSummaryRail
             form={form}
             serverStatus={serverStatus}
@@ -1673,7 +1673,7 @@ export function CreateRequestContent({ requestId }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="meta-request-template-name">Template name</label>
+            <label className="text-sm font-medium text-foreground" htmlFor="meta-request-template-name">Template name</label>
             <Input
               id="meta-request-template-name"
               value={templateName}
@@ -1703,7 +1703,6 @@ export function CreateRequestContent({ requestId }: Props) {
             <AlertDialogFooter>
               <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={submitting}
                 onClick={(event) => {
                   event.preventDefault()
@@ -1728,7 +1727,7 @@ export function CreateRequestContent({ requestId }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Stay</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => router.push(discardHref)}
             >
               Discard

@@ -144,8 +144,8 @@ export function MaintenanceManagementContent() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Maintenance Management</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold ">Maintenance Management</h1>
+        <p className="mt-1 text-sm ">
           Schedule or enable maintenance mode to redirect users while the system is being upgraded.
         </p>
       </div>

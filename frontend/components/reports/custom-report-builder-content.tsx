@@ -317,13 +317,13 @@ function SortableReportFieldItem({
       onClick={onToggle}
       className={cn(
         "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md transition-colors text-left",
-        selected ? selectedColorClass : "hover:bg-slate-50 text-slate-700",
+        selected ? selectedColorClass : "hover:bg-muted/50 text-foreground",
       )}
     >
       <span
         className={cn(
-          "w-5 h-5 rounded flex items-center justify-center shrink-0 text-slate-400",
-          selected ? "cursor-grab active:cursor-grabbing hover:bg-white/60" : "opacity-30",
+          "w-5 h-5 rounded flex items-center justify-center shrink-0 text-muted-foreground",
+          selected ? "cursor-grab active:cursor-grabbing hover:bg-card/60" : "opacity-30",
         )}
         onClick={(event) => event.stopPropagation()}
         {...attributes}
@@ -335,7 +335,7 @@ function SortableReportFieldItem({
         className={cn(
           "w-1 h-5 rounded-full shrink-0",
           selectedColorClass.includes("emerald") && selected ? "bg-emerald-500" : "",
-          selectedColorClass.includes("blue") && selected ? "bg-blue-500" : "",
+          selectedColorClass.includes("blue") && selected ? "bg-primary/100" : "",
           !selected ? "bg-transparent" : "",
         )}
       />
@@ -371,8 +371,8 @@ function renderPlatformBadge(
         className={cn(
           "gap-2 px-4 py-2 text-base font-semibold",
           isAndroid
-            ? "border-green-200 bg-green-50 text-green-700"
-            : "border-slate-200 bg-slate-50 text-slate-700",
+            ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+            : "border-border bg-muted/50 text-foreground",
         )}
       >
         {renderPlatformIcon(isAndroid, "h-5 w-5")}
@@ -389,8 +389,8 @@ function renderPlatformBadge(
           className={cn(
             "h-7 w-7 shrink-0 justify-center p-0",
             isAndroid
-              ? "border-green-200 bg-green-50 text-green-700"
-              : "border-slate-200 bg-slate-50 text-slate-700",
+              ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+              : "border-border bg-muted/50 text-foreground",
           )}
         >
           {renderPlatformIcon(isAndroid)}
@@ -405,8 +405,8 @@ function renderPlatformBadge(
       className={cn(
         "gap-1",
         isAndroid
-          ? "border-green-200 bg-green-50 text-green-700"
-          : "border-slate-200 bg-slate-50 text-slate-700",
+          ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+          : "border-border bg-muted/50 text-foreground",
       )}
     >
       {renderPlatformIcon(isAndroid)}
@@ -452,7 +452,7 @@ function CopyableAppStoreId({
   }
 
   return (
-    <div className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
+    <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
       <span
         className={cn("min-w-0 font-mono", breakAll ? "break-all" : "truncate")}
         title={value}
@@ -463,7 +463,7 @@ function CopyableAppStoreId({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-5 w-5 shrink-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+        className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
         aria-label={ariaLabel ?? "Copy App Store ID"}
         onClick={(event) => {
           void handleCopy(event)
@@ -504,7 +504,7 @@ function renderParameterCell(
       >
         <Avatar className={cn("shrink-0 rounded-lg", tableIsMobile ? "h-9 w-9" : "h-10 w-10")}>
           {appIconUri ? <AvatarImage src={appIconUri} alt={appName} className="rounded-lg object-cover" /> : null}
-          <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
+          <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
             <Smartphone className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
@@ -512,7 +512,7 @@ function renderParameterCell(
           <div className="min-w-0 flex-1">
             <div
               className={cn(
-                "text-sm font-medium text-slate-900",
+                "text-sm font-medium text-foreground",
                 forExpandPanel ? "break-words" : "truncate",
               )}
             >
@@ -550,25 +550,25 @@ function renderParameterCell(
       <div className={cn("flex min-w-0 max-w-full items-center gap-2", forExpandPanel ? "" : "min-w-[180px]")}>
         <Avatar className="h-10 w-10 rounded-lg shrink-0">
           {appIconUri ? <AvatarImage src={appIconUri} alt={displayName} className="rounded-lg object-cover" /> : null}
-          <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
+          <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
             <Smartphone className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <div
             className={cn(
-              "text-sm font-medium text-slate-900",
+              "text-sm font-medium text-foreground",
               forExpandPanel ? "break-words" : "truncate",
             )}
           >
             {displayName}
           </div>
           {shouldShowStoreSub ? (
-            <div className={cn("text-xs text-slate-500", forExpandPanel ? "break-all" : "truncate")}>
+            <div className={cn("text-xs text-muted-foreground", forExpandPanel ? "break-all" : "truncate")}>
               {storeSub}
             </div>
           ) : storeId && storeId.toLowerCase() !== displayName.trim().toLowerCase() ? (
-            <div className={cn("text-xs text-slate-500 font-mono", forExpandPanel ? "break-all" : "truncate")}>
+            <div className={cn("text-xs text-muted-foreground font-mono", forExpandPanel ? "break-all" : "truncate")}>
               {storeId}
             </div>
           ) : null}
@@ -585,18 +585,18 @@ function renderParameterCell(
       <div className={cn(forExpandPanel ? "min-w-0 max-w-full" : "min-w-[180px]")}>
         <div
           className={cn(
-            "text-sm font-medium text-slate-900",
+            "text-sm font-medium text-foreground",
             forExpandPanel ? "break-words" : "truncate",
           )}
         >
           {displayName || "—"}
         </div>
         {publisherSub ? (
-          <div className={cn("text-xs text-slate-500 font-mono", forExpandPanel ? "break-all" : "truncate")}>
+          <div className={cn("text-xs text-muted-foreground font-mono", forExpandPanel ? "break-all" : "truncate")}>
             {publisherSub}
           </div>
         ) : publisherId && publisherId.toLowerCase() !== displayName.trim().toLowerCase() ? (
-          <div className={cn("text-xs text-slate-500 font-mono", forExpandPanel ? "break-all" : "truncate")}>
+          <div className={cn("text-xs text-muted-foreground font-mono", forExpandPanel ? "break-all" : "truncate")}>
             {publisherId}
           </div>
         ) : null}
@@ -610,8 +610,8 @@ function renderParameterCell(
         className={cn(
           "tabular-nums",
           expandPanelCentered
-            ? "text-lg font-semibold text-slate-800 md:text-xl"
-            : "text-slate-700",
+            ? "text-lg font-semibold text-foreground md:text-xl"
+            : "text-foreground",
           forExpandPanel && !expandPanelCentered ? "break-words text-sm" : "",
           !forExpandPanel && "whitespace-nowrap",
           !forExpandPanel && (tableIsMobile ? "text-xs" : "text-sm"),
@@ -623,7 +623,7 @@ function renderParameterCell(
   }
 
   return (
-    <span className={cn("text-sm text-slate-700", forExpandPanel ? "break-words" : "whitespace-nowrap")}>
+    <span className={cn("text-sm text-foreground", forExpandPanel ? "break-words" : "whitespace-nowrap")}>
       {String(row[paramId] ?? "—")}
     </span>
   )
@@ -2238,7 +2238,7 @@ export function CustomReportBuilderContent() {
 
   const tableContent = !appliedReportQuery ? (
     <div className="flex flex-col items-center justify-center min-h-[280px] text-center p-8">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         Adjust filters, then click Apply to load report data.
       </p>
     </div>
@@ -2255,13 +2255,13 @@ export function CustomReportBuilderContent() {
     </div>
   ) : displayedParameters.length === 0 || displayedMetrics.length === 0 ? (
     <div className="flex flex-col items-center justify-center min-h-[280px] text-center p-8">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         Select at least one parameter and one metric in the right panel to view the report.
       </p>
     </div>
   ) : tableRows.length === 0 ? (
     <div className="flex flex-col items-center justify-center min-h-[280px] text-center p-8">
-      <p className="text-sm text-slate-600">No data for the selected filters.</p>
+      <p className="text-sm text-muted-foreground">No data for the selected filters.</p>
     </div>
   ) : (
     <table className="w-max min-w-full caption-bottom border-separate border-spacing-0 text-sm">
@@ -2273,7 +2273,7 @@ export function CustomReportBuilderContent() {
               <TableHead
                 key={paramId}
                 className={cn(
-                  "sticky top-0 z-50 cursor-pointer bg-white text-xs font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50",
+                  "sticky top-0 z-50 cursor-pointer bg-card text-xs font-medium text-muted-foreground whitespace-nowrap hover:bg-muted/50",
                   getParameterHorizontalPaddingClass(paramId, index, isMobile),
                   index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
@@ -2288,15 +2288,15 @@ export function CustomReportBuilderContent() {
                   )}
                 >
                   {isMobile && paramId === "app" ? (
-                    <Smartphone className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                    <Smartphone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                   ) : isMobile && paramId === "platform" ? (
-                    <Layers className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                    <Layers className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                   ) : (
                     param?.label
                   )}
-                  {sortColumn === paramId && <ArrowUpDown className="h-3 w-3 text-slate-400" />}
+                  {sortColumn === paramId && <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
                   {!isMobile || (paramId !== "app" && paramId !== "date" && paramId !== "platform") ? (
-                    <HelpCircle className="h-3 w-3 text-slate-300" />
+                    <HelpCircle className="h-3 w-3 text-muted-foreground/60" />
                   ) : null}
                 </div>
               </TableHead>
@@ -2308,7 +2308,7 @@ export function CustomReportBuilderContent() {
               <TableHead
                 key={metricId}
                 className={cn(
-                  "sticky top-0 z-40 bg-white text-xs font-medium text-slate-600 text-right cursor-pointer hover:bg-slate-50 whitespace-nowrap",
+                  "sticky top-0 z-40 bg-card text-xs font-medium text-muted-foreground text-right cursor-pointer hover:bg-muted/50 whitespace-nowrap",
                   index === displayedMetrics.length - 1 && "pr-5",
                 )}
                 style={{ ...getMetricColumnStyle(), top: 0 }}
@@ -2316,19 +2316,19 @@ export function CustomReportBuilderContent() {
               >
                 <div className="flex items-center justify-end gap-1">
                   {metric?.label}
-                  {sortColumn === metricId && <ArrowUpDown className="h-3 w-3 text-slate-400" />}
-                  <HelpCircle className="h-3 w-3 text-slate-300" />
+                  {sortColumn === metricId && <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
+                  <HelpCircle className="h-3 w-3 text-muted-foreground/60" />
                 </div>
               </TableHead>
             )
           })}
         </TableRow>
-        <TableRow className="border-b border-slate-200 bg-slate-100">
+        <TableRow className="border-b border-border bg-muted">
           {displayedParameters.map((paramId, index) => (
             <TableHead
               key={`total-p-${paramId}`}
               className={cn(
-                "sticky top-10 z-50 bg-slate-100 py-3",
+                "sticky top-10 z-50 bg-muted py-3",
                 getParameterHorizontalPaddingClass(paramId, index, isMobile),
                 index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
@@ -2337,14 +2337,14 @@ export function CustomReportBuilderContent() {
               {index === 0 ? (
                 <span
                   className={cn(
-                    "text-sm font-bold text-slate-900",
+                    "text-sm font-bold text-foreground",
                     isMobile && paramId === "app" && "sr-only",
                   )}
                 >
                   Total
                 </span>
               ) : (
-                <span className="text-sm text-slate-500">—</span>
+                <span className="text-sm text-muted-foreground">—</span>
               )}
             </TableHead>
           ))}
@@ -2352,7 +2352,7 @@ export function CustomReportBuilderContent() {
             <TableHead
               key={`total-${metricId}`}
               className={cn(
-                "sticky top-10 z-40 bg-slate-100 py-3 text-right text-sm font-bold text-slate-900 whitespace-nowrap",
+                "sticky top-10 z-40 bg-muted py-3 text-right text-sm font-bold text-foreground whitespace-nowrap",
                 index === displayedMetrics.length - 1 && "pr-5",
               )}
               style={{ ...getMetricColumnStyle(), top: "2.5rem" }}
@@ -2366,7 +2366,7 @@ export function CustomReportBuilderContent() {
             <TableHead
               key={`bar-p-${paramId}`}
               className={cn(
-                "sticky top-20 z-50 h-1 bg-white p-0",
+                "sticky top-20 z-50 h-1 bg-card p-0",
                 index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
               style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: "5rem" }}
@@ -2377,10 +2377,10 @@ export function CustomReportBuilderContent() {
           {displayedMetrics.map((metricId) => (
             <TableHead
               key={`bar-m-${metricId}`}
-              className="sticky top-20 z-40 h-1 bg-white p-0"
+              className="sticky top-20 z-40 h-1 bg-card p-0"
               style={{ ...getMetricColumnStyle(), top: "5rem" }}
             >
-              <div className="h-1 bg-blue-500" />
+              <div className="h-1 bg-primary/100" />
             </TableHead>
           ))}
         </TableRow>
@@ -2392,15 +2392,15 @@ export function CustomReportBuilderContent() {
             idx: number,
           ) => {
             const isExpanded = expandedRowIndex === idx
-            const rowBgClass = idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+            const rowBgClass = idx % 2 === 0 ? "bg-card" : "bg-muted/50"
             const stickyCellBgClass = isExpanded
-              ? "bg-blue-50"
+              ? "bg-primary/10"
               : idx % 2 === 0
-                ? "bg-white"
-                : "bg-slate-50"
+                ? "bg-card"
+                : "bg-muted/50"
 
             return (
-              <TableRow key={idx} className={cn(rowBgClass, isExpanded && "bg-blue-50/70")}>
+              <TableRow key={idx} className={cn(rowBgClass, isExpanded && "bg-primary/15")}>
                 {displayedParameters.map((paramId, index) => (
                   <TableCell
                     key={paramId}
@@ -2411,8 +2411,8 @@ export function CustomReportBuilderContent() {
                     className={cn(
                       "sticky z-20 cursor-pointer py-2 transition-colors",
                       stickyCellBgClass,
-                      "hover:bg-blue-50/80",
-                      isExpanded && "bg-blue-50",
+                      "hover:bg-primary/15",
+                      isExpanded && "bg-primary/10",
                       getParameterHorizontalPaddingClass(paramId, index, isMobile),
                       index === displayedParameters.length - 1 &&
                         "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
@@ -2439,7 +2439,7 @@ export function CustomReportBuilderContent() {
                         key={metricId}
                         rowSpan={spanState?.rowSpan}
                         className={cn(
-                          "text-sm text-right text-slate-700 py-2 whitespace-nowrap align-middle",
+                          "text-sm text-right text-foreground py-2 whitespace-nowrap align-middle",
                           index === displayedMetrics.length - 1 && "pr-5",
                         )}
                         style={getMetricColumnStyle()}
@@ -2453,7 +2453,7 @@ export function CustomReportBuilderContent() {
                     <TableCell
                       key={metricId}
                       className={cn(
-                        "text-sm text-right text-slate-700 py-2 whitespace-nowrap",
+                        "text-sm text-right text-foreground py-2 whitespace-nowrap",
                         index === displayedMetrics.length - 1 && "pr-5",
                       )}
                       style={getMetricColumnStyle()}
@@ -2469,7 +2469,7 @@ export function CustomReportBuilderContent() {
           const sharedExpandPanelRow = sharedPanelProps ? (
             <TableRow
               key="shared-expand-panel"
-              className={cn("bg-blue-50/40", !isPanelVisible && "hidden")}
+              className={cn("bg-primary/10", !isPanelVisible && "hidden")}
               aria-hidden={!isPanelVisible}
             >
               <TableCell colSpan={tableColumnCount} className="p-0">
@@ -2548,7 +2548,7 @@ export function CustomReportBuilderContent() {
           {app.iconUri?.trim() ? (
             <AvatarImage src={app.iconUri.trim()} alt={primaryLabel} className="rounded-lg object-cover" />
           ) : null}
-          <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600 text-[10px]">
+          <AvatarFallback className="rounded-lg bg-muted text-muted-foreground text-[10px]">
             {primaryLabel.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -2558,18 +2558,18 @@ export function CustomReportBuilderContent() {
           </p>
           {isMobile ? (
             secondaryLine ? (
-              <p className="truncate text-xs leading-tight text-slate-500" title={secondaryLine}>
+              <p className="truncate text-xs leading-tight text-muted-foreground" title={secondaryLine}>
                 {secondaryLine}
               </p>
             ) : null
           ) : (
             <>
-              <p className="truncate text-xs leading-tight text-slate-500" title={app.appId}>
+              <p className="truncate text-xs leading-tight text-muted-foreground" title={app.appId}>
                 {app.appId}
               </p>
               {storeId ? (
                 <p
-                  className="truncate font-mono text-[11px] leading-tight text-slate-400"
+                  className="truncate font-mono text-[11px] leading-tight text-muted-foreground"
                   title={storeId}
                 >
                   {storeId}
@@ -2596,14 +2596,14 @@ export function CustomReportBuilderContent() {
         )}
       >
         {canScopeManagedTeams ? (
-          <div className="flex gap-1 border-b border-slate-100 bg-slate-50/80 px-2 py-1.5">
+          <div className="flex gap-1 border-b border-border bg-muted/80 px-2 py-1.5">
             <button
               type="button"
               className={cn(
                 "flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
                 appSelectorViewMode === "flat"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900",
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setAppSelectorViewMode("flat")}
             >
@@ -2614,8 +2614,8 @@ export function CustomReportBuilderContent() {
               className={cn(
                 "flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
                 appSelectorViewMode === "by_user"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900",
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setAppSelectorViewMode("by_user")}
             >
@@ -2642,7 +2642,7 @@ export function CustomReportBuilderContent() {
                 "w-full max-w-full min-w-0 overflow-x-hidden p-0 [&_[cmdk-item]]:max-w-full [&_[cmdk-item]]:min-w-0",
             )}
           >
-            <div className="flex gap-2 border-b border-slate-100 px-2 py-1.5">
+            <div className="flex gap-2 border-b border-border px-2 py-1.5">
               <Button
                 type="button"
                 variant="ghost"
@@ -2671,21 +2671,21 @@ export function CustomReportBuilderContent() {
             </div>
             {isByUserView ? (
               selectedCommissionMemberIds.length === 0 ? (
-                <div className="px-3 py-4 text-sm text-slate-500">Select team members first.</div>
+                <div className="px-3 py-4 text-sm text-muted-foreground">Select team members first.</div>
               ) : userAppsLoading ? (
-                <div className="px-3 py-4 text-sm text-slate-500">Loading apps by user…</div>
+                <div className="px-3 py-4 text-sm text-muted-foreground">Loading apps by user…</div>
               ) : userAppsError ? (
                 <div className="px-3 py-4 text-sm text-red-600">{userAppsError}</div>
               ) : listSearchActive && filteredUserAppGroups.length === 0 ? (
-                <div className="px-3 py-4 text-sm text-slate-500">No apps match your search.</div>
+                <div className="px-3 py-4 text-sm text-muted-foreground">No apps match your search.</div>
               ) : userAppGroups.length === 0 ? (
-                <div className="px-3 py-4 text-sm text-slate-500">
+                <div className="px-3 py-4 text-sm text-muted-foreground">
                   No permitted apps for the selected members.
                 </div>
               ) : (
                 filteredUserAppGroups.map((group) => (
                   <div key={group.userId} className="pb-1">
-                    <div className="sticky top-0 z-[1] bg-white px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="sticky top-0 z-[1] bg-card px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {group.userLabel}
                     </div>
                     {group.apps.map((app) => renderAppSelectorRow(app, `${group.userId}-${app.appId}`))}
@@ -2695,11 +2695,11 @@ export function CustomReportBuilderContent() {
             ) : selectedCommissionTeamIds.length > 0 &&
               teamScopeApps !== null &&
               appsForSelection.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-slate-500">
+              <div className="px-3 py-4 text-sm text-muted-foreground">
                 No apps linked to the selected teams.
               </div>
             ) : listSearchActive && filteredFlatApps.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-slate-500">No apps match your search.</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">No apps match your search.</div>
             ) : (
               filteredFlatApps.map((app) => renderAppSelectorRow(app))
             )}
@@ -2713,7 +2713,7 @@ export function CustomReportBuilderContent() {
     <Button
       variant="outline"
       className={cn(
-        "h-10 w-full justify-between border-slate-200 bg-white font-normal sm:min-w-[11rem] sm:max-w-[280px]",
+        "h-10 w-full justify-between border-border bg-card font-normal sm:min-w-[11rem] sm:max-w-[280px]",
         isMobile ? "max-w-full min-w-0" : "max-w-none",
       )}
       type="button"
@@ -2729,10 +2729,10 @@ export function CustomReportBuilderContent() {
       }
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        <Smartphone className="h-4 w-4 shrink-0 text-slate-400" />
+        <Smartphone className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="truncate">{appsTriggerLabel}</span>
       </span>
-      <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
     </Button>
   )
 
@@ -2740,9 +2740,9 @@ export function CustomReportBuilderContent() {
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_10rem]">
         <div>
-          <div className="text-xs font-medium text-slate-500 mb-1.5">Metric</div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">Metric</div>
           <Select value={draftMetricFilterMetric} onValueChange={setDraftMetricFilterMetric}>
-            <SelectTrigger className="h-10 bg-white">
+            <SelectTrigger className="h-10 bg-card">
               <SelectValue placeholder="Select metric" />
             </SelectTrigger>
             <SelectContent className={cn(isMobile && "z-[100]")}>
@@ -2756,14 +2756,14 @@ export function CustomReportBuilderContent() {
         </div>
 
         <div>
-          <div className="text-xs font-medium text-slate-500 mb-1.5">Condition</div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">Condition</div>
           <Select
             value={draftMetricFilterCondition}
             onValueChange={(value) =>
               setDraftMetricFilterCondition(value as CustomReportMetricFilter["condition"])
             }
           >
-            <SelectTrigger className="h-10 bg-white">
+            <SelectTrigger className="h-10 bg-card">
               <SelectValue placeholder="Condition" />
             </SelectTrigger>
             <SelectContent className={cn(isMobile && "z-[100]")}>
@@ -2777,14 +2777,14 @@ export function CustomReportBuilderContent() {
         </div>
 
         <div>
-          <div className="text-xs font-medium text-slate-500 mb-1.5">Value</div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">Value</div>
           <Input
             type="number"
             inputMode="decimal"
             value={draftMetricFilterValue}
             onChange={(event) => setDraftMetricFilterValue(event.target.value)}
             placeholder="Value"
-            className="h-10 bg-white"
+            className="h-10 bg-card"
           />
         </div>
       </div>
@@ -2800,7 +2800,7 @@ export function CustomReportBuilderContent() {
         </Button>
         <Button
           type="button"
-          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+          className="w-full bg-primary hover:bg-primary/90 sm:w-auto"
           onClick={addMetricFilter}
           disabled={!draftMetricFilterMetric || draftMetricFilterValue.trim() === ""}
         >
@@ -2814,8 +2814,8 @@ export function CustomReportBuilderContent() {
     <>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Select value={dateSelectValue} onValueChange={handleDateSelectChange}>
-                  <SelectTrigger className="h-10 w-full bg-white sm:w-44">
-                    <CalendarIcon className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
+                  <SelectTrigger className="h-10 w-full bg-card sm:w-44">
+                    <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground shrink-0" />
                     <SelectValue placeholder="Date range" />
                   </SelectTrigger>
                   <SelectContent className={cn(isMobile && "z-[100]")}>
@@ -2830,14 +2830,14 @@ export function CustomReportBuilderContent() {
                 {dateFilterMode === "month" && (
                   <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen} modal={!isMobile}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-10 w-full border-slate-200 bg-white sm:w-auto" type="button">
+                      <Button variant="outline" className="h-10 w-full border-border bg-card sm:w-auto" type="button">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {dateRangeLabel}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className={cn("w-auto p-4", isMobile && "z-[100]")} align="start">
                       <div className="space-y-2">
-                        <Label htmlFor="report-month-picker" className="text-sm font-medium text-slate-700">
+                        <Label htmlFor="report-month-picker" className="text-sm font-medium text-foreground">
                           Month
                         </Label>
                         <Input
@@ -2848,7 +2848,7 @@ export function CustomReportBuilderContent() {
                           value={format(selectedMonth, "yyyy-MM")}
                           onChange={(e) => handleMonthInputChange(e.target.value)}
                         />
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           {format(startDate, "M/d/yyyy", { locale: enUS })} –{" "}
                           {format(endDate, "M/d/yyyy", { locale: enUS })}
                         </p>
@@ -2862,9 +2862,9 @@ export function CustomReportBuilderContent() {
                     variant="outline"
                     type="button"
                     disabled
-                    className="h-10 w-full cursor-default border-slate-200 bg-slate-50 text-slate-600 disabled:opacity-100 sm:w-auto"
+                    className="h-10 w-full cursor-default border-border bg-muted/50 text-muted-foreground disabled:opacity-100 sm:w-auto"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
                     {dateRangeLabel}
                   </Button>
                 ) : null}
@@ -2872,13 +2872,13 @@ export function CustomReportBuilderContent() {
                 {dateFilterMode === "custom" ? (
                   <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen} modal={!isMobile}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-10 w-full border-slate-200 bg-white sm:w-auto" type="button">
+                      <Button variant="outline" className="h-10 w-full border-border bg-card sm:w-auto" type="button">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {dateRangeLabel}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className={cn("w-auto p-0", isMobile && "z-[100]")} align="start">
-                      <div className="flex gap-1 border-b border-slate-100 p-2">
+                      <div className="flex gap-1 border-b border-border p-2">
                         {datePresets.map((preset) => (
                           <Button
                             key={preset.id}
@@ -2887,7 +2887,7 @@ export function CustomReportBuilderContent() {
                             size="sm"
                             className={cn(
                               "h-7 text-xs",
-                              activePresetDays === preset.days && "bg-blue-600 hover:bg-blue-700",
+                              activePresetDays === preset.days && "bg-primary hover:bg-primary/90",
                             )}
                             onClick={() => applyDatePreset(preset.days)}
                           >
@@ -2943,7 +2943,7 @@ export function CustomReportBuilderContent() {
                   <div className="w-full max-w-full min-w-0 overflow-x-hidden">
                     {renderAppSelectorTrigger({ toggleOnClick: true })}
                     {appPopoverOpen ? (
-                      <div className="mt-2 h-[220px] w-full max-w-full min-w-0 overflow-x-hidden overflow-y-hidden rounded-md border border-slate-200 bg-white">
+                      <div className="mt-2 h-[220px] w-full max-w-full min-w-0 overflow-x-hidden overflow-y-hidden rounded-md border border-border bg-card">
                         {renderAppSelectorList()}
                       </div>
                     ) : null}
@@ -2970,19 +2970,19 @@ export function CustomReportBuilderContent() {
                     className="w-full"
                   >
                     <CollapsibleTrigger asChild>
-                      <Button variant="outline" className="h-10 w-full gap-2 bg-white sm:w-auto" type="button">
+                      <Button variant="outline" className="h-10 w-full gap-2 bg-card sm:w-auto" type="button">
                         <Plus className="h-4 w-4" />
                         Add filter
                       </Button>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 rounded-md border border-slate-200 bg-white p-4">
+                    <CollapsibleContent className="mt-2 rounded-md border border-border bg-card p-4">
                       {renderMetricFilterFields()}
                     </CollapsibleContent>
                   </Collapsible>
                 ) : (
                   <Popover open={metricFilterPopoverOpen} onOpenChange={setMetricFilterPopoverOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-10 w-full gap-2 bg-white sm:w-auto" type="button">
+                      <Button variant="outline" className="h-10 w-full gap-2 bg-card sm:w-auto" type="button">
                         <Plus className="h-4 w-4" />
                         Add filter
                       </Button>
@@ -2999,7 +2999,7 @@ export function CustomReportBuilderContent() {
                 )}
 
                 <Button
-                  className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                  className="h-10 w-full gap-2 bg-primary hover:bg-primary/90 sm:w-auto"
                   type="button"
                   disabled={loadingSavedReport || reportLoading || !hasPendingApply}
                   onClick={handleApplyFilters}
@@ -3010,15 +3010,15 @@ export function CustomReportBuilderContent() {
               </div>
     
               {(activeFilters.length > 0 || metricFilters.length > 0) && (
-                <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-slate-100 pt-1">
-                  <span className="shrink-0 text-sm text-slate-500">Active filters:</span>
+                <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-border pt-1">
+                  <span className="shrink-0 text-sm text-muted-foreground">Active filters:</span>
                   {activeFilters
                     .filter((filter) => filter.type !== FILTER_COMMISSION_MEMBER)
                     .map((filter) => (
                     <Badge
                       key={filter.type}
                       variant="secondary"
-                      className="max-w-full gap-1 border border-blue-200 bg-blue-50 pr-1 text-blue-700"
+                      className="max-w-full gap-1 border border-primary/30 bg-primary/10 pr-1 text-primary"
                     >
                       <span className="truncate">
                         {filter.type}: {filter.value}
@@ -3027,7 +3027,7 @@ export function CustomReportBuilderContent() {
                         <button
                           type="button"
                           onClick={() => removeFilter(filter.type)}
-                          className="ml-1 hover:bg-blue-100 rounded p-0.5"
+                          className="ml-1 rounded p-0.5 hover:bg-primary/15"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -3038,13 +3038,13 @@ export function CustomReportBuilderContent() {
                     <Badge
                       key={`${filter.metric}-${filter.condition}-${filter.value}-${index}`}
                       variant="secondary"
-                      className="bg-purple-50 text-purple-700 border border-purple-200 gap-1 pr-1"
+                      className="gap-1 border border-purple-500/30 bg-purple-500/10 pr-1 text-purple-700 dark:text-purple-300"
                     >
                       {getMetricFilterLabel(filter, catalogMetrics)}
                       <button
                         type="button"
                         onClick={() => removeMetricFilter(index)}
-                        className="ml-1 hover:bg-purple-100 rounded p-0.5"
+                        className="ml-1 rounded p-0.5 hover:bg-purple-500/20"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -3053,7 +3053,7 @@ export function CustomReportBuilderContent() {
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm text-primary hover:underline"
                   >
                     Clear all
                   </button>
@@ -3064,21 +3064,21 @@ export function CustomReportBuilderContent() {
 
   const renderParametersMetricsBody = (scrollAreaClassName: string) => (
     <>
-      <div className="border-b border-slate-100 px-4 py-3">
+      <div className="border-b border-border px-4 py-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search parameters or metrics..."
-            className="h-10 border-slate-200 bg-white pl-9"
+            className="h-10 border-border bg-card pl-9"
             value={sidebarSearch}
             onChange={(e) => setSidebarSearch(e.target.value)}
           />
         </div>
       </div>
       <ScrollArea className={scrollAreaClassName}>
-        <div className="border-b border-slate-100 p-4">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+        <div className="border-b border-border p-4">
+          <div className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Parameters ({selectedParameters.length})
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleParameterDragEnd}>
@@ -3102,7 +3102,7 @@ export function CustomReportBuilderContent() {
           </DndContext>
         </div>
         <div className="p-4">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+          <div className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Metrics ({selectedMetrics.length})
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMetricDragEnd}>
@@ -3117,7 +3117,7 @@ export function CustomReportBuilderContent() {
                     id={metric.id}
                     label={metric.label}
                     selected={selectedMetrics.includes(metric.id)}
-                    selectedColorClass="bg-blue-50 text-blue-800"
+                    selectedColorClass="bg-primary/10 text-primary"
                     onToggle={() => toggleMetric(metric.id)}
                   />
                 ))}
@@ -3144,10 +3144,10 @@ export function CustomReportBuilderContent() {
   const desktopToolbarButtonClass = (tone: "default" | "danger" | "active" | "primary") =>
     cn(
       "flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5",
-      tone === "danger" && "text-red-600 hover:bg-red-50 hover:text-red-700",
-      tone === "active" && "bg-slate-200/70 text-blue-600 hover:bg-slate-200/80 hover:text-blue-700",
-      tone === "primary" && "text-blue-600 hover:bg-blue-50 hover:text-blue-700",
-      tone === "default" && "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+      tone === "danger" && "text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-300",
+      tone === "active" && "bg-muted/70 text-primary hover:bg-muted/80 hover:text-primary",
+      tone === "primary" && "text-primary hover:bg-primary/10 hover:text-primary",
+      tone === "default" && "text-muted-foreground hover:bg-muted hover:text-foreground",
     )
 
   const renderReportActionButtons = (layout: "desktop" | "mobile") => {
@@ -3155,11 +3155,11 @@ export function CustomReportBuilderContent() {
     const toolbarLabelClass = "text-[10px] font-medium leading-none"
     const mobileButtonClass = (tone: "default" | "danger" | "primary" | "active") =>
       cn(
-        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-transform active:scale-95 disabled:pointer-events-none disabled:opacity-50",
-        tone === "danger" && "text-red-600 hover:bg-red-50",
-        tone === "primary" && "border-blue-200 bg-blue-600 text-white hover:bg-blue-700",
-        tone === "active" && "border-blue-200 bg-blue-50 text-blue-600",
-        tone === "default" && "text-slate-600 hover:bg-slate-50",
+        "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-card shadow-sm transition-transform active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+        tone === "danger" && "text-red-600 hover:bg-red-500/10",
+        tone === "primary" && "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90",
+        tone === "active" && "border-primary/30 bg-primary/10 text-primary",
+        tone === "default" && "text-muted-foreground hover:bg-muted/50",
       )
 
     return (
@@ -3313,7 +3313,7 @@ export function CustomReportBuilderContent() {
                 onValueChange={(value) => setSaveReportFolder(value === "__none" ? "" : value)}
                 disabled={savingReport || foldersLoading || creatingFolder}
               >
-                <SelectTrigger id="save-report-folder" className="bg-white">
+                <SelectTrigger id="save-report-folder" className="bg-card">
                   <SelectValue placeholder={foldersLoading ? "Loading folders..." : "Select folder"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -3336,7 +3336,7 @@ export function CustomReportBuilderContent() {
                   />
                   <Button
                     type="button"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-primary hover:bg-primary/90"
                     disabled={savingReport || creatingFolder || !newFolderName.trim()}
                     onClick={() => void handleCreateFolder()}
                   >
@@ -3369,7 +3369,7 @@ export function CustomReportBuilderContent() {
             </Button>
             <Button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               disabled={savingReport || !saveReportName.trim()}
               onClick={() => void handleConfirmSaveReport()}
             >
@@ -3420,7 +3420,7 @@ export function CustomReportBuilderContent() {
           <Button
             type="button"
             variant="ghost"
-            className="h-8 w-fit px-2 text-slate-600 hover:text-slate-900"
+            className="h-8 w-fit px-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.push("/reports")}
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
@@ -3430,13 +3430,13 @@ export function CustomReportBuilderContent() {
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-2xl font-semibold text-slate-900">{reportPageTitle}</h1>
+            <h1 className="truncate text-2xl font-semibold text-foreground">{reportPageTitle}</h1>
             {savedReportId && canEditReports ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
                 disabled={savingReport || loadingSavedReport}
                 onClick={() => setSaveDialogOpen(true)}
                 title="Edit report name"
@@ -3457,8 +3457,8 @@ export function CustomReportBuilderContent() {
                 "flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5",
                 isMobile && "hidden",
                 filtersCardOpen
-                  ? "bg-slate-200/70 text-blue-600 hover:bg-slate-200/80 hover:text-blue-700"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                  ? "bg-muted/70 text-primary hover:bg-muted/80 hover:text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
               onClick={() => setFiltersCardOpen((open) => !open)}
               title={filtersCardOpen ? "Hide filters" : "Show filters"}
@@ -3471,7 +3471,7 @@ export function CustomReportBuilderContent() {
           </div>
         </div>
 
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Build ad activity reports with custom parameters and metrics
         </p>
       </div>
@@ -3490,7 +3490,7 @@ export function CustomReportBuilderContent() {
               filtersCardOpen ? "translate-y-0" : "-translate-y-2",
             )}
           >
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium">Filters</CardTitle>
           <CardDescription>Date range, apps, and report criteria. Click Apply to refresh data.</CardDescription>
@@ -3510,12 +3510,12 @@ export function CustomReportBuilderContent() {
       >
         <Card
           className={cn(
-            "flex flex-col overflow-hidden border-slate-200",
+            "flex flex-col overflow-hidden border-border",
             isMobile && "max-h-[95dvh]",
             !isMobile && "xl:h-[min(75vh,760px)]",
           )}
         >
-          <CardHeader className="shrink-0 border-b border-slate-100 pb-3">
+          <CardHeader className="shrink-0 border-b border-border pb-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-base font-medium">Report results</CardTitle>
@@ -3554,11 +3554,11 @@ export function CustomReportBuilderContent() {
 
         <Card
           className={cn(
-            "flex flex-col border-slate-200",
+            "flex flex-col border-border",
             isMobile ? "hidden" : "flex xl:h-[min(75vh,760px)]",
           )}
         >
-          <CardHeader className="shrink-0 border-b border-slate-100 px-3 py-3 min-h-[4.5rem]">
+          <CardHeader className="shrink-0 border-b border-border px-3 py-3 min-h-[4.5rem]">
             <div
               className={cn(
                 "flex w-full items-center gap-2",
@@ -3604,7 +3604,7 @@ export function CustomReportBuilderContent() {
               <div className="flex flex-1 items-center justify-center p-2">
                 <div
                   className={cn(
-                    "select-none text-xs font-semibold uppercase tracking-wider text-slate-600",
+                    "select-none text-xs font-semibold uppercase tracking-wider text-muted-foreground",
                     "[writing-mode:vertical-rl] [text-orientation:mixed]",
                   )}
                 >
@@ -3638,7 +3638,7 @@ export function CustomReportBuilderContent() {
                       setMobileReportActionsOpen((open) => !open)
                     }}
                     className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-l-xl border border-r-0 border-slate-200 bg-white shadow-lg",
+                      "flex h-12 w-12 items-center justify-center rounded-l-xl border border-r-0 border-border bg-card shadow-lg",
                       mobileReportActionsOpen && "ring-2 ring-blue-300",
                     )}
                     aria-label={
@@ -3648,10 +3648,10 @@ export function CustomReportBuilderContent() {
                     }
                     aria-expanded={mobileReportActionsOpen}
                   >
-                    <MoreHorizontal className="h-5 w-5 text-slate-600" aria-hidden />
+                    <MoreHorizontal className="h-5 w-5 text-muted-foreground" aria-hidden />
                   </button>
                   {mobileReportActionsOpen ? (
-                    <div className="flex items-center gap-2.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-2.5 py-2 shadow-lg">
+                    <div className="flex items-center gap-2.5 rounded-l-xl border border-r-0 border-border bg-card px-2.5 py-2 shadow-lg">
                       {renderReportActionButtons("mobile")}
                     </div>
                   ) : null}
@@ -3664,14 +3664,14 @@ export function CustomReportBuilderContent() {
                   setMobileFiltersOpen(true)
                 }}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg",
+                  "flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg",
                   hasPendingApply && "ring-2 ring-blue-300",
                 )}
                 aria-label="Open filters. Drag the sticker group up or down to reposition."
               >
-                <Filter className="h-4 w-4 text-slate-600" aria-hidden />
+                <Filter className="h-4 w-4 text-muted-foreground" aria-hidden />
                 <span
-                  className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                  className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
                   style={{ writingMode: "vertical-rl" }}
                 >
                   Filter
@@ -3692,12 +3692,12 @@ export function CustomReportBuilderContent() {
                   if (consumeMobileStickersDragClick()) return
                   setMobileColumnsOpen(true)
                 }}
-                className="flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg"
+                className="flex flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg"
                 aria-label="Open parameters and metrics. Drag the sticker group up or down to reposition."
               >
-                <Columns3 className="h-4 w-4 text-slate-600" aria-hidden />
+                <Columns3 className="h-4 w-4 text-muted-foreground" aria-hidden />
                 <span
-                  className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                  className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
                   style={{ writingMode: "vertical-rl" }}
                 >
                   Columns
@@ -3716,7 +3716,7 @@ export function CustomReportBuilderContent() {
                 side="right"
                 className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
               >
-                <SheetHeader className="shrink-0 border-b border-slate-100 px-4 py-4 text-left">
+                <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
                   <SheetTitle className="text-base">Filters</SheetTitle>
                   <SheetDescription>
                     Date range, apps, and report criteria. Click Apply to refresh data.
@@ -3735,15 +3735,15 @@ export function CustomReportBuilderContent() {
                 side="right"
                 className="flex w-[min(100vw-1.5rem,20rem)] flex-col gap-0 p-0"
               >
-                <SheetHeader className="border-b border-slate-100 px-4 py-4 text-left">
+                <SheetHeader className="border-b border-border px-4 py-4 text-left">
                   <SheetTitle className="text-base">Parameters & Metrics</SheetTitle>
                   <SheetDescription>Choose columns to display in the table</SheetDescription>
                 </SheetHeader>
                 <div className="flex min-h-0 flex-1 flex-col">
                   {renderParametersMetricsBody("min-h-0 flex-1")}
-                  <div className="shrink-0 border-t border-slate-100 bg-white p-4">
+                  <div className="shrink-0 border-t border-border bg-card p-4">
                     <Button
-                      className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700"
+                      className="h-10 w-full gap-2 bg-primary hover:bg-primary/90"
                       type="button"
                       disabled={loadingSavedReport || reportLoading || !hasPendingApply}
                       onClick={handleApplyFilters}

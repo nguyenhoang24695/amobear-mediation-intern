@@ -42,32 +42,32 @@ export function TemplatePreviewDialog({
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap gap-2">
               {template.isDefault ? (
-                <Badge className="bg-indigo-100 text-indigo-800">Default</Badge>
+                <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Default</Badge>
               ) : null}
               {category ? <Badge variant="secondary">{category}</Badge> : null}
               <Badge variant="outline">{template.sections.length} sections</Badge>
             </div>
             {body ? (
               <div>
-                <p className="mb-1 font-medium text-slate-900">Mô tả</p>
-                <p className="whitespace-pre-wrap text-slate-600">{body}</p>
+                <p className="mb-1 font-medium text-foreground">Mô tả</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">{body}</p>
               </div>
             ) : null}
             <div>
-              <p className="mb-1 font-medium text-slate-900">Global AI instructions</p>
-              <pre className="max-h-48 overflow-auto rounded-md border bg-slate-50 p-3 font-mono text-xs whitespace-pre-wrap text-slate-700">
+              <p className="mb-1 font-medium text-foreground">Global AI instructions</p>
+              <pre className="max-h-48 overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap text-foreground">
                 {template.globalAiInstructions || "—"}
               </pre>
             </div>
             <div>
-              <p className="mb-2 font-medium text-slate-900">Sections</p>
-              <Accordion type="multiple" className="w-full rounded-md border border-slate-200 px-2">
+              <p className="mb-2 font-medium text-foreground">Sections</p>
+              <Accordion type="multiple" className="w-full rounded-md border border-border px-2">
                 {sortedSections.map((s) => (
-                  <AccordionItem key={s.sectionKey} value={s.sectionKey} className="border-slate-200">
+                  <AccordionItem key={s.sectionKey} value={s.sectionKey} className="border-border">
                     <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
                       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                        <span className="font-medium text-slate-900">{s.title}</span>
-                        <span className="text-xs font-normal text-slate-500">({s.sectionKey})</span>
+                        <span className="font-medium text-foreground">{s.title}</span>
+                        <span className="text-xs font-normal text-muted-foreground">({s.sectionKey})</span>
                         {!s.isActive ? (
                           <Badge variant="outline" className="text-amber-700">
                             tắt
@@ -76,19 +76,19 @@ export function TemplatePreviewDialog({
                       </span>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="space-y-2 pb-2 text-xs text-slate-600">
+                      <div className="space-y-2 pb-2 text-xs text-muted-foreground">
                         {s.metrics?.length ? (
                           <p>
-                            <span className="font-medium text-slate-800">Metrics: </span>
+                            <span className="font-medium text-foreground">Metrics: </span>
                             {s.metrics.join(", ")}
                           </p>
                         ) : null}
                         {s.aiInstruction ? (
-                          <pre className="max-h-40 overflow-auto rounded border bg-slate-50 p-2 font-mono whitespace-pre-wrap">
+                          <pre className="max-h-40 overflow-auto rounded border bg-muted/40 p-2 font-mono whitespace-pre-wrap">
                             {s.aiInstruction}
                           </pre>
                         ) : (
-                          <p className="text-slate-400">Không có AI instruction.</p>
+                          <p className="text-muted-foreground">Không có AI instruction.</p>
                         )}
                       </div>
                     </AccordionContent>
@@ -96,7 +96,7 @@ export function TemplatePreviewDialog({
                 ))}
               </Accordion>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Preview chỉ hiển thị cấu hình. Để xem Markdown thật, mở app → tab AI Insight sau khi generate.
             </p>
           </div>

@@ -114,23 +114,23 @@ export function MyReportChartEditSheet({
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-col self-stretch overflow-hidden border-l border-gray-200 bg-gray-50 transition-[width,opacity] duration-200 ease-out",
+        "flex shrink-0 flex-col self-stretch overflow-hidden border-l border-border bg-card transition-[width,opacity] duration-200 ease-out",
         open ? "w-[min(100%,280px)] opacity-100" : "w-0 border-l-0 opacity-0",
       )}
       aria-hidden={!open}
     >
       {open ? (
         <>
-          <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-            <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900">
-              <ChartLine className="h-4 w-4 shrink-0 text-gray-500" />
+          <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
+              <ChartLine className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="truncate">Data visualization</span>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7 shrink-0 text-gray-500"
+              className="h-7 w-7 shrink-0 text-muted-foreground"
               onClick={() => onOpenChange(false)}
               aria-label="Close"
             >
@@ -146,7 +146,7 @@ export function MyReportChartEditSheet({
                   setLocalDraft((prev) => ({ ...prev, chartType: value as MyReportChartType }))
                 }
               >
-                <SelectTrigger className="h-9 w-full bg-white text-sm">
+                <SelectTrigger className="h-9 w-full bg-card text-sm">
                   <div className="flex items-center gap-2">
                     {CHART_TYPE_META[localDraft.chartType]?.icon}
                     <SelectValue>{CHART_TYPE_META[localDraft.chartType]?.label}</SelectValue>
@@ -177,8 +177,8 @@ export function MyReportChartEditSheet({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-gray-800">
-                    <ChartLine className="h-3.5 w-3.5 text-gray-500" />
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                    <ChartLine className="h-3.5 w-3.5 text-muted-foreground" />
                     Metrics (y-axis ↑)
                   </div>
                   {(() => {
@@ -208,7 +208,7 @@ export function MyReportChartEditSheet({
                   {localDraft.metricIds.map((mId, idx) => (
                     <div
                       key={mId}
-                      className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5"
+                      className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5"
                     >
                       <div
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -249,7 +249,7 @@ export function MyReportChartEditSheet({
                           }))
                         }
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                   ))}
@@ -258,8 +258,8 @@ export function MyReportChartEditSheet({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-gray-800">
-                    <FolderOpen className="h-3.5 w-3.5 text-gray-500" />
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                    <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
                     Dimensions (x-axis →)
                   </div>
                   {(() => {
@@ -291,10 +291,10 @@ export function MyReportChartEditSheet({
                   {localDraft.dimensionIds.map((dimId) => (
                     <div
                       key={dimId}
-                      className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5"
+                      className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5"
                     >
-                      <GripVertical className="h-3.5 w-3.5 shrink-0 text-gray-300" />
-                      <span className="flex-1 truncate text-xs text-gray-800">
+                      <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                      <span className="flex-1 truncate text-xs text-foreground">
                         {dimensionLabel(dimId, dimensionCatalog)}
                       </span>
                       <Button
@@ -310,7 +310,7 @@ export function MyReportChartEditSheet({
                           }))
                         }
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                   ))}
@@ -320,7 +320,7 @@ export function MyReportChartEditSheet({
                       <button
                         key={`add-${dimId}`}
                         type="button"
-                        className="flex w-full items-center gap-1.5 rounded-md border border-dashed border-gray-200 px-2 py-1.5 text-left text-xs text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        className="flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                         onClick={() =>
                           setLocalDraft((prev) => ({
                             ...prev,
@@ -336,12 +336,12 @@ export function MyReportChartEditSheet({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-800">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-gray-500" />
+                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                   Data configuration
-                  <Info className="h-3 w-3 text-gray-400" />
+                  <Info className="h-3 w-3 text-muted-foreground" />
                 </div>
-                <p className="text-[11px] leading-relaxed text-gray-500">
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
                   App, date, and team filters are configured from Data Configuration tags above the
                   table.
                 </p>
@@ -349,11 +349,11 @@ export function MyReportChartEditSheet({
             </div>
           </div>
 
-          <div className="flex justify-end border-t border-gray-200 bg-white px-4 py-3">
+          <div className="flex justify-end border-t border-border bg-card px-4 py-3">
             <Button
               type="button"
               size="sm"
-              className="h-8 bg-blue-600 px-4 text-xs hover:bg-blue-700"
+              className="h-8 bg-primary px-4 text-xs hover:bg-primary/90"
               onClick={handleDone}
             >
               Done

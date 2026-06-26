@@ -31,6 +31,9 @@ const roasLineConfig = [
   { key: "roasD30", label: "ROAS D30", color: "#96ca07ff" },
 ] as const
 
+const axisTickStyle = { fontSize: 12, fill: "var(--muted-foreground)" }
+const gridStroke = "var(--border)"
+
 interface MetaSpendChartProps {
   daily: MetaInsightsDailyDto[]
   loading: boolean
@@ -52,7 +55,7 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
 
   if (loading) {
     return (
-      <Card className="border-slate-200 bg-white shadow-sm">
+      <Card>
         <CardHeader>
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-64" />
@@ -66,10 +69,10 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <Card className="border-slate-200 bg-white shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold text-slate-900">Performance Over Time</CardTitle>
-          <CardDescription className="text-sm text-slate-500">No daily Meta insights are available for the selected filters.</CardDescription>
+          <CardTitle className="text-base font-semibold text-foreground">Performance Over Time</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">No daily Meta insights are available for the selected filters.</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -78,16 +81,16 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
   const color = metaMetricColors[activeTab]
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card>
       <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle className="text-base font-semibold text-slate-900">Performance Over Time</CardTitle>
-          <CardDescription className="text-sm text-slate-500">Current-period Meta campaign metrics and attribution ROAS grouped by day.</CardDescription>
+          <CardTitle className="text-base font-semibold text-foreground">Performance Over Time</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">Current-period Meta campaign metrics and attribution ROAS grouped by day.</CardDescription>
         </div>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MetaChartMetricKey)}>
-          <TabsList className="grid h-auto grid-cols-3 gap-1 bg-slate-100 p-1 lg:grid-cols-7">
+          <TabsList className="grid h-auto grid-cols-3 gap-1 bg-muted p-1 lg:grid-cols-7">
             {tabConfig.map((tab) => (
-              <TabsTrigger key={tab.key} value={tab.key} className="px-3 py-1.5 text-xs">
+              <TabsTrigger key={tab.key} value={tab.key} className="px-3 py-1.5 text-xs data-[state=active]:bg-background">
                 {tab.label}
               </TabsTrigger>
             ))}
@@ -99,26 +102,26 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             {isRoasTab ? (
               <LineChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748B" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTickStyle} />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   width={52}
-                  tick={{ fontSize: 12, fill: "#64748B" }}
+                  tick={axisTickStyle}
                   tickFormatter={(value) => formatChartAxisValue("roas", Number(value))}
                 />
                 <Tooltip
                   content={({ active, payload, label }) => {
                     if (!active || !payload || payload.length === 0) return null
                     return (
-                      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-md">
-                        <div className="text-sm font-medium text-slate-900">{label}</div>
+                      <div className="rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md">
+                        <div className="text-sm font-medium text-foreground">{label}</div>
                         {roasLineConfig.map((cfg) => {
                           const entry = payload.find((p) => p.dataKey === cfg.key)
                           const v = entry?.value != null ? Number(entry.value) : null
                           return (
-                            <div key={cfg.key} className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+                            <div key={cfg.key} className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cfg.color }} />
                               <span>{cfg.label}:</span>
                               <span className="font-medium">{v != null ? formatMetricValue("roas", v) : "--"}</span>
@@ -134,7 +137,7 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
                   height={28}
                   iconType="circle"
                   iconSize={8}
-                  formatter={(value: string) => <span className="text-xs text-slate-600">{value}</span>}
+                  formatter={(value: string) => <span className="text-xs text-muted-foreground">{value}</span>}
                 />
                 {roasLineConfig.map((cfg) => (
                   <Line key={cfg.key} type="monotone" dataKey={cfg.key} stroke={cfg.color} strokeWidth={2.5} dot={false} name={cfg.label} connectNulls={false} />
@@ -148,13 +151,13 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
                     <stop offset="100%" stopColor={color} stopOpacity={0.03} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748B" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTickStyle} />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   width={52}
-                  tick={{ fontSize: 12, fill: "#64748B" }}
+                  tick={axisTickStyle}
                   tickFormatter={(value) => formatChartAxisValue(activeTab, Number(value))}
                 />
                 <Tooltip
@@ -164,9 +167,9 @@ export function MetaSpendChart({ daily, loading }: MetaSpendChartProps) {
                     if (rawValue == null) return null
                     const value = Number(rawValue)
                     return (
-                      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-md">
-                        <div className="text-sm font-medium text-slate-900">{label}</div>
-                        <div className="mt-1 text-sm text-slate-600">{formatMetricValue(activeTab, value)}</div>
+                      <div className="rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md">
+                        <div className="text-sm font-medium text-foreground">{label}</div>
+                        <div className="mt-1 text-sm text-muted-foreground">{formatMetricValue(activeTab, value)}</div>
                       </div>
                     )
                   }}

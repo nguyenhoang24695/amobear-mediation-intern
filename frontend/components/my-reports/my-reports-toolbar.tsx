@@ -84,7 +84,7 @@ export function MyReportTableViewModeToggle({
         disabled={disabled}
         className={cn(
           "h-9 flex-1 gap-1.5",
-          tableViewMode === "flat" && "border-2 border-blue-600 text-blue-600",
+          tableViewMode === "flat" && "border-2 border-primary text-primary",
         )}
         onClick={() => onTableViewModeChange("flat")}
       >
@@ -98,7 +98,7 @@ export function MyReportTableViewModeToggle({
         disabled={disabled}
         className={cn(
           "h-9 flex-1 gap-1.5",
-          tableViewMode === "pivot" && "border-2 border-blue-600 text-blue-600",
+          tableViewMode === "pivot" && "border-2 border-primary text-primary",
         )}
         onClick={() => onTableViewModeChange("pivot")}
       >
@@ -171,24 +171,24 @@ export function MyReportsToolbar({
             onChange={(e) => onTitleChange(e.target.value)}
             onBlur={() => onEditingTitleChange(false)}
             onKeyDown={(e) => e.key === "Enter" && onEditingTitleChange(false)}
-            className="border-b-2 border-blue-500 bg-transparent text-2xl font-semibold outline-none"
+            className="border-b-2 border-primary bg-transparent text-2xl font-semibold text-foreground outline-none"
           />
         ) : (
-          <h1 className="truncate text-2xl font-semibold text-gray-900">{reportTitle}</h1>
+          <h1 className="truncate text-2xl font-semibold text-foreground">{reportTitle}</h1>
         )}
         <button
           type="button"
           onClick={() => onEditingTitleChange(true)}
-          className="rounded p-1 hover:bg-gray-100"
+          className="rounded p-1 hover:bg-muted"
         >
-          <Pencil className="h-4 w-4 text-gray-400" />
+          <Pencil className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {canViewOverviewReport && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-gray-600" asChild>
+              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
                 <Link href={buildOverviewHref(appliedConfig)}>
                   <ExternalLink className="h-4 w-4" />
                   Profit Overview
@@ -201,7 +201,7 @@ export function MyReportsToolbar({
         {orgId && canViewOrgDetails && canViewProfitPlan ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-gray-600" asChild>
+              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
                 <Link href={`/organizations/${orgId}?tab=profit-plan`}>
                   <ExternalLink className="h-4 w-4" />
                   Team plans
@@ -212,14 +212,14 @@ export function MyReportsToolbar({
           </Tooltip>
         ) : null}
         <MyReportTemplatePicker onLoadTemplate={onLoadTemplate} />
-        <Phase3DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-          <Star className="h-5 w-5 text-gray-400" />
+        <Phase3DisabledButton className="rounded-md p-2 hover:bg-muted">
+          <Star className="h-5 w-5 text-muted-foreground" />
         </Phase3DisabledButton>
-        <Phase3DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-          <Mail className="h-5 w-5 text-gray-400" />
+        <Phase3DisabledButton className="rounded-md p-2 hover:bg-muted">
+          <Mail className="h-5 w-5 text-muted-foreground" />
         </Phase3DisabledButton>
-        <Phase3DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-          <Share2 className="h-5 w-5 text-gray-400" />
+        <Phase3DisabledButton className="rounded-md p-2 hover:bg-muted">
+          <Share2 className="h-5 w-5 text-muted-foreground" />
         </Phase3DisabledButton>
         <Button
           type="button"
@@ -229,15 +229,15 @@ export function MyReportsToolbar({
           disabled={!canExport || exportDisabled}
           onClick={onExport}
         >
-          <Download className="h-5 w-5 text-gray-400" />
+          <Download className="h-5 w-5 text-muted-foreground" />
         </Button>
-        <Phase3DisabledButton className="rounded-md p-2 hover:bg-gray-100">
-          <MoreHorizontal className="h-5 w-5 text-gray-400" />
+        <Phase3DisabledButton className="rounded-md p-2 hover:bg-muted">
+          <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
         </Phase3DisabledButton>
         <Button
           type="button"
           size="sm"
-          className="ml-2 h-9 bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700"
+          className="ml-2 h-9 bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           onClick={onSave}
         >
           Save
@@ -268,13 +268,13 @@ export function MyReportsTableActionBar({
   | "onRefresh"
 >) {
   return (
-    <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-6 py-2">
+    <div className="flex items-center justify-between border-b border-border bg-muted/50 px-6 py-2">
       <div className="flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className={cn("h-9 gap-1.5", editTableOpen && "border-2 border-blue-600 text-blue-600")}
+          className={cn("h-9 gap-1.5", editTableOpen && "border-2 border-primary text-primary")}
           onClick={onEditTableToggle}
         >
           <Table2 className="h-4 w-4" />
@@ -286,7 +286,7 @@ export function MyReportsTableActionBar({
           size="sm"
           className={cn(
             "h-9 gap-1.5",
-            chartsVisible && "border-2 border-blue-600 text-blue-600",
+            chartsVisible && "border-2 border-primary text-primary",
           )}
           onClick={() => onChartsVisibleChange(!chartsVisible)}
         >
@@ -294,7 +294,7 @@ export function MyReportsTableActionBar({
           Chart
         </Button>
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={onRefresh}>
-          <RefreshCw className={cn("h-4 w-4 text-gray-500", loading && "animate-spin")} />
+          <RefreshCw className={cn("h-4 w-4 text-muted-foreground", loading && "animate-spin")} />
         </Button>
       </div>
       <div className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export function MyReportsTableActionBar({
         <Button
           type="button"
           size="sm"
-          className="h-9 bg-blue-600 hover:bg-blue-700"
+          className="h-9 bg-primary hover:bg-primary/90"
           disabled={loading}
           onClick={onApply}
         >

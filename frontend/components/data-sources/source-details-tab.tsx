@@ -33,18 +33,18 @@ function cellClass(status: string): string {
     case "ok":
       return "bg-emerald-100 border-emerald-300 text-emerald-900"
     case "missing":
-      return "bg-red-100 border-red-300 text-red-900"
+      return "bg-destructive/10 border-destructive/30 text-destructive"
     case "anomaly":
       return "bg-amber-100 border-amber-300 text-amber-900"
     default:
-      return "bg-slate-100 border-slate-200 text-slate-500"
+      return "bg-muted border-border text-muted-foreground"
   }
 }
 
 function cardTone(t: SourceTableHealthDto): string {
-  if (t.missingCount > 0) return "border-red-200 bg-red-50/40"
+  if (t.missingCount > 0) return "border-destructive/30 bg-destructive/10"
   if (t.anomalyCount > 0) return "border-amber-200 bg-amber-50/40"
-  return "border-slate-200 bg-white"
+  return "border-border bg-card"
 }
 
 function TableHealthCard({
@@ -67,9 +67,9 @@ function TableHealthCard({
               <Badge variant="secondary" className="text-[10px] font-mono uppercase">
                 {layerLabel}
               </Badge>
-              <CardTitle className="break-all text-base font-semibold text-slate-900 font-mono">{table.displayName ?? table.groupKey}</CardTitle>
+              <CardTitle className="break-all text-base font-semibold text-foreground font-mono">{table.displayName ?? table.groupKey}</CardTitle>
             </div>
-            <p className="mt-1 break-all text-xs text-slate-500">{table.groupKey}</p>
+            <p className="mt-1 break-all text-xs text-muted-foreground">{table.groupKey}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {table.median != null && (
@@ -77,7 +77,7 @@ function TableHealthCard({
                 median {table.median}
               </Badge>
             )}
-            <Badge variant="outline" className="text-[10px] border-red-200 text-red-800">
+            <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive">
               missing {table.missingCount}
             </Badge>
             <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-800">
@@ -111,17 +111,17 @@ function TableHealthCard({
           </div>
         )}
         {showPerApp && (
-          <Collapsible open={perAppOpen} onOpenChange={setPerAppOpen} className="border border-slate-100 rounded-md mt-2">
+          <Collapsible open={perAppOpen} onOpenChange={setPerAppOpen} className="border border-border rounded-md mt-2">
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between h-9 px-2 text-slate-700">
+              <Button variant="ghost" size="sm" className="w-full justify-between h-9 px-2 text-foreground">
                 <span className="text-xs font-medium">Per-app breakdown ({table.firebasePerApp!.length})</span>
                 {perAppOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="px-2 pb-3 space-y-3">
               {table.firebasePerApp!.map((child) => (
-                <div key={child.groupKey} className="rounded-md border border-slate-100 bg-slate-50/80 p-2 space-y-2">
-                  <p className="break-all text-xs font-mono text-slate-800">{child.displayName ?? child.groupKey}</p>
+                <div key={child.groupKey} className="rounded-md border border-border bg-muted/40 p-2 space-y-2">
+                  <p className="break-all text-xs font-mono text-foreground">{child.displayName ?? child.groupKey}</p>
                   <div className="flex flex-wrap gap-1">
                     {child.daily.map((d) => (
                       <div
@@ -213,11 +213,11 @@ export function SourceDetailsTab({
   }
 
   if (sources.length === 0) {
-    return <p className="text-sm text-slate-500">Loading sources…</p>
+    return <p className="text-sm text-muted-foreground">Loading sources…</p>
   }
 
   if (!enabled) {
-    return <p className="text-sm text-slate-500">Switch to this tab to load health details.</p>
+    return <p className="text-sm text-muted-foreground">Switch to this tab to load health details.</p>
   }
 
   const summary = details?.summary
@@ -226,8 +226,8 @@ export function SourceDetailsTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Details — health by day</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="text-lg font-semibold text-foreground">Details — health by day</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Bronze, silver, and gold together for the selected source. Last {days} complete UTC days ending yesterday.{" "}
             <span className="font-medium">Missing</span> = zero rows; <span className="font-medium">Anomaly</span> = count &lt; 30% of median
             (non-zero).
@@ -267,23 +267,23 @@ export function SourceDetailsTab({
 
       {sourceKey === "qonversion" && <QonversionDetailsIntro />}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {details && (
-        <p className="text-xs text-slate-500 font-mono">
+        <p className="text-xs text-muted-foreground font-mono">
           Range {details.rangeFrom} → {details.rangeTo} UTC
         </p>
       )}
 
       {summary && details && (
-        <Card className="border-slate-200 bg-slate-50/50">
+        <Card className="border-border bg-muted/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Summary — all layers</CardTitle>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               {summary.tablesWithAnyIssue > 0 ? (
                 <>
-                  <span className="font-medium text-slate-900">{summary.tablesWithAnyIssue}</span> table(s) with missing or anomaly days;{" "}
-                  <span className="text-red-700 font-medium">{summary.totalMissingDaySlots}</span> missing day slots,{" "}
+                  <span className="font-medium text-foreground">{summary.tablesWithAnyIssue}</span> table(s) with missing or anomaly days;{" "}
+                  <span className="text-destructive font-medium">{summary.totalMissingDaySlots}</span> missing day slots,{" "}
                   <span className="text-amber-800 font-medium">{summary.totalAnomalyDaySlots}</span> anomaly day slots (rollup + per-app
                   Firebase counted).
                 </>
@@ -308,7 +308,7 @@ export function SourceDetailsTab({
       )}
 
       {loading && !details && (
-        <div className="flex items-center gap-2 text-slate-600 text-sm py-8">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm py-8">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading…
         </div>
       )}
@@ -319,7 +319,7 @@ export function SourceDetailsTab({
           if (!tables?.length) return null
           return (
             <div key={layerKey} className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">{layerKey}</h3>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">{layerKey}</h3>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {tables.map((t) => (
                   <TableHealthCard key={`${layerKey}-${t.groupKey}`} table={t} onRunAction={openAction} />
@@ -330,7 +330,7 @@ export function SourceDetailsTab({
         })}
 
       {details && details.tables.length === 0 && !loading && (
-        <p className="text-sm text-slate-500">No tables configured for this source.</p>
+        <p className="text-sm text-muted-foreground">No tables configured for this source.</p>
       )}
 
       <BackfillDialog open={dialogOpen} onOpenChange={setDialogOpen} sourceKey={sourceKey} action={selectedAction} onSuccess={() => void load()} />

@@ -30,8 +30,8 @@ export function MobileNavHubContent({ slug }: MobileNavHubContentProps) {
   if (!hub || items.length === 0) {
     return (
       <div className="flex flex-col gap-4 py-8 text-center">
-        <p className="text-sm text-slate-500">This section is not available.</p>
-        <Link href="/" className="text-sm font-medium text-blue-600 hover:underline">
+        <p className="text-sm text-muted-foreground">This section is not available.</p>
+        <Link href="/" className="text-sm font-medium text-primary hover:underline">
           Back to Dashboard
         </Link>
       </div>
@@ -43,16 +43,16 @@ export function MobileNavHubContent({ slug }: MobileNavHubContentProps) {
       <button
         type="button"
         onClick={() => router.back()}
-        className="flex w-fit items-center gap-1.5 text-sm text-slate-600 transition-colors hover:text-slate-900"
+        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
       </button>
 
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">{hub.title}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{hub.title}</h1>
         {hub.description ? (
-          <p className="mt-1 text-sm text-slate-500">{hub.description}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{hub.description}</p>
         ) : null}
       </div>
 
@@ -63,16 +63,16 @@ export function MobileNavHubContent({ slug }: MobileNavHubContentProps) {
             <Link key={item.href} href={item.href} className="block min-w-0">
               <Card
                 className={cn(
-                  "flex min-w-0 flex-col items-center justify-center gap-2 border-slate-200 p-4 text-center transition-colors",
-                  "hover:border-blue-200 hover:bg-blue-50/40 active:bg-blue-50/60",
+                  "flex min-w-0 flex-col items-center justify-center gap-2 p-4 text-center transition-colors",
+                  "hover:border-primary/30 hover:bg-accent active:bg-accent/80",
                 )}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex w-full min-w-0 flex-col items-center gap-1 overflow-hidden">
                   <div className="flex flex-wrap items-center justify-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900">{item.label}</span>
+                    <span className="text-sm font-semibold text-foreground">{item.label}</span>
                     {item.isNew ? (
                       <Badge className="h-5 shrink-0 bg-green-500 px-1.5 text-[10px] hover:bg-green-600">
                         New
@@ -80,7 +80,7 @@ export function MobileNavHubContent({ slug }: MobileNavHubContentProps) {
                     ) : null}
                   </div>
                   {item.description ? (
-                    <p className="text-xs leading-snug text-slate-500">{item.description}</p>
+                    <p className="text-xs leading-snug text-muted-foreground">{item.description}</p>
                   ) : null}
                 </div>
               </Card>

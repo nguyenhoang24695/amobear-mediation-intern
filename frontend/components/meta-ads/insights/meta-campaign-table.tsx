@@ -58,7 +58,7 @@ function getCtrToneClass(value: number): string {
 }
 
 function getRoasToneClass(value: number | null): string {
-  if (value == null) return "bg-slate-50 text-slate-400"
+  if (value == null) return "bg-muted text-muted-foreground"
   if (value >= 1.5) return "bg-emerald-50 text-emerald-700"
   if (value >= 1) return "bg-amber-50 text-amber-700"
   return "bg-rose-50 text-rose-700"
@@ -70,7 +70,7 @@ function SortButton({ label, active, dir, onClick, align }: { label: string; act
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-900",
+        "inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground",
         align === "right" && "ml-auto"
       )}
     >
@@ -81,7 +81,7 @@ function SortButton({ label, active, dir, onClick, align }: { label: string; act
 }
 
 function MetricCell({ value, className }: { value: string; className?: string }) {
-  return <div className={cn("text-right text-sm font-medium text-slate-700", className)}>{value}</div>
+  return <div className={cn("text-right text-sm font-medium text-foreground", className)}>{value}</div>
 }
 
 function CampaignCell({ item }: { item: MetaCampaignBreakdownDto }) {
@@ -89,19 +89,19 @@ function CampaignCell({ item }: { item: MetaCampaignBreakdownDto }) {
 
   return (
     <div className="space-y-1">
-      <div className="font-medium text-slate-900">{item.campaignName || item.campaignId}</div>
-      <div className="text-xs text-slate-500">{item.campaignId}</div>
-      {item.appId ? <div className="text-xs text-slate-400">App: {item.appId}</div> : null}
+      <div className="font-medium text-foreground">{item.campaignName || item.campaignId}</div>
+      <div className="text-xs text-muted-foreground">{item.campaignId}</div>
+      {item.appId ? <div className="text-xs text-muted-foreground">App: {item.appId}</div> : null}
       <div className="flex flex-wrap gap-1.5 pt-1">
         {item.campaignRowId ? (
-          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-700 hover:text-blue-800">
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary hover:text-primary">
             <Link href={`/meta-ads/campaigns/${item.campaignRowId}`}>Open Detail</Link>
           </Button>
         ) : (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-slate-400"
+            className="h-7 px-2 text-xs text-muted-foreground"
             disabled
             title="Campaign is not mapped to an internal detail page yet."
           >
@@ -110,7 +110,7 @@ function CampaignCell({ item }: { item: MetaCampaignBreakdownDto }) {
         )}
 
         {metaCampaignUrl ? (
-          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-700 hover:text-blue-800">
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary hover:text-primary">
             <a href={metaCampaignUrl} target="_blank" rel="noreferrer noopener">
               Open in Meta
             </a>
@@ -119,7 +119,7 @@ function CampaignCell({ item }: { item: MetaCampaignBreakdownDto }) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-slate-400"
+            className="h-7 px-2 text-xs text-muted-foreground"
             disabled
             title="Missing account or campaign ID for Ads Manager."
           >
@@ -202,19 +202,19 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
   const columnCount = columns.length
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card>
       <CardHeader className="gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <CardTitle className="text-base font-semibold text-slate-900">Campaign Performance</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">Sortable, server-paginated campaign performance enriched with Adjust-attributed revenue and ROAS.</p>
+          <CardTitle className="text-base font-semibold text-foreground">Campaign Performance</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">Sortable, server-paginated campaign performance enriched with Adjust-attributed revenue and ROAS.</p>
         </div>
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search campaign name or ID"
-            className="h-10 border-slate-200 pl-9"
+            className="h-10 pl-9"
           />
         </div>
       </CardHeader>
@@ -222,7 +222,7 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50">
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
                 {columns.map((column) => (
                   <TableHead key={column.key} className={cn("whitespace-nowrap px-4", column.align === "right" && "text-right")}>
                     <SortButton
@@ -247,21 +247,21 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
                 ))
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={columnCount} className="px-4 py-10 text-center text-sm text-rose-600">
+                  <TableCell colSpan={columnCount} className="px-4 py-10 text-center text-sm text-destructive">
                     {error.message}
                   </TableCell>
                 </TableRow>
               ) : (data?.items.length ?? 0) === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columnCount} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <TableCell colSpan={columnCount} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No campaign data matches the selected filters.
                   </TableCell>
                 </TableRow>
               ) : (
                 data?.items.map((item) => (
-                  <TableRow key={item.campaignId} className="transition-colors hover:bg-slate-50/80">
+                  <TableRow key={item.campaignId} className="transition-colors hover:bg-accent/50">
                     <TableCell className="px-4 py-3"><CampaignCell item={item} /></TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-slate-600">{item.accountId}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.accountId}</TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatMetricValue("spend", item.spend)} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatNullableMetricValue("revenue", item.revenue)} /></TableCell>
                     <TableCell className="px-4 py-3"><MetricCell value={formatNullableMetricValue("roas", item.roas)} className={cn("rounded-md px-2 py-1", getRoasToneClass(item.roas))} /></TableCell>
@@ -282,7 +282,7 @@ export function MetaCampaignTable({ startDate, endDate, accountId, campaignId, c
           </Table>
         </div>
 
-        <div className="border-t border-slate-200 px-4 py-3">
+        <div className="border-t border-border px-4 py-3">
           <Pagination
             currentPage={data?.page ?? page}
             totalPages={data?.totalPages ?? 1}

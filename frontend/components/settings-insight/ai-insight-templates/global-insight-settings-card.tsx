@@ -216,21 +216,21 @@ export function GlobalInsightSettingsCard({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="border-slate-200 bg-slate-50">
+      <Card className="border-border bg-muted/40">
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer rounded-t-lg transition-colors hover:bg-slate-100/80">
+          <CardHeader className="cursor-pointer rounded-t-lg transition-colors hover:bg-muted/80">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <Settings className="h-4 w-4" />
                 Global Insight Settings
               </CardTitle>
               {open ? (
-                <ChevronUp className="h-4 w-4 text-slate-500" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </div>
-            <p className="mt-1 text-xs font-normal text-slate-500">
+            <p className="mt-1 text-xs font-normal text-muted-foreground">
               Cấu hình toàn cục theo mockup. Provider / batch / parallel đồng bộ với template đang{" "}
               <span className="font-medium">Default</span>; lịch chạy, ngôn ngữ và trọng số health score lưu trên
               trình duyệt này.
@@ -268,7 +268,7 @@ export function GlobalInsightSettingsCard({
                     value={maxApps}
                     onChange={(e) => setMaxApps(Number(e.target.value))}
                   />
-                  <p className="text-xs text-slate-500">Top apps by revenue (theo pipeline)</p>
+                  <p className="text-xs text-muted-foreground">Top apps by revenue (theo pipeline)</p>
                 </div>
 
                 <div className="space-y-2">
@@ -280,7 +280,7 @@ export function GlobalInsightSettingsCard({
                     value={parallel}
                     onChange={(e) => setParallel(Number(e.target.value))}
                   />
-                  <p className="text-xs text-slate-500">Concurrent insight generations</p>
+                  <p className="text-xs text-muted-foreground">Concurrent insight generations</p>
                 </div>
 
                 <div className="space-y-3">
@@ -303,7 +303,7 @@ export function GlobalInsightSettingsCard({
                               onChange={(e) => setBufferMinutes(Number(e.target.value))}
                               className="h-7 w-16 text-sm"
                             />
-                            <span className="text-xs text-slate-500">minutes</span>
+                            <span className="text-xs text-muted-foreground">minutes</span>
                           </span>
                         ) : null}
                       </label>
@@ -320,7 +320,7 @@ export function GlobalInsightSettingsCard({
                               onChange={(e) => setFixedTime(e.target.value)}
                               className="h-7 w-28 text-sm"
                             />
-                            <span className="text-xs text-slate-500">UTC+7</span>
+                            <span className="text-xs text-muted-foreground">UTC+7</span>
                           </span>
                         ) : null}
                       </label>
@@ -364,7 +364,7 @@ export function GlobalInsightSettingsCard({
                   <div className="flex items-center justify-between gap-2">
                     <Label>Health score formula weights</Label>
                     <span
-                      className={`text-xs font-medium ${isValidTotal ? "text-emerald-600" : "text-red-500"}`}
+                      className={`text-xs font-medium ${isValidTotal ? "text-emerald-600" : "text-destructive"}`}
                     >
                       Total: {totalWeight}%
                     </span>
@@ -381,8 +381,8 @@ export function GlobalInsightSettingsCard({
                     ).map(([label, value, setVal]) => (
                       <div key={label} className="space-y-1.5">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">{label}</span>
-                          <span className="font-mono text-slate-900">{value}%</span>
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className="font-mono text-foreground">{value}%</span>
                         </div>
                         <Slider
                           value={[value]}
@@ -396,7 +396,7 @@ export function GlobalInsightSettingsCard({
                   </div>
 
                   {!isValidTotal ? (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-destructive">
                       Total must equal 100%. Currently: {totalWeight}%
                     </p>
                   ) : null}
@@ -404,9 +404,9 @@ export function GlobalInsightSettingsCard({
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end border-t border-slate-200 pt-4">
+            <div className="mt-6 flex justify-end border-t border-border pt-4">
               <Button
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-primary hover:bg-primary/90"
                 disabled={saving || !isValidTotal}
                 onClick={() => void handleSave()}
               >

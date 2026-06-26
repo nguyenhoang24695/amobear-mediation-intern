@@ -356,20 +356,20 @@ export function AdAccountsContent() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
+          <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
             <span>Meta Ads</span>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-900 font-medium">Ad Accounts</span>
+            <span className="text-foreground font-medium">Ad Accounts</span>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <CreditCard className="w-5 h-5 text-blue-600" />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <CreditCard className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Meta Ad Accounts</h1>
-              <p className="text-sm text-slate-500">Manage synced Meta ad accounts and their connection status</p>
+              <h1 className="text-xl font-bold text-foreground">Meta Ad Accounts</h1>
+              <p className="text-sm text-muted-foreground">Manage synced Meta ad accounts and their connection status</p>
             </div>
           </div>
         </div>
@@ -384,60 +384,60 @@ export function AdAccountsContent() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,18rem)_16rem_14rem]">
         <Input
           placeholder="Search by name, integration, Meta ID, or business..."
-          className="h-9 text-sm w-72"
+          className="h-9 w-full text-sm"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
         <Input
           placeholder="Filter by Meta Ad Account ID..."
-          className="h-9 text-sm w-64 font-mono"
+          className="h-9 w-full text-sm font-mono"
           value={metaIdFilter}
           onChange={(event) => setMetaIdFilter(event.target.value)}
         />
         <Input
           placeholder="Filter by Business ID..."
-          className="h-9 text-sm w-56 font-mono"
+          className="h-9 w-full text-sm font-mono"
           value={businessIdFilter}
           onChange={(event) => setBusinessIdFilter(event.target.value)}
         />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto">
+      <div className="bg-background border border-border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs text-slate-500 font-medium">Meta Ad Account ID</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Name</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Primary Integration</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Accessible via</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-20">Currency</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Timezone</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Business ID</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">Business Name</TableHead>
+            <TableRow className="bg-muted/40">
+              <TableHead className="text-xs text-muted-foreground font-medium">Meta Ad Account ID</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium">Name</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium">Primary Integration</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium">Accessible via</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium w-20">Currency</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium">Timezone</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium">Business ID</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium">Business Name</TableHead>
               <TableHead
-                className="text-xs text-slate-500 font-medium text-right cursor-pointer select-none hover:text-slate-800 whitespace-nowrap"
+                className="text-xs text-muted-foreground font-medium text-right cursor-pointer select-none hover:text-foreground whitespace-nowrap"
                 onClick={() => handleSort("amountSpent")}
               >
                 Amount Spent<SortIcon col="amountSpent" />
               </TableHead>
               <TableHead
-                className="text-xs text-slate-500 font-medium text-right cursor-pointer select-none hover:text-slate-800 whitespace-nowrap"
+                className="text-xs text-muted-foreground font-medium text-right cursor-pointer select-none hover:text-foreground whitespace-nowrap"
                 onClick={() => handleSort("balance")}
               >
                 Balance<SortIcon col="balance" />
               </TableHead>
               <TableHead
-                className="text-xs text-slate-500 font-medium text-right cursor-pointer select-none hover:text-slate-800 whitespace-nowrap"
+                className="text-xs text-muted-foreground font-medium text-right cursor-pointer select-none hover:text-foreground whitespace-nowrap"
                 onClick={() => handleSort("spendCap")}
               >
                 Spend Cap<SortIcon col="spendCap" />
               </TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-24">Status</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-20">Active</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium w-32">Last Synced</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium w-24">Status</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium w-20">Active</TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium w-32">Last Synced</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -445,7 +445,7 @@ export function AdAccountsContent() {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={15} className="py-12">
-                  <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading ad accounts...
                   </div>
@@ -453,13 +453,13 @@ export function AdAccountsContent() {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center py-12 text-sm text-red-600">
+                <TableCell colSpan={15} className="text-center py-12 text-sm text-destructive">
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center py-12 text-sm text-slate-400">
+                <TableCell colSpan={15} className="text-center py-12 text-sm text-muted-foreground/70">
                   No ad accounts found.
                 </TableCell>
               </TableRow>
@@ -468,43 +468,43 @@ export function AdAccountsContent() {
                 const isBusy = rowActionLoadingId === account.id
                 const accessibleIntegrations = getAccessibleIntegrations(account)
                 return (
-                  <TableRow key={account.id} className="text-sm">
-                    <TableCell className="font-mono text-xs text-blue-700">{account.metaAdAccountId}</TableCell>
-                    <TableCell className="font-medium text-slate-900">{account.name}</TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      <div className="font-medium text-slate-800">{getPrimaryIntegrationName(account)}</div>
-                      <div className="mt-0.5 text-[11px] text-slate-400">{formatAuthMode(account.primaryAuthMode)}</div>
+                  <TableRow key={account.id} className="text-sm hover:bg-muted/40">
+                    <TableCell className="font-mono text-xs text-primary">{account.metaAdAccountId}</TableCell>
+                    <TableCell className="font-medium text-foreground">{account.name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="font-medium text-foreground">{getPrimaryIntegrationName(account)}</div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground/70">{formatAuthMode(account.primaryAuthMode)}</div>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">
+                    <TableCell className="text-xs text-muted-foreground">
                       <div className="flex flex-wrap gap-1 max-w-[220px]">
                         {accessibleIntegrations.slice(0, 3).map((access) => (
-                          <Badge key={`${account.id}-${access.integrationId}`} variant="outline" className="text-[11px] font-normal border-slate-200 bg-slate-50 text-slate-600">
+                          <Badge key={`${account.id}-${access.integrationId}`} variant="outline" className="text-[11px] font-normal border-border bg-muted/40 text-muted-foreground">
                             {formatAuthMode(access.authMode)}{access.isPrimary ? " • Primary" : ""}
                           </Badge>
                         ))}
                         {accessibleIntegrations.length > 3 ? (
-                          <Badge variant="outline" className="text-[11px] font-normal border-slate-200 bg-slate-50 text-slate-500">
+                          <Badge variant="outline" className="text-[11px] font-normal border-border bg-muted/40 text-muted-foreground">
                             +{accessibleIntegrations.length - 3}
                           </Badge>
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">{account.currency ?? "-"}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{account.timeZoneName ?? "-"}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-600">{account.businessId ?? "-"}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{account.businessName ?? "-"}</TableCell>
-                    <TableCell className="text-xs text-slate-600 text-right">{formatMoney(account.amountSpent, account.currency)}</TableCell>
-                    <TableCell className="text-xs text-slate-600 text-right">{formatMoney(account.balance, account.currency)}</TableCell>
-                    <TableCell className="text-xs text-slate-600 text-right">{formatMoney(account.spendCap, account.currency)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{account.currency ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{account.timeZoneName ?? "-"}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{account.businessId ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{account.businessName ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground text-right">{formatMoney(account.amountSpent, account.currency)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground text-right">{formatMoney(account.balance, account.currency)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground text-right">{formatMoney(account.spendCap, account.currency)}</TableCell>
                     <TableCell>
-                      <Badge className={formatAdAccountStatus(account.status) === "Active" ? "bg-green-100 text-green-700 text-[11px]" : formatAdAccountStatus(account.status) === "Disabled" || formatAdAccountStatus(account.status) === "Closed" ? "bg-red-100 text-red-700 text-[11px]" : "bg-slate-100 text-slate-500 text-[11px]"}>
+                      <Badge className={formatAdAccountStatus(account.status) === "Active" ? "bg-green-500/10 text-green-700 dark:text-green-400 text-[11px]" : formatAdAccountStatus(account.status) === "Disabled" || formatAdAccountStatus(account.status) === "Closed" ? "bg-destructive/10 text-destructive text-[11px]" : "bg-muted text-muted-foreground text-[11px]"}>
                         {formatAdAccountStatus(account.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Switch checked={account.isActive} onCheckedChange={() => canDisableEnable && void handleToggleActive(account)} disabled={!canDisableEnable || isBusy} />
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatDateTime(account.lastSyncedAt)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(account.lastSyncedAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -526,7 +526,7 @@ export function AdAccountsContent() {
                                 Set Primary
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent className="min-w-56">
-                                <DropdownMenuLabel className="text-xs text-slate-500">Accessible integrations</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {accessibleIntegrations.map((access) => (
                                   <DropdownMenuItem
@@ -575,15 +575,15 @@ export function AdAccountsContent() {
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DialogContent className="w-full max-w-[560px] p-0 gap-0 rounded-xl overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
-            <DialogTitle className="text-base font-semibold text-slate-900">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <DialogTitle className="text-base font-semibold text-foreground">
               Edit Ad Account
             </DialogTitle>
           </DialogHeader>
           <div className="px-6 py-5 space-y-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">
-                Ad Account ID <span className="text-red-500">*</span>
+                Ad Account ID <span className="text-destructive">*</span>
               </Label>
               <Input
                 className="h-9 text-sm font-mono"
@@ -595,7 +595,7 @@ export function AdAccountsContent() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">
-                Name <span className="text-red-500">*</span>
+                Name <span className="text-destructive">*</span>
               </Label>
               <Input className="h-9 text-sm" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
@@ -614,7 +614,7 @@ export function AdAccountsContent() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Currency</Label>
                 <Input className="h-9 text-sm" value={form.currency ?? ""} onChange={(event) => setForm((current) => ({ ...current, currency: event.target.value }))} placeholder="USD" />
@@ -644,15 +644,15 @@ export function AdAccountsContent() {
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.isActive} onCheckedChange={(value) => setForm((current) => ({ ...current, isActive: value }))} />
-              <Label className="text-sm text-slate-700 cursor-pointer">Active</Label>
+              <Label className="text-sm text-foreground cursor-pointer">Active</Label>
             </div>
           </div>
-          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/40">
+            <Button variant="ghost" className="text-muted-foreground" onClick={() => setDrawerOpen(false)} disabled={submitting}>
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={() => void handleSubmit()}
               disabled={submitting || !form.metaIntegrationId || !form.metaAdAccountId.trim() || !form.name.trim()}
             >
@@ -664,13 +664,13 @@ export function AdAccountsContent() {
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
         <DialogContent className="w-full max-w-[460px] p-0 gap-0 rounded-xl overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
-            <DialogTitle className="text-base font-semibold text-slate-900">Sync Ad Accounts</DialogTitle>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <DialogTitle className="text-base font-semibold text-foreground">Sync Ad Accounts</DialogTitle>
           </DialogHeader>
           <div className="px-6 py-5 space-y-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">
-                Integration <span className="text-red-500">*</span>
+                Integration <span className="text-destructive">*</span>
               </Label>
               <Select value={syncIntegrationId} onValueChange={setSyncIntegrationId}>
                 <SelectTrigger className="h-9 text-sm">
@@ -686,11 +686,11 @@ export function AdAccountsContent() {
               </Select>
             </div>
           </div>
-          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
-            <Button variant="ghost" className="text-slate-600" onClick={() => setSyncDialogOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/40">
+            <Button variant="ghost" className="text-muted-foreground" onClick={() => setSyncDialogOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => void handleSyncIntegration()} disabled={submitting || !syncIntegrationId}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => void handleSyncIntegration()} disabled={submitting || !syncIntegrationId}>
               {submitting ? "Syncing..." : "Sync"}
             </Button>
           </DialogFooter>
@@ -699,3 +699,4 @@ export function AdAccountsContent() {
     </div>
   )
 }
+

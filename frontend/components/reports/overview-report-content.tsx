@@ -96,7 +96,7 @@ const SHARED_APP_CONFLICTS_DISPLAY_MAX = 5
 const OVERVIEW_STICKY_HEADER_ROW_2_TOP = "top-10"
 const OVERVIEW_STICKY_HEADER_ROW_3_TOP = "top-[4.5rem]"
 const OVERVIEW_STICKY_TOTAL_ROW_CLASS =
-  "sticky top-[6.5rem] z-[35] bg-slate-100 shadow-[0_4px_6px_-2px_rgba(15,23,42,0.12)]"
+  "sticky top-[6.5rem] z-[35] bg-muted shadow-[0_4px_6px_-2px_rgba(15,23,42,0.12)]"
 const OVERVIEW_STICKY_TOTAL_ROW_CELL_CLASS = "!h-10 min-h-10 max-h-10 py-0 box-border align-middle"
 const OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS = "!h-8 min-h-8 max-h-8 py-0.5 box-border align-middle"
 
@@ -173,7 +173,7 @@ function overviewColumnCellClassName(
   if (columnId === "netProfitMargin") {
     return getNetProfitMarginClass(getNetProfitMargin(cell.profit.actual, cell.revenue.actual))
   }
-  return "text-slate-700"
+  return "text-foreground"
 }
 
 function currentYearRange() {
@@ -342,8 +342,8 @@ function renderPlatformBadge(platformValue: string) {
       className={cn(
         "gap-1",
         isAndroid
-          ? "border-green-200 bg-green-50 text-green-700"
-          : "border-slate-200 bg-slate-50 text-slate-700",
+          ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+          : "border-border bg-muted/50 text-foreground",
       )}
     >
       {isAndroid ? (
@@ -540,10 +540,10 @@ function TeamAppsPager({
 
   return (
     <div className="flex flex-col gap-2 py-1 text-sm sm:flex-row sm:flex-wrap sm:items-center">
-      <span className="shrink-0 text-slate-500">
-        Apps <span className="font-medium text-slate-700">{start}</span>–
-        <span className="font-medium text-slate-700">{end}</span> of{" "}
-        <span className="font-medium text-slate-700">{totalItems}</span>
+      <span className="shrink-0 text-muted-foreground">
+        Apps <span className="font-medium text-foreground">{start}</span>–
+        <span className="font-medium text-foreground">{end}</span> of{" "}
+        <span className="font-medium text-foreground">{totalItems}</span>
       </span>
       <div className="flex shrink-0 items-center gap-2">
         <Button
@@ -556,7 +556,7 @@ function TeamAppsPager({
         >
           Previous
         </Button>
-        <span className="tabular-nums text-slate-600">
+        <span className="tabular-nums text-muted-foreground">
           {currentPage} / {totalPages}
         </span>
         <Button
@@ -605,7 +605,7 @@ function OverviewMonthCells({
           rowVariant === "app"
             ? columnStyle.cellSubtle
             : rowVariant === "total"
-              ? "bg-slate-100"
+              ? "bg-muted"
               : columnStyle.cell
         const isFirstColumn = columnIndex === 0
         const isLastColumnInGroup = columnIndex === visibleColumns.length - 1
@@ -622,9 +622,9 @@ function OverviewMonthCells({
               "text-right text-sm tabular-nums",
               stickyTotalRow,
               isFirstColumn
-                ? cn("border-l", isTrailingTotal ? "border-l-2 border-slate-400" : columnStyle.border)
+                ? cn("border-l", isTrailingTotal ? "border-l-2 border-border" : columnStyle.border)
                 : "",
-              isLastColumnInGroup ? "border-r-2 border-slate-300" : cn("border-r", columnStyle.border),
+              isLastColumnInGroup ? "border-r-2 border-border" : cn("border-r", columnStyle.border),
               bgClass,
               rowVariant === "total" ? "font-semibold" : "",
               overviewColumnCellClassName(column.id, cell),
@@ -678,13 +678,13 @@ function SortableOverviewColumnItem({
       onClick={() => onToggle(id)}
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors",
-        selected ? groupStyle.sidebarSelected : "text-slate-700 hover:bg-slate-50",
+        selected ? groupStyle.sidebarSelected : "text-foreground hover:bg-muted/50",
       )}
     >
       <span
         className={cn(
-          "flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400",
-          selected ? "cursor-grab active:cursor-grabbing hover:bg-white/60" : "opacity-30",
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground",
+          selected ? "cursor-grab active:cursor-grabbing hover:bg-card/60" : "opacity-30",
         )}
         onClick={(event) => event.stopPropagation()}
         {...attributes}
@@ -701,7 +701,7 @@ function SortableOverviewColumnItem({
       <span
         className={cn(
           "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-          selected ? cn(groupStyle.sidebarCheckbox, "text-white") : "border-slate-300 bg-white",
+          selected ? cn(groupStyle.sidebarCheckbox, "text-primary-foreground") : "border-border bg-card",
         )}
         aria-hidden
       >
@@ -1321,7 +1321,7 @@ export function OverviewReportContent() {
     <>
       <Button
         type="button"
-        className={cn("h-9 bg-blue-600 hover:bg-blue-700", mobileLayout && "flex-1")}
+        className={cn("h-9 bg-primary hover:bg-primary/90", mobileLayout && "flex-1")}
         disabled={loading}
         onClick={() => void (mobileLayout ? handleApplyFilters() : applyRange())}
       >
@@ -1365,8 +1365,8 @@ export function OverviewReportContent() {
   const renderOverviewMobileFiltersAndMetricsBody = () => (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 [&_label]:leading-none">{renderOverviewFilterFields()}</div>
-      <div className="border-t border-slate-100 pt-4">{renderOverviewMetricsBody("px-0 py-0")}</div>
-      <div className="flex gap-2 border-t border-slate-100 pt-4">{renderOverviewFilterActions(true)}</div>
+      <div className="border-t border-border pt-4">{renderOverviewMetricsBody("px-0 py-0")}</div>
+      <div className="flex gap-2 border-t border-border pt-4">{renderOverviewFilterActions(true)}</div>
     </div>
   )
 
@@ -1388,7 +1388,7 @@ export function OverviewReportContent() {
 
           return (
             <div key={group} className="space-y-1">
-              {groupIndex > 0 ? <div className="mb-4 border-t border-slate-100 pt-4" /> : null}
+              {groupIndex > 0 ? <div className="mb-4 border-t border-border pt-4" /> : null}
               <div
                 className={cn(
                   "mb-3 text-xs font-medium uppercase tracking-wider",
@@ -1430,11 +1430,11 @@ export function OverviewReportContent() {
 
   return (
     <div className="space-y-6">
-      <Card className="gap-0 overflow-hidden border-slate-200 py-0 shadow-sm">
-        <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 [.border-b]:pb-2.5">
+      <Card className="gap-0 overflow-hidden border-border py-0 shadow-sm">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5 [.border-b]:pb-2.5">
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-lg font-semibold text-slate-900">Overview Report</CardTitle>
-            <CardDescription className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+            <CardTitle className="text-lg font-semibold text-foreground">Overview Report</CardTitle>
+            <CardDescription className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
               KPI plan vs actual by team (revenue, cost, profit). Expand a team for per-app detail.
             </CardDescription>
           </div>
@@ -1445,7 +1445,7 @@ export function OverviewReportContent() {
                 variant="outline"
                 size="icon"
                 className={cn(
-                  "h-9 w-9 shrink-0 border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900",
+                  "h-9 w-9 shrink-0 border-border bg-card text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground",
                   isMobile && "hidden",
                 )}
                 onClick={() => setFilterExpanded((prev) => !prev)}
@@ -1484,14 +1484,14 @@ export function OverviewReportContent() {
                 setMobileFiltersOpen(true)
               }}
               className={cn(
-                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white px-1.5 py-3 shadow-lg active:cursor-grabbing",
+                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg active:cursor-grabbing",
                 hasPendingApply && "ring-2 ring-blue-300",
               )}
               aria-label="Open filters and metrics. Drag up or down to reposition."
             >
-              <Filter className="h-4 w-4 text-slate-600" aria-hidden />
+              <Filter className="h-4 w-4 text-muted-foreground" aria-hidden />
               <span
-                className="text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
                 style={{ writingMode: "vertical-rl" }}
               >
                 Filters & Metrics
@@ -1510,7 +1510,7 @@ export function OverviewReportContent() {
               side="right"
               className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
             >
-              <SheetHeader className="shrink-0 border-b border-slate-100 px-4 py-4 text-left">
+              <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
                 <SheetTitle className="text-base">Filters & Metrics</SheetTitle>
                 <SheetDescription>
                   Period, teams, and columns. Click Apply to refresh data.
@@ -1528,24 +1528,24 @@ export function OverviewReportContent() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : data === null ? (
-        <Card className="border-slate-200">
-          <CardContent className="py-12 text-center text-sm text-slate-500">
-            Select a period and click <span className="font-medium text-slate-700">Apply</span> to load the
+        <Card className="border-border">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            Select a period and click <span className="font-medium text-foreground">Apply</span> to load the
             overview report.
           </CardContent>
         </Card>
       ) : allTeams.length === 0 ? (
-        <Card className="border-slate-200">
-          <CardContent className="py-12 text-center text-sm text-slate-500">
+        <Card className="border-border">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
             No teams available for this period.
           </CardContent>
         </Card>
       ) : teams.length === 0 ? (
-        <Card className="border-slate-200">
-          <CardContent className="py-12 text-center text-sm text-slate-500">
+        <Card className="border-border">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
             No teams match the selected filters.
           </CardContent>
         </Card>
@@ -1556,19 +1556,19 @@ export function OverviewReportContent() {
             !isMobile && (metricsCollapsed ? "xl:grid-cols-[1fr_3.5rem]" : "xl:grid-cols-[1fr_18rem]"),
           )}
         >
-          <Card className="overflow-hidden border-slate-200">
+          <Card className="overflow-hidden border-border">
             <CardContent className="p-0">
-              <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
+              <p className="border-b border-border px-4 py-2 text-xs text-muted-foreground">
                 Last update at:{" "}
                 {data?.lastUpdatedAt ? (
-                  <span className="text-slate-600">{formatLastUpdatedAt(data.lastUpdatedAt)}</span>
+                  <span className="text-muted-foreground">{formatLastUpdatedAt(data.lastUpdatedAt)}</span>
                 ) : (
-                  <span className="text-slate-400">—</span>
+                  <span className="text-muted-foreground">—</span>
                 )}
               </p>
               {sharedAppConflicts.length > 0 && !sharedAppWarningDismissed ? (
                 <div
-                  className="relative border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+                  className="relative border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-700 dark:text-red-300"
                   role="alert"
                 >
                   <div className="absolute right-2 top-2 flex items-center gap-1.5">
@@ -1579,14 +1579,14 @@ export function OverviewReportContent() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-red-700 hover:bg-red-100 hover:text-red-900"
+                      className="h-7 w-7 text-red-700 hover:bg-red-500/20 hover:text-red-700 dark:text-red-300"
                       aria-label="Dismiss warning"
                       onClick={() => setSharedAppWarningDismissed(true)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="pr-36 font-semibold text-red-800">
+                  <p className="pr-36 font-semibold text-red-700 dark:text-red-300">
                     Warning: the same app appears under multiple teams in the same group
                   </p>
                   <ul className="mt-1.5 list-disc space-y-1 pl-4">
@@ -1608,7 +1608,7 @@ export function OverviewReportContent() {
                       ))}
                   </ul>
                   {sharedAppConflicts.length > SHARED_APP_CONFLICTS_DISPLAY_MAX ? (
-                    <p className="mt-1 pl-4 font-medium text-red-800">
+                    <p className="mt-1 pl-4 font-medium text-red-700 dark:text-red-300">
                       +{sharedAppConflicts.length - SHARED_APP_CONFLICTS_DISPLAY_MAX} more
                     </p>
                   ) : null}
@@ -1617,11 +1617,11 @@ export function OverviewReportContent() {
               <div ref={scrollContainerRef} className="max-h-[min(70vh,720px)] overflow-auto">
                 <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
-                    <TableRow className="h-10 bg-slate-50/95 hover:bg-slate-50/95">
+                    <TableRow className="h-10 bg-muted/95 hover:bg-muted/95">
                       <TableHead
                         rowSpan={4}
                         className={cn(
-                          "sticky left-0 top-0 z-50 border-r bg-slate-50 align-bottom px-2 pb-2 font-bold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
+                          "sticky left-0 top-0 z-50 border-r bg-muted/50 align-bottom px-2 pb-2 font-bold text-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
                           overviewStickyFirstColWidth,
                         )}
                       >
@@ -1632,7 +1632,7 @@ export function OverviewReportContent() {
                               <TooltipTrigger asChild>
                                 <button
                                   type="button"
-                                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-200/80 hover:text-slate-700"
+                                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                                   aria-label="How the Total row is calculated"
                                 >
                                   <Info className="h-3.5 w-3.5" />
@@ -1645,7 +1645,7 @@ export function OverviewReportContent() {
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                          <span className="text-xs font-normal tabular-nums text-slate-500">
+                          <span className="text-xs font-normal tabular-nums text-muted-foreground">
                             {distinctDisplayedAppCount} app distinct
                           </span>
                         </div>
@@ -1654,30 +1654,30 @@ export function OverviewReportContent() {
                         <TableHead
                           key={month}
                           colSpan={colsPerMonth}
-                          className="sticky top-0 z-40 !h-10 border-b border-r border-slate-200 bg-slate-50 text-center text-xs font-semibold text-slate-700"
+                          className="sticky top-0 z-40 !h-10 border-b border-r border-border bg-muted/50 text-center text-xs font-semibold text-foreground"
                         >
                           {formatMonthLabel(month)}
                         </TableHead>
                       ))}
                       <TableHead
                         colSpan={colsPerMonth}
-                        className="sticky top-0 z-40 !h-10 border-b border-l-2 border-r border-slate-400 bg-slate-100 text-center text-xs font-semibold text-slate-800"
+                        className="sticky top-0 z-40 !h-10 border-b border-l-2 border-r border-border bg-muted text-center text-xs font-semibold text-foreground"
                       >
                         Total
                       </TableHead>
                     </TableRow>
-                    <TableRow className="h-8 bg-slate-50/95 hover:bg-slate-50/95">
+                    <TableRow className="h-8 bg-muted/95 hover:bg-muted/95">
                       {months.map((month) => (
                         <Fragment key={`${month}-groups`}>
                           {visibleRevenueColumnCount > 0 ? (
                             <TableHead
                               colSpan={visibleRevenueColumnCount}
                               className={cn(
-                                "sticky z-40 border-b border-r border-l border-slate-200 text-center text-xs font-semibold",
+                                "sticky z-40 border-b border-r border-l border-border text-center text-xs font-semibold",
                                 OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
-                                "bg-slate-50",
+                                "bg-muted/50",
                               )}
                             >
                               Revenue
@@ -1687,11 +1687,11 @@ export function OverviewReportContent() {
                             <TableHead
                               colSpan={visiblePerformanceColumnCount}
                               className={cn(
-                                "sticky z-40 border-b border-r border-slate-200 text-center text-xs font-semibold",
+                                "sticky z-40 border-b border-r border-border text-center text-xs font-semibold",
                                 OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.performance.groupHeader,
-                                "bg-slate-50",
+                                "bg-muted/50",
                               )}
                             >
                               Performance
@@ -1704,11 +1704,11 @@ export function OverviewReportContent() {
                           <TableHead
                             colSpan={visibleRevenueColumnCount}
                             className={cn(
-                              "sticky z-40 border-b border-r border-l-2 border-slate-400 text-center text-xs font-semibold",
+                              "sticky z-40 border-b border-r border-l-2 border-border text-center text-xs font-semibold",
                               OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                               OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                               OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
-                              "bg-slate-100",
+                              "bg-muted",
                             )}
                           >
                             Revenue
@@ -1718,11 +1718,11 @@ export function OverviewReportContent() {
                           <TableHead
                             colSpan={visiblePerformanceColumnCount}
                             className={cn(
-                              "sticky z-40 border-b border-r border-slate-200 text-center text-xs font-semibold",
+                              "sticky z-40 border-b border-r border-border text-center text-xs font-semibold",
                               OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                               OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                               OVERVIEW_COLUMN_STYLES.performance.groupHeader,
-                              "bg-slate-100",
+                              "bg-muted",
                             )}
                           >
                             Performance
@@ -1730,7 +1730,7 @@ export function OverviewReportContent() {
                         ) : null}
                       </Fragment>
                     </TableRow>
-                    <TableRow className="h-8 bg-slate-50/95 hover:bg-slate-50/95">
+                    <TableRow className="h-8 bg-muted/95 hover:bg-muted/95">
                       {months.map((month) => (
                         <Fragment key={`${month}-columns`}>
                           {visibleColumns.map((column, columnIndex) => {
@@ -1748,9 +1748,9 @@ export function OverviewReportContent() {
                                   columnStyle.header,
                                   isFirstColumn ? cn("border-l", columnStyle.border) : "",
                                   isLastColumnInMonth
-                                    ? "border-r-2 border-slate-300"
+                                    ? "border-r-2 border-border"
                                     : cn("border-r", columnStyle.border),
-                                  "bg-slate-50",
+                                  "bg-muted/50",
                                 )}
                               >
                                 {column.label}
@@ -1773,11 +1773,11 @@ export function OverviewReportContent() {
                                 OVERVIEW_STICKY_HEADER_ROW_3_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 columnStyle.header,
-                                isFirstColumn ? "border-l-2 border-slate-400" : "",
+                                isFirstColumn ? "border-l-2 border-border" : "",
                                 isLastColumnInGroup
-                                  ? "border-r-2 border-slate-300"
+                                  ? "border-r-2 border-border"
                                   : cn("border-r", columnStyle.border),
-                                "bg-slate-100",
+                                "bg-muted",
                               )}
                             >
                               {column.label}
@@ -1786,7 +1786,7 @@ export function OverviewReportContent() {
                         })}
                       </Fragment>
                     </TableRow>
-                    <TableRow className="h-10 bg-slate-100 hover:bg-slate-100">
+                    <TableRow className="h-10 bg-muted hover:bg-muted">
                       <OverviewMonthCells
                         monthKeys={months}
                         months={columnTotalsByMonth}
@@ -1814,10 +1814,10 @@ export function OverviewReportContent() {
 
                       return (
                         <Fragment key={team.teamId}>
-                          <TableRow className="hover:bg-slate-50/60">
+                          <TableRow className="hover:bg-muted/60">
                             <TableCell
                               className={cn(
-                                "sticky left-0 z-20 border-r bg-white py-2 font-semibold text-slate-900 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                "sticky left-0 z-20 border-r bg-card py-2 font-semibold text-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                 overviewStickyFirstColWidth,
                               )}
                             >
@@ -1858,10 +1858,10 @@ export function OverviewReportContent() {
                             />
                           </TableRow>
                           {expanded && appsLoading ? (
-                            <TableRow className="bg-slate-50/40 hover:bg-slate-50/60">
+                            <TableRow className="bg-muted/40 hover:bg-muted/60">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-slate-50 py-4 text-sm text-slate-500 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-muted/50 py-4 text-sm text-muted-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyNestedRowPadding,
                                 )}
@@ -1875,20 +1875,20 @@ export function OverviewReportContent() {
                                 <TableCell
                                   key={`${team.teamId}-loading-${month}`}
                                   colSpan={colsPerMonth}
-                                  className="border-l border-r-2 border-slate-300 bg-slate-50/55"
+                                  className="border-l border-r-2 border-border bg-muted/55"
                                 />
                               ))}
                               <TableCell
                                 colSpan={colsPerMonth}
-                                className="border-l-2 border-r-2 border-slate-400 bg-slate-50/55"
+                                className="border-l-2 border-r-2 border-border bg-muted/55"
                               />
                             </TableRow>
                           ) : null}
                           {expanded && appLoadError ? (
-                            <TableRow className="bg-red-50/40 hover:bg-red-50/60">
+                            <TableRow className="bg-red-500/10 hover:bg-red-500/15">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-red-50 py-4 text-sm text-red-700 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-red-500/10 py-4 text-sm text-red-700 dark:text-red-300 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyNestedRowPadding,
                                 )}
@@ -1901,12 +1901,12 @@ export function OverviewReportContent() {
                                 <TableCell
                                   key={`${team.teamId}-error-${month}`}
                                   colSpan={colsPerMonth}
-                                  className="border-l border-r-2 border-slate-300 bg-red-50/40"
+                                  className="border-l border-r-2 border-border bg-red-500/10"
                                 />
                               ))}
                               <TableCell
                                 colSpan={colsPerMonth}
-                                className="border-l-2 border-r-2 border-slate-400 bg-red-50/40"
+                                className="border-l-2 border-r-2 border-border bg-red-500/10"
                               />
                             </TableRow>
                           ) : null}
@@ -1921,11 +1921,11 @@ export function OverviewReportContent() {
                               return (
                               <TableRow
                                 key={`${team.teamId}-${app.appId}`}
-                                className="bg-slate-50/40 hover:bg-slate-50/60"
+                                className="bg-muted/40 hover:bg-muted/60"
                               >
                                 <TableCell
                                   className={cn(
-                                    "sticky left-0 z-20 border-r bg-slate-50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                    "sticky left-0 z-20 border-r bg-muted/50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                     overviewStickyFirstColWidth,
                                     overviewStickyNestedRowPadding,
                                   )}
@@ -1940,15 +1940,15 @@ export function OverviewReportContent() {
                                             className="rounded-lg object-cover"
                                           />
                                         ) : null}
-                                        <AvatarFallback className="rounded-lg bg-slate-100 text-slate-600">
+                                        <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
                                           {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
                                         </AvatarFallback>
                                       </Avatar>
                                       <div className="min-w-0">
-                                        <div className="truncate text-sm font-medium text-slate-900">
+                                        <div className="truncate text-sm font-medium text-foreground">
                                           {app.appLabel}
                                         </div>
-                                        <div className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
+                                        <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                                           <span
                                             className="min-w-0 truncate font-mono"
                                             title={app.appStoreId ?? undefined}
@@ -1960,7 +1960,7 @@ export function OverviewReportContent() {
                                               type="button"
                                               variant="ghost"
                                               size="icon"
-                                              className="h-5 w-5 shrink-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                              className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                                               aria-label={`Copy App Store ID for ${app.appLabel}`}
                                               onClick={(event) => {
                                                 event.stopPropagation()
@@ -1994,10 +1994,10 @@ export function OverviewReportContent() {
                               )
                             })}
                           {expanded && !appLoadError && appCount > APPS_PER_PAGE ? (
-                            <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
+                            <TableRow className="bg-muted/30 hover:bg-muted/30">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-slate-50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-muted/50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyPagerPadding,
                                 )}
@@ -2013,12 +2013,12 @@ export function OverviewReportContent() {
                                 <TableCell
                                   key={`${team.teamId}-pager-${month}`}
                                   colSpan={colsPerMonth}
-                                  className="border-l border-r-2 border-slate-300 bg-slate-50/55"
+                                  className="border-l border-r-2 border-border bg-muted/55"
                                 />
                               ))}
                               <TableCell
                                 colSpan={colsPerMonth}
-                                className="border-l-2 border-r-2 border-slate-400 bg-slate-50/55"
+                                className="border-l-2 border-r-2 border-border bg-muted/55"
                               />
                             </TableRow>
                           ) : null}
@@ -2031,10 +2031,10 @@ export function OverviewReportContent() {
             </CardContent>
           </Card>
 
-          <Card className={cn("flex min-h-[320px] flex-col border-slate-200 xl:min-h-0", isMobile && "hidden")}>
+          <Card className={cn("flex min-h-[320px] flex-col border-border xl:min-h-0", isMobile && "hidden")}>
             <CardHeader
               className={cn(
-                "border-b border-slate-100",
+                "border-b border-border",
                 metricsCollapsed ? "p-2" : "pb-3",
               )}
             >
@@ -2072,7 +2072,7 @@ export function OverviewReportContent() {
               <CardContent className="flex flex-1 items-center justify-center p-2">
                 <div
                   className={cn(
-                    "select-none text-xs font-semibold uppercase tracking-wider text-slate-600",
+                    "select-none text-xs font-semibold uppercase tracking-wider text-muted-foreground",
                     "[writing-mode:vertical-rl] [text-orientation:mixed]",
                   )}
                 >

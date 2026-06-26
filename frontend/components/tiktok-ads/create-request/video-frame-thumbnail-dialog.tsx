@@ -138,13 +138,13 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create cover image from video frame</DialogTitle>
           <DialogDescription>Pick a timestamp, capture the current frame, then use it as the TikTok cover image.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="space-y-4">
             <div className="overflow-hidden rounded-md border bg-black">
               {videoUrl ? (
@@ -165,12 +165,12 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
                   onError={() => setError("Cannot decode this video in browser. Please upload a cover image manually.")}
                 />
               ) : (
-                <div className="flex h-64 items-center justify-center text-sm text-slate-300">No local video file available.</div>
+                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">No local video file available.</div>
               )}
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{formatTimestamp(selectedTime)}</span>
                 <span>{formatTimestamp(duration)}</span>
               </div>
@@ -188,18 +188,18 @@ export function VideoFrameThumbnailDialog({ videoFile, open, onOpenChange, onUse
               />
             </div>
 
-            {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p> : null}
+            {error ? <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{error}</p> : null}
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-md border bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Captured frame</p>
-              <div className="mt-3 overflow-hidden rounded-md border bg-white">
+            <div className="rounded-md border bg-muted/40 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Captured frame</p>
+              <div className="mt-3 overflow-hidden rounded-md border bg-background">
                 {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={previewUrl} alt="Captured thumbnail preview" className="h-40 w-full object-contain" />
                 ) : (
-                  <div className="flex h-40 items-center justify-center text-xs text-slate-400">No frame captured yet</div>
+                  <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">No frame captured yet</div>
                 )}
               </div>
             </div>

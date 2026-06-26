@@ -103,6 +103,8 @@ export interface AuthResponse {
             role: string
             /** permission_roles.name */
             roleName?: string
+            roles?: string[]
+            roleNames?: string[]
             rolePermissions?: Record<string, string[]>
             organization?: {
                 id: string
@@ -165,6 +167,8 @@ export interface CurrentUser {
     role: string
     /** permission_roles.name */
     roleName?: string
+    roles?: string[]
+    roleNames?: string[]
     organizationId?: string
     emailVerified?: boolean
     slackWebhookUrl?: string
