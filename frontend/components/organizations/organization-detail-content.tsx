@@ -106,7 +106,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -114,7 +114,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   if (error || !org) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-red-600 mb-4">{error || "Organization not found"}</p>
+        <p className="text-destructive mb-4">{error || "Organization not found"}</p>
         <Link href={backLink}>
           <Button>{backLabel}</Button>
         </Link>
@@ -141,7 +141,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
       {/* Back Link */}
       <Link
         href={backLink}
-        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         {backLabel}
@@ -153,32 +153,32 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           <OrganizationLogoAvatar orgId={orgId} orgName={org.name} logoUrl={org.logoUrl} size="lg" />
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{org.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{org.name}</h1>
               <Badge
                 className={
                   status === "active"
-                    ? "bg-green-100 text-green-700 border-green-200"
-                    : "bg-red-100 text-red-700 border-red-200"
+                    ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300"
+                    : "bg-destructive/10 text-destructive border-destructive/20"
                 }
               >
                 {status === "active" ? "Active" : "Inactive"}
               </Badge>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-slate-500">{org.slug}.nexus.io</span>
+              <span className="text-sm text-muted-foreground">{org.slug}.nexus.io</span>
               <button
                 onClick={handleCopySlug}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 title="Copy slug"
               >
                 {copied ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                 ) : (
                   <Copy className="w-3.5 h-3.5" />
                 )}
               </button>
-              <span className="text-slate-300 mx-1">|</span>
-              <span className="text-sm text-slate-500">Created {formatDate(org.createdAt)}</span>
+              <span className="text-border mx-1">|</span>
+              <span className="text-sm text-muted-foreground">Created {formatDate(org.createdAt)}</span>
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
                 {canDelete && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                    <DropdownMenuItem className="text-destructive focus:text-destructive">
                       <Trash2 className="w-4 h-4 mr-2" />
                       Delete Organization
                     </DropdownMenuItem>
@@ -233,7 +233,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="bg-slate-100">
+        <TabsList className="bg-muted">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
           {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
@@ -243,7 +243,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
         </TabsList>
 
         <TabsContent value="overview">
-          <OrgOverviewTab org={orgTabData} orgId={orgId} />
+          <OrgOverviewTab org={orgTabData} orgId={orgId} canViewUsers={canViewUsers} />
         </TabsContent>
 
         {canViewUsers && (

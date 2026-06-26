@@ -38,7 +38,7 @@ import {
   UserPlus,
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Pagination } from "@/components/shared/pagination"
 import { AddUserToOrgModal } from "../add-user-to-org-modal"
 import { AddEditUserModal } from "../modals/add-edit-user-modal"
@@ -95,12 +95,14 @@ function formatLastActive(lastLoginAt?: string): string {
 
 export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const roleFromQuery = searchParams.get("role")
   const currentUser = getCurrentUser()
   const canAssignAdmin = currentUser?.role?.toLowerCase() === "super_admin"
   // RoleSelector will dynamically fetch the roles, we just need to pass canManage = canAssignAdmin
   // to let it know whether to allow assigning admin/super_admin roles.
   const [searchQuery, setSearchQuery] = useState("")
-  const [roleFilter, setRoleFilter] = useState("all")
+  const [roleFilter, setRoleFilter] = useState(roleFromQuery || "all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -141,7 +143,6 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
       .then(setTeams)
       .catch(() => setTeams([]))
   }, [orgId])
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
@@ -150,13 +151,13 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Fetch users — dùng teamMembersApi.filterTeamMembers() vì hỗ trợ filter teamId đúng cách
+  // Fetch users scoped to this organization.
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const [filterResponse, stats] = await Promise.all([
-        teamMembersApi.filterTeamMembers({
+      const [usersResponse, stats] = await Promise.all([
+        organizationsApi.getUsers(orgId, {
           page: currentPage,
           pageSize,
           search: debouncedSearch || undefined,
@@ -166,30 +167,9 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
         }),
         organizationsApi.getStatistics(orgId),
       ])
-      // Map TeamMember[] → OrgUserItem[] để tương thích với phần render hiện tại
-      const mappedItems: OrgUserItem[] = (filterResponse.data?.items ?? []).map((m) => {
-        // Lấy joinedAt từ team đang filter (nếu có) để dùng làm createdAt
-        const teamEntry = teamFilter !== "all"
-          ? m.teams?.find((t) => t.id === teamFilter)
-          : undefined
-        return {
-          id: m.id,
-          email: m.email,
-          firstName: m.firstName,
-          lastName: m.lastName,
-          fullName: m.fullName || m.email,
-          avatarUrl: m.avatarUrl,
-          role: m.role,
-          roles: m.roles,
-          roleNames: m.roleNames,
-          status: (m.status ?? "active") as string,
-          createdAt: teamEntry?.joinedAt ?? m.lastLoginAt ?? new Date().toISOString(),
-          lastLoginAt: m.lastLoginAt,
-        }
-      })
-      setUsers(mappedItems)
-      setTotal(filterResponse.data?.total ?? 0)
-      setTotalPages(filterResponse.data?.totalPages ?? 1)
+      setUsers(usersResponse.items ?? [])
+      setTotal(usersResponse.total ?? 0)
+      setTotalPages(usersResponse.totalPages ?? 1)
       setActiveCount(stats.activeUsers)
       setInactiveCount(stats.totalUsers - stats.activeUsers)
     } catch (err) {
@@ -203,6 +183,18 @@ export function OrgUsersTab({ org, orgId, canManage = false }: OrgUsersTabProps)
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
+
+  useEffect(() => {
+    const matchedRole = roleFromQuery
+      ? rolesData?.find(
+          (role) =>
+            role.roleKey.toLowerCase() === roleFromQuery.toLowerCase() ||
+            role.name.toLowerCase() === roleFromQuery.toLowerCase(),
+        )
+      : undefined
+    setRoleFilter(roleFromQuery ? matchedRole?.roleKey ?? roleFromQuery : "all")
+    setCurrentPage(1)
+  }, [roleFromQuery, rolesData])
 
   // Reset page on filter changes
   useEffect(() => {
