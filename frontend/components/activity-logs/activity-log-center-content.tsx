@@ -827,50 +827,50 @@ function ActivityLogCenterBody() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="border-border bg-muted/40">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-sm font-medium text-muted-foreground">
               Matched Activities
             </p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
+            <p className="mt-1 text-2xl font-bold text-foreground">
               {result.total}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/30 bg-destructive/10">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-red-700">Failures On Page</p>
-            <p className="mt-1 text-2xl font-bold text-red-600">
+            <p className="text-sm font-medium text-destructive">Failures On Page</p>
+            <p className="mt-1 text-2xl font-bold text-destructive">
               {currentPageFailureCount}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-500/30 bg-amber-500/10">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-amber-700">
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
               Warnings On Page
             </p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">
+            <p className="mt-1 text-2xl font-bold text-amber-700 dark:text-amber-300">
               {currentPageWarningCount}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 bg-slate-50">
+        <Card className="border-border bg-muted/40">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-sm font-medium text-muted-foreground">
               Domains On Page
             </p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
+            <p className="mt-1 text-2xl font-bold text-foreground">
               {currentPageDomainCount}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-emerald-200 bg-emerald-50">
+        <Card className="border-emerald-500/30 bg-emerald-500/10">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-emerald-700">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
               Latest Activity
             </p>
-            <p className="mt-1 text-sm font-semibold text-emerald-700">
+            <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
               {latestOccurredAt
                 ? formatRelativeTime(latestOccurredAt)
                 : "No activity"}
