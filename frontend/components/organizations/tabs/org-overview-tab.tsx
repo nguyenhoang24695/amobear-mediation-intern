@@ -54,6 +54,9 @@ export function OrgOverviewTab({
   >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  console.log("Role tu api", permissionApi.getRoles());
+  console.log("Role label: ", roleLabels);
+  console.log("role filter Values",roleFilterValues);
   useEffect(() => {
     const fetchOverviewData = async () => {
       try {

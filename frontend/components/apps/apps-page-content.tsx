@@ -276,9 +276,9 @@ export function AppsPageContent() {
       </div>
 
       {/* Action Bar */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+      <div className="flex flex-col gap-3">
         {/* Left: Search & Filters */}
-        <div className="flex min-w-0 flex-col xl:flex-row xl:items-center gap-3">
+        <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center">
           <div className="relative w-full xl:w-80 xl:shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -289,7 +289,7 @@ export function AppsPageContent() {
             />
           </div>
 
-          <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap xl:w-auto xl:flex-nowrap">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap">
             <Select value={platform} onValueChange={(v) => handleFilterChange("Platform", v)}>
               <SelectTrigger className="h-10 w-full bg-card lg:w-36">
                 <SelectValue placeholder="Platform" />
@@ -372,16 +372,16 @@ export function AppsPageContent() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           {canExport && (
-            <Button variant="outline" className="h-10 gap-2 bg-transparent">
+            <Button variant="outline" className="h-10 w-full gap-2 bg-transparent sm:w-auto">
               <Download className="w-4 h-4" />
               Export
             </Button>
           )}
           {canSyncFromAdmob && (
             <Button 
-              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+              className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700 sm:w-auto"
               onClick={() => void loadApps()}
               disabled={appsLoading || backgroundAppsLoading}
             >

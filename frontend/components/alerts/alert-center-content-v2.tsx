@@ -1842,7 +1842,7 @@ export function AlertCenterContentV2() {
   );
 
   return (
-    <div className="dark flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Tabs
         value={centerTab}
         onValueChange={handleCenterTabChange}
