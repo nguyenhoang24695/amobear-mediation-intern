@@ -1036,52 +1036,70 @@ export function AlertCenterContentV2() {
           <p className="mt-2 text-sm text-muted-foreground">{headerTagline}</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {!isMyAlertsTab && canCreateAlertRule ? (
-            <Button
-              className="h-10 w-full gap-2 sm:h-9 sm:w-auto"
-              onClick={() => setShowAiBuilder(true)}
-            >
-              Create Alert via AI
-            </Button>
-          ) : null}
           {isMyAlertsTab && canCreateAlertRule ? (
-            <Button
-              variant="outline"
-              className="h-10 w-full gap-2 bg-transparent sm:h-9 sm:w-auto"
-              disabled={
-                privateSlotsFull || (orgRulesForTemplate ?? []).length === 0
-              }
-              title={
-                (orgRulesForTemplate ?? []).length === 0
-                  ? "No active org templates available"
-                  : "Pick an org alert rule as a starting point"
-              }
-              onClick={() => setShowTemplatePicker(true)}
-            >
-              <LayoutTemplate className="w-4 h-4" />
-              Use a Template
-            </Button>
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Button
+                variant="outline"
+                className="h-10 flex-1 gap-2 bg-transparent sm:h-9 sm:w-auto sm:flex-none"
+                disabled={
+                  privateSlotsFull || (orgRulesForTemplate ?? []).length === 0
+                }
+                title={
+                  (orgRulesForTemplate ?? []).length === 0
+                    ? "No active org templates available"
+                    : "Pick an org alert rule as a starting point"
+                }
+                onClick={() => setShowTemplatePicker(true)}
+              >
+                <LayoutTemplate className="w-4 h-4" />
+                Use a Template
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 flex-1 gap-2 bg-transparent sm:h-9 sm:w-auto sm:flex-none"
+                disabled={privateSlotsFull}
+                onClick={() => {
+                  setManualEditRule(null);
+                  setCloneFromRule(null);
+                  setShowManualCreator(true);
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                Create Manually
+              </Button>
+            </div>
           ) : null}
           {canCreateAlertRule ? (
-            <Button
-              variant="outline"
-              className="h-10 w-full gap-2 bg-transparent sm:h-9 sm:w-auto"
-              disabled={privateSlotsFull}
-              onClick={() => {
-                setManualEditRule(null);
-                setCloneFromRule(null);
-                setShowManualCreator(true);
-              }}
-            >
-              {isMyAlertsTab ? <Plus className="w-4 h-4" /> : null}
-              {isMyAlertsTab ? "Create Manually" : "Create Manual Alert"}
-            </Button>
+            <div className="flex w-full gap-2 sm:w-auto">
+              {!isMyAlertsTab ? (
+                <Button
+                  className="h-10 flex-1 gap-2 sm:h-9 sm:w-auto sm:flex-none"
+                  onClick={() => setShowAiBuilder(true)}
+                >
+                  Create Alert via AI
+                </Button>
+              ) : null}
+              {!isMyAlertsTab ? (
+                <Button
+                  variant="outline"
+                  className="h-10 flex-1 gap-2 bg-transparent sm:h-9 sm:w-auto sm:flex-none"
+                  disabled={privateSlotsFull}
+                  onClick={() => {
+                    setManualEditRule(null);
+                    setCloneFromRule(null);
+                    setShowManualCreator(true);
+                  }}
+                >
+                  Create Manual Alert
+                </Button>
+              ) : null}
+            </div>
           ) : null}
           {!isMyAlertsTab ? (
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-full sm:h-9 sm:w-9"
+              className="hidden h-10 w-full sm:inline-flex sm:h-9 sm:w-9"
               onClick={() => setAlertRulesPanelOpen(true)}
             >
               <Settings className="w-4 h-4" />
@@ -1848,18 +1866,30 @@ export function AlertCenterContentV2() {
         onValueChange={handleCenterTabChange}
         className="w-full"
       >
-        <TabsList className="mb-2 h-10 w-fit bg-muted p-1">
-          <TabsTrigger value="alerts">Alerts</TabsTrigger>
-          {showMyAlertsTab ? (
-            <TabsTrigger value="my-alerts">My Alerts</TabsTrigger>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <TabsList className="h-10 w-fit bg-muted p-1">
+            <TabsTrigger value="alerts">Alerts</TabsTrigger>
+            {showMyAlertsTab ? (
+              <TabsTrigger value="my-alerts">My Alerts</TabsTrigger>
+            ) : null}
+            {showDailyInsights ? (
+              <TabsTrigger value="daily-insights" className="gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                Daily Insights
+              </TabsTrigger>
+            ) : null}
+          </TabsList>
+          {!isMyAlertsTab ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0 sm:hidden"
+              onClick={() => setAlertRulesPanelOpen(true)}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
           ) : null}
-          {showDailyInsights ? (
-            <TabsTrigger value="daily-insights" className="gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              Daily Insights
-            </TabsTrigger>
-          ) : null}
-        </TabsList>
+        </div>
         {(centerTab === "alerts" ||
           (centerTab === "my-alerts" && showMyAlertsTab)) && (
           <div className="mt-0 flex flex-col gap-6">{alertsPanel}</div>

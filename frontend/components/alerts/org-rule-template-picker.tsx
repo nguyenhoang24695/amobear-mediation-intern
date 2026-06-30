@@ -108,18 +108,18 @@ export function OrgRuleTemplatePicker({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
-        <SheetHeader className="px-5 pt-5 pb-4 border-b border-slate-200">
+      <SheetContent side="right" className="flex w-full flex-col gap-0 bg-background p-0 text-foreground sm:max-w-lg">
+        <SheetHeader className="border-b border-border px-5 pb-4 pt-5">
           <SheetTitle className="text-lg">Use an Org Template</SheetTitle>
           <SheetDescription>
             Pick an active org-wide alert rule to pre-fill your new personal alert. You can adjust
             everything before saving.
           </SheetDescription>
           <div className="relative mt-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name, metric…"
-              className="pl-9 h-9 text-sm"
+              className="h-9 border-border bg-background pl-9 text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -128,26 +128,29 @@ export function OrgRuleTemplatePicker({
 
         <div className="flex-1 overflow-y-auto">
           {sorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-2">
-              <Search className="w-8 h-8 text-slate-300" />
+            <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
+              <Search className="h-8 w-8 text-muted-foreground/50" />
               <p className="text-sm font-medium">No templates found</p>
               {search && (
-                <p className="text-xs text-slate-400">Try a different search term</p>
+                <p className="text-xs text-muted-foreground">Try a different search term</p>
               )}
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-border">
               {sorted.map((rule) => {
                 const metrics = extractMetricKeys(rule)
                 const conditionsSummary = formatRuleConditionsSummary(rule)
                 const scopeLabel = formatScopeCount(rule)
 
                 return (
-                  <li key={rule.id} className="flex items-start justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
+                  <li
+                    key={rule.id}
+                    className="flex items-start justify-between gap-3 px-5 py-4 transition-colors hover:bg-accent/40"
+                  >
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         {severityIcon(rule.severity)}
-                        <span className="text-sm font-semibold text-slate-900 truncate">
+                        <span className="truncate text-sm font-semibold text-foreground">
                           {rule.name}
                         </span>
                         <Badge
@@ -158,20 +161,20 @@ export function OrgRuleTemplatePicker({
                         </Badge>
                       </div>
 
-                      <p className="text-xs text-slate-500 line-clamp-2">{conditionsSummary}</p>
+                      <p className="line-clamp-2 text-xs text-muted-foreground">{conditionsSummary}</p>
 
                       <div className="flex items-center gap-3 flex-wrap">
                         {metrics.length > 0 && (
-                          <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                            <span className="font-medium text-slate-500">{metrics.join(", ")}</span>
+                          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span className="font-medium text-foreground/80">{metrics.join(", ")}</span>
                           </span>
                         )}
-                        <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Layers className="w-3 h-3" />
                           {scopeLabel}
                         </span>
                         {rule.lastTriggeredAt && (
-                          <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                             <Clock className="w-3 h-3" />
                             Last triggered {formatRelative(rule.lastTriggeredAt)}
                           </span>
@@ -182,7 +185,7 @@ export function OrgRuleTemplatePicker({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="shrink-0 h-8 gap-1.5 text-xs"
+                      className="h-8 shrink-0 gap-1.5 border-border bg-background text-xs hover:bg-accent"
                       onClick={() => {
                         onSelect(rule)
                         onOpenChange(false)
@@ -199,7 +202,7 @@ export function OrgRuleTemplatePicker({
         </div>
 
         {sorted.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-400">
+          <div className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
             {sorted.length} template{sorted.length !== 1 ? "s" : ""} — sorted by most recently triggered
           </div>
         )}

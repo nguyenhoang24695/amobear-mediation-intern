@@ -995,7 +995,7 @@ export function WaterfallOptimizationTab({
   if (loadingDetail && hasValidId) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="animate-pulse text-slate-500">Loading waterfall configuration...</div>
+        <div className="animate-pulse text-muted-foreground">Loading waterfall configuration...</div>
       </div>
     )
   }
@@ -1004,9 +1004,9 @@ export function WaterfallOptimizationTab({
     !loadingDetail && currentSetup.bidding.length === 0 && currentSetup.waterfall.length === 0 && hasValidId
   if (hasNoSources) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-        <p className="text-slate-600">No bidding or waterfall sources for this mediation group.</p>
-        <p className="text-sm text-slate-500 mt-1">
+      <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
+        <p className="text-foreground">No bidding or waterfall sources for this mediation group.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
           Sync structure from AdMob or add ad sources in the mediation group configuration.
         </p>
       </div>
@@ -1015,13 +1015,13 @@ export function WaterfallOptimizationTab({
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-6 pb-24">
-        <Card className="border-slate-200">
+      <div className="flex flex-col gap-6 pb-32 sm:pb-28">
+        <Card className="border-border">
           <CardHeader className="pb-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <CardTitle className="text-base font-semibold text-slate-900">Apply Policy</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">Configure how this mediation group handles the waterfall apply cycle and interval.</p>
+                <CardTitle className="text-base font-semibold text-foreground">Apply Policy</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Configure how this mediation group handles the waterfall apply cycle and interval.</p>
               </div>
               <div className="flex flex-col gap-1 lg:items-end">
                 <div className="flex flex-wrap items-end gap-2">
@@ -1036,7 +1036,7 @@ export function WaterfallOptimizationTab({
                     </SelectContent>
                   </Select>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-600">Interval (days)</p>
+                    <p className="text-xs font-medium text-muted-foreground">Interval (days)</p>
                     <Input
                       type="number"
                       min={MIN_POLICY_INTERVAL_DAYS}
@@ -1045,11 +1045,11 @@ export function WaterfallOptimizationTab({
                       value={policyIntervalDays}
                       onChange={(event) => setPolicyIntervalDays(event.target.value)}
                       disabled={loadingPolicy || savingPolicy || policyApplyMode === "manual"}
-                      className="w-[140px] bg-white disabled:bg-slate-50"
+                      className="w-[140px] bg-background disabled:bg-muted"
                     />
                   </div>
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={openPolicyConfirm}
                     disabled={loadingPolicy || savingPolicy || !applyPolicy || !hasPolicyChanges || (policyApplyMode !== "manual" && parsedPolicyIntervalDays == null)}
                   >
@@ -1057,7 +1057,7 @@ export function WaterfallOptimizationTab({
                     Save
                   </Button>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {policyApplyMode === "manual"
                     ? "Manual mode keeps the saved interval unchanged until semi-auto or auto is enabled again."
                     : parsedPolicyIntervalDays == null
@@ -1069,23 +1069,23 @@ export function WaterfallOptimizationTab({
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Last observed apply</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{formatUpdatedAt(applyPolicy?.lastObservedApplyAt ?? undefined)}</p>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Last observed apply</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{formatUpdatedAt(applyPolicy?.lastObservedApplyAt ?? undefined)}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Next due (GMT+7)</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{formatPolicyDueAtGmt7(applyPolicy?.dueAt ?? undefined)}</p>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Next due (GMT+7)</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{formatPolicyDueAtGmt7(applyPolicy?.dueAt ?? undefined)}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Apply source</p>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Apply source</p>
                 <p className="mt-1 text-sm font-medium text-slate-900">{applyPolicy?.lastApplySource ?? "—"}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Interval</p>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Interval</p>
                 <p className="mt-1 text-sm font-medium text-slate-900">{applyPolicy?.intervalDays ?? 7} days</p>
                 {applyPolicy?.isDue && (
-                  <Badge className="mt-2 bg-amber-100 text-amber-700 border-0">Due now</Badge>
+                  <Badge className="mt-2 border-0 bg-amber-500/15 text-amber-700 dark:text-amber-300">Due now</Badge>
                 )}
               </div>
             </div>
@@ -1093,7 +1093,7 @@ export function WaterfallOptimizationTab({
         </Card>
 
         {/* Section 1: Ad units + Optimization Status Banner (two columns like Current Setup / Optimized) */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Left column: Ad units */}
           <Card className="border-slate-200 overflow-hidden">
             <CardHeader className="pb-3">
@@ -1330,14 +1330,14 @@ export function WaterfallOptimizationTab({
                         {changes.modifiedCount + changes.addedCount + changes.removedCount} changes pending • Don&apos;t forget
                         to apply or test
                       </p>
-                      <div className="flex items-center gap-3 mt-3">
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
                         <Button variant="link" className="h-auto p-0 text-red-600" onClick={discardAllChanges}>
                           Discard Changes
                         </Button>
-                        <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
+                        <Button variant="outline" size="sm" className="h-8 w-full bg-transparent sm:w-auto" onClick={handleApplyDirectClick}>
                           Apply Direct
                         </Button>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!abTestingEnabled}>
+                        <Button size="sm" className="h-8 w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={onRunABTest} disabled={!abTestingEnabled}>
                           Run A/B Test
                         </Button>
                       </div>
@@ -1431,9 +1431,9 @@ export function WaterfallOptimizationTab({
         {/* Section 2: Side-by-Side Waterfall Comparison */}
         <div className="space-y-4">
           {/* Header Row */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Waterfall Configuration</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" className="h-9 bg-transparent" asChild>
                 <Link
                   href={buildActivityLogsHref({
@@ -1502,7 +1502,7 @@ export function WaterfallOptimizationTab({
           </div>
 
           {/* Two-Column Layout */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {/* LEFT COLUMN - Current Setup (READ-ONLY) */}
             <Card className="border-slate-200 overflow-hidden">
               {/* Teal header */}
@@ -2051,26 +2051,26 @@ export function WaterfallOptimizationTab({
         </Card>
 
         {/* Section 4: Sticky Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-lg z-50">
-          <div className="max-w-7xl mx-auto flex items-center justify-between pl-[240px]">
-            <div className="flex items-center gap-4">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 p-4 shadow-lg backdrop-blur">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:pl-[240px]">
+            <div className="flex flex-wrap items-center gap-4">
               {changes.hasChanges && (
                 <Button variant="link" className="text-red-600 h-auto p-0" onClick={discardAllChanges}>
                   Discard All Changes
                 </Button>
               )}
-              {!changes.hasChanges && <span className="text-sm text-slate-500">Make changes to enable actions</span>}
+              {!changes.hasChanges && <span className="text-sm text-muted-foreground">Make changes to enable actions</span>}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 variant="outline"
-                className="bg-transparent"
+                className="w-full bg-transparent sm:w-auto"
                 onClick={handleApplyDirectClick}
                 disabled={!changes.hasChanges}
               >
                 Apply Direct
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!changes.hasChanges || !abTestingEnabled}>
+              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={onRunABTest} disabled={!changes.hasChanges || !abTestingEnabled}>
                 Run A/B Test
               </Button>
             </div>

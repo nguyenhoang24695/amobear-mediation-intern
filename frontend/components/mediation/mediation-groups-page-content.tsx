@@ -558,9 +558,9 @@ export function MediationGroupsPageContent() {
 
       {/* Bulk Actions Bar */}
       {selectedGroups.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-primary">
+        <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-primary sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm font-medium">{selectedGroups.length} groups selected</span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canConfig && (
               <Button variant="secondary" size="sm" className="h-8 border-0">
                 Pause All
@@ -572,7 +572,7 @@ export function MediationGroupsPageContent() {
               </Button>
             )}
             {canConfig && (
-              <Button variant="secondary" size="sm" className="h-8 border-0">
+              <Button variant="secondary" size="sm" className="h-8 max-w-full border-0 text-left whitespace-normal">
                 Bulk Edit eCPM
               </Button>
             )}
@@ -581,7 +581,7 @@ export function MediationGroupsPageContent() {
                 Export
               </Button>
             )}
-            <button onClick={() => setSelectedGroups([])} className="ml-2 text-sm text-primary hover:underline">
+            <button onClick={() => setSelectedGroups([])} className="text-sm text-primary hover:underline sm:ml-2">
               Clear selection
             </button>
           </div>

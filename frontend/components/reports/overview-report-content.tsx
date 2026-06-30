@@ -20,7 +20,8 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { format, parse, parseISO } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, Filter, GripVertical, Info, Loader2, RefreshCw, Save, X } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Copy, Filter, GripVertical, Info, Loader2, RefreshCw, Save, X } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -89,7 +90,8 @@ import type {
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const APPS_PER_PAGE = 20
-const OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY = "overview-report-mobile-filters-sticker-top-v1"
+const OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY = "overview-report-mobile-filters-sticker-top-v2"
+const OVERVIEW_MOBILE_FILTERS_STICKER_BOTTOM_SAFE_AREA = 88
 const SHARED_APP_CONFLICTS_DISPLAY_MAX = 5
 
 /** Sticky offsets — khớp h-10 (40px) + h-8 (32px) + h-8 (32px); TableHead mặc định h-10 phải override ở row 2–3. */
@@ -114,24 +116,24 @@ const OVERVIEW_COLUMN_STYLES: Record<
   }
 > = {
   revenue: {
-    sidebarSelected: "bg-sky-50 text-sky-900",
+    sidebarSelected: "bg-sky-50 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100",
     sidebarAccent: "bg-sky-500",
-    sidebarCheckbox: "border-sky-600 bg-sky-600",
-    groupHeader: "bg-sky-50/80 text-sky-700",
-    header: "bg-sky-50 text-sky-900",
-    cell: "bg-sky-50/35",
-    cellSubtle: "bg-sky-50/55",
-    border: "border-sky-200",
+    sidebarCheckbox: "border-sky-600 bg-sky-600 dark:border-sky-400 dark:bg-sky-500",
+    groupHeader: "bg-sky-50/80 text-sky-700 dark:bg-sky-950/45 dark:text-sky-200",
+    header: "bg-sky-50 text-sky-900 dark:bg-sky-950/60 dark:text-sky-100",
+    cell: "bg-sky-50/35 dark:bg-sky-950/28",
+    cellSubtle: "bg-sky-50/55 dark:bg-sky-950/40",
+    border: "border-sky-200 dark:border-sky-900/70",
   },
   performance: {
-    sidebarSelected: "bg-emerald-50 text-emerald-900",
+    sidebarSelected: "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100",
     sidebarAccent: "bg-emerald-500",
-    sidebarCheckbox: "border-emerald-600 bg-emerald-600",
-    groupHeader: "bg-emerald-50/80 text-emerald-700",
-    header: "bg-emerald-50 text-emerald-900",
-    cell: "bg-emerald-50/35",
-    cellSubtle: "bg-emerald-50/55",
-    border: "border-emerald-200",
+    sidebarCheckbox: "border-emerald-600 bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-500",
+    groupHeader: "bg-emerald-50/80 text-emerald-700 dark:bg-emerald-950/45 dark:text-emerald-200",
+    header: "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100",
+    cell: "bg-emerald-50/35 dark:bg-emerald-950/28",
+    cellSubtle: "bg-emerald-50/55 dark:bg-emerald-950/40",
+    border: "border-emerald-200 dark:border-emerald-900/70",
   },
 }
 
@@ -332,26 +334,27 @@ function formatMonthLabel(month: string): string {
   }
 }
 
-function renderPlatformBadge(platformValue: string) {
+function renderPlatformBadge(platformValue: string, options?: { compact?: boolean }) {
   const platform = platformValue || "Unknown"
   const isAndroid = platform.toUpperCase() === "ANDROID"
+  const compact = options?.compact ?? false
 
   return (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1",
+        compact ? "gap-1 px-2 py-0 text-[11px]" : "gap-1",
         isAndroid
           ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
           : "border-border bg-muted/50 text-foreground",
       )}
     >
       {isAndroid ? (
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+        <svg className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")} viewBox="0 0 24 24" fill="currentColor">
           <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
         </svg>
       ) : (
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+        <svg className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")} viewBox="0 0 24 24" fill="currentColor">
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
         </svg>
       )}
@@ -527,11 +530,13 @@ function TeamAppsPager({
   totalPages,
   totalItems,
   onPageChange,
+  isMobile = false,
 }: {
   currentPage: number
   totalPages: number
   totalItems: number
   onPageChange: (page: number) => void
+  isMobile?: boolean
 }) {
   if (totalPages <= 1) return null
 
@@ -539,31 +544,36 @@ function TeamAppsPager({
   const end = Math.min(currentPage * APPS_PER_PAGE, totalItems)
 
   return (
-    <div className="flex flex-col gap-2 py-1 text-sm sm:flex-row sm:flex-wrap sm:items-center">
+    <div
+      className={cn(
+        "flex flex-col gap-2 py-1 text-sm",
+        isMobile ? "min-w-0" : "sm:flex-row sm:flex-wrap sm:items-center",
+      )}
+    >
       <span className="shrink-0 text-muted-foreground">
         Apps <span className="font-medium text-foreground">{start}</span>–
         <span className="font-medium text-foreground">{end}</span> of{" "}
         <span className="font-medium text-foreground">{totalItems}</span>
       </span>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className={cn("flex shrink-0 items-center gap-2", isMobile && "w-full justify-between gap-1")}>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8"
+          className={cn("h-8", isMobile && "h-7 px-2 text-xs")}
           disabled={currentPage <= 1}
           onClick={() => onPageChange(currentPage - 1)}
         >
-          Previous
+          {isMobile ? "Prev" : "Previous"}
         </Button>
-        <span className="tabular-nums text-muted-foreground">
+        <span className={cn("tabular-nums text-muted-foreground", isMobile && "text-xs")}>
           {currentPage} / {totalPages}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8"
+          className={cn("h-8", isMobile && "h-7 px-2 text-xs")}
           disabled={currentPage >= totalPages}
           onClick={() => onPageChange(currentPage + 1)}
         >
@@ -678,7 +688,7 @@ function SortableOverviewColumnItem({
       onClick={() => onToggle(id)}
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors",
-        selected ? groupStyle.sidebarSelected : "text-foreground hover:bg-muted/50",
+        selected ? groupStyle.sidebarSelected : "text-foreground hover:bg-muted/50 dark:hover:bg-muted/70",
       )}
     >
       <span
@@ -713,6 +723,7 @@ function SortableOverviewColumnItem({
 }
 
 export function OverviewReportContent() {
+  const router = useRouter()
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const storedCurrentUser = getCurrentUser()
   const { data: currentUserResponse } = useApi(
@@ -756,12 +767,16 @@ export function OverviewReportContent() {
     topPx: mobileFiltersStickerTop,
     consumeDragClick: consumeMobileFiltersStickerDragClick,
     dragProps: mobileFiltersStickerDragProps,
-  } = useDraggableVerticalFixed(OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY)
+  } = useDraggableVerticalFixed(OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY, {
+    bottomSafeAreaPx: OVERVIEW_MOBILE_FILTERS_STICKER_BOTTOM_SAFE_AREA,
+    defaultTop: (containerHeight) =>
+      window.innerHeight - containerHeight - OVERVIEW_MOBILE_FILTERS_STICKER_BOTTOM_SAFE_AREA,
+  })
   const overviewStickyFirstColWidth = isMobile
-    ? "min-w-[112px] max-w-[112px] w-[112px]"
+    ? "min-w-[164px] max-w-[164px] w-[164px]"
     : "min-w-[280px]"
   const overviewStickyNestedRowPadding = isMobile ? "pl-6" : "pl-10"
-  const overviewStickyPagerPadding = isMobile ? "pl-7" : "pl-12"
+  const overviewStickyPagerPadding = isMobile ? "pl-4" : "pl-12"
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -801,6 +816,14 @@ export function OverviewReportContent() {
       return [...prev, columnId]
     })
   }
+
+  const handleMobileBack = useCallback(() => {
+    if (window.history.length > 1) {
+      router.back()
+      return
+    }
+    router.push("/reports")
+  }, [router])
 
   const handleColumnDragEndForGroup = (group: OverviewColumnGroup) => (event: DragEndEvent) => {
     const { active, over } = event
@@ -1383,8 +1406,8 @@ export function OverviewReportContent() {
           const groupLabel = group === "revenue" ? "Revenue" : "Performance"
           const groupHeadingClass =
             group === "revenue"
-              ? "text-sky-700"
-              : "text-emerald-700"
+              ? "text-sky-700 dark:text-sky-300"
+              : "text-emerald-700 dark:text-emerald-300"
 
           return (
             <div key={group} className="space-y-1">
@@ -1430,6 +1453,22 @@ export function OverviewReportContent() {
 
   return (
     <div className="space-y-6">
+      {isMobile ? (
+        <div className="px-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-2 px-2 text-muted-foreground hover:bg-transparent hover:text-foreground"
+            onClick={handleMobileBack}
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+        </div>
+      ) : null}
+
       <Card className="gap-0 overflow-hidden border-border py-0 shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5 [.border-b]:pb-2.5">
           <div className="min-w-0 flex-1">
@@ -1533,8 +1572,17 @@ export function OverviewReportContent() {
       ) : data === null ? (
         <Card className="border-border">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Select a period and click <span className="font-medium text-foreground">Apply</span> to load the
-            overview report.
+            {isMobile ? (
+              <>
+                Tap <span className="font-medium text-foreground">Filters & Metrics</span> on the right, then
+                press <span className="font-medium text-foreground">Apply</span> to load the overview report.
+              </>
+            ) : (
+              <>
+                Select a period and click <span className="font-medium text-foreground">Apply</span> to load the
+                overview report.
+              </>
+            )}
           </CardContent>
         </Card>
       ) : allTeams.length === 0 ? (
@@ -1615,13 +1663,13 @@ export function OverviewReportContent() {
                 </div>
               ) : null}
               <div ref={scrollContainerRef} className="max-h-[min(70vh,720px)] overflow-auto">
-                <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
+                <table className="min-w-full w-max caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
                     <TableRow className="h-10 bg-muted/95 hover:bg-muted/95">
                       <TableHead
                         rowSpan={4}
                         className={cn(
-                          "sticky left-0 top-0 z-50 border-r bg-muted/50 align-bottom px-2 pb-2 font-bold text-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
+                          "sticky left-0 top-0 z-50 border-r bg-muted align-bottom px-2 pb-2 font-bold text-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
                           overviewStickyFirstColWidth,
                         )}
                       >
@@ -1654,7 +1702,7 @@ export function OverviewReportContent() {
                         <TableHead
                           key={month}
                           colSpan={colsPerMonth}
-                          className="sticky top-0 z-40 !h-10 border-b border-r border-border bg-muted/50 text-center text-xs font-semibold text-foreground"
+                          className="sticky top-0 z-40 !h-10 border-b border-r border-border bg-muted text-center text-xs font-semibold text-foreground"
                         >
                           {formatMonthLabel(month)}
                         </TableHead>
@@ -1677,7 +1725,7 @@ export function OverviewReportContent() {
                                 OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
-                                "bg-muted/50",
+                                "bg-muted",
                               )}
                             >
                               Revenue
@@ -1691,7 +1739,7 @@ export function OverviewReportContent() {
                                 OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.performance.groupHeader,
-                                "bg-muted/50",
+                                "bg-muted",
                               )}
                             >
                               Performance
@@ -1744,16 +1792,16 @@ export function OverviewReportContent() {
                                   column.minWidthClass,
                                   "sticky z-40 text-right text-xs font-medium",
                                   OVERVIEW_STICKY_HEADER_ROW_3_TOP,
-                                  OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
-                                  columnStyle.header,
-                                  isFirstColumn ? cn("border-l", columnStyle.border) : "",
-                                  isLastColumnInMonth
-                                    ? "border-r-2 border-border"
-                                    : cn("border-r", columnStyle.border),
-                                  "bg-muted/50",
-                                )}
-                              >
-                                {column.label}
+                                OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
+                                columnStyle.header,
+                                isFirstColumn ? cn("border-l", columnStyle.border) : "",
+                                isLastColumnInMonth
+                                  ? "border-r-2 border-border"
+                                  : cn("border-r", columnStyle.border),
+                                "bg-muted",
+                              )}
+                            >
+                              {column.label}
                               </TableHead>
                             )
                           })}
@@ -1861,7 +1909,7 @@ export function OverviewReportContent() {
                             <TableRow className="bg-muted/40 hover:bg-muted/60">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-muted/50 py-4 text-sm text-muted-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-muted py-4 text-sm text-muted-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyNestedRowPadding,
                                 )}
@@ -1923,15 +1971,15 @@ export function OverviewReportContent() {
                                 key={`${team.teamId}-${app.appId}`}
                                 className="bg-muted/40 hover:bg-muted/60"
                               >
-                                <TableCell
-                                  className={cn(
-                                    "sticky left-0 z-20 border-r bg-muted/50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
-                                    overviewStickyFirstColWidth,
-                                    overviewStickyNestedRowPadding,
-                                  )}
+                              <TableCell
+                                className={cn(
+                                  "sticky left-0 z-20 border-r bg-muted py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  overviewStickyFirstColWidth,
+                                  overviewStickyNestedRowPadding,
+                                )}
                                 >
-                                  <div className="flex min-w-0 items-center justify-between gap-3">
-                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                  {isMobile ? (
+                                    <div className="flex items-center gap-3">
                                       <Avatar className="h-8 w-8 shrink-0 rounded-lg">
                                         {app.appIconUri ? (
                                           <AvatarImage
@@ -1944,44 +1992,62 @@ export function OverviewReportContent() {
                                           {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <div className="min-w-0">
-                                        <div className="truncate text-sm font-medium text-foreground">
-                                          {app.appLabel}
-                                        </div>
-                                        <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                                          <span
-                                            className="min-w-0 truncate font-mono"
-                                            title={app.appStoreId ?? undefined}
-                                          >
-                                            {formatAppStoreId(app.appStoreId)}
-                                          </span>
-                                          {app.appStoreId ? (
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                              aria-label={`Copy App Store ID for ${app.appLabel}`}
-                                              onClick={(event) => {
-                                                event.stopPropagation()
-                                                void copyAppStoreId(appStoreCopyKey, app.appStoreId)
-                                              }}
+                                      {renderPlatformBadge(app.appPlatform ?? "", { compact: true })}
+                                    </div>
+                                  ) : (
+                                    <div className="flex min-w-0 items-center justify-between gap-3">
+                                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                                        <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                                          {app.appIconUri ? (
+                                            <AvatarImage
+                                              src={app.appIconUri}
+                                              alt={app.appLabel}
+                                              className="rounded-lg object-cover"
+                                            />
+                                          ) : null}
+                                          <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
+                                            {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="truncate text-sm font-medium text-foreground">
+                                            {app.appLabel}
+                                          </div>
+                                          <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                                            <span
+                                              className="min-w-0 truncate font-mono"
+                                              title={app.appStoreId ?? undefined}
                                             >
-                                              <Copy className="h-3 w-3" />
-                                            </Button>
-                                          ) : null}
-                                          {appStoreCopied ? (
-                                            <span className="shrink-0 text-xs font-medium text-green-600">
-                                              Copied!
+                                              {formatAppStoreId(app.appStoreId)}
                                             </span>
-                                          ) : null}
+                                            {app.appStoreId ? (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                aria-label={`Copy App Store ID for ${app.appLabel}`}
+                                                onClick={(event) => {
+                                                  event.stopPropagation()
+                                                  void copyAppStoreId(appStoreCopyKey, app.appStoreId)
+                                                }}
+                                              >
+                                                <Copy className="h-3 w-3" />
+                                              </Button>
+                                            ) : null}
+                                            {appStoreCopied ? (
+                                              <span className="shrink-0 text-xs font-medium text-green-600">
+                                                Copied!
+                                              </span>
+                                            ) : null}
+                                          </div>
                                         </div>
                                       </div>
+                                      <div className="shrink-0">
+                                        {renderPlatformBadge(app.appPlatform ?? "")}
+                                      </div>
                                     </div>
-                                    <div className="shrink-0">
-                                      {renderPlatformBadge(app.appPlatform ?? "")}
-                                    </div>
-                                  </div>
+                                  )}
                                 </TableCell>
                                 <OverviewMonthCells
                                   monthKeys={months}
@@ -1997,7 +2063,7 @@ export function OverviewReportContent() {
                             <TableRow className="bg-muted/30 hover:bg-muted/30">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-muted/50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-muted py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyPagerPadding,
                                 )}
@@ -2006,6 +2072,7 @@ export function OverviewReportContent() {
                                   currentPage={safeAppPage}
                                   totalPages={totalAppPages}
                                   totalItems={appCount}
+                                  isMobile={isMobile}
                                   onPageChange={(page) => setTeamAppPage(team.teamId, page)}
                                 />
                               </TableCell>

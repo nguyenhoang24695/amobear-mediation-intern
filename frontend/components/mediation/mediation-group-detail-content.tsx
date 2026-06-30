@@ -133,7 +133,7 @@ export function MediationGroupDetailContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -141,10 +141,10 @@ export function MediationGroupDetailContent() {
   if (!groupData || !groupDetail) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-sm text-slate-500">Mediation group not found</p>
+        <p className="text-sm text-muted-foreground">Mediation group not found</p>
         <Link
           href="/mediation"
-          className="mt-4 text-sm text-blue-600 hover:underline"
+          className="mt-4 text-sm text-primary hover:underline"
         >
           Back to Mediation Groups
         </Link>
@@ -163,24 +163,24 @@ export function MediationGroupDetailContent() {
         {/* Back Link */}
         <Link
           href="/mediation"
-          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors w-fit"
+          className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
           Mediation Groups
         </Link>
 
         {/* Page Header */}
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           {/* Left: Group Info */}
-          <div className="flex flex-col gap-2">
-            <h1 className="text-xl font-bold text-slate-900">{groupData.name}</h1>
+          <div className="flex min-w-0 flex-col gap-2">
+            <h1 className="break-words text-xl font-bold text-foreground">{groupData.name}</h1>
             {/* Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               {groupData.appId && (
                 <Link href={groupData.appAdMobId ? `/apps/${groupData.appAdMobId}` : "#"}>
                   <Badge
                     variant="outline"
-                    className="gap-1 bg-slate-50 border-slate-200 hover:bg-slate-100 cursor-pointer flex items-center"
+                    className="flex cursor-pointer items-center gap-1 border-border bg-muted/40 hover:bg-muted"
                   >
                     {groupData.appIconUri && (
                       <img
@@ -193,14 +193,14 @@ export function MediationGroupDetailContent() {
                   </Badge>
                 </Link>
               )}
-              <Badge className="gap-1 bg-green-100 text-green-700 border-0">
+              <Badge className="gap-1 border-0 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                 <Gift className="w-3 h-3" />
                 {groupData.format}
               </Badge>
-              <Badge className="bg-green-100 text-green-700 border-0">{groupData.status}</Badge>
+              <Badge className="border-0 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">{groupData.status}</Badge>
               {groupData.hasRunningTest && (
                 <Link href={`/mediation/tests/1`}>
-                  <Badge className="gap-1.5 bg-purple-100 text-purple-700 border-0 cursor-pointer hover:bg-purple-200 transition-colors">
+                  <Badge className="cursor-pointer gap-1.5 border-0 bg-primary/10 text-primary transition-colors hover:bg-primary/15">
                     <FlaskConical className="w-3 h-3" />
                     A/B Test Running
                     <span className="text-purple-500">•</span>
@@ -212,7 +212,7 @@ export function MediationGroupDetailContent() {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               className="h-9 gap-2 bg-transparent text-sm"
@@ -232,7 +232,7 @@ export function MediationGroupDetailContent() {
 
             <Button
               variant="outline"
-              className="h-9 gap-2 bg-transparent text-sm text-amber-600 border-amber-200 hover:bg-amber-50"
+              className="h-9 gap-2 border-amber-500/30 bg-transparent text-sm text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
             >
               <Pause className="w-4 h-4" />
               Pause Group
@@ -264,30 +264,32 @@ export function MediationGroupDetailContent() {
 
         {/* Tab Navigation - Updated with URL support */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="h-11 p-1 bg-slate-100 w-fit">
-            <TabsTrigger value="overview" className="px-4 data-[state=active]:bg-white">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="waterfall-optimization"
-              className="px-4 data-[state=active]:bg-white gap-1.5 data-[state=active]:text-blue-600"
-            >
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              Waterfall & Optimization
-            </TabsTrigger>
-            <TabsTrigger value="ab-tests" className="px-4 data-[state=active]:bg-white gap-1.5">
-              A/B Tests
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-slate-200 text-slate-600">
-                3
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="performance" className="px-4 data-[state=active]:bg-white">
-              Performance
-            </TabsTrigger>
-            <TabsTrigger value="change-history" className="px-4 data-[state=active]:bg-white">
-              Change History
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="h-11 w-max min-w-full gap-1 bg-muted p-1">
+              <TabsTrigger value="overview" className="shrink-0 px-4 data-[state=active]:bg-background">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="waterfall-optimization"
+                className="shrink-0 gap-1.5 px-4 data-[state=active]:bg-background data-[state=active]:text-primary"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                Waterfall & Optimization
+              </TabsTrigger>
+              <TabsTrigger value="ab-tests" className="shrink-0 gap-1.5 px-4 data-[state=active]:bg-background">
+                A/B Tests
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  3
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="performance" className="shrink-0 px-4 data-[state=active]:bg-background">
+                Performance
+              </TabsTrigger>
+              <TabsTrigger value="change-history" className="shrink-0 px-4 data-[state=active]:bg-background">
+                Change History
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="mt-6">
             <MediationGroupOverviewTab />
@@ -306,12 +308,12 @@ export function MediationGroupDetailContent() {
             <ABTestsTab onCreateTest={handleRunABTest} hasRunningTest={groupData.hasRunningTest} />
           </TabsContent>
           <TabsContent value="performance" className="mt-6">
-            <div className="flex items-center justify-center h-64 text-slate-500">
+            <div className="flex h-64 items-center justify-center text-muted-foreground">
               Performance tab content coming soon...
             </div>
           </TabsContent>
           <TabsContent value="change-history" className="mt-6">
-            <div className="flex items-center justify-center h-64 text-slate-500">
+            <div className="flex h-64 items-center justify-center text-muted-foreground">
               Change History tab content coming soon...
             </div>
           </TabsContent>

@@ -283,7 +283,7 @@ export function MediationGroupOverviewTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -291,7 +291,7 @@ export function MediationGroupOverviewTab() {
   if (!groupDetail) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-sm text-slate-500">Mediation group not found</p>
+        <p className="text-sm text-muted-foreground">Mediation group not found</p>
       </div>
     )
   }
@@ -304,56 +304,56 @@ export function MediationGroupOverviewTab() {
       {/* Left Column */}
       <div className="flex flex-col gap-6">
         {/* Basic Information Card */}
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-slate-900">Basic Information</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <p className="text-xs text-slate-500">Group ID</p>
-                <code className="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                <p className="text-xs text-muted-foreground">Group ID</p>
+                <code className="rounded bg-muted px-2 py-0.5 text-sm font-mono text-foreground">
                   {groupDetail.id}
                 </code>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-slate-500">AdMob Group ID</p>
-                <code className="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded truncate block">
+                <p className="text-xs text-muted-foreground">AdMob Group ID</p>
+                <code className="block truncate rounded bg-muted px-2 py-0.5 text-sm font-mono text-foreground">
                   {groupDetail.mediationGroupId}
                 </code>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
                   Created
                 </p>
-                <p className="text-sm font-medium text-slate-900">{createdDate}</p>
+                <p className="text-sm font-medium text-foreground">{createdDate}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="w-3 h-3" />
                   Last Modified
                 </p>
-                <p className="text-sm font-medium text-slate-900">{lastModifiedDate}</p>
+                <p className="text-sm font-medium text-foreground">{lastModifiedDate}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Gift className="w-3 h-3" />
                   Format
                 </p>
-                <Badge className="bg-amber-100 text-amber-700 border-0">
+                <Badge className="border-0 bg-amber-500/15 text-amber-700 dark:text-amber-300">
                   {formatAdFormat(groupDetail.adFormat)}
                 </Badge>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Hash className="w-3 h-3" />
                   App
                 </p>
                 {(groupDetail as any).AppAdMobId ? (
                   <Link
                     href={`/apps/${(groupDetail as any).AppAdMobId}`}
-                    className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-2"
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
                   >
                     {(groupDetail as any).AppIconUri && (
                       <img
@@ -373,11 +373,11 @@ export function MediationGroupOverviewTab() {
         </Card>
 
         {/* Targeting Card */}
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-slate-900">Targeting</CardTitle>
-              <Button variant="ghost" size="sm" className="h-8 gap-1 text-slate-600">
+              <CardTitle className="text-base font-semibold text-foreground">Targeting</CardTitle>
+              <Button variant="ghost" size="sm" className="h-8 gap-1 text-muted-foreground">
                 <Pencil className="w-3.5 h-3.5" />
                 Edit
               </Button>
@@ -387,19 +387,19 @@ export function MediationGroupOverviewTab() {
             <div className="space-y-4">
               {/* Countries */}
               <div className="space-y-2">
-                <p className="text-xs text-slate-500 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Globe className="w-3 h-3" />
                   Countries
                 </p>
                 {isGlobal ? (
-                  <div className="flex items-center gap-1 text-sm text-slate-600">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Globe className="w-4 h-4" />
                     Global
                   </div>
                 ) : countries.length > 0 ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     {countries.map((country: string) => (
-                      <Badge key={country} variant="outline" className="gap-1.5 bg-slate-50 border-slate-200">
+                      <Badge key={country} variant="outline" className="gap-1.5 border-border bg-muted/40">
                         <span>{countryFlags[country] || country}</span>
                         {country}
                       </Badge>

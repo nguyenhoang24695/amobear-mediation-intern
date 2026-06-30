@@ -26,29 +26,34 @@ function centerTop(containerHeight: number) {
 
 export function useDraggableVerticalFixed(
   storageKey: string,
-  options?: { capture?: boolean; bottomSafeAreaPx?: number },
+  options?: {
+    capture?: boolean
+    bottomSafeAreaPx?: number
+    defaultTop?: (containerHeight: number) => number
+  },
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [topPx, setTopPx] = useState<number | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
   const lastInteractionWasDragRef = useRef(false)
+  const bottomSafeAreaPx = options?.bottomSafeAreaPx ?? VIEWPORT_MARGIN_PX
+  const defaultTop = options?.defaultTop
 
   const clampTop = useCallback((top: number) => {
     const height = containerRef.current?.offsetHeight ?? 0
-    const bottomSafeAreaPx = options?.bottomSafeAreaPx ?? VIEWPORT_MARGIN_PX
     const maxTop = Math.max(VIEWPORT_MARGIN_PX, window.innerHeight - height - bottomSafeAreaPx)
     return Math.min(maxTop, Math.max(VIEWPORT_MARGIN_PX, top))
-  }, [options?.bottomSafeAreaPx])
+  }, [bottomSafeAreaPx])
 
   const syncTop = useCallback(
     (nextTop?: number) => {
       const height = containerRef.current?.offsetHeight ?? 0
-      const fallbackTop = centerTop(height)
+      const fallbackTop = defaultTop?.(height) ?? centerTop(height)
       const resolvedTop = clampTop(nextTop ?? readStoredTop(storageKey) ?? fallbackTop)
       setTopPx(resolvedTop)
       return resolvedTop
     },
-    [clampTop, storageKey],
+    [clampTop, defaultTop, storageKey],
   )
 
   useEffect(() => {
@@ -62,14 +67,14 @@ export function useDraggableVerticalFixed(
     const observer = new ResizeObserver(() => {
       setTopPx((prev) => {
         const height = containerRef.current?.offsetHeight ?? 0
-        const fallbackTop = centerTop(height)
+        const fallbackTop = defaultTop?.(height) ?? centerTop(height)
         const resolvedTop = prev ?? readStoredTop(storageKey) ?? fallbackTop
         return clampTop(resolvedTop)
       })
     })
     observer.observe(node)
     return () => observer.disconnect()
-  }, [clampTop, storageKey])
+  }, [clampTop, defaultTop, storageKey])
 
   useEffect(() => {
     const onResize = () => {
