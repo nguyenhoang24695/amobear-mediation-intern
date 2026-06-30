@@ -845,7 +845,7 @@ export function MyReportsContent() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <div className="px-6 pt-3 pb-1">
+      <div className="px-4 pb-1 pt-3 sm:px-6">
         <Link href="/reports" className="text-xs text-muted-foreground hover:text-primary">
           All reports
         </Link>
@@ -914,7 +914,7 @@ export function MyReportsContent() {
       />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className={cn("min-h-0 flex-1 overflow-auto", isMobile && "pb-28 pr-12")}>
           {emptyAppIntersection ? (
             <div className="px-6 py-12 text-center text-sm text-amber-700">
               No apps match the intersection of selected teams and app filters. Adjust filters and
@@ -1024,7 +1024,7 @@ export function MyReportsContent() {
         <>
           <div
             ref={mobileStickerRef}
-            className="fixed right-0 z-40 flex touch-none flex-col items-end"
+            className="fixed right-1 z-40 flex touch-none flex-col items-end sm:right-0"
             style={
               mobileStickerTop == null
                 ? { top: "50%", transform: "translateY(-50%)" }
@@ -1039,14 +1039,14 @@ export function MyReportsContent() {
                 setMobileFiltersOpen(true)
               }}
               className={cn(
-                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg active:cursor-grabbing",
+                "flex cursor-grab flex-col items-center gap-1.5 rounded-xl border border-border bg-card/95 px-1.5 py-2.5 shadow-lg backdrop-blur active:cursor-grabbing sm:rounded-l-xl sm:border-r-0 sm:py-3",
                 hasPendingApply && "ring-2 ring-primary/40",
               )}
               aria-label="Open filters and metrics"
             >
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span
-                className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[10px]"
                 style={{ writingMode: "vertical-rl" }}
               >
                 Filters & Metrics

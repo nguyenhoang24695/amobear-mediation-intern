@@ -164,7 +164,7 @@ export function MyReportTable({
 
   return (
     <div className="relative">
-      <table className="w-full text-sm">
+      <table className="w-max min-w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-card">
             {orderedColumns.map((column) => {
@@ -174,7 +174,8 @@ export function MyReportTable({
                   key={column.id}
                   style={stickyStyle(column.id)}
                   className={cn(
-                    "min-w-[120px] px-4 py-3 font-medium text-foreground",
+                    "px-4 py-3 font-medium text-foreground",
+                    column.kind === "metric" ? "min-w-[150px]" : "min-w-[132px]",
                     column.kind === "metric" ? "text-right" : "text-left",
                     stickyClass(column.id, "bg-card"),
                   )}
@@ -273,6 +274,7 @@ export function MyReportTable({
                     style={stickyStyle(column.id)}
                     className={cn(
                       "px-4 py-3 text-foreground",
+                      column.kind === "metric" ? "min-w-[150px]" : "min-w-[132px]",
                       column.kind === "metric" && "text-right tabular-nums",
                       stickyClass(column.id, "bg-background"),
                     )}
@@ -299,6 +301,7 @@ export function MyReportTable({
                 style={stickyStyle(column.id)}
                 className={cn(
                   "px-4 py-3 text-foreground",
+                  column.kind === "metric" ? "min-w-[150px]" : "min-w-[132px]",
                   column.kind === "metric" && "text-right tabular-nums",
                   stickyClass(column.id, "bg-muted"),
                 )}
@@ -330,7 +333,7 @@ export function MyReportTable({
       </table>
 
       {showReloadFab ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-8 z-30 flex justify-center">
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-center sm:bottom-8">
           <Button
             type="button"
             className="pointer-events-auto h-10 gap-2 rounded-full bg-primary px-5 shadow-lg hover:bg-primary/90"

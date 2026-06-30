@@ -187,7 +187,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <button
       onClick={() => handleSort(field)}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+      className="flex items-center gap-1 transition-colors hover:text-foreground"
     >
       {children}
       {sortField === field ? (
@@ -206,7 +206,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
     <TooltipProvider>
       <div className="flex flex-col gap-4">
         {useOwnFetch ? (
-          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300">
             Metrics từ <strong>bronze.mediation_table_bk</strong>, khoảng ngày đến <strong>{DEPRECATED_METRICS_MAX_YMD}</strong>.
           </p>
         ) : null}
@@ -215,7 +215,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
           {useOwnFetch ? (
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
-                <Label htmlFor="deprecated-mg-start" className="text-xs text-slate-600">
+                <Label htmlFor="deprecated-mg-start" className="text-xs text-muted-foreground">
                   Start date
                 </Label>
                 <Input
@@ -229,11 +229,11 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                     setStartDate(c)
                     if (c > endDate) setEndDate(c)
                   }}
-                  className="h-10 w-[158px] bg-white border-slate-200"
+                  className="h-10 w-[158px] bg-card"
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="deprecated-mg-end" className="text-xs text-slate-600">
+                <Label htmlFor="deprecated-mg-end" className="text-xs text-muted-foreground">
                   End date
                 </Label>
                 <Input
@@ -247,7 +247,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                     setEndDate(c)
                     if (startDate > c) setStartDate(c)
                   }}
-                  className="h-10 w-[158px] bg-white border-slate-200"
+                  className="h-10 w-[158px] bg-card"
                 />
               </div>
             </div>
@@ -256,23 +256,23 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
           )}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-end">
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search mediation groups..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 bg-white border-slate-200"
+                className="h-10 bg-card pl-9"
               />
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <Card className="border-slate-200 overflow-hidden">
+        <Card className="overflow-hidden border-border">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-xs text-slate-500 font-medium">
+              <thead className="border-b border-border bg-muted/60">
+                <tr className="text-xs font-medium text-muted-foreground">
                   <th className="px-4 py-3 text-left w-10">
                     <Checkbox
                       checked={
@@ -298,16 +298,16 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                   <th className="px-4 py-3 text-right w-24">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       Loading mediation groups...
                     </td>
                   </tr>
                 ) : paginatedGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       {searchQuery
                         ? "No mediation groups found matching your search."
                         : "No mediation groups found for this app."}
@@ -324,8 +324,8 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                       <tr
                         key={group.id}
                         className={cn(
-                          "hover:bg-slate-50 transition-colors",
-                          selectedGroups.includes(groupIdStr) && "bg-blue-50 hover:bg-blue-50",
+                          "transition-colors hover:bg-muted/50",
+                          selectedGroups.includes(groupIdStr) && "bg-primary/10 hover:bg-primary/10",
                           group.status === "Paused" && "opacity-60",
                         )}
                       >
@@ -338,7 +338,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                         <td className="px-4 py-3">
                           <Link
                             href={`/mediation/${group.mediationGroupId}`}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                            className="text-sm font-medium text-primary hover:underline"
                           >
                             {group.displayName || group.name || "Unnamed Mediation Group"}
                           </Link>
@@ -353,25 +353,25 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                           <MediationGroupTargetingCell countries={countries} />
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-medium text-slate-900">
+                          <span className="text-sm font-medium text-foreground">
                             {(group.revenue || 0) > 0 ? `$${(group.revenue || 0).toFixed(2)}` : "—"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-medium text-slate-900">
+                          <span className="text-sm font-medium text-foreground">
                             ${(group.ecpm || 0).toFixed(2)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           {group.status === "ENABLED" || !group.status ? (
-                            <Badge className="bg-green-100 text-green-700 border-0">Enabled</Badge>
+                            <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300">Enabled</Badge>
                           ) : (
-                            <Badge className="bg-slate-100 text-slate-600 border-0">Paused</Badge>
+                            <Badge className="border-0 bg-muted text-muted-foreground">Paused</Badge>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="outline" size="sm" className="h-8 text-xs gap-1 bg-transparent">
+                            <Button variant="outline" size="sm" className="h-8 gap-1 bg-background text-xs">
                               <Layers className="w-3 h-3" />
                               Waterfall
                             </Button>
@@ -393,7 +393,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="gap-2 text-amber-600">
+                                <DropdownMenuItem className="gap-2 text-amber-600 dark:text-amber-400">
                                   {group.status === "Active" || !group.status ? (
                                     <>
                                       <Pause className="w-4 h-4" />
@@ -406,7 +406,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                                     </>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-2 text-red-600">
+                                <DropdownMenuItem className="gap-2 text-destructive">
                                   <Trash2 className="w-4 h-4" />
                                   Delete
                                 </DropdownMenuItem>

@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { 
   Eye, EyeOff, Save, RefreshCw, CheckCircle, XCircle, 
-  Loader2, Lock, GripVertical, AlertTriangle, Zap
+  Loader2, Lock, GripVertical, AlertTriangle, Zap, ArrowUp, ArrowDown
 } from "lucide-react"
 import { 
   aiAssistantApi, 
@@ -113,18 +113,24 @@ function SortableItem({ id, idx, provider, onMoveUp, onMoveDown, isFirst, isLast
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50"
+      className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border bg-muted/50 p-3 sm:gap-3"
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
-      <span className="font-medium">{idx + 1}.</span>
-      <div className={`w-3 h-3 rounded-full ${PROVIDER_COLORS[id] || "bg-gray-500"}`} />
-      <span className="flex-1">{provider.displayName}</span>
-      {!provider.isConnected && (
-        <Badge variant="secondary" className="text-xs">not connected</Badge>
-      )}
-      <div className="flex gap-1">
+      <span className="w-6 text-center font-medium">{idx + 1}.</span>
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${PROVIDER_COLORS[id] || "bg-gray-500"}`} />
+            <span className="min-w-0 break-words font-medium leading-6 sm:truncate">{provider.displayName}</span>
+          </div>
+          {!provider.isConnected && (
+            <Badge variant="secondary" className="w-fit shrink-0 text-xs">not connected</Badge>
+          )}
+        </div>
+      </div>
+      <div className="flex shrink-0 gap-1">
         <Button
           variant="ghost"
           size="icon"
@@ -132,7 +138,7 @@ function SortableItem({ id, idx, provider, onMoveUp, onMoveDown, isFirst, isLast
           onClick={onMoveUp}
           disabled={isFirst}
         >
-          ↑
+          <ArrowUp className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -141,7 +147,7 @@ function SortableItem({ id, idx, provider, onMoveUp, onMoveDown, isFirst, isLast
           onClick={onMoveDown}
           disabled={isLast}
         >
-          ↓
+          <ArrowDown className="h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -730,17 +736,17 @@ export function AiSettingsContent() {
 
       <Separator className="my-8" />
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <CardTitle>Fallback Order</CardTitle>
               <CardDescription>
                 Kéo để sắp xếp thứ tự ưu tiên khi một provider gặp lỗi
               </CardDescription>
             </div>
             {savingFallback && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Đang lưu...
               </div>

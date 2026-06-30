@@ -289,24 +289,24 @@ export function KnowledgeBaseContent() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="space-y-6 overflow-hidden px-4 pb-28 pt-6 sm:px-6 sm:pb-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4 sm:items-center">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/ai-assistant">
                 <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-2xl font-semibold text-foreground">Knowledge Base</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="max-w-sm text-sm leading-6 text-muted-foreground">
                 Manage AI context entries for better SQL generation
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative w-64">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:shrink-0">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search entries..."
@@ -315,17 +315,17 @@ export function KnowledgeBaseContent() {
                 className="pl-9"
               />
             </div>
-            <Button onClick={handleOpenAdd}>
+            <Button className="w-full sm:w-auto" onClick={handleOpenAdd}>
               <Plus className="h-4 w-4 mr-2" />
               Add Entry
             </Button>
           </div>
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:gap-6">
           {/* Categories Sidebar */}
-          <div className="w-48 flex-shrink-0">
-            <nav className="space-y-1">
+          <div className="lg:w-48 lg:flex-shrink-0">
+            <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:mx-0 lg:block lg:space-y-1 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
@@ -334,7 +334,7 @@ export function KnowledgeBaseContent() {
                     setShowReviewQueue(false)
                   }}
                   className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
+                    "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors lg:w-full lg:shrink-0",
                     selectedCategory === cat.id && !showReviewQueue
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -344,11 +344,11 @@ export function KnowledgeBaseContent() {
                   {cat.label}
                 </button>
               ))}
-              <div className="my-2 border-t" />
+              <div className="mx-1 w-px shrink-0 bg-border lg:my-2 lg:h-px lg:w-auto lg:border-t lg:bg-transparent" />
               <button
                 onClick={() => setShowReviewQueue(true)}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors",
+                  "flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors lg:w-full lg:shrink-0",
                   showReviewQueue
                     ? "bg-amber-500/10 text-amber-700 font-medium dark:text-amber-300"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -368,7 +368,7 @@ export function KnowledgeBaseContent() {
           </div>
 
           {/* Entries List */}
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -399,8 +399,8 @@ export function KnowledgeBaseContent() {
                 )}
               </div>
             ) : (
-              <ScrollArea className="h-[calc(100vh-200px)]">
-                <div className="space-y-3 pr-4">
+              <ScrollArea className="h-[calc(100dvh-18rem)] min-h-[22rem] lg:h-[calc(100vh-200px)]">
+                <div className="space-y-3 pr-0 lg:pr-4">
                   {filteredEntries.map((entry) => (
                     <Card
                       key={entry.id}
@@ -410,8 +410,8 @@ export function KnowledgeBaseContent() {
                       )}
                     >
                       <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <h3 className="font-medium text-foreground">{entry.title}</h3>
                               <Badge
@@ -462,7 +462,7 @@ export function KnowledgeBaseContent() {
                               {entry.content}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1 ml-4 flex-shrink-0">
+                          <div className="flex shrink-0 items-center gap-1 sm:ml-4">
                             {showReviewQueue && entry.isUserSubmitted && !entry.isReviewed ? (
                               <>
                                 <Button

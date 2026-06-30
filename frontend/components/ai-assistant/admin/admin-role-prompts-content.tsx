@@ -58,7 +58,7 @@ const craftBadgeClass =
 const sectionPanelClass =
   "rounded-lg border bg-muted/25 p-4 transition-colors hover:bg-muted/35"
 const codeBlockClass =
-  "rounded-md border bg-background p-3 font-mono text-xs text-foreground/80 whitespace-pre-wrap"
+  "overflow-x-auto rounded-md border bg-background p-3 font-mono text-xs text-foreground/80 whitespace-pre-wrap"
 
 const emptyRoleForm = {
   roleKey: "",
@@ -311,20 +311,20 @@ export function AdminRolePromptsContent() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-muted/20 p-6">
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+      <div className="min-h-screen space-y-6 overflow-hidden bg-muted/20 px-4 pb-28 pt-6 sm:px-6 sm:pb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4 sm:items-center">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/ai-assistant">
                 <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
-                <Tag className="h-6 w-6 text-primary" />
+            <div className="min-w-0">
+              <h1 className="flex items-start gap-2 text-2xl font-semibold text-foreground sm:items-center">
+                <Tag className="mt-0.5 h-6 w-6 shrink-0 text-primary sm:mt-0" />
                 AI Role Prompt Management
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="max-w-md text-sm leading-6 text-muted-foreground">
                 Quản lý CRAFT prompts cho từng role, global rules và defaults
               </p>
             </div>
@@ -332,15 +332,15 @@ export function AdminRolePromptsContent() {
         </div>
 
         {/* Global Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <Card>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card className="border-border bg-card text-card-foreground">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
                   <Shield className="h-4 w-4 text-primary" />
                   Base Rules
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary" className="text-[10px]">v{baseRulesConfig?.version ?? 1}</Badge>
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/ai-assistant/admin/system-config">
@@ -358,14 +358,14 @@ export function AdminRolePromptsContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border bg-card text-card-foreground">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
                   <Settings className="h-4 w-4 text-primary" />
                   CRAFT Defaults
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary" className="text-[10px]">
                     F:v{formatDefaultConfig?.version ?? 1} T:v{toneDefaultConfig?.version ?? 1}
                   </Badge>
@@ -392,19 +392,21 @@ export function AdminRolePromptsContent() {
         </div>
 
         {/* Role Prompt Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex h-auto max-w-full flex-wrap justify-start">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0">
+          <div className="-mx-1 mb-6 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="h-auto w-max justify-start bg-muted">
             {roles.map((role) => (
-              <TabsTrigger key={role.roleKey} value={role.roleKey} className="gap-1.5">
+              <TabsTrigger key={role.roleKey} value={role.roleKey} className="shrink-0 gap-1.5">
                 {role.roleKey.toUpperCase()}
                 {!role.isActive && <span className="text-muted-foreground">(inactive)</span>}
               </TabsTrigger>
             ))}
-            <TabsTrigger value="__new" className="gap-1.5 text-muted-foreground" onClick={() => setShowCreateDialog(true)}>
+            <TabsTrigger value="__new" className="shrink-0 gap-1.5 text-muted-foreground" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4" />
               New Role
             </TabsTrigger>
           </TabsList>
+          </div>
 
           {/* New Role Placeholder */}
           <TabsContent value="__new">
@@ -426,7 +428,7 @@ export function AdminRolePromptsContent() {
           {/* Role Detail Tabs */}
           {roles.map((role) => (
             <TabsContent key={role.roleKey} value={role.roleKey}>
-              <Card>
+              <Card className="border-border bg-card text-card-foreground">
                 <CardHeader>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
@@ -442,7 +444,7 @@ export function AdminRolePromptsContent() {
                         v{role.version}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -457,6 +459,7 @@ export function AdminRolePromptsContent() {
                         onClick={() => handleToggleActive(role)}
                         disabled={isSaving}
                         className={cn(
+                          "shrink-0",
                           role.isActive
                             ? "bg-emerald-600 text-white hover:bg-emerald-700"
                             : "text-muted-foreground"
@@ -488,7 +491,7 @@ export function AdminRolePromptsContent() {
                     return (
                       <div key={key} className={sectionPanelClass}>
                         <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Badge
                               variant="outline"
                               className={craftBadgeClass}

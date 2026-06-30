@@ -141,7 +141,7 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-2xl">
         {/* Confirm State */}
         {modalState === "confirm" && (
           <>
@@ -150,29 +150,29 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <p className="text-sm text-slate-600">You are about to apply the following changes to AdMob:</p>
+              <p className="text-sm text-muted-foreground">You are about to apply the following changes to AdMob:</p>
 
               {/* Changes Summary Card */}
-              <div className="bg-slate-50 rounded-lg p-4 space-y-3 max-h-64 overflow-y-auto">
-                <h4 className="font-medium text-slate-900">Changes Summary</h4>
+              <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-border bg-muted/40 p-4">
+                <h4 className="font-medium text-foreground">Changes Summary</h4>
 
                 {/* eCPM Floors Modified */}
                 {effectiveChanges.floorsModified.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className="text-sm font-medium text-foreground">
                       {effectiveChanges.floorsModified.length} eCPM floors will be updated:
                     </p>
-                    <ul className="text-sm text-slate-600 space-y-1 ml-4">
+                    <ul className="ml-0 space-y-1 text-sm text-muted-foreground sm:ml-4">
                       {effectiveChanges.floorsModified.slice(0, 5).map((change) => (
-                        <li key={change.name} className="flex items-center gap-1">
-                          <span className="text-slate-500">{change.name}:</span>
-                          <span className="text-slate-400">${change.oldValue.toFixed(2)}</span>
-                          <ArrowRight className="w-3 h-3 text-slate-400" />
-                          <span className="font-medium text-slate-900">${change.newValue.toFixed(2)}</span>
+                        <li key={change.name} className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                          <span className="min-w-0 break-words text-muted-foreground">{change.name}:</span>
+                          <span className="text-muted-foreground">${change.oldValue.toFixed(2)}</span>
+                          <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className="font-medium text-foreground">${change.newValue.toFixed(2)}</span>
                         </li>
                       ))}
                       {effectiveChanges.floorsModified.length > 5 && (
-                        <li className="text-slate-500 italic">
+                        <li className="italic text-muted-foreground">
                           ...and {effectiveChanges.floorsModified.length - 5} more
                         </li>
                       )}
@@ -183,15 +183,17 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
                 {/* Sources Added — backend gọi AdMob batchCreate + batchCreateAdUnitMappings + patch (theo Dolphin) */}
                 {effectiveChanges.sourcesAdded.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-green-700">
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                       {effectiveChanges.sourcesAdded.length} sources will be added:
                     </p>
-                    <ul className="text-sm text-slate-600 space-y-1 ml-4">
+                    <ul className="ml-0 space-y-1 text-sm text-muted-foreground sm:ml-4">
                       {effectiveChanges.sourcesAdded.map((source) => (
-                        <li key={source.name} className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          <span>{source.name}</span>
-                          <span className="text-slate-400">at ${source.floor.toFixed(2)} floor</span>
+                        <li key={source.name} className="flex items-start gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                          <span className="min-w-0 break-words">
+                            {source.name}{" "}
+                            <span className="text-muted-foreground">at ${source.floor.toFixed(2)} floor</span>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -201,14 +203,14 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
                 {/* Sources Removed */}
                 {effectiveChanges.sourcesRemoved.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-red-700">
+                    <p className="text-sm font-medium text-destructive">
                       {effectiveChanges.sourcesRemoved.length} sources will be removed:
                     </p>
-                    <ul className="text-sm text-slate-600 space-y-1 ml-4">
+                    <ul className="ml-0 space-y-1 text-sm text-muted-foreground sm:ml-4">
                       {effectiveChanges.sourcesRemoved.map((source) => (
-                        <li key={source.name} className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                          <span className="line-through">{source.name}</span>
+                        <li key={source.name} className="flex items-start gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                          <span className="min-w-0 break-words line-through">{source.name}</span>
                         </li>
                       ))}
                     </ul>
@@ -218,46 +220,46 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
                 {effectiveChanges.floorsModified.length === 0 &&
                   effectiveChanges.sourcesAdded.length === 0 &&
                   effectiveChanges.sourcesRemoved.length === 0 && (
-                    <p className="text-sm text-slate-500 italic">No changes to apply</p>
+                    <p className="text-sm italic text-muted-foreground">No changes to apply</p>
                   )}
               </div>
 
               {mode === "direct" && (
-                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-slate-900">Apply for ad units</h4>
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-sm font-medium text-foreground">Apply for ad units</h4>
                     <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={toggleSelectAllAdUnits}>
                       {selectedAdUnitKeys.length === availableAdUnits.length ? "Clear all" : "Select all"}
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Only selected ad units will be affected by this apply.
                   </p>
-                  <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                  <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
                     {availableAdUnits.map((unit) => (
-                      <label key={unit.adUnitKey} className="flex items-start gap-2 rounded-md border border-slate-100 px-2 py-1.5">
+                      <label key={unit.adUnitKey} className="flex items-start gap-2 rounded-md border border-border bg-background px-2 py-1.5">
                         <Checkbox
                           checked={selectedAdUnitKeySet.has(unit.adUnitKey)}
                           onCheckedChange={() => toggleAdUnit(unit.adUnitKey)}
                         />
-                        <span className="text-sm text-slate-700">
+                        <span className="min-w-0 break-words text-sm text-foreground">
                           {unit.displayName}
                         </span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Selected: {selectedAdUnitKeys.length}/{availableAdUnits.length}
                   </p>
                 </div>
               )}
 
               {/* Warning Section */}
-              <div className="flex gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div className="flex gap-3 rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-700 dark:text-amber-300" />
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">This action will:</p>
-                  <ul className="text-sm text-slate-600 list-disc list-inside mt-1 space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground">This action will:</p>
+                  <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm text-muted-foreground">
                     <li>Update your AdMob mediation group immediately</li>
                     <li>Affect 100% of traffic for this ad unit</li>
                     <li>Changes will take effect within minutes</li>
@@ -267,18 +269,18 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
 
               {/* A/B Test Warning (if applicable) */}
               {mode === "direct" && (
-                <div className="bg-purple-50 rounded-lg p-3 text-sm text-purple-800 border border-purple-200">
+                <div className="rounded-lg border border-primary/25 bg-primary/10 p-3 text-sm text-foreground">
                   <strong>Note:</strong> If an A/B test is currently running, applying these changes will stop the test
                   and apply this configuration to all traffic.
                 </div>
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => void handleApply()} disabled={!canApplyDirect}>
+              <Button onClick={() => void handleApply()} disabled={!canApplyDirect}>
                 Apply Changes
               </Button>
             </DialogFooter>
@@ -287,46 +289,46 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
 
         {/* Loading State: Apply (1 request) → Sync → sau đó onSuccess đóng modal và reload */}
         {modalState === "loading" && (
-          <div className="py-8 px-4">
+          <div className="px-4 py-8">
             <DialogHeader className="mb-6">
               <DialogTitle className="text-center">Applying &amp; Syncing...</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 max-w-sm mx-auto">
+            <div className="mx-auto max-w-sm space-y-4">
               {PROCESS_STEPS.map((step, index) => {
                 const done = processStep > index
                 const current = processStep === index
                 return (
                   <div key={step.label} className="flex items-start gap-3 text-sm">
                     {done ? (
-                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600 dark:text-emerald-300" />
                     ) : current ? (
-                      <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0 mt-0.5" />
+                      <Loader2 className="mt-0.5 h-5 w-5 flex-shrink-0 animate-spin text-primary" />
                     ) : (
-                      <span className="w-5 h-5 rounded-full border-2 border-slate-200 flex-shrink-0 mt-0.5" />
+                      <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border-2 border-border" />
                     )}
-                    <div className={done ? "text-slate-700" : current ? "text-slate-900 font-medium" : "text-slate-400"}>
+                    <div className={done ? "text-foreground" : current ? "font-medium text-foreground" : "text-muted-foreground"}>
                       <p>{step.label}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{step.description}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{step.description}</p>
                     </div>
                   </div>
                 )
               })}
             </div>
 
-            <p className="text-center text-sm text-amber-600 mt-6">Please wait, do not close this window.</p>
+            <p className="mt-6 text-center text-sm text-amber-700 dark:text-amber-300">Please wait, do not close this window.</p>
           </div>
         )}
 
         {/* Success State (chỉ cho test-winner; direct mode đã gọi onSuccess và đóng modal) */}
         {modalState === "success" && (
-          <div className="py-12 px-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+          <div className="px-4 py-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-300" />
             </div>
             <DialogTitle className="mb-2">Done</DialogTitle>
-            <p className="text-sm text-slate-600 mb-6">The page will refresh.</p>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+            <p className="mb-6 text-sm text-muted-foreground">The page will refresh.</p>
+            <Button onClick={handleClose}>
               Done
             </Button>
           </div>
@@ -334,24 +336,24 @@ export function ApplyVariantModal({ open, onOpenChange, mode, mediationGroupId, 
 
         {/* Error State */}
         {modalState === "error" && (
-          <div className="py-12 px-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <XCircle className="w-8 h-8 text-red-600" />
+          <div className="px-4 py-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <XCircle className="h-8 w-8 text-destructive" />
             </div>
             <DialogTitle className="mb-2">Failed to Apply Changes</DialogTitle>
-            <p className="text-sm text-slate-600 mb-4">There was an error updating AdMob:</p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 max-w-sm mx-auto mb-2">
+            <p className="mb-4 text-sm text-muted-foreground">There was an error updating AdMob:</p>
+            <div className="mx-auto mb-2 max-w-sm break-words rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
               {errorMessage || "Unknown error. Please try again."}
             </div>
-            <p className="text-xs text-slate-500 mb-6">
+            <p className="mb-6 text-xs text-muted-foreground">
               Check AdMob token and network, then retry.
             </p>
 
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex flex-col-reverse justify-center gap-2 sm:flex-row sm:items-center sm:gap-3">
               <Button variant="outline" onClick={() => void handleApply()}>
                 Retry
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+              <Button onClick={handleClose}>
                 Close
               </Button>
             </div>

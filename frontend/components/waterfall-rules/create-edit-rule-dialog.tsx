@@ -175,7 +175,7 @@ export function CreateEditRuleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Rule" : "Create Rule"}
@@ -207,7 +207,7 @@ export function CreateEditRuleDialog({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="display-order">Display Order *</Label>
                   <Input
@@ -291,7 +291,7 @@ export function CreateEditRuleDialog({
               {/* SoW Range */}
               <div className="space-y-2">
                 <Label>SoW Range</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <Input
                       type="number"
@@ -319,7 +319,7 @@ export function CreateEditRuleDialog({
               {/* Match Rate Range */}
               <div className="space-y-2">
                 <Label>Match Rate Range</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <Input
                       type="number"
@@ -370,7 +370,7 @@ export function CreateEditRuleDialog({
                       setIsHighestFloor(v as "yes" | "no" | "any" | "")
                     }
                   >
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-full sm:w-32">
                       <SelectValue placeholder="Any" />
                     </SelectTrigger>
                     <SelectContent>
@@ -475,17 +475,17 @@ export function CreateEditRuleDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             variant="outline"
-            className="bg-transparent"
+            className="w-full bg-transparent sm:w-auto"
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
             Cancel
           </Button>
           <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-slate-900 text-white hover:bg-slate-800 sm:w-auto"
             onClick={handleSave}
             disabled={saving}
           >

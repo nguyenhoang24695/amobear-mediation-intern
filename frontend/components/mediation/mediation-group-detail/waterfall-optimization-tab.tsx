@@ -322,6 +322,9 @@ export function WaterfallOptimizationTab({
   const [savingPolicy, setSavingPolicy] = useState(false)
   const [policyConfirmOpen, setPolicyConfirmOpen] = useState(false)
 
+  const currentSetupHeaderClassName = "border-b border-border bg-[#00BAA7] p-4 text-white dark:bg-[#134E4A]"
+  const optimizedHeaderClassName = "bg-[#B922FF] p-4 text-white dark:bg-[#4C1D95]"
+
   useEffect(() => {
     if (applyPolicy?.applyMode) {
       setPolicyApplyMode(applyPolicy.applyMode)
@@ -1015,7 +1018,7 @@ export function WaterfallOptimizationTab({
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-6 pb-32 sm:pb-28">
+      <div className="flex flex-col gap-6 pb-64 sm:pb-36 lg:pb-28">
         <Card className="border-border">
           <CardHeader className="pb-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1079,11 +1082,11 @@ export function WaterfallOptimizationTab({
               </div>
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Apply source</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{applyPolicy?.lastApplySource ?? "—"}</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{applyPolicy?.lastApplySource ?? "—"}</p>
               </div>
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Interval</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{applyPolicy?.intervalDays ?? 7} days</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{applyPolicy?.intervalDays ?? 7} days</p>
                 {applyPolicy?.isDue && (
                   <Badge className="mt-2 border-0 bg-amber-500/15 text-amber-700 dark:text-amber-300">Due now</Badge>
                 )}
@@ -1095,18 +1098,18 @@ export function WaterfallOptimizationTab({
         {/* Section 1: Ad units + Optimization Status Banner (two columns like Current Setup / Optimized) */}
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Left column: Ad units */}
-          <Card className="border-slate-200 overflow-hidden">
+          <Card className="border-border overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle className="text-base font-semibold">Ad units</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="link" className="h-auto p-0 text-blue-600 text-sm" asChild>
+                  <Button variant="link" className="h-auto p-0 text-primary text-sm" asChild>
                     <a href={effectiveAppId ? `/apps/${effectiveAppId}` : "#"}>Add ad units</a>
                   </Button>
-                  <span className="text-slate-300">|</span>
+                  <span className="text-border">|</span>
                   <Button
                     variant="link"
-                    className={cn("h-auto p-0 text-sm", selectedAdUnitIds.length ? "text-slate-700" : "text-slate-400 cursor-not-allowed")}
+                    className={cn("h-auto p-0 text-sm", selectedAdUnitIds.length ? "text-foreground" : "text-muted-foreground cursor-not-allowed")}
                     disabled={selectedAdUnitIds.length === 0}
                   >
                     Remove
@@ -1116,7 +1119,7 @@ export function WaterfallOptimizationTab({
             </CardHeader>
             <CardContent className="p-0">
               {mediationAdUnitsFromMappings.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 text-sm">
+                <div className="py-12 text-center text-muted-foreground text-sm">
                   No ad units were found in this mediation group (`mediationGroupLines` / `adUnitMappings` are empty).
                 </div>
               ) : (
@@ -1124,24 +1127,24 @@ export function WaterfallOptimizationTab({
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b bg-slate-50/80">
+                        <tr className="border-b bg-muted/50">
                           <th className="w-10 px-3 py-2.5 text-left">
                             <input
                               type="checkbox"
-                              className="rounded border-slate-300"
+                              className="rounded border-border"
                               checked={paginatedAdUnits.length > 0 && selectedAdUnitIds.length === paginatedAdUnits.length}
                               onChange={toggleAllAdUnitsSelection}
                             />
                           </th>
-                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">Ad unit</th>
-                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">Ad Format</th>
-                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">App</th>
-                          <th className="px-3 py-2.5 text-left font-medium text-slate-700">
+                          <th className="px-3 py-2.5 text-left font-medium text-foreground">Ad unit</th>
+                          <th className="px-3 py-2.5 text-left font-medium text-foreground">Ad Format</th>
+                          <th className="px-3 py-2.5 text-left font-medium text-foreground">App</th>
+                          <th className="px-3 py-2.5 text-left font-medium text-foreground">
                             <span className="inline-flex items-center gap-1">
                               eCPM
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="text-slate-400 cursor-help"><HelpCircle className="w-3.5 h-3.5" /></span>
+                                  <span className="text-muted-foreground cursor-help"><HelpCircle className="w-3.5 h-3.5" /></span>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-xs">
                                   Effective CPM from ad unit performance (API apps/adunits).
@@ -1155,37 +1158,37 @@ export function WaterfallOptimizationTab({
                         {paginatedAdUnits.map((unit) => {
                           const details = adUnitDetailsByKey[unit.adUnitKey]
                           return (
-                            <tr key={unit.adUnitKey} className="border-b border-slate-100 hover:bg-slate-50/50">
+                            <tr key={unit.adUnitKey} className="border-b border-border hover:bg-muted/40">
                               <td className="w-10 px-3 py-2.5">
                                 <input
                                   type="checkbox"
-                                  className="rounded border-slate-300"
+                                  className="rounded border-border"
                                   checked={selectedAdUnitIds.includes(unit.adUnitKey)}
                                   onChange={() => toggleAdUnitSelection(unit.adUnitKey)}
                                 />
                               </td>
-                              <td className="px-3 py-2.5 font-medium text-slate-900">
+                              <td className="px-3 py-2.5 font-medium text-foreground">
                                 {loadingAppAdUnits && !details
                                   ? "Loading..."
                                   : (details?.displayName ?? unit.unitId)}
                               </td>
-                              <td className="px-3 py-2.5 text-slate-600">
+                              <td className="px-3 py-2.5 text-muted-foreground">
                                 {details?.adFormat ?? "—"}
                               </td>
                               <td className="px-3 py-2.5">
                                 <div className="flex items-center gap-2">
                                   {appIconUri ? (
-                                    <img src={appIconUri} alt="" className="w-8 h-8 rounded object-contain bg-slate-100" />
+                                    <img src={appIconUri} alt="" className="w-8 h-8 rounded object-contain bg-muted" />
                                   ) : (
-                                    <span className="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-slate-500 text-xs">App</span>
+                                    <span className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">App</span>
                                   )}
                                   <div>
-                                    <div className="font-medium text-slate-800">{appName || "—"}</div>
-                                    <div className="text-xs text-slate-500">{platform ? `${platform} • Free` : "—"}</div>
+                                    <div className="font-medium text-foreground">{appName || "—"}</div>
+                                    <div className="text-xs text-muted-foreground">{platform ? `${platform} • Free` : "—"}</div>
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-3 py-2.5 text-slate-600">
+                              <td className="px-3 py-2.5 text-muted-foreground">
                                 {details?.ecpm != null && details.ecpm > 0
                                   ? `$${details.ecpm.toFixed(2)}`
                                   : "—"}
@@ -1196,7 +1199,7 @@ export function WaterfallOptimizationTab({
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-t bg-slate-50/50 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-t bg-muted/40 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <span>Show rows:</span>
                       <Select value={String(adUnitsPageSize)} onValueChange={(v) => { setAdUnitsPageSize(Number(v)); setAdUnitsPage(1) }}>
@@ -1246,21 +1249,21 @@ export function WaterfallOptimizationTab({
               <>
                 {/* STATE A - Has Optimization Available */}
                 {bannerState === "optimization" && (
-                  <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-4 flex items-start gap-3 relative">
-                    <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="bg-primary/10 border-l-4 border-primary rounded-r-lg p-4 flex items-start gap-3 relative">
+                    <Lightbulb className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">Optimization Available</h3>
-                      <p className="text-sm text-slate-700 mt-0.5">
+                      <h3 className="font-semibold text-foreground">Optimization Available</h3>
+                      <p className="text-sm text-foreground mt-0.5">
                         Our analysis suggests changes that could increase eCPM by ~{changes.improvement}% ($
                         {(changes.estimatedMonthly - currentSetup.estimatedMonthly).toFixed(0)})
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Review recommendations in the lifecycle panel before pushing to production.
                       </p>
                       <div className="flex items-center gap-3 mt-3">
                         <Button
                           variant="link"
-                          className="h-auto p-0 text-blue-600"
+                          className="h-auto p-0 text-primary"
                           onClick={() => document.getElementById("changes-summary-card")?.scrollIntoView({ behavior: "smooth" })}
                         >
                           View Changes
@@ -1268,12 +1271,12 @@ export function WaterfallOptimizationTab({
                         <Button variant="outline" size="sm" className="h-8 bg-transparent" onClick={handleApplyDirectClick}>
                           Apply Direct
                         </Button>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={onRunABTest} disabled={!abTestingEnabled}>
+                        <Button size="sm" className="h-8 bg-primary text-primary-foreground hover:bg-primary/90" onClick={onRunABTest} disabled={!abTestingEnabled}>
                           Run A/B Test
                         </Button>
                       </div>
                     </div>
-                    <button onClick={() => setBannerDismissed(true)} className="text-slate-400 hover:text-slate-600">
+                    <button onClick={() => setBannerDismissed(true)} className="text-muted-foreground hover:text-foreground">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
@@ -1281,19 +1284,19 @@ export function WaterfallOptimizationTab({
 
                 {/* STATE B - A/B Test Running */}
                 {bannerState === "running" && (
-                  <div className="bg-purple-50 border-l-4 border-purple-500 rounded-r-lg p-4 flex items-start gap-3">
-                    <FlaskConical className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div className="bg-primary/10 border-l-4 border-primary rounded-r-lg p-4 flex items-start gap-3">
+                    <FlaskConical className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">A/B Test In Progress</h3>
-                      <p className="text-sm text-slate-700 mt-0.5">
+                      <h3 className="font-semibold text-foreground">A/B Test In Progress</h3>
+                      <p className="text-sm text-foreground mt-0.5">
                         Testing optimized waterfall • Day {testDay} of {testDuration} • Traffic split: 50/50
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Early results: Variant B (Optimized) leading by +8.2% eCPM
                       </p>
                       <Progress
                         value={(testDay / testDuration) * 100}
-                        className="h-2 mt-3 max-w-xs bg-purple-200 [&>div]:bg-purple-500"
+                        className="h-2 mt-3 max-w-xs bg-primary/20 [&>div]:bg-primary"
                       />
                     </div>
                     <Button variant="outline" size="sm" className="h-8 bg-transparent flex-shrink-0">
@@ -1304,14 +1307,14 @@ export function WaterfallOptimizationTab({
 
                 {/* STATE C - No Optimization Needed */}
                 {bannerState === "optimized" && (
-                  <div className="bg-green-50 border-l-4 border-green-500 rounded-r-lg p-4 flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-lg p-4 flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-300 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">Waterfall Optimized</h3>
-                      <p className="text-sm text-slate-700 mt-0.5">Current configuration is performing optimally</p>
-                      <p className="text-xs text-slate-500 mt-1">Re-run analysis anytime to refresh the suggested setup.</p>
+                      <h3 className="font-semibold text-foreground">Waterfall Optimized</h3>
+                      <p className="text-sm text-foreground mt-0.5">Current configuration is performing optimally</p>
+                      <p className="text-xs text-muted-foreground mt-1">Re-run analysis anytime to refresh the suggested setup.</p>
                     </div>
-                    <Button variant="link" className="h-auto p-0 text-green-600" onClick={() => void handleRerunRecommendation()}>
+                    <Button variant="link" className="h-auto p-0 text-emerald-600 dark:text-emerald-300" onClick={() => void handleRerunRecommendation()}>
                       Re-analyze Now
                     </Button>
                   </div>
@@ -1319,19 +1322,19 @@ export function WaterfallOptimizationTab({
 
                 {/* STATE D - Has Unsaved Changes */}
                 {bannerState === "unsaved" && (
-                  <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4 flex items-start gap-3">
-                    <Pencil className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="bg-amber-500/10 border-l-4 border-amber-500 rounded-r-lg p-4 flex items-start gap-3">
+                    <Pencil className="w-5 h-5 text-amber-700 dark:text-amber-300 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">Unsaved Changes</h3>
-                      <p className="text-sm text-slate-700 mt-0.5">
+                      <h3 className="font-semibold text-foreground">Unsaved Changes</h3>
+                      <p className="text-sm text-foreground mt-0.5">
                         You have modified the optimized waterfall configuration
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {changes.modifiedCount + changes.addedCount + changes.removedCount} changes pending • Don&apos;t forget
                         to apply or test
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <Button variant="link" className="h-auto p-0 text-red-600" onClick={discardAllChanges}>
+                        <Button variant="link" className="h-auto p-0 text-destructive" onClick={discardAllChanges}>
                           Discard Changes
                         </Button>
                         <Button variant="outline" size="sm" className="h-8 w-full bg-transparent sm:w-auto" onClick={handleApplyDirectClick}>
@@ -1348,22 +1351,22 @@ export function WaterfallOptimizationTab({
             )}
 
             {/* Rule Group Selection */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <div className="bg-muted/40 border border-border rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Settings className="w-4 h-4 text-slate-500" />
-                <h4 className="text-sm font-semibold text-slate-900">Recommendation Rule Group</h4>
+                <Settings className="w-4 h-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold text-foreground">Recommendation Rule Group</h4>
               </div>
               <div className="flex flex-col gap-3">
                 <Select
                   value={selectedRuleGroupId != null ? String(selectedRuleGroupId) : "none"}
                   onValueChange={handleRuleGroupChange}
                 >
-                  <SelectTrigger className="h-9 bg-white">
+                  <SelectTrigger className="h-9 bg-background">
                     <SelectValue placeholder="Select rule group..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">
-                      <span className="text-slate-500">No rule group (use default)</span>
+                      <span className="text-muted-foreground">No rule group (use default)</span>
                     </SelectItem>
                     {ruleGroups
                       .filter((g) => g.isActive)
@@ -1378,7 +1381,7 @@ export function WaterfallOptimizationTab({
                               />
                             )}
                             <span>{group.name}</span>
-                            <span className="text-xs text-slate-400">({group.ruleCount} rules)</span>
+                            <span className="text-xs text-muted-foreground">({group.ruleCount} rules)</span>
                             {group.isDefault && (
                               <Badge variant="outline" className="text-xs h-5 px-1.5">Default</Badge>
                             )}
@@ -1388,8 +1391,8 @@ export function WaterfallOptimizationTab({
                   </SelectContent>
                 </Select>
                 {appRuleGroupMapping?.effectiveGroupName ? (
-                  <p className="text-xs text-slate-500">
-                    Effective group: <span className="font-medium text-slate-700">{appRuleGroupMapping.effectiveGroupName}</span>
+                  <p className="text-xs text-muted-foreground">
+                    Effective group: <span className="font-medium text-foreground">{appRuleGroupMapping.effectiveGroupName}</span>
                     {appRuleGroupMapping.effectiveSource ? ` (${appRuleGroupMapping.effectiveSource})` : ""}
                   </p>
                 ) : null}
@@ -1432,7 +1435,7 @@ export function WaterfallOptimizationTab({
         <div className="space-y-4">
           {/* Header Row */}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Waterfall Configuration</h2>
+            <h2 className="text-lg font-semibold text-foreground">Waterfall Configuration</h2>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" className="h-9 bg-transparent" asChild>
                 <Link
@@ -1448,7 +1451,7 @@ export function WaterfallOptimizationTab({
                 </Link>
               </Button>
               <Select value={viewMode} onValueChange={setViewMode}>
-                <SelectTrigger className="w-[140px] h-9 bg-white">
+                <SelectTrigger className="w-[140px] h-9 bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1458,7 +1461,7 @@ export function WaterfallOptimizationTab({
                 </SelectContent>
               </Select>
               <Select value={showMode} onValueChange={setShowMode}>
-                <SelectTrigger className="w-[130px] h-9 bg-white">
+                <SelectTrigger className="w-[130px] h-9 bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1493,7 +1496,7 @@ export function WaterfallOptimizationTab({
                 Collapse All
               </Button>
               {hasManualChanges() && (
-                <Button variant="link" className="h-9 text-blue-600 gap-1" onClick={resetToAISuggestion}>
+                <Button variant="link" className="h-9 text-primary gap-1" onClick={resetToAISuggestion}>
                   <RotateCcw className="w-4 h-4" />
                   Reset to AI Suggestion
                 </Button>
@@ -1504,46 +1507,46 @@ export function WaterfallOptimizationTab({
           {/* Two-Column Layout */}
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {/* LEFT COLUMN - Current Setup (READ-ONLY) */}
-            <Card className="border-slate-200 overflow-hidden">
+            <Card className="border-border overflow-hidden">
               {/* Teal header */}
-              <div className="bg-teal-500 text-white p-4">
+              <div className={currentSetupHeaderClassName}>
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">CURRENT SETUP</h3>
-                      <Lock className="w-4 h-4 text-teal-200" />
+                      <h3 className="text-lg font-semibold">CURRENT SETUP</h3>
+                      <Lock className="w-4 h-4 text-white/80" />
                     </div>
-                    <p className="text-teal-100 text-sm">Variant A • Active • Read-only</p>
-                    <p className="text-teal-200 text-xs mt-1">Last updated: {formatUpdatedAt(updatedAt)}</p>
+                    <p className="text-sm text-white/80">Variant A • Active • Read-only</p>
+                    <p className="mt-1 text-xs text-white/70">Last updated: {formatUpdatedAt(updatedAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-teal-100">Estimated Monthly</p>
-                    <p className="text-2xl font-bold">${currentSetup.estimatedMonthly}</p>
+                    <p className="text-xs text-white/70">Estimated Monthly</p>
+                    <p className="text-2xl font-bold text-white">${currentSetup.estimatedMonthly}</p>
                   </div>
                 </div>
               </div>
               <CardContent className="p-4 space-y-4">
                 {/* Bidding Section */}
                 <Collapsible open={currentBiddingOpen} onOpenChange={setCurrentBiddingOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-slate-50 rounded-md">
-                    <span className="text-sm font-medium text-slate-700">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/40 rounded-md">
+                    <span className="text-sm font-medium text-foreground">
                       Bidding ({currentSetup.bidding.length} sources)
                     </span>
                     {currentBiddingOpen ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
                     {currentSetup.bidding.map((source) => (
-                      <div key={source.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                        <Check className="w-4 h-4 text-green-500" />
+                      <div key={source.id} className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-300" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-900">{source.name}</p>
-                          <p className="text-xs text-slate-500">No floor • Active</p>
+                          <p className="text-sm font-medium text-foreground">{source.name}</p>
+                          <p className="text-xs text-muted-foreground">No floor • Active</p>
                         </div>
-                        <p className="text-sm text-slate-600">7D: ${source.ecpm7d.toFixed(2)} eCPM</p>
+                        <p className="text-sm text-muted-foreground">7D: ${source.ecpm7d.toFixed(2)} eCPM</p>
                       </div>
                     ))}
                   </CollapsibleContent>
@@ -1551,14 +1554,14 @@ export function WaterfallOptimizationTab({
 
                 {/* Waterfall Section */}
                 <Collapsible open={currentWaterfallOpen} onOpenChange={setCurrentWaterfallOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-slate-50 rounded-md">
-                    <span className="text-sm font-medium text-slate-700">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/40 rounded-md">
+                    <span className="text-sm font-medium text-foreground">
                       Waterfall ({currentSetup.waterfall.length} sources)
                     </span>
                     {currentWaterfallOpen ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
@@ -1567,22 +1570,22 @@ export function WaterfallOptimizationTab({
                         ?? (source.network ? matchRateFromMediationLines.byAdSourceId[source.network] : undefined)
                         ?? (source.network ? matchRateByAdSourceId[source.network] : undefined)
                       return (
-                        <div key={source.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                          <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-medium flex items-center justify-center">
+                        <div key={source.id} className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+                          <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-medium flex items-center justify-center">
                             {index + 1}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900">{source.name}</p>
-                            <p className="text-xs text-slate-500">${source.floor.toFixed(2)}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">Updated: {formatUpdatedAt(updatedAt)}</p>
+                            <p className="text-sm font-medium text-foreground">{source.name}</p>
+                            <p className="text-xs text-muted-foreground">${source.floor.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Updated: {formatUpdatedAt(updatedAt)}</p>
                           </div>
                           <div className="shrink-0 flex flex-col items-end gap-0.5">
-                            <p className="text-sm text-slate-600">eCPM: ${source.ecpm.toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground">eCPM: ${source.ecpm.toFixed(2)}</p>
                             {matchRate != null && !Number.isNaN(matchRate) ? (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <p className="text-xs text-slate-500 cursor-help">MR: {matchRate.toFixed(1)}%</p>
+                                    <p className="text-xs text-muted-foreground cursor-help">MR: {matchRate.toFixed(1)}%</p>
                                   </TooltipTrigger>
                                   <TooltipContent side="left">
                                     <p>Match rate: requests with ads returned divided by total requests.</p>
@@ -1590,7 +1593,7 @@ export function WaterfallOptimizationTab({
                                 </Tooltip>
                               </TooltipProvider>
                             ) : null}
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                               Revenue 30D: {source.revenue30Days != null ? `$${source.revenue30Days.toFixed(2)}` : "—"}
                             </p>
                           </div>
@@ -1603,28 +1606,30 @@ export function WaterfallOptimizationTab({
             </Card>
 
             {/* RIGHT COLUMN - Optimized Suggested (EDITABLE) */}
-            <Card className="border-slate-200 overflow-hidden">
+            <Card className="border-border overflow-hidden">
               {/* Purple header */}
-              <div className="bg-purple-500 text-white p-4">
+              <div className={optimizedHeaderClassName}>
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">OPTIMIZED (Suggested)</h3>
-                      <Pencil className="w-4 h-4 text-purple-200" />
+                      <h3 className="text-lg font-semibold">OPTIMIZED (Suggested)</h3>
+                      <Pencil className="w-4 h-4 text-white/80" />
                       {hasManualChanges() && (
-                        <Badge className="bg-amber-400 text-amber-900 border-0 text-xs">Unsaved changes</Badge>
+                        <Badge className="border-0 bg-violet-100 text-violet-700 dark:bg-violet-400/20 dark:text-violet-100 text-xs">
+                          Unsaved changes
+                        </Badge>
                       )}
                     </div>
-                    <p className="text-purple-200 text-sm">Variant B • Editable</p>
+                    <p className="text-sm text-white/80">Variant B • Editable</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-purple-200">Estimated Monthly</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs text-white/70">Estimated Monthly</p>
+                    <p className="text-2xl font-bold text-white">
                       ${changes.estimatedMonthly}{" "}
                       <span
                         className={cn(
                           "text-sm",
-                          Number.parseFloat(changes.improvement) >= 0 ? "text-green-300" : "text-red-300",
+                          Number.parseFloat(changes.improvement) >= 0 ? "text-emerald-300" : "text-destructive",
                         )}
                       >
                         ({Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}
@@ -1637,14 +1642,14 @@ export function WaterfallOptimizationTab({
               <CardContent className="p-4 space-y-4">
                 {/* Bidding Section */}
                 <Collapsible open={optimizedBiddingOpen} onOpenChange={setOptimizedBiddingOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-slate-50 rounded-md">
-                    <span className="text-sm font-medium text-slate-700">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/40 rounded-md">
+                    <span className="text-sm font-medium text-foreground">
                       Bidding ({optimizedBidding.filter((s) => s.changeType !== "removed").length} sources)
                     </span>
                     {optimizedBiddingOpen ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
@@ -1653,23 +1658,23 @@ export function WaterfallOptimizationTab({
                         key={source.id}
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-lg group",
-                          source.changeType === "new" ? "bg-green-50" : "bg-slate-50",
+                          source.changeType === "new" ? "bg-emerald-500/10" : "bg-muted/40",
                         )}
                       >
-                        <Switch checked={source.status === "active"} disabled className="data-[state=checked]:bg-green-500" />
+                        <Switch checked={source.status === "active"} disabled className="data-[state=checked]:bg-emerald-500" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-slate-900">{source.name}</p>
+                            <p className="text-sm font-medium text-foreground">{source.name}</p>
                             {source.changeType === "new" && (
-                              <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
+                              <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-0 text-xs">NEW</Badge>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             No floor • {source.status === "active" ? "Active" : "Inactive"}
                           </p>
                         </div>
-                        <p className="text-sm text-slate-600">7D: ${source.ecpm7d.toFixed(2)} eCPM</p>
-                        <button className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity">
+                        <p className="text-sm text-muted-foreground">7D: ${source.ecpm7d.toFixed(2)} eCPM</p>
+                        <button className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -1677,7 +1682,7 @@ export function WaterfallOptimizationTab({
                     {/* Add Bidding Source Button */}
                     <button
                       disabled={!biddingEditingEnabled}
-                      className="flex items-center gap-2 w-full cursor-not-allowed p-3 border-2 border-dashed border-slate-200 rounded-lg text-sm text-slate-400"
+                      className="flex items-center gap-2 w-full cursor-not-allowed p-3 border-2 border-dashed border-border rounded-lg text-sm text-muted-foreground"
                     >
                       <Plus className="w-4 h-4" />
                       Add Bidding Source (Coming soon)
@@ -1687,14 +1692,14 @@ export function WaterfallOptimizationTab({
 
                 {/* Waterfall Section */}
                 <Collapsible open={optimizedWaterfallOpen} onOpenChange={setOptimizedWaterfallOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-slate-50 rounded-md">
-                    <span className="text-sm font-medium text-slate-700">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/40 rounded-md">
+                    <span className="text-sm font-medium text-foreground">
                       Waterfall ({optimizedWaterfall.filter((s) => s.changeType !== "removed").length} sources)
                     </span>
                     {optimizedWaterfallOpen ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     )}
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 space-y-2">
@@ -1716,20 +1721,20 @@ export function WaterfallOptimizationTab({
                           onDragOver={(e) => handleDragOver(e, index)}
                           onDragEnd={handleDragEnd}
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg group transition-all",
-                            isRemoved && "bg-red-50 opacity-60",
-                            isModified && !isRemoved && "bg-amber-50",
-                            isNew && !isRemoved && "bg-green-50",
-                            !isRemoved && !isModified && !isNew && "bg-slate-50",
+                            "flex flex-wrap items-center gap-3 p-3 rounded-lg group transition-all",
+                            isRemoved && "bg-destructive/10 opacity-60",
+                            isModified && !isRemoved && "bg-amber-500/10",
+                            isNew && !isRemoved && "bg-emerald-500/10",
+                            !isRemoved && !isModified && !isNew && "bg-muted/40",
                             dragOverIndex === index &&
                               draggedItemId !== source.id &&
-                              "border-2 border-purple-400 border-dashed",
+                              "border-2 border-primary border-dashed",
                             draggedItemId === source.id && "opacity-50",
                           )}
                         >
                           {/* Drag Handle */}
                           {!isRemoved && manualReorderEnabled && (
-                            <div className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
                               <GripVertical className="w-4 h-4" />
                             </div>
                           )}
@@ -1739,36 +1744,36 @@ export function WaterfallOptimizationTab({
                           <span
                             className={cn(
                               "w-6 h-6 rounded-full text-xs font-medium flex items-center justify-center",
-                              isRemoved ? "bg-red-200 text-red-600 line-through" : "bg-purple-100 text-purple-600",
+                              isRemoved ? "bg-destructive/20 text-destructive line-through" : "bg-primary/10 text-primary",
                             )}
                           >
                             {isRemoved ? "-" : displayIndex}
                           </span>
 
                           {/* Source Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
                               {hasRecommendationTooltip ? (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span className="inline-flex items-center gap-2 cursor-help">
+                                    <span className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2 cursor-help">
                                       <p
                                         className={cn(
-                                          "text-sm font-medium text-slate-900",
-                                          isRemoved && "line-through text-slate-400",
+                                          "min-w-0 break-words text-sm font-medium text-foreground",
+                                          isRemoved && "line-through text-muted-foreground",
                                         )}
                                       >
                                         {source.name}
                                       </p>
                                       {isNew && (
-                                        <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
+                                        <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-0 text-xs">NEW</Badge>
                                       )}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
                                     {hasReason && <p className="text-sm">{source.reason}</p>}
                                     {hasRecommendationMetrics && (
-                                      <p className={cn("text-xs text-slate-500", hasReason && "mt-1 border-t border-slate-200 pt-1")}>
+                                      <p className={cn("text-xs text-muted-foreground", hasReason && "mt-1 border-t border-border pt-1")}>
                                         SoW: {source.sowPercent != null ? `${Number(source.sowPercent).toFixed(2)}%` : "—"} • MR: {source.matchRatePercent != null ? `${Number(source.matchRatePercent).toFixed(1)}%` : "—"}
                                       </p>
                                     )}
@@ -1778,23 +1783,23 @@ export function WaterfallOptimizationTab({
                                 <>
                                   <p
                                     className={cn(
-                                      "text-sm font-medium text-slate-900",
-                                      isRemoved && "line-through text-slate-400",
+                                      "min-w-0 break-words text-sm font-medium text-foreground",
+                                      isRemoved && "line-through text-muted-foreground",
                                     )}
                                   >
                                     {source.name}
                                   </p>
                                   {isNew && !isRemoved && (
-                                    <Badge className="bg-green-100 text-green-700 border-0 text-xs">NEW</Badge>
+                                    <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-0 text-xs">NEW</Badge>
                                   )}
                                 </>
                               )}
                               {isModified && !isRemoved && (
-                                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">MODIFIED</Badge>
+                                <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-0 text-xs">MODIFIED</Badge>
                               )}
-                              {isRemoved && <Badge className="bg-red-100 text-red-700 border-0 text-xs">REMOVED</Badge>}
+                              {isRemoved && <Badge className="bg-destructive/10 text-destructive border-0 text-xs">REMOVED</Badge>}
                               {source.recommendationAction && source.recommendationAction !== "KEEP" && (
-                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                                <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/10">
                                   {source.recommendationAction}
                                 </Badge>
                               )}
@@ -1804,7 +1809,7 @@ export function WaterfallOptimizationTab({
                             <div className="flex items-center gap-2">
                               {editingFloorId === source.id ? (
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs text-slate-500">$</span>
+                                  <span className="text-xs text-muted-foreground">$</span>
                                   <Input
                                     type="number"
                                     step="0.01"
@@ -1812,7 +1817,7 @@ export function WaterfallOptimizationTab({
                                     onChange={(e) => setEditingFloorValue(e.target.value)}
                                     onKeyDown={(e) => handleFloorKeyDown(e, source.id)}
                                     onBlur={() => saveFloorEdit(source.id)}
-                                    className="h-6 w-24 text-xs px-1 ring-2 ring-blue-500"
+                                    className="h-6 w-24 text-xs px-1 ring-2 ring-ring"
                                     autoFocus
                                   />
                                 </div>
@@ -1823,8 +1828,8 @@ export function WaterfallOptimizationTab({
                                   className={cn(
                                     "text-xs flex items-center gap-1",
                                     isRemoved
-                                      ? "text-slate-400 line-through cursor-not-allowed"
-                                      : "text-slate-500 hover:text-blue-600 hover:underline cursor-pointer",
+                                      ? "text-muted-foreground line-through cursor-not-allowed"
+                                      : "text-muted-foreground hover:text-primary hover:underline cursor-pointer",
                                   )}
                                 >
                                   ${source.floor.toFixed(2)}
@@ -1832,7 +1837,7 @@ export function WaterfallOptimizationTab({
                                 </button>
                               )}
                               {isModified && source.originalFloor && !isRemoved && (
-                                <span className="text-xs text-slate-400 line-through">
+                                <span className="text-xs text-muted-foreground line-through">
                                   Was: ${source.originalFloor.toFixed(2)}
                                 </span>
                               )}
@@ -1840,7 +1845,12 @@ export function WaterfallOptimizationTab({
                           </div>
 
                           {/* Actual eCPM */}
-                          <p className={cn("text-sm text-slate-600", isRemoved && "line-through text-slate-400")}>
+                          <p
+                            className={cn(
+                              "order-last w-full pl-10 text-xs text-muted-foreground sm:pl-16",
+                              isRemoved && "line-through text-muted-foreground",
+                            )}
+                          >
                             7D: ${source.ecpm.toFixed(2)}
                           </p>
 
@@ -1850,7 +1860,7 @@ export function WaterfallOptimizationTab({
                               checked={source.status === "active"}
                               onCheckedChange={() => toggleSourceStatus(source.id)}
                               disabled={!manualStatusToggleEnabled}
-                              className="data-[state=checked]:bg-green-500"
+                              className="data-[state=checked]:bg-emerald-500"
                             />
                           )}
 
@@ -1858,7 +1868,7 @@ export function WaterfallOptimizationTab({
                           {isRemoved ? (
                             <button
                               onClick={() => undoRemoval(source.id)}
-                              className="text-blue-600 hover:text-blue-700 text-xs flex items-center gap-1"
+                              className="text-primary hover:text-primary/80 text-xs flex items-center gap-1"
                             >
                               <Undo2 className="w-3.5 h-3.5" />
                               Undo
@@ -1868,7 +1878,7 @@ export function WaterfallOptimizationTab({
                               <TooltipTrigger asChild>
                                 <button
                                   onClick={() => markSourceRemoved(source.id)}
-                                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1886,7 +1896,7 @@ export function WaterfallOptimizationTab({
                         setAddSourceType("waterfall")
                         setAddSourceModalOpen(true)
                       }}
-                      className="flex items-center gap-2 w-full p-3 border-2 border-dashed border-slate-200 rounded-lg text-sm text-slate-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                      className="flex items-center gap-2 w-full p-3 border-2 border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/10 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                       Add Waterfall Source
@@ -1899,15 +1909,15 @@ export function WaterfallOptimizationTab({
         </div>
 
         {/* Section 3: Changes Summary Card */}
-        <Card className="border-slate-200" id="changes-summary-card">
+        <Card className="border-border" id="changes-summary-card">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-slate-500" />
-                <CardTitle className="text-base font-semibold text-slate-900">Changes Summary</CardTitle>
+                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-base font-semibold text-foreground">Changes Summary</CardTitle>
               </div>
               {!changes.hasChanges && (
-                <Badge variant="outline" className="text-slate-500">
+                <Badge variant="outline" className="text-muted-foreground">
                   No changes
                 </Badge>
               )}
@@ -1915,34 +1925,34 @@ export function WaterfallOptimizationTab({
           </CardHeader>
           <CardContent className="pt-0">
             {changes.hasChanges ? (
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <ul className="space-y-1.5 text-sm text-slate-700">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div className="min-w-0 space-y-2">
+                  <ul className="space-y-1.5 text-sm text-foreground">
                     {changes.modifiedCount > 0 && (
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <li className="flex items-start gap-2">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
                         {changes.modifiedCount} eCPM floors modified (avg {changes.avgFloorIncrease >= 0 ? "+" : ""}$
                         {changes.avgFloorIncrease.toFixed(2)})
                       </li>
                     )}
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    <li className="flex items-start gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
                       {changes.addedCount} sources added
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <li className="flex items-start gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
                       {changes.removedCount} sources removed
                     </li>
                     <li
                       className={cn(
-                        "flex items-center gap-2 font-medium",
-                        Number.parseFloat(changes.improvement) >= 0 ? "text-green-600" : "text-red-600",
+                        "flex items-start gap-2 font-medium",
+                        Number.parseFloat(changes.improvement) >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-destructive",
                       )}
                     >
                       <span
                         className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          Number.parseFloat(changes.improvement) >= 0 ? "bg-green-500" : "bg-red-500",
+                          "mt-2 h-1.5 w-1.5 shrink-0 rounded-full",
+                          Number.parseFloat(changes.improvement) >= 0 ? "bg-emerald-500" : "bg-destructive",
                         )}
                       />
                       Estimated impact: {Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}$
@@ -1952,52 +1962,52 @@ export function WaterfallOptimizationTab({
                     </li>
                   </ul>
                 </div>
-                <div className="space-y-4">
+                <div className="min-w-0 space-y-4">
                   {/* Confidence Score */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Recommendation Workflow</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground">Recommendation Workflow</span>
                       {hasManualChanges() ? (
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 text-slate-400">
+                          <TooltipTrigger className="flex items-center gap-1 text-muted-foreground">
                             <span>Review needed</span>
                             <AlertCircle className="w-3.5 h-3.5" />
                           </TooltipTrigger>
                           <TooltipContent>Manual edits should be reviewed against approved recommendations before apply.</TooltipContent>
                         </Tooltip>
                       ) : (
-                        <span className="font-medium text-slate-900">Tracked</span>
+                        <span className="font-medium text-foreground">Tracked</span>
                       )}
                     </div>
                     {!hasManualChanges() && (
                       <>
                         <Progress value={100} className="h-2" />
-                        <p className="text-xs text-slate-500">Approve/apply history is tracked in the lifecycle panel.</p>
+                        <p className="text-xs text-muted-foreground">Approve/apply history is tracked in the lifecycle panel.</p>
                       </>
                     )}
-                    {hasManualChanges() && <p className="text-xs text-slate-500">Manual floor/add/remove changes applied</p>}
+                    {hasManualChanges() && <p className="text-xs text-muted-foreground">Manual floor/add/remove changes applied</p>}
                   </div>
 
                   {/* Mini Comparison Table */}
-                  <div className="border border-slate-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead className="bg-slate-50">
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="min-w-[560px] w-full text-xs">
+                      <thead className="bg-muted/40">
                         <tr>
-                          <th className="text-left p-2 font-medium text-slate-600">Metric</th>
-                          <th className="text-right p-2 font-medium text-slate-600">Current</th>
-                          <th className="text-right p-2 font-medium text-slate-600">Optimized</th>
-                          <th className="text-right p-2 font-medium text-slate-600">Change</th>
+                          <th className="whitespace-nowrap p-2 text-left font-medium text-muted-foreground">Metric</th>
+                          <th className="whitespace-nowrap p-2 text-right font-medium text-muted-foreground">Current</th>
+                          <th className="whitespace-nowrap p-2 text-right font-medium text-muted-foreground">Optimized</th>
+                          <th className="whitespace-nowrap p-2 text-right font-medium text-muted-foreground">Change</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-t border-slate-100">
-                          <td className="p-2 text-slate-700">Est. Monthly Revenue</td>
-                          <td className="p-2 text-right text-slate-600">${currentSetup.estimatedMonthly}</td>
-                          <td className="p-2 text-right text-slate-900 font-medium">${changes.estimatedMonthly}</td>
+                        <tr className="border-t border-border">
+                          <td className="p-2 text-foreground">Est. Monthly Revenue</td>
+                          <td className="p-2 text-right text-muted-foreground">${currentSetup.estimatedMonthly}</td>
+                          <td className="p-2 text-right text-foreground font-medium">${changes.estimatedMonthly}</td>
                           <td
                             className={cn(
                               "p-2 text-right font-medium",
-                              Number.parseFloat(changes.improvement) >= 0 ? "text-green-600" : "text-red-600",
+                              Number.parseFloat(changes.improvement) >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-destructive",
                             )}
                           >
                             {Number.parseFloat(changes.improvement) >= 0 ? "+" : ""}$
@@ -2006,30 +2016,30 @@ export function WaterfallOptimizationTab({
                             {changes.improvement}%)
                           </td>
                         </tr>
-                        <tr className="border-t border-slate-100">
-                          <td className="p-2 text-slate-700">Waterfall Sources</td>
-                          <td className="p-2 text-right text-slate-600">{currentSetup.waterfall.length}</td>
-                          <td className="p-2 text-right text-slate-900 font-medium">
+                        <tr className="border-t border-border">
+                          <td className="p-2 text-foreground">Waterfall Sources</td>
+                          <td className="p-2 text-right text-muted-foreground">{currentSetup.waterfall.length}</td>
+                          <td className="p-2 text-right text-foreground font-medium">
                             {optimizedWaterfall.filter((s) => s.changeType !== "removed").length}
                           </td>
                           <td
                             className={cn(
                               "p-2 text-right font-medium",
-                              changes.addedCount - changes.removedCount >= 0 ? "text-green-600" : "text-red-600",
+                              changes.addedCount - changes.removedCount >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-destructive",
                             )}
                           >
                             {changes.addedCount - changes.removedCount >= 0 ? "+" : ""}
                             {changes.addedCount - changes.removedCount}
                           </td>
                         </tr>
-                        <tr className="border-t border-slate-100">
-                          <td className="p-2 text-slate-700">Avg eCPM Floor</td>
-                          <td className="p-2 text-right text-slate-600">${currentAvgFloor.toFixed(2)}</td>
-                          <td className="p-2 text-right text-slate-900 font-medium">${optimizedAvgFloor.toFixed(2)}</td>
+                        <tr className="border-t border-border">
+                          <td className="p-2 text-foreground">Avg eCPM Floor</td>
+                          <td className="p-2 text-right text-muted-foreground">${currentAvgFloor.toFixed(2)}</td>
+                          <td className="p-2 text-right text-foreground font-medium">${optimizedAvgFloor.toFixed(2)}</td>
                           <td
                             className={cn(
                               "p-2 text-right font-medium",
-                              optimizedAvgFloor - currentAvgFloor >= 0 ? "text-green-600" : "text-red-600",
+                              optimizedAvgFloor - currentAvgFloor >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-destructive",
                             )}
                           >
                             {optimizedAvgFloor - currentAvgFloor >= 0 ? "+" : ""}$
@@ -2043,34 +2053,34 @@ export function WaterfallOptimizationTab({
               </div>
             ) : (
               <div className="text-center py-6">
-                <p className="text-slate-600">No changes from current configuration</p>
-                <p className="text-sm text-slate-500 mt-1">Modify the optimized waterfall or use AI suggestions</p>
+                <p className="text-muted-foreground">No changes from current configuration</p>
+                <p className="text-sm text-muted-foreground mt-1">Modify the optimized waterfall or use AI suggestions</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Section 4: Sticky Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 p-4 shadow-lg backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:pl-[240px]">
-            <div className="flex flex-wrap items-center gap-4">
+        <div className="fixed bottom-20 left-0 right-0 z-50 border-t border-border bg-background/95 px-3 pb-3 pt-3 shadow-lg backdrop-blur sm:bottom-0 sm:px-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pt-4">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:pl-[240px]">
+            <div className="min-w-0 text-center lg:text-left">
               {changes.hasChanges && (
-                <Button variant="link" className="text-red-600 h-auto p-0" onClick={discardAllChanges}>
+                <Button variant="link" className="h-auto min-h-9 p-0 text-destructive" onClick={discardAllChanges}>
                   Discard All Changes
                 </Button>
               )}
               {!changes.hasChanges && <span className="text-sm text-muted-foreground">Make changes to enable actions</span>}
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center lg:gap-3">
               <Button
                 variant="outline"
-                className="w-full bg-transparent sm:w-auto"
+                className="w-full bg-transparent lg:w-auto"
                 onClick={handleApplyDirectClick}
                 disabled={!changes.hasChanges}
               >
                 Apply Direct
               </Button>
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={onRunABTest} disabled={!changes.hasChanges || !abTestingEnabled}>
+              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 lg:w-auto" onClick={onRunABTest} disabled={!changes.hasChanges || !abTestingEnabled}>
                 Run A/B Test
               </Button>
             </div>

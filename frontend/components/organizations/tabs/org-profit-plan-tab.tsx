@@ -150,10 +150,10 @@ function hasPlanData(plan?: TeamMonthlyProfitPlan | null): boolean {
 }
 
 function getStatus(completion?: number | null) {
-  if (completion == null) return { label: "No target", className: "bg-slate-100 text-slate-600" }
-  if (completion >= 100) return { label: "Achieved", className: "bg-green-100 text-green-700" }
-  if (completion >= 80) return { label: "On track", className: "bg-blue-100 text-blue-700" }
-  return { label: "Behind", className: "bg-amber-100 text-amber-700" }
+  if (completion == null) return { label: "No target", className: "bg-muted text-muted-foreground" }
+  if (completion >= 100) return { label: "Achieved", className: "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300" }
+  if (completion >= 80) return { label: "On track", className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" }
+  return { label: "Behind", className: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300" }
 }
 
 function sanitizeFileNamePart(value: string) {
@@ -228,10 +228,10 @@ const APP_COLUMN_MIN_WIDTH = 96
 const APP_COLUMN_MAX_WIDTH = 420
 
 const APP_COLUMN_BASE_CLASS =
-  "sticky left-0 z-10 border-r-2 border-slate-300 bg-white px-2 py-1.5 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]"
+  "sticky left-0 z-10 border-r-2 border-border bg-card px-2 py-1.5 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.22)]"
 
 const APP_HEADER_BASE_CLASS =
-  "sticky left-0 top-0 z-30 border-r-2 border-slate-300 bg-slate-50/95 px-2 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]"
+  "sticky left-0 top-0 z-30 border-r-2 border-border bg-muted/95 px-2 align-bottom shadow-[4px_0_8px_-4px_rgba(15,23,42,0.22)]"
 
 function AppColumnResizeHandle({ onMouseDown }: { onMouseDown: (event: MouseEvent) => void }) {
   return (
@@ -243,12 +243,12 @@ function AppColumnResizeHandle({ onMouseDown }: { onMouseDown: (event: MouseEven
       className="group/handle absolute -right-1.5 top-0 bottom-0 z-40 flex w-4 cursor-col-resize touch-none items-center justify-center"
       onMouseDown={onMouseDown}
     >
-      <div className="absolute inset-y-2 right-1/2 w-0.5 translate-x-1/2 rounded-full bg-slate-300 transition-colors group-hover/handle:bg-blue-500 group-active/handle:w-1 group-active/handle:bg-blue-600" />
+      <div className="absolute inset-y-2 right-1/2 w-0.5 translate-x-1/2 rounded-full bg-border transition-colors group-hover/handle:bg-primary group-active/handle:w-1 group-active/handle:bg-primary" />
       <div
         className={cn(
-          "relative flex h-7 w-4 items-center justify-center rounded border-2 border-slate-300 bg-white text-slate-500 shadow-sm",
-          "transition-colors group-hover/handle:border-blue-400 group-hover/handle:text-blue-600",
-          "group-active/handle:border-blue-500 group-active/handle:bg-blue-50",
+          "relative flex h-7 w-4 items-center justify-center rounded border-2 border-border bg-background text-muted-foreground shadow-sm",
+          "transition-colors group-hover/handle:border-primary/60 group-hover/handle:text-primary",
+          "group-active/handle:border-primary group-active/handle:bg-primary/10",
         )}
       >
         <ArrowLeftRight className="h-3 w-3 shrink-0" aria-hidden />
@@ -258,7 +258,7 @@ function AppColumnResizeHandle({ onMouseDown }: { onMouseDown: (event: MouseEven
 }
 
 const METRIC_HEADER_CLASS =
-  "sticky top-[72px] z-20 border-r border-slate-200 bg-slate-50/95 text-right text-xs font-medium text-slate-600"
+  "sticky top-[72px] z-20 border-r border-border bg-muted/95 text-right text-xs font-medium text-muted-foreground"
 
 function renderMonthMetricCell(
   columnId: RevenuePlanColumnId,
@@ -273,8 +273,8 @@ function renderMonthMetricCell(
 
   const status = getStatus(hasPlan ? plan?.completionPercent : null)
   const edgeBorderClass = cn(
-    isFirst && "border-l border-slate-200",
-    isLast && "border-r border-slate-200",
+    isFirst && "border-l border-border",
+    isLast && "border-r border-border",
   )
 
   switch (columnId) {
@@ -297,7 +297,7 @@ function renderMonthMetricCell(
               {plan?.completionPercent == null ? "—" : `${plan.completionPercent.toFixed(2)}%`}
             </Badge>
           ) : (
-            <span className="text-sm text-slate-400">—</span>
+            <span className="text-sm text-muted-foreground">—</span>
           )}
         </TableCell>
       )
@@ -318,7 +318,7 @@ function renderMonthMetricCell(
             column.minWidthClass,
             edgeBorderClass,
             "text-right text-sm tabular-nums",
-            plan ? getActualProfitClass(plan.actualProfit) : "text-slate-500",
+            plan ? getActualProfitClass(plan.actualProfit) : "text-muted-foreground",
           )}
         >
           {plan ? formatCurrency(plan.actualProfit) : "—"}
@@ -332,20 +332,20 @@ function renderMonthMetricCell(
             column.minWidthClass,
             edgeBorderClass,
             "text-right text-sm tabular-nums",
-            plan ? getNetProfitMarginClass(netProfitMargin) : "text-slate-500",
+            plan ? getNetProfitMarginClass(netProfitMargin) : "text-muted-foreground",
           )}
         >
           {plan ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+                <span className="cursor-default underline decoration-dotted decoration-muted-foreground/40 underline-offset-2">
                   {formatNetProfitMarginDisplay(netProfitMargin)}
                 </span>
               </TooltipTrigger>
               <TooltipContent side="top">{formatNetProfitMarginTooltip(netProfitMargin)}</TooltipContent>
             </Tooltip>
           ) : (
-            <span className="text-slate-400">—</span>
+            <span className="text-muted-foreground">—</span>
           )}
         </TableCell>
       )
@@ -366,14 +366,14 @@ function renderAggregatedMetricCell(
 
   const status = getStatus(metrics.hasAnyPlan ? metrics.completion : null)
   const edgeBorderClass = cn(
-    isFirst && cn("border-l", options?.isTrailingTotal ? "border-l-2 border-slate-400" : "border-slate-200"),
-    isLast && "border-r border-slate-200",
+    isFirst && cn("border-l", options?.isTrailingTotal ? "border-l-2 border-border" : "border-border"),
+    isLast && "border-r border-border",
   )
   const cellClassName = cn(
     column.minWidthClass,
     edgeBorderClass,
     "text-right text-sm tabular-nums",
-    options?.isTotalRow ? "bg-slate-100/80 font-semibold" : options?.isTrailingTotal ? "bg-slate-50/80" : "",
+    options?.isTotalRow ? "bg-muted/80 font-semibold" : options?.isTrailingTotal ? "bg-muted/40" : "",
   )
 
   switch (columnId) {
@@ -391,13 +391,13 @@ function renderAggregatedMetricCell(
       )
     case "completion":
       return (
-        <TableCell key={columnId} className={cn(column.minWidthClass, edgeBorderClass, "text-right", options?.isTotalRow && "bg-slate-100/80")}>
+        <TableCell key={columnId} className={cn(column.minWidthClass, edgeBorderClass, "text-right", options?.isTotalRow && "bg-muted/80")}>
           {metrics.hasAnyPlan && metrics.completion != null ? (
             <Badge className={cn("w-fit font-semibold", status.className)} variant="secondary">
               {metrics.completion.toFixed(2)}%
             </Badge>
           ) : (
-            <span className={cn("text-sm", options?.isTotalRow ? "font-semibold text-slate-400" : "text-slate-400")}>—</span>
+            <span className={cn("text-sm", options?.isTotalRow ? "font-semibold text-muted-foreground" : "text-muted-foreground")}>—</span>
           )}
         </TableCell>
       )
@@ -424,7 +424,7 @@ function renderAggregatedMetricCell(
         >
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+              <span className="cursor-default underline decoration-dotted decoration-muted-foreground/40 underline-offset-2">
                 {formatNetProfitMarginDisplay(metrics.netProfitMargin)}
               </span>
             </TooltipTrigger>
@@ -970,12 +970,12 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
 
   return (
     <>
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-6">
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Target className="h-5 w-5 shrink-0 text-blue-600" />
+                <Target className="h-5 w-5 shrink-0 text-primary" />
                 Revenue Plan
               </CardTitle>
               <CardDescription className="mt-1.5">
@@ -989,7 +989,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 shrink-0 bg-white"
+                  className="h-9 w-9 shrink-0 bg-background"
                   onClick={() => setMonthRange((current) => shiftMonthRange(current, -1))}
                   aria-label="Previous month"
                   title="Previous month"
@@ -1001,7 +1001,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 shrink-0 bg-white"
+                  className="h-9 w-9 shrink-0 bg-background"
                   onClick={() => setMonthRange((current) => shiftMonthRange(current, 1))}
                   aria-label="Next month"
                   title="Next month"
@@ -1016,7 +1016,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-28 md:pb-6">
           <div className="flex min-h-0 gap-0">
             <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -1046,7 +1046,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="App name, App Store ID, or AdMob App ID"
-                  className="w-full bg-white sm:w-[280px]"
+                  className="w-full bg-background sm:w-[280px]"
                 />
               </div>
             </div>
@@ -1057,7 +1057,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   <Button
                     type="button"
                     variant={hasPendingLoad ? "default" : "outline"}
-                    className={cn(!hasPendingLoad && "bg-white")}
+                    className={cn("min-w-[148px]", !hasPendingLoad && "bg-background")}
                     onClick={() => void handleLoadData()}
                     disabled={loading || loadingFilterTeams}
                   >
@@ -1080,7 +1080,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   <Button
                     type="button"
                     variant="outline"
-                    className="bg-white"
+                    className="bg-background"
                     onClick={() => void handleExportData()}
                     disabled={loading || exportingData || !hasLoadedData || appRows.length === 0 || exportTeamSelectionBlocked}
                   >
@@ -1099,7 +1099,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       <Button
                         type="button"
                         variant="outline"
-                        className="bg-white"
+                        className="bg-background"
                         onClick={() => void handleExportTemplate()}
                         disabled={exportingTemplate}
                       >
@@ -1113,7 +1113,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button type="button" variant="outline" className="bg-white" onClick={() => setImportOpen(true)}>
+                      <Button type="button" variant="outline" className="bg-background" onClick={() => setImportOpen(true)}>
                         <Upload className="mr-2 h-4 w-4" />
                         Import Excel
                       </Button>
@@ -1130,7 +1130,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                     type="button"
                     variant={columnSidebarOpen ? "secondary" : "outline"}
                     size="icon"
-                    className="h-9 w-9 shrink-0 bg-white"
+                    className="h-9 w-9 shrink-0 bg-background"
                     onClick={() => setColumnSidebarOpen((open) => !open)}
                     aria-label={columnSidebarOpen ? "Hide column settings" : "Show column settings"}
                     aria-pressed={columnSidebarOpen}
@@ -1144,11 +1144,11 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           </div>
 
           {!hasLoadedData && !loading ? (
-            <div className="rounded-lg border border-slate-200">
+            <div className="rounded-lg border border-border bg-muted/30">
               <div className="flex min-h-[min(50vh,400px)] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-                <p className="max-w-md text-sm text-slate-500">
+                <p className="max-w-md text-sm text-muted-foreground">
                   Chọn khoảng tháng{canScopeManagedTeams ? ", team" : ""} và bấm{" "}
-                  <span className="font-medium text-slate-700">Load Data</span> để tải bảng revenue plan.
+                  <span className="font-medium text-foreground">Load Data</span> để tải bảng revenue plan.
                 </p>
                 <Button type="button" onClick={() => void handleLoadData()} disabled={loadingFilterTeams}>
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -1157,21 +1157,21 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               </div>
             </div>
           ) : loading ? (
-            <div className="flex min-h-[min(50vh,400px)] items-center justify-center py-10 text-sm text-slate-500">
+            <div className="flex min-h-[min(50vh,400px)] items-center justify-center py-10 text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Loading revenue plans...
             </div>
           ) : (
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
               <div
                 className={cn(
-                  "max-h-[min(70vh,720px)] overflow-auto",
+                  "max-h-[min(70vh,720px)] overflow-auto bg-card",
                   isAppColumnResizing && "select-none",
                 )}
               >
-                <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
+                <table className="min-w-[980px] w-full caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
-                    <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                    <TableRow className="bg-muted/95 hover:bg-muted/95">
                       <TableHead
                         rowSpan={3}
                         className={cn(APP_HEADER_BASE_CLASS, isAppColumnResizing && "select-none")}
@@ -1186,7 +1186,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                         <TableHead
                           key={month}
                           colSpan={visibleColumnCount}
-                          className="sticky top-0 z-20 border-b border-r border-slate-200 bg-slate-50/95 text-center text-xs font-semibold text-slate-700"
+                          className="sticky top-0 z-20 border-b border-r border-border bg-muted/95 text-center text-xs font-semibold text-foreground"
                           style={{ minWidth: `${Math.max(visibleColumnCount * 80, 160)}px` }}
                         >
                           {formatMonthTableHeader(month)}
@@ -1194,19 +1194,19 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       ))}
                       <TableHead
                         colSpan={visibleColumnCount}
-                        className="sticky top-0 z-20 border-b border-l-2 border-r border-slate-400 bg-slate-100/95 text-center text-xs font-semibold text-slate-800"
+                        className="sticky top-0 z-20 border-b border-l-2 border-r border-border bg-muted text-center text-xs font-semibold text-foreground"
                         style={{ minWidth: `${Math.max(visibleColumnCount * 80, 160)}px` }}
                       >
                         Total
                       </TableHead>
                     </TableRow>
-                    <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                    <TableRow className="bg-muted/95 hover:bg-muted/95">
                       {monthKeys.map((month) => (
                         <Fragment key={`${month}-groups`}>
                           {visibleRevenueColumnCount > 0 ? (
                             <TableHead
                               colSpan={visibleRevenueColumnCount}
-                              className="sticky top-10 z-20 border-b border-r border-l border-slate-200 bg-blue-50/80 text-center text-xs font-semibold text-blue-700"
+                              className="sticky top-10 z-20 border-b border-r border-l border-border bg-blue-50/90 text-center text-xs font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
                             >
                               Revenue
                             </TableHead>
@@ -1214,7 +1214,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           {visiblePerformanceColumnCount > 0 ? (
                             <TableHead
                               colSpan={visiblePerformanceColumnCount}
-                              className="sticky top-10 z-20 border-b border-r border-slate-200 bg-emerald-50/80 text-center text-xs font-semibold text-emerald-700"
+                              className="sticky top-10 z-20 border-b border-r border-border bg-emerald-50/90 text-center text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                             >
                               Performance
                             </TableHead>
@@ -1225,7 +1225,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                         {visibleRevenueColumnCount > 0 ? (
                           <TableHead
                             colSpan={visibleRevenueColumnCount}
-                            className="sticky top-10 z-20 border-b border-r border-l-2 border-slate-400 bg-blue-50/90 text-center text-xs font-semibold text-blue-700"
+                            className="sticky top-10 z-20 border-b border-r border-l-2 border-border bg-blue-50/90 text-center text-xs font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
                           >
                             Revenue
                           </TableHead>
@@ -1233,14 +1233,14 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                         {visiblePerformanceColumnCount > 0 ? (
                           <TableHead
                             colSpan={visiblePerformanceColumnCount}
-                            className="sticky top-10 z-20 border-b border-r border-slate-200 bg-emerald-50/90 text-center text-xs font-semibold text-emerald-700"
+                            className="sticky top-10 z-20 border-b border-r border-border bg-emerald-50/90 text-center text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                           >
                             Performance
                           </TableHead>
                         ) : null}
                       </Fragment>
                     </TableRow>
-                    <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                    <TableRow className="bg-muted/95 hover:bg-muted/95">
                       {monthKeys.map((month) => (
                         <Fragment key={`${month}-metrics`}>
                           {visibleColumns.map((column, index) => (
@@ -1265,9 +1265,9 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                             className={cn(
                               METRIC_HEADER_CLASS,
                               column.minWidthClass,
-                              index === 0 && "border-l-2 border-slate-400",
+                              index === 0 && "border-l-2 border-border",
                               index === visibleColumns.length - 1 && "border-r",
-                              "bg-slate-100/95",
+                              "bg-muted",
                             )}
                           >
                             {column.label}
@@ -1281,7 +1281,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       <TableRow>
                         <TableCell
                           colSpan={1 + monthKeys.length * visibleColumnCount + visibleColumnCount}
-                          className="py-10 text-center text-sm text-slate-500"
+                          className="py-10 text-center text-sm text-muted-foreground"
                         >
                           {searchQuery.trim()
                             ? "No revenue plans match your search."
@@ -1290,11 +1290,11 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                       </TableRow>
                     ) : (
                       <>
-                        <TableRow className="bg-slate-100/80 hover:bg-slate-100/80">
+                        <TableRow className="bg-muted/80 hover:bg-muted/80">
                           <TableCell
                             className={cn(
                               APP_COLUMN_BASE_CLASS,
-                              "bg-slate-100 font-bold text-slate-900",
+                              "bg-muted font-bold text-foreground",
                               isAppColumnResizing && "select-none",
                             )}
                             style={appColumnStyle}
@@ -1322,7 +1322,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           )
 
                           return (
-                        <TableRow key={row.appStoreId} className="hover:bg-slate-50/60">
+                        <TableRow key={row.appStoreId} className="hover:bg-muted/50">
                           <TableCell
                             className={cn(APP_COLUMN_BASE_CLASS, isAppColumnResizing && "select-none")}
                             style={appColumnStyle}
@@ -1346,8 +1346,8 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                               <Fragment key={`${row.appStoreId}-${month}`}>
                                 {visibleColumns.map((column, index) => {
                                   const edgeBorderClass = cn(
-                                    index === 0 && "border-l border-slate-200",
-                                    index === visibleColumns.length - 1 && "border-r border-slate-200",
+                                    index === 0 && "border-l border-border",
+                                    index === visibleColumns.length - 1 && "border-r border-border",
                                   )
 
                                   if (column.id === "planned") {
@@ -1394,7 +1394,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                 </table>
               </div>
               {appRows.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
+                <div className="flex flex-wrap items-center gap-3 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <span>Rows per page</span>
                     <Select
@@ -1404,7 +1404,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                         setCurrentPage(1)
                       }}
                     >
-                      <SelectTrigger className="h-8 w-20 bg-white text-xs">
+                      <SelectTrigger className="h-8 w-20 bg-background text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1426,7 +1426,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8 bg-white"
+                          className="h-8 w-8 bg-background"
                           onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                           disabled={currentPage <= 1}
                           aria-label="Previous page"
@@ -1440,7 +1440,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8 bg-white"
+                          className="h-8 w-8 bg-background"
                           onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                           disabled={currentPage >= totalPages}
                           aria-label="Next page"
@@ -1488,7 +1488,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               }}
             />
             {parsingImport ? (
-              <div className="flex items-center text-sm text-slate-500">
+              <div className="flex items-center text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Reading file and preparing preview...
               </div>

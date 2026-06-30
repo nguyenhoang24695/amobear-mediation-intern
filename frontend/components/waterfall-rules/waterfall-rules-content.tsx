@@ -30,20 +30,20 @@ export function WaterfallRulesContent() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="space-y-1">
         <h1 className="text-balance text-2xl font-bold text-foreground lg:text-3xl">Waterfall Config</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="max-w-3xl text-sm text-muted-foreground">
           Manage reusable rule configs, rule groups, and recommendation rules for waterfall optimization.
         </p>
       </div>
 
-      <div className="border-b">
-        <div className="flex gap-0">
+      <div className="border-b border-border">
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:gap-0">
           {canViewConfigs && (
             <button
               type="button"
               onClick={() => setActiveTab("configs")}
-              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex min-w-max items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors sm:min-w-0 ${
                 activeTab === "configs"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -65,7 +65,7 @@ export function WaterfallRulesContent() {
             <button
               type="button"
               onClick={() => setActiveTab("rules")}
-              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex min-w-max items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors sm:min-w-0 ${
                 activeTab === "rules"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -78,14 +78,16 @@ export function WaterfallRulesContent() {
         </div>
       </div>
 
-      {activeTab === "configs" ? (
-        <WaterfallConfigsPanel
-          canManageConfigs={canManageConfigs}
-          canManageApplyPolicies={canManageApplyPolicies}
-        />
-      ) : (
-        <WaterfallRulesPanel canManageRules={canManageRules} />
-      )}
+      <div className="min-w-0">
+        {activeTab === "configs" ? (
+          <WaterfallConfigsPanel
+            canManageConfigs={canManageConfigs}
+            canManageApplyPolicies={canManageApplyPolicies}
+          />
+        ) : (
+          <WaterfallRulesPanel canManageRules={canManageRules} />
+        )}
+      </div>
     </div>
   )
 }

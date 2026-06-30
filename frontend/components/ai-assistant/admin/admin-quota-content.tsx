@@ -190,8 +190,8 @@ export function AdminQuotaContent() {
   if (loading && !teamUsage) {
     return (
       <DashboardLayout>
-        <div className="p-6 flex items-center justify-center min-h-[200px]">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <div className="flex min-h-[200px] items-center justify-center p-6">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     )
@@ -199,20 +199,20 @@ export function AdminQuotaContent() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+      <div className="space-y-6 overflow-hidden px-4 pb-28 pt-6 sm:px-6 sm:pb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4 sm:items-center">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/ai-assistant">
                 <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-2xl font-semibold  flex items-center gap-2">
-                <Settings className="h-6 w-6" />
+            <div className="min-w-0">
+              <h1 className="flex items-start gap-2 text-2xl font-semibold text-foreground sm:items-center">
+                <Settings className="mt-0.5 h-6 w-6 shrink-0 sm:mt-0" />
                 Token Quota Management
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="max-w-md text-sm leading-6 text-muted-foreground">
                 Admin dashboard for managing team AI usage quotas
               </p>
             </div>
@@ -220,8 +220,8 @@ export function AdminQuotaContent() {
         </div>
 
         {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="py-4 flex items-center gap-2 text-red-800">
+          <Card className="border-destructive/25 bg-destructive/10">
+            <CardContent className="flex flex-col gap-3 py-4 text-destructive sm:flex-row sm:items-center">
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={() => setError(null)}>Đóng</Button>
             </CardContent>
@@ -229,46 +229,46 @@ export function AdminQuotaContent() {
         )}
 
         {/* Team Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card className="border-border bg-card text-card-foreground">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="rounded-lg bg-primary/10 p-2">
                   <Zap className="h-5 w-5 text-blue-600" />
                 </div>
-                <div>
-                  <p className="text-sm text-slate-500">Total Today</p>
-                  <p className="text-xl font-bold text-slate-900">
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Total Today</p>
+                  <p className="break-words text-xl font-bold text-foreground">
                     {(totalTodayTokens / 1000).toFixed(0)}K tokens
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border bg-card text-card-foreground">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 rounded-lg">
+                <div className="rounded-lg bg-emerald-500/10 p-2">
                   <DollarSign className="h-5 w-5 text-emerald-600" />
                 </div>
-                <div>
-                  <p className="text-sm text-slate-500">Cost Today</p>
-                  <p className="text-xl font-bold text-slate-900">
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Cost Today</p>
+                  <p className="break-words text-xl font-bold text-foreground">
                     ${totalTodayCost.toFixed(2)}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border bg-card text-card-foreground">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="rounded-lg bg-purple-500/10 p-2">
                   <Users className="h-5 w-5 text-purple-600" />
                 </div>
-                <div>
-                  <p className="text-sm text-slate-500">Total This Month</p>
-                  <p className="text-xl font-bold text-slate-900">
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Total This Month</p>
+                  <p className="break-words text-xl font-bold text-foreground">
                     {(totalMonthTokens / 1000000).toFixed(1)}M tokens | ${totalMonthCost.toFixed(2)}
                   </p>
                 </div>
@@ -278,11 +278,11 @@ export function AdminQuotaContent() {
         </div>
 
         {/* Users Table */}
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="border-border bg-card text-card-foreground">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base font-medium">User Usage</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
                 value={searchQuery}
@@ -293,9 +293,10 @@ export function AdminQuotaContent() {
           </CardHeader>
           <CardContent>
             {filteredMembers.length === 0 ? (
-              <p className="text-sm text-slate-500 py-4">Chưa có user nào có usage trong tháng hoặc có quota override.</p>
+              <p className="py-4 text-sm text-muted-foreground">Chưa có user nào có usage trong tháng hoặc có quota override.</p>
             ) : (
-              <Table>
+              <div className="overflow-x-auto">
+              <Table className="min-w-[720px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
@@ -313,16 +314,16 @@ export function AdminQuotaContent() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                              <AvatarFallback className="bg-muted text-xs text-muted-foreground">
                                 {m.fullName
                                   .split(" ")
                                   .map((n) => n[0])
                                   .join("") || m.email[0]?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="font-medium text-slate-900">{m.fullName || m.email}</p>
-                              <p className="text-xs text-slate-500">{m.role}</p>
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-foreground">{m.fullName || m.email}</p>
+                              <p className="text-xs text-muted-foreground">{m.role}</p>
                             </div>
                           </div>
                         </TableCell>
@@ -345,29 +346,31 @@ export function AdminQuotaContent() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Quota Configuration */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="border-border bg-card text-card-foreground">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base font-medium">Quota Configuration</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAddOverride(true)}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={() => setShowAddOverride(true)}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add User Override
               </Button>
-              <Button variant="outline" size="sm" onClick={load}>
+              <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={load}>
                 Refresh
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {quotaConfigs.length === 0 ? (
-              <p className="text-sm text-slate-500 py-4">Chưa có cấu hình quota. Chạy migration seed để có global default.</p>
+              <p className="py-4 text-sm text-muted-foreground">Chưa có cấu hình quota. Chạy migration seed để có global default.</p>
             ) : (
-              <Table>
+              <div className="overflow-x-auto">
+              <Table className="min-w-[720px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scope</TableHead>
@@ -382,7 +385,7 @@ export function AdminQuotaContent() {
                     <TableRow key={config.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-900">{scopeDisplayLabel(config)}</span>
+                          <span className="font-medium text-foreground">{scopeDisplayLabel(config)}</span>
                           {config.scopeType === "user" && (
                             <Badge variant="outline" className="text-xs">Override</Badge>
                           )}
@@ -406,7 +409,7 @@ export function AdminQuotaContent() {
                             disabled={deletingId === config.id}
                             onClick={() => handleDelete(config.id)}
                           >
-                            {deletingId === config.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-red-600" />}
+                            {deletingId === config.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
                           </Button>
                         )}
                       </TableCell>
@@ -414,6 +417,7 @@ export function AdminQuotaContent() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

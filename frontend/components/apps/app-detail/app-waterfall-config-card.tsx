@@ -38,9 +38,9 @@ function getSourceLabel(source: string) {
 }
 
 function getSourceBadgeClass(source: string) {
-  if (source === "direct") return "bg-blue-100 text-blue-700"
-  if (source === "global") return "bg-emerald-100 text-emerald-700"
-  return "bg-slate-100 text-slate-700"
+  if (source === "direct") return "border border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+  if (source === "global") return "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+  return "border border-border/70 bg-muted/40 text-foreground"
 }
 
 export function AppWaterfallConfigCard({ app, canManage, refreshKey = 0 }: AppWaterfallConfigCardProps) {
@@ -124,12 +124,12 @@ export function AppWaterfallConfigCard({ app, canManage, refreshKey = 0 }: AppWa
 
   return (
     <>
-      <Card className="border-slate-200">
+      <Card className="border-border/70 bg-card/90 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold text-slate-900">Waterfall Config</CardTitle>
-              <CardDescription className="text-sm text-slate-500">
+              <CardTitle className="text-base font-semibold text-foreground">Waterfall Config</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 Effective config resolution for this app.
               </CardDescription>
             </div>
@@ -150,44 +150,44 @@ export function AppWaterfallConfigCard({ app, canManage, refreshKey = 0 }: AppWa
           {effectiveConfigData?.config ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Source</span>
+                <span className="text-sm text-muted-foreground">Source</span>
                 <Badge variant="secondary" className={getSourceBadgeClass(effectiveConfigData.source)}>
                   {getSourceLabel(effectiveConfigData.source)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Config</span>
-                <span className="text-right text-sm font-medium text-slate-900">
+                <span className="text-sm text-muted-foreground">Config</span>
+                <span className="text-right text-sm font-medium text-foreground">
                   {effectiveConfigData.config.configName}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Recommendations</span>
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm text-muted-foreground">Recommendations</span>
+                <span className="text-sm font-medium text-foreground">
                   {effectiveConfigData.config.minRecommendations} - {effectiveConfigData.config.maxRecommendations}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Min Match Rate</span>
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm text-muted-foreground">Min Match Rate</span>
+                <span className="text-sm font-medium text-foreground">
                   {Number(effectiveConfigData.config.minMatchRatePercent).toFixed(2)}%
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Min SoW</span>
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm text-muted-foreground">Min SoW</span>
+                <span className="text-sm font-medium text-foreground">
                   {Number(effectiveConfigData.config.minSowPercent).toFixed(2)}%
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500">Rule Group</span>
-                <span className="text-right text-sm font-medium text-slate-900">
+                <span className="text-sm text-muted-foreground">Rule Group</span>
+                <span className="text-right text-sm font-medium text-foreground">
                   {effectiveConfigData.config.ruleGroupName || "Default rule group"}
                 </span>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No waterfall config data available for this app.</p>
+            <p className="text-sm text-muted-foreground">No waterfall config data available for this app.</p>
           )}
         </CardContent>
       </Card>
@@ -202,7 +202,7 @@ export function AppWaterfallConfigCard({ app, canManage, refreshKey = 0 }: AppWa
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <span className="text-sm font-medium text-slate-900">Current effective source</span>
+              <span className="text-sm font-medium text-foreground">Current effective source</span>
               <div>
                 <Badge variant="secondary" className={getSourceBadgeClass(effectiveConfigData?.source || "appsettings")}>
                   {getSourceLabel(effectiveConfigData?.source || "appsettings")}
@@ -210,7 +210,7 @@ export function AppWaterfallConfigCard({ app, canManage, refreshKey = 0 }: AppWa
               </div>
             </div>
             <div className="space-y-2">
-              <span className="text-sm font-medium text-slate-900">Direct assignment</span>
+              <span className="text-sm font-medium text-foreground">Direct assignment</span>
               <Select value={selectedConfigId} onValueChange={setSelectedConfigId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Use fallback" />
@@ -224,7 +224,7 @@ export function AppWaterfallConfigCard({ app, canManage, refreshKey = 0 }: AppWa
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Choosing a config here moves this app into that config. Global default configs are not selectable as direct assignments.
               </p>
             </div>

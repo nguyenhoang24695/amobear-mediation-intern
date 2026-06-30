@@ -35,32 +35,29 @@ export function CohortTable({
   const constrainRows = rows.length > MAX_VISIBLE_COHORT_ROWS
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-border/70 bg-card/90 p-4 shadow-sm">
       <div>
-        <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-        <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
       </div>
 
       {loading && !source ? <CohortSkeleton /> : null}
 
       {!loading && source && rows.length === 0 ? (
-        <div className="py-8 text-center text-sm text-slate-500">{emptyLabel}</div>
+        <div className="py-8 text-center text-sm text-muted-foreground">{emptyLabel}</div>
       ) : null}
 
       {source && rows.length > 0 ? (
-        <div
-          className={cn(
-            "mt-4 overflow-x-auto",
-            constrainRows && "max-h-[324px] overflow-y-auto pr-1",
-          )}
-        >
+        <div className={cn("mt-4 overflow-x-auto", constrainRows && "max-h-[324px] overflow-y-auto pr-1")}>
           <table className="min-w-full border-separate border-spacing-0 text-right text-sm">
-            <thead className={cn(constrainRows && "sticky top-0 z-20 bg-white")}>
-              <tr className="text-xs font-medium uppercase tracking-normal text-slate-500">
-                <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left">Install date</th>
+            <thead className={cn(constrainRows && "sticky top-0 z-20 bg-card/90")}>
+              <tr className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                <th className="sticky left-0 z-10 bg-card/90 px-3 py-2 text-left">Install date</th>
                 <th className="px-3 py-2 text-right">Users</th>
                 {dayOffsets.map((day) => (
-                  <th key={day} className="px-3 py-2 text-right">{formatDayLabel(day)}</th>
+                  <th key={day} className="px-3 py-2 text-right">
+                    {formatDayLabel(day)}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -68,36 +65,35 @@ export function CohortTable({
               {rows.map((row) => (
                 <CohortTableRow key={row.install_date} row={row} maxValue={maxValue} />
               ))}
-              {source.total ? (
-                <CohortTableRow row={source.total} maxValue={maxValue} isTotal />
-              ) : null}
+              {source.total ? <CohortTableRow row={source.total} maxValue={maxValue} isTotal /> : null}
             </tbody>
           </table>
         </div>
       ) : null}
 
-      {note ? <p className="mt-3 text-xs text-slate-500">{note}</p> : null}
+      {note ? <p className="mt-3 text-xs text-muted-foreground">{note}</p> : null}
     </section>
   )
 }
 
 function CohortTableRow({ row, maxValue, isTotal = false }: { row: CohortRow; maxValue: number; isTotal?: boolean }) {
   const labelClass = isTotal
-    ? "sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-900"
-    : "sticky left-0 z-10 bg-white px-3 py-2 text-left text-slate-700"
+    ? "sticky left-0 z-10 bg-card/90 px-3 py-2 text-left font-semibold text-foreground"
+    : "sticky left-0 z-10 bg-card/90 px-3 py-2 text-left text-muted-foreground"
+
   return (
-    <tr className={isTotal ? "border-t border-slate-200" : undefined}>
+    <tr className={isTotal ? "border-t border-border/70" : undefined}>
       <td className={labelClass}>{row.install_date}</td>
-      <td className={`px-3 py-2 text-right ${isTotal ? "font-semibold text-slate-900" : "text-slate-700"}`}>
+      <td className={`px-3 py-2 text-right ${isTotal ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
         {formatCount(row.users)}
       </td>
       {row.retention.map((value, index) => (
         <td
           key={index}
-          className={`px-3 py-2 text-right ${isTotal ? "font-semibold text-slate-900" : "text-slate-800"}`}
+          className={`px-3 py-2 text-right ${isTotal ? "font-semibold text-foreground" : "text-foreground"}`}
           style={value != null ? { backgroundColor: heatmapColor(value, maxValue) } : undefined}
         >
-          {value == null ? "—" : formatPercent(value, value < 10 ? 2 : 1)}
+          {value == null ? "â€”" : formatPercent(value, value < 10 ? 2 : 1)}
         </td>
       ))}
     </tr>
@@ -108,7 +104,7 @@ function CohortSkeleton() {
   return (
     <div className="mt-4 space-y-2">
       {Array.from({ length: 6 }, (_, i) => i).map((i) => (
-        <div key={i} className="h-8 w-full animate-pulse rounded bg-slate-100" />
+        <div key={i} className="h-8 w-full animate-pulse rounded bg-muted" />
       ))}
     </div>
   )

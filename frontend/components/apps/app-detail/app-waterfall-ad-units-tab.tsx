@@ -130,10 +130,10 @@ export function AppWaterfallAdUnitsTab({
     <button
       type="button"
       onClick={() => handleSort(field)}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors text-left"
+      className="flex items-center gap-1 text-left transition-colors hover:text-foreground"
     >
       {children}
-      <span className="text-slate-400">{sortField === field ? (sortDirection === "asc" ? "\u2191" : "\u2193") : "\u2195"}</span>
+      <span className="text-muted-foreground">{sortField === field ? (sortDirection === "asc" ? "\u2191" : "\u2193") : "\u2195"}</span>
     </button>
   )
 
@@ -147,21 +147,21 @@ export function AppWaterfallAdUnitsTab({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search waterfall ad units..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 bg-white border-slate-200"
+              className="h-10 border-border/70 bg-card/90 pl-9 shadow-sm"
             />
           </div>
         </div>
 
-        <Card className="border-slate-200 overflow-hidden">
+        <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-xs text-slate-500 font-medium">
+              <thead className="border-b border-border/70 bg-muted/40">
+                <tr className="text-xs font-medium text-muted-foreground">
                   <th className="px-4 py-3 text-left min-w-[140px]">
                     <SortHeader field="displayName">Display Name</SortHeader>
                   </th>
@@ -177,16 +177,16 @@ export function AppWaterfallAdUnitsTab({
                   <th className="px-4 py-3 text-right w-16">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border/70">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       Loading waterfall ad units...
                     </td>
                   </tr>
                 ) : sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       {searchQuery ? "No waterfall ad units match your search." : "No waterfall ad units for this app."}
                     </td>
                   </tr>
@@ -194,13 +194,13 @@ export function AppWaterfallAdUnitsTab({
                   paginated.map((w) => {
                     const countries = w.countries ?? []
                     return (
-                    <tr key={w.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-slate-700">
+                    <tr key={w.id} className="transition-colors hover:bg-muted/40">
+                      <td className="px-4 py-3 text-sm text-foreground">
                         {w.displayName || "-"}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded truncate max-w-[220px]">
+                          <code className="max-w-[220px] truncate rounded-md border border-border/70 bg-muted/50 px-2 py-0.5 font-mono text-xs text-muted-foreground">
                             {w.admobNetworkWaterfallAdUnitId}
                           </code>
                           <Tooltip>
@@ -208,12 +208,12 @@ export function AppWaterfallAdUnitsTab({
                               <button
                                 type="button"
                                 onClick={() => void copyId(w.admobNetworkWaterfallAdUnitId)}
-                                className="p-1 hover:bg-slate-100 rounded transition-colors shrink-0"
+                                className="shrink-0 rounded p-1 transition-colors hover:bg-muted"
                               >
                                 {copiedId === w.admobNetworkWaterfallAdUnitId ? (
-                                  <Check className="w-3.5 h-3.5 text-green-600" />
+                                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                                 ) : (
-                                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                                 )}
                               </button>
                             </TooltipTrigger>
@@ -221,10 +221,10 @@ export function AppWaterfallAdUnitsTab({
                           </Tooltip>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700">
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
                         {formatDisplay(w.format)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
+                      <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
                         {w.revenue != null && w.revenue > 0 ? "$" + Number(w.revenue).toFixed(2) : "-"}
                       </td>
                       <td className="px-4 py-3">
@@ -236,14 +236,14 @@ export function AppWaterfallAdUnitsTab({
                               </span>
                             ))}
                             {countries.length > 3 && (
-                              <span className="text-xs text-slate-500 ml-1">+{countries.length - 3}</span>
+                              <span className="ml-1 text-xs text-muted-foreground">+{countries.length - 3}</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
+                      <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
                         {floorDisplay(w.globalFloorMicros)}
                       </td>
                       <td className="px-4 py-3 text-right">

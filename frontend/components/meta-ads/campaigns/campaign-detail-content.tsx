@@ -171,7 +171,7 @@ function getStatusBadgeClass(value?: string | null): string {
   if (normalized === "ACTIVE") return "bg-green-100 text-green-700 border-green-200"
   if (normalized.includes("PAUSED")) return "bg-amber-100 text-amber-700 border-amber-200"
   if (issueStatuses.has(normalized)) return "bg-red-100 text-red-700 border-red-200"
-  if (normalized === "UNKNOWN") return "bg-slate-100 text-slate-600 border-slate-200"
+  if (normalized === "UNKNOWN") return "bg-muted text-muted-foreground border-border"
   return "bg-blue-100 text-blue-700 border-blue-200"
 }
 
@@ -225,17 +225,17 @@ function DetailField({ label, value, mono = false }: { label: string; value: str
 
   return (
     <div className="space-y-1">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={cn("text-sm text-slate-900", mono && "font-mono")}>{value || "-"}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={cn("text-sm text-foreground", mono && "font-mono")}>{value || "-"}</div>
     </div>
   )
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-      <p className="text-sm font-medium text-slate-700">{title}</p>
-      <p className="mt-1 text-sm text-slate-500">{description}</p>
+    <div className="rounded-lg border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
   )
 }
@@ -249,14 +249,14 @@ function AdSetTable({ items, onDuplicate }: { items: MetaCampaignAdSetSummaryDto
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50">
-            <TableHead className="text-xs font-medium text-slate-500">Ad Set</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Meta Ad Set ID</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Effective Status</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Meta App ID</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Store URL</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Last Synced</TableHead>
-            <TableHead className="text-right text-xs font-medium text-slate-500">Actions</TableHead>
+          <TableRow className="bg-muted/40">
+            <TableHead className="text-xs font-medium text-muted-foreground">Ad Set</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Meta Ad Set ID</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Effective Status</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Meta App ID</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Store URL</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Last Synced</TableHead>
+            <TableHead className="text-right text-xs font-medium text-muted-foreground">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -264,27 +264,27 @@ function AdSetTable({ items, onDuplicate }: { items: MetaCampaignAdSetSummaryDto
             <TableRow key={item.id}>
               <TableCell>
                 <div className="space-y-1">
-                  <div className="font-medium text-slate-900">{item.name}</div>
-                  <div className="text-xs text-slate-500">{item.appDisplayName ?? item.appId ?? "No app resolved"}</div>
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="text-xs text-muted-foreground">{item.appDisplayName ?? item.appId ?? "No app resolved"}</div>
                 </div>
               </TableCell>
-              <TableCell className="font-mono text-sm text-slate-700">{item.externalAdSetId}</TableCell>
+              <TableCell className="font-mono text-sm text-foreground">{item.externalAdSetId}</TableCell>
               <TableCell>
                 <Badge className={cn("border", getStatusBadgeClass(item.effectiveStatus))}>{toTitleCase(item.effectiveStatus)}</Badge>
               </TableCell>
-              <TableCell className="font-mono text-sm text-slate-700">{item.metaApplicationId ?? "-"}</TableCell>
+              <TableCell className="font-mono text-sm text-foreground">{item.metaApplicationId ?? "-"}</TableCell>
               <TableCell>
                 {item.objectStoreUrl ? (
                   <a href={item.objectStoreUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
                     {item.objectStoreUrl}
                   </a>
                 ) : (
-                  <span className="text-sm text-slate-400">-</span>
+                  <span className="text-sm text-muted-foreground">-</span>
                 )}
               </TableCell>
               <TableCell>
-                <div className="text-sm text-slate-700">{formatRelativeTime(item.lastSyncedAt)}</div>
-                <div className="text-xs text-slate-500">{formatDateTime(item.lastSyncedAt)}</div>
+                <div className="text-sm text-foreground">{formatRelativeTime(item.lastSyncedAt)}</div>
+                <div className="text-xs text-muted-foreground">{formatDateTime(item.lastSyncedAt)}</div>
               </TableCell>
               <TableCell className="text-right">
                 {onDuplicate ? (
@@ -313,15 +313,15 @@ function AdSetConfigurationTable({ items }: { items: MetaCampaignAdSetSummaryDto
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50">
-            <TableHead className="text-xs font-medium text-slate-500">Ad Set</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Budget</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Budget Remaining</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Bid / Strategy</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Billing / Optimization</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Schedule</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Targeting</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Learning / Issues</TableHead>
+          <TableRow className="bg-muted/40">
+            <TableHead className="text-xs font-medium text-muted-foreground">Ad Set</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Budget</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Budget Remaining</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Bid / Strategy</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Billing / Optimization</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Schedule</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Targeting</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Learning / Issues</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -329,37 +329,37 @@ function AdSetConfigurationTable({ items }: { items: MetaCampaignAdSetSummaryDto
             <TableRow key={item.id}>
               <TableCell>
                 <div className="space-y-1">
-                  <div className="font-medium text-slate-900">{item.name}</div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span className="font-mono">{item.externalAdSetId}</span>
                     <Badge className={cn("border", getStatusBadgeClass(item.effectiveStatus))}>{toTitleCase(item.effectiveStatus)}</Badge>
                   </div>
                 </div>
               </TableCell>
               <TableCell>
-                <div className="space-y-1 text-sm text-slate-700">
+                <div className="space-y-1 text-sm text-foreground">
                   <div>Daily: {formatRawValue(item.dailyBudget)}</div>
                   <div>Lifetime: {formatRawValue(item.lifetimeBudget)}</div>
                 </div>
               </TableCell>
-              <TableCell className="text-sm text-slate-700">{formatRawValue(item.budgetRemaining)}</TableCell>
+              <TableCell className="text-sm text-foreground">{formatRawValue(item.budgetRemaining)}</TableCell>
               <TableCell>
-                <div className="space-y-1 text-sm text-slate-700">
+                <div className="space-y-1 text-sm text-foreground">
                   <div>Bid: {formatRawValue(item.bidAmount)}</div>
                   <div>Strategy: {formatBidStrategy(item.bidStrategy)}</div>
                   <div>ROAS Goal: {formatRoasGoal(item.roasAverageFloor)}</div>
                 </div>
               </TableCell>
               <TableCell>
-                <div className="space-y-1 text-sm text-slate-700">
+                <div className="space-y-1 text-sm text-foreground">
                   <div>Billing: {item.billingEvent ? toTitleCase(item.billingEvent) : "-"}</div>
                   <div>Optimization: {item.optimizationGoal ? toTitleCase(item.optimizationGoal) : "-"}</div>
                 </div>
               </TableCell>
-              <TableCell className="text-sm text-slate-700">{formatDateRange(item.startTime, item.endTime)}</TableCell>
-              <TableCell className="text-sm text-slate-700">{item.targetingSummary ?? "-"}</TableCell>
+              <TableCell className="text-sm text-foreground">{formatDateRange(item.startTime, item.endTime)}</TableCell>
+              <TableCell className="text-sm text-foreground">{item.targetingSummary ?? "-"}</TableCell>
               <TableCell>
-                <div className="space-y-1 text-sm text-slate-700">
+                <div className="space-y-1 text-sm text-foreground">
                   <div>{item.learningStageInfoSummary ?? "-"}</div>
                   {item.issuesInfoSummary ? <div className="text-amber-700">{item.issuesInfoSummary}</div> : null}
                 </div>
@@ -381,13 +381,13 @@ function AdTable({ items }: { items: MetaCampaignAdSummaryDto[] }) {
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50">
-            <TableHead className="text-xs font-medium text-slate-500">Ad</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Meta Ad ID</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Ad Set</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Creative</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Effective Status</TableHead>
-            <TableHead className="text-xs font-medium text-slate-500">Last Synced</TableHead>
+          <TableRow className="bg-muted/40">
+            <TableHead className="text-xs font-medium text-muted-foreground">Ad</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Meta Ad ID</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Ad Set</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Creative</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Effective Status</TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground">Last Synced</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -395,31 +395,31 @@ function AdTable({ items }: { items: MetaCampaignAdSummaryDto[] }) {
             <TableRow key={item.id}>
               <TableCell>
                 <div className="space-y-1">
-                  <div className="font-medium text-slate-900">{item.name}</div>
-                  <div className="text-xs text-slate-500">{item.appDisplayName ?? item.appId ?? "No app resolved"}</div>
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="text-xs text-muted-foreground">{item.appDisplayName ?? item.appId ?? "No app resolved"}</div>
                 </div>
               </TableCell>
-              <TableCell className="font-mono text-sm text-slate-700">{item.externalAdId}</TableCell>
+              <TableCell className="font-mono text-sm text-foreground">{item.externalAdId}</TableCell>
               <TableCell>
-                <div className="text-sm text-slate-700">{item.adSetName ?? "-"}</div>
-                <div className="font-mono text-xs text-slate-500">{item.externalAdSetId ?? "-"}</div>
+                <div className="text-sm text-foreground">{item.adSetName ?? "-"}</div>
+                <div className="font-mono text-xs text-muted-foreground">{item.externalAdSetId ?? "-"}</div>
               </TableCell>
               <TableCell>
                 {item.externalCreativeId ? (
                   <div className="space-y-1">
-                    <div className="text-sm font-medium text-slate-900">{item.creativeName ?? item.externalCreativeId}</div>
-                    <div className="font-mono text-xs text-slate-500">{item.externalCreativeId}</div>
+                    <div className="text-sm font-medium text-foreground">{item.creativeName ?? item.externalCreativeId}</div>
+                    <div className="font-mono text-xs text-muted-foreground">{item.externalCreativeId}</div>
                   </div>
                 ) : (
-                  <span className="text-sm text-slate-400">No creative link</span>
+                  <span className="text-sm text-muted-foreground">No creative link</span>
                 )}
               </TableCell>
               <TableCell>
                 <Badge className={cn("border", getStatusBadgeClass(item.effectiveStatus))}>{toTitleCase(item.effectiveStatus)}</Badge>
               </TableCell>
               <TableCell>
-                <div className="text-sm text-slate-700">{formatRelativeTime(item.lastSyncedAt)}</div>
-                <div className="text-xs text-slate-500">{formatDateTime(item.lastSyncedAt)}</div>
+                <div className="text-sm text-foreground">{formatRelativeTime(item.lastSyncedAt)}</div>
+                <div className="text-xs text-muted-foreground">{formatDateTime(item.lastSyncedAt)}</div>
               </TableCell>
             </TableRow>
           ))}
@@ -451,22 +451,22 @@ function CreativeAssetThumb({
   const altText = (label ?? assetType) || "Creative asset"
 
   return (
-    <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-      <div className="relative h-16 w-full bg-slate-100">
+    <div className="overflow-hidden rounded-md border border-border bg-card">
+      <div className="relative h-16 w-full bg-muted/50">
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewUrl} alt={altText} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-slate-400">
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
             {isVideo ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
           </div>
         )}
-        <Badge className="absolute left-1 top-1 border border-white/60 bg-slate-900/75 px-1.5 py-0 text-[10px] font-medium text-white">
+        <Badge className="absolute left-1 top-1 border border-background/60 bg-foreground/85 px-1.5 py-0 text-[10px] font-medium text-background">
           {isVideo ? "Video" : "Image"}
         </Badge>
       </div>
       <div className="space-y-1 px-2 py-1.5">
-        <div className="truncate font-mono text-[11px] text-slate-600">{label ?? "No id"}</div>
+        <div className="truncate font-mono text-[11px] text-muted-foreground">{label ?? "No id"}</div>
         {!previewUrl ? <div className="text-[10px] text-amber-600">No thumbnail URL</div> : null}
       </div>
     </div>
@@ -479,10 +479,10 @@ function CreativeTextChips({ label, values }: { label: string; values?: string[]
 
   return (
     <div className="space-y-1">
-      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="flex flex-wrap gap-1.5">
         {visibleValues.map((value, index) => (
-          <span key={`${label}-${index}-${value}`} className="max-w-[220px] truncate rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+          <span key={`${label}-${index}-${value}`} className="max-w-[220px] truncate rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-foreground">
             {value}
           </span>
         ))}
@@ -498,10 +498,10 @@ function FlexibleCreativeSummary({ item, compact = false }: { item: MetaCampaign
   return (
     <div className={cn("space-y-2", compact ? "mt-2" : undefined)}>
       {groups.map((group, groupIndex) => (
-        <div key={group.groupUuid ?? groupIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div key={group.groupUuid ?? groupIndex} className="rounded-lg border border-border bg-muted/30 p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-slate-700">Asset group {groupIndex + 1}</div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+            <div className="text-xs font-semibold text-foreground">Asset group {groupIndex + 1}</div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
               {(group.primaryTexts ?? []).length > 0 ? <span>{group.primaryTexts.length} primary</span> : null}
               {(group.headlines ?? []).length > 0 ? <span>{group.headlines.length} headline</span> : null}
               {(group.assets ?? []).length > 0 ? <span>{group.assets.length} media</span> : null}
@@ -586,15 +586,15 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs font-medium text-slate-500">Creative</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Meta Creative ID</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Used By</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Page / IG Actor</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Headline / CTA</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Destination</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Last Synced</TableHead>
-              <TableHead className="text-right text-xs font-medium text-slate-500">Actions</TableHead>
+            <TableRow className="bg-muted/40">
+              <TableHead className="text-xs font-medium text-muted-foreground">Creative</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Meta Creative ID</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Used By</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Page / IG Actor</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Headline / CTA</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Destination</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Last Synced</TableHead>
+              <TableHead className="text-right text-xs font-medium text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -610,12 +610,12 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                 <TableRow key={item.id}>
                   <TableCell>
                     <div className="flex items-start gap-3">
-                      <div className="h-14 w-14 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                      <div className="h-14 w-14 overflow-hidden rounded-lg border border-border bg-muted/40">
                         {previewImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={previewImage} alt={item.name} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                             <Palette className="h-5 w-5" />
                           </div>
                         )}
@@ -624,7 +624,7 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            className="text-left font-medium text-slate-900 transition hover:text-blue-700 disabled:cursor-default disabled:hover:text-slate-900"
+                            className="text-left font-medium text-foreground transition hover:text-blue-700 disabled:cursor-default disabled:hover:text-foreground"
                             onClick={() => void handlePreview(item)}
                             disabled={item.usedByAds.length === 0 || previewBusy}
                           >
@@ -634,31 +634,31 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                             "border",
                             creativeFormatLabel === "Flexible format"
                               ? "border-violet-200 bg-violet-50 text-violet-700"
-                              : "border-slate-200 bg-slate-50 text-slate-600"
+                              : "border-border bg-muted/50 text-muted-foreground"
                           )}>
                             {creativeFormatLabel}
                           </Badge>
-                          {rawOnly ? <Badge className="border border-slate-200 bg-slate-50 text-slate-600">Raw only</Badge> : null}
+                          {rawOnly ? <Badge className="border border-border bg-muted/50 text-muted-foreground">Raw only</Badge> : null}
                           {item.objectType ? <Badge className="border border-blue-200 bg-blue-50 text-blue-700">{toTitleCase(item.objectType)}</Badge> : null}
                         </div>
-                        {item.message ? <p className="line-clamp-2 text-sm text-slate-600">{item.message}</p> : null}
-                        {!item.message && item.description ? <p className="line-clamp-2 text-sm text-slate-600">{item.description}</p> : null}
+                        {item.message ? <p className="line-clamp-2 text-sm text-muted-foreground">{item.message}</p> : null}
+                        {!item.message && item.description ? <p className="line-clamp-2 text-sm text-muted-foreground">{item.description}</p> : null}
                         {creativeFormatLabel === "Flexible format" ? <FlexibleCreativeSummary item={item} compact /> : null}
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           {item.effectiveObjectStoryId ? <span className="font-mono">Story {item.effectiveObjectStoryId}</span> : null}
                           {item.status ? <span>{toTitleCase(item.status)}</span> : null}
                           {item.objectType !== "EXISTING_POST" && (
                             <span className="inline-flex items-center gap-1">
                               <Sparkles className="w-3 h-3 text-blue-500" />
-                              <span className="font-medium text-slate-600">Advantage+ Creative:</span>
+                              <span className="font-medium text-muted-foreground">Advantage+ Creative:</span>
                               {isAdvantagePlusOn && (
                                 <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 text-[10px] px-1.5 py-0 font-semibold">On</Badge>
                               )}
                               {isAdvantagePlusOff && (
-                                <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500 text-[10px] px-1.5 py-0">Off</Badge>
+                                <Badge variant="outline" className="border-border bg-muted/60 px-1.5 py-0 text-[10px] text-muted-foreground">Off</Badge>
                               )}
                               {!isAdvantagePlusOn && !isAdvantagePlusOff && (
-                                <span className="text-slate-400 italic">Not configured</span>
+                                <span className="italic text-muted-foreground">Not configured</span>
                               )}
                             </span>
                           )}
@@ -666,11 +666,11 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono text-sm text-slate-700">{item.externalCreativeId}</TableCell>
+                  <TableCell className="font-mono text-sm text-foreground">{item.externalCreativeId}</TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-slate-900">{item.usedByAdCount} ad{item.usedByAdCount === 1 ? "" : "s"}</div>
-                      <div className="space-y-0.5 text-xs text-slate-500">
+                      <div className="text-sm font-medium text-foreground">{item.usedByAdCount} ad{item.usedByAdCount === 1 ? "" : "s"}</div>
+                      <div className="space-y-0.5 text-xs text-muted-foreground">
                         {item.usedByAds.slice(0, 2).map((ad) => (
                           <div key={ad.id}>{ad.adName}</div>
                         ))}
@@ -679,15 +679,15 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-1 text-sm text-slate-700">
+                    <div className="space-y-1 text-sm text-foreground">
                       <div>Page: <span className="font-mono text-xs">{item.pageId ?? "-"}</span></div>
                       <div>IG: <span className="font-mono text-xs">{item.instagramActorId ?? "-"}</span></div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-slate-900">{item.headline ?? "-"}</div>
-                      <div className="text-xs text-slate-500">CTA: {item.callToActionType ? toTitleCase(item.callToActionType) : "-"}</div>
+                      <div className="text-sm font-medium text-foreground">{item.headline ?? "-"}</div>
+                      <div className="text-xs text-muted-foreground">CTA: {item.callToActionType ? toTitleCase(item.callToActionType) : "-"}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -696,15 +696,15 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                         <a href={item.linkUrl} target="_blank" rel="noreferrer" className="line-clamp-2 break-all text-sm text-blue-600 hover:underline">
                           {item.linkUrl}
                         </a>
-                        {item.imageUrl ? <div className="text-xs text-slate-500">Image ready</div> : null}
+                        {item.imageUrl ? <div className="text-xs text-muted-foreground">Image ready</div> : null}
                       </div>
                     ) : (
-                      <span className="text-sm text-slate-400">-</span>
+                      <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm text-slate-700">{formatRelativeTime(item.lastSyncedAt)}</div>
-                    <div className="text-xs text-slate-500">{formatDateTime(item.lastSyncedAt)}</div>
+                    <div className="text-sm text-foreground">{formatRelativeTime(item.lastSyncedAt)}</div>
+                    <div className="text-xs text-muted-foreground">{formatDateTime(item.lastSyncedAt)}</div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -738,15 +738,15 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
                 <button
                   key={ad.id}
                   type="button"
-                  className="flex w-full items-start justify-between rounded-lg border border-slate-200 px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                  className="flex w-full items-start justify-between rounded-lg border border-border px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/60 dark:hover:bg-blue-950/20"
                   onClick={() => void openPreview(ad)}
                   disabled={busy}
                 >
                   <div>
-                    <div className="text-sm font-medium text-slate-900">{ad.adName}</div>
-                    <div className="mt-1 font-mono text-xs text-slate-500">{ad.externalAdId}</div>
+                    <div className="text-sm font-medium text-foreground">{ad.adName}</div>
+                    <div className="mt-1 font-mono text-xs text-muted-foreground">{ad.externalAdId}</div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
                     <span>Open preview</span>
                   </div>
@@ -765,52 +765,52 @@ function CreativeTable({ items, campaignId }: { items: MetaCampaignCreativeSumma
           </DialogHeader>
           <div className="grid gap-4 overflow-y-auto pr-1 lg:grid-cols-[320px_minmax(0,1fr)]">
             <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">Meta Creative ID</div>
-                <div className="mt-1 font-mono text-sm text-slate-900">{selectedCreative?.externalCreativeId ?? "-"}</div>
-                <div className="mt-3 text-xs uppercase tracking-wide text-slate-500">Format</div>
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Meta Creative ID</div>
+                <div className="mt-1 font-mono text-sm text-foreground">{selectedCreative?.externalCreativeId ?? "-"}</div>
+                <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">Format</div>
                 <div className="mt-1">
                   {selectedCreative ? (
                     <Badge className={cn(
                       "border",
                       getCreativeFormatLabel(selectedCreative) === "Flexible format"
                         ? "border-violet-200 bg-violet-50 text-violet-700"
-                        : "border-slate-200 bg-slate-50 text-slate-600"
+                        : "border-border bg-muted/50 text-muted-foreground"
                     )}>
                       {getCreativeFormatLabel(selectedCreative)}
                     </Badge>
                   ) : null}
                 </div>
-                <div className="mt-3 text-xs uppercase tracking-wide text-slate-500">Used By</div>
-                <div className="mt-1 space-y-1 text-sm text-slate-700">
+                <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">Used By</div>
+                <div className="mt-1 space-y-1 text-sm text-foreground">
                   {selectedCreative?.usedByAds.map((ad) => (
                     <div key={ad.id}>{ad.adName}</div>
                   ))}
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="grid gap-3 text-sm text-slate-700">
-                  <div><span className="font-medium text-slate-900">Page:</span> <span className="font-mono text-xs">{selectedCreative?.pageId ?? "-"}</span></div>
-                  <div><span className="font-medium text-slate-900">IG Actor:</span> <span className="font-mono text-xs">{selectedCreative?.instagramActorId ?? "-"}</span></div>
-                  <div><span className="font-medium text-slate-900">Headline:</span> {selectedCreative?.headline ?? "-"}</div>
-                  <div><span className="font-medium text-slate-900">CTA:</span> {selectedCreative?.callToActionType ? toTitleCase(selectedCreative.callToActionType) : "-"}</div>
+              <div className="rounded-lg border border-border p-4">
+                <div className="grid gap-3 text-sm text-foreground">
+                  <div><span className="font-medium text-foreground">Page:</span> <span className="font-mono text-xs">{selectedCreative?.pageId ?? "-"}</span></div>
+                  <div><span className="font-medium text-foreground">IG Actor:</span> <span className="font-mono text-xs">{selectedCreative?.instagramActorId ?? "-"}</span></div>
+                  <div><span className="font-medium text-foreground">Headline:</span> {selectedCreative?.headline ?? "-"}</div>
+                  <div><span className="font-medium text-foreground">CTA:</span> {selectedCreative?.callToActionType ? toTitleCase(selectedCreative.callToActionType) : "-"}</div>
                 </div>
               </div>
             </div>
             <div className="space-y-4">
               {selectedCreative && getCreativeFormatLabel(selectedCreative) === "Flexible format" ? (
-                <div className="rounded-lg border border-slate-200 p-4">
-                  <div className="mb-2 text-sm font-medium text-slate-900">Flexible Asset Groups</div>
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 text-sm font-medium text-foreground">Flexible Asset Groups</div>
                   <FlexibleCreativeSummary item={selectedCreative} />
                 </div>
               ) : null}
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="mb-2 text-sm font-medium text-slate-900">Object Story Spec</div>
-                <pre className="max-h-[240px] overflow-auto rounded-md bg-slate-950 p-4 text-xs text-slate-100">{objectStorySpecJson ?? "No object_story_spec snapshot available."}</pre>
+              <div className="rounded-lg border border-border p-4">
+                <div className="mb-2 text-sm font-medium text-foreground">Object Story Spec</div>
+                <pre className="max-h-[240px] overflow-auto rounded-md border border-border bg-muted/50 p-4 text-xs text-foreground">{objectStorySpecJson ?? "No object_story_spec snapshot available."}</pre>
               </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="mb-2 text-sm font-medium text-slate-900">Raw Config JSON</div>
-                <pre className="max-h-[320px] overflow-auto rounded-md bg-slate-950 p-4 text-xs text-slate-100">{rawJson}</pre>
+              <div className="rounded-lg border border-border p-4">
+                <div className="mb-2 text-sm font-medium text-foreground">Raw Config JSON</div>
+                <pre className="max-h-[320px] overflow-auto rounded-md border border-border bg-muted/50 p-4 text-xs text-foreground">{rawJson}</pre>
               </div>
             </div>
           </div>
@@ -964,7 +964,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-400">
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading campaign detail...
       </div>
@@ -1125,16 +1125,16 @@ export function CampaignDetailContent({ campaignId }: Props) {
   return (
     <div className="space-y-5">
       <div>
-        <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
-          <Link href="/meta-ads/campaigns" className="hover:text-slate-700">
+        <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+          <Link href="/meta-ads/campaigns" className="hover:text-foreground">
             Meta Ads
           </Link>
           <ChevronRight className="h-3 w-3" />
-          <Link href="/meta-ads/campaigns" className="hover:text-slate-700">
+          <Link href="/meta-ads/campaigns" className="hover:text-foreground">
             Campaigns
           </Link>
           <ChevronRight className="h-3 w-3" />
-          <span className="font-medium text-slate-900">{detail.externalCampaignId}</span>
+          <span className="font-medium text-foreground">{detail.externalCampaignId}</span>
         </nav>
 
         <div className="space-y-3">
@@ -1144,27 +1144,27 @@ export function CampaignDetailContent({ campaignId }: Props) {
             </Button>
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-bold text-slate-900">{detail.name}</h1>
+                <h1 className="text-lg font-bold text-foreground">{detail.name}</h1>
                 <Badge className={cn("border", getStatusBadgeClass(detail.effectiveStatus))}>{toTitleCase(detail.effectiveStatus)}</Badge>
                 <Badge className={cn("border", getStatusBadgeClass(detail.status))}>{toTitleCase(detail.status)}</Badge>
                 {detail.isUnmapped ? <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Unmapped Meta App</Badge> : null}
                 {detail.isSyncStale ? <Badge className="border border-amber-200 bg-amber-50 text-amber-700">Stale Sync</Badge> : null}
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span>
-                  Meta Campaign ID: <strong className="font-mono text-slate-700">{detail.externalCampaignId}</strong>
+                  Meta Campaign ID: <strong className="font-mono text-foreground">{detail.externalCampaignId}</strong>
                 </span>
                 <span>
-                  Source: <strong className="text-slate-700">{getSourceLabel(detail.source)}</strong>
+                  Source: <strong className="text-foreground">{getSourceLabel(detail.source)}</strong>
                 </span>
                 <span>
-                  Ad Sets: <strong className="text-slate-700">{detail.adSets.length}</strong>
+                  Ad Sets: <strong className="text-foreground">{detail.adSets.length}</strong>
                 </span>
                 <span>
-                  Ads: <strong className="text-slate-700">{detail.ads.length}</strong>
+                  Ads: <strong className="text-foreground">{detail.ads.length}</strong>
                 </span>
                 <span>
-                  Creatives: <strong className="text-slate-700">{detail.creatives.length}</strong>
+                  Creatives: <strong className="text-foreground">{detail.creatives.length}</strong>
                 </span>
               </div>
             </div>
@@ -1278,9 +1278,9 @@ export function CampaignDetailContent({ campaignId }: Props) {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">Campaign Info</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">Campaign Info</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
@@ -1289,7 +1289,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
                 <DetailField label="Objective" value={toTitleCase(detail.objective)} />
                 {detail.isSkadnetworkAttribution ? (
                   <div className="space-y-1">
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">Attribution</p>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Attribution</p>
                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">iOS 14+ / SKAN</Badge>
                   </div>
                 ) : null}
@@ -1302,9 +1302,9 @@ export function CampaignDetailContent({ campaignId }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">Campaign Configuration</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">Campaign Configuration</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
@@ -1327,24 +1327,24 @@ export function CampaignDetailContent({ campaignId }: Props) {
 
           {/* Advantage+ Creative section */}
           {relevantCreatives.length === 0 ? (
-            <Card className="border-slate-200">
+            <Card className="border-border">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Sparkles className="w-4 h-4 text-blue-500" />
                   Advantage+ Creative
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[9px] hover:bg-blue-50 font-semibold uppercase tracking-wider px-1.5 py-0">
+                  <Badge variant="secondary" className="bg-blue-50 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider text-blue-700 hover:bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300">
                     Meta AI
                   </Badge>
                 </CardTitle>
                 <div className="flex flex-col gap-1 mt-1">
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-muted-foreground">
                     Creative-level settings saved for this campaign/request.
                   </p>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center">
-                  <p className="text-xs text-slate-500 italic">No Advantage+ Creative settings were captured for this campaign.</p>
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-center">
+                  <p className="text-xs italic text-muted-foreground">No Advantage+ Creative settings were captured for this campaign.</p>
                 </div>
               </CardContent>
             </Card>
@@ -1356,22 +1356,22 @@ export function CampaignDetailContent({ campaignId }: Props) {
               fallbackMessage="No Advantage+ Creative settings were captured for this campaign."
             />
           ) : (
-            <Card className="border-slate-200">
+            <Card className="border-border">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Sparkles className="w-4 h-4 text-blue-500" />
                     Advantage+ Creative
-                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[9px] hover:bg-blue-50 font-semibold uppercase tracking-wider px-1.5 py-0">
+                    <Badge variant="secondary" className="bg-blue-50 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider text-blue-700 hover:bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300">
                       Meta AI
                     </Badge>
                   </CardTitle>
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
-                  <p className="text-[11px] text-slate-450 font-medium text-amber-700">
+                  <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
                     Advantage+ Creative settings vary by ad creative.
                   </p>
-                  <p className="text-[10px] text-slate-500 font-medium">
+                  <p className="text-[10px] font-medium text-muted-foreground">
                     Source: executed creative snapshot (Creative-level settings)
                   </p>
                 </div>
@@ -1382,27 +1382,27 @@ export function CampaignDetailContent({ campaignId }: Props) {
                     const isOn = spec?.creativeFeaturesSpec?.advantagePlusCreative?.enrollStatus === "OPT_IN"
                     const isOff = spec?.creativeFeaturesSpec?.advantagePlusCreative?.enrollStatus === "OPT_OUT"
                     return (
-                      <div key={creative.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                      <div key={creative.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2.5 transition-colors hover:bg-muted/50">
                         <div className="min-w-0 pr-2">
-                          <p className="text-xs font-semibold text-slate-700 truncate">{creative.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">Meta ID: {creative.externalCreativeId}</p>
+                          <p className="truncate text-xs font-semibold text-foreground">{creative.name}</p>
+                          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">Meta ID: {creative.externalCreativeId}</p>
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-500">All optimizations:</span>
+                          <span className="text-[10px] text-muted-foreground">All optimizations:</span>
                           {isOn && (
-                            <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 text-[10px] font-semibold px-2 py-0.5">On</Badge>
+                            <Badge variant="outline" className="border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">On</Badge>
                           )}
                           {isOff && (
-                            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500 text-[10px] px-2 py-0.5">Off</Badge>
+                            <Badge variant="outline" className="border-border bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground">Off</Badge>
                           )}
                           {!isOn && !isOff && (
-                            <Badge variant="outline" className="border-slate-100 bg-slate-50/50 text-slate-400 italic text-[10px] px-2 py-0.5">Not configured</Badge>
+                            <Badge variant="outline" className="border-dashed border-border bg-muted/30 px-2 py-0.5 text-[10px] italic text-muted-foreground">Not configured</Badge>
                           )}
                         </div>
                       </div>
                     )
                   })}
-                  <p className="text-[11px] text-slate-400 italic mt-2 text-center">
+                  <p className="mt-2 text-center text-[11px] italic text-muted-foreground">
                     See the Structure Drilldown &gt; Creatives tab below for details on individual creative settings.
                   </p>
                 </div>
@@ -1413,7 +1413,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
           {detail.issuesInfoSummary || detail.recommendationsSummary ? (
             <Card className="border-amber-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-slate-900">Configuration Warnings</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Configuration Warnings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {detail.issuesInfoSummary ? (
@@ -1432,41 +1432,41 @@ export function CampaignDetailContent({ campaignId }: Props) {
             </Card>
           ) : null}
 
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">Ad Set Configuration</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">Ad Set Configuration</CardTitle>
             </CardHeader>
             <CardContent>
               <AdSetConfigurationTable items={detail.adSets} />
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">App and Account Context</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">App and Account Context</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-3 text-xs uppercase tracking-wide text-slate-500">Resolved App</div>
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">Resolved App</div>
                 {detail.isUnmapped || !detail.appDisplayName ? (
-                  <div className="text-sm text-slate-500">No internal app mapping resolved.</div>
+                  <div className="text-sm text-muted-foreground">No internal app mapping resolved.</div>
                 ) : (
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 shrink-0 rounded-lg">
                       <AvatarImage src={detail.appIconUri || "/placeholder.svg"} alt={detail.appDisplayName} className="rounded-lg object-cover" />
-                      <AvatarFallback className="rounded-lg bg-slate-100 text-xs font-semibold text-slate-600">
+                      <AvatarFallback className="rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
                         {getInitials(detail.appDisplayName)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       {appHref ? (
-                        <Link href={appHref} className="font-medium text-slate-900 hover:text-blue-700 hover:underline">
+                        <Link href={appHref} className="font-medium text-foreground hover:text-blue-700 hover:underline">
                           {detail.appDisplayName}
                         </Link>
                       ) : (
-                        <div className="font-medium text-slate-900">{detail.appDisplayName}</div>
+                        <div className="font-medium text-foreground">{detail.appDisplayName}</div>
                       )}
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         {detail.platform ? <span>{toTitleCase(detail.platform)}</span> : null}
                         {detail.appId ? <span className="font-mono">{detail.appId}</span> : null}
                       </div>
@@ -1485,70 +1485,70 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </Card>
         </div>
 
-        <Card className="border-slate-200">
+        <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-slate-900">Sync Metadata</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">Sync Metadata</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Last Synced</div>
-              <div className="mt-1 text-base font-semibold text-slate-900">{formatRelativeTime(detail.lastSyncedAt)}</div>
-              <div className="mt-1 text-sm text-slate-500">{formatDateTime(detail.lastSyncedAt)}</div>
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Last Synced</div>
+              <div className="mt-1 text-base font-semibold text-foreground">{formatRelativeTime(detail.lastSyncedAt)}</div>
+              <div className="mt-1 text-sm text-muted-foreground">{formatDateTime(detail.lastSyncedAt)}</div>
             </div>
 
             <div className="grid gap-3">
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
-                  <Layers3 className="h-4 w-4 text-slate-500" />
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Layers3 className="h-4 w-4 text-muted-foreground" />
                   Ad Sets
                 </div>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{detail.adSets.length}</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{detail.adSets.length}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
-                  <Boxes className="h-4 w-4 text-slate-500" />
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Boxes className="h-4 w-4 text-muted-foreground" />
                   Ads
                 </div>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{detail.ads.length}</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{detail.ads.length}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
-                  <Palette className="h-4 w-4 text-slate-500" />
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Palette className="h-4 w-4 text-muted-foreground" />
                   Creatives
                 </div>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{detail.creatives.length}</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{detail.creatives.length}</p>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-4 text-sm text-slate-600">
-              <div className="font-medium text-slate-900">Health</div>
+            <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-foreground">Health</div>
               <div className="mt-1">{detail.isSyncStale ? "Campaign data is stale. Run a sync from the campaigns list." : "Campaign data is within the normal sync freshness window."}</div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-slate-200">
+      <Card className="border-border">
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-sm font-semibold text-slate-900">Structure Drilldown</CardTitle>
-            <div className="text-xs text-slate-500">Read-only view of synced child objects from Meta.</div>
+            <CardTitle className="text-sm font-semibold text-foreground">Structure Drilldown</CardTitle>
+            <div className="text-xs text-muted-foreground">Read-only view of synced child objects from Meta.</div>
           </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="adsets" className="space-y-4">
-            <TabsList className="h-11 w-fit bg-slate-100 p-1">
-              <TabsTrigger value="adsets" className="gap-2 px-4 data-[state=active]:bg-white">
+            <TabsList className="h-11 w-fit bg-muted p-1">
+              <TabsTrigger value="adsets" className="gap-2 px-4 data-[state=active]:bg-background">
                 Ad Sets
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600">{detail.adSets.length}</span>
+                <span className="rounded-full bg-background/70 px-2 py-0.5 text-[11px] text-muted-foreground">{detail.adSets.length}</span>
               </TabsTrigger>
-              <TabsTrigger value="ads" className="gap-2 px-4 data-[state=active]:bg-white">
+              <TabsTrigger value="ads" className="gap-2 px-4 data-[state=active]:bg-background">
                 Ads
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600">{detail.ads.length}</span>
+                <span className="rounded-full bg-background/70 px-2 py-0.5 text-[11px] text-muted-foreground">{detail.ads.length}</span>
               </TabsTrigger>
-              <TabsTrigger value="creatives" className="gap-2 px-4 data-[state=active]:bg-white">
+              <TabsTrigger value="creatives" className="gap-2 px-4 data-[state=active]:bg-background">
                 Creatives
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600">{detail.creatives.length}</span>
+                <span className="rounded-full bg-background/70 px-2 py-0.5 text-[11px] text-muted-foreground">{detail.creatives.length}</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1580,8 +1580,8 @@ export function CampaignDetailContent({ campaignId }: Props) {
               <span className="block">
                 {statusAction?.confirmDescription ?? "This will update the campaign status on Meta."}
               </span>
-              <span className="block rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="block break-all font-medium text-slate-900">{detail.name}</span>
+              <span className="block rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <span className="block break-all font-medium text-foreground">{detail.name}</span>
                 <span className="mt-1 block">Status: {toTitleCase(detail.status)} · Effective: {toTitleCase(detail.effectiveStatus)} · Target: {toTitleCase(statusAction?.targetStatus)}</span>
               </span>
             </AlertDialogDescription>
@@ -1622,7 +1622,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <div className="text-sm font-medium text-slate-700">Number of copies</div>
+            <div className="text-sm font-medium text-foreground">Number of copies</div>
             <Input
               type="number"
               min={1}
@@ -1631,7 +1631,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
               onChange={(event) => setDuplicateQuantity(event.target.value)}
               disabled={duplicating}
             />
-            <div className={cn("text-xs", duplicateQuantityValid ? "text-slate-500" : "text-red-600")}>Create between 1 and 10 paused campaign copies.</div>
+            <div className={cn("text-xs", duplicateQuantityValid ? "text-muted-foreground" : "text-red-600")}>Create between 1 and 10 paused campaign copies.</div>
           </div>
           <AlertDialogFooter className="flex-wrap">
             <AlertDialogCancel disabled={duplicating}>Cancel</AlertDialogCancel>
@@ -1666,7 +1666,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
           </AlertDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-700">Number of copies</div>
+              <div className="text-sm font-medium text-foreground">Number of copies</div>
               <Input
                 type="number"
                 min={1}
@@ -1675,14 +1675,14 @@ export function CampaignDetailContent({ campaignId }: Props) {
                 onChange={(event) => setDuplicateAdSetQuantity(event.target.value)}
                 disabled={duplicatingAdSet}
               />
-              <div className={cn("text-xs", duplicateAdSetQuantityValid ? "text-slate-500" : "text-red-600")}>
+              <div className={cn("text-xs", duplicateAdSetQuantityValid ? "text-muted-foreground" : "text-red-600")}>
                 Create between 1 and 10 paused ad set copies.
               </div>
             </div>
 
             {duplicateAdSetQuantityValue === 1 && (
               <div className="space-y-2">
-                <div className="text-sm font-medium text-slate-700">New Ad Set Name</div>
+                <div className="text-sm font-medium text-foreground">New Ad Set Name</div>
                 <Input
                   type="text"
                   value={duplicateAdSetName}
@@ -1690,7 +1690,7 @@ export function CampaignDetailContent({ campaignId }: Props) {
                   disabled={duplicatingAdSet}
                   placeholder="Leave empty to use default copy name"
                 />
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-muted-foreground">
                   Specify a custom name for the copy.
                 </div>
               </div>

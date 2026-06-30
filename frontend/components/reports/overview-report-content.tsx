@@ -69,7 +69,6 @@ import {
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
-import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams"
 import {
@@ -90,8 +89,6 @@ import type {
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const APPS_PER_PAGE = 20
-const OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY = "overview-report-mobile-filters-sticker-top-v2"
-const OVERVIEW_MOBILE_FILTERS_STICKER_BOTTOM_SAFE_AREA = 88
 const SHARED_APP_CONFLICTS_DISPLAY_MAX = 5
 
 /** Sticky offsets — khớp h-10 (40px) + h-8 (32px) + h-8 (32px); TableHead mặc định h-10 phải override ở row 2–3. */
@@ -762,16 +759,6 @@ export function OverviewReportContent() {
   const [metricsCollapsed, setMetricsCollapsed] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const isMobile = useIsMobile()
-  const {
-    containerRef: mobileFiltersStickerRef,
-    topPx: mobileFiltersStickerTop,
-    consumeDragClick: consumeMobileFiltersStickerDragClick,
-    dragProps: mobileFiltersStickerDragProps,
-  } = useDraggableVerticalFixed(OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY, {
-    bottomSafeAreaPx: OVERVIEW_MOBILE_FILTERS_STICKER_BOTTOM_SAFE_AREA,
-    defaultTop: (containerHeight) =>
-      window.innerHeight - containerHeight - OVERVIEW_MOBILE_FILTERS_STICKER_BOTTOM_SAFE_AREA,
-  })
   const overviewStickyFirstColWidth = isMobile
     ? "min-w-[164px] max-w-[164px] w-[164px]"
     : "min-w-[280px]"
@@ -1477,25 +1464,45 @@ export function OverviewReportContent() {
               KPI plan vs actual by team (revenue, cost, profit). Expand a team for per-app detail.
             </CardDescription>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className={cn(
-                  "h-9 w-9 shrink-0 border-border bg-card text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground",
-                  isMobile && "hidden",
-                )}
-                onClick={() => setFilterExpanded((prev) => !prev)}
-                aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
-                aria-expanded={filterExpanded}
+          {isMobile ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-9 shrink-0 gap-2 rounded-full border-border bg-card px-3 text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground",
+                hasPendingApply && "ring-2 ring-blue-300 ring-offset-2 ring-offset-background",
+              )}
+              onClick={() => setMobileFiltersOpen(true)}
+              aria-label="Open filters and metrics"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="whitespace-nowrap text-sm font-medium">Filters</span>
+              <Badge
+                variant="secondary"
+                className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px] font-semibold"
               >
-                {filterExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{filterExpanded ? "Hide filters" : "Show filters"}</TooltipContent>
-          </Tooltip>
+                {selectedColumnsCount}
+              </Badge>
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border-border bg-card text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground"
+                  onClick={() => setFilterExpanded((prev) => !prev)}
+                  aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
+                  aria-expanded={filterExpanded}
+                >
+                  {filterExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{filterExpanded ? "Hide filters" : "Show filters"}</TooltipContent>
+            </Tooltip>
+          )}
         </CardHeader>
         {!isMobile && filterExpanded ? (
           <CardContent className="flex flex-wrap items-end gap-3 px-4 py-3 [&_label]:leading-none">
@@ -1505,64 +1512,24 @@ export function OverviewReportContent() {
       </Card>
 
       {isMobile ? (
-        <>
-          <div
-            ref={mobileFiltersStickerRef}
-            className="fixed right-0 z-40 flex touch-none flex-col items-end gap-2"
-            style={
-              mobileFiltersStickerTop == null
-                ? { top: "50%", transform: "translateY(-50%)" }
-                : { top: mobileFiltersStickerTop }
-            }
+        <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+          <SheetContent
+            side="right"
+            className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
           >
-            <button
-              type="button"
-              {...mobileFiltersStickerDragProps}
-              onClick={() => {
-                if (consumeMobileFiltersStickerDragClick()) return
-                setMobileFiltersOpen(true)
-              }}
-              className={cn(
-                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg active:cursor-grabbing",
-                hasPendingApply && "ring-2 ring-blue-300",
-              )}
-              aria-label="Open filters and metrics. Drag up or down to reposition."
-            >
-              <Filter className="h-4 w-4 text-muted-foreground" aria-hidden />
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
-                style={{ writingMode: "vertical-rl" }}
-              >
-                Filters & Metrics
-              </span>
-              <Badge
-                variant="secondary"
-                className="h-5 min-w-5 justify-center px-1 text-[10px] font-semibold"
-              >
-                {selectedColumnsCount}
-              </Badge>
-            </button>
-          </div>
-
-          <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-            <SheetContent
-              side="right"
-              className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
-            >
-              <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
-                <SheetTitle className="text-base">Filters & Metrics</SheetTitle>
-                <SheetDescription>
-                  Period, teams, and columns. Click Apply to refresh data.
-                </SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-                <div className="box-border min-w-0 max-w-full overflow-x-hidden p-4">
-                  {renderOverviewMobileFiltersAndMetricsBody()}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        </>
+            <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
+              <SheetTitle className="text-base">Filters & Metrics</SheetTitle>
+              <SheetDescription>
+                Period, teams, and columns. Click Apply to refresh data.
+              </SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+              <div className="box-border min-w-0 max-w-full overflow-x-hidden p-4">
+                {renderOverviewMobileFiltersAndMetricsBody()}
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
       ) : null}
 
       {loading ? (
@@ -1574,8 +1541,8 @@ export function OverviewReportContent() {
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {isMobile ? (
               <>
-                Tap <span className="font-medium text-foreground">Filters & Metrics</span> on the right, then
-                press <span className="font-medium text-foreground">Apply</span> to load the overview report.
+                Tap <span className="font-medium text-foreground">Filters</span> above, then press{" "}
+                <span className="font-medium text-foreground">Apply</span> to load the overview report.
               </>
             ) : (
               <>

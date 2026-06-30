@@ -186,27 +186,27 @@ export function RevenuePlanMonthRangePicker({
         <Button
           type="button"
           variant="outline"
-          className={cn("h-9 min-w-[220px] justify-between bg-white px-3 font-normal", className)}
+          className={cn("h-9 min-w-[220px] justify-between bg-background px-3 font-normal", className)}
           aria-label="Select month range"
         >
           <span className="flex min-w-0 items-center gap-2 truncate">
-            <CalendarRange className="h-4 w-4 shrink-0 text-slate-500" />
-            <span className="truncate text-sm text-slate-900">{formatMonthRangeLabel(value)}</span>
+            <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm text-foreground">{formatMonthRangeLabel(value)}</span>
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto p-0">
-        <div className="flex w-[min(95vw,560px)] flex-col overflow-hidden rounded-md bg-white">
+        <div className="flex w-[min(95vw,560px)] flex-col overflow-hidden rounded-md bg-popover text-popover-foreground">
           <div className="flex min-h-0">
-            <aside className="w-[148px] shrink-0 border-r border-slate-100 py-1">
+            <aside className="w-[148px] shrink-0 border-r border-border py-1">
               {MONTH_RANGE_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   type="button"
                   className={cn(
-                    "w-full px-4 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50",
-                    activePresetId === preset.id && "bg-blue-50 font-medium text-blue-600",
+                    "w-full px-4 py-2.5 text-left text-sm text-popover-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+                    activePresetId === preset.id && "bg-primary/10 font-medium text-primary",
                   )}
                   onClick={() => handlePresetClick(preset.id)}
                 >
@@ -223,7 +223,7 @@ export function RevenuePlanMonthRangePicker({
                   type="month"
                   value={draft.startMonth}
                   onChange={(event) => handleDraftMonthChange("startMonth", event.target.value)}
-                  className="h-9 bg-white"
+                  className="h-9 bg-background"
                 />
               </div>
               <div className="space-y-1.5">
@@ -233,19 +233,19 @@ export function RevenuePlanMonthRangePicker({
                   type="month"
                   value={draft.endMonth}
                   onChange={(event) => handleDraftMonthChange("endMonth", event.target.value)}
-                  className="h-9 bg-white"
+                  className="h-9 bg-background"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 border-t border-slate-100 px-4 py-3">
-            <span className="min-w-0 flex-1 truncate text-center text-sm text-slate-600">{footerLabel}</span>
+          <div className="flex items-center gap-3 border-t border-border px-4 py-3">
+            <span className="min-w-0 flex-1 truncate text-center text-sm text-muted-foreground">{footerLabel}</span>
             <div className="flex shrink-0 gap-2">
               <Button type="button" variant="outline" className="h-8 px-4" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button type="button" className="h-8 bg-blue-600 px-4 hover:bg-blue-700" onClick={handleApply}>
+              <Button type="button" className="h-8 px-4" onClick={handleApply}>
                 Apply
               </Button>
             </div>

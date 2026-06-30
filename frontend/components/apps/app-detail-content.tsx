@@ -262,49 +262,49 @@ export function AppDetailContent() {
         {/* Back Link */}
         <Link
           href={searchParams.get("from") === "account" && searchParams.get("accountId") ? `/data-accounts/${searchParams.get("accountId")}` : "/apps"}
-          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors w-fit"
+          className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
           {searchParams.get("from") === "account" ? "Back to Account" : "Back to Apps"}
         </Link>
 
         {/* Page Header */}
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           {/* Left: App Info */}
-          <div className="flex items-start gap-4">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
             <img
               src={app?.iconUri || "/placeholder.svg"}
               alt={app?.displayName || app?.name || "App"}
-              className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm object-cover"
+              className="h-12 w-12 shrink-0 rounded-xl border border-border object-cover shadow-sm sm:h-16 sm:w-16"
             />
-            <div className="flex flex-col gap-2">
-              <div>
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <h1 className="text-2xl font-semibold text-slate-900">
+                  <h1 className="min-w-0 break-words text-xl font-semibold text-foreground sm:text-2xl">
                     {appLoading ? "Loading..." : app?.displayName || app?.name || "Unnamed App"}
                   </h1>
-                  <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200">
+                  <Badge variant="outline" className="gap-1 border-border bg-muted/40 text-foreground">
                     <Apple className="w-3 h-3" />
                     {app?.platform || "Unknown"}
                   </Badge>
-                  <Badge className="bg-green-100 text-green-700 border-0">
+                  <Badge className="border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                     {app?.approvalState || "Unknown"}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <code className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-mono">
+                <div className="mt-1 flex min-w-0 max-w-full items-center gap-2">
+                  <code className="block min-w-0 max-w-full truncate rounded bg-muted px-2 py-0.5 font-mono text-sm text-muted-foreground">
                     {app?.appId || "--"}
                   </code>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => { if (app?.appId) { void copyToClipboard(app.appId, "appId") } }}
-                        className="p-1 hover:bg-slate-100 rounded transition-colors"
+                        className="rounded p-1 transition-colors hover:bg-muted"
                       >
                         {copiedField === "appId" ? (
-                          <Check className="w-3.5 h-3.5 text-green-600" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                         ) : (
-                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                         )}
                       </button>
                     </TooltipTrigger>
@@ -312,20 +312,20 @@ export function AppDetailContent() {
                   </Tooltip>
                 </div>
                 {app?.appStoreId ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <code className="text-sm text-slate-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-mono text-amber-800">
+                  <div className="mt-1 flex min-w-0 max-w-full items-center gap-2">
+                    <code className="block min-w-0 max-w-full truncate rounded border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 font-mono text-sm text-amber-800 dark:text-amber-300">
                       {app.appStoreId}
                     </code>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => { void copyToClipboard(app.appStoreId!, "appStoreId") }}
-                          className="p-1 hover:bg-slate-100 rounded transition-colors"
+                          className="rounded p-1 transition-colors hover:bg-muted"
                         >
                           {copiedField === "appStoreId" ? (
-                            <Check className="w-3.5 h-3.5 text-green-600" />
+                            <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                           ) : (
-                            <Copy className="w-3.5 h-3.5 text-slate-400" />
+                            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                           )}
                         </button>
                       </TooltipTrigger>
@@ -338,10 +338,10 @@ export function AppDetailContent() {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
             {canSyncFromAdmob && (
               <Button
-                className="h-9 gap-2 bg-blue-600 hover:bg-blue-700"
+                className="h-9 w-full gap-2 sm:w-auto"
                 onClick={() => setSyncPerformanceModalOpen(true)}
                 disabled={!app?.appId || appLoading}
               >
@@ -351,7 +351,7 @@ export function AppDetailContent() {
             )}
             <Button
               variant="outline"
-              className="h-9 gap-2 bg-transparent text-sm"
+              className="h-9 w-full gap-2 bg-transparent text-sm sm:w-auto"
               onClick={() => window.open("https://admob.google.com", "_blank")}
             >
               <ExternalLink className="w-4 h-4" />
@@ -359,7 +359,7 @@ export function AppDetailContent() {
             </Button>
             <Button
               variant="outline"
-              className="h-9 gap-2 bg-transparent text-sm"
+              className="h-9 w-full gap-2 bg-transparent text-sm sm:w-auto"
               onClick={() => window.open("https://apps.apple.com", "_blank")}
             >
               <Apple className="w-4 h-4" />
@@ -367,7 +367,7 @@ export function AppDetailContent() {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-9 w-9 p-0 bg-transparent">
+                <Button variant="outline" className="h-9 w-9 shrink-0 bg-transparent p-0">
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -396,11 +396,11 @@ export function AppDetailContent() {
                   Copy App ID
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-amber-600">
+                <DropdownMenuItem className="gap-2 text-amber-600 dark:text-amber-300">
                   <Pause className="w-4 h-4" />
                   Pause App
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 text-red-600">
+                <DropdownMenuItem className="gap-2 text-destructive">
                   <Trash2 className="w-4 h-4" />
                   Delete App
                 </DropdownMenuItem>
@@ -410,12 +410,12 @@ export function AppDetailContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
-          <div className="flex w-full max-w-full min-w-0 items-center gap-2">
+          <div className="flex w-full max-w-full min-w-0 items-center gap-1 sm:gap-2">
             <Button
               type="button"
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0 rounded-lg border-slate-200 bg-white shadow-sm"
+              className="hidden h-9 w-9 shrink-0 rounded-lg border-border bg-card shadow-sm sm:inline-flex"
               disabled={!tabScrollEdges.canLeft}
               aria-label="Cuộn tab sang trái"
               onClick={() => {
@@ -442,87 +442,87 @@ export function AppDetailContent() {
                 "select-none",
               )}
             >
-              <TabsList className="inline-flex h-11 w-max flex-nowrap items-center justify-start gap-0 rounded-lg bg-slate-100 p-1">
+              <TabsList className="inline-flex h-11 w-max flex-nowrap items-center justify-start gap-0 rounded-lg bg-muted p-1">
                 {canViewOverview ? (
-                  <TabsTrigger value="overview" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="overview" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Overview
                   </TabsTrigger>
                 ) : null}
                 {canViewDashboard ? (
-                  <TabsTrigger value="dashboard" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="dashboard" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Dashboard
                   </TabsTrigger>
                 ) : null}
                 {canViewAdUnitsMediation ? (
-                  <TabsTrigger value="ad-units-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="ad-units-mediation" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Ad Units
-                    <Badge variant="outline" className="ml-2 text-[10px] border-emerald-300 text-emerald-800 bg-emerald-50">
+                    <Badge variant="outline" className="ml-2 border-emerald-500/20 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300">
                       New
                     </Badge>
                   </TabsTrigger>
                 ) : null}
                 {canViewMediationGroupsMediation ? (
-                  <TabsTrigger value="mediation-groups-mediation" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="mediation-groups-mediation" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Mediation Groups
-                    <Badge variant="outline" className="ml-2 text-[10px] border-emerald-300 text-emerald-800 bg-emerald-50">
+                    <Badge variant="outline" className="ml-2 border-emerald-500/20 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300">
                       New
                     </Badge>
                   </TabsTrigger>
                 ) : null}
                 {canViewWaterfallAdUnits ? (
-                  <TabsTrigger value="waterfall-ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="waterfall-ad-units" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Waterfall Ad Units
-                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                    <Badge variant="secondary" className="ml-2 bg-secondary text-xs text-secondary-foreground">
                       {waterfallAdUnitsLoading ? "..." : waterfallAdUnitsCount}
                     </Badge>
                   </TabsTrigger>
                 ) : null}
                 {canViewPerformance ? (
-                  <TabsTrigger value="performance" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="performance" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Performance
                   </TabsTrigger>
                 ) : null}
                 {showAiInsightTab ? (
-                  <TabsTrigger value="ai-insight" className="shrink-0 flex-none gap-1.5 px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="ai-insight" className="shrink-0 flex-none gap-1.5 px-3 sm:px-4 data-[state=active]:bg-background">
                     <Sparkles className="w-3.5 h-3.5" />
                     AI Insight
                   </TabsTrigger>
                 ) : null}
                 {showInsightConfigTab ? (
-                  <TabsTrigger value="insight-config" className="shrink-0 flex-none gap-1.5 px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="insight-config" className="shrink-0 flex-none gap-1.5 px-3 sm:px-4 data-[state=active]:bg-background">
                     <SlidersHorizontal className="w-3.5 h-3.5" />
                     Insight config
                   </TabsTrigger>
                 ) : null}
                 {showPlaybookTab ? (
-                  <TabsTrigger value="playbook" className="shrink-0 flex-none gap-1.5 px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="playbook" className="shrink-0 flex-none gap-1.5 px-3 sm:px-4 data-[state=active]:bg-background">
                     <SlidersHorizontal className="w-3.5 h-3.5" />
                     AI Playbook
                   </TabsTrigger>
                 ) : null}
                 {canViewSettingsTab ? (
-                  <TabsTrigger value="settings" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="settings" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Settings
                   </TabsTrigger>
                 ) : null}
                 {canViewAdUnits ? (
-                  <TabsTrigger value="ad-units" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="ad-units" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Ad Units
-                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                    <Badge variant="outline" className="ml-2 border-amber-500/20 bg-amber-500/10 text-[10px] text-amber-800 dark:text-amber-300">
                       deprecated
                     </Badge>
-                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                    <Badge variant="secondary" className="ml-2 bg-secondary text-xs text-secondary-foreground">
                       {app?.adUnitsCount ?? 0}
                     </Badge>
                   </TabsTrigger>
                 ) : null}
                 {canViewMediationGroups ? (
-                  <TabsTrigger value="mediation-groups" className="shrink-0 flex-none px-4 data-[state=active]:bg-white">
+                  <TabsTrigger value="mediation-groups" className="shrink-0 flex-none px-3 sm:px-4 data-[state=active]:bg-background">
                     Mediation Groups
-                    <Badge variant="outline" className="ml-2 text-[10px] border-amber-300 text-amber-800 bg-amber-50">
+                    <Badge variant="outline" className="ml-2 border-amber-500/20 bg-amber-500/10 text-[10px] text-amber-800 dark:text-amber-300">
                       deprecated
                     </Badge>
-                    <Badge variant="secondary" className="ml-2 bg-slate-200 text-slate-600 text-xs">
+                    <Badge variant="secondary" className="ml-2 bg-secondary text-xs text-secondary-foreground">
                       {appLoading ? "..." : mediationGroupsCount}
                     </Badge>
                   </TabsTrigger>
@@ -533,7 +533,7 @@ export function AppDetailContent() {
               type="button"
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0 rounded-lg border-slate-200 bg-white shadow-sm"
+              className="hidden h-9 w-9 shrink-0 rounded-lg border-border bg-card shadow-sm sm:inline-flex"
               disabled={!tabScrollEdges.canRight}
               aria-label="Cuộn tab sang phải"
               onClick={() => {
@@ -575,7 +575,7 @@ export function AppDetailContent() {
           {canViewPerformance ? (
             <TabsContent value="performance" className="mt-6">
               {appLoading ? (
-                <div className="flex items-center justify-center h-40 text-sm text-slate-500">Loading app…</div>
+                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Loading app…</div>
               ) : app?.appId ? (
                 <AppPerformanceTab
                   key={app.appId}

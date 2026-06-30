@@ -63,7 +63,7 @@ export function DashboardFilterBar({
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-        <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-xl border border-border/70 bg-card/90 p-1 shadow-sm backdrop-blur">
           {PRESETS.map((p) => {
             const active = p.key === currentRange.range
             return (
@@ -72,10 +72,10 @@ export function DashboardFilterBar({
                 type="button"
                 onClick={() => selectPreset(p.key)}
                 className={cn(
-                  "h-8 rounded-md px-3 text-sm font-medium transition-colors",
+                  "h-8 rounded-lg px-3 text-sm font-medium transition-colors",
                   active
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-700 hover:bg-slate-100",
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                 )}
                 aria-pressed={active}
               >
@@ -86,24 +86,24 @@ export function DashboardFilterBar({
         </div>
 
         {currentRange.range === "custom" ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
-            <CalendarDays className="ml-2 h-4 w-4 text-slate-500" />
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-card/90 p-1 shadow-sm backdrop-blur">
+            <CalendarDays className="ml-2 h-4 w-4 text-muted-foreground" />
             <input
               type="date"
               value={draftStart}
               max={draftEnd || defaultCustomRange.endDate}
               onChange={(event) => setDraftStart(event.target.value)}
-              className="h-8 rounded-md border border-slate-200 px-2 text-sm text-slate-700 outline-none focus:border-slate-400"
+              className="h-8 rounded-lg border border-border/70 bg-background px-2 text-sm text-foreground outline-none focus:border-primary/40"
               aria-label="Custom start date"
             />
-            <span className="text-xs text-slate-400">to</span>
+            <span className="text-xs text-muted-foreground">to</span>
             <input
               type="date"
               value={draftEnd}
               min={draftStart || undefined}
               max={defaultCustomRange.endDate}
               onChange={(event) => setDraftEnd(event.target.value)}
-              className="h-8 rounded-md border border-slate-200 px-2 text-sm text-slate-700 outline-none focus:border-slate-400"
+              className="h-8 rounded-lg border border-border/70 bg-background px-2 text-sm text-foreground outline-none focus:border-primary/40"
               aria-label="Custom end date"
             />
             <Button size="sm" className="h-8" onClick={applyCustomRange} disabled={!customRangeValid}>
@@ -114,16 +114,16 @@ export function DashboardFilterBar({
       </div>
 
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200 font-normal">
+        <Badge variant="outline" className="gap-1 border-border/70 bg-muted/40 font-normal text-foreground">
           <Clock className="h-3 w-3" />
           GMT+7
         </Badge>
-        <Badge variant="outline" className="gap-1 bg-slate-50 border-slate-200 font-normal">
+        <Badge variant="outline" className="gap-1 border-border/70 bg-muted/40 font-normal text-foreground">
           <DollarSign className="h-3 w-3" />
           USD
         </Badge>
         {accountDisplayName ? (
-          <Badge variant="outline" className="bg-slate-50 border-slate-200 font-normal">
+          <Badge variant="outline" className="border-border/70 bg-muted/40 font-normal text-foreground">
             {accountDisplayName}
           </Badge>
         ) : null}

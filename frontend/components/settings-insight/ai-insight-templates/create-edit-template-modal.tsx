@@ -227,7 +227,7 @@ export function CreateEditTemplateModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           showCloseButton
-          className="flex h-[min(92dvh,920px)] w-[min(96vw,1440px)] max-w-[min(96vw,1440px)] sm:max-w-[min(96vw,1440px)] flex-col gap-0 overflow-hidden p-0 rounded-lg"
+          className="flex h-[92dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:h-[min(92dvh,920px)] sm:w-[min(96vw,1440px)] sm:max-w-[min(96vw,1440px)]"
         >
           <DialogHeader className="shrink-0 border-b border-border px-6 py-4 pr-14 text-left">
             <DialogTitle>
@@ -404,13 +404,14 @@ export function CreateEditTemplateModal({
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-4 py-3 sm:px-6 flex-wrap sm:justify-end">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-4 py-3 sm:flex-row sm:flex-wrap sm:justify-end sm:px-6">
+            <Button variant="outline" type="button" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
               Hủy
             </Button>
             <Button
               type="button"
               variant="secondary"
+              className="w-full sm:w-auto"
               onClick={() =>
                 toast({
                   title: "Preview với app mẫu",
@@ -423,7 +424,7 @@ export function CreateEditTemplateModal({
             </Button>
             <Button
               type="button"
-              className="bg-primary hover:bg-primary/90"
+              className="w-full bg-primary hover:bg-primary/90 sm:w-auto"
               disabled={saving}
               onClick={() => void handleSubmit()}
             >

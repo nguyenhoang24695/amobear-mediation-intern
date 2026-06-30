@@ -26,7 +26,7 @@ export function UserTrendChart({ appId, range }: UserTrendChartProps) {
   const hasValues = chartData.some((row) => SERIES.some((series) => row[series.key] != null))
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-border/70 bg-card/90 p-4 shadow-sm">
       <ChartHeader title="User trend" subtitle="Installs and Firebase users by day" />
       {loading && !data ? <ChartSkeleton /> : null}
       {!loading && data && !hasValues ? <NoData label="No user trend data for this range." /> : null}
@@ -57,7 +57,7 @@ function buildRows(data: UserTrendSeries): UserTrendChartRow[] {
 
 function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name?: string; value?: number | null; color?: string }>; label?: string }) {
   if (!active || !payload?.length) return null
-  return <div className="rounded-md border border-slate-200 bg-white p-3 text-xs shadow-lg"><p className="mb-2 font-medium text-slate-700">{label}</p><div className="space-y-1">
-    {payload.map((item) => <div key={item.name} className="flex items-center justify-between gap-4"><span className="flex items-center gap-2 text-slate-600"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><span className="font-medium text-slate-950">{formatCount(item.value)}</span></div>)}
+  return <div className="rounded-xl border border-border/70 bg-card/95 p-3 text-xs shadow-lg backdrop-blur"><p className="mb-2 font-medium text-foreground">{label}</p><div className="space-y-1">
+    {payload.map((item) => <div key={item.name} className="flex items-center justify-between gap-4"><span className="flex items-center gap-2 text-muted-foreground"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><span className="font-medium text-foreground">{formatCount(item.value)}</span></div>)}
   </div></div>
 }

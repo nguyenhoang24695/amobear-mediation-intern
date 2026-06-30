@@ -137,7 +137,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* Back Link */}
       <Link
         href={backLink}
@@ -148,12 +148,12 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
       </Link>
 
       {/* Organization Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 items-start gap-4 sm:items-center">
           <OrganizationLogoAvatar orgId={orgId} orgName={org.name} logoUrl={org.logoUrl} size="lg" />
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{org.name}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="min-w-0 break-words text-2xl font-bold text-foreground">{org.name}</h1>
               <Badge
                 className={
                   status === "active"
@@ -164,11 +164,11 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
                 {status === "active" ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-muted-foreground">{org.slug}.nexus.io</span>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="min-w-0 break-all text-sm text-muted-foreground">{org.slug}.nexus.io</span>
               <button
                 onClick={handleCopySlug}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                 title="Copy slug"
               >
                 {copied ? (
@@ -177,14 +177,14 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
                   <Copy className="w-3.5 h-3.5" />
                 )}
               </button>
-              <span className="text-border mx-1">|</span>
+              <span className="mx-1 hidden text-border sm:inline">|</span>
               <span className="text-sm text-muted-foreground">Created {formatDate(org.createdAt)}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2 bg-transparent" asChild>
+        <div className="-mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:mx-0 sm:shrink-0 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+          <Button variant="outline" className="h-10 shrink-0 gap-2 bg-transparent" asChild>
             <Link
               href={buildActivityLogsHref({
                 domain: "organization",
@@ -197,7 +197,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
             </Link>
           </Button>
           {canEdit && (
-            <Button variant="outline" className="gap-2 bg-transparent">
+            <Button variant="outline" className="h-10 shrink-0 gap-2 bg-transparent">
               <Edit className="w-4 h-4" />
               Edit
             </Button>
@@ -205,7 +205,7 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
           {(canEdit || canDelete) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="bg-transparent">
+                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 bg-transparent">
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -233,14 +233,16 @@ export function OrganizationDetailContent({ orgId, backLink = "/organizations", 
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="bg-muted">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          {canViewUsers && <TabsTrigger value="users">Users</TabsTrigger>}
-          {canViewPersonnelChart && <TabsTrigger value="org-chart">Organizational Chart</TabsTrigger>}
-          {canViewTeams && <TabsTrigger value="teams">Teams</TabsTrigger>}
-          {canViewProfitPlan && <TabsTrigger value="profit-plan">Revenue Plan</TabsTrigger>}
-          {canEdit && <TabsTrigger value="settings">Settings</TabsTrigger>}
-        </TabsList>
+        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="w-max bg-muted">
+            <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
+            {canViewUsers && <TabsTrigger value="users" className="shrink-0">Users</TabsTrigger>}
+            {canViewPersonnelChart && <TabsTrigger value="org-chart" className="shrink-0">Organizational Chart</TabsTrigger>}
+            {canViewTeams && <TabsTrigger value="teams" className="shrink-0">Teams</TabsTrigger>}
+            {canViewProfitPlan && <TabsTrigger value="profit-plan" className="shrink-0">Revenue Plan</TabsTrigger>}
+            {canEdit && <TabsTrigger value="settings" className="shrink-0">Settings</TabsTrigger>}
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <OrgOverviewTab org={orgTabData} orgId={orgId} canViewUsers={canViewUsers} />

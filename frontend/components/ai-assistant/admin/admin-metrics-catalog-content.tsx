@@ -50,16 +50,16 @@ import { useToast } from "@/hooks/use-toast"
 import { aiAdminApi, MetricsCatalogDto } from "@/lib/api/ai-admin"
 
 const domainColors: Record<string, string> = {
-  revenue: "bg-emerald-100 text-emerald-700",
-  engagement: "bg-blue-100 text-blue-700",
-  retention: "bg-purple-100 text-purple-700",
-  iap: "bg-amber-100 text-amber-700",
-  ua: "bg-rose-100 text-rose-700",
-  game: "bg-indigo-100 text-indigo-700",
-  ad_perf: "bg-orange-100 text-orange-700",
-  product: "bg-sky-100 text-sky-700",
-  growth: "bg-teal-100 text-teal-700",
-  health: "bg-violet-100 text-violet-700",
+  revenue: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  engagement: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  retention: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
+  iap: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  ua: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  game: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+  ad_perf: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+  product: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  growth: "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  health: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
 }
 
 const domainLabels: Record<string, string> = {
@@ -307,16 +307,16 @@ export function AdminMetricsCatalogContent() {
   }
 
   const priorityColor = (p: number) => {
-    if (p >= 9) return "bg-red-100 text-red-700"
-    if (p >= 7) return "bg-amber-100 text-amber-700"
-    return "bg-slate-100 text-slate-600"
+    if (p >= 9) return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+    if (p >= 7) return "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+    return "bg-muted text-muted-foreground"
   }
 
   if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     )
@@ -324,20 +324,20 @@ export function AdminMetricsCatalogContent() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+      <div className="space-y-6 overflow-hidden px-4 pb-28 pt-6 sm:px-6 sm:pb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/ai-assistant">
                 <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-2xl font-semibold  flex items-center gap-2">
-                <Database className="h-6 w-6" />
+            <div className="min-w-0">
+              <h1 className="flex items-start gap-2 text-2xl font-semibold text-foreground sm:items-center">
+                <Database className="mt-0.5 h-6 w-6 shrink-0 sm:mt-0" />
                 Metrics Catalog
               </h1>
-              <p className="text-sm ">
+              <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">
                 <Badge variant="outline" className="mr-1 text-xs">
                   {metrics.length} metrics
                 </Badge>
@@ -345,23 +345,23 @@ export function AdminMetricsCatalogContent() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-              <Upload className="h-4 w-4 mr-1" />
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+            <Button variant="outline" className="min-w-0 flex-1 sm:flex-none" onClick={() => setShowImportDialog(true)}>
+              <Upload className="mr-1 h-4 w-4 shrink-0" />
               Import CSV
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={openAddDialog}>
-              <Plus className="h-4 w-4 mr-1" />
+            <Button className="min-w-0 flex-1 sm:flex-none" onClick={openAddDialog}>
+              <Plus className="mr-1 h-4 w-4 shrink-0" />
               Add Metric
             </Button>
           </div>
         </div>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search metrics..."
                   value={search}
@@ -378,8 +378,8 @@ export function AdminMetricsCatalogContent() {
                   className={cn(
                     "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
                     activeDomain === d
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   {d === "all" ? "All" : domainLabels[d] ?? d}
@@ -389,82 +389,84 @@ export function AdminMetricsCatalogContent() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Key</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Domain</TableHead>
-                  <TableHead>Formula</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead className="text-center">Priority</TableHead>
-                  <TableHead className="text-right pr-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMetrics.map((metric) => (
-                  <TableRow key={metric.id} className="group hover:bg-slate-50">
-                    <TableCell className="pl-6 font-mono text-xs text-slate-700">
-                      {metric.metricKey}
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-900">
-                      {metric.displayName}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={cn(
-                          "text-xs font-medium border-0",
-                          domainColors[metric.domain] ?? "bg-slate-100 text-slate-600"
-                        )}
-                      >
-                        {domainLabels[metric.domain] ?? metric.domain}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">
-                      {metric.formula}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500 max-w-[140px] truncate font-mono">
-                      {metric.sourceTable}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">{metric.unit}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge className={cn("text-xs font-semibold border-0", priorityColor(metric.defaultPriority))}>
-                        {metric.defaultPriority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(metric)}>
-                          <Edit2 className="h-3.5 w-3.5 text-slate-500" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowDeleteConfirm(metric)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredMetrics.length === 0 && (
+            <div className="overflow-x-auto">
+              <Table className="min-w-[900px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-slate-400">
-                      No metrics found matching your search.
-                    </TableCell>
+                    <TableHead className="pl-6">Key</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Domain</TableHead>
+                    <TableHead>Formula</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead className="text-center">Priority</TableHead>
+                    <TableHead className="text-right pr-6">Actions</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredMetrics.map((metric) => (
+                    <TableRow key={metric.id} className="group hover:bg-muted/50">
+                      <TableCell className="pl-6 font-mono text-xs text-foreground">
+                        {metric.metricKey}
+                      </TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {metric.displayName}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={cn(
+                            "text-xs font-medium border-0",
+                            domainColors[metric.domain] ?? "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {domainLabels[metric.domain] ?? metric.domain}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
+                        {metric.formula}
+                      </TableCell>
+                      <TableCell className="max-w-[160px] truncate font-mono text-xs text-muted-foreground">
+                        {metric.sourceTable}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{metric.unit}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge className={cn("text-xs font-semibold border-0", priorityColor(metric.defaultPriority))}>
+                          {metric.defaultPriority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(metric)}>
+                            <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowDeleteConfirm(metric)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredMetrics.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+                        No metrics found matching your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingMetric ? "Edit Metric" : "Add New Metric"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>
                 metric_key <span className="text-red-500">*</span>
@@ -517,26 +519,26 @@ export function AdminMetricsCatalogContent() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>
                 formula <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder="e.g. ad_revenue / impressions × 1000"
+                placeholder="e.g. ad_revenue / impressions x 1000"
                 value={form.formula}
                 onChange={(e) => updateField("formula", e.target.value)}
               />
             </div>
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>formula_sql</Label>
               <Textarea
                 placeholder="SQL expression..."
                 value={form.formulaSql}
                 onChange={(e) => updateField("formulaSql", e.target.value)}
-                className="font-mono text-sm min-h-[80px]"
+                className="min-h-[80px] font-mono text-sm"
               />
             </div>
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>description</Label>
               <Textarea
                 placeholder="Mô tả metric..."
@@ -564,9 +566,9 @@ export function AdminMetricsCatalogContent() {
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Label className="mb-3 block">Thresholds</Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700">
                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -606,7 +608,7 @@ export function AdminMetricsCatalogContent() {
               </div>
             </div>
 
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label className="flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5" />
                 Tags
@@ -623,7 +625,7 @@ export function AdminMetricsCatalogContent() {
                     .map((t) => t.trim())
                     .filter(Boolean)
                     .map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs bg-slate-50">
+                      <Badge key={tag} variant="outline" className="bg-muted text-xs">
                         {tag}
                       </Badge>
                     ))}
@@ -636,7 +638,6 @@ export function AdminMetricsCatalogContent() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
               onClick={handleSave}
               disabled={isSaving || !form.metricKey || !form.displayName || !form.formula}
             >
@@ -653,7 +654,7 @@ export function AdminMetricsCatalogContent() {
           <DialogHeader>
             <DialogTitle>Delete Metric</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-600 py-4">
+          <p className="py-4 text-sm text-muted-foreground">
             Are you sure you want to delete <strong>{showDeleteConfirm?.displayName}</strong>? This action cannot be undone.
           </p>
           <DialogFooter>
@@ -682,7 +683,9 @@ export function AdminMetricsCatalogContent() {
             <div
               className={cn(
                 "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
-                importFile ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:border-slate-300"
+                importFile
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border hover:border-muted-foreground/40"
               )}
             >
               <input
@@ -697,20 +700,20 @@ export function AdminMetricsCatalogContent() {
                 }}
               />
               <label htmlFor="csv-upload" className="cursor-pointer">
-                <Upload className="h-8 w-8 mx-auto text-slate-400 mb-3" />
+                <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
                 {importFile ? (
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{importFile.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-sm font-medium text-foreground">{importFile.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {(importFile.size / 1024).toFixed(1)} KB
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className="text-sm font-medium text-foreground">
                       Click to upload CSV file
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Required columns: metric_key, display_name, domain, formula
                     </p>
                   </div>
@@ -718,9 +721,9 @@ export function AdminMetricsCatalogContent() {
               </label>
             </div>
             {importResult && (
-              <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-                <p className="text-sm font-medium text-slate-700 mb-2">Import Result</p>
-                <div className="text-xs text-slate-500 space-y-1">
+              <div className="mt-4 rounded-lg bg-muted p-3">
+                <p className="mb-2 text-sm font-medium text-foreground">Import Result</p>
+                <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                     {importResult.imported} metrics imported
@@ -752,7 +755,6 @@ export function AdminMetricsCatalogContent() {
             </Button>
             {!importResult && (
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
                 disabled={!importFile || isImporting}
                 onClick={handleImport}
               >

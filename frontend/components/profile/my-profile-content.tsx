@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,12 +13,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Edit, Camera, KeyRound, Shield, Monitor, ChevronDown, Loader2, BadgePercent, CheckCircle2, AlertTriangle } from "lucide-react"
 import { ChangePasswordModal } from "./change-password-modal"
 import { CommissionRevenueTab } from "@/components/commission/revenue/commission-revenue-tab"
-import { alertsApi, authApi } from "@/lib/api/services"
+import { Pagination } from "@/components/shared/pagination"
+import { alertsApi, authApi, structureApi } from "@/lib/api/services"
 import { authUserFromMeDto, clearAuthSessionData, getAccessToken, getRefreshToken, getUserInitials, hasScreenFunction, setAuthData } from "@/lib/auth"
 import { useApi } from "@/hooks/use-api"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import type { ActiveSession } from "@/types/api"
+import type { ActiveSession, App } from "@/types/api"
 
 type TelegramDestinationDraft = {
   id: string
@@ -71,12 +72,37 @@ function parseTelegramDestinationsJson(input?: string | null): TelegramDestinati
   }
 }
 
+function formatPlatformLabel(platform?: string | null): string | null {
+  if (!platform?.trim()) return null
+  const normalized = platform.trim().toUpperCase()
+  if (normalized === "IOS" || normalized === "IPHONE") return "iOS"
+  if (normalized === "ANDROID") return "Android"
+  return platform.trim()
+}
+
+function getPlatformBadgeClass(platform?: string | null): string {
+  const normalized = platform?.trim().toUpperCase()
+  if (normalized === "ANDROID") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+  }
+  if (normalized === "IOS" || normalized === "IPHONE") {
+    return "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300"
+  }
+  return "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+}
+
+function getAppDisplayName(app: App): string {
+  return app.displayName?.trim() || app.name?.trim() || app.appId
+}
+
 export function MyProfileContent() {
   const router = useRouter()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [showApps, setShowApps] = useState(false)
+  const [appsPage, setAppsPage] = useState(1)
+  const [appsPageSize, setAppsPageSize] = useState(6)
   const [showTeams, setShowTeams] = useState(false)
   const [notifications, setNotifications] = useState({
     emailAlerts: true,
@@ -121,6 +147,18 @@ export function MyProfileContent() {
     : null
 
   const displayUser = user || userFromStorage
+  const myAppIds = useMemo(
+    () => Object.keys(displayUser?.permissions ?? {}),
+    [displayUser?.permissions],
+  )
+
+  const { data: appsResponse, loading: appsLoading } = useApi(
+    () => structureApi.getApps(),
+    {
+      enabled: myAppIds.length > 0,
+      cacheKey: "profile-my-access-apps",
+    },
+  )
 
   const getSlackWebhookUrlForTest = useCallback(
     (key: "direct" | "realtime" | "hourly" | "daily"): string => {
@@ -292,8 +330,35 @@ export function MyProfileContent() {
   )
 
   // Get apps and teams from user data
-  const myApps = displayUser?.permissions ? Object.keys(displayUser.permissions) : []
+  const myApps = appsResponse?.apps ?? []
+  const accessibleApps = useMemo(
+    () =>
+      myAppIds
+        .map((appId) => {
+          const app = myApps.find((item) => item.appId === appId)
+          return {
+            appId,
+            app,
+            permission: displayUser?.permissions?.[appId] ?? "",
+          }
+        })
+        .sort((a, b) => {
+          const aName = getAppDisplayName(a.app ?? ({ appId: a.appId, name: a.appId } as App)).toLowerCase()
+          const bName = getAppDisplayName(b.app ?? ({ appId: b.appId, name: b.appId } as App)).toLowerCase()
+          return aName.localeCompare(bName)
+        }),
+    [displayUser?.permissions, myAppIds, myApps],
+  )
+  const accessibleAppsTotalPages = Math.max(1, Math.ceil(accessibleApps.length / appsPageSize))
+  const paginatedAccessibleApps = useMemo(
+    () => accessibleApps.slice((appsPage - 1) * appsPageSize, appsPage * appsPageSize),
+    [accessibleApps, appsPage, appsPageSize],
+  )
   const myTeams = displayUser?.teams || []
+
+  useEffect(() => {
+    setAppsPage((page) => Math.min(page, accessibleAppsTotalPages))
+  }, [accessibleAppsTotalPages])
 
   const getSessionSubtitle = (session: ActiveSession) => {
     if (session.isCurrent) return "Current session"
@@ -987,26 +1052,90 @@ export function MyProfileContent() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">Apps I can access</span>
                 <Badge variant="secondary" className="text-xs">
-                  {myApps.length}
+                  {accessibleApps.length}
                 </Badge>
               </div>
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showApps ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {myApps.length > 0 ? (
-                  Object.entries(displayUser?.permissions || {}).map(([appId, permission]) => (
-                    <div key={appId} className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm text-foreground">{appId}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {permission as string}
-                      </Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground col-span-2">No app permissions found</p>
-                )}
-              </div>
+              {appsLoading ? (
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading apps...
+                </div>
+              ) : accessibleApps.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-2">
+                    {paginatedAccessibleApps.map(({ appId, app, permission }) => {
+                      const appName = app ? getAppDisplayName(app) : appId
+                      const platformLabel = formatPlatformLabel(app?.platform)
+                      const storeId = app?.appStoreId?.trim()
+                      const initials = appName.slice(0, 2).toUpperCase()
+
+                      return (
+                        <div
+                          key={appId}
+                          className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/25 hover:bg-muted/20"
+                        >
+                          <Avatar className="h-11 w-11 rounded-lg">
+                            {app?.iconUri ? (
+                              <AvatarImage src={app.iconUri} alt={appName} className="rounded-lg object-cover" />
+                            ) : null}
+                            <AvatarFallback className="rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-sm font-semibold text-foreground" title={appName}>
+                              {appName}
+                            </p>
+                            {platformLabel ? (
+                              <Badge
+                                variant="outline"
+                                className={`h-5 px-1.5 text-[10px] font-medium uppercase tracking-wide ${getPlatformBadgeClass(
+                                  app?.platform,
+                                )}`}
+                              >
+                                {platformLabel}
+                              </Badge>
+                            ) : null}
+                          </div>
+                            <p className="truncate text-xs text-muted-foreground">
+                              Package / Store ID: {storeId || app?.appId || appId}
+                            </p>
+                            <p className="truncate font-mono text-[11px] text-muted-foreground" title={appId}>
+                              App ID: {appId}
+                            </p>
+                          </div>
+
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            {permission}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {accessibleApps.length > appsPageSize ? (
+                    <Pagination
+                      currentPage={appsPage}
+                      totalPages={accessibleAppsTotalPages}
+                      totalItems={accessibleApps.length}
+                      pageSize={appsPageSize}
+                      onPageChange={setAppsPage}
+                      onPageSizeChange={(size) => {
+                        setAppsPageSize(size)
+                        setAppsPage(1)
+                      }}
+                      itemName="apps"
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No app permissions found</p>
+              )}
             </CollapsibleContent>
           </Collapsible>
 

@@ -49,8 +49,8 @@ function renderPlatformBadge(platformValue?: string | null) {
       className={cn(
         "h-5 shrink-0 gap-1 px-1.5 text-[10px] font-medium whitespace-nowrap",
         isAndroid
-          ? "border-green-200 bg-green-50 text-green-700"
-          : "border-slate-200 bg-slate-50 text-slate-700",
+          ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900/70 dark:bg-green-950/50 dark:text-green-300"
+          : "border-border bg-muted text-muted-foreground",
       )}
       title={platform}
     >
@@ -73,16 +73,16 @@ export function RevenuePlanAppCell({
         {appIconUri ? (
           <AvatarImage src={appIconUri} alt={appLabel} className="rounded-md object-cover" />
         ) : null}
-        <AvatarFallback className="rounded-md bg-slate-100">
-          <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+        <AvatarFallback className="rounded-md bg-muted">
+          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-xs font-medium text-slate-900" title={appLabel}>
+        <div className="truncate text-xs font-medium text-foreground" title={appLabel}>
           {appLabel}
         </div>
         <div
-          className="truncate font-mono text-[10px] text-slate-500"
+          className="truncate font-mono text-[10px] text-muted-foreground"
           title={appStoreId || admobAppId || undefined}
         >
           {appStoreId || admobAppId || "—"}

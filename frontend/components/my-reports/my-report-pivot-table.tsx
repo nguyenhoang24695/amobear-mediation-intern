@@ -173,7 +173,7 @@ function PivotTreeRow({
           key={column.id}
           style={stickyStyle(column.id)}
           className={cn(
-            "px-3 py-2.5 text-right tabular-nums text-foreground",
+            "min-w-[150px] px-3 py-2.5 text-right tabular-nums text-foreground",
             stickyClass(column.id, "bg-background"),
           )}
         >
@@ -304,8 +304,8 @@ export function MyReportPivotTable({
   if (rows.length === 0 || tree.length === 0) return null
 
   return (
-    <div className="relative px-6 pb-6">
-      <table className="min-w-full border-collapse text-sm">
+    <div className="relative px-4 pb-28 sm:px-6 sm:pb-6">
+      <table className="w-max min-w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border bg-card">
             <th
@@ -346,7 +346,7 @@ export function MyReportPivotTable({
                   key={column.id}
                   style={stickyStyle(column.id)}
                   className={cn(
-                    "min-w-[120px] px-3 py-3 text-right font-medium text-foreground",
+                    "min-w-[150px] px-3 py-3 text-right font-medium text-foreground",
                     stickyClass(column.id, "bg-card"),
                   )}
                 >
@@ -520,7 +520,7 @@ export function MyReportPivotTable({
       </table>
 
       {showReloadFab ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-8 z-30 flex justify-center">
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-center sm:bottom-8">
           <Button
             type="button"
             className="pointer-events-auto h-10 gap-2 rounded-full bg-primary px-5 shadow-lg hover:bg-primary/90"

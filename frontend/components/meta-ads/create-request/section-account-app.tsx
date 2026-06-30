@@ -73,9 +73,9 @@ function SearchableSelect<T>({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("h-9 w-full justify-between bg-background px-3 text-left font-normal", className)}
+          className={cn("min-h-9 h-auto w-full items-start justify-between bg-background px-3 py-2 text-left font-normal", className)}
         >
-          <span className="min-w-0 flex-1 truncate text-left">
+          <span className="min-w-0 flex-1 whitespace-normal break-words text-left leading-tight">
             {selectedOption ? renderValue(selectedOption) : <span className="text-muted-foreground">{placeholder}</span>}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -179,14 +179,14 @@ export function AccountAppSection({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <CardTitle className="flex items-center gap-2 break-words text-sm font-semibold text-foreground">
           <Building2 className="h-4 w-4 text-muted-foreground" />
           Account &amp; App Readiness
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 md:items-start">
-          <div className="space-y-4">
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <div className="min-w-0 space-y-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-foreground">
                 Meta Integration <span className="text-destructive">*</span>
@@ -202,9 +202,9 @@ export function AccountAppSection({
                 getValue={(integration) => integration.id.toString()}
                 getSearchText={(integration) => `${integration.displayName} ${integration.authMode} ${integration.metaBusinessName ?? ""}`}
                 renderValue={(integration) => (
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-foreground">{integration.displayName}</span>
-                    <Badge variant="outline" className="shrink-0 border-border px-1.5 py-0 text-[10px] text-muted-foreground">
+                  <span className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+                    <span className="break-words font-medium text-foreground">{integration.displayName}</span>
+                    <Badge variant="outline" className="w-fit shrink-0 border-border px-1.5 py-0 text-[10px] text-muted-foreground">
                       {integration.authMode === "system_user_token" ? "System User" : "User Token"}
                     </Badge>
                   </span>
@@ -222,7 +222,7 @@ export function AccountAppSection({
                 )}
               />
               {!canChangeExecutionIntegration ? (
-                <p className="text-[11px] text-muted-foreground">Execution integration is locked after the request leaves draft.</p>
+                <p className="break-words text-[11px] text-muted-foreground">Execution integration is locked after the request leaves draft.</p>
               ) : null}
             </div>
 
@@ -241,9 +241,9 @@ export function AccountAppSection({
                 getValue={(account) => account.id.toString()}
                 getSearchText={(account) => `${account.metaAdAccountId} ${account.name} ${account.currency ?? ""} ${account.timeZoneName ?? ""}`}
                 renderValue={(account) => (
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-foreground">{account.name}</span>
-                    <span className="truncate font-mono text-xs text-muted-foreground">{account.metaAdAccountId}</span>
+                  <span className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+                    <span className="break-words font-medium text-foreground">{account.name}</span>
+                    <span className="break-all font-mono text-xs text-muted-foreground">{account.metaAdAccountId}</span>
                   </span>
                 )}
                 renderOption={(account) => (
@@ -263,7 +263,7 @@ export function AccountAppSection({
                 )}
               />
               {!canChangeAdAccount ? (
-                <p className="text-[11px] text-muted-foreground">Ad account is locked while this draft reuses an existing Meta creative.</p>
+                <p className="break-words text-[11px] text-muted-foreground">Ad account is locked while this draft reuses an existing Meta creative.</p>
               ) : null}
             </div>
 
@@ -316,9 +316,9 @@ export function AccountAppSection({
               getValue={(mapping) => mapping.id.toString()}
               getSearchText={(mapping) => `${mapping.appDisplayName ?? ""} ${mapping.appId ?? ""} ${mapping.platform ?? ""} ${mapping.metaApplicationId ?? ""}`}
               renderValue={(mapping) => (
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate font-medium text-foreground">{mapping.appDisplayName ?? mapping.appId ?? mapping.packageName ?? mapping.normalizedStoreIdentifier ?? `Store ${mapping.id}`}</span>
-                  <span className="truncate font-mono text-xs text-muted-foreground">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `store:${mapping.id}`}</span>
+                <span className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="break-words font-medium text-foreground">{mapping.appDisplayName ?? mapping.appId ?? mapping.packageName ?? mapping.normalizedStoreIdentifier ?? `Store ${mapping.id}`}</span>
+                  <span className="break-all font-mono text-xs text-muted-foreground">{mapping.appId ?? mapping.normalizedStoreIdentifier ?? `store:${mapping.id}`}</span>
                 </span>
               )}
               renderOption={(mapping) => (
@@ -352,21 +352,21 @@ export function AccountAppSection({
             ) : appMappingsMessage ? (
               <div className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-destructive" />
-                <p className="text-[11px] text-destructive">{appMappingsMessage}</p>
+                <p className="break-words text-[11px] text-destructive">{appMappingsMessage}</p>
               </div>
             ) : appMappings.length === 0 ? (
               <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                <p className="text-[11px] text-amber-800 dark:text-amber-200">No active app mappings are currently advertisable for the selected Meta ad account.</p>
+                <p className="break-words text-[11px] text-amber-800 dark:text-amber-200">No active app mappings are currently advertisable for the selected Meta ad account.</p>
               </div>
             ) : (
-              <p className="text-[11px] text-muted-foreground">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
+              <p className="break-words text-[11px] text-muted-foreground">Showing {appMappings.length} mapped app{appMappings.length === 1 ? "" : "s"} that this Meta ad account can advertise.</p>
             )}
           </div>
         </div>
 
         {selectedAppMapping ? (
-          <div className={`space-y-2 rounded-lg border p-3 ${hasMappingIssue ? "border-amber-500/25 bg-amber-500/10" : "border-border bg-muted/40"}`}>
+          <div className={`min-w-0 space-y-2 rounded-lg border p-3 ${hasMappingIssue ? "border-amber-500/25 bg-amber-500/10" : "border-border bg-muted/40"}`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Promoted Object</p>
               {hasMappingIssue ? (
@@ -461,8 +461,8 @@ export function AccountAppSection({
         ) : null}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5 rounded-md border border-border bg-muted/40 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">App Mapping</p>
+          <div className="min-w-0 space-y-1.5 rounded-md border border-border bg-muted/40 p-3">
+            <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">App Mapping</p>
             <StatusRow
               ok={form.paidMediaAppBindingId ? (selectedAppMapping?.metaApplicationId ? true : false) : null}
               label={!form.paidMediaAppBindingId ? "Select an app" : selectedAppMapping?.metaApplicationId ? "Meta App ID set" : "Meta App ID missing"}
@@ -472,8 +472,8 @@ export function AccountAppSection({
               label={!form.paidMediaAppBindingId ? "Store URL" : mappingUrl ? "Store URL set" : "Store URL missing"}
             />
           </div>
-          <div className="space-y-1.5 rounded-md border border-border bg-muted/40 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Integration</p>
+          <div className="min-w-0 space-y-1.5 rounded-md border border-border bg-muted/40 p-3">
+            <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Integration</p>
             <StatusRow
               ok={form.adAccountId ? (tokenState === "ready" ? true : tokenState === "not_tested" ? null : false) : null}
               label={!form.adAccountId ? "Select an account" : tokenState === "ready" ? "Integration enabled" : tokenState === "not_tested" ? "Integration not tested" : "Integration issue"}
@@ -496,7 +496,7 @@ export function AccountAppSection({
                   objective: form.objective === objective.key ? "" : objective.key,
                   campaignObjective: form.campaignObjective === objective.key ? "" : objective.key,
                 })}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium leading-tight transition-colors ${
                   form.campaignObjective === objective.key
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-primary"

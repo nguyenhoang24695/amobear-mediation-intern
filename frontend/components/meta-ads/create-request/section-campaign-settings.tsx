@@ -91,7 +91,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <CardTitle className="flex items-center gap-2 break-words text-sm font-semibold text-foreground">
           <Megaphone className="h-4 w-4 text-muted-foreground" />
           Campaign Settings
         </CardTitle>
@@ -102,7 +102,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             <Label className="text-xs font-medium text-foreground">
               Campaign Name <span className="text-destructive">*</span>
             </Label>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
               <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Auto-generate</span>
               <Switch checked={isAutoNameEnabled} onCheckedChange={(checked) => {
@@ -122,7 +122,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
           />
           <div className="space-y-1.5 rounded-md border border-border bg-muted/40 px-3 py-2">
             <p className="text-[11px] text-muted-foreground">Pattern: <code className="rounded bg-background px-1 py-0.5 text-foreground">APP_GEO_PLATFORM_OBJECTIVE_YYYYMMDD</code></p>
-            <p className={`font-mono text-xs ${generatedCampaignName ? "text-foreground" : "text-muted-foreground italic"}`}>
+            <p className={`break-words font-mono text-xs ${generatedCampaignName ? "text-foreground" : "text-muted-foreground italic"}`}>
               {generatedCampaignName || "Select an app and geo targeting to generate a campaign name."}
             </p>
             {!isAutoNameEnabled && generatedCampaignName ? (
@@ -180,17 +180,17 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
           <Label className="text-xs font-medium text-foreground">
             Budget Strategy <span className="text-destructive">*</span>
           </Label>
-          <div className="grid w-full grid-cols-1 overflow-hidden rounded-md border border-border sm:flex sm:w-fit">
+          <div className="grid w-full grid-cols-1 overflow-hidden rounded-md border border-border sm:inline-flex sm:w-full sm:grid-cols-2">
             {(["CBO", "ABO"] as const).map((strategy) => (
               <button
                 key={strategy}
                 type="button"
                 onClick={() => onChange({ budgetStrategy: strategy })}
-                className={`px-5 py-2 text-xs font-semibold transition-colors ${
+                className={`w-full whitespace-normal px-5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:flex-1 ${
                   form.budgetStrategy === strategy
                     ? "bg-primary text-primary-foreground"
                     : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                } ${strategy === "ABO" ? "border-l border-border" : ""}`}
+                } ${strategy === "ABO" ? "sm:border-l sm:border-border" : ""}`}
               >
                 {strategy === "CBO" ? "Advantage+ campaign budget" : "Ad set budget"}
               </button>
@@ -210,9 +210,9 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
               disabled={isCBO}
               className="mt-0.5"
             />
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Label className="text-sm font-medium text-foreground">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Label className="break-words text-sm font-medium text-foreground">
                   Share some of your budget with other ad sets
                 </Label>
                 {isCBO ? (
@@ -233,15 +233,15 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
           title={canEnableSkan ? "Bật thủ công cho campaign iOS 14+ / SKAdNetwork." : skanDisabledReason}
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Label className="text-sm font-medium text-foreground">iOS 14+ campaign (SKAdNetwork)</Label>
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Label className="break-words text-sm font-medium text-foreground">iOS 14+ campaign (SKAdNetwork)</Label>
                 <Badge className="bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">Manual</Badge>
                 {form.isSkadnetworkAttribution ? (
                   <Badge className="bg-primary/10 px-1.5 py-0 text-[10px] text-primary">Enabled</Badge>
                 ) : null}
               </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <p className="break-words text-[11px] leading-relaxed text-muted-foreground">
                 Bật khi campaign App Promotion cho app iOS cần dùng Meta SKAdNetwork attribution. Nexus không tự bật cờ này.
               </p>
               {!canEnableSkan ? (
@@ -276,7 +276,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currency}</span>
                 <Input
                   placeholder="0.00"
-                  className="pl-12 h-9 text-sm"
+                  className="h-9 pl-12 text-sm"
                   value={form.campaignDailyBudget}
                   onChange={(event) => onChange({ campaignDailyBudget: event.target.value })}
                   disabled={!isCBO}
@@ -289,7 +289,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currency}</span>
                 <Input
                   placeholder="0.00"
-                  className="pl-12 h-9 text-sm"
+                  className="h-9 pl-12 text-sm"
                   value={form.campaignLifetimeBudget}
                   onChange={(event) => onChange({ campaignLifetimeBudget: event.target.value })}
                   disabled={!isCBO}
@@ -310,7 +310,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
                 key={category}
                 type="button"
                 onClick={() => toggleCategory(category)}
-                className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors ${
+                className={`rounded border px-2.5 py-1 text-left text-[11px] font-medium leading-tight transition-colors whitespace-normal ${
                   form.specialAdCategories.includes(category)
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300"
                     : "border-border bg-background text-muted-foreground hover:border-amber-500/40 hover:text-foreground"
@@ -329,10 +329,10 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
             Bid Strategy <span className="text-destructive">*</span>
           </Label>
           <Select value={form.bidStrategy} onValueChange={handleBidStrategyChange}>
-            <SelectTrigger className={`h-9 w-full text-sm sm:w-72 ${(bidAmountRequired && !form.bidAmount.trim()) || (roasGoalRequired && !form.roasAverageFloor.trim()) ? "border-amber-500 ring-1 ring-amber-500/40" : ""}`}>
+            <SelectTrigger className={`h-9 w-full text-sm ${(bidAmountRequired && !form.bidAmount.trim()) || (roasGoalRequired && !form.roasAverageFloor.trim()) ? "border-amber-500 ring-1 ring-amber-500/40" : ""}`}>
               {selectedBidStrategy ? (
                 <div className="min-w-0 text-left">
-                  <div className="text-sm font-medium truncate">{selectedBidStrategyLabel}</div>
+                  <div className="break-words text-sm font-medium">{selectedBidStrategyLabel}</div>
                   <div className="truncate font-mono text-[10px] text-muted-foreground">{selectedBidStrategy.key}</div>
                 </div>
               ) : (
@@ -378,7 +378,7 @@ export function CampaignSettingsSection({ form, onChange, objectives, bidStrateg
           ) : null}
           {selectedBidStrategy ? (
             <div className={`space-y-1 rounded-md border px-3 py-2 ${selectedBidStrategySupported && selectedBidStrategyCompatible ? "border-border bg-muted/40" : "border-amber-500/25 bg-amber-500/10"}`}>
-              <p className={`text-[11px] font-semibold ${selectedBidStrategySupported && selectedBidStrategyCompatible ? "text-foreground" : "text-amber-800 dark:text-amber-300"}`}>{selectedBidStrategyLabel} ({selectedBidStrategy.key})</p>
+              <p className={`break-words text-[11px] font-semibold ${selectedBidStrategySupported && selectedBidStrategyCompatible ? "text-foreground" : "text-amber-800 dark:text-amber-300"}`}>{selectedBidStrategyLabel} ({selectedBidStrategy.key})</p>
               <p className={`text-[11px] leading-relaxed ${selectedBidStrategySupported && selectedBidStrategyCompatible ? "text-muted-foreground" : "text-amber-800 dark:text-amber-200"}`}>{selectedBidStrategy.description}</p>
               {(!selectedBidStrategySupported || !selectedBidStrategyCompatible) ? <p className="text-[11px] text-amber-800 dark:text-amber-200">{getBidStrategyDisabledReason(selectedBidStrategy.key, form.performanceGoalType)}</p> : null}
             </div>

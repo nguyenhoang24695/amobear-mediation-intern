@@ -756,20 +756,20 @@ export function ContextLibraryContent() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="space-y-6 overflow-hidden px-4 pb-28 pt-6 sm:px-6 sm:pb-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4 sm:items-center">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/ai-assistant">
                 <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-2xl font-semibold ">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold text-foreground">
                 Context Library
               </h1>
-              <p className="text-sm ">
+              <p className="max-w-sm text-sm leading-6 text-muted-foreground">
                 Khám phá và quản lý các context template
               </p>
             </div>
@@ -777,41 +777,42 @@ export function ContextLibraryContent() {
           
           {/* Stats */}
           {stats && (
-            <div className="flex items-center gap-6 text-sm">
-              <div className="text-center">
+            <div className="-mx-1 flex min-w-0 items-center gap-5 overflow-x-auto px-1 pb-1 text-sm [scrollbar-width:none] lg:mx-0 lg:shrink-0 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden">
+              <div className="shrink-0 text-center">
                 <div className="text-2xl font-bold text-blue-600">{stats.systemTemplates}</div>
-                <div className="text-xs text-slate-500">Official</div>
+                <div className="text-xs text-muted-foreground">Official</div>
               </div>
-              <div className="text-center">
+              <div className="shrink-0 text-center">
                 <div className="text-2xl font-bold text-green-600">{stats.communityApproved}</div>
-                <div className="text-xs text-slate-500">Community</div>
+                <div className="text-xs text-muted-foreground">Community</div>
               </div>
               {isAdmin && stats.communityPending > 0 && (
-                <div className="text-center">
+                <div className="shrink-0 text-center">
                   <div className="text-2xl font-bold text-yellow-600">{stats.communityPending}</div>
-                  <div className="text-xs text-slate-500">Pending</div>
+                  <div className="text-xs text-muted-foreground">Pending</div>
                 </div>
               )}
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-600">{stats.totalClones}</div>
-                <div className="text-xs text-slate-500">Total Clones</div>
+              <div className="shrink-0 text-center">
+                <div className="text-2xl font-bold text-foreground">{stats.totalClones}</div>
+                <div className="text-xs text-muted-foreground">Total Clones</div>
               </div>
             </div>
           )}
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="mb-6">
-          <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="official" className="flex items-center gap-2">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="min-w-0">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <TabsList className="w-max bg-muted">
+              <TabsTrigger value="official" className="flex shrink-0 items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Official
                 {stats && (
                   <Badge variant="secondary" className="ml-1">{stats.systemTemplates}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="community" className="flex items-center gap-2">
+              <TabsTrigger value="community" className="flex shrink-0 items-center gap-2">
                 <Users className="h-4 w-4" />
                 Community
                 {stats && (
@@ -820,13 +821,14 @@ export function ContextLibraryContent() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="my-contexts" className="flex items-center gap-2">
+              <TabsTrigger value="my-contexts" className="flex shrink-0 items-center gap-2">
                 <BookOpen className="h-4 w-4" />
                 My Contexts
               </TabsTrigger>
             </TabsList>
+            </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Pending toggle for admin */}
               {activeTab === "community" && isAdmin && stats && stats.communityPending > 0 && (
                 <div className="flex items-center gap-2">
@@ -835,7 +837,7 @@ export function ContextLibraryContent() {
                     checked={showPending}
                     onCheckedChange={setShowPending}
                   />
-                  <Label htmlFor="show-pending" className="text-sm text-slate-600">
+                  <Label htmlFor="show-pending" className="text-sm text-muted-foreground">
                     Pending ({stats.communityPending})
                   </Label>
                 </div>
@@ -854,9 +856,9 @@ export function ContextLibraryContent() {
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-4 mt-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:flex lg:items-center">
+            <div className="relative min-w-0 sm:col-span-2 lg:w-full lg:max-w-md lg:flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Tìm kiếm..."
                 value={searchQuery}
@@ -865,7 +867,7 @@ export function ContextLibraryContent() {
               />
             </div>
             <Select value={filterFocus} onValueChange={setFilterFocus}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full lg:w-40">
                 <SelectValue placeholder="Focus area" />
               </SelectTrigger>
               <SelectContent>
@@ -879,7 +881,7 @@ export function ContextLibraryContent() {
             </Select>
             {activeTab !== "my-contexts" && (
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full lg:w-40">
                   <SelectValue placeholder="Sắp xếp" />
                 </SelectTrigger>
                 <SelectContent>
@@ -896,16 +898,16 @@ export function ContextLibraryContent() {
             <TabsContent key={tabValue} value={tabValue} className="mt-6">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredContexts.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
+                <div className="py-12 text-center text-muted-foreground">
                   {tabValue === "my-contexts" ? (
-                    <BookOpen className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                    <BookOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   ) : tabValue === "official" ? (
-                    <Sparkles className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                    <Sparkles className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   ) : (
-                    <Users className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                    <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   )}
                   <p>
                     {tabValue === "my-contexts" 

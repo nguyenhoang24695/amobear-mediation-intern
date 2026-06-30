@@ -60,16 +60,16 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="flex max-h-[calc(100svh-2rem)] w-[calc(100vw-1rem)] flex-col overflow-hidden p-0 sm:max-w-2xl">
         {/* Form State */}
         {modalState === "form" && (
           <>
-            <DialogHeader>
+            <DialogHeader className="px-4 pt-5 sm:px-6 sm:pt-6">
               <DialogTitle>Create A/B Test</DialogTitle>
               <DialogDescription>Test your optimized waterfall configuration</DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
+            <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4 sm:px-6">
               {/* Test Name */}
               <div className="space-y-2">
                 <Label htmlFor="test-name">Test Name</Label>
@@ -88,26 +88,26 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
                 <Label>Variants</Label>
 
                 {/* Variant A */}
-                <div className="border-l-4 border-teal-500 bg-slate-50 rounded-r-lg p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-3 h-3 rounded-sm bg-teal-500" />
-                    <span className="font-medium text-slate-900">Variant A (Control)</span>
+                <div className="rounded-r-lg border-l-4 border-teal-500 bg-muted/60 p-4">
+                  <div className="mb-1 flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-sm bg-teal-500" />
+                    <span className="font-medium text-foreground">Variant A (Control)</span>
                   </div>
-                  <p className="text-sm text-slate-600">Current waterfall configuration</p>
-                  <p className="text-xs text-slate-500 mt-1">5 waterfall sources • Est. $859/month</p>
+                  <p className="text-sm text-muted-foreground">Current waterfall configuration</p>
+                  <p className="mt-1 text-xs text-muted-foreground">5 waterfall sources • Est. $859/month</p>
                 </div>
 
                 {/* Variant B */}
-                <div className="border-l-4 border-purple-500 bg-slate-50 rounded-r-lg p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-3 h-3 rounded-sm bg-purple-500" />
-                    <span className="font-medium text-slate-900">Variant B (Treatment)</span>
+                <div className="rounded-r-lg border-l-4 border-purple-500 bg-muted/60 p-4">
+                  <div className="mb-1 flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-sm bg-purple-500" />
+                    <span className="font-medium text-foreground">Variant B (Treatment)</span>
                   </div>
-                  <p className="text-sm text-slate-600">Optimized waterfall configuration</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    5 waterfall sources • Est. $954/month <span className="text-green-600">(+11.1%)</span>
+                  <p className="text-sm text-muted-foreground">Optimized waterfall configuration</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    5 waterfall sources • Est. $954/month <span className="text-green-600 dark:text-green-400">(+11.1%)</span>
                   </p>
-                  <button className="text-sm text-blue-600 hover:underline mt-2">View differences</button>
+                  <button className="mt-2 text-sm text-primary hover:underline">View differences</button>
                 </div>
               </div>
 
@@ -116,51 +116,51 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
               {/* Traffic Allocation */}
               <div className="space-y-3">
                 <Label>Traffic Allocation</Label>
-                <p className="text-sm text-slate-500">How much traffic should each variant receive?</p>
+                <p className="text-sm text-muted-foreground">How much traffic should each variant receive?</p>
 
-                <RadioGroup value={trafficSplit} onValueChange={setTrafficSplit}>
+                <RadioGroup value={trafficSplit} onValueChange={setTrafficSplit} className="gap-2">
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer",
-                      trafficSplit === "50-50" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                      trafficSplit === "50-50" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="50-50" id="split-50" className="mt-0.5" />
                     <div>
-                      <Label htmlFor="split-50" className="font-medium cursor-pointer">
+                      <Label htmlFor="split-50" className="cursor-pointer font-medium">
                         50% / 50% (Recommended)
                       </Label>
-                      <p className="text-xs text-slate-500">Equal split for fastest statistical significance</p>
+                      <p className="text-xs text-muted-foreground">Equal split for fastest statistical significance</p>
                     </div>
                   </div>
 
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer",
-                      trafficSplit === "70-30" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                      trafficSplit === "70-30" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="70-30" id="split-70" className="mt-0.5" />
                     <div>
-                      <Label htmlFor="split-70" className="font-medium cursor-pointer">
+                      <Label htmlFor="split-70" className="cursor-pointer font-medium">
                         70% / 30%
                       </Label>
-                      <p className="text-xs text-slate-500">More traffic to control, safer approach</p>
+                      <p className="text-xs text-muted-foreground">More traffic to control, safer approach</p>
                     </div>
                   </div>
 
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer",
-                      trafficSplit === "90-10" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                      trafficSplit === "90-10" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="90-10" id="split-90" className="mt-0.5" />
                     <div>
-                      <Label htmlFor="split-90" className="font-medium cursor-pointer">
+                      <Label htmlFor="split-90" className="cursor-pointer font-medium">
                         90% / 10%
                       </Label>
-                      <p className="text-xs text-slate-500">Minimal exposure to new variant</p>
+                      <p className="text-xs text-muted-foreground">Minimal exposure to new variant</p>
                     </div>
                   </div>
                 </RadioGroup>
@@ -171,53 +171,53 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
               {/* Test Duration */}
               <div className="space-y-3">
                 <Label>Test Duration</Label>
-                <p className="text-sm text-slate-500">How long should the test run?</p>
+                <p className="text-sm text-muted-foreground">How long should the test run?</p>
 
-                <RadioGroup value={duration} onValueChange={setDuration}>
+                <RadioGroup value={duration} onValueChange={setDuration} className="gap-2">
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer",
-                      duration === "7" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                      duration === "7" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="7" id="duration-7" className="mt-0.5" />
-                    <Label htmlFor="duration-7" className="font-medium cursor-pointer">
+                    <Label htmlFor="duration-7" className="cursor-pointer font-medium">
                       7 days - Quick validation
                     </Label>
                   </div>
 
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer",
-                      duration === "14" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                      duration === "14" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="14" id="duration-14" className="mt-0.5" />
-                    <Label htmlFor="duration-14" className="font-medium cursor-pointer">
+                    <Label htmlFor="duration-14" className="cursor-pointer font-medium">
                       14 days - Recommended for reliable results
                     </Label>
                   </div>
 
                   <div
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border cursor-pointer",
-                      duration === "30" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                      duration === "30" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="30" id="duration-30" className="mt-0.5" />
-                    <Label htmlFor="duration-30" className="font-medium cursor-pointer">
+                    <Label htmlFor="duration-30" className="cursor-pointer font-medium">
                       30 days - Extended testing period
                     </Label>
                   </div>
 
                   <div
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer",
-                      duration === "custom" ? "bg-blue-50 border-blue-200" : "border-slate-200",
+                      "flex cursor-pointer flex-wrap items-center gap-3 rounded-lg border p-3 transition-colors",
+                      duration === "custom" ? "border-primary/40 bg-primary/10" : "border-border hover:bg-muted/50",
                     )}
                   >
                     <RadioGroupItem value="custom" id="duration-custom" />
-                    <Label htmlFor="duration-custom" className="font-medium cursor-pointer">
+                    <Label htmlFor="duration-custom" className="cursor-pointer font-medium">
                       Custom:
                     </Label>
                     <Input
@@ -227,27 +227,27 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
                         setCustomDuration(e.target.value)
                         setDuration("custom")
                       }}
-                      className="w-20 h-8"
+                      className="h-8 w-24"
                       min={1}
                       max={90}
                     />
-                    <span className="text-sm text-slate-600">days</span>
+                    <span className="text-sm text-muted-foreground">days</span>
                   </div>
                 </RadioGroup>
 
-                <p className="text-sm text-slate-500">
-                  Estimated completion: <span className="font-medium text-slate-700">{getEstimatedCompletion()}</span>
+                <p className="text-sm text-muted-foreground">
+                  Estimated completion: <span className="font-medium text-foreground">{getEstimatedCompletion()}</span>
                 </p>
               </div>
 
               <Separator />
 
               {/* Warning Section */}
-              <div className="flex gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/40">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-300" />
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">Important Notes:</p>
-                  <ul className="text-sm text-slate-600 list-disc list-inside mt-1 space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground">Important Notes:</p>
+                  <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm text-muted-foreground">
                     <li>The test will be created in AdMob via API</li>
                     <li>You can stop the test early at any time</li>
                     <li>Results will be available in real-time</li>
@@ -256,11 +256,11 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
+            <DialogFooter className="border-t border-border px-4 py-4 sm:px-6">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate}>
+              <Button className="w-full sm:w-auto" onClick={handleCreate}>
                 Create & Start Test
               </Button>
             </DialogFooter>
@@ -269,47 +269,47 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
 
         {/* Loading State */}
         {modalState === "loading" && (
-          <div className="py-12 px-4">
+          <div className="px-4 py-12 sm:px-6">
             <DialogHeader className="mb-8">
               <DialogTitle className="text-center">Creating A/B Test...</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 max-w-sm mx-auto">
               <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-green-500" />
-                <span className="text-sm text-slate-700">Variant A configured</span>
+                <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <span className="text-sm text-foreground">Variant A configured</span>
               </div>
               <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                <span className="text-sm text-slate-700">Configuring Variant B...</span>
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="text-sm text-foreground">Configuring Variant B...</span>
               </div>
               <div className="flex items-center gap-3">
-                <Circle className="w-5 h-5 text-slate-300" />
-                <span className="text-sm text-slate-400">Starting traffic split</span>
+                <Circle className="h-5 w-5 text-muted-foreground/40" />
+                <span className="text-sm text-muted-foreground">Starting traffic split</span>
               </div>
             </div>
 
-            <p className="text-center text-sm text-slate-500 mt-8">Please wait, this may take a few moments.</p>
+            <p className="mt-8 text-center text-sm text-muted-foreground">Please wait, this may take a few moments.</p>
           </div>
         )}
 
         {/* Success State */}
         {modalState === "success" && (
-          <div className="py-12 px-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+          <div className="px-4 py-12 text-center sm:px-6">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/50">
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-300" />
             </div>
             <DialogTitle className="mb-2">A/B Test Created Successfully!</DialogTitle>
-            <p className="text-sm text-slate-600 mb-2">Your test is now running in AdMob.</p>
-            <p className="text-xs text-slate-500 mb-6">
+            <p className="mb-2 text-sm text-muted-foreground">Your test is now running in AdMob.</p>
+            <p className="mb-6 text-xs text-muted-foreground">
               You&apos;ll be notified when results are statistically significant.
             </p>
 
-            <div className="flex items-center justify-center gap-3">
-              <Button variant="outline" onClick={handleClose}>
+            <div className="flex flex-col-reverse items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={handleClose}>
                 View Test Details
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+              <Button className="w-full sm:w-auto" onClick={handleClose}>
                 Done
               </Button>
             </div>
@@ -318,21 +318,21 @@ export function CreateABTestModal({ open, onOpenChange }: CreateABTestModalProps
 
         {/* Error State */}
         {modalState === "error" && (
-          <div className="py-12 px-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <XCircle className="w-8 h-8 text-red-600" />
+          <div className="px-4 py-12 text-center sm:px-6">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/50">
+              <XCircle className="h-8 w-8 text-red-600 dark:text-red-300" />
             </div>
             <DialogTitle className="mb-2">Failed to Create A/B Test</DialogTitle>
-            <p className="text-sm text-slate-600 mb-4">There was an error communicating with AdMob API.</p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 max-w-sm mx-auto mb-6">
+            <p className="mb-4 text-sm text-muted-foreground">There was an error communicating with AdMob API.</p>
+            <div className="mx-auto mb-6 max-w-sm rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300">
               Error: Rate limit exceeded. Please try again in 5 minutes.
             </div>
 
-            <div className="flex items-center justify-center gap-3">
-              <Button variant="outline" onClick={handleClose}>
+            <div className="flex flex-col-reverse items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={handleClose}>
                 Close
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate}>
+              <Button className="w-full sm:w-auto" onClick={handleCreate}>
                 Try Again
               </Button>
             </div>

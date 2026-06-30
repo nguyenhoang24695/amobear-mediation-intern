@@ -72,7 +72,7 @@ type ChecklistItem = { label: string; ok: boolean }
 type UploadedAssetSlot = { requestAssetId: number; slotKey: string; kind: "image" | "video"; label: string }
 
 const statusConfig: Record<MetaRequestStatus, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-slate-100 text-slate-600" },
+  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
   pending_approval: { label: "Pending Approval", className: "bg-amber-100 text-amber-700" },
   approved: { label: "Approved", className: "bg-blue-100 text-blue-700" },
   rejected: { label: "Rejected", className: "bg-red-100 text-red-700" },
@@ -84,7 +84,7 @@ const statusConfig: Record<MetaRequestStatus, { label: string; className: string
 const logStatusIcon: Record<LogStatus, ReactNode> = {
   success: <CheckCircle2 className="w-4 h-4 text-green-600" />,
   error: <XCircle className="w-4 h-4 text-red-500" />,
-  pending: <Clock className="w-4 h-4 text-slate-400" />,
+  pending: <Clock className="w-4 h-4 text-muted-foreground" />,
 }
 
 function formatDateTime(value?: string | null): string {
@@ -553,17 +553,17 @@ function getCreativePreviewCallToAction(creative: MetaCreativeDraftDto): string 
 function getCreativePreviewIcon(creative: MetaCreativeDraftDto) {
   switch (getCreativeType(creative)) {
     case "SINGLE_VIDEO":
-      return <Video className="w-6 h-6 text-slate-300" />
+      return <Video className="h-6 w-6 text-muted-foreground" />
     case "CAROUSEL_IMAGE":
-      return <GalleryHorizontal className="w-6 h-6 text-slate-300" />
+      return <GalleryHorizontal className="h-6 w-6 text-muted-foreground" />
     case "FLEXIBLE":
-      return <GalleryHorizontal className="w-6 h-6 text-slate-300" />
+      return <GalleryHorizontal className="h-6 w-6 text-muted-foreground" />
     case "EXISTING_POST":
-      return <FileText className="w-6 h-6 text-slate-300" />
+      return <FileText className="h-6 w-6 text-muted-foreground" />
     case "EXISTING_CREATIVE":
-      return <Copy className="w-6 h-6 text-slate-300" />
+      return <Copy className="h-6 w-6 text-muted-foreground" />
     default:
-      return <ImageIcon className="w-6 h-6 text-slate-300" />
+      return <ImageIcon className="h-6 w-6 text-muted-foreground" />
   }
 }
 
@@ -606,7 +606,7 @@ function formatLogStatusLabel(status?: string | null): string {
 function getLogStatusClasses(status?: string | null): string {
   if (status === "succeeded") return "bg-green-100 text-green-700"
   if (status === "failed") return "bg-red-100 text-red-700"
-  return "bg-slate-100 text-slate-600"
+  return "bg-muted text-muted-foreground"
 }
 
 
@@ -890,7 +890,7 @@ export function RequestDetailContent({ requestId }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-sm text-slate-400 gap-2">
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading request detail...
       </div>
@@ -921,24 +921,24 @@ export function RequestDetailContent({ requestId }: Props) {
   return (
     <div className="space-y-5">
       <div>
-        <nav className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
-          <Link href="/meta-ads/requests" className="hover:text-slate-700">
+        <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+          <Link href="/meta-ads/requests" className="hover:text-foreground">
             Meta Ads
           </Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/meta-ads/requests" className="hover:text-slate-700">
+          <Link href="/meta-ads/requests" className="hover:text-foreground">
             Requests
           </Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-slate-900 font-medium">{formatMetaRequestId(detail.id)}</span>
+          <span className="font-medium text-foreground">{formatMetaRequestId(detail.id)}</span>
         </nav>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-3">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push("/meta-ads/requests")}>
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <h1 className="text-lg font-bold text-slate-900">{formatMetaRequestId(detail.id)}</h1>
+              <h1 className="text-lg font-bold text-foreground">{formatMetaRequestId(detail.id)}</h1>
               <Badge className={`text-xs ${statusConfig[detail.status].className}`}>{statusConfig[detail.status].label}</Badge>
               {hasUploadedAssets ? (
                 <Badge variant="outline" className={assetPreparationBlocked ? "border-amber-200 bg-amber-50 text-amber-700" : "border-green-200 bg-green-50 text-green-700"}>
@@ -954,33 +954,33 @@ export function RequestDetailContent({ requestId }: Props) {
                 </Link>
               ) : null}
             </div>
-            <p className="text-sm text-slate-600 pl-11">{detail.campaignName}</p>
-            <div className="flex items-center gap-4 pl-11 text-xs text-slate-500 flex-wrap">
-              <span>
-                App: <strong className="text-slate-700">{detail.appDisplayName ?? detail.appId ?? "-"}</strong>
+            <p className="pl-0 text-sm break-words text-muted-foreground sm:pl-11">{detail.campaignName}</p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-0 text-xs text-muted-foreground sm:pl-11">
+              <span className="min-w-0 break-words">
+                App: <strong className="text-foreground">{detail.appDisplayName ?? detail.appId ?? "-"}</strong>
               </span>
-              <span>
-                Account: <strong className="text-slate-700 font-mono">{detail.metaAdAccountName ?? detail.metaAdAccountId}</strong>
+              <span className="min-w-0 break-words">
+                Account: <strong className="font-mono text-foreground">{detail.metaAdAccountName ?? detail.metaAdAccountId}</strong>
               </span>
               {detail.executionMetaIntegrationName ? (
-                <span>
-                  Execution: <strong className="text-slate-700">{detail.executionMetaIntegrationName}</strong>
-                  {detail.executionAuthMode ? <span className="text-slate-400"> ({detail.executionAuthMode})</span> : null}
+                <span className="min-w-0 break-words">
+                  Execution: <strong className="text-foreground">{detail.executionMetaIntegrationName}</strong>
+                  {detail.executionAuthMode ? <span className="text-muted-foreground"> ({detail.executionAuthMode})</span> : null}
                 </span>
               ) : null}
-              <span>
-                By: <strong className="text-slate-700">{formatUserGuidShort(detail.requestedBy)}</strong>
+              <span className="min-w-0 break-words">
+                By: <strong className="text-foreground">{formatUserGuidShort(detail.requestedBy)}</strong>
               </span>
-              <span>
-                Created: <strong className="text-slate-700">{formatDateTime(detail.createdAt)}</strong>
+              <span className="min-w-0 break-words">
+                Created: <strong className="text-foreground">{formatDateTime(detail.createdAt)}</strong>
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
             {campaignLocalId ? (
               <Button
                 variant="outline"
-                className="text-slate-700 border-slate-300 hover:bg-slate-50"
+                className="w-full border-border text-foreground hover:bg-muted/30 sm:w-auto"
                 onClick={() => router.push(`/meta-ads/campaigns/${campaignLocalId}`)}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
@@ -989,14 +989,14 @@ export function RequestDetailContent({ requestId }: Props) {
             ) : null}
 
             {canCreate && detail.status !== "executing" ? (
-              <Button variant="outline" onClick={() => router.push(`/meta-ads/requests/${detail.id}/edit`)}>
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => router.push(`/meta-ads/requests/${detail.id}/edit`)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Edit Request
               </Button>
             ) : null}
 
             {canCreate && detail.status === "completed" ? (
-              <Button variant="outline" onClick={() => void handleDuplicate()} disabled={actionLoading}>
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleDuplicate()} disabled={actionLoading}>
                 {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Copy className="w-4 h-4 mr-2" />}
                 Duplicate
               </Button>
@@ -1004,7 +1004,7 @@ export function RequestDetailContent({ requestId }: Props) {
 
             {detail.status === "approved" && canExecute ? (
               <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
                 onClick={() => setConfirmAction("execute")}
                 disabled={assetPreparationBlocked}
                 title={assetPreparationBlocked ? "Assets are still uploading to Meta. Execution will be available when all assets are ready." : undefined}
@@ -1016,7 +1016,7 @@ export function RequestDetailContent({ requestId }: Props) {
             {detail.status === "failed" && canRetry ? (
               <Button
                 variant="outline"
-                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 sm:w-auto"
                 onClick={() => setConfirmAction("retry")}
                 disabled={assetPreparationBlocked}
                 title={assetPreparationBlocked ? "Assets are still uploading to Meta. Retry will be available when all assets are ready." : undefined}
@@ -1030,23 +1030,23 @@ export function RequestDetailContent({ requestId }: Props) {
       </div>
 
       {detail.status !== "draft" && detail.status !== "executing" ? (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/25 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500 dark:text-amber-300" />
+          <p className="text-sm text-amber-900 dark:text-amber-100">
             Editing this request will re-validate it, and it will be ready to execute immediately after changes are saved.
           </p>
         </div>
       ) : null}
 
       {assetPreparationBlocked ? (
-        <div className="flex flex-wrap items-start justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/25 dark:text-amber-100">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {failedAssetCount > 0 ? (
-              <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500 dark:text-red-300" />
             ) : (
-              <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <Clock className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500 dark:text-amber-300" />
             )}
-            <p className="text-sm text-amber-800">
+            <p className="text-sm text-amber-900 dark:text-amber-100">
               {failedAssetCount > 0
                 ? `${failedAssetCount} asset upload${failedAssetCount === 1 ? "" : "s"} failed on Meta. Retry failed uploads before execution.`
                 : "Assets are still uploading to Meta. Execution will be available when all assets are ready."}
@@ -1057,7 +1057,7 @@ export function RequestDetailContent({ requestId }: Props) {
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+              className="h-8 border-amber-300 bg-background text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-background/5 dark:text-amber-300 dark:hover:bg-amber-950/40"
               disabled={retryingAllFailedAssets}
               onClick={() => void handleRetryAllFailedAssetPreparations()}
             >
@@ -1070,46 +1070,46 @@ export function RequestDetailContent({ requestId }: Props) {
 
       {detail.status === "failed" ? (
         <div className="space-y-3">
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="flex items-start gap-3 rounded-lg border border-red-200/70 bg-red-50/80 px-4 py-3 text-red-950 dark:border-red-500/30 dark:bg-red-950/25 dark:text-red-100">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500 dark:text-red-300" />
             <div>
-              <p className="text-sm font-semibold text-red-800">
+              <p className="text-sm font-semibold text-red-900 dark:text-red-100">
                 {latestFailedLog?.metaErrorUserTitle ?? "Request execution failed"}
               </p>
-              <p className="text-xs text-red-600 mt-0.5">
+              <p className="mt-0.5 text-xs text-red-700 dark:text-red-200">
                 {latestFailedLog?.metaErrorUserMsg ?? detail.failureSummary ?? "Execution failed. Check operation logs for more details."}
               </p>
             </div>
           </div>
 
           {latestFailedLog ? (
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border border-red-200/70 bg-red-50/80 dark:border-red-500/30 dark:bg-red-950/25">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-red-800 flex items-center gap-2">
-                  <Bug className="w-4 h-4" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-red-900 dark:text-red-100">
+                  <Bug className="h-4 w-4" />
                   Latest Meta Error
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-red-100 text-red-700">{formatOperationAction(latestFailedLog)}</Badge>
-                  <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                  <Badge className="bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-200">{formatOperationAction(latestFailedLog)}</Badge>
+                  <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground dark:text-muted-foreground/90">
                     {formatStepLabel(latestFailedLog.step)}
                   </Badge>
                   {latestFailedLog.httpStatusCode ? (
-                    <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                    <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground dark:text-muted-foreground/90">
                       HTTP {latestFailedLog.httpStatusCode}
                     </Badge>
                   ) : null}
                   {latestFailedLog.metaErrorCode ? (
-                    <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                    <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground dark:text-muted-foreground/90">
                       Meta {latestFailedLog.metaErrorCode}{latestFailedLog.metaErrorSubcode ? `/${latestFailedLog.metaErrorSubcode}` : ""}
                     </Badge>
                   ) : null}
                 </div>
                 {latestFailedLog.resourcePath ? <ValueBlock label="Resource Path" value={latestFailedLog.resourcePath} mono breakAll /> : null}
                 {latestFailedLog.metaErrorUserTitle ? (
-                  <div className="text-sm font-semibold text-red-800 bg-red-100/30 border border-red-200/50 rounded-md px-3 py-2.5">
+                  <div className="rounded-md border border-red-200/60 bg-red-100/40 px-3 py-2.5 text-sm font-semibold text-red-900 dark:border-red-500/20 dark:bg-red-950/40 dark:text-red-100">
                     {latestFailedLog.metaErrorUserTitle}
                   </div>
                 ) : null}
@@ -1138,17 +1138,17 @@ export function RequestDetailContent({ requestId }: Props) {
       ) : null}
 
       {hasValidationErrors ? (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border border-red-200/70 bg-red-50/80 dark:border-red-500/30 dark:bg-red-950/25">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-red-800">Validation Errors</CardTitle>
+            <CardTitle className="text-sm font-semibold text-red-900 dark:text-red-100">Validation Errors</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {Object.entries(groupedValidationErrors).map(([group, messages]) => (
               <div key={group}>
-                <p className="text-xs font-semibold text-red-900 uppercase tracking-wide mb-1">{group}</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-900 dark:text-red-100">{group}</p>
                 <ul className="space-y-1 pl-4">
                   {messages.map((message, index) => (
-                    <li key={`${group}-${index}`} className="list-disc text-xs text-red-700">
+                    <li key={`${group}-${index}`} className="list-disc text-xs text-red-700 dark:text-red-200">
                       {message}
                     </li>
                   ))}
@@ -1158,18 +1158,18 @@ export function RequestDetailContent({ requestId }: Props) {
           </CardContent>
         </Card>
       ) : null}
-      <div className="grid grid-cols-[1fr_320px] gap-5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">Request Payload Summary</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">Request Payload Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+              <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
                 <DetailRow label="Objective" value={detail.payload.campaign.objective} mono />
                 {detail.payload.campaign.isSkadnetworkAttribution ? (
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-1.5">
-                    <span className="text-slate-500">Attribution</span>
+                  <div className="flex items-center justify-between gap-3 border-b border-border py-1.5">
+                    <span className="text-muted-foreground">Attribution</span>
                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">iOS 14+ / SKAN</Badge>
                   </div>
                 ) : null}
@@ -1218,19 +1218,19 @@ export function RequestDetailContent({ requestId }: Props) {
 
           {/* Creative card — tabs when multiple variants, plain card when single */}
           {allVariants.length > 1 ? (
-            <Card className="border-slate-200">
+            <Card className="border-border">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-slate-500" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
                   Creative — {allVariants.length} Variations
                 </CardTitle>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   Primary text, headline, description, CTA, and page are shared across all variations. Each variation differs only by its image/video.
                 </p>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue={`variant-${allVariants[0].sequenceNumber}`}>
-                  <TabsList className="mb-4 flex-wrap h-auto gap-1">
+                  <TabsList className="mb-4 flex h-auto w-full flex-wrap gap-1">
                     {allVariants.map((variant, index) => {
                       const vc = variant.creative ?? {}
                       const vcComplete = isCreativeComplete(vc)
@@ -1238,7 +1238,7 @@ export function RequestDetailContent({ requestId }: Props) {
                         <TabsTrigger
                           key={variant.sequenceNumber}
                           value={`variant-${variant.sequenceNumber}`}
-                          className="text-xs gap-1.5"
+                          className="flex-1 gap-1.5 text-xs sm:flex-none"
                         >
                           Variation #{index + 1}
                           <span className={`w-1.5 h-1.5 rounded-full ${vcComplete ? "bg-green-500" : "bg-amber-400"}`} />
@@ -1255,12 +1255,12 @@ export function RequestDetailContent({ requestId }: Props) {
                     const vcPreview = getCreativePreviewImage(vc)
                     return (
                       <TabsContent key={variant.sequenceNumber} value={`variant-${variant.sequenceNumber}`}>
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          <p className="text-xs text-slate-500">
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-xs text-muted-foreground">
                             Ad: &ldquo;{variant.ad?.name || "-"}&rdquo; · Variation #{index + 1} of {allVariants.length}
                           </p>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">
+                            <Badge variant="outline" className="border-border px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
                               {vcType}
                             </Badge>
                             <Badge className={vcComplete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
@@ -1270,7 +1270,7 @@ export function RequestDetailContent({ requestId }: Props) {
                         </div>
                         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
                           <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                            <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
                               <DetailRow label="Creative Type" value={vcType.replaceAll("_", " ")} mono />
                               <DetailRow label="Creative Name" value={vcCommon.name || "-"} />
                               <DetailRow label="Facebook Page ID" value={vcCommon.pageId || "-"} mono />
@@ -1283,9 +1283,9 @@ export function RequestDetailContent({ requestId }: Props) {
                               retryingAssetId={retryingAssetId}
                               onRetryAssetPreparation={handleRetryAssetPreparation}
                             />
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
-                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div className="rounded-lg border border-border bg-muted/30 p-3">
+                              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Required Creative Fields</p>
+                              <div className="grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2">
                                 {vcChecklist.map((item) => (
                                   <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
                                     {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
@@ -1296,15 +1296,15 @@ export function RequestDetailContent({ requestId }: Props) {
                             </div>
                           </div>
                           <div className="flex flex-col items-center">
-                            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">Creative Preview</p>
-                            <div className="w-44 overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
-                              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5">
-                                <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                                <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                                <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Creative Preview</p>
+                            <div className="w-full max-w-44 overflow-hidden rounded-2xl border-2 border-border bg-card shadow-sm">
+                              <div className="flex items-center gap-2 bg-muted px-3 py-1.5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
                               </div>
                               <div className="space-y-1.5 p-2">
-                                <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100">
+                                <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-border bg-muted">
                                   {vcPreview.url ? (
                                     <ProtectedMediaImage
                                       src={vcPreview.url}
@@ -1318,18 +1318,18 @@ export function RequestDetailContent({ requestId }: Props) {
                                   )}
                                 </div>
                                 <div className="space-y-0.5">
-                                  <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900">{getCreativePreviewHeadline(vc)}</p>
-                                  <p className="line-clamp-2 text-[9px] leading-tight text-slate-500">{getCreativePreviewMessage(vc)}</p>
+                                  <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-foreground">{getCreativePreviewHeadline(vc)}</p>
+                                  <p className="line-clamp-2 text-[9px] leading-tight text-muted-foreground">{getCreativePreviewMessage(vc)}</p>
                                 </div>
                                 <div className="pt-0.5">
                                   <div className="rounded bg-blue-600 py-1 text-center">
                                     <span className="text-[9px] font-semibold text-white">{getCreativePreviewCallToAction(vc)}</span>
                                   </div>
                                 </div>
-                                <p className="text-[8px] text-slate-400">Sponsored</p>
+                                <p className="text-[8px] text-muted-foreground">Sponsored</p>
                               </div>
                             </div>
-                            <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                            <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
                               <Smartphone className="w-3 h-3" />
                               <span>Preview only</span>
                             </div>
@@ -1351,15 +1351,15 @@ export function RequestDetailContent({ requestId }: Props) {
               const vcComplete = isCreativeComplete(vc)
               const vcPreview = getCreativePreviewImage(vc)
               return (
-                <Card key={variant.sequenceNumber} className="border-slate-200">
+                <Card key={variant.sequenceNumber} className="border-border">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between gap-3">
-                      <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4 text-slate-500" />
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
                         Creative
                       </CardTitle>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-300 font-mono px-2 py-0.5">
+                        <Badge variant="outline" className="border-border px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
                           {vcType}
                         </Badge>
                         <Badge className={vcComplete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
@@ -1367,14 +1367,14 @@ export function RequestDetailContent({ requestId }: Props) {
                         </Badge>
                       </div>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Snapshot of the request creative payload that will be transformed into the matching Meta creative shape during execution.
                     </p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
                       <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
                           <DetailRow label="Creative Type" value={vcType.replaceAll("_", " ")} mono />
                           <DetailRow label="Creative Name" value={vcCommon.name || "-"} />
                           <DetailRow label="Facebook Page ID" value={vcCommon.pageId || "-"} mono />
@@ -1389,9 +1389,9 @@ export function RequestDetailContent({ requestId }: Props) {
                           onRetryAssetPreparation={handleRetryAssetPreparation}
                         />
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Required Creative Fields</p>
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="rounded-lg border border-border bg-muted/30 p-3">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Required Creative Fields</p>
+                          <div className="grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2">
                             {vcChecklist.map((item) => (
                               <div key={item.label} className={`flex items-center gap-1.5 ${item.ok ? "text-green-700" : "text-amber-700"}`}>
                                 {item.ok ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <AlertTriangle className="w-3 h-3 text-amber-600" />}
@@ -1403,15 +1403,15 @@ export function RequestDetailContent({ requestId }: Props) {
                       </div>
 
                       <div className="flex flex-col items-center">
-                        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">Creative Preview</p>
-                        <div className="w-44 overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
-                          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5">
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Creative Preview</p>
+                        <div className="w-full max-w-44 overflow-hidden rounded-2xl border-2 border-border bg-card shadow-sm">
+                          <div className="flex items-center gap-2 bg-muted px-3 py-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
                           </div>
                           <div className="space-y-1.5 p-2">
-                            <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100">
+                            <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-border bg-muted">
                               {vcPreview.url ? (
                                 <ProtectedMediaImage
                                   src={vcPreview.url}
@@ -1425,18 +1425,18 @@ export function RequestDetailContent({ requestId }: Props) {
                               )}
                             </div>
                             <div className="space-y-0.5">
-                              <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900">{getCreativePreviewHeadline(vc)}</p>
-                              <p className="line-clamp-2 text-[9px] leading-tight text-slate-500">{getCreativePreviewMessage(vc)}</p>
+                              <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-foreground">{getCreativePreviewHeadline(vc)}</p>
+                              <p className="line-clamp-2 text-[9px] leading-tight text-muted-foreground">{getCreativePreviewMessage(vc)}</p>
                             </div>
                             <div className="pt-0.5">
                               <div className="rounded bg-blue-600 py-1 text-center">
                                 <span className="text-[9px] font-semibold text-white">{getCreativePreviewCallToAction(vc)}</span>
                               </div>
                             </div>
-                            <p className="text-[8px] text-slate-400">Sponsored</p>
+                            <p className="text-[8px] text-muted-foreground">Sponsored</p>
                           </div>
                         </div>
-                        <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                        <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Smartphone className="w-3 h-3" />
                           <span>Preview only</span>
                         </div>
@@ -1448,21 +1448,21 @@ export function RequestDetailContent({ requestId }: Props) {
             })
           )}
 
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-slate-900">Operation Logs</CardTitle>
-                <Badge variant="outline" className="text-[10px] font-mono text-slate-500 border-slate-300">
+                <CardTitle className="text-sm font-semibold text-foreground">Operation Logs</CardTitle>
+                <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground">
                   {detail.operationLogs.length} step{detail.operationLogs.length === 1 ? "" : "s"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
               {detail.operationLogs.length === 0 ? (
-                <p className="text-sm text-slate-400">No operation logs yet.</p>
+                <p className="text-sm text-muted-foreground">No operation logs yet.</p>
               ) : (
                 <div className="relative">
-                  <div className="absolute left-[13px] top-2 bottom-2 w-px bg-slate-200" />
+                  <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border" />
                   <div className="space-y-4">
                     {detail.operationLogs.map((log) => {
                       const status = getLogStatus(log)
@@ -1473,41 +1473,41 @@ export function RequestDetailContent({ requestId }: Props) {
 
                       return (
                         <div key={log.id} id={`meta-operation-log-${log.id}`} className="relative flex items-start gap-3">
-                          <div className="relative z-10 flex-shrink-0 bg-white">
+                          <div className="relative z-10 flex-shrink-0 bg-background">
                             {logStatusIcon[status]}
                           </div>
                           <div className="min-w-0 flex-1 pb-1">
                             <Collapsible open={expanded} onOpenChange={(open) => setExpandedLogs((current) => ({ ...current, [log.id]: open }))}>
-                              <div className={`rounded-lg border px-4 py-3 ${log.status === "failed" ? "border-red-200 bg-red-50/60" : "border-slate-200 bg-white"}`}>
+                              <div className={`rounded-lg border px-4 py-3 ${log.status === "failed" ? "border-red-200/70 bg-red-50/60 dark:border-red-500/30 dark:bg-red-950/20" : "border-border bg-card"}`}>
                                 <CollapsibleTrigger className="w-full text-left">
                                   <div className="flex items-start justify-between gap-4">
                                     <div className="min-w-0 space-y-2">
                                       <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-sm font-semibold text-slate-900">{formatOperationAction(log)}</p>
-                                        <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                                        <p className="text-sm font-semibold text-foreground">{formatOperationAction(log)}</p>
+                                        <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground">
                                           {formatStepLabel(log.step)}
                                         </Badge>
                                         <Badge className={`text-[10px] ${getLogStatusClasses(log.status)}`}>{formatLogStatusLabel(log.status)}</Badge>
                                         {log.httpStatusCode ? (
-                                          <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                                          <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground">
                                             HTTP {log.httpStatusCode}
                                           </Badge>
                                         ) : null}
                                         {log.metaErrorCode ? (
-                                          <Badge variant="outline" className="text-[10px] font-mono text-slate-600 border-slate-300">
+                                          <Badge variant="outline" className="border-border text-[10px] font-mono text-muted-foreground">
                                             Meta {log.metaErrorCode}{log.metaErrorSubcode ? `/${log.metaErrorSubcode}` : ""}
                                           </Badge>
                                         ) : null}
                                       </div>
-                                      <p className="text-xs text-slate-500">{log.summaryMessage ?? log.errorMessage ?? "No summary available."}</p>
-                                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                                      <p className="text-xs text-muted-foreground">{log.summaryMessage ?? log.errorMessage ?? "No summary available."}</p>
+                                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                                         <span>{formatDateTime(log.startedAt)}</span>
                                         <span>Attempt #{log.attemptNumber}</span>
-                                        {log.resourcePath ? <span className="font-mono text-slate-500">{log.resourcePath}</span> : null}
+                                        {log.resourcePath ? <span className="font-mono text-muted-foreground">{log.resourcePath}</span> : null}
                                         {log.correlationId ? <span className="font-mono">Correlation: {log.correlationId}</span> : null}
                                       </div>
                                     </div>
-                                    <ChevronDown className={`mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                                    <ChevronDown className={`mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
                                   </div>
                                 </CollapsibleTrigger>
 
@@ -1534,16 +1534,16 @@ export function RequestDetailContent({ requestId }: Props) {
                                       emptyLabel="No error summary available."
                                       onCopy={() => void handleCopy("Error summary", formattedErrorSummary)}
                                       footer={
-                                        <div className="space-y-1 text-[11px] text-slate-500">
-                                          {log.metaErrorType ? <p>Type: <span className="font-mono text-slate-700">{log.metaErrorType}</span></p> : null}
-                                          {log.metaTraceId ? <p>Trace: <span className="font-mono text-slate-700">{log.metaTraceId}</span></p> : null}
-                                          {log.resourcePath ? <p>Endpoint: <span className="font-mono text-slate-700 break-all">{log.resourcePath}</span></p> : null}
+                                        <div className="space-y-1 text-[11px] text-muted-foreground">
+                                          {log.metaErrorType ? <p>Type: <span className="font-mono text-foreground">{log.metaErrorType}</span></p> : null}
+                                          {log.metaTraceId ? <p>Trace: <span className="font-mono text-foreground">{log.metaTraceId}</span></p> : null}
+                                          {log.resourcePath ? <p>Endpoint: <span className="break-all font-mono text-foreground">{log.resourcePath}</span></p> : null}
                                         </div>
                                       }
                                     />
                                   </div>
                                   {!hasLogDebugPayload(log) ? (
-                                    <p className="mt-3 text-[11px] text-slate-400">This operation log predates the extended debug payload and only contains minimal legacy data.</p>
+                                    <p className="mt-3 text-[11px] text-muted-foreground">This operation log predates the extended debug payload and only contains minimal legacy data.</p>
                                   ) : null}
                                 </CollapsibleContent>
                               </div>
@@ -1560,9 +1560,9 @@ export function RequestDetailContent({ requestId }: Props) {
         </div>
 
         <div className="space-y-4">
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Lifecycle</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-foreground">Lifecycle</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <TimelineEntry label="Created" value={formatDateTime(detail.createdAt)} done />
@@ -1574,13 +1574,13 @@ export function RequestDetailContent({ requestId }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200">
+          <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Created Meta Objects</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-foreground">Created Meta Objects</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {createdObjects.length === 0 ? (
-                <p className="text-[11px] text-slate-400">No Meta objects created yet.</p>
+                <p className="text-[11px] text-muted-foreground">No Meta objects created yet.</p>
               ) : (
                 createdObjects.map((object) => (
                   <ObjectRow
@@ -1593,7 +1593,7 @@ export function RequestDetailContent({ requestId }: Props) {
                 ))
               )}
               {createdObjects.length > 0 ? (
-                <p className="text-[11px] text-slate-400 pt-1">Campaign is expected to be <strong>PAUSED</strong>; Ad Set and Ads are expected to be <strong>ACTIVE</strong> on Meta.</p>
+                <p className="pt-1 text-[11px] text-muted-foreground">Campaign is expected to be <strong>PAUSED</strong>; Ad Set and Ads are expected to be <strong>ACTIVE</strong> on Meta.</p>
               ) : null}
             </CardContent>
           </Card>
@@ -1651,15 +1651,15 @@ function AssetPreparationStatusLine({
   const metaId = getShortMetaAssetId(preparation?.metaImageHash ?? preparation?.metaVideoId)
 
   return (
-    <div className="mt-2 space-y-1 rounded-md border border-slate-200 bg-white px-3 py-2">
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+    <div className="mt-2 space-y-1 rounded-md border border-border bg-card px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <Badge variant="outline" className={getAssetPreparationClasses(status)}>
           {status === "ready" ? <CheckCircle2 className="h-3 w-3" /> : status === "failed" ? <AlertTriangle className="h-3 w-3" /> : status === "uploading" || status === "processing" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Clock className="h-3 w-3" />}
           {getAssetPreparationLabel(status)}
         </Badge>
         <span>{label}</span>
-        <span className="font-mono text-slate-400">Asset #{assetId}</span>
-        {metaId ? <span className="font-mono text-slate-400">Meta {metaId}</span> : null}
+        <span className="font-mono text-muted-foreground">Asset #{assetId}</span>
+        {metaId ? <span className="font-mono text-muted-foreground">Meta {metaId}</span> : null}
         {isFailed && canRetry ? (
           <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" disabled={retryingAssetId === assetId} onClick={() => void onRetry(assetId)}>
             {retryingAssetId === assetId ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
@@ -1705,7 +1705,7 @@ function CreativeTypeSnapshot({
     const video = getSingleVideoCreative(creative)
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
           <DetailRow label="Headline" value={video.headline ?? "-"} />
           <DetailRow label="Call To Action" value={formatCallToAction(video.callToActionType)} mono />
           <DetailRow label="Video Source" value={getMediaSourceValue(video.video, "video")} mono />
@@ -1718,7 +1718,7 @@ function CreativeTypeSnapshot({
         <ValueBlock label="Link URL" value={video.linkUrl} breakAll />
         <ValueBlock label="Primary Text" value={video.message} preserveWhitespace />
         <ValueBlock label="Description" value={video.description} preserveWhitespace />
-        <p className="text-[11px] text-slate-400">Facebook Page ID {common.pageId || "-"} will be used to build object_story_spec.video_data at execute time.</p>
+        <p className="text-[11px] text-muted-foreground">Facebook Page ID {common.pageId || "-"} will be used to build object_story_spec.video_data at execute time.</p>
       </div>
     )
   }
@@ -1727,20 +1727,20 @@ function CreativeTypeSnapshot({
     const carousel = getCarouselCreative(creative)
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
           <DetailRow label="Call To Action" value={formatCallToAction(carousel.callToActionType)} mono />
           <DetailRow label="Card Count" value={(carousel.cards?.length ?? 0).toString()} mono />
         </div>
         <ValueBlock label="Primary Text" value={carousel.message} preserveWhitespace />
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-slate-700">Carousel Cards</p>
+          <p className="text-xs font-semibold text-foreground">Carousel Cards</p>
           {(carousel.cards ?? []).length === 0 ? (
-            <p className="text-sm text-slate-400">No carousel cards in this payload.</p>
+            <p className="text-sm text-muted-foreground">No carousel cards in this payload.</p>
           ) : (
             (carousel.cards ?? []).map((card, index) => (
-              <div key={`${index}-${card.headline ?? "card"}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div key={`${index}-${card.headline ?? "card"}`} className="rounded-lg border border-border bg-muted/30 p-3">
                 <div className="grid gap-3 md:grid-cols-[96px_minmax(0,1fr)]">
-                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded border border-border bg-card">
                     {(() => {
                       const preview = getMediaPreviewSource(card.image)
                       return preview.url ? (
@@ -1749,15 +1749,15 @@ function CreativeTypeSnapshot({
                           requiresAuth={preview.requiresAuth}
                           alt={`Carousel card ${index + 1}`}
                           className="h-full w-full object-cover"
-                          fallback={<GalleryHorizontal className="w-5 h-5 text-slate-300" />}
+                          fallback={<GalleryHorizontal className="h-5 w-5 text-muted-foreground" />}
                         />
                       ) : (
-                        <GalleryHorizontal className="w-5 h-5 text-slate-300" />
+                        <GalleryHorizontal className="h-5 w-5 text-muted-foreground" />
                       )
                     })()}
                   </div>
                   <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                       <DetailRow label="Card" value={`#${index + 1}`} mono />
                       <DetailRow label="Headline" value={card.headline ?? "-"} />
                     </div>
@@ -1780,7 +1780,7 @@ function CreativeTypeSnapshot({
     const flexible = getFlexibleCreative(creative)
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+        <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
           <DetailRow label="Call To Action" value={formatCallToAction(flexible.callToActionType)} mono />
           <DetailRow label="Asset Count" value={(flexible.assets?.length ?? 0).toString()} mono />
         </div>
@@ -1788,11 +1788,11 @@ function CreativeTypeSnapshot({
         <ValueBlock label="Primary Texts" value={(flexible.primaryTexts ?? []).join("\n\n")} preserveWhitespace />
         <ValueBlock label="Headlines" value={(flexible.headlines ?? []).join("\n")} preserveWhitespace />
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Flexible Assets</p>
+          <p className="text-xs font-semibold text-foreground">Flexible Assets</p>
           {(flexible.assets ?? []).map((asset, index) => (
-            <div key={`${asset.assetType}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <div key={`${asset.assetType}-${index}`} className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
               <p className="font-medium">Asset {index + 1} ({asset.assetType ?? "IMAGE"})</p>
-              <p className="font-mono text-[12px] text-slate-500 break-all">{asset.assetType === "VIDEO" ? getMediaSourceValue(asset.video, "video") : getMediaSourceValue(asset.image)}</p>
+              <p className="break-all font-mono text-[12px] text-muted-foreground">{asset.assetType === "VIDEO" ? getMediaSourceValue(asset.video, "video") : getMediaSourceValue(asset.image)}</p>
               {asset.assetType === "VIDEO" ? (
                 <div className="space-y-2">
                   {renderAssetPreparation(asset.video, `Flexible asset ${index + 1} video`)}
@@ -1811,11 +1811,11 @@ function CreativeTypeSnapshot({
     const existingPost = getExistingPostCreative(creative)
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+        <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
           <DetailRow label="Source Post ID" value={existingPost.sourcePostId ?? "-"} mono />
           <DetailRow label="Mode" value="object_story_id" mono />
         </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
           This request will reuse an existing Facebook Page post instead of building inline image or video story data.
         </div>
       </div>
@@ -1825,7 +1825,7 @@ function CreativeTypeSnapshot({
   const image = getSingleImageCreative(creative)
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+      <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <DetailRow label="Headline" value={image.headline ?? "-"} />
         <DetailRow label="Call To Action" value={formatCallToAction(image.callToActionType)} mono />
       </div>
@@ -1860,19 +1860,19 @@ function OperationLogPanel({
   const hasValue = !!value?.trim()
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+    <div className="rounded-lg border border-border bg-muted/30">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {icon}
           <span>{title}</span>
         </div>
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-500" onClick={onCopy}>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={onCopy}>
           <Copy className="mr-1 h-3.5 w-3.5" />
           Copy
         </Button>
       </div>
       <div className="space-y-3 p-3">
-        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-100">
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-card px-3 py-2 text-[11px] leading-5 text-foreground">
           {hasValue ? value : emptyLabel}
         </pre>
         {footer}
@@ -1883,9 +1883,9 @@ function OperationLogPanel({
 
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="col-span-1">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className={`text-sm text-slate-900 font-medium mt-0.5 ${mono ? "font-mono text-xs break-all" : ""}`}>{value}</p>
+    <div className="col-span-1 min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 text-sm font-medium text-foreground ${mono ? "font-mono text-xs" : ""} break-words`}>{value}</p>
     </div>
   )
 }
@@ -1893,8 +1893,8 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
 function ValueBlock({ label, value, mono, preserveWhitespace, breakAll }: { label: string; value?: string | null; mono?: boolean; preserveWhitespace?: boolean; breakAll?: boolean }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs text-slate-500">{label}</p>
-      <div className={`rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 ${mono ? "font-mono text-xs" : ""} ${preserveWhitespace ? "whitespace-pre-wrap" : ""} ${breakAll ? "break-all" : ""}`}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className={`rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground ${mono ? "font-mono text-xs" : ""} ${preserveWhitespace ? "whitespace-pre-wrap" : "break-words"} ${breakAll ? "break-all" : ""}`}>
         {value?.trim() ? value : "-"}
       </div>
     </div>
@@ -1903,12 +1903,12 @@ function ValueBlock({ label, value, mono, preserveWhitespace, breakAll }: { labe
 
 function TimelineEntry({ label, value, done }: { label: string; value: string; done: boolean }) {
   return (
-    <div className="flex items-center justify-between text-xs">
+    <div className="flex flex-col gap-1 text-xs sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
-        {done ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Clock className="w-3.5 h-3.5 text-slate-300" />}
-        <span className={done ? "text-slate-700" : "text-slate-400"}>{label}</span>
+        {done ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+        <span className={done ? "text-foreground" : "text-muted-foreground"}>{label}</span>
       </div>
-      <span className={done ? "text-slate-500" : "text-slate-300"}>{value}</span>
+      <span className={done ? "text-muted-foreground" : "text-muted-foreground/70"}>{value}</span>
     </div>
   )
 }
@@ -1942,7 +1942,7 @@ function ObjectRow({
 
   return (
     <div
-      className={`border border-slate-200 rounded-md px-3 py-2 ${url ? "hover:bg-slate-50 transition-colors cursor-pointer" : ""}`}
+      className={`rounded-md border border-border px-3 py-2 ${url ? "cursor-pointer transition-colors hover:bg-muted/30" : ""}`}
       onClick={() => {
         if (url) {
           if (isInternal) {
@@ -1954,13 +1954,13 @@ function ObjectRow({
       }}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-700 capitalize">{label}</p>
+        <p className="text-xs font-semibold capitalize text-foreground">{label}</p>
         {url ? (
-          <ExternalLink className={`w-3 h-3 ${isInternal ? "text-blue-500" : "text-slate-400"}`} />
+          <ExternalLink className={`h-3 w-3 ${isInternal ? "text-blue-500" : "text-muted-foreground"}`} />
         ) : null}
       </div>
       <p className="text-[11px] font-mono text-blue-700 mt-0.5">Meta ID: {metaId}</p>
-      <p className="text-[11px] font-mono text-slate-400">Local ID: {localId}</p>
+      <p className="text-[11px] font-mono text-muted-foreground">Local ID: {localId}</p>
     </div>
   )
 }

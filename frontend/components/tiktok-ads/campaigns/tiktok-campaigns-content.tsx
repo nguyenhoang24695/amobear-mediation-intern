@@ -405,31 +405,31 @@ export function TikTokCampaignsContent() {
   const summary = data?.summary
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <div className="space-y-5 overflow-hidden">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>TikTok Ads</span>
             <ChevronRight className="h-3 w-3" />
             <span className="font-medium text-foreground">Campaigns</span>
           </nav>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <div className="shrink-0 rounded-lg bg-primary/10 p-2">
               <Megaphone className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">TikTok Campaigns</h1>
-              <p className="text-sm text-muted-foreground">Monitor synced TikTok campaign structure and drill into ad groups and ads.</p>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-foreground sm:text-2xl">TikTok Campaigns</h1>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Monitor synced TikTok campaign structure and drill into ad groups and ads.</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:shrink-0">
+          <div className="min-w-0 text-xs text-muted-foreground sm:text-right">
             <div className="font-medium text-foreground">Last synced</div>
-            <div>{summary?.lastSyncedAt ? `${formatRelativeTime(summary.lastSyncedAt)} (${formatDateTime(summary.lastSyncedAt)})` : "No campaign sync yet"}</div>
+            <div className="break-words sm:max-w-52">{summary?.lastSyncedAt ? `${formatRelativeTime(summary.lastSyncedAt)} (${formatDateTime(summary.lastSyncedAt)})` : "No campaign sync yet"}</div>
           </div>
           {canSync ? (
-            <Button onClick={sync} disabled={syncing}>
+            <Button className="w-full shrink-0 sm:w-auto" onClick={sync} disabled={syncing}>
               {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Sync from TikTok
             </Button>
@@ -439,7 +439,7 @@ export function TikTokCampaignsContent() {
 
       {error ? <div className="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
 
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <SummaryCard title="Total" value={summary?.total ?? 0} />
         <SummaryCard title="Active" value={summary?.active ?? 0} tone="good" />
         <SummaryCard title="Paused" value={summary?.paused ?? 0} tone="warn" />
@@ -448,7 +448,7 @@ export function TikTokCampaignsContent() {
         <SummaryCard title="Stale Sync" value={summary?.staleSync ?? 0} tone="warn" />
       </div>
 
-      <Card className="border-border bg-card text-card-foreground">
+      <Card className="min-w-0 border-border bg-card text-card-foreground">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <CardTitle className="text-base font-semibold text-foreground">Campaign Mirror</CardTitle>
@@ -493,7 +493,7 @@ export function TikTokCampaignsContent() {
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[1280px]">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="px-4">Campaign</TableHead>

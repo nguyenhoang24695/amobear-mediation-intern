@@ -211,14 +211,14 @@ export function TikTokRequestListContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">TikTok Requests</h1>
-          <p className="text-sm text-muted-foreground">Create, approve, and execute TikTok campaign requests.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-lg font-semibold text-foreground sm:text-xl">TikTok Requests</h1>
+          <p className="break-words text-sm text-muted-foreground">Create, approve, and execute TikTok campaign requests.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
-          {canCreate ? <Button onClick={() => router.push("/tiktok-ads/requests/create")}><Send className="mr-2 h-4 w-4" />New Request</Button> : null}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
+          {canCreate ? <Button className="w-full sm:w-auto" onClick={() => router.push("/tiktok-ads/requests/create")}><Send className="mr-2 h-4 w-4" />New Request</Button> : null}
         </div>
       </div>
 
@@ -255,12 +255,25 @@ export function TikTokRequestListContent() {
       </div>
 
       <Dialog open={!!confirm} onOpenChange={(open) => !open && !actionLoading && setConfirm(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Confirm {confirm?.action}</DialogTitle></DialogHeader>
-          {confirm?.action === "reject" ? <div className="space-y-2"><Label>Reject reason</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} /></div> : <p className="text-sm text-muted-foreground">Apply this action to {confirm?.item.campaignName}?</p>}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>Cancel</Button>
-            <Button onClick={() => void run()} disabled={actionLoading}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-2rem)] overflow-y-auto px-4 py-4 sm:max-w-lg sm:px-6 sm:py-5">
+          <DialogHeader className="space-y-2 pr-6">
+            <DialogTitle className="break-words text-base leading-snug">Confirm {confirm?.action}</DialogTitle>
+          </DialogHeader>
+          {confirm?.action === "reject" ? (
+            <div className="space-y-2">
+              <Label>Reject reason</Label>
+              <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="min-h-28" />
+            </div>
+          ) : (
+            <p className="break-words text-sm leading-relaxed text-muted-foreground">
+              Apply this action to <span className="break-all font-medium text-foreground">{confirm?.item.campaignName}</span>?
+            </p>
+          )}
+          <DialogFooter className="flex-col gap-2 pt-2 sm:flex-row">
+            <Button className="w-full sm:w-auto" variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button className="w-full sm:w-auto" onClick={() => void run()} disabled={actionLoading}>
               {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {actionLoading && confirm?.action === "execute" ? "Executing..." : actionLoading ? "Processing..." : "Confirm"}
             </Button>
@@ -342,14 +355,17 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h1 className="text-xl font-semibold text-foreground">{detail.campaignName || `Request #${detail.id}`}</h1><p className="text-sm text-muted-foreground">TikTok request detail and execution logs.</p></div>
-        <div className="flex gap-2">
-          {canEditRequestStatus(detail.status) && canCreate ? <Button variant="outline" onClick={() => router.push(`/tiktok-ads/requests/${detail.id}/edit`)}>Edit</Button> : null}
-          {canCreate ? <Button variant="outline" onClick={() => void validate()}>Validate</Button> : null}
-          {detail.status === "pending_approval" && canApprove ? <Button onClick={() => setConfirm("approve")}><CheckCircle2 className="mr-2 h-4 w-4" />Approve</Button> : null}
-          {detail.status === "pending_approval" && canApprove ? <Button variant="outline" onClick={() => setConfirm("reject")}><XCircle className="mr-2 h-4 w-4" />Reject</Button> : null}
-          {detail.status === "approved" && canExecute ? <Button onClick={() => setConfirm("execute")}><Play className="mr-2 h-4 w-4" />Execute</Button> : null}
-          {detail.status === "failed" && canRetry ? <Button onClick={() => setConfirm("retry")}>Retry</Button> : null}
+        <div className="min-w-0">
+          <h1 className="break-words text-lg font-semibold text-foreground sm:text-xl">{detail.campaignName || `Request #${detail.id}`}</h1>
+          <p className="break-words text-sm text-muted-foreground">TikTok request detail and execution logs.</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {canEditRequestStatus(detail.status) && canCreate ? <Button className="w-full sm:w-auto" variant="outline" onClick={() => router.push(`/tiktok-ads/requests/${detail.id}/edit`)}>Edit</Button> : null}
+          {canCreate ? <Button className="w-full sm:w-auto" variant="outline" onClick={() => void validate()}>Validate</Button> : null}
+          {detail.status === "pending_approval" && canApprove ? <Button className="w-full sm:w-auto" onClick={() => setConfirm("approve")}><CheckCircle2 className="mr-2 h-4 w-4" />Approve</Button> : null}
+          {detail.status === "pending_approval" && canApprove ? <Button className="w-full sm:w-auto" variant="outline" onClick={() => setConfirm("reject")}><XCircle className="mr-2 h-4 w-4" />Reject</Button> : null}
+          {detail.status === "approved" && canExecute ? <Button className="w-full sm:w-auto" onClick={() => setConfirm("execute")}><Play className="mr-2 h-4 w-4" />Execute</Button> : null}
+          {detail.status === "failed" && canRetry ? <Button className="w-full sm:w-auto" onClick={() => setConfirm("retry")}>Retry</Button> : null}
         </div>
       </div>
 
@@ -451,7 +467,23 @@ export function TikTokRequestDetailContent({ requestId }: { requestId: number })
       <section className="rounded-md border bg-card p-4 text-card-foreground"><h2 className="mb-3 font-semibold">Payload</h2><pre className="max-h-96 overflow-auto rounded bg-zinc-950 p-3 text-xs text-zinc-100 dark:bg-zinc-900">{JSON.stringify(payload, null, 2)}</pre></section>
 
       <Dialog open={!!confirm} onOpenChange={(open) => !open && !actionLoading && setConfirm(null)}>
-        <DialogContent><DialogHeader><DialogTitle>Confirm {confirm}</DialogTitle></DialogHeader>{confirm === "reject" ? <div className="space-y-2"><Label>Reject reason</Label><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} /></div> : <p className="text-sm text-muted-foreground">Apply this action to the request?</p>}<DialogFooter><Button variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>Cancel</Button><Button onClick={() => void run()} disabled={actionLoading}>{actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{actionLoading && confirm === "execute" ? "Executing..." : actionLoading ? "Processing..." : "Confirm"}</Button></DialogFooter></DialogContent>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-2rem)] overflow-y-auto px-4 py-4 sm:max-w-lg sm:px-6 sm:py-5">
+          <DialogHeader className="space-y-2 pr-6">
+            <DialogTitle className="break-words text-base leading-snug">Confirm {confirm}</DialogTitle>
+          </DialogHeader>
+          {confirm === "reject" ? (
+            <div className="space-y-2">
+              <Label>Reject reason</Label>
+              <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="min-h-28" />
+            </div>
+          ) : (
+            <p className="break-words text-sm leading-relaxed text-muted-foreground">Apply this action to the request?</p>
+          )}
+          <DialogFooter className="flex-col gap-2 pt-2 sm:flex-row">
+            <Button className="w-full sm:w-auto" variant="outline" onClick={() => setConfirm(null)} disabled={actionLoading}>Cancel</Button>
+            <Button className="w-full sm:w-auto" onClick={() => void run()} disabled={actionLoading}>{actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{actionLoading && confirm === "execute" ? "Executing..." : actionLoading ? "Processing..." : "Confirm"}</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   )

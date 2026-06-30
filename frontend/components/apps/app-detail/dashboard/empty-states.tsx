@@ -6,16 +6,15 @@
 
 export function AdjustNotConfigured() {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-      Adjust account is not configured for this app — install, revenue, ROAS and Adjust retention
-      are unavailable.
+    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+      Adjust account is not configured for this app — install, revenue, ROAS and Adjust retention are unavailable.
     </div>
   )
 }
 
 export function AdjustAdRevenueMissing() {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
       Adjust ad_revenue tracking is not enabled for this app — IAA revenue may be missing.
     </div>
   )
@@ -23,7 +22,7 @@ export function AdjustAdRevenueMissing() {
 
 export function AdjustDelayed() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+    <div className="rounded-xl border border-border/70 bg-muted/30 p-4 text-sm text-muted-foreground">
       Adjust syncs daily (T+1). Try <strong>Yesterday</strong> or <strong>Last 7 days</strong>.
     </div>
   )
@@ -31,7 +30,7 @@ export function AdjustDelayed() {
 
 export function FirebaseNotConfigured() {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+    <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-800 dark:text-rose-200">
       Firebase data is not configured for this app.
     </div>
   )
@@ -39,12 +38,12 @@ export function FirebaseNotConfigured() {
 
 export function QonversionNotConfigured() {
   return (
-    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-4 text-sm text-fuchsia-800">
+    <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-4 text-sm text-fuchsia-800 dark:text-fuchsia-200">
       Qonversion IAP/SUB data is not configured for this app.
     </div>
   )
 }
 
 export function NoData({ label }: { label: string }) {
-  return <div className="text-sm text-slate-500 py-8 text-center">{label}</div>
+  return <div className="py-8 text-center text-sm text-muted-foreground">{label}</div>
 }

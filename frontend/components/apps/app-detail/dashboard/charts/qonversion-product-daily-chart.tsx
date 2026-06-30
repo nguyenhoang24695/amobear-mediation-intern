@@ -72,7 +72,7 @@ export function QonversionProductDailyChart({ appId, range, ...config }: Qonvers
   const hasValues = hasQonversionDailyValues(primaryData) || (secondaryData ? hasQonversionDailyValues(secondaryData) : false)
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-border/70 bg-card/90 p-4 shadow-sm">
       <ChartHeader title={config.title} subtitle={config.subtitle} />
       {loading && !data ? <ChartSkeleton height={320} /> : null}
       {!loading && data && !hasValues ? <NoData label={EMPTY_LABEL} /> : null}
@@ -92,7 +92,7 @@ function DailyMetricChart({ data, metric }: { data: QonversionDailyChartData; me
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-slate-600">{metric.label}</p>
+        <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
         <LegendItems items={data.series} className="justify-end" />
       </div>
       <div className="h-[280px]">
@@ -107,10 +107,10 @@ function DailyMetricChart({ data, metric }: { data: QonversionDailyChartData; me
 function DailyStackedBarChart({ data, metric }: { data: QonversionDailyChartData; metric: QonversionDailyMetricConfig }) {
   return (
     <BarChart data={data.rows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
       <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
       <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => formatQonversionDailyValue(Number(value), metric.valueType)} tickLine={false} axisLine={false} />
-      <Tooltip content={<DailyTooltip metric={metric} series={data.series} />} cursor={{ fill: "#f8fafc" }} />
+      <Tooltip content={<DailyTooltip metric={metric} series={data.series} />} cursor={{ fill: "hsl(var(--muted))" }} />
       {data.series.map((series) => (
         <Bar key={series.key} dataKey={series.key} name={series.label} stackId="product" fill={series.color} maxBarSize={34} />
       ))}
@@ -121,7 +121,7 @@ function DailyStackedBarChart({ data, metric }: { data: QonversionDailyChartData
 function DailyLineChart({ data, metric }: { data: QonversionDailyChartData; metric: QonversionDailyMetricConfig }) {
   return (
     <LineChart data={data.rows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
       <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
       <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => formatQonversionDailyValue(Number(value), metric.valueType)} tickLine={false} axisLine={false} />
       <Tooltip content={<DailyTooltip metric={metric} series={data.series} />} />
@@ -147,19 +147,19 @@ function DailyTooltip({
   if (!active || !payload?.length || !row) return null
 
   return (
-    <div className="max-w-[360px] rounded-md border border-slate-200 bg-white p-3 text-xs shadow-lg">
-      <p className="mb-2 font-medium text-slate-700">{row.reportDate}</p>
+    <div className="max-w-[360px] rounded-xl border border-border/70 bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
+      <p className="mb-2 font-medium text-foreground">{row.reportDate}</p>
       <div className="space-y-1">
         {payload.map((item) => {
           const itemSeries = series.find((seriesItem) => seriesItem.key === item.dataKey)
           if (!itemSeries) return null
           return (
             <div key={itemSeries.key} className="flex items-center justify-between gap-4">
-              <span className="flex min-w-0 items-center gap-2 text-slate-600" title={itemSeries.productId}>
+              <span className="flex min-w-0 items-center gap-2 text-muted-foreground" title={itemSeries.productId}>
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: itemSeries.color }} />
                 <span className="truncate">{itemSeries.isOther ? "Other products" : itemSeries.productId}</span>
               </span>
-              <span className="font-medium text-slate-950">
+              <span className="font-medium text-foreground">
                 {formatQonversionDailyValue(item.value, metric.valueType)}
               </span>
             </div>
