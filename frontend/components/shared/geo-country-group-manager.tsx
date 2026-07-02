@@ -188,41 +188,43 @@ export function GeoCountryGroupManager({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <Label className="text-xs font-medium text-slate-700">{title} <span className="text-red-500">*</span></Label>
-            {description ? <p className="text-xs text-slate-500">{description}</p> : null}
+            <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">{title} <span className="text-rose-500">*</span></Label>
+            {description ? <p className="text-xs text-slate-600 dark:text-slate-400">{description}</p> : null}
           </div>
           <div className="flex items-center gap-2">
             {actionLabel ? (
-              <Button type="button" size="sm" variant="outline" disabled={selectionDisabled || actionDisabled || selectedGroupIds.length === 0} onClick={onAction}>
+              <Button type="button" size="sm" variant="outline" disabled={selectionDisabled || actionDisabled || selectedGroupIds.length === 0} onClick={onAction} className="rounded-full border-slate-200 bg-white/80 text-slate-700 shadow-sm hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
                 {actionLabel}
               </Button>
             ) : null}
-            <Button type="button" size="sm" onClick={openCreateGroupDialog}>Create group</Button>
+            <Button type="button" size="sm" onClick={openCreateGroupDialog} className="rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-500">
+              Create group
+            </Button>
           </div>
         </div>
-        {selectionDisabled && selectionDisabledMessage ? <p className="text-xs text-amber-700">{selectionDisabledMessage}</p> : null}
-        {loading ? <p className="text-xs text-slate-500 flex items-center gap-1"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading country groups...</p> : null}
-        {message ? <p className="text-xs text-red-600">{message}</p> : null}
+        {selectionDisabled && selectionDisabledMessage ? <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{selectionDisabledMessage}</p> : null}
+        {loading ? <p className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading country groups...</p> : null}
+        {message ? <p className="text-xs font-medium text-rose-600 dark:text-rose-300">{message}</p> : null}
         {!loading && !message ? (
           <div className="grid gap-2 md:grid-cols-2">
             {groups.length === 0 ? (
-              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 md:col-span-2">{emptyMessage}</p>
+              <p className="rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs font-medium text-amber-900 shadow-sm md:col-span-2 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">{emptyMessage}</p>
             ) : groups.map((group) => {
               const selected = selectedGroupIds.includes(group.id)
               const preview = group.countryCodes.slice(0, 6).join(", ")
               return (
-                <div key={group.id} className={`rounded-md border p-3 ${selected ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white"}`}>
+                <div key={group.id} className={cn("rounded-xl border p-3 shadow-sm transition-colors", selected ? "border-blue-300 bg-blue-50/80 dark:border-blue-700 dark:bg-blue-950/20" : "border-slate-200 bg-white/80 dark:border-slate-800 dark:bg-slate-950/30")}>
                   <label className={cn("flex items-start gap-2", selectionDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer")}>
                     <Checkbox checked={selected} disabled={selectionDisabled} onCheckedChange={() => toggleSelectedGroup(group.id)} />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-slate-800">{group.name}</span>
-                      <span className="block text-[11px] text-slate-500">{group.countryCount} countries{preview ? `: ${preview}${group.countryCount > 6 ? "..." : ""}` : ""}</span>
-                      {group.description ? <span className="mt-1 block text-[11px] text-slate-500">{group.description}</span> : null}
+                      <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{group.name}</span>
+                      <span className="block text-[11px] text-slate-600 dark:text-slate-400">{group.countryCount} countries{preview ? `: ${preview}${group.countryCount > 6 ? "..." : ""}` : ""}</span>
+                      {group.description ? <span className="mt-1 block text-[11px] text-slate-600 dark:text-slate-400">{group.description}</span> : null}
                     </span>
                   </label>
                   <div className="mt-2 flex justify-end gap-2">
-                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={() => startEditGroup(group)}>Edit</Button>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-red-600" disabled={groupSaving} onClick={() => void deleteCountryGroup(group.id)}>Delete</Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2.5 text-[11px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100" onClick={() => startEditGroup(group)}>Edit</Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2.5 text-[11px] text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/30 dark:hover:text-rose-200" disabled={groupSaving} onClick={() => void deleteCountryGroup(group.id)}>Delete</Button>
                   </div>
                 </div>
               )
@@ -234,7 +236,7 @@ export function GeoCountryGroupManager({
             {selectedGroupIds.map((groupId) => {
               const group = groups.find((item) => item.id === groupId)
               return (
-                <Badge key={groupId} className="bg-blue-100 text-blue-800 gap-1 pr-1 text-xs">
+                <Badge key={groupId} className="gap-1 rounded-full border border-blue-200 bg-blue-100 px-2 py-1 pr-1 text-xs font-medium text-blue-800 shadow-sm dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200">
                   {group?.name ?? `Group #${groupId}`}
                   <button type="button" disabled={selectionDisabled} onClick={() => toggleSelectedGroup(groupId)}>
                     <X className="w-3 h-3" />
@@ -255,18 +257,18 @@ export function GeoCountryGroupManager({
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-slate-500">Group name</Label>
+                <Label className="text-[11px] text-slate-600 dark:text-slate-400">Group name</Label>
                 <Input value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder="e.g. Tier 1 English" className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-slate-500">Description</Label>
+                <Label className="text-[11px] text-slate-600 dark:text-slate-400">Description</Label>
                 <Input value={groupDescription} onChange={(event) => setGroupDescription(event.target.value)} placeholder="Optional" className="h-9 text-sm" />
               </div>
             </div>
             <Popover open={groupCountryPopoverOpen} onOpenChange={setGroupCountryPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button type="button" variant="outline" role="combobox" aria-expanded={groupCountryPopoverOpen} className="h-9 w-full justify-between bg-white px-3 text-left font-normal">
-                  <span className="min-w-0 flex-1 truncate text-left text-sm text-slate-700">
+                <Button type="button" variant="outline" role="combobox" aria-expanded={groupCountryPopoverOpen} className="h-10 w-full justify-between rounded-xl border-slate-200 bg-slate-50 px-3 text-left font-normal shadow-sm hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:hover:bg-slate-900">
+                  <span className="min-w-0 flex-1 truncate text-left text-sm text-slate-700 dark:text-slate-200">
                     {groupCountryCodes.length === 0 ? "Select countries for this group" : `${groupCountryCodes.length} countries selected`}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -293,9 +295,9 @@ export function GeoCountryGroupManager({
               </PopoverContent>
             </Popover>
             {groupCountryCodes.length > 0 ? (
-              <div className="flex max-h-40 flex-wrap gap-1.5 overflow-auto rounded-md border bg-slate-50 p-2">
+              <div className="flex max-h-40 flex-wrap gap-1.5 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
                 {groupCountryCodes.map((country) => (
-                  <Badge key={country} className="bg-white text-slate-700 gap-1 pr-1 text-xs">
+                  <Badge key={country} className="gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 pr-1 text-xs text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                     {getCountryLabel(country)}
                     <button type="button" onClick={() => toggleGroupCountry(country)}>
                       <X className="w-3 h-3" />
@@ -304,10 +306,12 @@ export function GeoCountryGroupManager({
                 ))}
               </div>
             ) : null}
-            {groupMessage ? <p className="text-xs text-red-600">{groupMessage}</p> : null}
+            {groupMessage ? <p className="text-xs font-medium text-rose-600 dark:text-rose-300">{groupMessage}</p> : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" disabled={groupSaving} onClick={closeGroupDialog}>Cancel</Button>
+            <Button type="button" variant="outline" disabled={groupSaving} onClick={closeGroupDialog} className="rounded-full">
+              Cancel
+            </Button>
             <Button type="button" disabled={groupSaving || !groupName.trim() || groupCountryCodes.length === 0} onClick={() => void saveCountryGroup()}>
               {groupSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
               {editingGroupId ? "Save group" : "Create group"}

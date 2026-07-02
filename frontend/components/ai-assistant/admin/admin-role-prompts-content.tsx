@@ -556,31 +556,35 @@ export function AdminRolePromptsContent() {
                     </div>
                     <div className="space-y-2">
                       {role.includedTopics.length > 0 && (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="w-16 text-xs text-muted-foreground">Included:</span>
-                          {role.includedTopics.map((t) => (
-                            <Badge
-                              key={t}
-                              variant="outline"
-                              className="border-emerald-500/30 bg-emerald-500/10 text-[11px] text-emerald-700 dark:text-emerald-300"
-                            >
-                              {t}
-                            </Badge>
-                          ))}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                          <span className="shrink-0 text-xs text-muted-foreground sm:w-16 sm:pt-1">Included:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {role.includedTopics.map((t) => (
+                              <Badge
+                                key={t}
+                                variant="outline"
+                                className="max-w-full border-emerald-500/30 bg-emerald-500/10 text-[11px] text-emerald-700 dark:text-emerald-300"
+                              >
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {role.excludedTopics.length > 0 && (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="w-16 text-xs text-muted-foreground">Excluded:</span>
-                          {role.excludedTopics.map((t) => (
-                            <Badge
-                              key={t}
-                              variant="outline"
-                              className="border-destructive/30 bg-destructive/10 text-[11px] text-destructive"
-                            >
-                              {t}
-                            </Badge>
-                          ))}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                          <span className="shrink-0 text-xs text-muted-foreground sm:w-16 sm:pt-1">Excluded:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {role.excludedTopics.map((t) => (
+                              <Badge
+                                key={t}
+                                variant="outline"
+                                className="max-w-full border-destructive/30 bg-destructive/10 text-[11px] text-destructive"
+                              >
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {role.includedTopics.length === 0 && role.excludedTopics.length === 0 && (
@@ -590,18 +594,19 @@ export function AdminRolePromptsContent() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <Button variant="outline" size="sm" onClick={() => loadVersionHistory(role.id)}>
+                  <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => loadVersionHistory(role.id)}>
                       <History className="h-4 w-4 mr-1" />
                       History
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => loadPreview(role.id)}>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => loadPreview(role.id)}>
                       <Eye className="h-4 w-4 mr-1" />
                       Preview Assembled
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full sm:w-auto"
                       onClick={() => {
                         setTestQuestion("")
                         setTestResponse("")

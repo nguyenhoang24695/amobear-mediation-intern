@@ -582,14 +582,14 @@ export function OrgPersonnelTab({
                   )}
                 </p>
                 {removeDescendantNames.length > 0 && (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
-                    <p className="font-medium">Warning</p>
-                    <p className="mt-1">
+                  <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-amber-100">
+                    <p className="font-medium text-amber-200">Warning</p>
+                    <p className="mt-1 text-amber-100/90">
                       This person has direct or indirect reports on the chart.
                       The following people assigned under them will also be
                       removed from the chart:
                     </p>
-                    <ul className="mt-2 list-inside list-disc text-xs">
+                    <ul className="mt-2 list-inside list-disc text-xs text-amber-100/80">
                       {removeDescendantNames.map((name, index) => (
                         <li key={`${name}-${index}`}>{name}</li>
                       ))}
@@ -622,47 +622,47 @@ export function OrgPersonnelTab({
       </AlertDialog>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/50">
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-              <Users className="h-5 w-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/15">
+              <Users className="h-5 w-5 text-blue-600 dark:text-blue-300" />
             </div>
             <div>
-              <p className="text-2xl font-bold ">{stats.headcount}</p>
-              <p className="text-sm ">Headcount</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.headcount}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Headcount</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/50">
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100">
-              <Building2 className="h-5 w-5 text-violet-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-500/15">
+              <Building2 className="h-5 w-5 text-violet-600 dark:text-violet-300" />
             </div>
             <div>
-              <p className="text-2xl font-bold ">{stats.departments}</p>
-              <p className="text-sm ">Departments</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.departments}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Departments</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/50">
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-              <Network className="h-5 w-5 text-slate-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-500/15">
+              <Network className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             </div>
             <div>
-              <p className="text-2xl font-bold ">{flatCount}</p>
-              <p className="text-sm ">Nodes in chart</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{flatCount}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Nodes in chart</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="flex h-[95vh] min-h-0 flex-col border-slate-200">
+      <Card className="flex h-[95vh] min-h-0 flex-col border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/40">
         <CardHeader className="shrink-0">
-          <CardTitle className="text-base font-semibold ">
+          <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Organizational Chart
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-slate-500 dark:text-slate-400">
             {isEditMode
               ? "Edit mode — drag users from the panel or drag members to reassign reporting lines. Save to persist."
               : "Hierarchical view of reporting structure. Open edit mode to make changes."}
@@ -694,8 +694,8 @@ export function OrgPersonnelTab({
                   "text-sm rounded-md px-3 py-2 border",
                   dropFeedback.startsWith("Added") ||
                     dropFeedback.startsWith("Moved")
-                    ? "bg-green-50 text-green-800 border-green-200"
-                    : "bg-amber-50 text-amber-800 border-amber-200",
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/20"
+                    : "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/20",
                 )}
               >
                 {dropFeedback}
@@ -705,8 +705,8 @@ export function OrgPersonnelTab({
 
           <div
             className={cn(
-              "flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200",
-              isEditMode && canManage && "ring-2 ring-blue-200 ring-offset-2",
+              "flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/30",
+              isEditMode && canManage && "ring-2 ring-blue-200 ring-offset-2 dark:ring-blue-500/20 dark:ring-offset-0",
             )}
           >
             {isEditMode && canManage ? (
@@ -734,14 +734,14 @@ export function OrgPersonnelTab({
                     {chartBlock}
                     {hydratingChart && (
                       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                        <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-300" />
                       </div>
                     )}
                   </div>
                 </div>
                 <DragOverlay dropAnimation={null}>
                   {dragOverlayLabel ? (
-                    <div className="rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium shadow-lg">
+                    <div className="rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium shadow-lg dark:border-blue-500/20 dark:bg-slate-950 dark:text-slate-100">
                       {dragOverlayLabel}
                     </div>
                   ) : null}

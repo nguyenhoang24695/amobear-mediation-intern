@@ -155,6 +155,7 @@ export function TikTokRequestListContent() {
   const [actionLoading, setActionLoading] = useState(false)
   const [confirm, setConfirm] = useState<{ action: "approve" | "reject" | "execute" | "retry"; item: TikTokCampaignRequestListItemDto } | null>(null)
   const [rejectReason, setRejectReason] = useState("")
+  const [filtersOpen, setFiltersOpen] = useState(true)
 
   const canCreate = hasScreenFunction(SCREEN, "create")
   const canApprove = hasScreenFunction(SCREEN, "approve")
@@ -216,17 +217,44 @@ export function TikTokRequestListContent() {
           <h1 className="break-words text-lg font-semibold text-foreground sm:text-xl">TikTok Requests</h1>
           <p className="break-words text-sm text-muted-foreground">Create, approve, and execute TikTok campaign requests.</p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="w-full sm:w-auto" variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
-          {canCreate ? <Button className="w-full sm:w-auto" onClick={() => router.push("/tiktok-ads/requests/create")}><Send className="mr-2 h-4 w-4" />New Request</Button> : null}
+        <div className="flex w-full gap-2 sm:w-auto sm:justify-end">
+          <Button className="flex-1 justify-center sm:flex-none sm:w-auto" variant="outline" onClick={() => void load()} disabled={loading}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          {canCreate ? (
+            <Button className="flex-1 justify-center sm:flex-none sm:w-auto" onClick={() => router.push("/tiktok-ads/requests/create")}>
+              <Send className="mr-2 h-4 w-4" />
+              New Request
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-md border bg-card p-3 text-card-foreground md:grid-cols-3">
-        <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent>{["all", "draft", "pending_approval", "approved", "executing", "completed", "failed", "rejected"].map(x => <SelectItem key={x} value={x}>{x === "all" ? "All statuses" : x}</SelectItem>)}</SelectContent></Select>
-        <Select value={accountId} onValueChange={setAccountId}><SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{reference?.adAccounts.map(x => <SelectItem key={x.id} value={String(x.id)}>{x.name ?? x.advertiserId}</SelectItem>)}</SelectContent></Select>
-        <Select value={appRowId} onValueChange={setAppRowId}><SelectTrigger><SelectValue placeholder="App" /></SelectTrigger><SelectContent><SelectItem value="all">All apps</SelectItem>{reference?.appMappings.filter(x => x.appRowId != null).map(x => <SelectItem key={x.id} value={String(x.appRowId)}>{x.appDisplayName ?? x.appId ?? x.packageName ?? x.normalizedStoreIdentifier ?? x.tikTokAppId}</SelectItem>)}</SelectContent></Select>
-      </div>
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <div className="rounded-md border bg-card text-card-foreground">
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Filters</p>
+              <p className="text-xs text-muted-foreground">Status, account, and app filters</p>
+            </div>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-3 pb-3">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="sm:col-span-2 xl:col-span-1">
+                <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent>{["all", "draft", "pending_approval", "approved", "executing", "completed", "failed", "rejected"].map(x => <SelectItem key={x} value={x}>{x === "all" ? "All statuses" : x}</SelectItem>)}</SelectContent></Select>
+              </div>
+              <div>
+                <Select value={accountId} onValueChange={setAccountId}><SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{reference?.adAccounts.map(x => <SelectItem key={x.id} value={String(x.id)}>{x.name ?? x.advertiserId}</SelectItem>)}</SelectContent></Select>
+              </div>
+              <div>
+                <Select value={appRowId} onValueChange={setAppRowId}><SelectTrigger><SelectValue placeholder="App" /></SelectTrigger><SelectContent><SelectItem value="all">All apps</SelectItem>{reference?.appMappings.filter(x => x.appRowId != null).map(x => <SelectItem key={x.id} value={String(x.appRowId)}>{x.appDisplayName ?? x.appId ?? x.packageName ?? x.normalizedStoreIdentifier ?? x.tikTokAppId}</SelectItem>)}</SelectContent></Select>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
 
       <div className="rounded-md border bg-card text-card-foreground">
         <Table>
@@ -241,12 +269,18 @@ export function TikTokRequestListContent() {
                 <TableCell>{item.appDisplayName ?? item.appId ?? item.appRowId}</TableCell>
                 <TableCell><Badge className={tone(item.status)}>{item.status}</Badge></TableCell>
                 <TableCell>{formatDate(item.createdAt)}</TableCell>
-                <TableCell className="space-x-2 text-right">
-                  {canEditRequestStatus(item.status) && canCreate ? <Button size="sm" variant="outline" onClick={() => router.push(`/tiktok-ads/requests/${item.id}/edit`)}>Edit</Button> : null}
-                  {item.status === "pending_approval" && canApprove ? <Button size="sm" variant="outline" onClick={() => setConfirm({ action: "approve", item })}><CheckCircle2 className="h-4 w-4" /></Button> : null}
-                  {item.status === "pending_approval" && canApprove ? <Button size="sm" variant="outline" onClick={() => setConfirm({ action: "reject", item })}><XCircle className="h-4 w-4" /></Button> : null}
-                  {item.status === "approved" && canExecute ? <Button size="sm" onClick={() => setConfirm({ action: "execute", item })}><Play className="h-4 w-4" /></Button> : null}
-                  {item.status === "failed" && canRetry ? <Button size="sm" onClick={() => setConfirm({ action: "retry", item })}>Retry</Button> : null}
+                <TableCell className="text-right">
+                  <div className="ml-auto grid w-[176px] grid-cols-2 gap-2">
+                    <div className="flex justify-end">
+                      {canEditRequestStatus(item.status) && canCreate ? <Button size="sm" variant="outline" className="w-full shrink-0 justify-center" onClick={() => router.push(`/tiktok-ads/requests/${item.id}/edit`)}>Edit</Button> : null}
+                      {item.status === "approved" && canExecute ? <Button size="sm" className="w-full shrink-0 justify-center" onClick={() => setConfirm({ action: "execute", item })}><Play className="h-4 w-4" /></Button> : null}
+                      {item.status === "pending_approval" && canApprove ? <Button size="sm" variant="outline" className="w-full shrink-0 justify-center" onClick={() => setConfirm({ action: "approve", item })}><CheckCircle2 className="h-4 w-4" /></Button> : null}
+                    </div>
+                    <div className="flex justify-end">
+                      {item.status === "pending_approval" && canApprove ? <Button size="sm" variant="outline" className="w-full shrink-0 justify-center" onClick={() => setConfirm({ action: "reject", item })}><XCircle className="h-4 w-4" /></Button> : null}
+                      {item.status === "failed" && canRetry ? <Button size="sm" className="w-full shrink-0 justify-center" onClick={() => setConfirm({ action: "retry", item })}>Retry</Button> : null}
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

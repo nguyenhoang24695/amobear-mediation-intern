@@ -74,15 +74,15 @@ export function PersonnelDroppableNode({
       style={style}
       className={cn(
         "rounded-lg transition-all",
-        canDrop && isOver && "ring-2 ring-green-500 ring-offset-2 bg-green-50/40",
-        canDrop && !isOver && "ring-1 ring-dashed ring-transparent hover:ring-blue-200",
+        canDrop && isOver && "ring-2 ring-green-500 ring-offset-2 bg-green-50/40 dark:ring-green-400 dark:ring-offset-slate-950 dark:bg-green-500/10",
+        canDrop && !isOver && "ring-1 ring-dashed ring-transparent hover:ring-blue-200 dark:hover:ring-blue-500/30",
         isDragging && "opacity-50",
       )}
     >
       {canDrag && (
         <button
           type="button"
-          className="mx-auto mb-0.5 flex cursor-grab items-center gap-0.5 text-[10px] text-slate-500 active:cursor-grabbing"
+          className="mx-auto mb-0.5 flex cursor-grab items-center gap-0.5 text-[10px] text-slate-500 active:cursor-grabbing dark:text-slate-400"
           {...listeners}
           {...attributes}
           onClick={(e) => e.stopPropagation()}
@@ -99,7 +99,7 @@ export function PersonnelDroppableNode({
         organizationLogoUrl={organizationLogoUrl}
       />
       {canDrop && isOver && (
-        <p className="mt-1 text-center text-[10px] font-medium text-green-700">
+        <p className="mt-1 text-center text-[10px] font-medium text-green-700 dark:text-green-300">
           Drop to add report
         </p>
       )}

@@ -75,17 +75,17 @@ export function PersonnelEditMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-white text-slate-900 dark:border-white/10 dark:bg-slate-950 dark:text-slate-100">
         <DialogHeader>
           <DialogTitle>Edit member</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-slate-500 dark:text-slate-400">
             Update profile fields for this node. Changes apply to the preview chart only.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label htmlFor="personnel-name">Full name</Label>
+            <Label htmlFor="personnel-name" className="text-slate-700 dark:text-slate-200">Full name</Label>
             <Input
               id="personnel-name"
               value={name}
@@ -93,7 +93,7 @@ export function PersonnelEditMemberDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="personnel-title">Title</Label>
+            <Label htmlFor="personnel-title" className="text-slate-700 dark:text-slate-200">Title</Label>
             <Input
               id="personnel-title"
               value={title}
@@ -101,7 +101,7 @@ export function PersonnelEditMemberDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="personnel-dept">Department</Label>
+            <Label htmlFor="personnel-dept" className="text-slate-700 dark:text-slate-200">Department</Label>
             <Input
               id="personnel-dept"
               value={department}
@@ -109,7 +109,7 @@ export function PersonnelEditMemberDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="personnel-email">Email</Label>
+            <Label htmlFor="personnel-email" className="text-slate-700 dark:text-slate-200">Email</Label>
             <Input
               id="personnel-email"
               type="email"
@@ -118,7 +118,7 @@ export function PersonnelEditMemberDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Status</Label>
+            <Label className="text-slate-700 dark:text-slate-200">Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
               <SelectTrigger>
                 <SelectValue />
@@ -131,14 +131,14 @@ export function PersonnelEditMemberDialog({
             </Select>
           </div>
           {savedMessage && (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-500/20 dark:bg-green-500/15 dark:text-green-200">
               {savedMessage}
             </p>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" className="dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving || !name.trim()}>

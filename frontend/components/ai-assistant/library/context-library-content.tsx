@@ -81,16 +81,16 @@ const providerConfig = {
 }
 
 const focusColors: Record<string, string> = {
-  Level: "bg-purple-100 text-purple-700",
-  Retention: "bg-blue-100 text-blue-700",
-  IAA: "bg-emerald-100 text-emerald-700",
-  IAP: "bg-amber-100 text-amber-700",
-  UA: "bg-rose-100 text-rose-700",
-  level: "bg-purple-100 text-purple-700",
-  retention: "bg-blue-100 text-blue-700",
-  iaa: "bg-emerald-100 text-emerald-700",
-  iap: "bg-amber-100 text-amber-700",
-  ua: "bg-rose-100 text-rose-700",
+  Level: "border border-violet-400/30 bg-violet-500/15 text-violet-100 shadow-sm shadow-violet-950/20",
+  Retention: "border border-sky-400/30 bg-sky-500/15 text-sky-100 shadow-sm shadow-sky-950/20",
+  IAA: "border border-emerald-400/30 bg-emerald-500/15 text-emerald-100 shadow-sm shadow-emerald-950/20",
+  IAP: "border border-amber-400/30 bg-amber-500/15 text-amber-100 shadow-sm shadow-amber-950/20",
+  UA: "border border-rose-400/30 bg-rose-500/15 text-rose-100 shadow-sm shadow-rose-950/20",
+  level: "border border-violet-400/30 bg-violet-500/15 text-violet-100 shadow-sm shadow-violet-950/20",
+  retention: "border border-sky-400/30 bg-sky-500/15 text-sky-100 shadow-sm shadow-sky-950/20",
+  iaa: "border border-emerald-400/30 bg-emerald-500/15 text-emerald-100 shadow-sm shadow-emerald-950/20",
+  iap: "border border-amber-400/30 bg-amber-500/15 text-amber-100 shadow-sm shadow-amber-950/20",
+  ua: "border border-rose-400/30 bg-rose-500/15 text-rose-100 shadow-sm shadow-rose-950/20",
 }
 
 const FOCUS_OPTIONS = ["level", "retention", "iaa", "iap", "ua"]
@@ -1142,16 +1142,16 @@ export function ContextLibraryContent() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden bg-background border shadow-lg">
-          <DialogHeader className="shrink-0 border-b pb-4">
-            <DialogTitle>
+        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden border border-white/10 bg-slate-950/95 text-slate-100 shadow-[0_24px_80px_rgba(15,23,42,0.55)] backdrop-blur-xl">
+          <DialogHeader className="shrink-0 border-b border-white/10 bg-gradient-to-r from-slate-950 via-slate-950 to-slate-900/60 pb-4">
+            <DialogTitle className="text-xl font-semibold tracking-tight text-slate-50">
               {editingTemplate 
                 ? `Chỉnh sửa: ${editingTemplate.name}`
                 : activeTab === "official" 
                   ? "Tạo Official Template" 
                   : "Tạo Context Template"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-400">
               {activeTab === "official" 
                 ? "Official template sẽ hiển thị cho tất cả người dùng"
                 : "Template sẽ được gửi cho admin duyệt trước khi hiển thị"}
@@ -1162,50 +1162,53 @@ export function ContextLibraryContent() {
           <div className="space-y-4 pr-3">
             {/* System Context Key - only for creating Official templates */}
             {activeTab === "official" && !editingTemplate && isSuperAdmin && (
-              <div className="space-y-2">
-                <Label>System Context Key *</Label>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                <Label className="text-slate-200">System Context Key *</Label>
                 <Input
                   placeholder="vd: game_analytics_starter"
                   value={formData.systemContextKey}
                   onChange={(e) => setFormData(prev => ({ ...prev, systemContextKey: e.target.value }))}
+                  className="border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
                 />
-                <p className="text-xs text-slate-500">Key duy nhất để định danh template, không có khoảng trắng</p>
+                <p className="text-xs text-slate-400">Key duy nhất để định danh template, không có khoảng trắng</p>
               </div>
             )}
 
             {/* Name */}
-            <div className="space-y-2">
-              <Label>Tên template *</Label>
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <Label className="text-slate-200">Tên template *</Label>
               <Input
                 placeholder="vd: Game Analytics Starter"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
               />
             </div>
 
             {/* Description */}
-            <div className="space-y-2">
-              <Label>Mô tả</Label>
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <Label className="text-slate-200">Mô tả</Label>
               <Textarea
                 placeholder="Mô tả ngắn về template này..."
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
+                className="border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
               />
             </div>
 
             {/* Icon & Color */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Icon</Label>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                <Label className="text-slate-200">Icon</Label>
                 <div className="flex flex-wrap gap-2">
                   {ICON_OPTIONS.map((icon) => (
                     <button
                       key={icon}
                       type="button"
                       className={cn(
-                        "w-10 h-10 rounded-lg border-2 text-xl flex items-center justify-center hover:border-blue-400 transition-colors",
-                        formData.icon === icon ? "border-blue-500 bg-blue-50" : "border-slate-200"
+                        "flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-900/70 text-xl text-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-slate-800/90",
+                        formData.icon === icon ? "border-cyan-400/60 bg-cyan-500/15 ring-2 ring-cyan-400/25" : ""
                       )}
                       onClick={() => setFormData(prev => ({ ...prev, icon }))}
                     >
@@ -1214,16 +1217,16 @@ export function ContextLibraryContent() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Màu sắc</Label>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                <Label className="text-slate-200">Màu sắc</Label>
                 <div className="flex flex-wrap gap-2">
                   {COLOR_OPTIONS.map((color) => (
                     <button
                       key={color}
                       type="button"
                       className={cn(
-                        "w-8 h-8 rounded-full border-2 transition-all",
-                        formData.color === color ? "border-slate-800 scale-110" : "border-transparent"
+                        "h-8 w-8 rounded-full border border-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:scale-105",
+                        formData.color === color ? "scale-110 border-white/80 ring-2 ring-white/20" : "opacity-80"
                       )}
                       style={{ backgroundColor: color }}
                       onClick={() => setFormData(prev => ({ ...prev, color }))}
@@ -1234,18 +1237,18 @@ export function ContextLibraryContent() {
             </div>
 
             {/* Focus Areas */}
-            <div className="space-y-2">
-              <Label>Focus Areas (lĩnh vực tập trung)</Label>
-              <p className="text-xs text-slate-500">Chọn các lĩnh vực mà context này tập trung phân tích</p>
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <Label className="text-slate-200">Focus Areas (lĩnh vực tập trung)</Label>
+              <p className="text-xs text-slate-400">Chọn các lĩnh vực mà context này tập trung phân tích</p>
               <div className="flex flex-wrap gap-2">
                 {FOCUS_OPTIONS.map((focus) => (
                   <Badge
                     key={focus}
                     className={cn(
-                      "cursor-pointer transition-all",
+                      "cursor-pointer border px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-[1px]",
                       formData.focusAreas.includes(focus)
                         ? focusColors[focus]
-                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        : "border-white/10 bg-slate-900/70 text-slate-300 hover:border-white/20 hover:bg-slate-800"
                     )}
                     onClick={() => toggleFocusArea(focus)}
                   >
@@ -1259,11 +1262,11 @@ export function ContextLibraryContent() {
             </div>
 
             {/* Pinned Metrics — list trong vùng scroll cố định, không tràn ra ngoài */}
-            <div className="space-y-2 rounded-lg border bg-card p-3">
-              <Label>Pinned Metrics (metrics gắn với context)</Label>
-              <p className="text-xs text-slate-500">Các metric sẽ được inject vào prompt khi dùng context này</p>
+            <div className="space-y-2 rounded-xl border border-white/10 bg-slate-900/60 p-3">
+              <Label className="text-slate-200">Pinned Metrics (metrics gắn với context)</Label>
+              <p className="text-xs text-slate-400">Các metric sẽ được inject vào prompt khi dùng context này</p>
               <div className="flex flex-wrap gap-2 mb-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => addPinnedMetric()}>
+                <Button type="button" variant="outline" size="sm" onClick={() => addPinnedMetric()} className="border-white/10 bg-slate-900/70 text-slate-200 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white">
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Thêm thủ công
                 </Button>
@@ -1274,7 +1277,7 @@ export function ContextLibraryContent() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="w-[240px] justify-between"
+                        className="w-[240px] justify-between border-white/10 bg-slate-900/70 text-slate-200 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white"
                         disabled={isLoadingCatalog || metricsCatalog.length === 0}
                       >
                         {isLoadingCatalog ? "Đang tải catalog..." : "Thêm từ Metrics Catalog"}
@@ -1282,19 +1285,20 @@ export function ContextLibraryContent() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="w-[360px] p-0"
+                      className="w-[360px] overflow-hidden border border-white/10 bg-slate-950 p-0 text-slate-100 shadow-[0_20px_60px_rgba(15,23,42,0.55)]"
                       align="start"
                       onWheel={(e) => e.stopPropagation()}
                     >
-                      <Command className="rounded-lg border-0 shadow-none flex flex-col max-h-[320px]">
-                        <CommandInput placeholder="Tìm theo tên hoặc công thức..." />
-                        <CommandList className="min-h-0 max-h-[260px] overscroll-contain">
-                          <CommandEmpty>Không tìm thấy metric nào.</CommandEmpty>
-                          <CommandGroup heading="Chọn metric">
+                      <Command className="flex max-h-[320px] flex-col rounded-none border-0 bg-slate-950 shadow-none">
+                        <CommandInput className="h-10 border-0 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0" placeholder="Tìm theo tên hoặc công thức..." />
+                        <CommandList className="min-h-0 max-h-[260px] overscroll-contain bg-slate-950">
+                          <CommandEmpty className="py-6 text-sm text-slate-400">Không tìm thấy metric nào.</CommandEmpty>
+                          <CommandGroup heading="Chọn metric" className="text-slate-400">
                             {metricsCatalog.map((m) => (
                               <CommandItem
                                 key={m.id}
                                 value={`${m.displayName} ${m.formula} ${m.metricKey} ${m.description ?? ""}`}
+                                className="text-slate-100 aria-selected:bg-cyan-500/15 aria-selected:text-slate-50"
                                 onSelect={() => {
                                   addPinnedMetric({
                                     metricName: m.displayName,
@@ -1318,44 +1322,44 @@ export function ContextLibraryContent() {
                   </Popover>
                 )}
               </div>
-              <div className="max-h-[280px] min-h-[80px] overflow-y-auto overflow-x-hidden rounded-md border bg-background p-2">
+              <div className="max-h-[280px] min-h-[80px] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-slate-950/60 p-2">
                 <div className="space-y-2">
                   {formData.pinnedMetrics.length === 0 ? (
-                    <p className="text-sm text-slate-400 italic py-2">Chưa có metric nào. Thêm thủ công hoặc chọn từ Catalog.</p>
+                    <p className="py-2 text-sm italic text-slate-400">Chưa có metric nào. Thêm thủ công hoặc chọn từ Catalog.</p>
                   ) : (
                     formData.pinnedMetrics.map((pm, index) => (
-                      <div key={index} className="flex gap-2 items-start rounded-lg border bg-background p-2 shrink-0">
+                      <div key={index} className="flex shrink-0 items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
                         <div className="flex-1 grid grid-cols-2 gap-2 min-w-0">
                           <Input
                             placeholder="Tên metric"
                             value={pm.metricName}
                             onChange={(e) => updatePinnedMetric(index, "metricName", e.target.value)}
-                            className="h-8"
+                            className="h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
                           />
                           <Input
                             placeholder="Công thức"
                             value={pm.metricFormula}
                             onChange={(e) => updatePinnedMetric(index, "metricFormula", e.target.value)}
-                            className="h-8"
+                            className="h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
                           />
                           <Input
                             placeholder="Mô tả (tùy chọn)"
                             value={pm.description ?? ""}
                             onChange={(e) => updatePinnedMetric(index, "description", e.target.value)}
-                            className="h-8 col-span-2"
+                            className="col-span-2 h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
                           />
                           <Input
                             placeholder="Source table (tùy chọn)"
                             value={pm.sourceTable ?? ""}
                             onChange={(e) => updatePinnedMetric(index, "sourceTable", e.target.value)}
-                            className="h-8 col-span-2"
+                            className="col-span-2 h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
                           />
                         </div>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 shrink-0 text-red-600 hover:bg-red-50"
+                          className="h-8 w-8 shrink-0 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
                           onClick={() => removePinnedMetric(index)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -1368,13 +1372,13 @@ export function ContextLibraryContent() {
             </div>
 
             {/* Provider */}
-            <div className="space-y-2">
-              <Label>Default AI Provider</Label>
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <Label className="text-slate-200">Default AI Provider</Label>
               <Select 
                 value={formData.preferredProvider} 
                 onValueChange={(v) => setFormData(prev => ({ ...prev, preferredProvider: v }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border-slate-700/80 bg-slate-900/80 text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1387,10 +1391,10 @@ export function ContextLibraryContent() {
 
             {/* Include Data Context - only for Official templates */}
             {(activeTab === "official" || editingTemplate?.isSystemTemplate) && isSuperAdmin && (
-              <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
                 <div>
-                  <Label>Bao gồm System Data Context</Label>
-                  <p className="text-xs text-slate-500">Inject toàn bộ cấu trúc data hệ thống vào prompt</p>
+                  <Label className="text-slate-200">Bao gồm System Data Context</Label>
+                  <p className="text-xs text-slate-400">Inject toàn bộ cấu trúc data hệ thống vào prompt</p>
                 </div>
                 <Switch
                   checked={formData.includeDataContext}
@@ -1401,11 +1405,11 @@ export function ContextLibraryContent() {
           </div>
           </ScrollArea>
 
-          <DialogFooter className="shrink-0 border-t bg-background pt-4 mt-0">
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+          <DialogFooter className="shrink-0 border-t border-white/10 bg-slate-950/80 pt-4 mt-0">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="border-white/10 bg-slate-900/70 text-slate-200 hover:border-white/20 hover:bg-slate-800 hover:text-white">
               Hủy
             </Button>
-            <Button onClick={handleSaveTemplate} disabled={isSaving}>
+            <Button onClick={handleSaveTemplate} disabled={isSaving} className="bg-cyan-500 text-slate-950 hover:bg-cyan-400">
               {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {editingTemplate ? "Lưu thay đổi" : "Tạo mới"}
             </Button>

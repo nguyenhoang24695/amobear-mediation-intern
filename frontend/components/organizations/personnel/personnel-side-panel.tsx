@@ -31,17 +31,17 @@ function HistoryMetadataChips({ metadata }: { metadata?: Record<string, unknown>
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       {added > 0 && (
-        <Badge variant="secondary" className="text-[10px] bg-green-50 text-green-700">
+        <Badge variant="secondary" className="text-[10px] border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-200">
           +{added} members
         </Badge>
       )}
       {removed > 0 && (
-        <Badge variant="secondary" className="text-[10px] bg-red-50 text-red-700">
+        <Badge variant="secondary" className="text-[10px] border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200">
           -{removed} members
         </Badge>
       )}
       {moved > 0 && (
-        <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700">
+        <Badge variant="secondary" className="text-[10px] border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-200">
           {moved} moved
         </Badge>
       )}
@@ -52,11 +52,11 @@ function HistoryMetadataChips({ metadata }: { metadata?: Record<string, unknown>
 function HistoryRow({ item }: { item: PersonnelChartHistoryItem }) {
   const when = formatDistanceToNow(new Date(item.occurredAt), { addSuffix: true })
   return (
-    <div className="rounded-md border border-slate-200 px-3 py-2 text-sm">
-      <p className="text-xs text-slate-500">{when}</p>
-      <p className="font-medium text-slate-800 mt-0.5">{item.actorName ?? "Unknown"}</p>
-      {item.actorRole && <p className="text-[10px] text-slate-500 capitalize">{item.actorRole}</p>}
-      <p className="text-slate-600 mt-1 text-xs leading-snug">{item.summary}</p>
+    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/50">
+      <p className="text-xs text-slate-500 dark:text-slate-400">{when}</p>
+      <p className="mt-0.5 font-medium text-slate-800 dark:text-slate-100">{item.actorName ?? "Unknown"}</p>
+      {item.actorRole && <p className="text-[10px] capitalize text-slate-500 dark:text-slate-400">{item.actorRole}</p>}
+      <p className="mt-1 text-xs leading-snug text-slate-600 dark:text-slate-300">{item.summary}</p>
       <HistoryMetadataChips metadata={item.metadata as Record<string, unknown> | null} />
     </div>
   )
@@ -116,11 +116,11 @@ export function PersonnelSidePanel({
 
   if (!expanded) {
     return (
-      <div className="flex w-10 shrink-0 flex-col items-center border-r border-slate-200 bg-slate-50 py-2">
+      <div className="flex w-10 shrink-0 flex-col items-center border-r border-slate-200 bg-slate-50 py-2 dark:border-white/10 dark:bg-slate-950/50">
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
           onClick={() => onExpandedChange(true)}
           title="Expand panel"
         >
@@ -131,12 +131,12 @@ export function PersonnelSidePanel({
   }
 
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-50/80">
-      <div className="flex items-center justify-end border-b border-slate-200 px-1 py-1">
+    <div className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-slate-950/60">
+      <div className="flex items-center justify-end border-b border-slate-200 px-1 py-1 dark:border-white/10">
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="h-7 w-7 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
           onClick={() => onExpandedChange(false)}
           title="Collapse panel"
         >
@@ -144,21 +144,21 @@ export function PersonnelSidePanel({
         </Button>
       </div>
       <Tabs key={defaultTab} defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className={cn("mx-2 grid w-auto", showUsersTab ? "grid-cols-2" : "grid-cols-1")}>
+        <TabsList className={cn("mx-2 grid w-auto dark:bg-slate-950/40 dark:text-slate-400", showUsersTab ? "grid-cols-2" : "grid-cols-1")}>
           {showUsersTab && (
-            <TabsTrigger value="users" className="text-xs gap-1">
+            <TabsTrigger value="users" className="gap-1 text-xs dark:data-[state=active]:bg-slate-900 dark:data-[state=active]:text-slate-100">
               <Users className="h-3 w-3" />
               Users
             </TabsTrigger>
           )}
-          <TabsTrigger value="history" className="text-xs gap-1">
+          <TabsTrigger value="history" className="gap-1 text-xs dark:data-[state=active]:bg-slate-900 dark:data-[state=active]:text-slate-100">
             <History className="h-3 w-3" />
             History
           </TabsTrigger>
         </TabsList>
 
         {showUsersTab && (
-          <TabsContent value="users" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+        <TabsContent value="users" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
             <PersonnelUsersPalette orgId={orgId} tree={tree} embedded />
           </TabsContent>
         )}
@@ -168,10 +168,10 @@ export function PersonnelSidePanel({
             <div className="space-y-2 p-2">
               {historyLoading && historyItems.length === 0 ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-slate-400 dark:text-slate-500" />
                 </div>
               ) : historyItems.length === 0 ? (
-                <p className="text-center text-xs text-slate-500 py-8">No saved changes yet</p>
+                <p className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">No saved changes yet</p>
               ) : (
                 historyItems.map((item) => <HistoryRow key={item.id} item={item} />)
               )}
@@ -179,7 +179,7 @@ export function PersonnelSidePanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-xs"
+                  className="w-full text-xs dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
                   disabled={historyLoading}
                   onClick={handleViewMore}
                 >
@@ -187,7 +187,7 @@ export function PersonnelSidePanel({
                 </Button>
               )}
               {historyTotal > 0 && (
-                <p className="text-center text-[10px] text-slate-500 pt-1">
+                <p className="pt-1 text-center text-[10px] text-slate-500 dark:text-slate-500">
                   Showing {loadedCount} of {cappedTotal} changes
                   {historyTotal > historyMaxViewable ? ` (max ${historyMaxViewable})` : ""}
                 </p>

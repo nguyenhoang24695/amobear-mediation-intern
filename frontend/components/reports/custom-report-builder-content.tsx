@@ -389,8 +389,8 @@ function renderPlatformBadge(
           className={cn(
             "h-7 w-7 shrink-0 justify-center p-0",
             isAndroid
-              ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
-              : "border-border bg-muted/50 text-foreground",
+              ? "border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500 dark:text-white"
+              : "border-border bg-card text-foreground",
           )}
         >
           {renderPlatformIcon(isAndroid)}
@@ -2394,10 +2394,15 @@ export function CustomReportBuilderContent() {
             const isExpanded = expandedRowIndex === idx
             const rowBgClass = idx % 2 === 0 ? "bg-card" : "bg-muted/50"
             const stickyCellBgClass = isExpanded
-              ? "bg-primary/10"
-              : idx % 2 === 0
+              ? isMobile
+                ? "bg-primary/15"
+                : "bg-primary/10"
+              : isMobile
                 ? "bg-card"
-                : "bg-muted/50"
+                : idx % 2 === 0
+                  ? "bg-card"
+                  : "bg-muted/50"
+            const stickyCellExpandedBgClass = isMobile ? "bg-primary/15" : "bg-primary/10"
 
             return (
               <TableRow key={idx} className={cn(rowBgClass, isExpanded && "bg-primary/15")}>
@@ -2409,10 +2414,11 @@ export function CustomReportBuilderContent() {
                     aria-expanded={isExpanded}
                     aria-label={`${isExpanded ? "Collapse" : "Expand"} row ${idx + 1} details`}
                     className={cn(
-                      "sticky z-20 cursor-pointer py-2 transition-colors",
+                      "sticky cursor-pointer py-2 transition-colors",
+                      isMobile ? "z-30 overflow-hidden bg-card" : "z-20",
                       stickyCellBgClass,
                       "hover:bg-primary/15",
-                      isExpanded && "bg-primary/10",
+                      isExpanded && stickyCellExpandedBgClass,
                       getParameterHorizontalPaddingClass(paramId, index, isMobile),
                       index === displayedParameters.length - 1 &&
                         "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",

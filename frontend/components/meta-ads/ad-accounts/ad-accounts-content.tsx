@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -38,6 +39,7 @@ import { invalidateCache, invalidateCachePrefix, useApi } from "@/hooks/use-api"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
 import { Pagination } from "@/components/shared/pagination"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
 import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Check } from "lucide-react"
 
@@ -126,6 +128,7 @@ type SortDir = "asc" | "desc"
 
 export function AdAccountsContent() {
   const { toast } = useToast()
+  const isMobile = useIsMobile()
   const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
   const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
   const currentUser = getCurrentUser()
@@ -148,6 +151,8 @@ export function AdAccountsContent() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [primaryIntegrationDialogOpen, setPrimaryIntegrationDialogOpen] = useState(false)
+  const [primaryIntegrationTarget, setPrimaryIntegrationTarget] = useState<MetaAdAccountDto | null>(null)
   const [editTarget, setEditTarget] = useState<MetaAdAccountDto | null>(null)
   const [form, setForm] = useState<UpsertMetaAdAccountRequestDto>(emptyForm)
   const [syncIntegrationId, setSyncIntegrationId] = useState("")
@@ -195,6 +200,11 @@ export function AdAccountsContent() {
         }],
     [getPrimaryIntegrationName]
   )
+
+  const openPrimaryIntegrationPicker = (account: MetaAdAccountDto) => {
+    setPrimaryIntegrationTarget(account)
+    setPrimaryIntegrationDialogOpen(true)
+  }
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -503,26 +513,33 @@ export function AdAccountsContent() {
                         </DropdownMenuItem>
                       ) : null}
                       {canEdit && accessibleIntegrations.length > 1 ? (
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
+                        isMobile ? (
+                          <DropdownMenuItem onClick={() => openPrimaryIntegrationPicker(account)}>
                             <Check className="w-4 h-4 mr-2" />
                             Set Primary
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="min-w-56">
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {accessibleIntegrations.map((access) => (
-                              <DropdownMenuItem
-                                key={access.integrationId}
-                                disabled={access.integrationId === account.metaIntegrationId}
-                                onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
-                              >
-                                {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
-                                <span className="truncate">{access.integrationName}</span>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <Check className="w-4 h-4 mr-2" />
+                              Set Primary
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="w-[min(18rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] min-w-0 max-h-[min(60vh,24rem)] overflow-x-hidden overflow-y-auto">
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {accessibleIntegrations.map((access) => (
+                                <DropdownMenuItem
+                                  key={access.integrationId}
+                                  disabled={access.integrationId === account.metaIntegrationId}
+                                  onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
+                                >
+                                  {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
+                                  <span className="truncate">{access.integrationName}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                        )
                       ) : null}
                       {canEdit ? (
                         <DropdownMenuItem onClick={() => void handleSyncSingleAccount(account)}>
@@ -669,26 +686,33 @@ export function AdAccountsContent() {
                             </DropdownMenuItem>
                           ) : null}
                           {canEdit && accessibleIntegrations.length > 1 ? (
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
+                            isMobile ? (
+                              <DropdownMenuItem onClick={() => openPrimaryIntegrationPicker(account)}>
                                 <Check className="w-4 h-4 mr-2" />
                                 Set Primary
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="min-w-56">
-                                <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {accessibleIntegrations.map((access) => (
-                                  <DropdownMenuItem
-                                    key={access.integrationId}
-                                    disabled={access.integrationId === account.metaIntegrationId}
-                                    onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
-                                  >
-                                    {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
-                                    <span className="truncate">{access.integrationName}</span>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Set Primary
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="w-[min(18rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] min-w-0 max-h-[min(60vh,24rem)] overflow-x-hidden overflow-y-auto">
+                                  <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {accessibleIntegrations.map((access) => (
+                                    <DropdownMenuItem
+                                      key={access.integrationId}
+                                      disabled={access.integrationId === account.metaIntegrationId}
+                                      onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
+                                    >
+                                      {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
+                                      <span className="truncate">{access.integrationName}</span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            )
                           ) : null}
                           {canEdit ? (
                             <DropdownMenuItem onClick={() => void handleSyncSingleAccount(account)}>
@@ -843,6 +867,43 @@ export function AdAccountsContent() {
               {submitting ? "Syncing..." : "Sync"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={primaryIntegrationDialogOpen} onOpenChange={setPrimaryIntegrationDialogOpen}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[420px] p-0 gap-0 overflow-hidden rounded-xl">
+          <DialogHeader className="border-b border-border px-4 py-4 text-left">
+            <DialogTitle className="text-base">Accessible integrations</DialogTitle>
+            <DialogDescription>
+              Choose which integration should become the primary one for this ad account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[min(60vh,28rem)] overflow-y-auto px-4 py-4">
+            <div className="space-y-2">
+              {(primaryIntegrationTarget ? getAccessibleIntegrations(primaryIntegrationTarget) : []).map((access) => (
+                <Button
+                  key={access.integrationId}
+                  type="button"
+                  variant={access.integrationId === primaryIntegrationTarget?.metaIntegrationId ? "secondary" : "outline"}
+                  className="h-auto w-full justify-between gap-3 px-3 py-2 text-left"
+                  disabled={access.integrationId === primaryIntegrationTarget?.metaIntegrationId}
+                  onClick={() => {
+                    if (!primaryIntegrationTarget) return
+                    void handleSetPrimaryIntegration(primaryIntegrationTarget, access.integrationId)
+                    setPrimaryIntegrationDialogOpen(false)
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{access.integrationName}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{formatAuthMode(access.authMode)}</span>
+                  </span>
+                  {access.integrationId === primaryIntegrationTarget?.metaIntegrationId ? (
+                    <Check className="h-4 w-4 shrink-0" />
+                  ) : null}
+                </Button>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

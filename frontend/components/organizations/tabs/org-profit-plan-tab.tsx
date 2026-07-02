@@ -1017,131 +1017,131 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pb-28 md:pb-6">
-          <div className="flex min-h-0 gap-0">
+          <div className="flex min-h-0 flex-col gap-4 xl:flex-row xl:items-start">
             <div className="min-w-0 flex-1 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              {canScopeManagedTeams ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="org-profit-team">Teams</Label>
-                  <GroupedTeamMultiSelect
-                    id="org-profit-team"
-                    teams={filterTeams}
-                    teamGroupSections={teamGroupSections}
-                    selectedTeamIds={selectedTeamIds}
-                    onSelectedTeamIdsChange={setSelectedTeamIds}
-                    disabled={loadingFilterTeams}
-                    placeholder="Teams in your scope"
-                    searchPlaceholder="Search teams..."
-                    emptySearchMessage="No teams found."
-                    emptyTeamsMessage="No teams under you or as team lead"
-                    triggerClassName="w-full max-w-none sm:w-[220px] sm:max-w-[280px]"
-                  />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  {canScopeManagedTeams ? (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="org-profit-team">Teams</Label>
+                      <GroupedTeamMultiSelect
+                        id="org-profit-team"
+                        teams={filterTeams}
+                        teamGroupSections={teamGroupSections}
+                        selectedTeamIds={selectedTeamIds}
+                        onSelectedTeamIdsChange={setSelectedTeamIds}
+                        disabled={loadingFilterTeams}
+                        placeholder="Teams in your scope"
+                        searchPlaceholder="Search teams..."
+                        emptySearchMessage="No teams found."
+                        emptyTeamsMessage="No teams under you or as team lead"
+                        triggerClassName="w-full max-w-none sm:w-[220px] sm:max-w-[280px]"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="org-profit-search">Search app</Label>
+                    <Input
+                      id="org-profit-search"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="App name, App Store ID, or AdMob App ID"
+                      className="w-full bg-background sm:w-[280px]"
+                    />
+                  </div>
                 </div>
-              ) : null}
-              <div className="space-y-1.5">
-                <Label htmlFor="org-profit-search">Search app</Label>
-                <Input
-                  id="org-profit-search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="App name, App Store ID, or AdMob App ID"
-                  className="w-full bg-background sm:w-[280px]"
-                />
-              </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant={hasPendingLoad ? "default" : "outline"}
-                    className={cn("min-w-[148px]", !hasPendingLoad && "bg-background")}
-                    onClick={() => void handleLoadData()}
-                    disabled={loading || loadingFilterTeams}
-                  >
-                    {loading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                    )}
-                    Load Data
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  {hasPendingLoad
-                    ? "Apply the selected month range and teams, then load the table."
-                    : "Reload the table with the current filters."}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="bg-background"
-                    onClick={() => void handleExportData()}
-                    disabled={loading || exportingData || !hasLoadedData || appRows.length === 0 || exportTeamSelectionBlocked}
-                  >
-                    {exportingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    Export data
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  Export the visible revenue plan data for the selected month range.
-                </TooltipContent>
-              </Tooltip>
-              {canManage ? (
-                <>
+                <div className="flex flex-wrap gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={hasPendingLoad ? "default" : "outline"}
+                        className={cn("min-w-[148px]", !hasPendingLoad && "bg-background")}
+                        onClick={() => void handleLoadData()}
+                        disabled={loading || loadingFilterTeams}
+                      >
+                        {loading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                        )}
+                        Load Data
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {hasPendingLoad
+                        ? "Apply the selected month range and teams, then load the table."
+                        : "Reload the table with the current filters."}
+                    </TooltipContent>
+                  </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         type="button"
                         variant="outline"
                         className="bg-background"
-                        onClick={() => void handleExportTemplate()}
-                        disabled={exportingTemplate}
+                        onClick={() => void handleExportData()}
+                        disabled={loading || exportingData || !hasLoadedData || appRows.length === 0 || exportTeamSelectionBlocked}
                       >
-                        {exportingTemplate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        Export template
+                        {exportingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Export data
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      Download an Excel template for the end month in the selected range.
+                      Export the visible revenue plan data for the selected month range.
                     </TooltipContent>
                   </Tooltip>
+                  {canManage ? (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="bg-background"
+                            onClick={() => void handleExportTemplate()}
+                            disabled={exportingTemplate}
+                          >
+                            {exportingTemplate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                            Export template
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          Download an Excel template for the end month in the selected range.
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button type="button" variant="outline" className="bg-background" onClick={() => setImportOpen(true)}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Import Excel
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          Upload an Excel file to update revenue plans in the selected range.
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
+                  ) : null}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button type="button" variant="outline" className="bg-background" onClick={() => setImportOpen(true)}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Import Excel
+                      <Button
+                        type="button"
+                        variant={columnSidebarOpen ? "secondary" : "outline"}
+                        size="icon"
+                        className="h-9 w-9 shrink-0 bg-background"
+                        onClick={() => setColumnSidebarOpen((open) => !open)}
+                        aria-label={columnSidebarOpen ? "Hide column settings" : "Show column settings"}
+                        aria-pressed={columnSidebarOpen}
+                      >
+                        <Settings className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">
-                      Upload an Excel file to update revenue plans in the selected range.
-                    </TooltipContent>
+                    <TooltipContent side="top">Configure visible columns</TooltipContent>
                   </Tooltip>
-                </>
-              ) : null}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant={columnSidebarOpen ? "secondary" : "outline"}
-                    size="icon"
-                    className="h-9 w-9 shrink-0 bg-background"
-                    onClick={() => setColumnSidebarOpen((open) => !open)}
-                    aria-label={columnSidebarOpen ? "Hide column settings" : "Show column settings"}
-                    aria-pressed={columnSidebarOpen}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Configure visible columns</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+                </div>
+              </div>
 
           {!hasLoadedData && !loading ? (
             <div className="rounded-lg border border-border bg-muted/30">
@@ -1461,7 +1461,7 @@ export function OrgProfitPlanTab({ orgId, canManage = false }: OrgProfitPlanTabP
               <RevenuePlanColumnSidebar
                 visibility={columnVisibility}
                 onChange={setColumnVisibility}
-                className="max-h-[min(70vh,720px)] self-start"
+                className="max-h-[min(70vh,720px)] xl:sticky xl:top-4"
               />
             ) : null}
           </div>

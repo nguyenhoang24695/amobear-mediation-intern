@@ -1583,10 +1583,40 @@ export function OverviewReportContent() {
               </p>
               {sharedAppConflicts.length > 0 && !sharedAppWarningDismissed ? (
                 <div
-                  className="relative border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-700 dark:text-red-300"
+                  className="relative overflow-hidden border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-700 dark:text-red-300"
                   role="alert"
                 >
-                  <div className="absolute right-2 top-2 flex items-center gap-1.5">
+                  <div className="flex flex-col gap-2 sm:pr-36">
+                    <p className="font-semibold text-red-700 break-words dark:text-red-300">
+                      Warning: the same app appears under multiple teams in the same group
+                    </p>
+                    <ul className="mt-1.5 min-w-0 list-disc space-y-1 pl-4 pr-0 break-words">
+                      {sharedAppConflicts
+                        .slice(0, SHARED_APP_CONFLICTS_DISPLAY_MAX)
+                        .map((conflict) => (
+                          <li key={`${conflict.appStoreId}-${conflict.groupLabels.join("|")}`} className="min-w-0 break-words">
+                            <span className="break-words font-medium">{conflict.appLabel}</span>{" "}
+                            <span className="break-all font-mono text-red-600/90">({conflict.appStoreId})</span>
+                            {" - groups: "}
+                            <span className="break-words">
+                              {conflict.groupLabels
+                                .map((g) =>
+                                  getTeamGroupSectionLabel(g === "(No group)" ? null : g),
+                                )
+                                .join(", ")}
+                            </span>
+                            {" - teams: "}
+                            <span className="break-words">{conflict.teamNames.join(", ")}</span>
+                          </li>
+                        ))}
+                    </ul>
+                    {sharedAppConflicts.length > SHARED_APP_CONFLICTS_DISPLAY_MAX ? (
+                      <p className="font-medium text-red-700 dark:text-red-300">
+                        +{sharedAppConflicts.length - SHARED_APP_CONFLICTS_DISPLAY_MAX} more
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 sm:absolute sm:right-2 sm:top-2 sm:mt-0">
                     <span className="whitespace-nowrap text-[10px] text-red-600/80">
                       Auto close in {sharedAppWarningCountdown}s
                     </span>
@@ -1601,32 +1631,6 @@ export function OverviewReportContent() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="pr-36 font-semibold text-red-700 dark:text-red-300">
-                    Warning: the same app appears under multiple teams in the same group
-                  </p>
-                  <ul className="mt-1.5 list-disc space-y-1 pl-4">
-                    {sharedAppConflicts
-                      .slice(0, SHARED_APP_CONFLICTS_DISPLAY_MAX)
-                      .map((conflict) => (
-                        <li key={`${conflict.appStoreId}-${conflict.groupLabels.join("|")}`}>
-                          <span className="font-medium">{conflict.appLabel}</span>{" "}
-                          <span className="font-mono text-red-600/90">({conflict.appStoreId})</span>
-                          {" — groups: "}
-                          {conflict.groupLabels
-                            .map((g) =>
-                              getTeamGroupSectionLabel(g === "(No group)" ? null : g),
-                            )
-                            .join(", ")}
-                          {" · teams: "}
-                          {conflict.teamNames.join(", ")}
-                        </li>
-                      ))}
-                  </ul>
-                  {sharedAppConflicts.length > SHARED_APP_CONFLICTS_DISPLAY_MAX ? (
-                    <p className="mt-1 pl-4 font-medium text-red-700 dark:text-red-300">
-                      +{sharedAppConflicts.length - SHARED_APP_CONFLICTS_DISPLAY_MAX} more
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
               <div ref={scrollContainerRef} className="max-h-[min(70vh,720px)] overflow-auto">
@@ -2126,3 +2130,4 @@ export function OverviewReportContent() {
     </div>
   )
 }
+

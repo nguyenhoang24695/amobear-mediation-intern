@@ -49,31 +49,31 @@ function DraggableUserRow({
     : undefined
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
-        placed
-          ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed"
-          : "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50",
-        isDragging && "opacity-50 shadow-md ring-2 ring-blue-300",
-      )}
-      {...(placed ? {} : { ...listeners, ...attributes })}
-    >
-      {!placed && <GripVertical className="h-4 w-4 shrink-0 text-slate-400" />}
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
+          placed
+          ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed dark:border-white/10 dark:bg-slate-950/40"
+          : "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50 dark:border-white/10 dark:bg-slate-950/40 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10",
+          isDragging && "opacity-50 shadow-md ring-2 ring-blue-300",
+        )}
+        {...(placed ? {} : { ...listeners, ...attributes })}
+      >
+      {!placed && <GripVertical className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />}
       <Avatar className="h-8 w-8 shrink-0">
         {user.avatarUrl && <AvatarImage src={user.avatarUrl} />}
-        <AvatarFallback className="text-xs bg-slate-100 text-slate-600">
+        <AvatarFallback className="text-xs bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {getInitials(user.fullName || user.email)}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-slate-900">{user.fullName || user.email}</p>
-        <p className="truncate text-xs text-slate-500">{user.email}</p>
+        <p className="truncate font-medium text-slate-900 dark:text-slate-100">{user.fullName || user.email}</p>
+        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
       </div>
       {placed && (
-        <Badge variant="secondary" className="shrink-0 text-[10px]">
+        <Badge variant="secondary" className="shrink-0 text-[10px] dark:bg-slate-800 dark:text-slate-200">
           On chart
         </Badge>
       )}
@@ -135,26 +135,26 @@ function DraggableTeamRow({ group, placed }: { group: UserGroup; placed: boolean
       className={cn(
         "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
         placed
-          ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed"
-          : "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50",
+          ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed dark:border-white/10 dark:bg-slate-950/40"
+          : "border-slate-200 bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:bg-blue-50/50 dark:border-white/10 dark:bg-slate-950/40 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10",
         isDragging && "opacity-50 shadow-md ring-2 ring-blue-300",
       )}
       {...(placed ? {} : { ...listeners, ...attributes })}
     >
-      {!placed && <GripVertical className="h-4 w-4 shrink-0 text-slate-400" />}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+      {!placed && <GripVertical className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
         <FolderOpen className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-slate-900">{group.name}</p>
-        <p className="truncate text-xs text-slate-500">{group.users.length} members</p>
+        <p className="truncate font-medium text-slate-900 dark:text-slate-100">{group.name}</p>
+        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{group.users.length} members</p>
       </div>
       {placed ? (
-        <Badge variant="secondary" className="shrink-0 text-[10px]">
+        <Badge variant="secondary" className="shrink-0 text-[10px] dark:bg-slate-800 dark:text-slate-200">
           On chart
         </Badge>
       ) : (
-        <Badge variant="secondary" className="shrink-0 text-[10px]">
+        <Badge variant="secondary" className="shrink-0 text-[10px] dark:bg-slate-800 dark:text-slate-200">
           Team
         </Badge>
       )}
@@ -251,19 +251,19 @@ export function PersonnelUsersPalette({
 
   if (!embedded && !expanded) {
     return (
-      <div className="flex w-11 shrink-0 flex-col items-center border-r border-slate-200 bg-slate-50 py-3">
+      <div className="flex w-11 shrink-0 flex-col items-center border-r border-slate-200 bg-slate-50 py-3 dark:border-white/10 dark:bg-slate-950/50">
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
           title="Expand users list"
           onClick={() => onExpandedChange?.(true)}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Users className="mt-2 h-4 w-4 text-slate-500" />
-        <span className="mt-1 text-[10px] text-slate-500 [writing-mode:vertical-rl] rotate-180">
+        <Users className="mt-2 h-4 w-4 text-slate-500 dark:text-slate-400" />
+        <span className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 [writing-mode:vertical-rl] rotate-180">
           Users
         </span>
       </div>
@@ -274,7 +274,7 @@ export function PersonnelUsersPalette({
     <>
       <div className={cn("p-3 pb-2", embedded && "px-2")}>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <Input
             placeholder="Search name or email..."
             value={search}
@@ -282,7 +282,7 @@ export function PersonnelUsersPalette({
             className="h-8 pl-8 text-sm"
           />
         </div>
-        <p className="mt-2 text-[11px] text-slate-500">
+        <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
           Drag a team or unassigned user onto someone in the chart to add as a direct report.
         </p>
       </div>
@@ -290,21 +290,21 @@ export function PersonnelUsersPalette({
       <ScrollArea className={cn("flex-1 px-3 pb-3", embedded ? "min-h-[240px] max-h-[360px]" : "min-h-[280px] max-h-[520px]")}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-300" />
           </div>
         ) : error ? (
-          <p className="py-6 text-center text-sm text-red-600">{error}</p>
+          <p className="py-6 text-center text-sm text-red-600 dark:text-red-400">{error}</p>
         ) : groupedUsers.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-500">No users found</p>
+          <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">No users found</p>
         ) : (
           <div className="space-y-3">
             {groupedUsers.map((group) =>
               group.id === "no-team" ? (
                 <div key={group.id} className="space-y-2">
-                  <div className="flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <Users className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <Users className="h-3.5 w-3.5 dark:text-slate-400" />
                     <span className="truncate">{group.name}</span>
-                    <Badge variant="secondary" className="ml-auto text-[10px]">
+                    <Badge variant="secondary" className="ml-auto text-[10px] dark:bg-slate-800 dark:text-slate-200">
                       {group.users.length}
                     </Badge>
                   </div>
@@ -337,12 +337,12 @@ export function PersonnelUsersPalette({
   }
 
   return (
-    <div className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-slate-50">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
+    <div className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-slate-950/60">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 dark:border-white/10">
         <div className="flex items-center gap-2 min-w-0">
-          <Users className="h-4 w-4 shrink-0 text-slate-600" />
-          <span className="text-sm font-semibold text-slate-900 truncate">Users</span>
-          <Badge variant="secondary" className="text-[10px] shrink-0">
+          <Users className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" />
+          <span className="text-sm font-semibold text-slate-900 truncate dark:text-slate-100">Users</span>
+          <Badge variant="secondary" className="text-[10px] shrink-0 dark:bg-slate-800 dark:text-slate-200">
             {availableCount} available
           </Badge>
         </div>
@@ -350,7 +350,7 @@ export function PersonnelUsersPalette({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 shrink-0"
+          className="h-7 w-7 shrink-0 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
           title="Collapse"
           onClick={() => onExpandedChange?.(false)}
         >
